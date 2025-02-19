@@ -40,24 +40,55 @@
 #define PMBUS_REGISTER_MFR_MODEL                0x9A
 #define PMBUS_REGISTER_MFR_REVISION             0x9B
 #define PMBUS_REGISTER_MFR_SERIAL               0x9E
-
+#define PMBUS_REGISTER_MFR_VOUT_MIN             0xA4
+#define PMBUS_REGISTER_MFR_VOUT_MAX             0xA5
+#define PMBUS_REGISTER_MFR_IOUT_MAX             0xA6
+#define PMBUS_REGISTER_MFR_POUT_MAX             0xA7
 
 #define MAX_FAN_DUTY_CYCLE      100
-#define I2C_RW_RETRY_COUNT		10
-#define I2C_RW_RETRY_INTERVAL	60 /* ms */
+#define I2C_RW_RETRY_COUNT        10
+#define I2C_RW_RETRY_INTERVAL    60 /* ms */
 
-/* Addresses scanned 
+/* STATUS WORD BIT MAP
+ *
+ * BIT 0(Low Byte): NONE OF THE ABOVE
+ * BIT 1(Low Byte): COMM, MEMORY, LOGIC EVENT
+ * BIT 2(Low Byte): TEMPERATURE FAULT OR WARNING
+ * BIT 3(Low Byte): VIN_UV_FAULT
+ * BIT 4(Low Byte): IOUT_OC_FAULT
+ * BIT 5(Low Byte): VOUT_OV_FAULT
+ * BIT 6(Low Byte): UNIT IS OFF
+ * BIT 7(Low Byte): UNIT WAS BUSY
+ *
+ * BIT 8(High Byte): UNKNOWN FAULT OR WARNING
+ * BIT 9(High Byte): OTHER
+ * BIT10(High Byte): FAN FAULT OR WARNING
+ * BIT11(High Byte): POWER_GOOD Negated
+ * BIT12(High Byte): MFR_SPECIFIC
+ * BIT13(High Byte): INPUT FAULT OR WARNING
+ * BIT14(High Byte): IOUT/POUT FAULT OR WARNING
+ * BIT15(High Byte): VOUT FAULT OR WARNING
+ */
+#define STATUS_WORD_CHECKER_INPUT (BIT(3) | BIT(6) | BIT(11) | BIT(13))
+#define STATUS_WORD_CHECKER_VOUT (BIT(5) | BIT(15) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_IOUT (BIT(4) | BIT(14) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_POUT (BIT(14) | STATUS_WORD_CHECKER_INPUT)
+
+/* Addresses scanned
  */
 static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
 
-/* Each client has this additional data 
+/* Each client has this additional data
  */
 struct accton_i2c_psu_data {
     struct device      *hwmon_dev;
     struct mutex        update_lock;
     char                valid;           /* !=0 if registers are valid */
     unsigned long       last_updated;    /* In jiffies */
+    u8   chip;          /* chip id */
+    u8   mfr_serial_supported;
     u8   vout_mode;     /* Register value */
+    u16  status_word;    /* Register value */
     u16  v_in;          /* Register value */
     u16  v_out;         /* Register value */
     u16  i_in;          /* Register value */
@@ -69,21 +100,28 @@ struct accton_i2c_psu_data {
     u16  fan_duty_cycle[2];  /* Register value */
     u16  fan_speed[2];  /* Register value */
     u8   pmbus_revision; /* Register value */
-    u8   mfr_id[10];	 /* Register value */
-	u8   mfr_model[16]; /* Register value */
-	u8   mfr_revsion[3]; /* Register value */
-	u8   mfr_serial[26]; /* Register value */
+    u8   mfr_id[10];     /* Register value */
+    u8   mfr_model[16]; /* Register value */
+    u8   mfr_revsion[3]; /* Register value */
+    u8   mfr_serial[26]; /* Register value */
+    u16  mfr_iout_max;   /* Register value */
+    u16  mfr_pout_max;   /* Register value */
+    u16  mfr_vout_min;   /* Register value */
+    u16  mfr_vout_max;   /* Register value */
 };
+
+typedef int (*range_checker_t)(u16 reg_val, struct accton_i2c_psu_data*);
 
 static ssize_t show_linear(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_fan_fault(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_vout(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 static ssize_t show_ascii(struct device *dev, struct device_attribute *da,
-			 char *buf);
+             char *buf);
 static ssize_t show_byte(struct device *dev, struct device_attribute *da,
-			 char *buf);
-			 			 
+             char *buf);
+
+static int mfr_serial_supported(u8 chip);
 static int accton_i2c_psu_write_word(struct i2c_client *client, u8 reg, u16 value);
 static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *dev);
 
@@ -100,13 +138,13 @@ enum accton_i2c_psu_sysfs_attributes {
     PSU_FAN1_DUTY_CYCLE,
     PSU_FAN1_SPEED,
     PSU_PMBUS_REVISION,
-	PSU_MFR_ID,
-	PSU_MFR_MODEL,
-	PSU_MFR_REVISION,
-	PSU_MFR_SERIAL,
+    PSU_MFR_ID,
+    PSU_MFR_MODEL,
+    PSU_MFR_REVISION,
+    PSU_MFR_SERIAL,
 };
 
-/* sysfs attributes for hwmon 
+/* sysfs attributes for hwmon
  */
 static SENSOR_DEVICE_ATTR(psu_v_in,        S_IRUGO, show_linear,      NULL, PSU_V_IN);
 static SENSOR_DEVICE_ATTR(psu_v_out,       S_IRUGO, show_vout,        NULL, PSU_V_OUT);
@@ -119,10 +157,10 @@ static SENSOR_DEVICE_ATTR(psu_fan1_fault,  S_IRUGO, show_fan_fault,   NULL, PSU_
 static SENSOR_DEVICE_ATTR(psu_fan1_duty_cycle_percentage, S_IWUSR | S_IRUGO, show_linear, set_fan_duty_cycle, PSU_FAN1_DUTY_CYCLE);
 static SENSOR_DEVICE_ATTR(psu_fan1_speed_rpm, S_IRUGO, show_linear,   NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(psu_pmbus_revision,S_IRUGO, show_byte,   NULL, PSU_PMBUS_REVISION);
-static SENSOR_DEVICE_ATTR(psu_mfr_id,		S_IRUGO, show_ascii,  NULL, PSU_MFR_ID);
-static SENSOR_DEVICE_ATTR(psu_mfr_model,	S_IRUGO, show_ascii,  NULL, PSU_MFR_MODEL);
-static SENSOR_DEVICE_ATTR(psu_mfr_revision,	S_IRUGO, show_ascii, NULL, PSU_MFR_REVISION);
-static SENSOR_DEVICE_ATTR(psu_mfr_serial,	S_IRUGO, show_ascii, NULL, PSU_MFR_SERIAL);
+static SENSOR_DEVICE_ATTR(psu_mfr_id,        S_IRUGO, show_ascii,  NULL, PSU_MFR_ID);
+static SENSOR_DEVICE_ATTR(psu_mfr_model,    S_IRUGO, show_ascii,  NULL, PSU_MFR_MODEL);
+static SENSOR_DEVICE_ATTR(psu_mfr_revision,    S_IRUGO, show_ascii, NULL, PSU_MFR_REVISION);
+static SENSOR_DEVICE_ATTR(psu_mfr_serial,    S_IRUGO, show_ascii, NULL, PSU_MFR_SERIAL);
 
 
 /*Duplicate nodes for lm-sensors.*/
@@ -168,19 +206,89 @@ static int two_complement_to_int(u16 data, u8 valid_bit, int mask)
     return is_negative ? (-(((~valid_data) & mask) + 1)) : valid_data;
 }
 
+int pmbus_linear_format_to_int(u16 reg_val, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(reg_val >> 11, 5, 0x1f);
+    mantissa = two_complement_to_int(reg_val & 0x7ff, 11, 0x7ff);
+
+    return (exponent >= 0) ? ((mantissa << exponent) * multiplier) :
+                             ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int pmbus_vout_data_to_int(u16 reg_val, u8 vout_mode, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(vout_mode, 5, 0x1f);
+    mantissa = reg_val;
+
+    return (exponent > 0) ? ((mantissa << exponent) * multiplier) :
+                            ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int vout_range_checker(u16 reg_val, struct accton_i2c_psu_data *data)
+{
+    int vout = 0;
+    int vout_max = 0;
+    int vout_min = 0;
+
+    vout = pmbus_vout_data_to_int(reg_val, data->vout_mode, 1000);
+    vout_max = pmbus_vout_data_to_int(data->mfr_vout_max, data->vout_mode, 1000);
+    vout_min = pmbus_vout_data_to_int(data->mfr_vout_min, data->vout_mode, 1000);
+
+    return ((vout <= vout_max) && (vout >= vout_min)) ? 0 : -EINVAL;;
+}
+
+int iout_range_checker(u16 reg_val, struct accton_i2c_psu_data *data)
+{
+    int iout = pmbus_linear_format_to_int(reg_val, 1000);
+    int iout_max = pmbus_linear_format_to_int(data->mfr_iout_max, 1000);
+
+    return ((iout > 0) && (iout <= iout_max)) ? 0 : -EINVAL;
+}
+
+int pout_range_checker(u16 reg_val, struct accton_i2c_psu_data *data)
+{
+    int pout = pmbus_linear_format_to_int(reg_val, 1000);
+    int pout_max = pmbus_linear_format_to_int(data->mfr_pout_max, 1000);
+
+    return ((pout > 0) && (pout <= pout_max)) ? 0 : -EINVAL;
+}
+
+int enable_status_range_checker(struct accton_i2c_psu_data *data)
+{
+    int i;
+    char *model_list[] = { "YESM1300AM" };
+
+    if (!data) {
+        return 0;
+    }
+
+    for (i = 0; i < ARRAY_SIZE(model_list); i++) {
+        if (strncmp(model_list[i], data->mfr_model, strlen(model_list[i])) != 0) {
+            continue;
+        }
+        return 1;
+    }
+
+    return 0;
+}
+
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da,
-			const char *buf, size_t count)
+            const char *buf, size_t count)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
     struct i2c_client *client = to_i2c_client(dev);
     struct accton_i2c_psu_data *data = i2c_get_clientdata(client);
     int nr = (attr->index == PSU_FAN1_DUTY_CYCLE) ? 0 : 1;
-	long speed;
-	int error;
+    long speed;
+    int error;
 
-	error = kstrtol(buf, 10, &speed);
-	if (error)
-		return error;
+    error = kstrtol(buf, 10, &speed);
+    if (error)
+        return error;
 
     if (speed < 0 || speed > MAX_FAN_DUTY_CYCLE)
         return -EINVAL;
@@ -202,7 +310,7 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
     u16 value = 0;
     int exponent, mantissa;
     int multiplier = 0;
-    
+
     switch (attr->index) {
     case PSU_V_IN:
         value = data->v_in;
@@ -235,7 +343,7 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
     default:
         break;
     }
-    
+
     exponent = two_complement_to_int(value >> 11, 5, 0x1f);
     mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
 
@@ -243,9 +351,9 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
         multiplier = PMBUS_LITERAL_DATA_MULTIPLIER;
     if(attr->index==PSU_P_OUT_UV)
         multiplier = 1000000;
-    
+
     return (exponent >= 0) ? sprintf(buf, "%d\n", (mantissa << exponent) * multiplier) :
-                             sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));                      
+                             sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
 }
 
 static ssize_t show_fan_fault(struct device *dev, struct device_attribute *da,
@@ -263,7 +371,7 @@ static ssize_t show_vout(struct device *dev, struct device_attribute *da,
              char *buf)
 {
     struct accton_i2c_psu_data *data = accton_i2c_psu_update_device(dev);
-    int exponent, mantissa;    
+    int exponent, mantissa;
 
     exponent = two_complement_to_int(data->vout_mode, 5, 0x1f);
     mantissa = data->v_out;
@@ -273,48 +381,48 @@ static ssize_t show_vout(struct device *dev, struct device_attribute *da,
 }
 
 static ssize_t show_byte(struct device *dev, struct device_attribute *da,
-			 char *buf)
+             char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-	struct accton_i2c_psu_data *data = accton_i2c_psu_update_device(dev);
-	
-	if (!data->valid) {
-		return 0;
-	}
+    struct accton_i2c_psu_data *data = accton_i2c_psu_update_device(dev);
 
-	return (attr->index == PSU_PMBUS_REVISION) ? sprintf(buf, "%d\n", data->pmbus_revision) :
-								 sprintf(buf, "0\n");
+    if (!data->valid) {
+        return 0;
+    }
+
+    return (attr->index == PSU_PMBUS_REVISION) ? sprintf(buf, "%d\n", data->pmbus_revision) :
+                                 sprintf(buf, "0\n");
 }
 
 static ssize_t show_ascii(struct device *dev, struct device_attribute *da,
-			 char *buf)
+             char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
-	struct accton_i2c_psu_data *data = accton_i2c_psu_update_device(dev);
-	u8 *ptr = NULL;
+    struct accton_i2c_psu_data *data = accton_i2c_psu_update_device(dev);
+    u8 *ptr = NULL;
 
-	if (!data->valid) {
-		return 0;
-	}	
-	switch (attr->index) {
+    if (!data->valid) {
+        return 0;
+    }
+    switch (attr->index) {
 
-	case PSU_MFR_ID:
-			ptr = data->mfr_id;
-		break;
-	case PSU_MFR_MODEL:
-			ptr = data->mfr_model;
-		break;
-	case PSU_MFR_REVISION:
-			ptr = data->mfr_revsion;
-		break;
-	case PSU_MFR_SERIAL:
-		ptr = data->mfr_serial;
-		break;
-	default:
-		return 0;
-	}
+    case PSU_MFR_ID:
+            ptr = data->mfr_id;
+        break;
+    case PSU_MFR_MODEL:
+            ptr = data->mfr_model;
+        break;
+    case PSU_MFR_REVISION:
+            ptr = data->mfr_revsion;
+        break;
+    case PSU_MFR_SERIAL:
+        ptr = data->mfr_serial;
+        break;
+    default:
+        return 0;
+    }
 
-	return sprintf(buf, "%s\n", ptr);
+    return sprintf(buf, "%s\n", ptr);
 }
 
 
@@ -328,7 +436,7 @@ static int accton_i2c_psu_probe(struct i2c_client *client,
     struct accton_i2c_psu_data *data;
     int status;
 
-    if (!i2c_check_functionality(client->adapter, 
+    if (!i2c_check_functionality(client->adapter,
         I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_WORD_DATA)) {
         status = -EIO;
         goto exit;
@@ -342,6 +450,8 @@ static int accton_i2c_psu_probe(struct i2c_client *client,
 
     i2c_set_clientdata(client, data);
     data->valid = 0;
+    data->chip = dev_id->driver_data;
+    data->mfr_serial_supported = mfr_serial_supported(data->chip);
     mutex_init(&data->update_lock);
 
     dev_info(&client->dev, "chip found\n");
@@ -360,7 +470,7 @@ static int accton_i2c_psu_probe(struct i2c_client *client,
 
     dev_info(&client->dev, "%s: psu '%s'\n",
          dev_name(data->hwmon_dev), client->name);
-    
+
     return 0;
 
 exit_remove:
@@ -368,7 +478,7 @@ exit_remove:
 exit_free:
     kfree(data);
 exit:
-    
+
     return status;
 }
 
@@ -379,7 +489,7 @@ static void accton_i2c_psu_remove(struct i2c_client *client)
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &accton_i2c_psu_group);
     kfree(data);
-    
+
 }
 /* Support psu moduel
  */
@@ -417,20 +527,20 @@ static int accton_i2c_psu_write_word(struct i2c_client *client, u8 reg, u16 valu
 }
 
 static int accton_i2c_psu_read_block(struct i2c_client *client, u8 command, u8 *data,
-			  int data_len)
+              int data_len)
 {
-	int status = 0, retry = I2C_RW_RETRY_COUNT;
+    int status = 0, retry = I2C_RW_RETRY_COUNT;
 
-	while (retry) {
-		status = i2c_smbus_read_i2c_block_data(client, command, data_len, data);
-		if (unlikely(status < 0)) {
-			msleep(I2C_RW_RETRY_INTERVAL);
-			retry--;
-			continue;
-		}
+    while (retry) {
+        status = i2c_smbus_read_i2c_block_data(client, command, data_len, data);
+        if (unlikely(status < 0)) {
+            msleep(I2C_RW_RETRY_INTERVAL);
+            retry--;
+            continue;
+        }
 
-		break;
-	}
+        break;
+    }
 
     return status;
 }
@@ -449,7 +559,7 @@ static int accton_i2c_psu_read_block_data(struct i2c_client *client, u8 command,
         status = -EIO;
         goto EXIT_READ_BLOCK_DATA;
     }
-  
+
     status = (status & 0xFF) + 1;
     if ( status > 128)
     {
@@ -457,7 +567,7 @@ static int accton_i2c_psu_read_block_data(struct i2c_client *client, u8 command,
         status = -EINVAL;
         goto EXIT_READ_BLOCK_DATA;
     }
-    
+
     length = status;
     status = accton_i2c_psu_read_block(client, command, buffer, length);
     if (unlikely(status < 0))
@@ -465,8 +575,8 @@ static int accton_i2c_psu_read_block_data(struct i2c_client *client, u8 command,
     if (unlikely(status != length)) {
         status = -EIO;
         goto EXIT_READ_BLOCK_DATA;
-    } 
-    /* The first byte is the count byte of string. */   
+    }
+    /* The first byte is the count byte of string. */
     ptr++;
     status--;
 
@@ -475,7 +585,7 @@ static int accton_i2c_psu_read_block_data(struct i2c_client *client, u8 command,
     data[length-1] = 0;
 
 EXIT_READ_BLOCK_DATA:
-    
+
     return status;
 }
 
@@ -488,13 +598,17 @@ struct reg_data_byte {
 struct reg_data_word {
     u8   reg;
     u16 *value;
+    u16  old_value;
+    u16  status_checker;
+    range_checker_t range_checker;
 };
 
 static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *dev)
 {
     struct i2c_client *client = to_i2c_client(dev);
     struct accton_i2c_psu_data *data = i2c_get_clientdata(client);
-    
+    int enable_checker = 0;
+
     mutex_lock(&data->update_lock);
 
     if (time_after(jiffies, data->last_updated + HZ + HZ / 2)
@@ -503,76 +617,108 @@ static struct accton_i2c_psu_data *accton_i2c_psu_update_device(struct device *d
         //u8 command, buf;
         struct reg_data_byte regs_byte[] = { {PMBUS_REGISTER_VOUT_MODE, &data->vout_mode},
                                              {PMBUS_REGISTER_STATUS_FAN, &data->fan_fault}};
-        struct reg_data_word regs_word[] = { {PMBUS_REGISTER_READ_VIN, &data->v_in},
-                                             {PMBUS_REGISTER_READ_VOUT, &data->v_out},
-                                             {PMBUS_REGISTER_READ_IIN, &data->i_in},
-                                             {PMBUS_REGISTER_READ_IOUT, &data->i_out},
-                                             {PMBUS_REGISTER_READ_POUT, &data->p_out},
-                                             {PMBUS_REGISTER_READ_PIN, &data->p_in},
-                                             {PMBUS_REGISTER_READ_TEMPERATURE_1, &(data->temp_input[0])},
-                                             {PMBUS_REGISTER_READ_TEMPERATURE_2, &(data->temp_input[1])},
-                                             {PMBUS_REGISTER_FAN_COMMAND_1, &(data->fan_duty_cycle[0])},
-                                             {PMBUS_REGISTER_READ_FAN_SPEED_1, &(data->fan_speed[0])},
-                                             {PMBUS_REGISTER_READ_FAN_SPEED_2, &(data->fan_speed[1])},
-                                             };
+        struct reg_data_word regs_word[] = {
+            /* The mfr_* and status_word should be read
+            * before reading the data with a status/range checker
+            */
+            {PMBUS_REGISTER_STATUS_WORD, &data->status_word, 0, 0, NULL},
+            {PMBUS_REGISTER_READ_VIN, &data->v_in, 0, 0, NULL},
+            {PMBUS_REGISTER_READ_IIN, &data->i_in, 0, 0, NULL},
+            {PMBUS_REGISTER_READ_PIN, &data->p_in, 0, 0, NULL},
+            {PMBUS_REGISTER_READ_TEMPERATURE_1, &(data->temp_input[0]), 0, 0, NULL},
+            {PMBUS_REGISTER_READ_TEMPERATURE_2, &(data->temp_input[1]), 0, 0, NULL},
+            {PMBUS_REGISTER_FAN_COMMAND_1, &(data->fan_duty_cycle[0]), 0, 0, NULL},
+            {PMBUS_REGISTER_READ_FAN_SPEED_1, &(data->fan_speed[0]), 0, 0, NULL},
+            {PMBUS_REGISTER_READ_FAN_SPEED_2, &(data->fan_speed[1]), 0, 0, NULL},
+            {PMBUS_REGISTER_MFR_VOUT_MIN, &data->mfr_vout_min, 0, 0, NULL},
+            {PMBUS_REGISTER_MFR_VOUT_MAX, &data->mfr_vout_max, 0, 0, NULL},
+            {PMBUS_REGISTER_MFR_IOUT_MAX, &data->mfr_iout_max, 0, 0, NULL},
+            {PMBUS_REGISTER_MFR_POUT_MAX, &data->mfr_pout_max, 0, 0, NULL},
+            {PMBUS_REGISTER_READ_VOUT, &data->v_out, data->v_out, STATUS_WORD_CHECKER_VOUT, vout_range_checker},
+            {PMBUS_REGISTER_READ_IOUT, &data->i_out, data->i_out, STATUS_WORD_CHECKER_IOUT, iout_range_checker},
+            {PMBUS_REGISTER_READ_POUT, &data->p_out, data->p_out, STATUS_WORD_CHECKER_POUT, pout_range_checker}
+        };
 
         dev_dbg(&client->dev, "Starting accton_i2c_psu update\n");
 
-        /* Read byte data */        
+        /* Read mfr_model */
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_MODEL, data->mfr_model,
+                                                 ARRAY_SIZE(data->mfr_model));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_MODEL, status);
+            goto exit;
+        }
+
+        /* Read byte data */
         for (i = 0; i < ARRAY_SIZE(regs_byte); i++) {
             status = accton_i2c_psu_read_byte(client, regs_byte[i].reg);
-            
+
             if (status < 0) {
                 dev_dbg(&client->dev, "reg %d, err %d\n",
                         regs_byte[i].reg, status);
+                *(regs_byte[i].value) = 0;
             }
             else {
                 *(regs_byte[i].value) = status;
             }
         }
-                    
-        /* Read word data */                    
+
+        /* Read word data */
+        enable_checker = enable_status_range_checker(data);
         for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
             status = accton_i2c_psu_read_word(client, regs_word[i].reg);
-            
+
             if (status < 0) {
                 dev_dbg(&client->dev, "reg %d, err %d\n",
                         regs_word[i].reg, status);
+                *(regs_word[i].value) = 0;
             }
             else {
+                if ((enable_checker == 0) || (regs_word[i].status_checker == 0)) {
+                    *(regs_word[i].value) = status;
+                    continue;
+                }
+
+                /* Validate data range */
+                if (regs_word[i].range_checker &&
+                    regs_word[i].range_checker(status, data) < 0) {
+                    if (!(data->status_word & regs_word[i].status_checker)) {
+                        /* Drop the data because it is out of the
+                         * expected range and the status bit is not set.
+                         * Keep old_value instead.
+                         */
+                        *(regs_word[i].value) = regs_word[i].old_value;
+                        continue;
+                    }
+                }
                 *(regs_word[i].value) = status;
             }
-            
+
         }
         /* Read mfr_id */
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_ID, data->mfr_id,
-										 ARRAY_SIZE(data->mfr_id));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_ID, status);
-			goto exit;
-		}		
-		/* Read mfr_model */		
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_MODEL, data->mfr_model,
-										 ARRAY_SIZE(data->mfr_model));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_MODEL, status);
-			goto exit;
-		}
-        /* Read mfr_revsion */		
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_REVISION, data->mfr_revsion,
-										 ARRAY_SIZE(data->mfr_revsion));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_REVISION, status);
-			goto exit;
-		}
-		/* Read mfr_serial */
-		status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_SERIAL, data->mfr_serial,
-										 ARRAY_SIZE(data->mfr_serial));
-		if (status < 0) {
-			dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_SERIAL, status);
-			goto exit;
-		}
-        
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_ID, data->mfr_id,
+                                                 ARRAY_SIZE(data->mfr_id));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_ID, status);
+            goto exit;
+        }
+        /* Read mfr_revsion */
+        status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_REVISION, data->mfr_revsion,
+                                                ARRAY_SIZE(data->mfr_revsion));
+        if (status < 0) {
+            dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_REVISION, status);
+            goto exit;
+        }
+        /* Read mfr_serial */
+        if (data->mfr_serial_supported) {
+            status = accton_i2c_psu_read_block_data(client, PMBUS_REGISTER_MFR_SERIAL, data->mfr_serial,
+                                                    ARRAY_SIZE(data->mfr_serial));
+            if (status < 0) {
+                dev_dbg(&client->dev, "reg %d, err %d\n", PMBUS_REGISTER_MFR_SERIAL, status);
+                goto exit;
+            }
+        }
+
         data->last_updated = jiffies;
         data->valid = 1;
     }
@@ -581,6 +727,19 @@ exit:
     mutex_unlock(&data->update_lock);
 
     return data;
+}
+
+static int mfr_serial_supported(u8 chip)
+{
+    int i = 0;
+    u8 supported_chips[] = {};
+
+    for (i = 0; i < ARRAY_SIZE(supported_chips); i++) {
+        if (chip == supported_chips[i])
+            return 1;
+    }
+
+    return 0;
 }
 
 static int __init accton_i2c_psu_init(void)
