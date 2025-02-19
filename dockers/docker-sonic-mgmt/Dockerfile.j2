@@ -179,7 +179,6 @@ RUN python2 -m pip install allure-pytest==2.8.22 \
                 pytest-repeat \
                 pytest-html \
                 pytest-xdist==1.28.0 \
-                pytest-stress \
                 python-dateutil \
                 PyYAML \
                 redis \
@@ -212,11 +211,6 @@ RUN mkdir -p /etc/apt/keyrings \
     && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update && apt-get install -y azure-cli
 
-## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/
-
-RUN dpkg -i debs/sonic-device-data_*.deb
-
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
@@ -230,13 +224,10 @@ RUN mkdir -p /tmp/protobuf \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
-# Install dash-api
-RUN cd /tmp \
-    && mkdir -p /usr/lib/python3/dist-packages/dash_api \
-    && wget https://raw.githubusercontent.com/sonic-net/sonic-dash-api/master/misc/pypkg/dash_api/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
-    && git clone https://github.com/sonic-net/sonic-dash-api.git \
-    && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
-    && rm -rf /tmp/sonic-dash-api
+## Copy and install sonic-mgmt docker dependencies
+COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
+
+RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
 
 RUN mkdir /var/run/sshd
 EXPOSE 22

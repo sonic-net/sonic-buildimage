@@ -145,9 +145,9 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
 # Install Python module for grpcio and grpcio-toole
-if [[ $CONFIGURED_ARCH == amd64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.51.1"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.51.1"
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.58.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
 fi
 
 # Install sonic-py-common Python 3 package
@@ -367,22 +367,6 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-db-cli_*.deb || \
 # Install sonic-rsyslog-plugin
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-rsyslog-plugin_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-
-# Generate host conf for rsyslog_plugin
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/host_events.conf
-sudo cp $BUILD_TEMPLATES/monit_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/sshd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/systemd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/kernel_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/dockerd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/seu_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/zebra_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/bgpd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
-
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/syncd_events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/syncd_events.conf
-sudo cp $BUILD_TEMPLATES/syncd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
 {% endif %}
 
 # Install custom-built monit package and SONiC configuration files
@@ -771,6 +755,26 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noni
 {% endfor %}
 {% endif %}
 
+{% if installer_debs.strip() -%}
+{% for deb in installer_debs.strip().split(' ') -%}
+
+# For some SONiC patch packages, Debian offcial version may higher than SONiC version
+# When install SONiC packages, fix broken install by 'apt-get -y install -f' may upgrade some installed SONiC packages to Debian offical version
+# Check and install upgraded SONiC package again, if install failed, need manually check and fix SONiC package version issue
+PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
+PACKAGE_VERSION=$(dpkg-deb -f {{deb}} Version)
+INSTALLED_VERSION=$(dpkg-query --showformat='${Version}' --show $PACKAGE_NAME || true)
+if [ "$INSTALLED_VERSION" != "" ] && [ "$INSTALLED_VERSION" != "$PACKAGE_VERSION" ]; then
+    sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+fi
+
+## SONiC packages may have lower version than Debian offical package, install offical Debian package will break feature
+## Hold installed packages to prevent these packages be upgrade by apt commands in this file
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold $PACKAGE_NAME
+
+{% endfor %}
+{% endif %}
+
 ## Run depmod command for target kernel modules
 sudo LANG=C chroot $FILESYSTEM_ROOT depmod -a {{kversion}}
 
@@ -1123,6 +1127,8 @@ sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpu.conf $FILESYSTEM_RO
 # Install dpuctl services
 sudo cp platform/mellanox/smartswitch/dpuctl/dpuctl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
+# Install dpumap script
+sudo install -m 755 platform/mellanox/smartswitch/dpumap.sh $FILESYSTEM_ROOT/usr/bin/dpumap.sh
 {% endif %}
 
 {% if sonic_asic_platform == "nvidia-bluefield" %}
@@ -1170,6 +1176,15 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+
+{% if installer_debs.strip() -%}
+{% for deb in installer_debs.strip().split(' ') -%}
+## Unhold installed packages to allow these packages be upgrade after SONiC installed
+PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unhold $PACKAGE_NAME
+{% endfor %}
+{% endif %}
 
 ## Enable MULTIDB
 {% if ENABLE_MULTIDB == "y" %}
