@@ -2590,7 +2590,7 @@ index fd6cbc8b6..7bd40c78f 100644
  }
  
  void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaults)
-@@ -220,34 +223,61 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
+@@ -220,34 +223,57 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
  
  /*
   * XPath:
