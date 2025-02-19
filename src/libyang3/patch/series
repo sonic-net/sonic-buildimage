@@ -4,3 +4,4 @@
 0004-union-apptag-529a594.patch
 0005-pr2360-validate-union-errors.patch
 0006-pr2361-union-sort-assert.patch
+0007-pr2362-lyd_validate_noextdeps.patch
