@@ -22,7 +22,7 @@ clean:
 	dh_clean
 
 build:
-	# Nothing to do
+	$(PYTHON) setup.py bdist_wheel -d $(SRC_DIR)
 
 
 binary: binary-arch binary-indep
