@@ -22,6 +22,7 @@ resources:
     type: git
     name: One/Networking-acs-buildimage
     ref: internal
+
 parameters:
 - name: BRANCH_FOLDER
   default: 'default'

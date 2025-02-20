@@ -39,7 +39,6 @@ steps:
         for image in `ls target | grep -E "\.(swi|bin|raw|deb)$"`; do
           version_image=$(echo $image | sed -E "s/(-dbg\.\w+|\.\w+)$/-$SONIC_VERSION\1/")
           echo "$image,$version_image" >> target/sonic-installers
-          ln -sf $image target/$version_image
         done
       displayName: "Copy installers"
     - task: ManifestGeneratorTask@0
@@ -106,8 +105,8 @@ steps:
             for installer in `cat $latest_path/target/sonic-installers`; do
               image=$(echo $installer | cut -d, -f1)
               version_image=$(echo $installer | cut -d, -f2)
-              ln -sf $latest_path/target/$version_image $installers_path/$image
-              ln -sf $latest_path/target/$version_image $link_path/$version_image
+              ln -sf $latest_path/target/$image $installers_path/$image
+              ln -sf $latest_path/target/$image $link_path/$version_image
               ln -sf latest/target/$image $link_path/$image
               ln -sf prev/target/$image $link_path/$image.PREV.1
             done

@@ -104,7 +104,6 @@ stages:
               rm -rf target/*.squashfs
               rm rules/config.user
               rm target/docker-sonic-gnmi.gz
-              rm -rf target/*.squashfs
               echo "==== Finished building slim images"
               echo "==== Building swi images"
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
@@ -115,12 +114,11 @@ stages:
               echo "==== Finished building swi images"
               echo "==== Building regular images"
               make $OPTIONS target/sonic-broadcom.bin
+              mv target/sonic-broadcom.bin target/sonic-broadcom-dnx.bin target/release/
               rm -rf target/*.squashfs
-              mv target/sonic-broadcom.bin target/release/
               echo "==== Finished building regular images"
               echo "==== Building syncd-rpc docker"
-              # brcm-rpc failed. it will be fixed on github. TODO
-              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz || failures+=docker-syncd-brcm-rpc.gz
+              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
               echo "==== Finished building syncd-rpc docker"
               echo "==== Building one debug image"
               make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin
@@ -133,7 +131,7 @@ stages:
             displayName: Build SONiC image
           - script: |
               echo $(build_result)
-              [[ "$(build_result)" == '' ]] || exit 1
+              [[ "$(build_result)" == '' ]] && echo "ALL SUCCEEDED" || exit 1
             continueOnError: true
             displayName: Check Result
           - template: /.pipelines/template-poststeps.yml@self
