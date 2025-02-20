@@ -40,31 +40,6 @@ static const char ionic_priv_flags_strings[][ETH_GSTRING_LEN] = {
 
 #define IONIC_PRIV_FLAGS_COUNT ARRAY_SIZE(ionic_priv_flags_strings)
 
-static int ionic_validate_cmb_config(struct ionic_lif *lif,
-				     struct ionic_queue_params *qparam)
-{
-	int pages_have, pages_required = 0;
-	unsigned long sz;
-
-	if (!qparam->cmb_enabled)
-		return 0;
-
-	sz = sizeof(struct ionic_txq_desc) * qparam->ntxq_descs * qparam->nxqs;
-	pages_required += ALIGN(sz, PAGE_SIZE) / PAGE_SIZE;
-
-	sz = sizeof(struct ionic_rxq_desc) * qparam->nrxq_descs * qparam->nxqs;
-	pages_required += ALIGN(sz, PAGE_SIZE) / PAGE_SIZE;
-
-	pages_have = lif->ionic->bars[IONIC_PCI_BAR_CMB].len / PAGE_SIZE;
-	if (pages_required > pages_have) {
-		netdev_info(lif->netdev, "Not enough CMB pages for number of queues and size of descriptor rings, need %d have %d",
-			    pages_required, pages_have);
-		return -ENOMEM;
-	}
-
-	return pages_required;
-}
-
 static void ionic_get_stats_strings(struct ionic_lif *lif, u8 *buf)
 {
 	u32 i;
@@ -165,6 +140,17 @@ static void ionic_get_regs(struct net_device *netdev, struct ethtool_regs *regs,
 	size = IONIC_DEV_CMD_REG_COUNT * sizeof(u32);
 	memcpy_fromio(p + offset, lif->ionic->idev.dev_cmd_regs->words, size);
 }
+
+#if (KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE)
+static void ionic_get_link_ext_stats(struct net_device *netdev,
+				     struct ethtool_link_ext_stats *stats)
+{
+	struct ionic_lif *lif = netdev_priv(netdev);
+
+	if (!lif->ionic->pdev || lif->ionic->pdev->is_physfn)
+		stats->link_down_events = lif->link_down_count;
+}
+#endif
 
 static int ionic_get_link_ksettings(struct net_device *netdev,
 				    struct ethtool_link_ksettings *ks)
@@ -377,7 +363,7 @@ static int ionic_set_link_ksettings(struct net_device *netdev,
 	if (ks->base.autoneg != idev->port_info->config.an_enable) {
 		mutex_lock(&ionic->dev_cmd_lock);
 		ionic_dev_cmd_port_autoneg(idev, ks->base.autoneg);
-		err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+		err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 		mutex_unlock(&ionic->dev_cmd_lock);
 		if (err)
 			return err;
@@ -387,7 +373,7 @@ static int ionic_set_link_ksettings(struct net_device *netdev,
 	if (ks->base.speed != le32_to_cpu(idev->port_info->config.speed)) {
 		mutex_lock(&ionic->dev_cmd_lock);
 		ionic_dev_cmd_port_speed(idev, ks->base.speed);
-		err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+		err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 		mutex_unlock(&ionic->dev_cmd_lock);
 		if (err)
 			return err;
@@ -437,7 +423,7 @@ static int ionic_set_pauseparam(struct net_device *netdev,
 
 	mutex_lock(&ionic->dev_cmd_lock);
 	ionic_dev_cmd_port_pause(&lif->ionic->idev, requested_pause);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	mutex_unlock(&ionic->dev_cmd_lock);
 	if (err)
 		return err;
@@ -514,15 +500,15 @@ static int ionic_set_fecparam(struct net_device *netdev,
 		break;
 	case ETHTOOL_FEC_AUTO:
 	default:
-		netdev_err(netdev, "FEC request 0x%04x not supported\n",
+		netdev_dbg(netdev, "FEC request 0x%04x not supported\n",
 			   fec->fec);
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	if (fec_type != lif->ionic->idev.port_info->config.fec_type) {
 		mutex_lock(&lif->ionic->dev_cmd_lock);
 		ionic_dev_cmd_port_fec(&lif->ionic->idev, fec_type);
-		ret = ionic_dev_cmd_wait(lif->ionic, devcmd_timeout);
+		ret = ionic_dev_cmd_wait(lif->ionic, DEVCMD_TIMEOUT);
 		mutex_unlock(&lif->ionic->dev_cmd_lock);
 	}
 
@@ -591,12 +577,6 @@ static int ionic_set_coalesce(struct net_device *netdev,
 	    coalesce->rate_sample_interval)
 		return -EINVAL;
 
-	if (lif->ionic->neth_eqs &&
-	    (coalesce->use_adaptive_rx_coalesce ||
-	     coalesce->use_adaptive_tx_coalesce)) {
-		return -EINVAL;
-	}
-
 	ident = &lif->ionic->ident;
 	if (ident->dev.intr_coal_div == 0) {
 		netdev_warn(netdev, "bad HW value in dev.intr_coal_div = %d\n",
@@ -659,6 +639,8 @@ static int ionic_set_coalesce(struct net_device *netdev,
 						     lif->rxqcqs[i]->intr.index,
 						     lif->rx_coalesce_hw);
 				lif->rxqcqs[i]->intr.dim_coal_hw = rx_dim;
+				lif->rxqcqs[i]->intr.dim_coal_usecs =
+							lif->rx_coalesce_usecs;
 			}
 
 			if (lif->txqcqs[i]->flags & IONIC_QCQ_F_INTR) {
@@ -666,9 +648,100 @@ static int ionic_set_coalesce(struct net_device *netdev,
 						     lif->txqcqs[i]->intr.index,
 						     lif->tx_coalesce_hw);
 				lif->txqcqs[i]->intr.dim_coal_hw = tx_dim;
+				lif->txqcqs[i]->intr.dim_coal_usecs =
+							lif->tx_coalesce_usecs;
 			}
 		}
 	}
+
+	return 0;
+}
+
+static int ionic_validate_cmb_config(struct ionic_lif *lif,
+				     struct ionic_queue_params *qparam)
+{
+	int pages_have, pages_required = 0;
+	unsigned long sz;
+
+	if (!lif->ionic->idev.cmb_inuse &&
+	    (qparam->cmb_tx || qparam->cmb_rx)) {
+		netdev_info(lif->netdev, "CMB rings are not supported on this device\n");
+		return -EOPNOTSUPP;
+	}
+
+	if (qparam->cmb_tx) {
+		if (!(lif->qtype_info[IONIC_QTYPE_TXQ].features & IONIC_QIDENT_F_CMB)) {
+			netdev_info(lif->netdev,
+				    "CMB rings for tx-push are not supported on this device\n");
+			return -EOPNOTSUPP;
+		}
+
+		sz = sizeof(struct ionic_txq_desc) * qparam->ntxq_descs * qparam->nxqs;
+		pages_required += ALIGN(sz, PAGE_SIZE) / PAGE_SIZE;
+	}
+
+	if (qparam->cmb_rx) {
+		if (!(lif->qtype_info[IONIC_QTYPE_RXQ].features & IONIC_QIDENT_F_CMB)) {
+			netdev_info(lif->netdev,
+				    "CMB rings for rx-push are not supported on this device\n");
+			return -EOPNOTSUPP;
+		}
+
+		sz = sizeof(struct ionic_rxq_desc) * qparam->nrxq_descs * qparam->nxqs;
+		pages_required += ALIGN(sz, PAGE_SIZE) / PAGE_SIZE;
+	}
+
+	pages_have = lif->ionic->bars[IONIC_PCI_BAR_CMB].len / PAGE_SIZE;
+	if (pages_required > pages_have) {
+		netdev_info(lif->netdev,
+			    "Not enough CMB pages for number of queues and size of descriptor rings, need %d have %d",
+			    pages_required, pages_have);
+		return -ENOMEM;
+	}
+
+	return pages_required;
+}
+
+int ionic_cmb_pages_in_use(struct ionic_lif *lif)
+{
+	struct ionic_queue_params qparam;
+
+	ionic_init_queue_params(lif, &qparam);
+	return ionic_validate_cmb_config(lif, &qparam);
+}
+
+static int ionic_cmb_rings_toggle(struct ionic_lif *lif, bool cmb_tx, bool cmb_rx)
+{
+	struct ionic_queue_params qparam;
+	int pages_used;
+
+	if (netif_running(lif->netdev)) {
+		netdev_info(lif->netdev, "Please stop device to toggle CMB for tx/rx-push\n");
+		return -EBUSY;
+	}
+
+	ionic_init_queue_params(lif, &qparam);
+	qparam.cmb_tx = cmb_tx;
+	qparam.cmb_rx = cmb_rx;
+	pages_used = ionic_validate_cmb_config(lif, &qparam);
+	if (pages_used < 0)
+		return pages_used;
+
+	if (cmb_tx)
+		set_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
+	else
+		clear_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
+
+	if (cmb_rx)
+		set_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
+	else
+		clear_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
+
+	if (cmb_tx || cmb_rx)
+		netdev_info(lif->netdev, "Enabling CMB %s %s rings - %d pages\n",
+			    cmb_tx ? "TX" : "", cmb_rx ? "RX" : "", pages_used);
+	else
+		netdev_info(lif->netdev, "Disabling CMB rings\n");
 
 	return 0;
 }
@@ -689,6 +762,10 @@ static void ionic_get_ringparam(struct net_device *netdev,
 	ring->tx_pending = lif->ntxq_descs;
 	ring->rx_max_pending = IONIC_MAX_RX_DESC;
 	ring->rx_pending = lif->nrxq_descs;
+#ifdef HAVE_RX_PUSH
+	kernel_ring->tx_push = test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state);
+	kernel_ring->rx_push = test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state);
+#endif
 }
 
 #ifdef HAVE_RINGPARAM_EXTACK
@@ -704,6 +781,9 @@ static int ionic_set_ringparam(struct net_device *netdev,
 	struct ionic_lif *lif = netdev_priv(netdev);
 	struct ionic_queue_params qparam;
 	int err;
+
+	if (test_bit(IONIC_LIF_F_FW_RESET, lif->state))
+		return -EBUSY;
 
 	ionic_init_queue_params(lif, &qparam);
 
@@ -734,16 +814,36 @@ static int ionic_set_ringparam(struct net_device *netdev,
 
 	/* if nothing to do return success */
 	if (ring->tx_pending == lif->ntxq_descs &&
-	    ring->rx_pending == lif->nrxq_descs)
+	    ring->rx_pending == lif->nrxq_descs
+#ifdef HAVE_RX_PUSH
+	    &&
+	    kernel_ring->tx_push == test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state) &&
+	    kernel_ring->rx_push == test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state)
+#endif
+	    )
 		return 0;
 
 	qparam.ntxq_descs = ring->tx_pending;
 	qparam.nrxq_descs = ring->rx_pending;
+#ifdef HAVE_RX_PUSH
+	qparam.cmb_tx = kernel_ring->tx_push;
+	qparam.cmb_rx = kernel_ring->rx_push;
+#endif
 
 	err = ionic_validate_cmb_config(lif, &qparam);
 	if (err < 0)
 		return err;
 
+#ifdef HAVE_RX_PUSH
+	if (kernel_ring->tx_push != test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state) ||
+	    kernel_ring->rx_push != test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state)) {
+		err = ionic_cmb_rings_toggle(lif, kernel_ring->tx_push,
+					     kernel_ring->rx_push);
+		if (err < 0)
+			return err;
+	}
+
+#endif
 	if (ring->tx_pending != lif->ntxq_descs)
 		netdev_info(netdev, "Changing Tx ring size from %d to %d\n",
 			    lif->ntxq_descs, ring->tx_pending);
@@ -775,10 +875,8 @@ static void ionic_get_channels(struct net_device *netdev,
 
 	/* report maximum channels */
 	ch->max_combined = lif->ionic->ntxqs_per_lif;
-	if (!ionic_use_eqs(lif)) {
-		ch->max_rx = lif->ionic->ntxqs_per_lif / 2;
-		ch->max_tx = lif->ionic->ntxqs_per_lif / 2;
-	}
+	ch->max_rx = lif->ionic->ntxqs_per_lif / 2;
+	ch->max_tx = lif->ionic->ntxqs_per_lif / 2;
 
 	/* report current channels */
 	if (test_bit(IONIC_LIF_F_SPLIT_INTR, lif->state)) {
@@ -796,6 +894,9 @@ static int ionic_set_channels(struct net_device *netdev,
 	struct ionic_queue_params qparam;
 	int max_cnt;
 	int err;
+
+	if (test_bit(IONIC_LIF_F_FW_RESET, lif->state))
+		return -EBUSY;
 
 	ionic_init_queue_params(lif, &qparam);
 
@@ -816,11 +917,6 @@ static int ionic_set_channels(struct net_device *netdev,
 
 	if (ch->rx_count != ch->tx_count) {
 		netdev_info(netdev, "The rx and tx count must be equal\n");
-		return -EINVAL;
-	}
-
-	if (ionic_use_eqs(lif) && ch->rx_count) {
-		netdev_info(netdev, "Separate rx and tx count not available when using EventQueues\n");
 		return -EINVAL;
 	}
 
@@ -890,52 +986,23 @@ static int ionic_set_channels(struct net_device *netdev,
 	return err;
 }
 
-int ionic_cmb_pages_in_use(struct ionic_lif *lif)
+static int ionic_get_rxnfc(struct net_device *netdev,
+			   struct ethtool_rxnfc *info, u32 *rules)
 {
-	struct ionic_queue_params qparam;
+	struct ionic_lif *lif = netdev_priv(netdev);
+	int err = 0;
 
-	ionic_init_queue_params(lif, &qparam);
-	return ionic_validate_cmb_config(lif, &qparam);
-}
-
-static int ionic_cmb_rings_toggle(struct ionic_lif *lif, bool cmb_enable)
-{
-	struct ionic_queue_params qparam;
-	int pages_used;
-
-	if (!(lif->qtype_info[IONIC_QTYPE_TXQ].features & IONIC_QIDENT_F_CMB) ||
-	    !(lif->qtype_info[IONIC_QTYPE_RXQ].features & IONIC_QIDENT_F_CMB) ||
-	    !lif->ionic->idev.cmb_npages) {
-		netdev_info(lif->netdev, "CMB rings are not supported on this device\n");
-		return -EOPNOTSUPP;
+	switch (info->cmd) {
+	case ETHTOOL_GRXRINGS:
+		info->data = lif->nxqs;
+		break;
+	default:
+		netdev_dbg(netdev, "Command parameter %d is not supported\n",
+			   info->cmd);
+		err = -EOPNOTSUPP;
 	}
 
-	if (netif_running(lif->netdev))
-		return -EBUSY;
-
-	ionic_init_queue_params(lif, &qparam);
-	qparam.cmb_enabled = cmb_enable;
-	pages_used = ionic_validate_cmb_config(lif, &qparam);
-	if (pages_used < 0)
-		return pages_used;
-
-	if (cmb_enable) {
-		netdev_info(lif->netdev, "Enabling CMB rings - %d pages\n",
-			    pages_used);
-		set_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
-	} else {
-		netdev_info(lif->netdev, "Disabling CMB rings\n");
-		clear_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
-	}
-
-	/* We are currently restricting CMB mode enable/disable to
-	 * only when the driver is DOWN, in order to keep reconfig
-	 * thrash to a minimum and to keep the reconfig code simpler.
-	 * In the future when we relax this requirement we can call
-	 * ionic_reconfigure_queues() here.
-	 */
-
-	return 0;
+	return err;
 }
 
 static u32 ionic_get_priv_flags(struct net_device *netdev)
@@ -949,7 +1016,8 @@ static u32 ionic_get_priv_flags(struct net_device *netdev)
 	if (test_bit(IONIC_LIF_F_RDMA_SNIFFER, lif->state))
 		priv_flags |= IONIC_PRIV_F_RDMA_SNIFFER;
 
-	if (test_bit(IONIC_LIF_F_CMB_RINGS, lif->state))
+	if (test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state) ||
+	    test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state))
 		priv_flags |= IONIC_PRIV_F_CMB_RINGS;
 
 	return priv_flags;
@@ -958,12 +1026,14 @@ static u32 ionic_get_priv_flags(struct net_device *netdev)
 static int ionic_set_priv_flags(struct net_device *netdev, u32 priv_flags)
 {
 	struct ionic_lif *lif = netdev_priv(netdev);
-	bool cmb_now, cmb_req;
+	bool cmb_req;
 	int rdma;
 	int ret;
 
-	if (priv_flags & IONIC_PRIV_F_DEVICE_RESET)
-		ionic_device_reset(lif);
+	if (priv_flags & IONIC_PRIV_F_DEVICE_RESET) {
+		ionic_reset_prepare(lif->ionic->pdev);
+		ionic_reset_done(lif->ionic->pdev);
+	}
 
 	clear_bit(IONIC_LIF_F_SW_DEBUG_STATS, lif->state);
 	if (priv_flags & IONIC_PRIV_F_SW_DBG_STATS)
@@ -977,34 +1047,17 @@ static int ionic_set_priv_flags(struct net_device *netdev, u32 priv_flags)
 	if (rdma != test_bit(IONIC_LIF_F_RDMA_SNIFFER, lif->state))
 		ionic_lif_rx_mode(lif);
 
-	cmb_now = test_bit(IONIC_LIF_F_CMB_RINGS, lif->state);
 	cmb_req = !!(priv_flags & IONIC_PRIV_F_CMB_RINGS);
-	if (cmb_now != cmb_req) {
-		ret = ionic_cmb_rings_toggle(lif, cmb_req);
+	if ((cmb_req && !(test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state) &&
+			  test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state))) ||
+	    (!cmb_req && (test_bit(IONIC_LIF_F_CMB_TX_RINGS, lif->state) ||
+			  test_bit(IONIC_LIF_F_CMB_RX_RINGS, lif->state)))) {
+		ret = ionic_cmb_rings_toggle(lif, cmb_req, cmb_req);
 		if (ret < 0)
 			return ret;
 	}
 
 	return 0;
-}
-
-static int ionic_get_rxnfc(struct net_device *netdev,
-			   struct ethtool_rxnfc *info, u32 *rules)
-{
-	struct ionic_lif *lif = netdev_priv(netdev);
-	int err = 0;
-
-	switch (info->cmd) {
-	case ETHTOOL_GRXRINGS:
-		info->data = lif->nxqs;
-		break;
-	default:
-		netdev_err(netdev, "Command parameter %d is not supported\n",
-			   info->cmd);
-		err = -EOPNOTSUPP;
-	}
-
-	return err;
 }
 
 static u32 ionic_get_rxfh_indir_size(struct net_device *netdev)
@@ -1281,11 +1334,11 @@ static int ionic_nway_reset(struct net_device *netdev)
 	mutex_lock(&ionic->dev_cmd_lock);
 
 	ionic_dev_cmd_port_state(&ionic->idev, IONIC_PORT_ADMIN_STATE_DOWN);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 
 	if (!err) {
 		ionic_dev_cmd_port_state(&ionic->idev, IONIC_PORT_ADMIN_STATE_UP);
-		err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+		err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	}
 
 	mutex_unlock(&ionic->dev_cmd_lock);
@@ -1310,10 +1363,17 @@ static const struct ethtool_ops ionic_ethtool_ops = {
 				     ETHTOOL_COALESCE_USE_ADAPTIVE_RX |
 				     ETHTOOL_COALESCE_USE_ADAPTIVE_TX,
 #endif
+#ifdef HAVE_RX_PUSH
+	.supported_ring_params = ETHTOOL_RING_USE_TX_PUSH |
+				 ETHTOOL_RING_USE_RX_PUSH,
+#endif
 	.get_drvinfo		= ionic_get_drvinfo,
 	.get_regs_len		= ionic_get_regs_len,
 	.get_regs		= ionic_get_regs,
 	.get_link		= ethtool_op_get_link,
+#if (KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE)
+	.get_link_ext_stats	= ionic_get_link_ext_stats,
+#endif
 	.get_link_ksettings	= ionic_get_link_ksettings,
 	.set_link_ksettings	= ionic_set_link_ksettings,
 	.get_coalesce		= ionic_get_coalesce,

@@ -145,9 +145,9 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
 # Install Python module for grpcio and grpcio-toole
-if [[ $CONFIGURED_ARCH == amd64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.51.1"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.51.1"
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.58.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
 fi
 
 # Install sonic-py-common Python 3 package
@@ -367,22 +367,6 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-db-cli_*.deb || \
 # Install sonic-rsyslog-plugin
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-rsyslog-plugin_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-
-# Generate host conf for rsyslog_plugin
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/host_events.conf
-sudo cp $BUILD_TEMPLATES/monit_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/sshd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/systemd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/kernel_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/dockerd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/seu_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/zebra_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/bgpd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
-
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/syncd_events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/syncd_events.conf
-sudo cp $BUILD_TEMPLATES/syncd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
 {% endif %}
 
 # Install custom-built monit package and SONiC configuration files
@@ -1068,7 +1052,12 @@ sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_S
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
 
+# All Python development packages must be removed, as they will conflict with the dependencies of the Python FIPS packages
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libpython3-dev
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^python3\.[0-9]+-dev'
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y '^libpython3\.[0-9]+-dev'
+
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsystemd-dev pkg-config
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get clean -y
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get autoremove -y
@@ -1192,6 +1181,15 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+# Install FIPS python package will break apt-get purge command, so install after all purge command finish 
+if [ "$INCLUDE_FIPS" == y ]; then
+    {% if installer_python_debs.strip() -%}
+    {% for deb in installer_python_debs.strip().split(' ') -%}
+    sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+    {% endfor %}
+    {% endif %}
+fi
 
 
 {% if installer_debs.strip() -%}
