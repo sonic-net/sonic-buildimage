@@ -18,8 +18,15 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 1024
-ORCHAGENT_ARGS+="-b 1024 "
+LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
+    # Set orchagent pop batch size to 128 for faster link notification handling 
+    # during route-churn
+    ORCHAGENT_ARGS+="-b 128 "
+else
+    # Set orchagent pop batch size to 1024
+    ORCHAGENT_ARGS+="-b 1024 "
+fi
 
 # Set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
@@ -66,7 +73,10 @@ elif [ "$platform" == "marvell-teralynx" ]; then
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
-    MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
+    MAC_ADDRESS=$(ip link show int_mnic0 | grep ether | awk '{print $2}')
+    if [ "$MAC_ADDRESS" == "" ]; then
+        MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
+    fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "marvell" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
