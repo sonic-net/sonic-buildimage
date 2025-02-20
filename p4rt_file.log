@@ -1,0 +1,325 @@
++++ --- Making target/docker-sonic-p4rt.gz --- +++
+./scripts/run_with_retry make BLDENV=bookworm -f Makefile.work target/docker-sonic-p4rt.gz
+make[1]: Entering directory '/usr/local/google/home/divyagayathris/p4rt_sub_module_update/sonic-buildimage'
+"SECURE_UPGRADE_PROD_SIGNING_TOOL": ""
+~/p4rt_sub_module_update/sonic-buildimage/src/sonic-build-hooks ~/p4rt_sub_module_update/sonic-buildimage
+make[2]: Entering directory '/usr/local/google/home/divyagayathris/p4rt_sub_module_update/sonic-buildimage/src/sonic-build-hooks'
+dpkg-deb: building package 'sonic-build-hooks' in 'buildinfo/sonic-build-hooks_1.0_all.deb'.
+make[2]: Leaving directory '/usr/local/google/home/divyagayathris/p4rt_sub_module_update/sonic-buildimage/src/sonic-build-hooks'
+~/p4rt_sub_module_update/sonic-buildimage
+Checking sonic-slave-base image: sonic-slave-bookworm:858e747525a
+Checking sonic-slave-user image: sonic-slave-bookworm-divyagayathris:e9d7cab737d
+SONiC Build System
+
+Build Configuration
+"CONFIGURED_PLATFORM"             : "vs"
+"CONFIGURED_ARCH"                 : "amd64"
+"SONIC_CONFIG_PRINT_DEPENDENCIES" : ""
+"SONIC_BUILD_JOBS"                : "12"
+"SONIC_CONFIG_MAKE_JOBS"          : "96"
+"USE_NATIVE_DOCKERD_FOR_BUILD"    : ""
+"SONIC_USE_DOCKER_BUILDKIT"       : ""
+"USERNAME"                        : "admin"
+"PASSWORD"                        : "YourPaSsWoRd"
+"CHANGE_DEFAULT_PASSWORD"         : "n"
+"SECURE_UPGRADE_MODE"             : "no_sign"
+"SECURE_UPGRADE_DEV_SIGNING_KEY"  : ""
+"SECURE_UPGRADE_SIGNING_CERT"     : ""
+"SECURE_UPGRADE_PROD_SIGNING_TOOL": ""
+"SECURE_UPGRADE_PROD_TOOL_ARGS"   : ""
+"ONIE_IMAGE_PART_SIZE"            : ""
+"SHUTDOWN_BGP_ON_START"           : ""
+"ENABLE_PFCWD_ON_START"           : ""
+"SONIC_BUFFER_MODEL"              : ""
+"INSTALL_DEBUG_TOOLS"             : ""
+"ROUTING_STACK"                   : "frr"
+"FRR_USER_UID"                    : "300"
+"FRR_USER_GID"                    : "300"
+"ENABLE_SYNCD_RPC"                : ""
+"SAITHRIFT_V2"                    : ""
+"ENABLE_ORGANIZATION_EXTENSIONS"  : "y"
+"HTTP_PROXY"                      : ""
+"HTTPS_PROXY"                     : ""
+"NO_PROXY"                        : ""
+"ENABLE_ZTP"                      : ""
+"INCLUDE_PDE"                     : ""
+"SONIC_DEBUGGING_ON"              : ""
+"SONIC_PROFILING_ON"              : ""
+"KERNEL_PROCURE_METHOD"           : "build"
+"BUILD_TIMESTAMP"                 : "20250210.154553"
+"BUILD_LOG_TIMESTAMP"             : "none"
+"SONIC_IMAGE_VERSION"             : "p4rt_sub_module_1.0-99e161b7c"
+"BLDENV"                          : "bookworm"
+"VS_PREPARE_MEM"                  : "yes"
+"INCLUDE_MGMT_FRAMEWORK"          : "y"
+"INCLUDE_ICCPD"                   : "n"
+"INCLUDE_SYSTEM_TELEMETRY"        : "n"
+"INCLUDE_SYSTEM_GNMI"             : "y"
+"INCLUDE_SYSTEM_BMP"              : "y"
+"INCLUDE_SYSTEM_EVENTD"           : "y"
+"ENABLE_HOST_SERVICE_ON_START"    : "y"
+"INCLUDE_RESTAPI"                 : "n"
+"INCLUDE_SFLOW"                   : "y"
+"INCLUDE_NAT"                     : "y"
+"INCLUDE_DHCP_RELAY"              : "y"
+"INCLUDE_DHCP_SERVER"             : "n"
+"INCLUDE_P4RT"                    : "n"
+"INCLUDE_KUBERNETES"              : "n"
+"INCLUDE_KUBERNETES_MASTER"       : "n"
+"INCLUDE_MACSEC"                  : "y"
+"INCLUDE_MUX"                     : "y"
+"INCLUDE_TEAMD"                   : "y"
+"INCLUDE_ROUTER_ADVERTISER"       : "y"
+"INCLUDE_BOOTCHART                : "y"
+"ENABLE_BOOTCHART                 : "n"
+"INCLUDE_FIPS"                    : "y"
+"ENABLE_TRANSLIB_WRITE"           : ""
+"ENABLE_NATIVE_WRITE"             : "y"
+"ENABLE_DIALOUT"                  : ""
+"ENABLE_AUTO_TECH_SUPPORT"        : "y"
+"PDDF_SUPPORT"                    : "y"
+"MULTIARCH_QEMU_ENVIRON"          : "n"
+"SONIC_VERSION_CONTROL_COMPONENTS": "deb,py2,py3,web,git,docker"
+"ENABLE_ASAN"                     : "n"
+"DEFAULT_CONTAINER_REGISTRY"      : "publicmirror.azurecr.io/"
+"BUILD_MULTIASIC_KVM"             : "n"
+"CROSS_BUILD_ENVIRON"             : "n"
+"LEGACY_SONIC_MGMT_DOCKER"        : "y"
+"INCLUDE_EXTERNAL_PATCHES"        : "n"
+"PTF_ENV_PY_VER"                  : "mixed"
+"ENABLE_MULTIDB"                  : ""
+
+mv: cannot move '/etc/apt/sources.list.d/debian.sources' to '/etc/apt/sources.list.d/debian.sources.back': Permission denied
+"SONIC_DPKG_CACHE_METHOD"         : "none"
+
+[ 01 ] [ target/debs/bookworm/libnl-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 03 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 03 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 04 ] [ target/docker-base-bookworm.gz-load ]
+[A[K[A[K[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 03 ] [ target/docker-base-bookworm.gz-load ]
+[A[K[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 03 ] [ target/debs/bookworm/libnl-genl-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 03 ] [ target/debs/bookworm/libnl-genl-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[A[K[ 01 ] [ target/debs/bookworm/libyang_1.0.73_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[ 02 ] [ target/debs/bookworm/libyang-dev_1.0.73_amd64.deb-install ]
+[A[K[A[K[ 01 ] [ target/debs/bookworm/libnl-route-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-route-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-nf-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-nf-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-cli-3-200_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libnl-cli-3-dev_3.7.0-0.2+b1sonic1_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libswsscommon_1.0.0_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/libswsscommon-dev_1.0.0_amd64.deb-install ]
+[A[K[ 01 ] [ target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb ]
+[A[K[ 01 ] [ target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb ]
+[ 02 ] [ target/docker-config-engine-bookworm.gz ]
+[A[K[A[K[ FAIL LOG START ] [ target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb ]
+Build start time: Mon Feb 10 15:46:24 UTC 2025
+[ REASON ] :      target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb does not exist   NON-EXISTENT PREREQUISITES: target/debs/bookworm/libswsscommon-dev_1.0.0_amd64.deb-install 
+[ FLAGS  FILE    ] : [] 
+[ FLAGS  DEPENDS ] : [] 
+[ FLAGS  DIFF    ] : [] 
+make[1]: warning: -j96 forced in submake: resetting jobserver mode.
+make[1]: Entering directory '/sonic/src/sonic-p4rt'
+function cleanup {
+# Note: make seems to hang if Bazel is still running
+cd /sonic/src/sonic-p4rt/sonic-pins && bazel  shutdown
+}
+trap cleanup EXIT
+pushd ./sonic-pins
+bazel  build --fission=yes --features=per_object_debug_info --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common --copt=-Wno-array-bounds --copt=-Wno-stringop-overflow -c opt //p4rt_app:p4rt_deb //p4rt_app:p4rt_dbg_deb
+bazel  test --fission=yes --features=per_object_debug_info --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common --copt=-Wno-array-bounds --copt=-Wno-stringop-overflow -c opt //p4rt_app/...
+cd ./bazel-bin/p4rt_app
+mv sonic-p4rt_0.0.1_amd64.deb sonic-p4rt-dbgsym_0.0.1_amd64.deb /sonic/target/debs/bookworm/
+popd
+/sonic/src/sonic-p4rt/sonic-pins /sonic/src/sonic-p4rt
+2025/02/10 15:46:24 Downloading https://releases.bazel.build/6.4.0/release/bazel-6.4.0-linux-x86_64...
+Extracting Bazel installation...
+Starting local Bazel server and connecting to it...
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: 2 targets (1 packages loaded, 0 targets configured)
+Analyzing: 2 targets (2 packages loaded, 0 targets configured)
+Analyzing: 2 targets (37 packages loaded, 14 targets configured)
+Analyzing: 2 targets (55 packages loaded, 450 targets configured)
+Analyzing: 2 targets (115 packages loaded, 1790 targets configured)
+Analyzing: 2 targets (176 packages loaded, 4020 targets configured)
+Analyzing: 2 targets (191 packages loaded, 4636 targets configured)
+Analyzing: 2 targets (193 packages loaded, 4814 targets configured)
+Analyzing: 2 targets (193 packages loaded, 4814 targets configured)
+Analyzing: 2 targets (195 packages loaded, 5508 targets configured)
+Analyzing: 2 targets (195 packages loaded, 5508 targets configured)
+Analyzing: 2 targets (199 packages loaded, 13478 targets configured)
+Analyzing: 2 targets (201 packages loaded, 13478 targets configured)
+INFO: Analyzed 2 targets (203 packages loaded, 14005 targets configured).
+ checking cached actions
+INFO: Found 2 targets...
+[0 / 434] [Prepa] Writing file p4rt_app/p4rt_binaries.args ... (67 actions, 31 running)
+[592 / 3,227] Compiling googletest/src/gtest-death-test.cc; 0s linux-sandbox ... (95 actions, 94 running)
+[767 / 3,227] Compiling googletest/src/gtest-death-test.cc; 1s linux-sandbox ... (96 actions, 95 running)
+[956 / 3,227] Compiling googletest/src/gtest-death-test.cc; 2s linux-sandbox ... (96 actions, 95 running)
+INFO: From CcGenerateIntermediateDwp p4rt_app/_dwps/p4rt_app/p4rt-9.dwp:
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-9.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-9.dwp: duplicate entry for CU (dwo_id 0x0)
+[1,079 / 3,227] Compiling googletest/src/gtest-death-test.cc; 4s linux-sandbox ... (96 actions, 95 running)
+INFO: From CcGenerateIntermediateDwp p4rt_app/_dwps/p4rt_app/p4rt-8.dwp:
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-8.dwp: duplicate entry for CU (dwo_id 0x0)
+[1,227 / 3,227] Compiling googletest/src/gtest.cc; 5s linux-sandbox ... (96 actions, 95 running)
+INFO: From Compiling p4rt_app/sonic/adapters/table_adapter.cc:
+p4rt_app/sonic/adapters/table_adapter.cc: In member function 'virtual void p4rt_app::sonic::TableAdapter::batch_del(const std::vector<std::__cxx11::basic_string<char> >&)':
+p4rt_app/sonic/adapters/table_adapter.cc:65:21: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<std::__cxx11::basic_string<char> >::size_type' {aka 'long unsigned int'} [-Wsign-compare]
+   65 |   for (int i = 0; i < keys.size(); ++i) {
+      |                   ~~^~~~~~~~~~~~~
+INFO: From CcGenerateIntermediateDwp p4rt_app/_dwps/p4rt_app/p4rt-7.dwp:
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-7.dwp: duplicate entry for CU (dwo_id 0x0)
+[1,282 / 3,227] Compiling googletest/src/gtest.cc; 6s linux-sandbox ... (96 actions, 95 running)
+[1,355 / 3,227] Compiling googletest/src/gtest.cc; 7s linux-sandbox ... (96 actions, 95 running)
+[1,413 / 3,227] Compiling googletest/src/gtest.cc; 8s linux-sandbox ... (96 actions, 95 running)
+INFO: From Compiling src/google/protobuf/compiler/retention.cc [for tool]:
+external/com_google_protobuf/src/google/protobuf/compiler/retention.cc: In function 'void google::protobuf::compiler::{anonymous}::StripSourceCodeInfo(std::vector<std::vector<int> >&, google::protobuf::SourceCodeInfo&)':
+external/com_google_protobuf/src/google/protobuf/compiler/retention.cc:216:21: warning: comparison of integer expressions of different signedness: 'int' and 'std::vector<google::protobuf::SourceCodeInfo_Location*>::size_type' {aka 'long unsigned int'} [-Wsign-compare]
+  216 |   for (int i = 0; i < old_locations.size(); ++i) {
+      |                   ~~^~~~~~~~~~~~~~~~~~~~~~
+[1,460 / 3,227] Compiling googletest/src/gtest.cc; 9s linux-sandbox ... (96 actions running)
+[1,502 / 3,227] Compiling googletest/src/gtest.cc; 10s linux-sandbox ... (96 actions, 95 running)
+[1,543 / 3,227] Compiling googletest/src/gtest.cc; 11s linux-sandbox ... (95 actions, 94 running)
+[1,593 / 3,227] Compiling googletest/src/gtest.cc; 12s linux-sandbox ... (96 actions, 95 running)
+ERROR: /sonic/src/sonic-p4rt/sonic-pins/p4rt_app/BUILD.bazel:25:10: CcGenerateIntermediateDwp p4rt_app/_dwps/p4rt_app/p4rt-1.dwp failed: (Segmentation fault): dwp failed: error executing command (from target //p4rt_app:p4rt) /usr/bin/dwp bazel-out/k8-opt/bin/external/com_github_gflags_gflags/_objs/gflags/gflags.dwo bazel-out/k8-opt/bin/external/com_github_gflags_gflags/_objs/gflags/gflags_completions.dwo ... (remaining 100 arguments skipped)
+
+Use --sandbox_debug to see verbose messages from the sandbox and retain the sandbox build root for debugging
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+/usr/bin/dwp: warning: bazel-out/k8-opt/bin/p4rt_app/_dwps/p4rt_app/p4rt-1.dwp: duplicate entry for CU (dwo_id 0x0)
+[1,704 / 3,227] Compiling libs/graph/src/read_graphviz_new.cpp; 8s linux-sandbox ... (10 actions running)
+INFO: Elapsed time: 52.289s, Critical Path: 12.85s
+INFO: 1714 processes: 554 internal, 1160 linux-sandbox.
+FAILED: Build did NOT complete successfully
+make[1]: *** [Makefile:38: /sonic/target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb] Error 1
+make[1]: Leaving directory '/sonic/src/sonic-p4rt'
+[  FAIL LOG END  ] [ target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb ]
+make: *** [slave.mk:750: target/debs/bookworm/sonic-p4rt_0.0.1_amd64.deb] Error 1
+make: *** Waiting for unfinished jobs....
+[ 01 ] [ target/docker-config-engine-bookworm.gz ]
+[A[Kmake[1]: *** [Makefile.work:611: target/docker-sonic-p4rt.gz] Error 2
+make[1]: Leaving directory '/usr/local/google/home/divyagayathris/p4rt_sub_module_update/sonic-buildimage'
+make: *** [Makefile:48: target/docker-sonic-p4rt.gz] Error 2
