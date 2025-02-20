@@ -42,7 +42,7 @@ stages:
     - script: |
         set -x
         sudo setfacl -R -b $(Agent.BuildDirectory)
-        displayName: 'setfacl'
+      displayName: 'setfacl'
 
     - bash: |
         set -xe
