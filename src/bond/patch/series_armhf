@@ -1,2 +1,2 @@
 0001-Add-debian-packaging-files.patch
-0002-Fixes-for-arm64-build.patch
+0002-Fixes-for-armhf-build.patch
