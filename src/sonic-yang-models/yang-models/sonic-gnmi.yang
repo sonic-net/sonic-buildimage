@@ -85,6 +85,13 @@ module sonic-gnmi {
                     type uint32;
                     description "Certificate revocation list cache expire duration.";
                 }
+
+                leaf user_auth {
+                    type string {
+                        pattern 'password|jwt|cert';
+                    }
+                    description "GNMI service user authorization type.";
+                }
             }
         }
 
@@ -92,7 +99,6 @@ module sonic-gnmi {
             description "GNMI client cert list";
 
             list GNMI_CLIENT_CERT_LIST {
-                max-elements 8;
                 key "cert_cname";
 
                 leaf cert_cname {
