@@ -73,7 +73,8 @@ route-map FROM_BGP_PEER_V6 permit 13
 {% else %}
   set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
 {% endif %}
-  set community {{ constants.bgp.internal_fallback_community }} additive                                                                                                                                         {% endif %}
+  set community {{ constants.bgp.internal_fallback_community }} additive
+{% endif %}
 {% endif %}
 !
 {% endif %}
