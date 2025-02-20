@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "x86_64-ufispace_s9321_64eo-r0": {
+            "component": {
+                "CPU_CPLD": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "FPGA": { },
+                "BIOS": { },
+                "BMC": {}
+            }
+        }
+    }
+}
