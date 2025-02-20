@@ -35,16 +35,20 @@ class PrefixListMgr(Manager):
         """
         cmd = "\n"
         metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
-        bgp_asn = metadata["bgp_asn"]
-        localhost_type = metadata["type"]
-        subtype = metadata["subtype"]
+        try:
+            bgp_asn = metadata["bgp_asn"]
+            localhost_type = metadata["type"]
+            subtype = metadata["subtype"]
+        except KeyError as e:
+            log_warn(f"PrefixListMgr:: Missing metadata key: {e}")
+            return False
 
         if data["prefix_list_name"] != "ANCHOR_PREFIX":
             log_warn("PrefixListMgr:: Prefix list %s is not supported" % data["prefix_list_name"])
-            return
+            return False
         if localhost_type != "SpineRouter" or subtype != "UpstreamLC":
             log_warn("PrefixListMgr:: Prefix list %s is only supported on UpstreamLC of SpineRouter" % data["prefix_list_name"])
-            return
+            return False
 
         # Add the anchor prefix to the radian configuration
         data["bgp_asn"] = bgp_asn
@@ -56,6 +60,7 @@ class PrefixListMgr(Manager):
             cmd += self.templates["del_radian"].render(data=data)
             log_debug("PrefixListMgr:: Anchor prefix %s removed from radian configuration" % data["prefix"])	
         self.cfg_mgr.push(cmd)
+        return True
             
         
 
@@ -72,11 +77,11 @@ class PrefixListMgr(Manager):
             data["prefix"] = str(prefix.cidr)
             data["ipv"] = self.get_ip_type(prefix)
             # Generate the prefix list configuration
-            self.generate_prefix_list_config(data, add=True)
-            log_info("PrefixListMgr:: %s %s configuration generated" % (prefix_list_name, data["prefix"]))
+            if self.generate_prefix_list_config(data, add=True):
+                log_info("PrefixListMgr:: %s %s configuration generated" % (prefix_list_name, data["prefix"]))
 
-            self.directory.put(self.db_name, self.table_name, key, data)
-            log_info("PrefixListMgr:: set %s" % key)
+                self.directory.put(self.db_name, self.table_name, key, data)
+                log_info("PrefixListMgr:: set %s" % key)
         return True
 
     def del_handler(self, key):
@@ -92,10 +97,11 @@ class PrefixListMgr(Manager):
             data["prefix_list_name"] = prefix_list_name
             data["prefix"] = str(prefix.cidr)
             data["ipv"] = self.get_ip_type(prefix)
-            self.generate_prefix_list_config(data, add=False)
-            log_info("PrefixListMgr:: %s %s configuration deleted" % (prefix_list_name, data["prefix"]))
-            self.directory.remove(self.db_name, self.table_name, key)
-            log_info("PrefixListMgr:: deleted %s" % key)
+            # remove the prefix list configuration
+            if self.generate_prefix_list_config(data, add=False):
+                log_info("PrefixListMgr:: %s %s configuration deleted" % (prefix_list_name, data["prefix"]))
+                self.directory.remove(self.db_name, self.table_name, key)
+                log_info("PrefixListMgr:: deleted %s" % key)
         # Implement deletion logic if necessary
         return True
 
