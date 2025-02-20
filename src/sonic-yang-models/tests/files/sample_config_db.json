@@ -2337,6 +2337,13 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE_TUNNEL" : {
+            "vnet1" : {
+                "endpoint": "192.168.1.2",
+                "mac_address": "F9:22:83:99:22:A2",
+                "vxlanid": "10011"
+            }
+        },
         "PORT_QOS_MAP": {
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",

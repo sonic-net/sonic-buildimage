@@ -1,0 +1,190 @@
+{
+    "VNET_ROUTE_TUNNEL_TEST": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_MULTI_TEST": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    },
+                    {
+                        "name": "Vnet2:10.0.1.0/24",
+                        "endpoint": "192.168.1.2",
+                        "vxlanid": "10012"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "00:aa:bb:cc:dd:ee",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    },
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.2",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_ENDPOINT": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "256.256.256.256",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_MAC": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "mac_address": "GG:HH:II:JJ:KK:LL",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_VXLANID": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "16777216"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:300.168.1.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MISSING_VXLAN_CONFIG": {
+        "sonic-vxlan:sonic-vxlan": {
+            "VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": []
+            }
+        },
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VXLANID": {
+        "sonic-vnet-route-tunnel-vxlan:sonic-vnet-route-tunnel-vxlan": {
+            "sonic-vnet-route-tunnel-vxlan:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "name": "Vnet1:10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "vxlanid": "10011"
+                    },
+                    {
+                        "name": "Vnet2:10.0.1.0/24",
+                        "endpoint": "192.168.1.2",
+                        "vxlanid": "10011"
+                    }
+                ]
+            }
+        }
+    }
+}

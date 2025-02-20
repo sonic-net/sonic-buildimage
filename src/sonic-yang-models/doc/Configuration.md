@@ -80,6 +80,7 @@
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
   * [Virtual router](#virtual-router)
@@ -2538,6 +2539,30 @@ monitoring sessions for the vnet routes and is optional.
 		"scope": "default",
 		"vni": "10011",
 	}
+  }
+}
+```
+
+### VNET_ROUTE_TUNNEL
+
+VNET_ROUTE_TUNNEL table has vnet_name:prefix as the object key, where vnet_name is the name of the VNet and prefix is the prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: The IP address of the host VM (mandatory), IPv4 address. It is used to identify the endpoint of the tunnel.
+- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadecimal digit value.
+- VXLANID: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+
+```
+{
+  "VNET_ROUTE_TUNNEL": {
+    "Vnet1-1:10.0.0.0/24": {
+      "endpoint": "192.168.1.1",
+      "mac_address": "F9:22:83:99:22:A2",
+      "vxlanid": "10011"
+    },
+    "Vnetv4_v4-0:10.0.1.0/24": {
+      "endpoint": "192.168.1.2",
+      "mac_address": "F8:22:83:99:22:A2",
+      "vxlanid": "10012"
+    }
   }
 }
 ```

@@ -1,0 +1,63 @@
+{
+    "VNET_ROUTE_TUNNEL_TEST": {
+        "desc": "Basic VNET route tunnel configuration in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_MULTI_TEST": {
+        "desc": "Multiple VNET route tunnel configurations in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
+        "desc": "Complete VNET route tunnel configuration with all optional fields in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {
+        "desc": "VNET route tunnel configuration with duplicate name in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStr": "Duplicated instance of \"VNET_ROUTE_TUNNEL_LIST\" list."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_ENDPOINT": {
+        "desc": "VNET route tunnel configuration with invalid endpoint IP value in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["endpoint"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_MAC": {
+        "desc": "VNET route tunnel configuration with invalid MAC address format in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["mac_address"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_VXLANID": {
+        "desc": "VNET route tunnel configuration with invalid VXLAN ID in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["vxlanid"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
+        "desc": "VNET route tunnel configuration with invalid name format (missing prefix) in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["name"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
+        "desc": "VNET route tunnel configuration with invalid prefix format in name field.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["name"]
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
+        "desc": "VNET route tunnel configuration with missing mandatory endpoint in VNET_ROUTE_TUNNEL_LIST table.",
+        "eStr": "Missing required attribute \"endpoint\""
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MISSING_VXLAN_CONFIG": {
+        "desc": "VNET route tunnel configuration with missing referenced VXLAN tunnel configuration.",
+        "eStr": "points to a non-existing leaf"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VXLANID": {
+        "desc": "VNET route tunnel configuration with duplicate VXLAN ID across entries.",
+        "eStr": "Duplicate VXLAN ID found in VNET_ROUTE_TUNNEL_LIST"
+    }
+}
