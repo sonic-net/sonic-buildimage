@@ -83,7 +83,8 @@ stlp_overlap(const pcie_stlp_t *stlp,
 static pciehwdevh_t
 cfgpa_to_hwdevh(const u_int64_t cfgpa)
 {
-#define CFGCURSZ sizeof(((pciehw_mem_t *)0L)->cfgcur)
+    pciehw_shmem_t *pshmem = pciesvc_shmem_get();
+#define CFGCURSZ PHWMEM_SIZEOF(phwmem, pshmem, cfgcur)
     const u_int64_t cfgcurpa = pciesvc_cfgcur_pa();
 
     if (cfgpa >= cfgcurpa && cfgpa < cfgcurpa + CFGCURSZ) {
@@ -531,6 +532,7 @@ pciehw_cfgwr_msix(const handler_ctx_t *hctx)
     msix_mask = (msixctl & PCI_MSIX_FLAGS_MASKALL) != 0;
 
     phwdev = pciehwdev_get(hctx->hwdevh);
+    phwdev->msix_en = msix_en;
 
     if (msix_en) {
         /* msix mode */
@@ -635,7 +637,7 @@ pciehw_sriov_adjust_vf0(pciehwdev_t *vfhwdev, const int numvfs)
         pciehw_spmt_t *spmt, *spmte;
         if (!phwbar->valid) continue;
         do_log = 1; /* log adjust_vf0 for first pmt of bar */
-        spmt = &pshmem->spmt[phwbar->pmtb];
+        spmt = PSHMEM_ADDR_FIELD(pshmem, spmt[phwbar->pmtb]);
         spmte = spmt + phwbar->pmtc;
         for ( ; spmt < spmte; spmt++) {
             if (spmt->vf0) {
@@ -1026,15 +1028,30 @@ void
 pciehw_cfg_reset(pciehwdev_t *phwdev, const pciesvc_rsttype_t rsttype)
 {
     cfgspace_t cs;
-    u_int16_t cfgsz, cmd;
+    u_int16_t cfgsz, cmd, pciecap, devctl, maxpayload;
 
     pciesvc_cfgspace_get(pciehwdev_geth(phwdev), &cs);
     cfgsz = cfgspace_size(&cs);
+
+    /* save maxpayload setting before reset */
+    pciecap = cfgspace_findcap(&cs, PCI_CAP_ID_EXP);
+    if (pciecap) {
+        devctl = cfgspace_readw(&cs, pciecap + PCI_EXP_DEVCTL);
+        maxpayload = devctl & PCI_EXP_DEVCTL_PAYLOAD;
+    }
 
     /*****************
      * reset cfg space
      */
     pciesvc_memcpy_toio(cs.cur, cs.rst, cfgsz);
+
+    /* maxpayload setting preserved across FLR, restore saved value */
+    if (rsttype == PCIESVC_RSTTYPE_FLR && pciecap) {
+        devctl = cfgspace_readw(&cs, pciecap + PCI_EXP_DEVCTL);
+        devctl &= ~PCI_EXP_DEVCTL_PAYLOAD;
+        devctl |= maxpayload;
+        cfgspace_writew(&cs, pciecap + PCI_EXP_DEVCTL, devctl);
+    }
 
     /* Read reset value for cmd */
     cmd = cfgspace_readw(&cs, PCI_COMMAND);

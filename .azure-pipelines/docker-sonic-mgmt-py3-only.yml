@@ -38,6 +38,12 @@ stages:
     - template: cleanup.yml
     - checkout: self
       clean: true
+
+    - script: |
+        set -x
+        sudo setfacl -R -b $(Agent.BuildDirectory)
+        displayName: 'setfacl'
+
     - bash: |
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api

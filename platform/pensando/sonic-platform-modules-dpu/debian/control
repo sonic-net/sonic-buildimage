@@ -1,0 +1,10 @@
+Source: sonic-pensando-platform-modules
+Section: main
+Priority: extra
+Maintainer: AMD <shantanu.shrivastava@amd.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-pensando-dpu
+Architecture: arm64
+Description: kernel modules for platform devicesl
