@@ -108,7 +108,7 @@ requests==2.25.1
 roman==2.0.0
 scapy==2.4.4
 service-identity==18.1.0
-setuptools==49.6.0
+setuptools==65.5.1
 six==1.16.0
 snowballstemmer==2.1.0
 soupsieve==2.2.1
