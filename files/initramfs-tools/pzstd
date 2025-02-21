@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+PREREQ=""
+prereqs() {
+    echo "$PREREQ"
+}
+case "$1" in
+    prereqs)
+        prereqs
+        exit 0
+        ;;
+esac
+. /usr/share/initramfs-tools/hook-functions
+# Include pzstd binary
+copy_exec /usr/bin/pzstd /usr/bin
+# Include any necessary libraries
+copy_exec /lib/x86_64-linux-gnu/libzstd.so.1 /lib/x86_64-linux-gnu
+exit 0

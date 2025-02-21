@@ -132,7 +132,7 @@ extract_dockerfs()
     if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
         # Extract dockerfs.tar.gz into /var/lib/docker unless the system booted with secureboot
         # In secureboot dockerfs.tar.gz cannot be trusted as it does not have a signature
-        tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
+        pzstd -d -q ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -c | tar x --numeric-owner -C ${rootmnt}/var/lib/docker
     elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
         # Aboot swi images also support extracting dockerfs.tar.gz directly from them
         unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
