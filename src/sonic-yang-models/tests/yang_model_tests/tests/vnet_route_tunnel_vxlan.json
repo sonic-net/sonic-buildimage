@@ -33,12 +33,12 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
         "desc": "VNET route tunnel configuration with invalid name format (missing prefix) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Value does not satisfy the constraint"
+        "eStrKey":"InvalidValue"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
         "desc": "VNET route tunnel configuration with invalid prefix format in name field.",
-        "eStr": "Value does not satisfy the constraint"
+        "eStrKey":"InvalidValue"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
