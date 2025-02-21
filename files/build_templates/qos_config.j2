@@ -96,6 +96,18 @@
     {{- generate_tc_to_pg_map_per_sku() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
+{% if PORT_DPC %}
+        "AZURE_DPC": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "7"
+        },
+{% endif %}
         "AZURE": {
             "0": "0",
             "1": "0",
@@ -351,7 +363,11 @@
 {% endif %}
             "pfcwd_sw_enable" : "3,4",
 {% endif %}
+{% if port not in PORT_DPC %}
             "tc_to_pg_map"    : "AZURE",
+{% else %}
+            "tc_to_pg_map"    : "AZURE_DPC",
+{% endif %}
             "pfc_to_queue_map": "AZURE"
         }{% if not loop.last %},{% endif %}
 
