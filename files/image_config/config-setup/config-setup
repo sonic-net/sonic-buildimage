@@ -320,7 +320,22 @@ check_all_config_db_present()
 
     return 0   
 }
-
+is_supervisor()
+{
+    PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+    PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+    if [ -e "$PLATFORM_ENV_CONF_FILE" ]; then
+        source $PLATFORM_ENV_CONF_FILE
+        if [ -v supervisor ]; then
+            if [ $supervisor -eq 1 ]; then
+                true
+                return
+            fi
+        fi
+    fi
+    false
+    return
+}
 # DB schema is subject to change between two images
 # Perform DB schema migration after loading backup config/minigraph from previous image
 do_db_migration()
@@ -332,7 +347,7 @@ do_db_migration()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-    if [[ -f /etc/sonic/chassisdb.conf ]]; then
+    if is_supervisor; then
        tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
        sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
        OP_CODE=$?
