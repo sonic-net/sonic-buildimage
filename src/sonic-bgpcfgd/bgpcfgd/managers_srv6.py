@@ -104,8 +104,9 @@ class SRv6Mgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
         self.directory.remove(self.db_name, self.table_name, key)
-        self.deps.remove((self.db_name, "SRV6_MY_LOCATORS", locator_name))
-        self.directory.unsubscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)])
+        if (self.db_name, "SRV6_MY_LOCATORS", locator_name) in self.deps:
+            self.deps.remove((self.db_name, "SRV6_MY_LOCATORS", locator_name))
+            self.directory.unsubscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)])
 
     def sids_del_handler(self, key):
         locator_name = key.split("|")[0]
