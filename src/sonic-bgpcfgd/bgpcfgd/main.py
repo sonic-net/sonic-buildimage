@@ -24,6 +24,7 @@ from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
+from .managers_prefix_list import PrefixListMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
@@ -79,7 +80,9 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
-        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # Prefix List Manager
+        PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
     ]
 
     if device_info.is_chassis():
