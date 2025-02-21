@@ -18,8 +18,15 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 1024
-ORCHAGENT_ARGS+="-b 1024 "
+LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
+    # Set orchagent pop batch size to 128 for faster link notification handling 
+    # during route-churn
+    ORCHAGENT_ARGS+="-b 128 "
+else
+    # Set orchagent pop batch size to 1024
+    ORCHAGENT_ARGS+="-b 1024 "
+fi
 
 # Set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
