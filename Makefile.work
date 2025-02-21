@@ -146,7 +146,20 @@ endif
 rules/config.user:
 	$(Q)echo -n ""
 
-include rules/config
+# Check if SONIC_PROFILE is set
+ifeq ($(SONIC_PROFILE),)
+    CONFIG_FILE := rules/config
+    $(info SONIC_PROFILE is not set. Using default configuration.)
+else
+    CONFIG_FILE := rules/config.$(SONIC_PROFILE)
+    ifeq ($(wildcard $(CONFIG_FILE)),)
+        CONFIG_FILE := rules/config
+        $(info Configuration file $(CONFIG_FILE) does not exist. Using default configuration.)
+    endif
+endif
+
+# Import the configuration file
+include ${CONFIG_FILE}
 -include rules/config.user
 include rules/sonic-fips.mk
 
