@@ -12,5 +12,6 @@ include $(PLATFORM_PATH)/onie.mk
 include $(PLATFORM_PATH)/kvm-image.mk
 include $(PLATFORM_PATH)/raw-image.mk
 include $(PLATFORM_PATH)/docker-dash-engine.mk
+include $(PLATFORM_PATH)/docker-sonic-minion-vs.mk
 
-SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_KVM_IMAGE) $(DOCKER_SONIC_VS) $(SONIC_RAW_IMAGE)
+SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_KVM_IMAGE) $(DOCKER_SONIC_VS) $(SONIC_RAW_IMAGE) $(DOCKER_SONIC_MINION_VS)

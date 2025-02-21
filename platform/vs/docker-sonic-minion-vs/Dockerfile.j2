@@ -1,0 +1,21 @@
+FROM debian:bookworm
+
+COPY files/sonic-minion-vs-root.tar.gz /
+
+RUN tar -xzf sonic-minion-vs-root.tar.gz || echo "Ignore tar rootfs errors!"
+
+COPY ./config_db.json ./machine.conf ./systemd-docker.sh ./systemd_var.conf /tmp/
+
+RUN mkdir -p /onie && \
+    mkdir -p /host && \
+    mv /tmp/systemd-docker.sh /usr/local/bin/systemd-docker.sh  && \
+    mv /tmp/systemd_var.conf /usr/lib/tmpfiles.d/var.conf && \
+    mv /tmp/machine.conf /host/machine.conf && \
+    mv /tmp/config_db.json /etc/sonic/config_db.json && \
+    chmod +x /usr/local/bin/systemd-docker.sh && \
+    /usr/local/bin/systemd-docker.sh
+    
+
+VOLUME [ "/sys/fs/cgroup", "/var/lib/docker" ]
+
+CMD ["/sbin/init"]
