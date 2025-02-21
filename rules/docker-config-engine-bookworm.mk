@@ -7,6 +7,8 @@ $(DOCKER_CONFIG_ENGINE_BOOKWORM)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(LIBYANG) \
                                           $(LIBYANG_CPP) \
                                           $(LIBYANG_PY3) \
+                                          $(LIBYANG3) \
+                                          $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
                                           $(SONIC_EVENTD)
