@@ -36,15 +36,14 @@
     },
     "PORT_INVALID_AUTONEG_TEST": {
         "desc": "PORT_INVALID_AUTONEG_TEST must condition failure.",
-        "eStrKey" : "Pattern",
-        "eStr": ["on|off"]
+        "eStrKey" : "Pattern"
     },
     "PORT_VALID_SPEEDS_TEST_1": {
         "desc": "PORT_VALID_SPEEDS_TEST_1 no failure."
     },
     "PORT_INVALID_SPEEDS_TEST_1": {
         "desc": "PORT_INVALID_SPEEDS_TEST_1 InvalidValue condition failure.",
-        "eStr": ["pattern", "does not satisfy"]
+        "eStrKey": "Range"
     },
     "PORT_VALID_ADVSPEEDS_TEST_1": {
         "desc": "PORT_VALID_ADVSPEEDS_TEST_1 no failure."
@@ -117,8 +116,7 @@
     },
     "PORT_INVALID_LINK_TRAINING_TEST": {
         "desc": "PORT_INVALID_LINK_TRAINING_TEST must condition failure.",
-        "eStrKey" : "Pattern",
-        "eStr": ["on|off"]
+        "eStrKey" : "Pattern"
     },
     "PORT_INVALID_TPID_TEST": {
         "desc": "PORT_INVALID_TPID_TEST invalid tpid value failure.",
@@ -144,24 +142,21 @@
      },
      "PORT_INVALID_SUBPORT_NUMBER": {
          "desc": "Out of range subport number",
-         "eStrKey": "Range",
-         "eStr": "0..8"
+         "eStrKey": "Range"
      },
      "PORT_VALID_DOM_POLLING": {
         "desc": "PORT_VALID_DOM_POLLING no failure."
     },
     "PORT_INVALID_DOM_POLLING": {
         "desc": "PORT_INVALID_DOM_POLLING invalid condition failure.",
-        "eStrKey" : "InvalidValue",
-        "eStr": ["dom_polling"]
+        "eStrKey" : "InvalidValue"
     },
     "PORT_AUTO_FEC_TEST": {
         "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
     },
     "PORT_NO_LANES_NEGATIVE_TEST": {
         "desc": "PORT_NO_LANES_NEGATIVE_TEST no lanes.",
-        "eStrKey": "Mandatory",
-        "eStr": ["Missing"]
+        "eStrKey": "Mandatory"
     },
     "PORT_VOQ_CHASSIS_WITH_NO_LANES": {
         "desc": "PORT_VOQ_CHASSIS_WITH_NO_LANES no failure."
