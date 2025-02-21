@@ -15,7 +15,7 @@ display_help() {
     echo "            No additional parameters required."
     echo ""
     echo "Arguments:"
-    echo "  <PREFIX_TYPE>  Type of prefix list. Allowed values: {$(IFS='|'; echo "${supported_prefix_types[*]}")}."
+    echo "  <PREFIX_TYPE>  Type of prefix list. Allowed values: {$(printf "%s" "${supported_prefix_types[*]}" | tr ' ' '|')}."
     echo "  <NETWORK>      Network in CIDR format."
     echo ""
     echo "Options:"
