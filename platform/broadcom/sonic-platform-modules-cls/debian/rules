@@ -1,0 +1,42 @@
+#!/usr/bin/make -f
+
+export INSTALL_MOD_DIR:=extra
+export KBUILD_EXTRA_SYMBOLS := /sonic/platform/pddf/i2c/Module.symvers.PDDF 
+
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+
+MODULE_DIRS:= ds1000 ds2000 ds3000 ds4000
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	(for mod in $(MODULE_DIRS); do \
+	    make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+	    if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+	        cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+	    else \
+	        cd $(MOD_SRC_DIR)/$${mod}; \
+	    fi; \
+	    python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+	    echo "Finished making sonic_platform whl package for $$mod"; \
+	done)
+
+override_dh_auto_install:
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -pplatform-modules-$${mod} \
+			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
+			debian/platform-modules-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+	done)
+
+override_dh_usrlocal:
+
+override_dh_clean:
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
+	done)
