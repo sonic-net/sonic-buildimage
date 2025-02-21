@@ -335,7 +335,7 @@
         "MTEF-AC-E": {
             "label": [
                 "in1 PSU 220V Rail (in)",
-                "in3 PSU 12V Rail (out)",
+                "in2 PSU 12V Rail (out)",
                 "fan1 PSU Fan 1",
                 "temp1 PSU Temp 1",
                 "temp2 PSU Temp 2",
