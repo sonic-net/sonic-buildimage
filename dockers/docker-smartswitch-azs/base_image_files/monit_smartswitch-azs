@@ -1,0 +1,7 @@
+###############################################################################
+## Monit configuration for Smart Switch container
+## process list:
+##  vnetping
+###############################################################################
+check program vnet_monitor|vnetping_server with path "/usr/bin/process_checker vnet_monitor python /usr/bin/vnetpingsrv.py"
+    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles

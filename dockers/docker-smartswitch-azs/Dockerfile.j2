@@ -1,0 +1,53 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bookworm
+
+ARG docker_container_name
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update &&     \
+    apt-get install -f -y \
+        libpcap0.8        \
+        rsyslog           \
+        build-essential   \
+        python3-dev
+
+# Upgrade pip via PyPI and uninstall the Debian version
+RUN pip3 install --upgrade pip
+RUN apt-get purge -y python3-pip
+RUN pip3 install \
+         pyroute2==0.7.2 \
+         netifaces==0.11.0
+
+{% if docker_smartswitch_azs_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_smartswitch_azs_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_smartswitch_azs_debs.split(' ')) }}
+{%- endif %}
+
+{% if docker_smartswitch_azs_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_smartswitch_azs_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_smartswitch_azs_whls.split(' ')) }}
+{% endif %}
+
+## Clean up
+RUN apt-get purge -y          \
+        python3-dev           \
+        build-essential    && \
+    apt-get clean -y       && \
+    apt-get autoclean -y   && \
+    apt-get autoremove -y  && \
+    rm -rf /debs ~/.cache
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
