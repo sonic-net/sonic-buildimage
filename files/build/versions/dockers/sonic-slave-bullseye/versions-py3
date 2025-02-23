@@ -7,7 +7,7 @@ babel==2.8.0
 backcall==0.2.0
 bcrypt==3.1.7
 beautifulsoup4==4.9.3
-bitarray==3.0.0
+bitarray==3.1.0
 blkinfo==0.2.0
 certifi==2020.6.20
 chardet==4.0.0
