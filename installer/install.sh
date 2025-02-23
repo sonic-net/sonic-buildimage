@@ -57,8 +57,6 @@ else
     install_env="build"
 fi
 
-BUILD_REDUCE_IMAGE_SIZE=%%BUILD_REDUCE_IMAGE_SIZE%%
-
 cd $(dirname $0)
 if [ -r ./machine.conf ]; then
     read_conf_file "./machine.conf"
@@ -160,6 +158,13 @@ timestamp="$(date -u +%Y%m%d)"
 demo_volume_label="SONiC-${demo_type}"
 demo_volume_revision_label="SONiC-${demo_type}-${image_version}"
 
+BUILD_REDUCE_IMAGE_SIZE=%%BUILD_REDUCE_IMAGE_SIZE%%
+
+if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+    FILESYSTEM_DOCKERFS=${FILESYSTEM_DOCKERFS_ZSTD}
+else
+    FILESYSTEM_DOCKERFS=${FILESYSTEM_DOCKERFS_GZ}
+fi
 
 . ./default_platform.conf
 
@@ -232,7 +237,15 @@ else
         TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
     fi
     mkdir -p $demo_mnt/$image_dir/$DOCKERFS_DIR
-    unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -x $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+        if [ "$install_env" = "onie" ]; then
+            echo "Error: ONIE environment doesn't support zstd decompression. This image cannot be installed."
+            exit 1
+        fi
+        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -x $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    else
+        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+    fi
 fi
 
 mkdir -p $demo_mnt/$image_dir/platform
