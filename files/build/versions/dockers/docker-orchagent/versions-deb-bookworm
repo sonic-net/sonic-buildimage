@@ -33,7 +33,7 @@ libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
 ndisc6==1.0.5-1+b2
 ndppd==0.2.5-6
-openssh-client==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 pci.ids==0.0~2023.04.11-1
 pciutils==1:3.9.0-4

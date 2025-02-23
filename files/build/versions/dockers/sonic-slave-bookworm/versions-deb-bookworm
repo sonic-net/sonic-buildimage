@@ -110,7 +110,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:27.5.1-1~debian.12~bookworm
+docker-ce-rootless-extras==5:28.0.0-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -747,7 +747,8 @@ libgme0==0.6.3-6
 libgmock-dev==1.12.1-0.2
 libgmp-dev==2:6.2.1+dfsg1-1.1
 libgmpxx4ldbl==2:6.2.1+dfsg1-1.1
-libgnutls-dane0==3.7.9-2+deb12u3
+libgnutls-dane0==3.7.9-2+deb12u4
+libgnutls30==3.7.9-2+deb12u4
 libgomp1==12.2.0-14
 libgomp1-armhf-cross==12.2.0-14cross1
 libgoogle-perftools4==2.10-1
@@ -1692,9 +1693,9 @@ openjdk-17-jre-headless==17.0.14+7-1~deb12u1
 openmpi-bin==4.1.4-3+b1
 openmpi-common==4.1.4-3
 opensp==1.5.2-13+b2
-openssh-client==1:9.2p1-2+deb12u4
-openssh-server==1:9.2p1-2+deb12u4
-openssh-sftp-server==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
+openssh-server==1:9.2p1-2+deb12u5
+openssh-sftp-server==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 os-prober==1.81
 ovmf==2022.11-6+deb12u1
