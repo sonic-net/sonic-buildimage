@@ -211,12 +211,11 @@ class PortChannelHandler(object):
         # gone down and come back up, we need to restart the sniffer to be able to sniff 
         # traffic on the interface that has come back up.
         #
-        ### May Need changes here
-        # pc_index_map = self.get_portchannel_index_mapping()
-        # for msg in messages:
-        #     if msg['index'] in pc_index_map:
-        #         if msg['state'] == 'up':
-        #             smartswitchlogger.log_info('vnetping: {0} came back up, sniffer restart required'.format(str(pc_index_map[msg['index']])))
-        #             return True
-        # return False
+        pc_index_map = self.get_portchannel_index_mapping()
+        for msg in messages:
+            if msg['index'] in pc_index_map:
+                if msg['state'] == 'up':
+                    smartswitchlogger.log_info('vnetping: {0} came back up, sniffer restart required'.format(str(pc_index_map[msg['index']])))
+                    return True
+        return False
 
