@@ -35,6 +35,9 @@ $(DOCKER_SMARTSWITCH_AZS)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_SMARTSWITCH_AZS)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
 $(DOCKER_SMARTSWITCH_AZS)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
 $(DOCKER_SMARTSWITCH_AZS)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
+# TODO: Include Base_image_files entry
+#       Could be deleted based on vnet-monitor template
+$(DOCKER_SMARTSWITCH_AZS)_BASE_IMAGE_FILES += monit_smartswitch-azs:/etc/monit/conf.d
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SMARTSWITCH_AZS)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_SMARTSWITCH_AZS_DBG)
