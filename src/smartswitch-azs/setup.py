@@ -23,8 +23,7 @@ setup(
     license="GNU General Public License v3",
         long_description=readme + '\n\n',
     scripts=[
-        'bgp_session_tracker.py',
-        'link_state_tracker.py'
+      'smartswitch-azs.py'
     ],
     install_requires = [
         'pyroute2==0.7.2',
@@ -50,14 +49,13 @@ setup(
     include_package_data=True,
     keywords='sonic-smartswitch-azs',
     name='sonic-smartswitch-azs',
-    # py_modules=['configutil'],
-    # packages=find_packages(),
+    py_modules=['configutil'],
+    packages=find_packages(),
     version='1.0',
     zip_safe=False,
     entry_point = {
         'console_scripts' : [
-            'bgp-session-tracker=smartswitch_azs.bgp_session_tracker:main',
-            'link-state-tracker=smartswitch_azs.link_state_tracker:main'
+            'smartswitch-azs=smartswitch_azs.smartswitch_azs:main'
         ]
     }
 )
