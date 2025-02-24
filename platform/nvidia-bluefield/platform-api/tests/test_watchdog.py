@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,7 @@ import pytest
 import sys
 import subprocess
 from unittest import mock
+from sonic_platform.watchdog import Watchdog, WD_COMMON_ERROR
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
@@ -47,8 +49,6 @@ arm_string = 'primary: /dev/mmcblk0boot0\n'\
         'lifecycle state: Secured (development)\n'\
         'secure boot key free slots: 3'
 
-from sonic_platform.watchdog import Watchdog, WD_COMMON_ERROR
-
 
 class TestWatchdog:
     @mock.patch('sonic_platform.watchdog.Watchdog.is_armed_for_time')
@@ -66,7 +66,7 @@ class TestWatchdog:
         mock_exec_cmd.assert_not_called()
         mock_is_armed_for_time.return_value = False
         assert test_wd.arm(180)
-        mock_exec_cmd.assert_called_once_with(['mlxbf-bootctl', 
+        mock_exec_cmd.assert_called_once_with(['mlxbf-bootctl',
                                                '--watchdog-boot-mode',
                                                'standard',
                                                '--watchdog-boot-interval',
@@ -93,9 +93,9 @@ class TestWatchdog:
         watchdog.arm(180)
         mock_is_armed.return_value = True
         mock_get_time.return_value = 'standard', 100
-        first_value = watchdog.get_remaining_time() 
+        first_value = watchdog.get_remaining_time()
         assert first_value > 0
-        second_value = watchdog.get_remaining_time() 
+        second_value = watchdog.get_remaining_time()
         assert second_value <= first_value
 
     @mock.patch('sonic_platform.watchdog.Watchdog.exec_cmd')
@@ -139,4 +139,3 @@ class TestWatchdog:
             watchdog.exec_cmd(['ls', 'non-existent-dir'])
             watchdog.exec_cmd(['cat', 'non-existent-file.txt'])
             watchdog.exec_cmd(['non-existent-cmd'])
-

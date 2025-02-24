@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import ctypes
 import functools
 import subprocess
 from sonic_py_common.logger import Logger
@@ -72,6 +74,7 @@ def default_return(return_value, log_func=logger.log_debug):
         return _impl
     return wrapper
 
+
 def read_from_file(file_path, target_type, default='', raise_exception=False, log_func=logger.log_error):
     """
     Read content from file and convert to target type
@@ -102,6 +105,7 @@ def read_from_file(file_path, target_type, default='', raise_exception=False, lo
 
     return value
 
+
 def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func=logger.log_error):
     """
     Read content from file and cast it to integer
@@ -112,6 +116,7 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
     :return: Integer value of the file content
     """
     return read_from_file(file_path=file_path, target_type=float, default=default, raise_exception=raise_exception, log_func=log_func)
+
 
 def write_file(file_path, content, raise_exception=False, log_func=logger.log_error):
     """

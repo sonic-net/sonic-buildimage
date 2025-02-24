@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 
 try:
     from sonic_platform_base.watchdog_base import WatchdogBase
@@ -81,7 +81,7 @@ class Watchdog(WatchdogBase):
         if seconds < 45 or seconds > 4095:
             logger.log_error(f"Arm time provided {seconds} is outside the valid range 45-4095")
             return arm_time
-        arm_command = [self.MLXBF_DRIVER, "--watchdog-boot-mode", "standard", 
+        arm_command = [self.MLXBF_DRIVER, "--watchdog-boot-mode", "standard",
                        "--watchdog-boot-interval", str(seconds)]
         try:
             if self.is_armed_for_time(seconds):
@@ -114,7 +114,7 @@ class Watchdog(WatchdogBase):
 
     def is_armed_for_time(self, time_check=None):
         """
-        Retrieves the armed state of the hardware watchdog 
+        Retrieves the armed state of the hardware watchdog
         And it also checks if the time configured
         If the time_check parameter is not provided, we check
         if watchdog is just armed or not

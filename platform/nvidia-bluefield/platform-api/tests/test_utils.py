@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,22 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 import os
 import pytest
 import sys
-import threading
-import time
-if sys.version_info.major == 3:
-    from unittest import mock
-else:
-    import mock
+from sonic_platform import utils
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
-
-from sonic_platform import utils
 
 
 class TestUtils:
