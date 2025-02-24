@@ -1411,16 +1411,32 @@ class SocketHandler:
         This method sets up the socket with appropriate permissions and starts
         listening for client connections. It raises an exception if socket creation fails.
         """
+        # try:
+        #     self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        #     self.listener_socket.settimeout(1.0) 
+        #     self.listener_socket.bind(self.address)
+        #     os.chmod(self.address, 0o644)
+        #     self.listener_socket.listen(5)  
+        #     logger.log_info(f"UNIX socket created and listening at {self.address}")
+        # except Exception as e:
+        #     logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
+        #     raise
         try:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(1.0) 
             self.listener_socket.bind(self.address)
-            os.chmod(self.address, 0o644)
+            os.chmod(self.address, 0o600)
+            os.chown(self.address, os.getuid(), -1)
             self.listener_socket.listen(5)  
             logger.log_info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
             logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
             raise
+
+    def validate_request(self, request_json):
+        """Validate incoming JSON request structure"""
+        required_keys = ['command']
+        return all(key in request_json for key in required_keys)
 
     def send_response(self, connection, response_data):
         """Sends a JSON response back to the client.
@@ -1447,6 +1463,32 @@ class SocketHandler:
         
         :param connection: The socket connection established with the client.
         """
+        # error_response = {"status": False, "msg": None}
+        # try:
+        #     request_data = connection.recv(4096)
+        #     if not request_data:
+        #         logger.log_warning("Received empty request")
+        #         return
+
+        #     request_json = json.loads(request_data.decode('utf-8'))
+        #     logger.log_debug(f"Received request: {request_json}")
+        #     command_name = request_json['command']
+        #     command_data = request_json.get('data', {})
+
+        #     response = self.command_handler(command_name, command_data)
+
+        #     self.send_response(connection, response)
+        # except Exception as error:
+        #     logger.log_error(f"Error handling request: {traceback.format_exc()}")
+        #     error_response['msg'] = str(error)
+        #     self.send_response(connection, error_response)
+        # finally:
+        #     try:
+        #         connection.close()
+        #         logger.log_debug("Connection closed")
+        #     except Exception as e:
+        #         logger.log_error(f"Error closing connection: {e}")
+    # def handle_connection(self, connection):
         error_response = {"status": False, "msg": None}
         try:
             request_data = connection.recv(4096)
@@ -1456,12 +1498,20 @@ class SocketHandler:
 
             request_json = json.loads(request_data.decode('utf-8'))
             logger.log_debug(f"Received request: {request_json}")
+
+            if not self.validate_request(request_json):
+                raise ValueError("Invalid request structure")
+
             command_name = request_json['command']
             command_data = request_json.get('data', {})
 
             response = self.command_handler(command_name, command_data)
-
             self.send_response(connection, response)
+
+        except json.JSONDecodeError:
+            logger.log_error("Invalid JSON in request")
+            error_response['msg'] = "Invalid JSON format"
+            self.send_response(connection, error_response)
         except Exception as error:
             logger.log_error(f"Error handling request: {traceback.format_exc()}")
             error_response['msg'] = str(error)
@@ -1472,6 +1522,7 @@ class SocketHandler:
                 logger.log_debug("Connection closed")
             except Exception as e:
                 logger.log_error(f"Error closing connection: {e}")
+
 
     def stop_listening(self):
         """Stops the socket listener loop by setting stop_event."""
