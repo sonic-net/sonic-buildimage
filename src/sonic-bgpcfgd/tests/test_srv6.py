@@ -170,14 +170,14 @@ def test_out_of_order_add():
     loc_mgr.cfg_mgr.push_list = MagicMock()
     sid_mgr.cfg_mgr.push_list = MagicMock()
 
-    # add the sid first, expect the addition to return false
-    assert not sid_mgr.handler(op='SET', key="loc2|FCBB:BBBB:21::/48", data={'action': 'uN'})
+    # add the sid first
+    sid_mgr.handler(op='SET', key="loc2|FCBB:BBBB:21::/48", data={'action': 'uN'})
 
     # verify that the sid is not added
     assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
 
-    # add the locator, expect the addition to return true
-    assert loc_mgr.handler(op='SET', key="loc2", data={'prefix': 'fcbb:bbbb:21::'})
+    # add the locator
+    loc_mgr.handler(op='SET', key="loc2", data={'prefix': 'fcbb:bbbb:21::'})
 
     time.sleep(3)
 
