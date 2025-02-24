@@ -359,7 +359,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         Returns:
             tuple: (error state, error description)
         """
-        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/statuserror', default=-1)
         sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
         if sfp_state_bits is None:
             logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
@@ -678,7 +678,9 @@ class SFP(NvidiaSFPCommon):
             if self.is_sw_control():
                 api = self.get_xcvr_api()
                 return api.get_error_description() if api else None
-        except:
+        except NotImplementedError:
+            return 'Not supported'
+        except Exception:
             return self.SFP_STATUS_INITIALIZING
 
         oper_status, error_code = self._get_module_info(self.sdk_index)
