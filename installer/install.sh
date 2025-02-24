@@ -242,7 +242,7 @@ else
             echo "Error: ONIE environment doesn't support zstd decompression. This image cannot be installed."
             exit 1
         fi
-        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -x $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
+        unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -x -I pzstd $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
     else
         unzip -op $INSTALLER_PAYLOAD "$FILESYSTEM_DOCKERFS" | tar -xz $TAR_EXTRA_OPTION -f - -C $demo_mnt/$image_dir/$DOCKERFS_DIR
     fi
