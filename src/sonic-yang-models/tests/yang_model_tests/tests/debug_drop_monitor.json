@@ -1,0 +1,9 @@
+{
+    "DEBUG_DROP_MONITOR_POSITIVE_CONFIG": {
+        "desc": "Configure DEBUG_DROP_MONITOR positive config."
+    },
+    "DEBUG_DROP_MONITOR_INVALID_TYPE": {
+        "desc": "Configure invalid status in DEBUG_DROP_MONITOR.",
+        "eStr": "Invalid status for debug drop monitor."
+    }
+}
