@@ -196,6 +196,10 @@ ifeq ($(SONIC_INCLUDE_VNET_MONITOR),y)
 INCLUDE_VNET_MONITOR = y
 endif
 
+ifeq ($(SONIC_INCLUDE_SMARTSWITCH_AZS),y)
+INCLUDE_SMARTSWITCH_AZS = y
+endif
+
 ifeq ($(SONIC_ENABLE_SYNCD_RPC),y)
 ENABLE_SYNCD_RPC = y
 endif
@@ -1474,6 +1478,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_acms="$(INCLUDE_ACMS)"
 	export include_vnet_monitor="$(INCLUDE_VNET_MONITOR)"
+	export include_smartswitch_azs="$(INCLUDE_SMARTSWITCH_AZS)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
 	export default_buffer_model="$(SONIC_BUFFER_MODEL)"
