@@ -109,7 +109,6 @@ module sonic-gnmi {
 
                  leaf-list role {
                     type string;
-                    mandatory true;
                     description
                         "role of client cert common name";
                 }
