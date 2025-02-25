@@ -163,6 +163,7 @@
                 "PORT": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "BULK_CHUNK_SIZE": 100,
+                    "BULK_CHUNK_SIZE_PER_PREFIX": "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:32",
                     "POLL_INTERVAL": 1000
                 },
                 "PORT_BUFFER_DROP": {

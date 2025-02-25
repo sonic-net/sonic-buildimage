@@ -1,5 +1,6 @@
 # SONiC Configuration Database Manual
 
+
 **Table of Contents**
 
 * [Introduction](#introduction)
@@ -92,6 +93,8 @@
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)  
+  * [SRv6](#srv6)
+  * [Prefix List](#prefix-list)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -1368,7 +1371,10 @@ The configuration is applied globally for each ECMP and LAG on a switch.
         "config": {
             "enabled": "true",
             "num_dumps": "3",
-            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
+            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
+            "remote": "true",
+            "ssh_string": "username@ipaddress",
+            "ssh_path": "a/b/c"
          }
      }
 }
@@ -2884,6 +2890,42 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 }
 ```
 
+### SRv6
+
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
+An example is as follows:
+```
+{
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
+           "action": "uN"
+        },
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
+        }
+    }
+}
+```
+
+### Prefix List
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+
+An example is as follows:
+```json
+{
+    "PREFIX_LIST": {
+        "ANCHOR_PREFIX|fc00::/48": {}
+    }
+}
+```
+
 ### FIPS
 
 The FIPS table introduces FIPS  configuration.
@@ -2947,6 +2989,42 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 }
 ```
 
+### DPU PORT Configuration^M
+
+The **DPU_PORT** table introduces the configuration for the DPUs(Data Processing Unit) PORT information available on the platform.
+
+```json
+{
+    "DPU_PORT": {
+        "dpu0": {
+            "state": "up",
+            "vip_ipv4": "192.168.1.1",
+            "vip_ipv6": "2001:db8::10",
+            "pa_ipv4": "192.168.1.10",
+            "pa_ipv6": "2001:db8::10",
+            "vdpu_id": "vdpu0",
+            "gnmi_port": "50052"
+        },
+        "dpu1": {
+            "state": "down",
+            "vip_ipv4": "192.168.1.2",
+            "vip_ipv6": "2001:db8::20",
+            "pa_ipv4": "192.168.1.20",
+            "pa_ipv6": "2001:db8::20",
+            "vdpu_id": "vdpu1",
+            "gnmi_port": "50052"
+        }
+    }
+}
+```
+
+**state**: Administrative status of the DPU (`up` or `down`).
+**vip_ipv4**: VIP IPv4 address from minigraph.
+**vip_ipv6**: VIP IPv6 address from minigraph.
+**pa_ipv4**: PA IPv4 address from minigraph.
+**pa_ipv6**: PA IPv6 address from minigraph.
+**vdpu_id**: ID of VDPUs from minigraph.
+**gnmi_port**: Port gNMI runs on.
 
 # For Developers
 

@@ -24,7 +24,7 @@ $(addprefix $(DEST)/, $(MLNX_BLUEFIELD_BUILD_SCRIPTS)): $(DEST)/% :
 	mkdir ./tmp/
 	pushd ./tmp/
 
-	wget -O ${MLNX_BLUEFIELD_BUILD_SCRIPTS} "${BSD_BASE_URL}/build/install/distro/DEBS/${MLNX_BLUEFIELD_BUILD_SCRIPTS}"
+	wget -O ${MLNX_BLUEFIELD_BUILD_SCRIPTS} "${BSD_BASE_URL}/install/distro/DEBS/${MLNX_BLUEFIELD_BUILD_SCRIPTS}"
 
 	mkdir -p bfscripts/DEBIAN
 	dpkg -e ${MLNX_BLUEFIELD_BUILD_SCRIPTS} bfscripts/DEBIAN
