@@ -1477,6 +1477,7 @@ protocol_traps_mode.BCM8885X=IN_LIF
 rate_ext_mdio_divisor=16
 schan_intr_enable.BCM8885X=0
 schan_timeout_usec.BCM8885X=900000
+system_ref_core_clock_khz.BCM8885X=1600000
 serdes_fabric_clk_freq_in.BCM8885X=1
 serdes_fabric_clk_freq_out.BCM8885X=bypass
 serdes_nif_clk_freq_in0.BCM8885X=1
