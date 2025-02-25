@@ -106,10 +106,10 @@ remove_not_in_allowlist_files()
 mount_docker_inram()
 {
     if [ "$docker_inram_algo" = "tmpfs" ]; then
-        echo "Creating tmpfs to extract {{ FILESYSTEM_DOCKERFS }}"
+        echo "Creating tmpfs to extract {{ FILESYSTEM_DOCKERFS_ZSTD }}"
         mount -t tmpfs -o "rw,nodev,size=$docker_inram_size" tmpfs "${rootmnt}/var/lib/docker"
     else
-        echo "Creating zram to extract {{ FILESYSTEM_DOCKERFS }}"
+        echo "Creating zram to extract {{ FILESYSTEM_DOCKERFS_ZSTD }}"
         modprobe zram num_devices=0
         # create new zram device
         local zid="$(cat /sys/class/zram-control/hot_add)"
@@ -128,17 +128,17 @@ mount_docker_inram()
 
 extract_dockerfs()
 {
-    echo "Extracting {{ FILESYSTEM_DOCKERFS }}"
-    if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
+    echo "Extracting {{ FILESYSTEM_DOCKERFS_ZSTD }}"
+    if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS_ZSTD }}" ] && [ "$secureboot" = false ]; then
         # Extract dockerfs.tar.gz into /var/lib/docker unless the system booted with secureboot
         # In secureboot dockerfs.tar.gz cannot be trusted as it does not have a signature
-        pzstd -d -q ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -c | tar x --numeric-owner -C ${rootmnt}/var/lib/docker
-    elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
+        pzstd -d -q ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS_ZSTD }} -c | tar x --numeric-owner -C ${rootmnt}/var/lib/docker
+    elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS_ZSTD }}; then
         # Aboot swi images also support extracting dockerfs.tar.gz directly from them
-        unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
+        unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS_ZSTD }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
     else
         # Warn but allow the system to boot to at least have ssh access
-        echo "No {{ FILESYSTEM_DOCKERFS }} to extract, SONiC will be broken"
+        echo "No {{ FILESYSTEM_DOCKERFS_ZSTD }} to extract, SONiC will be broken"
     fi
 }
 

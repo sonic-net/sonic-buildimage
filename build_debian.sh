@@ -859,11 +859,15 @@ fi
 
 ## Compress docker files
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
-    pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
+    pushd $FILESYSTEM_ROOT && sudo tar -I pzstd -cf $OLDPWD/$FILESYSTEM_DOCKERFS_ZSTD -C ${DOCKERFS_PATH}var/lib/docker .; popd
 else
-    pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf $OLDPWD/$FILESYSTEM_DOCKERFS -C ${DOCKERFS_PATH}var/lib/docker .; popd
+    pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf $OLDPWD/$FILESYSTEM_DOCKERFS_GZ -C ${DOCKERFS_PATH}var/lib/docker .; popd
 fi
 
 ## Compress together with /boot, /var/lib/docker and $PLATFORM_DIR as an installer payload zip file
 pushd $FILESYSTEM_ROOT && sudo tar -I pigz -cf platform.tar.gz -C $PLATFORM_DIR . && sudo zip -n .gz $OLDPWD/$INSTALLER_PAYLOAD -r boot/ platform.tar.gz; popd
-sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS
+if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+	sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS_ZSTD
+else
+	sudo zip -g -n .squashfs:.gz $INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS $FILESYSTEM_DOCKERFS_GZ
+fi
