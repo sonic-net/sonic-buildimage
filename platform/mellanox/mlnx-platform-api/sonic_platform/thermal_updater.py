@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -142,7 +143,16 @@ class ThermalUpdater:
                 )
             else:
                 if pre_presence != presence:
-                    hw_management_independent_mode_update.thermal_data_clean_module(0, sfp.sdk_index + 1)
+                    # thermal control service requires to
+                    # set value 0 to all temperature files when module is not present
+                    hw_management_independent_mode_update.thermal_data_set_module(
+                        0,  # ASIC index always 0 for now
+                        sfp.sdk_index + 1,
+                        0,
+                        0,
+                        0,
+                        0
+                    )
 
             if pre_presence != presence:
                 self._sfp_status[sfp.sdk_index] = presence

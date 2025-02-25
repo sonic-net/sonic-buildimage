@@ -235,13 +235,29 @@ if [[ $fw_upgrade_is_needed == "true" ]]; then
 	ex mkdir -p $sonic_fs_mountpoint
 	ex mount -t squashfs $sonic_fs_path $sonic_fs_mountpoint
 
+	kernel_mft=$(chroot $sonic_fs_mountpoint dpkg -l | grep kernel-mft-dkms-modules | awk '/^ii/ {print $2}')
+	mft_files=$(chroot $sonic_fs_mountpoint dpkg -L $kernel_mft)
+
+	for f in $mft_files; do
+		if [[ $sonic_fs_mountpoint/$f != *.ko ]]; then
+			continue
+		fi
+
+		insmod "$sonic_fs_mountpoint/$f"
+	done
+
 	ex mkdir -p /etc/mlnx/
 
 	ex ln -s /mnt/$image_dir/platform/fw/asic/fw-BF3.mfa /etc/mlnx/fw-BF3.mfa
 
 	ex mst start
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh --update -v
+	if function_exists bfb_pre_fw_install; then
+		log "Running bfb_pre_fw_install from bf.cfg"
+		bfb_pre_fw_install
+	fi
+
+	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
 	fi

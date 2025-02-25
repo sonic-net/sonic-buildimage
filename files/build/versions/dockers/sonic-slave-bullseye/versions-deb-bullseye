@@ -176,9 +176,9 @@ gir1.2-gtk-3.0==3.24.24-4+deb11u4
 gir1.2-harfbuzz-0.0==2.7.4-1
 gir1.2-packagekitglib-1.0==1.2.2-2
 gir1.2-pango-1.0==1.46.2-3
-git==1:2.30.2-1+deb11u3
+git==1:2.30.2-1+deb11u4
 git-buildpackage==0.9.22
-git-man==1:2.30.2-1+deb11u3
+git-man==1:2.30.2-1+deb11u4
 glib-networking==2.66.0-2
 glib-networking-common==2.66.0-2
 glib-networking-services==2.66.0-2

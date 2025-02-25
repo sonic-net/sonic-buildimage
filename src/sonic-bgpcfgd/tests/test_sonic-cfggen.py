@@ -206,3 +206,15 @@ def test_bgpd_main_conf_defaults_router_id():
              "bgpd/bgpd.main.conf.j2",
              "bgpd.main.conf.j2/defaults_router_id.json",
              "bgpd.main.conf.j2/defaults_router_id.conf")
+
+def test_prefix_list_add_radian():
+    run_test("Add radian configuration",
+             "bgpd/radian/add_radian.conf.j2",
+             "radian/add_radian.json",
+             "radian/add_radian.conf")
+    
+def test_prefix_list_del_radian():
+    run_test("Del radian configuration",
+             "bgpd/radian/del_radian.conf.j2",
+             "radian/del_radian.json",
+             "radian/del_radian.conf")

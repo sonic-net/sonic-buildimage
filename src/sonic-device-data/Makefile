@@ -10,6 +10,13 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale data
 	rm -rf ./device
 
+	# set asic type for virtual switch
+	if [ "$(CONFIGURED_PLATFORM)" = "vpp" ]; then \
+		echo "vpp" > ../../../device/virtual/x86_64-kvm_x86_64-r0/platform_asic; \
+	else \
+		echo "vs" > ../../../device/virtual/x86_64-kvm_x86_64-r0/platform_asic; \
+	fi;
+
 	# Create a new dir and copy all ONIE-platform-string-named dirs into it
 	mkdir ./device
 	cp -r -L ../../../device/*/* ./device/

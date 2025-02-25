@@ -14,6 +14,9 @@
     neighbor PEER_V4 soft-reconfiguration inbound
     neighbor PEER_V4 route-map FROM_BGP_PEER_V4 in
     neighbor PEER_V4 route-map TO_BGP_PEER_V4 out
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}
+    table-map SELECTIVE_ROUTE_DOWNLOAD_V4
+{% endif %}
   exit-address-family
   address-family ipv6
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
@@ -26,6 +29,9 @@
     neighbor PEER_V6 soft-reconfiguration inbound
     neighbor PEER_V6 route-map FROM_BGP_PEER_V6 in
     neighbor PEER_V6 route-map TO_BGP_PEER_V6 out
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}
+    table-map SELECTIVE_ROUTE_DOWNLOAD_V6
+{% endif %}
   exit-address-family
 !
 ! end of template: bgpd/templates/general/peer-group.conf.j2
