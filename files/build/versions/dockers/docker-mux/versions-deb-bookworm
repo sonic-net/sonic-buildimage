@@ -24,7 +24,7 @@ libssl-dev==3.0.15-1~deb12u1
 libssl3==3.0.15-1~deb12u1
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
-openssh-client==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 sensible-utils==0.0.17+nmu1
 sonic-linkmgrd==1.0.0-1
