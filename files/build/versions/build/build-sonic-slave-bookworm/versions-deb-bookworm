@@ -60,5 +60,5 @@ sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
-sys-sdk-dev==1.mlnx.4.7.2166
-sys-sdk-main==1.mlnx.4.7.2166
+sys-sdk-dev==1.mlnx.4.7.2202
+sys-sdk-main==1.mlnx.4.7.2202
