@@ -33,12 +33,12 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
         "desc": "VNET route tunnel configuration with invalid name format (missing prefix) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey":"InvalidValue"
+        "eStr":["does not match pattern"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
         "desc": "VNET route tunnel configuration with invalid prefix format in name field.",
-        "eStrKey":"InvalidValue"
+        "eStr":["does not match pattern"]
     },
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
@@ -53,6 +53,6 @@
 
     "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_VXLANID": {
         "desc": "VNET route tunnel configuration with duplicate VXLAN ID across entries.",
-        "eStr": "Duplicated instance of \"VNET_ROUTE_TUNNEL_LIST\" list."
+        "eStr": ["VXLAN ID must be unique across all route tunnels"]
     }
 }

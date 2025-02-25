@@ -65,6 +65,10 @@ module sonic-vnet-route-tunnel-vxlan {
                 leaf vxlanid {
                     type stypes:vnid_type;
                     description "A valid and unique vni value in encapsulated packet";
+                    must "not(../VNET_ROUTE_TUNNEL_LIST[name != current()/../name][vxlanid = current()])" 
+                    {
+                        error-message "VXLAN ID must be unique across all route tunnels";
+                    }
                 }
             }
         }
