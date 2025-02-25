@@ -2338,7 +2338,7 @@
             }
         },
         "VNET_ROUTE_TUNNEL" : {
-            "vnet1" : {
+            "vnet1:10.0.0.0/24" : {
                 "endpoint": "192.168.1.2",
                 "mac_address": "F9:22:83:99:22:A2",
                 "vxlanid": "10011"
