@@ -1391,7 +1391,7 @@
         "GNMI_CLIENT_CERT": {
             "testcert1": {
                 "role": [
-			"RO"
+			"RW"
 		]
             },
             "testcert2": {
