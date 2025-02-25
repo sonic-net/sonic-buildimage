@@ -1390,10 +1390,14 @@
         },
         "GNMI_CLIENT_CERT": {
             "testcert1": {
-                "role": "RW"
+                "role": [
+			"RO"
+		]
             },
             "testcert2": {
-                "role": "RO"
+                "role": [
+			"RO"
+		]
             }
         },
         "TUNNEL": {
