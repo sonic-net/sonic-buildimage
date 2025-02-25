@@ -52,7 +52,7 @@ class YangWrapper(object):
         """
         Raise exception when yang validation failed
         """
-        if PY3x and "-m" in argument:
+        if PY3x and ("-m" in argument or "--preset" in argument):
             import sonic_yang
             parser=argparse.ArgumentParser(description="Render configuration file from minigraph data and jinja2 template.")
             parser.add_argument("-m", "--minigraph", help="minigraph xml file", nargs='?', const='/etc/sonic/minigraph.xml')
@@ -61,10 +61,17 @@ class YangWrapper(object):
             parser.add_argument("-p", "--port-config", help="port config file, used with -m or -k", nargs='?', const=None)
             parser.add_argument("-S", "--hwsku-config", help="hwsku config file, used with -p and -m or -k", nargs='?', const=None)
             parser.add_argument("-j", "--json", help="additional json file input, used with -p, -S and -m or -k", nargs='?', const=None)
+            parser.add_argument("-a", "--additional-data", help="addition data, in json string", nargs='?', const=None)
+            parser.add_argument("--preset", help="generate sample configuration from a preset template",  nargs='?', const=None)
             args, unknown = parser.parse_known_args(argument)
 
             print('\n    Validating yang schema')
-            cmd = self.script_file + ['-m', args.minigraph]
+            if "-m" in argument:
+                cmd = self.script_file + ['-m', args.minigraph]
+                cmd += ['--print-data']
+            elif "--preset" in argument:
+                cmd = self.script_file + ['--preset', args.preset]
+
             if args.hwsku is not None:
                 cmd += ['-k', args.hwsku]
             if args.hwsku_config is not None:
@@ -75,7 +82,9 @@ class YangWrapper(object):
                 cmd += ['-n', args.namespace]
             if args.json is not None:
                 cmd += ['-j', args.json]
-            cmd += ['--print-data']
+            if args.additional_data is not None:
+                cmd += ['-a', args.additional_data]
+
             output = subprocess.check_output(cmd).decode()
             try:
                 self.yang_parser.loadData(configdbJson=json.loads(output))
@@ -86,6 +95,7 @@ class YangWrapper(object):
             if len(self.yang_parser.tablesWithOutYang):
                 return False
         return True
+
 
 def cmp(file1, file2):
     """ compare files """
