@@ -1,0 +1,44 @@
+FROM {{docker_tam_load_image}}
+
+MAINTAINER Shirisha Dasari
+
+ARG docker_container_name
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+{% if ARTIFACTORY_URL is defined and ARTIFACTORY_URL|length -%}
+# Insert Artifactory URL references
+COPY ["files/sources_af.list", "/etc/apt/sources.list.d/03_sources_af.list"]
+{%- endif %}
+
+RUN apt-get update
+
+## Install dependencies
+RUN apt-get install -y gdb
+RUN apt-get -y install libpython2.7
+RUN apt-get -y install libprotobuf17
+
+## Copy locally built debian packages
+## Install locally built debian packages in docker
+COPY \
+{% for deb in docker_tam_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN dpkg -i \
+{% for deb in docker_tam_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+{% if ARTIFACTORY_URL is defined and ARTIFACTORY_URL|length -%}
+# Remove Artifactory URL references
+RUN rm -f /etc/apt/sources.list.d/03_sources_af.list && apt-get update
+{%- endif %}
+
+COPY ["start.sh", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+ENTRYPOINT ["/usr/bin/supervisord"]
