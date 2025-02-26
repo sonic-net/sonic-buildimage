@@ -1,0 +1,13 @@
+[Unit]
+Description=notify bcm soft ready service
+PartOf=syncd.service
+
+[Service]
+Type=simple
+ExecStop=/usr/local/bin/notify_bcm_ready.sh 0
+ExecStart=/usr/local/bin/notify_bcm_ready.sh 1
+ExecReload=/usr/local/bin/notify_bcm_ready.sh 1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

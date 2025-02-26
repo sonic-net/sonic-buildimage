@@ -1,0 +1,20 @@
+{# Get sai.profile based on uft_profile. balanced-profile-1.config.yaml file is the default one #}
+{%- set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-balanced-profile-1.config.yaml' -%}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined -%}
+{%-     if DEVICE_METADATA['localhost']['uft_profile'] is defined -%}
+{%-         set uft_profile = DEVICE_METADATA['localhost']['uft_profile'] -%}
+{%-         if 'l2_profile' in uft_profile.lower() %}
+{%              set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-max-l2-profile.config.yaml' -%}
+{%-         elif  'l3_profile' in uft_profile.lower() %}
+{%-             set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-max-l3-profile.config.yaml' -%}
+{%-         elif  'balanced_profile_1' in uft_profile.lower() %}
+{%-             set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-balanced-profile-1.config.yaml' -%}
+{%-         elif  'balanced_profile_2' in uft_profile.lower() %}
+{%-             set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-balanced-profile-2.config.yaml' -%}
+{%-         endif %}
+{%-     else %}
+{%-         set sai_profile_configs = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5_b0-generic-64x800-balanced-profile-1.config.yaml' -%}
+{%-     endif %}
+{%- endif %}
+{# Write the contents of sai_profile_filename to sai.profile file #}
+{{ sai_profile_configs }}
