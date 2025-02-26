@@ -13,6 +13,7 @@ include $(PLATFORM_PATH)/platform-modules-accton.dep
 include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
 include $(PLATFORM_PATH)/platform-modules-inventec.dep
 include $(PLATFORM_PATH)/platform-modules-cel.dep
+include $(PLATFORM_PATH)/platform-modules-cls.dep
 include $(PLATFORM_PATH)/platform-modules-delta.dep
 include $(PLATFORM_PATH)/platform-modules-quanta.dep
 #include $(PLATFORM_PATH)/platform-modules-mitac.dep
