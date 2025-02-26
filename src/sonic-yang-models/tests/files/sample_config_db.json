@@ -2363,6 +2363,157 @@
             }
         },
 
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true"
+            },
+            "Vlan200": {
+                "forward_delay": "16",
+                "hello_time": "3",
+                "max_age": "22",
+                "priority": "16384",
+                "enabled": "true"
+            }
+        },
+        "STP_VLAN_INTF": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "Vlan100|PortChannel2": {
+                "path_cost": "20000",
+                "priority": "64"
+            },
+            "Vlan200|Ethernet4": {
+                "path_cost": "200000", 
+                "priority": "128"
+            }
+        },
+        "STP_INTF": {
+            "Ethernet0": {
+                "enabled": "1",
+                "root_guard": "0",
+                "bpdu_guard": "0",
+                "bpdu_guard_do_disable": "0",
+                "path_cost": "200000",
+                "priority": "128",
+                "portfast": "1",
+                "uplink_fast": "0"
+            },
+            "Ethernet4": {
+                "enabled": "1",
+                "root_guard": "0",
+                "bpdu_guard": "1",
+                "bpdu_guard_do_disable": "1",
+                "path_cost": "200000",
+                "priority": "128",
+                "portfast": "0",
+                "uplink_fast": "0"
+            },
+            "PortChannel2": {
+                "enabled": "1",
+                "root_guard": "1",
+                "bpdu_guard": "0",
+                "bpdu_guard_do_disable": "0",
+                "path_cost": "20000",
+                "priority": "64",
+                "portfast": "0",
+                "uplink_fast": "1"
+            }
+        },
+
+        "STP_MST": {
+            "GLOBAL": {
+                "name": "region1",
+                "revision": "0",
+                "max_hops": "20",
+                "max_age": "20",
+                "hello_time": "2",
+                "forward_delay": "15"
+            }
+        },
+        "STP_MST_INST": {
+            "0": {
+                "bridge_priority": "32768",
+                "vlan_list": "1-99,4000-4094"
+            },
+            "1": {
+                "bridge_priority": "16384",
+                "vlan_list": "100-199"
+            },
+            "2": {
+                "bridge_priority": "20480",
+                "vlan_list": "200-299"
+            },
+            "3": {
+                "bridge_priority": "24576",
+                "vlan_list": "300-399"
+            }
+        },
+        "STP_MST_PORT": {
+            "0|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "1|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128" 
+            },
+            "2|Ethernet4": {
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "3|PortChannel2": {
+                "path_cost": "20000",
+                "priority": "64"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "edge_port": "1",
+                "link_type": "point-to-point",
+                "enabled": "1",
+                "bpdu_guard": "0", 
+                "bpdu_guard_do": "0",
+                "root_guard": "0",
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "Ethernet4": {
+                "edge_port": "0",
+                "link_type": "shared",
+                "enabled": "1",
+                "bpdu_guard": "1",
+                "bpdu_guard_do": "1",
+                "root_guard": "0",
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "PortChannel2": {
+                "edge_port": "0",
+                "link_type": "point-to-point",
+                "enabled": "1",
+                "bpdu_guard": "0",
+                "bpdu_guard_do": "0", 
+                "root_guard": "1",
+                "path_cost": "20000",
+                "priority": "64"
+            }
+        },
 
         "MCLAG_DOMAIN": {
             "123": {
