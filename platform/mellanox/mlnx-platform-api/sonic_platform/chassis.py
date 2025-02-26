@@ -27,7 +27,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
     import os
-    from subprocess import check_output
+    import subprocess
     from functools import reduce
     from .utils import extract_RJ45_ports_index
     from . import module_host_mgmt_initializer
@@ -58,7 +58,7 @@ REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
-SPC_RETRIEVAL = "lspci | grep 'Mellanox Technologies'"
+GET_HWSKU_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.hwsku"]
 SYS_DISPLAY = "SYS_DISPLAY"
 
 # Global logger class instance
@@ -955,29 +955,18 @@ class Chassis(ChassisBase):
 
         return result
 
-    def _get_spectrum_version(self):
-        """
-        Returns spectrum version of the platform
-
-        Returns:
-            Returns spectrum version of the platform
-        """
-        out = check_output(SPC_RETRIEVAL, shell=True)
-        spc_version = 1
-        spc_match = re.search('Spectrum-([1-9](?!\d))', out.decode("utf-8"))
-        if spc_match is not None:
-            spc_version = int(spc_match.group(1))
-        return spc_version
-
     def _read_model_from_vpd(self):
         """
         Returns if model number should be returned from VPD file
 
         Returns:
-            Returns True if spectrum version is higher than Spectrum-4
+            Returns True if spectrum version is higher than Spectrum-4 according to sku number
         """
-        spc_version = self._get_spectrum_version()
-        return (spc_version >= 4)
+        p = subprocess.Popen(self.GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        out.rstrip('\n')
+        sku_num = re.search('[0-9]{4}', out).group()
+        return int(sku_num) >= 5000
 
     def _verify_reboot_cause(self, filename):
         '''

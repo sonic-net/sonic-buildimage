@@ -34,8 +34,7 @@ from sonic_platform.eeprom import Eeprom, EepromContentVisitor
 class TestEeprom:
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.islink', MagicMock(return_value=True))
-    @patch('sonic_platform.chassis.check_output',
-           MagicMock(return_value=b'Ethernet controller: Mellanox Technologies MT53100 [Spectrum-2]'))
+    @patch('sonic_platform.chassis.subprocess.Popen', MagicMock(return_value='MSN3700'))
     @patch('sonic_platform.eeprom.Eeprom.get_system_eeprom_info')
     @patch('sonic_platform.chassis.extract_RJ45_ports_index', MagicMock(return_value=[]))
     def test_chassis_eeprom(self, mock_eeprom_info):
