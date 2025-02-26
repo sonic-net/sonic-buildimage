@@ -11,7 +11,7 @@ cov-core==1.15.0
 coverage==4.5.2
 cryptography==2.6.1
 devscripts==2.19.5+deb10u1
-distro-info==0.21
+distro-info==0.21+deb10u1
 docutils==0.14
 entrypoints==0.3
 fastentrypoints==0.12
