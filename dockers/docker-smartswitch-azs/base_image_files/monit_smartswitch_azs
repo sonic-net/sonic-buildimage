@@ -1,7 +1,0 @@
-###############################################################################
-## Monit configuration for smartswitch-azs container
-## process list:
-##  smartswitch-azs
-###############################################################################
-check program smartswitch_azs|smartswitch_azs with path "/usr/bin/process_checker smartswitch_azs python /usr/bin/smartswitch-azs.py"
-    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles
