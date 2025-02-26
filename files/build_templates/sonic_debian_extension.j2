@@ -743,7 +743,7 @@ PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
 PACKAGE_VERSION=$(dpkg-deb -f {{deb}} Version)
 INSTALLED_VERSION=$(dpkg-query --showformat='${Version}' --show $PACKAGE_NAME || true)
 if [ "$INSTALLED_VERSION" != "" ] && [ "$INSTALLED_VERSION" != "$PACKAGE_VERSION" ]; then
-    sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+    install_deb_package {{deb}}
 fi
 
 ## SONiC packages may have lower version than Debian offical package, install offical Debian package will break feature
@@ -1129,8 +1129,7 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 install_pip_package {{platform_api_py3_wheel_path}}
 
 
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libdashapi_*.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+install_deb_package $debs_path/libdashapi_*.deb
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install xmlstarlet
 
@@ -1158,7 +1157,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 if [ "$INCLUDE_FIPS" == y ]; then
     {% if installer_python_debs.strip() -%}
     {% for deb in installer_python_debs.strip().split(' ') -%}
-    sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+    install_deb_package {{deb}}
     {% endfor %}
     {% endif %}
 fi
