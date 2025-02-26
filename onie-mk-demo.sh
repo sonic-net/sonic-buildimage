@@ -102,6 +102,7 @@ sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
        -e "s/%%ONIE_IMAGE_PART_SIZE%%/$onie_image_part_size/" \
        -e "s/%%EXTRA_CMDLINE_LINUX%%/$EXTRA_CMDLINE_LINUX/" \
        -e "s@%%OUTPUT_RAW_IMAGE%%@$output_raw_image@" \
+       -e "s@%%BUILD_REDUCE_IMAGE_SIZE%%@$build_reduce_image_size@" \
     $tmp_installdir/install.sh || clean_up 1
 echo -n "."
 cp -r $onie_installer_payload $tmp_installdir || clean_up 1

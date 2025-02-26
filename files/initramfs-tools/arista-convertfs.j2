@@ -243,7 +243,7 @@ run_cmd "$cmd" "$err_msg"
 
 if [ x"$docker_inram" != x"on" ]; then
     err_msg="Error: extract docker directory"
-    cmd="[ -f $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS }} ] && rm -rf $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && mkdir -p $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && tar xzf $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && rm -f $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS }}"
+    cmd="[ -f $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS_GZ }} ] && rm -rf $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && mkdir -p $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && tar xzf $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS_GZ }} -C $root_mnt/$image_dir/{{ DOCKERFS_DIR }} && rm -f $tmp_mnt/$image_dir/{{ FILESYSTEM_DOCKERFS_GZ }}"
     run_cmd "$cmd" "$err_msg"
 fi
 

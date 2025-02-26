@@ -46,7 +46,12 @@
 
 # All templated variables should be declared here
 image_name="image-%%IMAGE_VERSION%%"
-dockerfs="{{ FILESYSTEM_DOCKERFS }}"
+build_reduce_image_size=%%BUILD_REDUCE_IMAGE_SIZE%%
+if [ $build_reduce_image_size == "y" ]; then
+    dockerfs="{{ FILESYSTEM_DOCKERFS_ZSTD }}"
+else
+    dockerfs="{{ FILESYSTEM_DOCKERFS_GZ }}"
+fi
 boot_image="{{ ABOOT_BOOT_IMAGE }}"
 installer_image="sonic.swi"
 docker_dir="{{ DOCKERFS_DIR }}"
@@ -370,6 +375,11 @@ extract_image() {
 
         if [ -n "$install" ]; then
             TAR_EXTRA_OPTION="--numeric-owner --warning=no-timestamp"
+        fi
+
+        if $in_aboot && [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+            echo "Error: Aboot environment doesn't support zstd decompression. This image cannot be installed."
+            exit 1
         fi
 
         ## extract docker archive

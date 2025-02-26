@@ -186,7 +186,7 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     cp $INSTALLER_PAYLOAD $OUTPUT_ABOOT_IMAGE
     ## Add Aboot boot0 file
     j2 -f env files/Aboot/boot0.j2 ./onie-image.conf > files/Aboot/boot0
-    sed -i -e "s/%%IMAGE_VERSION%%/$IMAGE_VERSION/g" files/Aboot/boot0
+    sed -i -e "s/%%IMAGE_VERSION%%/$IMAGE_VERSION/g" -e "s/%%BUILD_REDUCE_IMAGE_SIZE%%/$BUILD_REDUCE_IMAGE_SIZE/g" files/Aboot/boot0
     pushd files/Aboot && zip -g $OLDPWD/$OUTPUT_ABOOT_IMAGE boot0; popd
     pushd files/Aboot && zip -g $OLDPWD/$ABOOT_BOOT_IMAGE boot0; popd
     pushd files/image_config/secureboot && zip -g $OLDPWD/$OUTPUT_ABOOT_IMAGE allowlist_paths.conf; popd
