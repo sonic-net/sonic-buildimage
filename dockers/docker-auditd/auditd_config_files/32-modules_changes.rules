@@ -1,0 +1,3 @@
+-w /sbin/insmod -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-w /sbin/rmmod -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-w /sbin/modprobe -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes

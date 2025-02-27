@@ -1,0 +1,1 @@
+-a always,exit -F arch=b32 -S setuid,setresuid,setreuid,setfsuid,setgid,setresgid,setregid,setfsgid -F auid>=1000 -F auid!=4294967295 -F key=user_group_management

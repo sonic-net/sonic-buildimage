@@ -1,0 +1,10 @@
+DPATH       := $($(DOCKER_AUDITD)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-auditd.mk rules/docker-auditd.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_AUDITD)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_AUDITD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_AUDITD)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_AUDITD),$(DOCKER_AUDITD_DBG)))
