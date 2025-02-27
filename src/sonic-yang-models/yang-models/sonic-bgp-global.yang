@@ -445,6 +445,16 @@ module sonic-bgp-global {
                     }
                     description "Maximum duration to suppress a stable route";
                 }
+
+                leaf advertise-all-vni {
+                    type boolean;
+                    description "L2VPN advertise all VNIs";
+                }
+
+                leaf advertise-svi-ip {
+                    type boolean;
+                    description "L2VPN advertise the local SVI IP address so that it can be accessible from remote VTEPs";
+                }
             }
         }
 

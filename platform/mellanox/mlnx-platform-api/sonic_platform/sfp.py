@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -358,7 +359,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         Returns:
             tuple: (error state, error description)
         """
-        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/statuserror', default=-1)
         sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
         if sfp_state_bits is None:
             logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
@@ -675,8 +676,11 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             if self.is_sw_control():
-                return 'Not supported'
-        except:
+                api = self.get_xcvr_api()
+                return api.get_error_description() if api else None
+        except NotImplementedError:
+            return 'Not supported'
+        except Exception:
             return self.SFP_STATUS_INITIALIZING
 
         oper_status, error_code = self._get_module_info(self.sdk_index)
@@ -815,6 +819,11 @@ class SFP(NvidiaSFPCommon):
             list: [False] * channels
         """
         api = self.get_xcvr_api()
+        try:
+            if self.is_sw_control():
+                return api.get_rx_los() if api else None
+        except Exception as e:
+            print(e)
         return [False] * api.NUM_CHANNELS if api else None
 
     def get_tx_fault(self):
@@ -927,8 +936,6 @@ class SFP(NvidiaSFPCommon):
         """
         if self._xcvr_api is None:
             self.refresh_xcvr_api()
-            if self._xcvr_api is not None:
-                self._xcvr_api.get_rx_los = self.get_rx_los
         return self._xcvr_api
 
     def is_sw_control(self):
@@ -1470,14 +1477,14 @@ class SFP(NvidiaSFPCommon):
             # Resetting SFP requires a reloading of module firmware, it takes up to 3 seconds
             # according to standard
             max_wait_time = 3.5
-            begin = time.time()
+            begin = time.monotonic()
             while True:
                 ready_sfp_set = wait_ready_task.get_ready_set()
                 for sfp_index in ready_sfp_set:
                     s = sfp_list[sfp_index]
                     logger.log_debug(f'SFP {sfp_index} is recovered from resetting state')
                     s.on_event(EVENT_RESET_DONE)
-                elapse = time.time() - begin
+                elapse = time.monotonic() - begin
                 if elapse < max_wait_time:
                     time.sleep(0.5)
                 else:

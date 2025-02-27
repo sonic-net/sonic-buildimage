@@ -1268,6 +1268,7 @@ polled_irq_delay.BCM8885X=5
 polled_irq_mode.BCM8885X=0
 port_fec_fabric.BCM8885X=7
 bcm_stat_interval.BCM8885X=1000000
+bcm_linkscan_interval=500000
 
 
 port_init_cl72_1=0
@@ -1496,6 +1497,7 @@ protocol_traps_mode.BCM8885X=IN_LIF
 rate_ext_mdio_divisor=16
 schan_intr_enable.BCM8885X=0
 schan_timeout_usec.BCM8885X=900000
+system_ref_core_clock_khz.BCM8885X=1600000
 serdes_fabric_clk_freq_in.BCM8885X=1
 serdes_fabric_clk_freq_out.BCM8885X=bypass
 serdes_nif_clk_freq_in0.BCM8885X=1

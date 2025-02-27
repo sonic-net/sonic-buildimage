@@ -164,16 +164,12 @@ void run_cap(void *zctx, bool &term, string &read_source,
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_SUBSCRIBE, "", 0));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_RCVTIMEO, &block_ms, sizeof (block_ms)));
 
-    zmq_msg_t msg;
-    zmq_msg_init(&msg);
-    int rc = zmq_msg_recv(&msg, mock_cap, 0);
-    EXPECT_EQ(1, rc); // read control character
 
     while(!term) {
         string source;
         internal_event_t ev_int;
-
-        if (0 == zmq_message_read(mock_cap, 0, source, ev_int)) {
+        int rc = zmq_message_read(mock_cap, 0, source, ev_int);
+        if (0 == rc && !ev_int.empty()) { // ignore control character empty event
             cnt = ++i;
         }
     }

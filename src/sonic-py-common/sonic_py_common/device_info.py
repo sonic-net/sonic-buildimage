@@ -168,6 +168,34 @@ def get_platform_and_hwsku():
     return (platform, hwsku)
 
 
+def get_platform_json_data():
+    """
+    Retrieve the data from platform.json file
+
+    Returns:
+        A dictionary containing the key/value pairs as found in the platform.json file
+    """
+    platform = get_platform()
+    if not platform:
+        return None
+
+    platform_path = get_path_to_platform_dir()
+    if not platform_path:
+        return None
+
+    platform_json = os.path.join(platform_path, PLATFORM_JSON_FILE)
+    if not os.path.isfile(platform_json):
+        return None
+
+    try:
+        with open(platform_json, 'r') as f:
+            platform_data = json.loads(f.read())
+            return platform_data
+    except (json.JSONDecodeError, IOError, TypeError, ValueError):
+        # Handle any file reading and JSON parsing errors
+        return None
+
+
 def get_asic_conf_file_path():
     """
     Retrieves the path to the ASIC configuration file on the device
@@ -582,14 +610,29 @@ def is_smartswitch():
     if not platform:
         return False
 
-    # get platform.json file path
-    platform_json = os.path.join(HOST_DEVICE_PATH, platform, "platform.json")
-    try:
-        with open(platform_json, 'r') as f:
-            platform_cfg = json.loads(f.read())
-            return "DPUS" in platform_cfg
-    except IOError:
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if platform_data:
+        return "DPUS" in platform_data
+
+    return False
+
+
+def is_dpu():
+    # Get platform
+    platform = get_platform()
+    if not platform:
         return False
+
+    if not is_smartswitch():
+        return False
+
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if platform_data:
+        return 'DPU' in platform_data
+
+    return False
 
 
 def is_supervisor():
@@ -819,7 +862,7 @@ def get_system_mac(namespace=None, hostname=None):
         mac_tmp = "{:012x}".format(int(mac_tmp, 16) + 1)
         mac_tmp = re.sub("(.{2})", "\\1:", mac_tmp, 0, re.DOTALL)
         mac = mac_tmp[:-1]
-    return mac
+    return mac.strip() if mac else None
 
 
 def get_system_routing_stack():
@@ -892,37 +935,63 @@ def is_frontend_port_present_in_host():
     return True
 
 
+def get_dpu_info():
+    """
+    Retrieves the DPU information from platform.json file.
+
+    Returns:
+        A dictionary containing the DPU information.
+    """
+
+    platform = get_platform()
+    if not platform:
+        return {}
+
+    # Retrieve platform.json data
+    platform_data = get_platform_json_data()
+    if not platform_data:
+        return {}
+
+    if "DPUS" in platform_data:
+        return platform_data["DPUS"]
+    elif 'DPU' in platform_data:
+        return platform_data['DPU']
+    else:
+        return {}
+
+
 def get_num_dpus():
     """
     Retrieves the number of DPUs from platform.json file.
-
-    Args:
 
     Returns:
         A integer to indicate the number of DPUs.
     """
 
-    platform = get_platform()
-    if not platform:
+    if is_dpu():
         return 0
 
-    # Get Platform path.
-    platform_path = get_path_to_platform_dir()
-
-    if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
-        json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
-
-        try:
-            with open(json_file, 'r') as file:
-                platform_data = json.load(file)
-        except (json.JSONDecodeError, IOError, TypeError, ValueError):
-            # Handle any file reading and JSON parsing errors
-            return 0
-
-        # Convert to lower case avoid case sensitive.
-        data = {k.lower(): v for k, v in platform_data.items()}
-        DPUs = data.get('dpus', None)
-        if DPUs is not None and len(DPUs) > 0:
-            return len(DPUs)
+    dpu_info = get_dpu_info()
+    if dpu_info is not None and len(dpu_info) > 0:
+        return len(dpu_info)
 
     return 0
+
+
+def get_dpu_list():
+    """
+    Retrieves the list of DPUs from platform.json file.
+
+    Returns:
+        A list indicating the list of DPUs.
+        For example, ['dpu0', 'dpu1', 'dpu2']
+    """
+
+    if is_dpu():
+        return []
+
+    dpu_info = get_dpu_info()
+    if dpu_info is not None and len(dpu_info) > 0:
+        return list(dpu_info)
+
+    return []

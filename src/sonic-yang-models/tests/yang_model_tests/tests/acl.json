@@ -174,5 +174,12 @@
     },
     "ACL_TABLE_L3V4V6_TABLE_TYPE": {
         "desc": "ACL_TABLE Validate type L3V4V6."
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION_WRONG_TYPE": {
+        "desc": "ACL Rule with Tunnel Termination",
+        "eStrKey" : "InvalidValue"
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION": {
+        "desc": "ACL Rule with Tunnel Termination"
     }
 }
