@@ -1,0 +1,12 @@
+{
+    "PVST_GLOBAL_VALID": {
+        "desc": "Configure valid global PVST settings"
+    },
+    "MSTP_GLOBAL_VALID": {
+        "desc": "Configure valid global MSTP settings"
+    },
+    "INVALID_STP_MODE": {
+        "desc": "Configure invalid STP mode",
+        "eStr": ["Invalid STP mode"]
+    }
+}
