@@ -8,8 +8,8 @@ parity_correction=0
 parity_enable=0
 mmu_lossless=1
 
-pbmp_oversubscribe=0x444444441111111104444444422222222
-pbmp_xport_xe=0x444444451111111144444444422222222
+pbmp_oversubscribe=0x3fffffffdffffffff7fffffffdfffffffe
+pbmp_xport_xe=0x3fffffffdffffffff7fffffffdfffffffe
 
 #
 arl_clean_timeout_usec=15000000
@@ -26,55 +26,295 @@ max_vp_lags=0
 miim_intr_enable=0
 oversubscribe_mode=1
 
+# port1
+dport_map_port_50=1
+dport_map_port_51=2
+dport_map_port_52=3
+dport_map_port_53=4
+
+# port2
+dport_map_port_54=5
+dport_map_port_55=6
+dport_map_port_56=7
+dport_map_port_57=8
+
+# port3
+dport_map_port_58=9
+dport_map_port_59=10
+dport_map_port_60=11
+dport_map_port_61=12
+
+# port4
+dport_map_port_62=13
+dport_map_port_63=14
+dport_map_port_64=15
+dport_map_port_65=16
+
+# port5
+dport_map_port_68=17
+dport_map_port_69=18
+dport_map_port_70=19
+dport_map_port_71=20
+
+# port6
+dport_map_port_72=21
+dport_map_port_73=22
+dport_map_port_74=23
+dport_map_port_75=24
+
+# port7
+dport_map_port_76=25
+dport_map_port_77=26
+dport_map_port_78=27
+dport_map_port_79=28
+
+# port8
+dport_map_port_80=29
+dport_map_port_81=30
+dport_map_port_82=31
+dport_map_port_83=32
+
+# port9
+dport_map_port_34=33
+dport_map_port_35=34
+dport_map_port_36=35
+dport_map_port_37=36
+
+# port10
+dport_map_port_38=37
+dport_map_port_39=38
+dport_map_port_40=39
+dport_map_port_41=40
+
+# port11
+dport_map_port_42=41
+dport_map_port_43=42
+dport_map_port_44=43
+dport_map_port_45=44
+
+# port12
+dport_map_port_46=45
+dport_map_port_47=46
+dport_map_port_48=47
+dport_map_port_49=48
+
+# port13
+dport_map_port_84=49
+dport_map_port_85=50
+dport_map_port_86=51
+dport_map_port_87=52
+
+# port14
+dport_map_port_88=53
+dport_map_port_89=54
+dport_map_port_90=55
+dport_map_port_91=56
+
+# port15
+dport_map_port_92=57
+dport_map_port_93=58
+dport_map_port_94=59
+dport_map_port_95=60
+
+# port16
+dport_map_port_96=61
+dport_map_port_97=62
+dport_map_port_98=63
+dport_map_port_99=64
+
+# port17
+dport_map_port_102=65
+dport_map_port_103=66
+dport_map_port_104=67
+dport_map_port_105=68
+
+# port18
+dport_map_port_106=69
+dport_map_port_107=70
+dport_map_port_108=71
+dport_map_port_109=72
+
+# port19
+dport_map_port_110=73
+dport_map_port_111=74
+dport_map_port_112=75
+dport_map_port_113=76
+
+# port20
+dport_map_port_114=77
+dport_map_port_115=78
+dport_map_port_116=79
+dport_map_port_117=80
+
+# port21
+dport_map_port_17=81
+dport_map_port_18=82
+dport_map_port_19=83
+dport_map_port_20=84
+
+# port22
+dport_map_port_21=85
+dport_map_port_22=86
+dport_map_port_23=87
+dport_map_port_24=88
+
+# port23
+dport_map_port_25=89
+dport_map_port_26=90
+dport_map_port_27=91
+dport_map_port_28=92
+
+# port24
+dport_map_port_29=93
+dport_map_port_30=94
+dport_map_port_31=95
+dport_map_port_32=96
+
+# port25
+dport_map_port_118=97
+dport_map_port_119=98
+dport_map_port_120=99
+dport_map_port_121=100
+
+# port26
+dport_map_port_122=101
+dport_map_port_123=102
+dport_map_port_124=103
+dport_map_port_125=104
+
+# port27
+dport_map_port_126=105
+dport_map_port_127=106
+dport_map_port_128=107
+dport_map_port_129=108
+
+# port28
+dport_map_port_130=109
+dport_map_port_131=110
+dport_map_port_132=111
+dport_map_port_133=112
+
+# port29
+dport_map_port_1=113
+dport_map_port_2=114
+dport_map_port_3=115
+dport_map_port_4=116
+
+# port30
+dport_map_port_5=117
+dport_map_port_6=118
+dport_map_port_7=119
+dport_map_port_8=120
+
+# port31
+dport_map_port_9=121
+dport_map_port_10=122
+dport_map_port_11=123
+dport_map_port_12=124
+
+# port32
+dport_map_port_13=125
+dport_map_port_14=126
+dport_map_port_15=127
+dport_map_port_16=128
+
 # portmap_0=x:xx
 #FC0
 portmap_1=1:100
+portmap_2=2:25:i
+portmap_3=3:25:i
+portmap_4=4:25:i
 
 #FC1
 portmap_5=5:100
+portmap_6=6:25:i
+portmap_7=7:25:i
+portmap_8=8:25:i
 
 #FC2
 portmap_9=9:100
+portmap_10=10:25:i
+portmap_11=11:25:i
+portmap_12=12:25:i
 
 #FC3
 portmap_13=13:100
+portmap_14=14:25:i
+portmap_15=15:25:i
+portmap_16=16:25:i
 
 #FC4
 portmap_17=17:100
+portmap_18=18:25:i
+portmap_19=19:25:i
+portmap_20=20:25:i
 
 #FC5
 portmap_21=21:100
+portmap_22=22:25:i
+portmap_23=23:25:i
+portmap_24=24:25:i
 
 #FC6
 portmap_25=25:100
+portmap_26=26:25:i
+portmap_27=27:25:i
+portmap_28=28:25:i
 
 #FC7
 portmap_29=29:100
+portmap_30=30:25:i
+portmap_31=31:25:i
+portmap_32=32:25:i
 
 # Tile-1
 #FC8
 portmap_34=33:100
+portmap_35=34:25:i
+portmap_36=35:25:i
+portmap_37=36:25:i
 
 #FC9
 portmap_38=37:100
+portmap_39=38:25:i
+portmap_40=39:25:i
+portmap_41=40:25:i
 
 #FC10
 portmap_42=41:100
+portmap_43=42:25:i
+portmap_44=43:25:i
+portmap_45=44:25:i
 
 #FC11
 portmap_46=45:100
+portmap_47=46:25:i
+portmap_48=47:25:i
+portmap_49=48:25:i
 
 #FC12
 portmap_50=49:100
+portmap_51=50:25:i
+portmap_52=51:25:i
+portmap_53=52:25:i
 
 #FC13
 portmap_54=53:100
+portmap_55=54:25:i
+portmap_56=55:25:i
+portmap_57=56:25:i
 
 #FC14
 portmap_58=57:100
+portmap_59=58:25:i
+portmap_60=59:25:i
+portmap_61=60:25:i
 
 #FC15
 portmap_62=61:100
+portmap_63=62:25:i
+portmap_64=63:25:i
+portmap_65=64:25:i
 
 #TSC-E Management port 1
 #portmap_66=129:10
@@ -83,27 +323,51 @@ portmap_62=61:100
 # Tile-2
 #FC16
 portmap_68=65:100
+portmap_69=66:25:i
+portmap_70=67:25:i
+portmap_71=68:25:i
 
 #FC17
 portmap_72=69:100
+portmap_73=70:25:i
+portmap_74=71:25:i
+portmap_75=72:25:i
 
 #FC18
 portmap_76=73:100
+portmap_77=74:25:i
+portmap_78=75:25:i
+portmap_79=76:25:i
 
 #FC19
 portmap_80=77:100
+portmap_81=78:25:i
+portmap_82=79:25:i
+portmap_83=80:25:i
 
 #FC20
 portmap_84=81:100
+portmap_85=82:25:i
+portmap_86=83:25:i
+portmap_87=84:25:i
 
 #FC21
 portmap_88=85:100
+portmap_89=86:25:i
+portmap_90=87:25:i
+portmap_91=88:25:i
 
 #FC22
 portmap_92=89:100
+portmap_93=90:25:i
+portmap_94=91:25:i
+portmap_95=92:25:i
 
 #FC23
 portmap_96=93:100
+portmap_97=94:25:i
+portmap_98=95:25:i
+portmap_99=96:25:i
 
 #TSC-E Management port 2
 #portmap_100=131:10
@@ -112,28 +376,51 @@ portmap_96=93:100
 # Tile-3
 #FC24
 portmap_102=97:100
+portmap_103=98:25:i
+portmap_104=99:25:i
+portmap_105=100:25:i
 
 #FC25
 portmap_106=101:100
+portmap_107=102:25:i
+portmap_108=103:25:i
+portmap_109=104:25:i
 
 #FC26
 portmap_110=105:100
+portmap_111=106:25:i
+portmap_112=107:25:i
+portmap_113=108:25:i
 
 #FC27
 portmap_114=109:100
+portmap_115=110:25:i
+portmap_116=111:25:i
+portmap_117=112:25:i
 
 #FC28
 portmap_118=113:100
+portmap_119=114:25:i
+portmap_120=115:25:i
+portmap_121=116:25:i
 
 #FC29
 portmap_122=117:100
+portmap_123=118:25:i
+portmap_124=119:25:i
+portmap_125=120:25:i
 
 #FC30
 portmap_126=121:100
+portmap_127=122:25:i
+portmap_128=123:25:i
+portmap_129=124:25:i
 
 #FC31
 portmap_130=125:100
-
+portmap_131=126:25:i
+portmap_132=127:25:i
+portmap_133=128:25:i
 
 
 ## TX/RX Lane Swap
