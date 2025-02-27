@@ -50,6 +50,7 @@ module sonic-bgp-sentinel {
 
                 leaf-list ip_range {
                     type stypes:sonic-ip-prefix;
+                    ordered-by user;
                     description "A range of addresses";
                 }
             }
