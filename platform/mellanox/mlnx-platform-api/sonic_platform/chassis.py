@@ -962,7 +962,7 @@ class Chassis(ChassisBase):
         Returns:
             Returns True if spectrum version is higher than Spectrum-4 according to sku number
         """
-        p = subprocess.Popen(self.GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         out.rstrip('\n')
         sku_num = re.search('[0-9]{4}', out).group()
