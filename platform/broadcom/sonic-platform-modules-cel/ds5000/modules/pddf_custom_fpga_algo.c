@@ -554,8 +554,8 @@ static int adap_data_init(struct i2c_adapter *adap, int i2c_ch_index)
         return -1;
     }
 #ifdef DEBUG_KERN
-    pddf_dbg(FPGA, KERN_INFO "[%s] index: [%d] fpga_data__base_addr:0x%0x8lx"
-        " fpgapci_bar_len:0x%08lx fpga_i2c_ch_base_addr:0x%08lx ch_size=0x%x supported_i2c_ch=%d",
+    pddf_dbg(FPGA, KERN_INFO "[%s] index: [%d] fpga_data__base_addr:0x%p"
+        " fpgapci_bar_len:0x%08lx fpga_i2c_ch_base_addr:0x%p ch_size=0x%x supported_i2c_ch=%d",
              __FUNCTION__, i2c_ch_index, pci_privdata->fpga_data_base_addr,
             pci_privdata->bar_length, pci_privdata->fpga_i2c_ch_base_addr,
             pci_privdata->fpga_i2c_ch_size, pci_privdata->max_fpga_i2c_ch);

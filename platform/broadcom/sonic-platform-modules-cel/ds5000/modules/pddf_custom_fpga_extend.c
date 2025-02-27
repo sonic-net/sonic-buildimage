@@ -120,6 +120,7 @@ static ssize_t get_fpga_version(struct device *dev, struct device_attribute *dev
  * @param  buf     the value and address in format '0xhhhh 0xhhhhhhhh'
  * @return         number of bytes sent by user space, or an error code
  */
+#define ARG_SIZE 40
 static ssize_t set_fpga_reg_value(struct device *dev, struct device_attribute *devattr,
                                   const char *buf, size_t count)
 {
@@ -128,11 +129,15 @@ static ssize_t set_fpga_reg_value(struct device *dev, struct device_attribute *d
     uint32_t value;
     uint32_t mode = 8;
     char *tok;
-    char clone[count];
+    char clone[ARG_SIZE];
     char *pclone = clone;
     char *last;
 
-    strcpy(clone, buf);
+    if (count >= ARG_SIZE) {
+        return -EOVERFLOW;
+    }
+
+    strscpy(clone, buf, ARG_SIZE);
     mutex_lock(&fpga->fpga_lock);
     tok = strsep((char**)&pclone, " ");
     if (tok == NULL) {
@@ -188,7 +193,6 @@ static ssize_t dump_read(struct file *filp, struct kobject *kobj,
     unsigned long i = 0;
     ssize_t status;
     u8 read_reg;
-    struct device *dev = kobj_to_dev(kobj);
 
     if ( off + count > XILINX_FPGA_REG_SIZE ) {
         return -EINVAL;
@@ -217,7 +221,7 @@ static ssize_t TH5_max_temp_show(struct device *dev, struct device_attribute *at
 
     // return normal temp if invalid val, FSC will not shutdwon due to invalid val
     if (data == 0 || ((ready & 0x1) == 0x0)) {
-        ret_val = sprintf(buf, "%lld\n", 30);
+        ret_val = strscpy(buf, "30\n", 4);
     } else {
         /* original calculation */
         /* temp = ((1000000000 / data / 40 / 2 - 1) * (-0.23734)) + 356.07; */
@@ -316,7 +320,7 @@ static int cls_fpga_probe(struct platform_device *pdev)
     int ret = -ENOMEM;
 
     if (!fpga_ctl_addr){
-        printk(KERN_WARNING, "fpga_ctl_addr is null");
+        printk(KERN_WARNING "fpga_ctl_addr is null");
         return ret;
     }
 
@@ -324,7 +328,7 @@ static int cls_fpga_probe(struct platform_device *pdev)
     dev_set_drvdata(&pdev->dev, fpga);
     fpga->base = fpga_ctl_addr;
 
-    printk("FPGA version: 0x%x\n", ioread32(fpga->base + XILINX_FPGA_VERSION));
+    printk(KERN_INFO "FPGA version: 0x%x\n", ioread32(fpga->base + XILINX_FPGA_VERSION));
     
     fpga_obj = kobject_create_and_add("FPGA", &pdev->dev.kobj);
     if (!fpga_obj) {
@@ -343,8 +347,6 @@ static int cls_fpga_probe(struct platform_device *pdev)
 
 err_remove_fpga:
     sysfs_remove_group(&pdev->dev.kobj, &fpga_attr_grp);
-mem_unmap:
-    iounmap(fpga->base);
 err_exit:
     return ret;
 }
@@ -362,8 +364,8 @@ static void fpga_dev_release( struct device * dev)
 }
 static struct resource cls_fpga_resources[] = {
     {
-        .start = NULL,
-        .end = NULL,
+        .start = 0,
+        .end = 0,
         .flags = IORESOURCE_IO,
     },
 };

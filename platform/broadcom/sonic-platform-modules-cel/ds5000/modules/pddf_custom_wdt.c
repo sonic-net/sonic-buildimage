@@ -259,8 +259,12 @@ static ssize_t settimeout_store(struct device *dev, struct device_attribute *att
 {
 	unsigned long timeout;
 	struct cpld_wdt *cpld_wdt = dev_get_drvdata(dev);
+    int ret = 0;
    
-	kstrtoul(buf, 0, &timeout);
+    ret = kstrtoul(buf, 0, &timeout);
+	if (ret != 0) {
+        return ret;
+    }
 	cpld_wdt_set_timeout(&cpld_wdt->wdd, (unsigned int)timeout);
 
     return count;
