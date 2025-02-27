@@ -5,7 +5,6 @@ Requisite=swss.service
 After=config-setup.service swss.service syncd.service interfaces-config.service
 BindsTo=sonic.target
 After=sonic.target
-Before=ntp-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
