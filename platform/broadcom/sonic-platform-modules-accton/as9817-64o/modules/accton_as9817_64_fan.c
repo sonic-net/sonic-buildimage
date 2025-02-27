@@ -339,7 +339,7 @@ static void ipmi_msg_handler(struct ipmi_recv_msg *msg, void *user_msg_data)
     struct ipmi_data *ipmi = user_msg_data;
 
     if (msg->msgid != ipmi->tx_msgid) {
-        dev_err(&data->pdev->dev, "Mismatch between received msgid "
+        dev_notice(&data->pdev->dev, "Mismatch between received msgid "
             "(%02x) and transmitted msgid (%02x)!\n",
             (int)msg->msgid,
             (int)ipmi->tx_msgid);
