@@ -19,6 +19,7 @@
 import os
 import pytest
 import sys
+import subprocess
 if sys.version_info.major == 3:
     from unittest.mock import MagicMock, patch
 else:
@@ -34,10 +35,11 @@ from sonic_platform.eeprom import Eeprom, EepromContentVisitor
 class TestEeprom:
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.islink', MagicMock(return_value=True))
-    @patch('sonic_platform.chassis.subprocess.Popen', MagicMock(return_value='MSN3700'))
+    @patch('subprocess.Popen')
     @patch('sonic_platform.eeprom.Eeprom.get_system_eeprom_info')
     @patch('sonic_platform.chassis.extract_RJ45_ports_index', MagicMock(return_value=[]))
-    def test_chassis_eeprom(self, mock_eeprom_info):
+    def test_chassis_eeprom(self, mock_eeprom_info, mock_subprocess):
+        mock_subprocess.return_value.communicate.return_value = ('MSN3420', None)
         mock_eeprom_info.return_value = {
             hex(Eeprom._TLV_CODE_PRODUCT_NAME): 'MSN3420',
             hex(Eeprom._TLV_CODE_PART_NUMBER): 'MSN3420-CB2FO',
