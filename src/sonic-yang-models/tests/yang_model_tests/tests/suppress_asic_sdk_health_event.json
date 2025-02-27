@@ -14,7 +14,7 @@
     },
     "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_NEGATIVE_MAX_EVENTS": {
         "desc": "Load suppress ASIC/SDK health event list missing name.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_INVALID_MAX_EVENTS": {
         "desc": "Load suppress ASIC/SDK health event list missing name.",
