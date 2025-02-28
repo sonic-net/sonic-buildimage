@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 LIBSAIBCM_XGS_VERSION = 12.3.2.2
 LIBSAIBCM_DNX_VERSION = 12.3.3.2
 LIBSAIBCM_XGS_BRANCH_NAME = SAI_12.3.0_master
+=======
+LIBSAIBCM_XGS_VERSION = 12.0.0.8
+LIBSAIBCM_DNX_VERSION = 12.3.2.2
+LIBSAIBCM_XGS_BRANCH_NAME = SAI_12.0.0_EA3
+>>>>>>> added new buffer configs for th5 from BCM
 LIBSAIBCM_DNX_BRANCH_NAME = SAI_12.3.0_master
 LIBSAIBCM_XGS_URL_PREFIX = "https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/$(LIBSAIBCM_XGS_BRANCH_NAME)/$(LIBSAIBCM_XGS_VERSION)/xgs"
 LIBSAIBCM_DNX_URL_PREFIX = "https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/$(LIBSAIBCM_DNX_BRANCH_NAME)/$(LIBSAIBCM_DNX_VERSION)/dnx"
