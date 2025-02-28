@@ -1,0 +1,42 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-6": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            }
+
+        },
+        "11-22": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            }
+
+        },
+        "27-30": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            }
+        }
+    }
+}
