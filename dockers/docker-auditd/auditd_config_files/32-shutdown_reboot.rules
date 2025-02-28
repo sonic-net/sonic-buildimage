@@ -1,0 +1,1 @@
+-w /var/log/wtmp -p wa -F auid>=1000 -F auid!=4294967295 -k shutdown_reboot

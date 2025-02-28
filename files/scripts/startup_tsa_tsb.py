@@ -67,12 +67,12 @@ def config_tsa():
     num_asics = multi_asic.get_num_asics()
     tsa_ena = get_tsa_status(num_asics)
     if tsa_ena == True:
-        logger.log_info("Configuring TSA")
-        subprocess.check_output(['TSA']).strip()
         logger.log_info("Setting TSA-TSB service field in STATE_DB")
         subprocess.check_output([
             'sonic-db-cli', 'STATE_DB', 'HSET', 'ALL_SERVICE_STATUS|tsa_tsb_service', 'running', 'OK'
         ]).strip()
+        logger.log_info("Configuring TSA")
+        subprocess.check_output(['TSA']).strip()
     else:
         #check if tsa_tsb service is already running, restart the timer
         try:
@@ -84,6 +84,8 @@ def config_tsa():
 
         if startup_tsa_tsb_service_status == 'OK':
             logger.log_info("TSA-TSB service is already running, just restart the timer")
+            # execute TSA again: this is to overcome race condition where in its previous run, TSA configuration didnt complete on all asics
+            subprocess.check_output(['TSA']).strip()
             return True
         else:
             if num_asics > 1:

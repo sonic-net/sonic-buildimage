@@ -17,7 +17,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# Apply patches
 	stg init
+ifeq ($(shell dpkg --print-architecture),armhf)
+	stg import -s ../patch/series_armhf
+else
 	stg import -s ../patch/series
+endif
 
 	# Build source and Debian packages
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)

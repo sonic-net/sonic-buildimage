@@ -1,0 +1,31 @@
+From e507de8f8339ffdef70e12e7fa4de087cca18e03 Mon Sep 17 00:00:00 2001
+From: Gang Lv <ganglv@microsoft.com>
+Date: Wed, 19 Feb 2025 15:14:00 -0700
+Subject: [PATCH 2/2] Fixes for arm64 build
+
+Signed-off-by: Gang Lv <ganglv@microsoft.com>
+---
+ compiler/stack.yaml                        | 2 +-
+ 1 file changed, 2 insertion(+), 1 deletion(-)
+
+diff --git a/compiler/stack.yaml b/compiler/stack.yaml
+index 94b73fe5..fc7b3d81 100644
+--- a/compiler/stack.yaml
++++ b/compiler/stack.yaml
+@@ -6,6 +6,7 @@
+ # A snapshot resolver dictates the compiler version and the set of packages
+ # to be used for project dependencies. For example:
+ resolver: lts-14.4
++compiler: ghc-8.6.5
+ 
+ # User packages to be built.
+ # Various formats can be used as shown in the example below.
+@@ -37,4 +38,4 @@ system-ghc: true
+ 
+ flags:
+   bond:
+-    warningsAsErrors: true
+\ No newline at end of file
++    warningsAsErrors: false
+-- 
+2.25.1

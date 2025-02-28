@@ -145,6 +145,7 @@ jobs:
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
+          make $BUILD_OPTIONS target/docker-auditd.gz
           make $BUILD_OPTIONS target/docker-auditd-watchdog.gz
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar

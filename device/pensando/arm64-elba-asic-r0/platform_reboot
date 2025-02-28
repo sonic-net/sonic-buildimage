@@ -1,0 +1,16 @@
+#!/bin/bash
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+
+DPU_DOCKER_INFO_DIR=/host/dpu-docker-info
+
+function StopDpuDocker() {
+    sync ; sync
+    dpu_docker_name=$(<"$DPU_DOCKER_INFO_DIR/name")
+    docker exec "$dpu_docker_name" rm /var/run/pcieport_data
+    sync ; sync
+    echo "Stopping dpu docker container"
+    docker stop "$dpu_docker_name"
+    sync ; sync
+}
+
+StopDpuDocker

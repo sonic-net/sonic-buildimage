@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,5 +108,6 @@ class TestThermalUpdater:
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
 
         mock_sfp.get_presence = mock.MagicMock(return_value=False)
+        hw_management_independent_mode_update.reset_mock()
         updater.update_module()
-        hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once_with(0, 11)
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
