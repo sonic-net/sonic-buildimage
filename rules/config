@@ -95,7 +95,7 @@ ENABLE_ORGANIZATION_EXTENSIONS = y
 # DEFAULT_KERNEL_PROCURE_METHOD - default method for obtaining kernel
 #   build:    build kernel from source
 #   download: download pre-built kernel from Azure storage.
-DEFAULT_KERNEL_PROCURE_METHOD = build
+DEFAULT_KERNEL_PROCURE_METHOD = download
 
 # FRR user and group id values. These only take effect when SONIC_ROUTING_STACK is frr.
 # Note: these values match the admin uid/gid of the host's admin account. If these values
@@ -122,13 +122,13 @@ SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 DEFAULT_VS_PREPARE_MEM = yes
 
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
-INCLUDE_SYSTEM_GNMI = y
+INCLUDE_SYSTEM_GNMI = n
 
 # INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
-INCLUDE_SYSTEM_BMP = y
+INCLUDE_SYSTEM_BMP = n
 
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
-INCLUDE_SYSTEM_EVENTD = y
+INCLUDE_SYSTEM_EVENTD = n
 
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = n
@@ -137,10 +137,13 @@ INCLUDE_SYSTEM_TELEMETRY = n
 INCLUDE_ICCPD = n
 
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
-INCLUDE_SFLOW = y
+INCLUDE_SFLOW = n
 
 # INCLUDE_MGMT_FRAMEWORK - build docker-sonic-mgmt-framework for CLI and REST server support
-INCLUDE_MGMT_FRAMEWORK = y
+INCLUDE_MGMT_FRAMEWORK = n
+
+# INCLUDE_NETCONF_SERVER - build docker-sonic-netconf server for NETCONF support
+INCLUDE_NETCONF_SERVER = y
 
 # ENABLE_HOST_SERVICE_ON_START - enable sonic-host-server for mgmt-framework and/or
 # gnmi containers to access host functionality by default
