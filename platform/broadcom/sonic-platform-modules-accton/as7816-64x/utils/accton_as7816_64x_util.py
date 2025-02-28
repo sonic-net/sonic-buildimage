@@ -129,7 +129,7 @@ def my_log(txt):
     
 def log_os_system(cmd, show):
     logging.info('Run :'+cmd)  
-    status, output = subprocess.getstatusoutput(cmd)    
+    status, output = getstatusoutput_noshell([cmd])    
     my_log (cmd +"with result:" + str(status))
     my_log ("      output:"+output)    
     if status:
