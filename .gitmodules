@@ -124,6 +124,9 @@
 [submodule "platform/marvell/sonic-platform-marvell"]
 	path = platform/marvell/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "src/sonic-dash-ha"]
+	path = src/sonic-dash-ha
+	url = https://github.com/sonic-net/sonic-dash-ha
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
 	url = https://github.com/sonic-net/sonic-stp
