@@ -181,5 +181,8 @@
     },
     "ACL_RULE_WITH_TUNNEL_TERMINATION": {
         "desc": "ACL Rule with Tunnel Termination"
+    },
+    "ACL_TABLE_INNERSRCMACREWRITE_TABLE_TYPE": {
+        "desc": "ACL_TABLE Validate type INNERSRCMACREWRITE."
     }
 }
