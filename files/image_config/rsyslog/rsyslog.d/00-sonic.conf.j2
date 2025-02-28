@@ -46,3 +46,11 @@ if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
     /var/log/telemetry.log
     stop
 }
+
+## stpd rules
+if $programname contains "stp" then {
+    if not ($msg contains "STP_SYSLOG") then {
+        /var/log/stpd.log
+            stop
+    }
+}
