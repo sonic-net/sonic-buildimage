@@ -1368,13 +1368,34 @@ class MemoryStatisticsProcessor:
 
 
 class SocketHandler:
+    """Handles the creation and management of a UNIX socket for communication.
+    
+    This class is responsible for setting up a UNIX socket, accepting incoming
+    connections, processing requests, and sending responses. It provides methods
+    for managing socket file cleanup and error handling during communication.
+    """
+
     def __init__(self, address, command_handler, stop_event):
+        """
+        Initializes the SocketHandler with the specified parameters.
+        
+        :param address: The file system path where the UNIX socket will be created.
+        :param command_handler: A callable that processes commands received from clients.
+        :param stop_event: An event flag used to signal when to stop the socket listener.
+        """
         self.address = address
         self.command_handler = command_handler
         self.listener_socket = None
         self.stop_event = stop_event 
 
     def safe_remove_file(self, filepath):
+        """Removes a file if it exists to prevent socket binding errors.
+        
+        This method checks for the existence of the specified file and removes
+        it if found. It logs the action taken or any errors encountered.
+        
+        :param filepath: The path of the socket file to be removed.
+        """
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -1383,6 +1404,11 @@ class SocketHandler:
             logger.log_error(f"Failed to remove file {filepath}: {e}")
 
     def create_unix_socket(self):
+        """Creates and configures a UNIX socket for listening for incoming connections.
+        
+        This method sets up the socket with appropriate permissions and starts
+        listening for client connections. It raises an exception if socket creation fails.
+        """
         try:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(1.0) 
@@ -1401,6 +1427,14 @@ class SocketHandler:
         return all(key in request_json for key in required_keys)
 
     def send_response(self, connection, response_data):
+        """Sends a JSON response back to the client.
+        
+        This method encodes the response data as JSON and sends it through
+        the established socket connection. It logs any errors encountered during the process.
+        
+        :param connection: The socket connection to the client.
+        :param response_data: The data to be sent as a JSON response.
+        """
         try:
             response_json = json.dumps(response_data)
             connection.sendall(response_json.encode('utf-8'))
@@ -1409,6 +1443,14 @@ class SocketHandler:
             logger.log_error(f"Failed to send response: {e}")
 
     def handle_connection(self, connection):
+        """Processes a single incoming socket connection.
+        
+        This method reads the request data from the client, decodes it from JSON,
+        and processes it using the command handler. It handles any exceptions,
+        sending an error response if needed, and closes the connection afterward.
+        
+        :param connection: The socket connection established with the client.
+        """
         error_response = {"status": False, "msg": None}
         try:
             request_data = connection.recv(4096)
@@ -1831,11 +1873,11 @@ class MemoryStatisticsService:
         """
         logger.log_info("Starting configuration retrieval from ConfigDB")
         config_db = ConfigDBConnector()
-
+        
         try:
             config_db.connect()
             config = config_db.get_table('MEMORY_STATISTICS')
-
+            
             updates = {}
 
             sampling_interval = config.get('sampling_interval', 5)
@@ -1849,7 +1891,7 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as interval_error:
                 logger.log_warning(f"Invalid sampling interval: {interval_error}. Using default.")
                 updates['sampling_interval'] = 5
-
+            
             retention_period = config.get('retention_period', 15)
             try:
                 retention_period = int(retention_period)
@@ -1861,21 +1903,21 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as retention_error:
                 logger.log_warning(f"Invalid retention period: {retention_error}. Using default.")
                 updates['retention_period'] = 15
-
+            
             self.config.update(updates)
-
+            
             self.sampling_interval = updates.get('sampling_interval', 5) * 60
             self.retention_period = updates.get('retention_period', 15)
-
+            
             logger.log_info(f"Configuration updated: "
                             f"sampling_interval={self.sampling_interval // 60} minutes, "
                             f"retention_period={self.retention_period} days")
-
+        
         except Exception as error:
             logger.log_error(f"Configuration retrieval failed: {error}")
             self.sampling_interval = 5 * 60
             self.retention_period = 15
-
+        
         finally:
             try:
                 config_db.disconnect()
@@ -1905,7 +1947,7 @@ class MemoryStatisticsService:
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
-
+            
             current_config = self.config.get_copy()
             sampling_interval = int(current_config.get('sampling_interval', 5)) * 60
             retention_period = int(current_config.get('retention_period', 15))
@@ -1918,7 +1960,7 @@ class MemoryStatisticsService:
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
                 logger.log_info(f"Current memory usage collected: {current_memory}")
-
+                
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1978,7 +2020,7 @@ class MemoryStatisticsService:
                 logger.log_error(f"JSON encoding/decoding error during collection: {je}")
             except Exception as error:
                 logger.log_error(f"Error during memory statistics collection: {error}")
-
+            
             elapsed_time = (datetime.now() - start_time).total_seconds()
             sleep_time = max(0, self.sampling_interval - elapsed_time)
             if self.stop_event.wait(timeout=sleep_time):
@@ -2014,7 +2056,7 @@ class MemoryStatisticsService:
         """
         logger.log_info("Signaling threads to stop.")
         self.stop_event.set()
-
+        
         if self.socket_listener_thread and self.socket_listener_thread.is_alive():
             logger.log_info("Waiting for socket listener thread to stop...")
             self.socket_listener_thread.join(timeout=5)
@@ -2095,7 +2137,7 @@ if __name__ == '__main__':
     }
 
     logger = SyslogLogger(identifier="memstats#log", log_to_console=True)
-
+    
     service_name = "MemoryStatisticsService" 
     service = MemoryStatisticsService(memory_statistics_config, name=service_name)
     service.run()
