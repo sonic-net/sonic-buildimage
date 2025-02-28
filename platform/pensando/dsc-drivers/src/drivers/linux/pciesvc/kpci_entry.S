@@ -9,11 +9,17 @@
  *  Author: rob.gardner@oracle.com
  */
 	
-#include <linux/linkage.h>
-#include <asm/assembler.h>
-#include <asm/sysreg.h>
 #include "kpci_constants.h"
 	
+#ifndef SYM_CODE_START
+#define SYM_CODE_START(name) \
+	.globl name		;\
+        name:			;
+
+#define SYM_CODE_END(name) \
+	.size name, .-name
+#endif
+
 /* Calling conventions for printl: */
 /* We use x12 as the branch link register and x13 as the first function arg */
 #define	return_addr 	x12

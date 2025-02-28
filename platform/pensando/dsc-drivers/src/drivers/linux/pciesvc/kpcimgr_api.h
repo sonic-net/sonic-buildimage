@@ -22,6 +22,7 @@
 #include <linux/moduleloader.h>
 #include <linux/set_memory.h>
 #include <asm/insn.h>
+#include <asm/cacheflush.h>
 #endif
 
 #include "kpci_constants.h"
