@@ -61,6 +61,7 @@ module sonic-route-common {
                     type leafref {
                         path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
                     }
+                    ordered-by user;
                     max-elements 1;
                     description "Router filter to apply while redistributing the routes from another protocol.";
                 }
