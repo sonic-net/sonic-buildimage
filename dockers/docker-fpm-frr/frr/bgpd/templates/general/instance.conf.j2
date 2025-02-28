@@ -14,13 +14,18 @@
   neighbor {{ neighbor_addr }} shutdown
 {% endif %}
 !
+{% set skip_internal_group_member_hwskus = ['Arista-7050CX3-32S-C28S4'] %}
 {% if neighbor_addr | ipv4 %}
   address-family ipv4
+{% if bgp_session["asn"] != bgp_asn or CONFIG_DB__DEVICE_METADATA['localhost']['hwsku'] not in skip_internal_group_member_hwskus %}
     neighbor {{ neighbor_addr }} peer-group PEER_V4
+{% endif %}
 !
 {% elif neighbor_addr | ipv6 %}
   address-family ipv6
+{% if bgp_session["asn"] != bgp_asn or CONFIG_DB__DEVICE_METADATA['localhost']['hwsku'] not in skip_internal_group_member_hwskus %}
     neighbor {{ neighbor_addr }} peer-group PEER_V6
+{% endif %}
 !
 {% endif %}
 !
