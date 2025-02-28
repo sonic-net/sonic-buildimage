@@ -426,7 +426,7 @@ def test_set_ipv6():
             "  redistribute static route-map STATIC_ROUTE_FILTER",
             " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
             " exit-address-family",
             "exit"
         ]
@@ -966,6 +966,7 @@ def test_set_del_bgp_asn_change():
         " address-family ipv6",
         "  redistribute static route-map STATIC_ROUTE_FILTER",
         " exit-address-family",
+        "exit"
     ]
     def push_list(cmds):
         set_del_test.push_list_called = True
@@ -1108,7 +1109,7 @@ def test_set_bfd_false():
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
             " exit-address-family",
-            "exit"
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
