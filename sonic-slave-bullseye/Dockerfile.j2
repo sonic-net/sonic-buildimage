@@ -535,6 +535,7 @@ RUN apt-get purge -y python3-pip python3-yaml
 
 # For building Python packages
 RUN pip3 install setuptools==49.6.00
+RUN pip3 install setuptools-scm=8.1.0
 RUN pip3 install wheel==0.38.1
 
 {%- if CONFIGURED_ARCH == "armhf" %}
