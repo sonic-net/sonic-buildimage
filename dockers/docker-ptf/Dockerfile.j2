@@ -91,7 +91,8 @@ RUN apt-get update          \
         gdb                 \
         automake            \
         iproute2            \
-        wireshark-common
+        wireshark-common    \
+        freeradius
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
