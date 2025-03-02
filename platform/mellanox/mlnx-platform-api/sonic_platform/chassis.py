@@ -963,7 +963,7 @@ class Chassis(ChassisBase):
             Returns True if spectrum version is higher than Spectrum-4 according to sku number
         """
         sku = device_info.get_hwsku()
-        sku_num = re.search('[0-9]{4}', out).group()
+        sku_num = re.search('[0-9]{4}', sku).group()
         return int(sku_num) >= 5000
 
     def _verify_reboot_cause(self, filename):
