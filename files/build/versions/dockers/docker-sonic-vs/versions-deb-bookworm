@@ -89,9 +89,9 @@ logrotate==3.21.0-1
 lsof==4.95.0-1
 ndisc6==1.0.5-1+b2
 netbase==6.4
-openssh-client==1:9.2p1-2+deb12u4
-openssh-server==1:9.2p1-2+deb12u4
-openssh-sftp-server==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
+openssh-server==1:9.2p1-2+deb12u5
+openssh-sftp-server==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 pinentry-curses==1.2.1-1
 pkgconf==1.8.1-1
