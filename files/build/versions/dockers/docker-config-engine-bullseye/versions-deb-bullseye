@@ -18,13 +18,13 @@ libnsl-dev==1.3.0-2
 libpython3.9==3.9.2-1+deb11u2
 libswsscommon==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
-libxml2==2.9.10+dfsg-6.7+deb11u5
-libxml2-dev==2.9.10+dfsg-6.7+deb11u5
+libxml2==2.9.10+dfsg-6.7+deb11u6
+libxml2-dev==2.9.10+dfsg-6.7+deb11u6
 libxslt1-dev==1.1.34-4+deb11u1
 libxslt1.1==1.1.34-4+deb11u1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==5.10.226-1
+linux-libc-dev==5.10.234-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-db-cli==1.0.0

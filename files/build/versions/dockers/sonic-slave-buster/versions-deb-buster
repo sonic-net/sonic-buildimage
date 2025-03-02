@@ -1141,7 +1141,7 @@ libtexlua53==2018.20181218.49446-1+deb10u2
 libtexluajit2==2018.20181218.49446-1+deb10u2
 libtext-charwidth-perl==0.04-7.1+b1
 libtext-glob-perl==0.10-1
-libtext-iconv-perl==1.7-5+b7
+libtext-iconv-perl==1.7-5+b6
 libtext-levenshtein-perl==0.13-1
 libtext-unidecode-perl==1.30-1
 libtext-wrapi18n-perl==0.06-7.1

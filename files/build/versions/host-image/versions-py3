@@ -47,7 +47,7 @@ pip==23.0.1
 ply==3.11
 prefixed==0.9.0
 prettyprinter==0.18.0
-protobuf==4.25.4
+protobuf==5.29.3
 psutil==6.0.0
 ptyprocess==0.7.0
 pyang==2.6.1

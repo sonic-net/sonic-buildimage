@@ -1,6 +1,6 @@
 bfscripts==4.9.0-13347
 doca-cx-libs==2.8.0064-1
-kernel-mft-dkms==4.30.2-23
+kernel-mft-dkms==4.28.0-96
 kernel-mft-dkms-modules-6.1.0-22-2-arm64==4.28.0
 libdashapi==1.0.0
 libdoca-cx-libs-dev==2.8.0064-1
@@ -60,5 +60,5 @@ sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
-sys-sdk-dev==1.mlnx.4.7.2166
-sys-sdk-main==1.mlnx.4.7.2166
+sys-sdk-dev==1.mlnx.4.7.2202
+sys-sdk-main==1.mlnx.4.7.2202

@@ -65,7 +65,7 @@ grub2-common==2.06-13+deb12u1
 haveged==1.9.14-1+b1
 hdparm==9.65+ds-1
 hping3==3.a2.ds2-10
-hw-management==1.mlnx.7.0040.2000
+hw-management==1.mlnx.7.0040.2104
 i2c-tools==4.3-2+b3
 icu-devtools==72.1-3
 ifmetric==0.3-5
@@ -145,6 +145,7 @@ libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
 libgirepository-1.0-1==1.74.0-3
 libglib2.0-0==2.74.6-2+deb12u5
+libgnutls30==3.7.9-2+deb12u4
 libgomp1==12.2.0-14
 libgpm2==1.20.7-10+b1
 libgprofng0==2.40-2
@@ -290,9 +291,9 @@ lsof==4.95.0-1
 makedev==2.3.1-97
 makedumpfile==1:1.7.2-1
 media-types==10.0.0
-mft==4.30.2-23
+mft==4.28.0-96
 mft-fwtrace-cfg==1.0.0
-mft-oem==4.30.2-23
+mft-oem==4.28.0-96
 minicom==2.8-2
 mlnx-iproute2==6.9.0-1.2407061
 mlnx-ofed-kernel-modules-6.1.0-22-2-arm64==24.07.OFED.24.07.0.6.1.1
@@ -315,7 +316,7 @@ ntpdate==1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1
 ntpsec==1.2.2+dfsg1-1+deb12u1
 ntpsec-ntpdate==1.2.2+dfsg1-1+deb12u1
 ntpsec-ntpdig==1.2.2+dfsg1-1+deb12u1
-ntpstat==0.0.0.1-2+b1
+ntpstat==0.0.0.1-2
 nvme-cli==2.4+really2.3-3
 opennsl-modules==7.1.0.0
 openssh-client==1:9.2p1-2+deb12u3+fips
@@ -381,7 +382,7 @@ sqlite3==3.40.1-2+deb12u1
 squashfs-tools==1:4.5.1-1
 ssh==1:9.2p1-2+deb12u3+fips
 sudo==1.9.13p3-1+deb12u1
-sx-kernel==1.mlnx.4.7.2166
+sx-kernel==1.mlnx.4.7.2202
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-4
 sysstat==12.6.1-1
