@@ -159,6 +159,7 @@ module sonic-device_metadata {
 
                 leaf mgmt_type {
                     type string;
+                    description "Indicates the management type of this device.";
                 }
 
                 leaf cluster {
