@@ -22,10 +22,6 @@ class SonicYang(SonicYangExtMixin):
         self.SYSLOG_IDENTIFIER = "sonic_yang"
         self.DEBUG = debug
         self.print_log_enabled = print_log_enabled
-        if not print_log_enabled:
-            # The default libyang log options are ly.LY_LOLOG|ly.LY_LOSTORE_LAST.
-            # Removing ly.LY_LOLOG will stop libyang from printing the logs.
-            ly.set_log_options(ly.LY_LOSTORE_LAST)
 
         # yang model files, need this map it to module
         self.yangFiles = list()
