@@ -27,7 +27,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
     import os
-    import subprocess
+    from sonic_py_common import device_info
     from functools import reduce
     from .utils import extract_RJ45_ports_index
     from . import module_host_mgmt_initializer
@@ -962,9 +962,7 @@ class Chassis(ChassisBase):
         Returns:
             Returns True if spectrum version is higher than Spectrum-4 according to sku number
         """
-        p = subprocess.Popen(GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        out.rstrip('\n')
+        sku = device_info.get_hwsku()
         sku_num = re.search('[0-9]{4}', out).group()
         return int(sku_num) >= 5000
 
