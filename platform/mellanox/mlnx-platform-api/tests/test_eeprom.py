@@ -35,7 +35,7 @@ from sonic_platform.eeprom import Eeprom, EepromContentVisitor
 class TestEeprom:
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.islink', MagicMock(return_value=True))
-    @patch('device_info.get_hwsku', MagicMock(return_value='MSN3420'))
+    @patch('sonic_py_common.device_info.get_hwsku', MagicMock(return_value='MSN3420'))
     @patch('sonic_platform.eeprom.Eeprom.get_system_eeprom_info')
     @patch('sonic_platform.chassis.extract_RJ45_ports_index', MagicMock(return_value=[]))
     def test_chassis_eeprom(self, mock_eeprom_info):
