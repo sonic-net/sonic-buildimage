@@ -1,0 +1,56 @@
+{
+    "PVST_GLOBAL_VALID": {
+        "sonic-spanning-tree:sonic-spanning-tree": {
+            "sonic-spanning-tree:STP": {
+                "GLOBAL": [
+                    {
+                        "global-stp-mode": "GLOBAL",
+                        "mode": "pvst",
+                        "rootguard_timeout": 30,
+                        "forward_delay": 15,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "priority": 32768
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_GLOBAL_VALID": {
+        "sonic-spanning-tree:sonic-spanning-tree": {
+            "sonic-spanning-tree:STP": {
+                "GLOBAL": [
+                    {
+                        "global-stp-mode": "GLOBAL",
+                        "mode": "mst"
+                    }
+                ]
+            },
+            "sonic-spanning-tree:STP_MST": {
+                "MST_GLOBAL": [
+                    {
+                        "global-stp-mode": "GLOBAL",
+                        "name": "region1",
+                        "revision": 0,
+                        "max_hops": 20,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "forward_delay": 15
+                    }
+                ]
+            }
+        }
+    },
+    "INVALID_STP_MODE": {
+        "sonic-spanning-tree:sonic-spanning-tree": {
+            "sonic-spanning-tree:STP": {
+                "GLOBAL": [
+                    {
+                        "global-stp-mode": "GLOBAL",
+                        "mode": "invalid-mode"
+                    }
+                ]
+            }
+        }
+    }
+}
