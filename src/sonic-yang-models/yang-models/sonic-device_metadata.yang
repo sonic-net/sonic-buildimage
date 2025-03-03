@@ -100,7 +100,7 @@ module sonic-device_metadata {
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SonicDpu|not-provisioned";
                     }
                 }
 
@@ -164,7 +164,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
                     }
                 }
 
@@ -250,6 +250,11 @@ module sonic-device_metadata {
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
 
+                leaf-list supporting_bulk_counter_groups {
+                    type string;
+                    description "This field contains a list of counter groups that support bulk operation.";
+                }
+
                 leaf bgp_router_id {
                     type inet:ipv4-address;
                     description "BGP Router identifier";
@@ -272,6 +277,12 @@ module sonic-device_metadata {
                         enum disabled;
                     }
                     default disabled;
+                }
+
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
                 }
 
             }

@@ -387,7 +387,7 @@ class BGPPeerMgrBase(Manager):
         Load peers from FRR.
         :return: set of peers, which are already installed in FRR
         """
-        command = ["vtysh", "-c", "show bgp vrfs json"]
+        command = ["vtysh", "-H", "/dev/null", "-c", "show bgp vrfs json"]
         ret_code, out, err = run_command(command)
         if ret_code == 0:
             js_vrf = json.loads(out)

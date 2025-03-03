@@ -1,5 +1,5 @@
 # $Id: Makefile.linux-x86-smp_generic_64-2_6,v 1.5 Broadcom SDK $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -24,6 +24,7 @@
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
 # 
+# 
 
 CFGFLAGS += -DLONGS_ARE_64BITS
 CFGFLAGS += -DPTRS_ARE_64BITS
@@ -43,6 +44,17 @@ LINUX_UAPI = $(LINUX_INCLUDE)/uapi
 ifneq (,$(shell ls $(LINUX_UAPI) 2>/dev/null))
 KFLAGS += -I$(LINUX_INCLUDE)/uapi -I$(LINUX_INCLUDE)/generated/uapi -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/arch/x86/include/generated/uapi
 endif
+
+GCC_MAJOR_VER  = $(shell GCCVER=$(GCCVER) $(CC) -dumpversion | cut -d'.' -f1)
+
+ifeq (${GCC_MAJOR_VER}, 11)
+	CFGFLAGS += -Wno-error=sizeof-array-div
+	CFGFLAGS += -Wno-error=stringop-overread
+endif
+CFGFLAGS += -Wno-error=stringop-truncation
+CFGFLAGS += -Wno-error=maybe-uninitialized
+CFGFLAGS += -Wno-error=format-overflow
+CFGFLAGS += -Wno-error=array-bounds
 
 ifdef LTSW_CHIPS
 # Ensure we do not use an out-of-date libelf.so

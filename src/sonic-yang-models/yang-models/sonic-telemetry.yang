@@ -76,6 +76,22 @@ module sonic-telemetry {
                     description "Flag for enabling save on set.";
                 }
 
+                leaf enable_crl {
+                    type boolean;
+                    description "Flag for enable certificate revocation list.";
+                }
+
+                leaf crl_expire_duration {
+                    type uint32;
+                    description "Certificate revocation list cache expire duration.";
+                }
+
+                leaf user_auth {
+                    type string {
+                        pattern 'password|jwt|cert';
+                    }
+                    description "Telemetry service user authorization type.";
+                }
             }
 
         }

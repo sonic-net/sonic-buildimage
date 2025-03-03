@@ -7,7 +7,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  *
  * This file provides field macros for the Packet Loopback HeaDeR (LBHDR, called
  * LOOPBACK_MH in hardware.) access.
@@ -179,8 +179,22 @@
 #define BCMPKT_LBHDR_INPUT_PRIORITY_MD_ETH       47
 /*!  */
 #define BCMPKT_LBHDR_CNP                         48
+/*!  */
+#define BCMPKT_LBHDR_FLIP_SECOND_PASS_L2_DENSE_MODE_ADDRESS 49
+/*!  */
+#define BCMPKT_LBHDR_VFI_VALID_MD_ETH            50
+/*!  */
+#define BCMPKT_LBHDR_VFI_MD_ETH                  51
+/*!  */
+#define BCMPKT_LBHDR_TRUNCATE_MD_ETH             52
+/*!  */
+#define BCMPKT_LBHDR_TRUNCATE_OFFSET_MD_ETH      53
+/*!  */
+#define BCMPKT_LBHDR_SVP_MD_ETH                  54
+/*!  */
+#define BCMPKT_LBHDR_CNP_OR_CNM_MD_ETH           55
 /*! LBHDR FIELD ID NUMBER */
-#define BCMPKT_LBHDR_FID_COUNT                   49
+#define BCMPKT_LBHDR_FID_COUNT                   56
 /*! \} */
 
 /*! LBHDR field name strings for debugging. */
@@ -234,6 +248,13 @@
     {"QOS_FIELD_ETH_MD_ETH", BCMPKT_LBHDR_QOS_FIELD_ETH_MD_ETH},\
     {"INPUT_PRIORITY_MD_ETH", BCMPKT_LBHDR_INPUT_PRIORITY_MD_ETH},\
     {"CNP", BCMPKT_LBHDR_CNP},\
+    {"FLIP_SECOND_PASS_L2_DENSE_MODE_ADDRESS", BCMPKT_LBHDR_FLIP_SECOND_PASS_L2_DENSE_MODE_ADDRESS},\
+    {"VFI_VALID_MD_ETH", BCMPKT_LBHDR_VFI_VALID_MD_ETH},\
+    {"VFI_MD_ETH", BCMPKT_LBHDR_VFI_MD_ETH},\
+    {"TRUNCATE_MD_ETH", BCMPKT_LBHDR_TRUNCATE_MD_ETH},\
+    {"TRUNCATE_OFFSET_MD_ETH", BCMPKT_LBHDR_TRUNCATE_OFFSET_MD_ETH},\
+    {"SVP_MD_ETH", BCMPKT_LBHDR_SVP_MD_ETH},\
+    {"CNP_OR_CNM_MD_ETH", BCMPKT_LBHDR_CNP_OR_CNM_MD_ETH},\
     {"fid count", BCMPKT_LBHDR_FID_COUNT}
 
 /*!

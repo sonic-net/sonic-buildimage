@@ -144,6 +144,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libsystemd-dev \
         python-ipaddr \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 {%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \

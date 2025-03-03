@@ -58,7 +58,7 @@ pexpect==4.6.0
 pillow==5.4.1
 pip==20.3.4
 pluggy==0.8.0
-psutil==6.0.0
+psutil==6.1.1
 ptyprocess==0.7.0
 py==1.7.0
 pyasn1==0.4.2

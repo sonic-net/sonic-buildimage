@@ -41,6 +41,17 @@ module sonic-flex_counter {
                 }
             }
 
+            typedef bulk_chunk_size {
+                type uint32 {
+                    range 1..4294967295;
+                }
+            }
+
+            typedef bulk_chunk_size_per_prefix {
+                type string;
+                description "Bulk chunk size per counter name prefix";
+            }
+
             description "FLEX_COUNTER_TABLE part of config_db.json";
 
             /* below are in alphabetical order */
@@ -102,6 +113,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container PG_WATERMARK {
@@ -115,6 +132,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container PORT {
@@ -127,6 +150,12 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
                 }
             }
 
@@ -151,6 +180,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container QUEUE {
@@ -164,6 +199,12 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
+                }
             }
 
             container QUEUE_WATERMARK {
@@ -176,6 +217,12 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
+                leaf BULK_CHUNK_SIZE_PER_PREFIX {
+                    type bulk_chunk_size_per_prefix;
                 }
             }
 

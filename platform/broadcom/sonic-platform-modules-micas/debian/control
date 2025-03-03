@@ -7,3 +7,35 @@ Standards-Version: 3.9.3
 Package: platform-modules-micas-m2-w6510-48v8c
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6510-48gt4v
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6520-24dc8qc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6940-128qc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6930-64qc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6940-64oc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6920-32qc2x
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6510-32c
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6520-48c8qc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp

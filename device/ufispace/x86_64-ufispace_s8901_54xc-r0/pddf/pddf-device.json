@@ -1777,14 +1777,6 @@
                         "field_name": "PSU0_TEMP1",
                         "field_pos": "12",
                         "separator": ","
-                    },
-                    {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_TEMP1",
-                        "raw": "0",
-                        "field_name": "PSU0_TEMP1",
-                        "field_pos": "13",
-                        "separator": ","
                     }
                 ]
             }
@@ -1816,14 +1808,6 @@
                         "raw": "0",
                         "field_name": "PSU1_TEMP1",
                         "field_pos": "12",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_TEMP1",
-                        "raw": "0",
-                        "field_name": "PSU1_TEMP1",
-                        "field_pos": "13",
                         "separator": ","
                     }
                 ]

@@ -1,5 +1,5 @@
 /*
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
  * 
+ * 
  */
 
 /*
@@ -33,8 +34,6 @@
 #include <mpool.h>
 #include <linux-bde.h>
 
-#include <sal/core/thread.h>
-#include <sal/core/sync.h>
 #include <soc/devids.h>
 #include <linux/jiffies.h>
 #include "linux-user-bde.h"
@@ -84,12 +83,12 @@ MODULE_LICENSE("GPL");
 #define INTC_INTR_REG_NUM               (8)
 #define PAXB_INTRCLR_DELAY_REG_NUM      (16)
 
-/*
-TODO:HX5
-The INTR base address values are changed for HX5,
-hence making new #defines so runtime decisions can
-be made.
-*/
+
+
+
+
+
+
 #define PAXB_0_PAXB_IC_INTRCLR_0       (0x180123a0)
 #define PAXB_0_PAXB_IC_INTRCLR_1       (0x180123a4)
 #define PAXB_0_PAXB_IC_INTRCLR_MODE_0  (0x180123a8)
@@ -711,11 +710,22 @@ _cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
                     break;
                 }
             }
+            if (!active_interrupts) {
+                /** only KNET interrupt asserted */
+                return;
+            }
         } else if (intrs) {
             active_interrupts = 1;
         }
-    } else {
+    }
+
+    /** check left interrupts */
+    if (!active_interrupts) {
         for (ind = 0; ind < CMICX_GEN2_INTC_INTR_REG_NUM; ind++) {
+            /** skip packetDMA */
+            if (fmask && (ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0)) {
+                continue;
+            }
             IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * ind, stat);
             if (stat == 0) {
                 continue;
@@ -1125,6 +1135,7 @@ _intr_regs_init(bde_ctrl_t *ctrl, int flag)
                 case BCM53651_DEVICE_ID:
                 case BCM53652_DEVICE_ID:
                 case BCM53653_DEVICE_ID:
+                case BCM53654_DEVICE_ID:
                     ihost_sw_prog_intr_num = P19_SW_PROG_INTR_IRQ;
                     break;
                 default:
@@ -1282,6 +1293,7 @@ _devices_init(int d)
         case BCM53651_DEVICE_ID:
         case BCM53652_DEVICE_ID:
         case BCM53653_DEVICE_ID:
+        case BCM53654_DEVICE_ID:
             ctrl->isr = (isr_f)_cmicx_interrupt;
             if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
                 if (!ihost_intr_enable_base) {
@@ -1314,7 +1326,7 @@ _devices_init(int d)
             } else {
                 ctrl->isr = (isr_f)_cmic_interrupt;
                 if ((ctrl->dev_type & BDE_256K_REG_SPACE) &&
-#ifdef BCM_PETRA_SUPPORT /* FIXME remove code when hardware design is fixed */
+#ifdef BCM_PETRA_SUPPORT 
                     ctrl->devid != 0x1234 &&
 #endif
                     readl(ctrl->ba + CMICE_DEV_REV_ID) == 0) {
@@ -1349,6 +1361,10 @@ _devices_init(int d)
           case J3AI_DEVICE_ID:
 
           case Q3D_DEVICE_ID:
+#ifdef BCM_Q3A_SUPPORT
+          case Q3A_DEVICE_ID:
+          case Q3U_DEVICE_ID:
+#endif
 #endif
 #ifdef BCM_DNXF3_SUPPORT
           case  RAMON2_DEVICE_ID:
@@ -1572,6 +1588,15 @@ _dma_resource_get(unsigned inst_id, phys_addr_t *cpu_pbase, phys_addr_t *dma_pba
         return -1;
     }
     res = &_bde_inst_resource[inst_id];
+
+    if (res->is_active == 0) {
+        *cpu_pbase = 0;
+        *dma_pbase = 0;
+        *size = 0;
+        spin_unlock(&bde_resource_lock);
+        return -2;
+    }
+
     dma_size = res->dma_size;
     dma_offset = res->dma_offset;
     spin_unlock(&bde_resource_lock);
@@ -1604,7 +1629,7 @@ _instance_validate(unsigned int inst_id, unsigned int dmasize, linux_bde_device_
     }
 
     if (res->is_active == 0) {
-        /* FIXME SDK-250746 check that the devices are not used by another active instance */
+
         return LUBDE_SUCCESS;
     }
 
@@ -1715,7 +1740,7 @@ _instance_attach(unsigned int inst_id, unsigned int dma_size, linux_bde_device_b
                 if (previous_inst_id == BDE_DEV_INST_ID_INVALID) {
                     lkbde_dev_instid_set(i, inst_id);
                 }
-            } /* TODO handle the case where the device is marked belonging to a different instance */
+            } 
         }
     }
     spin_unlock(&bde_resource_lock);
@@ -1760,8 +1785,9 @@ _ioctl(unsigned int cmd, unsigned long arg)
     lubde_ioctl_t io;
     phys_addr_t cpu_pbase, dma_pbase;
     ssize_t size;
+    ssize_t total_size;
     const ibde_dev_t *bde_dev;
-    int inst_id, idx;
+    int inst_id, idx, inst_i;
     bde_inst_resource_t *res;
     uint32_t *mapaddr;
 
@@ -1828,9 +1854,22 @@ _ioctl(unsigned int cmd, unsigned long arg)
         break;
     case LUBDE_GET_DMA_INFO:
         inst_id = io.dev;
-        if (_bde_multi_inst){
-            if (_dma_resource_get(inst_id, &cpu_pbase, &dma_pbase, &size)) {
-                io.rc = LUBDE_FAIL;
+        if (_bde_multi_inst && (inst_id != BDE_DEV_INST_ID_INVALID)) {
+            if (inst_id == BDE_DEV_INST_ID_GET_FREE) {
+                /* Get the total DMA size */
+                lkbde_get_dma_info(&cpu_pbase, &dma_pbase, &total_size);
+                /* Decrease the total size for each allocated SDK instance */
+                for (inst_i = 0; inst_i < LINUX_BDE_MAX_DEVICES; inst_i++)
+                {
+                    if (_bde_inst_resource[inst_i].is_active && (_dma_resource_get(inst_i, &cpu_pbase, &dma_pbase, &size) == 0)) {
+                        total_size -= size;
+                    }
+                }
+                size = total_size;
+            } else {
+                if (_dma_resource_get(inst_id, &cpu_pbase, &dma_pbase, &size)) {
+                    io.rc = LUBDE_FAIL;
+                }
             }
         } else {
             lkbde_get_dma_info(&cpu_pbase, &dma_pbase, &size);
@@ -1856,6 +1895,19 @@ _ioctl(unsigned int cmd, unsigned long arg)
         io.d3 = 0;
 #endif
         break;
+
+#ifdef INCLUDE_SRAM_DMA
+    case LUBDE_GET_DEV_DMA_INFO:
+        if (!VALID_DEVICE(io.dev)) {
+            return -EINVAL;
+        }
+        lkbde_get_sram_dma_info(io.dev, &io.dx.dw[1], &io.dx.dw[0]);
+        if (io.dx.dw[0] == 0) {
+            io.rc = LUBDE_FAIL;
+        }
+        break;
+#endif /* INCLUDE_SRAM_DMA */
+
     case LUBDE_ENABLE_INTERRUPTS:
         if (!VALID_DEVICE(io.dev)) {
             return -EINVAL;
@@ -1889,7 +1941,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
             }
         } else {
             /* Process ethernet device interrupt */
-            /* FIXME: for multiple chips */
+
             if (!_devices[io.dev].enabled) {
                 user_bde->interrupt_connect(io.dev,
                                             (void(*)(void *))_ether_interrupt,
@@ -1973,6 +2025,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
                                       atomic_read(&res->intr) != 0);
             }
 #endif
+
             /*
              * Even if we get multiple interrupts, we
              * only run the interrupt handler once.
@@ -2122,9 +2175,6 @@ _ioctl(unsigned int cmd, unsigned long arg)
             iounmap(mapaddr);
         } else {
             io.d1 = user_bde->iproc_read(io.dev, io.d0);
-            if (io.d1 == -1) {
-                io.rc = LUBDE_FAIL;
-            }
         }
         break;
     case LUBDE_IPROC_WRITE_REG:
@@ -2148,6 +2198,38 @@ _ioctl(unsigned int cmd, unsigned long arg)
     case LUBDE_REPROBE:
         io.rc = _device_reprobe();
         break;
+    case LUBDE_GET_DEVICE_PCI_INFO:
+        if (_devices[io.dev].dev_type & BDE_PCI_DEV_TYPE) {
+            if (lkbde_get_dev_pci_info(io.dev, &io.d0, &io.d1, &io.d2) < 0)
+                io.rc = LUBDE_FAIL;
+        } else {
+            io.rc = LUBDE_FAIL;
+        }
+        break;
+    case LUBDE_BAR2_READ32:
+        io.d1 = user_bde->read(io.dev, io.d0);
+        break;
+    case LUBDE_BAR2_WRITE32:
+        if (user_bde->write(io.dev, io.d0, io.d1) == -1) {
+            io.rc = LUBDE_FAIL;
+        }
+        break;
+    case LUBDE_BAR2_READ64:
+        {
+            uint64_t data;
+            data = user_bde->read64(io.dev, io.d0);
+            io.d1 = (uint32_t)data;
+            io.d2 = (uint32_t)(data >> 32);
+        }
+        break;
+    case LUBDE_BAR2_WRITE64:
+        {
+            uint64_t val;
+            val = ((uint64_t)io.d2 << 32) |  (uint64_t)io.d1;
+            user_bde->write64(io.dev, io.d0, val);
+        }
+        break;
+
     default:
         gprintk("Error: Invalid ioctl (%08x)\n", cmd);
         io.rc = LUBDE_FAIL;

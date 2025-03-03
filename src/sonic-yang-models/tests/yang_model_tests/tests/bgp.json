@@ -2,6 +2,26 @@
     "BGP_GLOBAL_VALID": {
         "desc": "Configure BGP global table."
     },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to false"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-all-vni\" element."
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to false"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_SVI_IP_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-svi-ip set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-svi-ip\" element."
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },
@@ -158,43 +178,32 @@
     "BGP_PEERRANGE_ALL_VALID": {
         "desc": "Configure BGP peer range table."
     },
-    "BGP_ALLOWED_PREFIXES_COM_LIST_ALL_VALID": {
+    "BGP_ALLOWED_PREFIXES_ALL_VALID": {
         "desc": "Configue BGP allowed prefix list."
     },
-    "BGP_ALLOWED_PREFIXES_COM_LIST_INVALID_DEPLOYMENT": {
-        "desc": "Invalid default action.",
+    "BGP_ALLOWED_PREFIXES_INVALID_DEPLOYMENT": {
+        "desc": "Invalid deployment.",
         "eStrKey" : "Pattern"
     },
-    "BGP_ALLOWED_PREFIXES_COM_LIST_INVALID_DEFAULT_ACTION": {
+    "BGP_ALLOWED_PREFIXES_INVALID_ID": {
+        "desc": "Invalid id.",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["id"]
+    },
+    "BGP_ALLOWED_PREFIXES_INVALID_NEIGHBOR": {
+        "desc": "Invalid neighbor.",
+        "eStrKey" : "Pattern"
+    },
+    "BGP_ALLOWED_PREFIXES_INVALID_DEFAULT_ACTION": {
         "desc": "Invalid default action.",
         "eStrKey" : "InvalidValue",
         "eStr" : ["default_action"]
     },
-    "BGP_ALLOWED_PREFIXES_COM_LIST_INVALID_PREFIXES_IPV4": {
+    "BGP_ALLOWED_PREFIXES_INVALID_PREFIXES_IPV4": {
         "desc": "Invalid IPv4 prefix.",
         "eStrKey" : "Pattern"
     },
-    "BGP_ALLOWED_PREFIXES_COM_LIST_INVALID_PREFIXES_IPV6": {
-        "desc": "Invalid IPv6 prefix.",
-        "eStrKey" : "Pattern"
-    },
-    "BGP_ALLOWED_PREFIXES_LIST_ALL_VALID": {
-        "desc": "Configue BGP allowed prefix list."
-    },
-    "BGP_ALLOWED_PREFIXES_LIST_INVALID_DEPLOYMENT": {
-        "desc": "Invalid default action.",
-        "eStrKey" : "Pattern"
-    },
-    "BGP_ALLOWED_PREFIXES_LIST_INVALID_DEFAULT_ACTION": {
-        "desc": "Invalid default action.",
-        "eStrKey" : "InvalidValue",
-        "eStr" : ["default_action"]
-    },
-    "BGP_ALLOWED_PREFIXES_LIST_INVALID_PREFIXES_IPV4": {
-        "desc": "Invalid IPv4 prefix.",
-        "eStrKey" : "Pattern"
-    },
-    "BGP_ALLOWED_PREFIXES_LIST_INVALID_PREFIXES_IPV6": {
+    "BGP_ALLOWED_PREFIXES_INVALID_PREFIXES_IPV6": {
         "desc": "Invalid IPv6 prefix.",
         "eStrKey" : "Pattern"
     },

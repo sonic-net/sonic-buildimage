@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+HWSKU_DIR=/usr/share/sonic/hwsku
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -17,8 +18,15 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 1024
-ORCHAGENT_ARGS+="-b 1024 "
+LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
+    # Set orchagent pop batch size to 128 for faster link notification handling 
+    # during route-churn
+    ORCHAGENT_ARGS+="-b 128 "
+else
+    # Set orchagent pop batch size to 1024
+    ORCHAGENT_ARGS+="-b 1024 "
+fi
 
 # Set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
@@ -50,8 +58,6 @@ fi
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "cavium" ]; then
-    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "nephos" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "centec" ]; then
@@ -62,13 +68,22 @@ elif [ "$platform" == "vs" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "mellanox" ]; then
     ORCHAGENT_ARGS+=""
-elif [ "$platform" == "innovium" ]; then
+elif [ "$platform" == "marvell-teralynx" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
-    MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
+    MAC_ADDRESS=$(ip link show int_mnic0 | grep ether | awk '{print $2}')
+    if [ "$MAC_ADDRESS" == "" ]; then
+        MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
+    fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+elif [ "$platform" == "marvell" ]; then
+    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+    CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
+    if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
+        ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
+    fi
 else
     # Should we use the fallback MAC in case it is not found in Device.Metadata
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
@@ -77,17 +92,29 @@ fi
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    midplane_mgmt_ip=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].addr_info[0].local" )
+    midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
     mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
-    if [[ $midplane_ip != "" ]]; then
-        # Enable ZMQ with eth0-midplane address
-        ORCHAGENT_ARGS+=" -q tcp://${midplane_mgmt_ip}:8100"
+    if [[ $midplane_mgmt_state == "UP" ]]; then
+        # Enable ZMQ with eth0-midplane interface name
+        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane:8100"
     elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
-        # If eth0-midplane interface does not exist, enable ZMQ with eth0 address
+        # If eth0-midplane interface does not up, enable ZMQ with eth0 address
         ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
     else
         ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
     fi
+fi
+
+# Add VRF parameter when mgmt-vrf enabled
+MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -v mgmt"
+fi
+
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -R"
 fi
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}

@@ -1,13 +1,8 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 FROM docker-syncd-brcm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-
-COPY \
-{% for deb in docker_syncd_brcm_rpc_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
 
 RUN apt-get purge -y syncd
 
@@ -15,37 +10,42 @@ RUN apt-get purge -y syncd
 RUN apt-get update \
  && apt-get -y install  \
     net-tools           \
-    python3-pip          \
-    python-setuptools   \
+    python3-pip         \
+    python3-dev         \
+    python-is-python3   \
+    python3-scapy       \
     build-essential     \
     libssl-dev          \
     libffi-dev          \
-    python-dev          \
     wget                \
     cmake               \
-    libqt5core5a        \
-    libqt5network5      \
-    libboost-atomic1.74.0
+    libnanomsg5         \
+    libnanomsg-dev      \
+    libthrift-0.17.0
 
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_syncd_brcm_rpc_debs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
+{% if docker_syncd_brcm_rpc_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_syncd_brcm_rpc_debs.split(' '), "/debs/") }}
+{% endif %}
 
-RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
- && tar xvfz 1.0.0.tar.gz \
- && cd nanomsg-1.0.0    \
- && mkdir -p build      \
- && cmake .             \
- && make install        \
- && ldconfig            \
- && cd ..               \
- && rm -fr nanomsg-1.0.0 \
- && rm -f 1.0.0.tar.gz  \
- && pip2 install cffi==1.7.0    \
- && pip2 install --upgrade cffi==1.7.0 \
- && pip2 install wheel  \
- && pip2 install nnpy   \
+{% if docker_syncd_brcm_rpc_pydebs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("python-debs/", docker_syncd_brcm_rpc_pydebs.split(' '), "/debs/") }}
+{% endif %}
+
+{% if docker_syncd_brcm_rpc_debs.strip() -%}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_brcm_rpc_debs.split(' ')) }}
+{% endif %}
+
+{% if docker_syncd_brcm_rpc_pydebs.strip() -%}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_brcm_rpc_pydebs.split(' ')) }}
+{% endif %}
+
+RUN pip3 install cffi==1.16.0    \
+ && pip3 install wheel  \
+ && pip3 install nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
@@ -53,5 +53,20 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && rm -rf /root/deps
 
 COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
+
+## Clean up
+RUN apt-get -y purge \
+    cmake            \
+    libssl-dev       \
+    libffi-dev       \
+    python3-dev      \
+    python3-pip      \
+    libthrift-dev    \
+    build-essential
+
+RUN apt-get clean -y && \
+    apt-get autoclean -y && \
+    apt-get autoremove -y && \
+    rm -rf /debs
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
