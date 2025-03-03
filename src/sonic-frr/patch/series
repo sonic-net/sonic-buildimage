@@ -62,3 +62,4 @@
 0079-staticd-add-support-for-srv6.patch
 0080-SRv6-vpn-route-and-sidlist-install.patch
 0081-bgpd-Optimize-evaluate-paths-for-a-peer-going-down.patch
+0082-Revert-bgpd-upon-if-event-evaluate-bnc-with-matching.patch
