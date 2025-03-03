@@ -1,0 +1,53 @@
+{
+    "LOGGING_NAME_TEST": {
+        "desc": "Valid log file name test"
+    },
+    "LOGGING_INVALID_NAME_TEST": {
+        "desc": "Invalid log file name test",
+        "eStrKey": "Pattern"
+    },
+    "LOGGING_DISK_PERCENTAGE_TEST": {
+        "desc": "Valid disk percentage test"
+    },
+    "LOGGING_INVALID_DISK_PERCENTAGE_TEST": {
+        "desc": "Invalid disk percentage test",
+        "eStrKey": "Range"
+    },
+    "LOGGING_INVALID_DISK_PERCENTAGE_TEST_2": {
+        "desc": "Invalid disk percentage test 2",
+        "eStrKey": "Range"
+    },
+    "LOGGING_FREQUENCY_TEST": {
+        "desc": "Valid rotation frequency test"
+    },
+    "LOGGING_INVALID_FREQUENCY_TEST": {
+        "desc": "Invalid rotation frequency test",
+        "eStrKey": "Pattern"
+    },
+    "LOGGING_INVALID_FREQUENCY_TEST_2": {
+        "desc": "Invalid rotation frequency test 2",
+        "eStrKey": "Pattern"
+    },
+    "LOGGING_MAX_NUMBER_TEST": {
+        "desc": "Valid rotation max number test"
+    },
+    "LOGGING_INVALID_MAX_NUMBER_TEST": {
+        "desc": "Invalid rotation max number test",
+        "eStrKey": "Range"
+    },
+    "LOGGING_INVALID_MAX_NUMBER_TEST_2": {
+        "desc": "Invalid rotation max number test 2",
+        "eStrKey": "Range"
+    },
+    "LOGGING_SIZE_TEST": {
+        "desc": "Rotation file size test"
+    },
+    "LOGGING_INVALID_SIZE_TEST": {
+        "desc": "Invalid rotation file size test",
+        "eStrKey": "Range"
+    },
+    "LOGGING_INVALID_SIZE_TEST_2": {
+        "desc": "Invalid rotation file size test 2",
+        "eStrKey": "Range"
+    }
+}

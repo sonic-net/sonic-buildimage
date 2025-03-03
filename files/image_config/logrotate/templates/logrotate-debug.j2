@@ -1,0 +1,28 @@
+{% from "logrotate-common.j2" import postrotate with context %}
+{% from "logrotate-common.j2"
+    import disk_percentage_treshold_rotation with context -%}
+
+{% set debug = (LOGGING | d({})).get('debug', {}) -%}
+{% set frequency = debug.frequency | d('daily') -%}
+{% set max_number = debug.max_number | d(1) -%}
+
+{% if debug.disk_percentage and not debug.size -%}
+    {% set size_mb = (max_logs_size_kb | int) * 
+                     (debug.disk_percentage | float) / 100 / 1024 -%}
+{% else -%}
+    {% set size_mb = (debug.size | d(0.001)) | float -%}
+{%- endif %}
+{% set size = (size_mb * 1024 * 1024) | int %}
+/var/log/debug
+{
+    {{ frequency }}
+    size {{ size }}
+    rotate {{ max_number }}
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nosharedscripts
+    {{ disk_percentage_treshold_rotation() }}
+    {{ postrotate() }}
+}

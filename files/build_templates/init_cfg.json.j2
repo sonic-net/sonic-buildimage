@@ -181,6 +181,18 @@
             "logout": ""
         }
     },
+    "LOGGING": {
+        "debug": {
+            "frequency": "daily",
+            "max_number": 20,
+            "size": 10
+        },
+        "syslog": {
+            "frequency": "daily",
+            "max_number": 10,
+            "size": 16
+        }
+    },
     "SYSTEM_DEFAULTS" : {
 {%- if include_mux == "y" %}
         "mux_tunnel_egress_acl": {

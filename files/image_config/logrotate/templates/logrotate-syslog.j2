@@ -1,0 +1,28 @@
+{% from "logrotate-common.j2" import postrotate with context %}
+{% from "logrotate-common.j2"
+    import disk_percentage_treshold_rotation with context -%}
+
+{% set syslog = (LOGGING | d({})).get('syslog', {}) -%}
+{% set frequency = syslog.frequency | d('daily') -%}
+{% set max_number = syslog.max_number | d(5000) -%}
+
+{% if syslog.disk_percentage and not syslog.size -%}
+    {% set size_mb = (max_logs_size_kb | int) * 
+                     (syslog.disk_percentage | float) / 100 / 1024 -%}
+{% else -%}
+    {% set size_mb = (syslog.size | d(common_file_size_mb)) | float -%}
+{%- endif %}
+{% set size = (size_mb * 1024 * 1024) | int -%}
+/var/log/syslog
+{
+    {{ frequency }}
+    size {{ size }}
+    rotate {{ max_number }}
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nosharedscripts
+    {{ disk_percentage_treshold_rotation() }}
+    {{ postrotate() }}
+}

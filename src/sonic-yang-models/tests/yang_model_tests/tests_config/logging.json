@@ -1,0 +1,168 @@
+{
+    "LOGGING_NAME_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "someloggingfile.log"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_NAME_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": ""
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_DISK_PERCENTAGE_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "disk_percentage": "90.0"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_DISK_PERCENTAGE_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "disk_percentage": "101.0"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_DISK_PERCENTAGE_TEST_2": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "disk_percentage": "0.0"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_FREQUENCY_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "frequency": "weekly"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_FREQUENCY_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "frequency": "blabla"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_FREQUENCY_TEST_2": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "syslog",
+                        "frequency": ""
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_MAX_NUMBER_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "max_number": "5000"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_MAX_NUMBER_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "max_number": "1000000"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_MAX_NUMBER_TEST_2": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "max_number": "-1"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_SIZE_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "size": "10.0"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_SIZE_TEST": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "size": "0.0"
+                    }
+                ]
+            }
+        }
+    },
+    "LOGGING_INVALID_SIZE_TEST_2": {
+        "sonic-logging:sonic-logging": {
+            "sonic-logging:LOGGING": {
+                "LOGGING_LIST": [
+                    {
+                        "name": "debug",
+                        "size": "10000.001"
+                    }
+                ]
+            }
+        }
+    }
+}
