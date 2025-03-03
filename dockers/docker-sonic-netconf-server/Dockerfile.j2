@@ -7,7 +7,7 @@ RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%s
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y g++ python3-dev libxml2 libcurl3-gnutls libcjson-dev
+    apt-get install -y g++ python3-dev libxml2 libcurl4-openssl-dev libcjson-dev
 
 RUN pip3 install requests \
                  urllib3
