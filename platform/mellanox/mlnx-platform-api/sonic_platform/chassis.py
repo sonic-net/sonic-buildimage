@@ -58,7 +58,6 @@ REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
-GET_HWSKU_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.hwsku"]
 SYS_DISPLAY = "SYS_DISPLAY"
 
 # Global logger class instance
@@ -964,6 +963,9 @@ class Chassis(ChassisBase):
         """
         sku = device_info.get_hwsku()
         sku_num = re.search('[0-9]{4}', sku).group()
+        # fallback to spc1 in case sku number is not available
+        if sku_num is None:
+            sku_num = 2700
         return int(sku_num) >= 5000
 
     def _verify_reboot_cause(self, filename):
