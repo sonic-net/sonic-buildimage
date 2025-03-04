@@ -279,6 +279,12 @@ module sonic-device_metadata {
                     default disabled;
                 }
 
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
+                }
+
             }
             /* end of container localhost */
         }
