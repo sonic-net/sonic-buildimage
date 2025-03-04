@@ -5,7 +5,7 @@ export INSTALL_MOD_DIR:=extra
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f z9332f z9432f s5296f n3248pxe n3248te e3224f z9664f
+MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f s5448f z9332f z9432f s5296f n3248pxe n3248te e3224f z9664f
 COMMON_DIR := common
 
 %:
@@ -59,6 +59,19 @@ override_dh_auto_build:
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 			cd $(MOD_SRC_DIR)/$${mod}; \
 			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
+			cd $(MOD_SRC_DIR); \
+		elif [ $$mod = "s5448f" ]; then \
+			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+			cd $(MOD_SRC_DIR)/$${mod}; \
+			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
+			if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+				cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+				if [ -f sonic_platform_setup.py ]; then \
+					python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+					echo "Finished making pddf whl package for $$mod"; \
+				fi; \
+			fi; \
 			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5296f" ]; then \
 		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
@@ -180,6 +193,15 @@ override_dh_clean:
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
+		elif [ $$mod = "s5448f" ]; then \
+			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
+			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
+			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
+			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
+			if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl ]; then \
+				rm -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl; \
+			fi; \
 		elif [ $$mod = "s5296f" ]; then \
 		        rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5296f_fpga_ocores.c; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
