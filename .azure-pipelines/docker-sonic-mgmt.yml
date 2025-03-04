@@ -74,7 +74,7 @@ stages:
       displayName: "Archive docker image sonic-mgmt"
 
   - job: validate_docker_image
-    pool: sonic-ubuntu-1c
+    pool: sonicbld-1es
     timeoutInMinutes: 360
     dependsOn: Build
     steps:
@@ -83,15 +83,13 @@ stages:
       displayName: 'Checkout sonic-mgmt'
 
     - script: |
-        set -x
+        set -ex
 
-        cd sonic-mgmt
         cd ansible
         sudo ./setup-management-network.sh -d
         cd ../
         docker rm -f sonic-mgmt
         ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
-        echo $?
       displayName: 'Setup sonic-mgmt docker container'
 
 
