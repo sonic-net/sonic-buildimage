@@ -84,6 +84,13 @@ module sonic-acl {
 					}
 				}
 
+				leaf INNER_SRC_MAC_REWRITE_ACTION {
+					type stypes:mac-address;
+				}
+
+				/* Validating 'INNER_SRC_MAC_REWRITE_ACTION' exist if ACL type is 'INNERSRCMACREWRITE' */
+				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'INNERSRCMACREWRITE')) or (boolean(INNER_SRC_MAC_REWRITE_ACTION))";
+
 				leaf IP_TYPE {
 					type stypes:ip_type;
 				}
@@ -127,6 +134,9 @@ module sonic-acl {
 						}
 					}
 				}
+
+				/* Validating 'SRC_IP' exist if ACL type is 'INNERSRCMACREWRITE' */
+				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'INNERSRCMACREWRITE')) or (boolean(SRC_IP))";
 
 				leaf IN_PORTS {
 					/* Values is a list of SONiC port name (/port:sonic-port/port:PORT/port:PORT_LIST/port:name) joined by comma */
@@ -255,6 +265,15 @@ module sonic-acl {
 					}
 				}
 
+				leaf VNI_ID {
+					type uint32 {
+						range "1..16777215";
+					}
+				}
+
+				/* Validating 'VNI_ID' exist if ACL type is 'INNERSRCMACREWRITE' */
+				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'INNERSRCMACREWRITE')) or (boolean(VNI_ID))";
+
 				leaf PCP {
 					when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/../acl:ACL_TABLE_NAME]/acl:type = 'L2')";
 					type string {
@@ -354,6 +373,9 @@ module sonic-acl {
 					}
 					default "INGRESS";
 				}
+
+				/* Validating stage is EGRESS exist if ACL type is 'INNERSRCMACREWRITE' */
+				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'INNERSRCMACREWRITE')) or (stage = 'EGRESS')";
 
 				leaf-list services {
 					type string;
