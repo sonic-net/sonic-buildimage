@@ -94,8 +94,9 @@ pciesvc_indirect_intr_dest_pa(const int port)
     pciesvc_assert(port >= 0 && port < PCIEHW_NPORTS);
     if (intr_dest_pa[port] == 0) {
         pciehw_mem_t *phwmem = pciesvc_hwmem_get();
+        pciehw_shmem_t *pshmem = pciesvc_shmem_get();
         intr_dest_pa[port] =
-            pciesvc_vtop(&phwmem->indirect_intr_dest[port]);
+            pciesvc_vtop(PHWMEM_ADDR_FIELD(phwmem, pshmem, indirect_intr_dest[port]));
     }
     return intr_dest_pa[port];
 }
@@ -108,8 +109,9 @@ pciesvc_notify_intr_dest_pa(const int port)
     pciesvc_assert(port >= 0 && port < PCIEHW_NPORTS);
     if (intr_dest_pa[port] == 0) {
         pciehw_mem_t *phwmem = pciesvc_hwmem_get();
+        pciehw_shmem_t *pshmem = pciesvc_shmem_get();
         intr_dest_pa[port] =
-            pciesvc_vtop(&phwmem->notify_intr_dest[port]);
+            pciesvc_vtop(PHWMEM_ADDR_FIELD(phwmem, pshmem, notify_intr_dest[port]));
     }
     return intr_dest_pa[port];
 }
@@ -121,7 +123,8 @@ pciesvc_cfgcur_pa(void)
 
     if (cfgcur_pa == 0) {
         pciehw_mem_t *phwmem = pciesvc_hwmem_get();
-        cfgcur_pa = pciesvc_vtop(phwmem->cfgcur);
+        pciehw_shmem_t *pshmem = pciesvc_shmem_get();
+        cfgcur_pa = pciesvc_vtop(PHWMEM_DATA_FIELD(phwmem, pshmem, cfgcur));
     }
     return cfgcur_pa;
 }
@@ -133,7 +136,7 @@ pciesvc_notify_ring_mask(const int port)
 
     if (ring_mask == 0) {
         pciehw_shmem_t *pshmem = pciesvc_shmem_get();
-        ring_mask = pshmem->notify_ring_mask;
+        ring_mask = PSHMEM_DATA_FIELD(pshmem, notify_ring_mask);
     }
     return ring_mask;
 }
@@ -142,9 +145,10 @@ static inline notify_entry_t *
 pciesvc_notify_ring_get(const int port, const int idx)
 {
     pciehw_mem_t *phwmem = pciesvc_hwmem_get();
+    pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     notify_entry_t *notify_ring;
 
-    notify_ring = (notify_entry_t *)phwmem->notify_area[port];
+    notify_ring = (notify_entry_t *)PHWMEM_ADDR_FIELD(phwmem, pshmem, notify_area[port]);
     return &notify_ring[idx];
 }
 
@@ -160,7 +164,7 @@ pciesvc_port_get(const int port)
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
 
     pciesvc_assert(port >= 0 && port <= PCIEHW_NPORTS);
-    return &pshmem->port[port];
+    return PSHMEM_ADDR_FIELD(pshmem, port[port]);
 }
 
 static inline void
@@ -173,8 +177,10 @@ static inline pciehwdev_t *
 pciesvc_dev_get(const pciehwdevh_t hwdevh)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
+    int ndevs = PSHMEM_NDEVS(pshmem);
 
-    return hwdevh > 0 && hwdevh < PCIEHW_NDEVS ? &pshmem->dev[hwdevh] : NULL;
+    return hwdevh > 0 &&
+        hwdevh < ndevs ? PSHMEM_ADDR_FIELD(pshmem, dev[hwdevh]) : NULL;
 }
 
 static inline void
@@ -189,9 +195,9 @@ pciesvc_cfgspace_get(const pciehwdevh_t hwdevh, cfgspace_t *cs)
     pciehw_mem_t *phwmem = pciesvc_hwmem_get();
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
 
-    cs->cur = phwmem->cfgcur[hwdevh];
-    cs->msk = pshmem->cfgmsk[hwdevh];
-    cs->rst = pshmem->cfgrst[hwdevh];
+    cs->cur = PHWMEM_DATA_FIELD(phwmem, pshmem, cfgcur[hwdevh]);
+    cs->msk = PSHMEM_DATA_FIELD(pshmem, cfgmsk[hwdevh]);
+    cs->rst = PSHMEM_DATA_FIELD(pshmem, cfgrst[hwdevh]);
     cs->size = PCIEHW_CFGSZ;
 }
 
@@ -206,7 +212,7 @@ pciesvc_spmt_get(const int idx)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
 
-    return &pshmem->spmt[idx];
+    return PSHMEM_ADDR_FIELD(pshmem, spmt[idx]);
 }
 
 static inline void
@@ -220,7 +226,7 @@ pciesvc_sprt_get(const int idx)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
 
-    return &pshmem->sprt[idx];
+    return PSHMEM_ADDR_FIELD(pshmem, sprt[idx]);
 }
 
 static inline void
@@ -234,7 +240,7 @@ pciesvc_vpd_get(const pciehwdevh_t hwdevh)
 {
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
 
-    return &pshmem->vpddata[hwdevh];
+    return PSHMEM_ADDR_FIELD(pshmem, vpddata[hwdevh]);
 }
 
 static inline void
@@ -302,6 +308,12 @@ static inline u_int64_t
 rounddn_power2(u_int64_t n)
 {
     return roundup_power2(n + 1) >> 1;
+}
+
+static inline u_int64_t
+align_to(u_int64_t n, u_int64_t align)
+{
+	return (n + align - 1) & ~(align - 1);
 }
 
 #ifdef __cplusplus

@@ -94,6 +94,7 @@
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)  
   * [SRv6](#srv6)
+  * [Prefix List](#prefix-list)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -1370,7 +1371,10 @@ The configuration is applied globally for each ECMP and LAG on a switch.
         "config": {
             "enabled": "true",
             "num_dumps": "3",
-            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
+            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
+            "remote": "true",
+            "ssh_string": "username@ipaddress",
+            "ssh_path": "a/b/c"
          }
      }
 }
@@ -2906,6 +2910,18 @@ An example is as follows:
            "decap_vrf": "default",
            "decap_dscp_mode": "pipe"
         }
+    }
+}
+```
+
+### Prefix List
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+
+An example is as follows:
+```json
+{
+    "PREFIX_LIST": {
+        "ANCHOR_PREFIX|fc00::/48": {}
     }
 }
 ```
