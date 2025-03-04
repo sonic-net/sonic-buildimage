@@ -235,6 +235,16 @@ RUN cd /tmp \
     && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
     && rm -rf /tmp/sonic-dash-api
 
+# Install dash-pipeline-utils
+COPY ["files/github_get.py", "/usr/bin"]
+RUN cd /tmp \
+    && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
+    && cd utils \
+    && python3 setup.py bdist_wheel \
+    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && cd / \
+    && rm -rf /tmp/utils
+
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
