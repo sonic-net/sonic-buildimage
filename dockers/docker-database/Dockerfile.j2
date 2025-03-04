@@ -9,8 +9,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update apt's cache of available packages
 RUN apt-get update
 
-# Install redis-server
-RUN apt-get install -y redis-tools redis-server
+# Install valkey-server, redis deprecated
+RUN apt-get install -y valkey-tools valkey-server
 
 # Install click for CLI
 RUN pip3 install click
@@ -37,7 +37,7 @@ RUN apt-get clean -y                                  && \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
              s/^databases [0-9]+$/databases 100/ \
-            ' /etc/redis/redis.conf
+            ' /etc/valkey/valkey.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
