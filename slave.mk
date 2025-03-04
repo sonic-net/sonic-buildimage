@@ -457,6 +457,7 @@ $(info "BLDENV"                          : "$(BLDENV)")
 $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
+$(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
 $(info "INCLUDE_SYSTEM_TELEMETRY"        : "$(INCLUDE_SYSTEM_TELEMETRY)")
 $(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
 $(info "INCLUDE_SYSTEM_BMP"              : "$(INCLUDE_SYSTEM_BMP)")
@@ -1468,6 +1469,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
+	export include_stpd="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_acms="$(INCLUDE_ACMS)"
 	export include_vnet_monitor="$(INCLUDE_VNET_MONITOR)"
