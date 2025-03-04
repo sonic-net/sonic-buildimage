@@ -20,6 +20,13 @@ pr:
     include:
     - dockers/docker-sonic-mgmt
 
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    endpoint: sonic-net
+
 parameters:
 - name: registry_url
   type: string
@@ -55,14 +62,38 @@ stages:
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: Build docker-sonic-mgmt.gz
-    - task: Docker@2
-      displayName: Upload image
-      inputs:
-        containerRegistry: ${{ parameters.registry_conn }}
-        repository: docker-sonic-mgmt
-        command: push
-        tags: latest
+#    - task: Docker@2
+#      displayName: Upload image
+#      inputs:
+#        containerRegistry: ${{ parameters.registry_conn }}
+#        repository: docker-sonic-mgmt
+#        command: push
+#        tags: latest
     - publish:  $(Build.ArtifactStagingDirectory)
       artifact: 'docker-sonic-mgmt'
       displayName: "Archive docker image sonic-mgmt"
+
+  - job: Validate docker image
+    pool: sonic-ubuntu-1c
+    timeoutInMinutes: 360
+    dependsOn: Build
+    steps:
+    - checkout: sonic-mgmt
+      clean: true
+      displayName: 'Checkout sonic-mgmt'
+
+    - script: |
+        set -x
+
+        cd sonic-mgmt
+        cd ansible
+        sudo ./setup-management-network.sh -d
+        cd ../
+        docker rm -f sonic-mgmt
+        ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
+        echo $?
+      displayName: 'Setup sonic-mgmt docker container'
+
+
+
 
