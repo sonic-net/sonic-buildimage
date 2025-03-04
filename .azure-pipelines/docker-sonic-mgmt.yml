@@ -73,7 +73,7 @@ stages:
       artifact: 'docker-sonic-mgmt'
       displayName: "Archive docker image sonic-mgmt"
 
-  - job: Validate docker image
+  - job: validate_docker_image
     pool: sonic-ubuntu-1c
     timeoutInMinutes: 360
     dependsOn: Build
