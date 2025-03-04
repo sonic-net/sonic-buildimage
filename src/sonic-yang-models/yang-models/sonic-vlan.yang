@@ -43,6 +43,9 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2024-05-23 {
+		description "Add SAG support";
+	}
 
 	revision 2024-03-07 {
 		description "Add Constraints that are implemented in CLI";
@@ -123,6 +126,11 @@ module sonic-vlan {
 					default disable;
 				}
 
+				leaf static_anycast_gateway {
+					description "Enable/disable static anycast gateway for the vlan interface";
+					type boolean;
+					default false;
+				}
 
 				leaf loopback_action {
 					description "Packet action when a packet ingress and gets routed on the same IP interface";
