@@ -227,6 +227,16 @@ COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
 
 RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
 
+# Install dash-pipeline-utils
+COPY ["files/github_get.py", "/usr/bin"]
+RUN cd /tmp \
+    && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
+    && cd utils \
+    && python3 setup.py bdist_wheel \
+    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && cd / \
+    && rm -rf /tmp/utils
+
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
