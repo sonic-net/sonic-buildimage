@@ -1,0 +1,51 @@
+module sonic-configurable-drop-monitor {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-configurable-drop-monitor";
+
+    prefix configurable-drop-monitor;
+
+    description "DEBUG_DROP_MONITOR YANG Module for SONiC OS";
+
+    revision 2025-01-10 {
+        description
+            "First revision";
+    }
+
+    container sonic-configurable-drop-monitor {
+        container DEBUG_DROP_MONITOR {
+            container CONFIG {
+                description "Stores configuration for debug drop monitor in CONFIG_DB";
+
+                leaf status {
+                    type string {
+                        pattern "enabled|disabled" {
+                            error-message "Invalid status for debug drop monitor.";
+                            error-app-tag debug-drop-monitor-invalid-status;
+                        }
+                    }
+                    description "Status of the feature";
+                }
+
+                leaf window {
+                    type uint64;
+                    default 900;
+                    units seconds;
+                    description "The length of the time window in seconds";
+                }
+
+                leaf incident_count_threshold {
+                    type uint64;
+                    default 3;
+                    description "The number of incidents that have to occur per window for it to be registered as a syslog";
+                }
+
+                leaf drop_count_threshold {
+                    type uint64;
+                    default 100;
+                    description "The number of packet drops required for being classified as an incident";
+                }
+            } /* end of container CONFIG */
+        } /* end of container DEBUG_DROP_MONITOR */
+    } /* end of container sonic-configurable-drop-monitor */
+} /* end of module sonic-configurable-drop-monitor */
