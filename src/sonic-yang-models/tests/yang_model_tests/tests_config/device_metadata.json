@@ -545,5 +545,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_RING_THREAD_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "ring_thread_enabled": true
+                }
+            }
+        }
     }
 }

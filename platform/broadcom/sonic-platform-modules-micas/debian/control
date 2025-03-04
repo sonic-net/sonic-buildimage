@@ -35,3 +35,7 @@ Description: kernel modules for platform devices such as fan, led, sfp
 Package: platform-modules-micas-m2-w6510-32c
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-micas-m2-w6520-48c8qc
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
