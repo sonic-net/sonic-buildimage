@@ -95,6 +95,7 @@ module sonic-types {
             enum MIRRORV6;
             enum MIRROR_DSCP;
             enum CTRLPLANE;
+            enum INNERSRCMACREWRITE;
         }
     }
 
@@ -264,6 +265,12 @@ module sonic-types {
     typedef mac-addr-and-mask {
         type string {
             pattern "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}|[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}/[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
+        }
+    }
+
+    typedef mac-address {
+        type string {
+            pattern "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
         }
     }
 
