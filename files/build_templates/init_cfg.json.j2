@@ -52,6 +52,7 @@
 {%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_device_health == "y" %}{% do features.append(("device-health", "enabled", true, "enabled")) %}{% endif %}
     "FEATURE": {
 {# has_timer field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, has_timer, autorestart in features %}
@@ -72,7 +73,7 @@
             "check_up_status" : "false",
 {%- endif %}
 {%- if include_kubernetes == "y" %}
-{%- if feature in ["lldp", "pmon", "radv", "snmp", "telemetry"] %}
+{%- if feature in ["lldp", "pmon", "radv", "snmp", "telemetry", "device-health"] %}
             "set_owner": "kube", {% else %}
             "set_owner": "local", {% endif %} {% endif %}
             "high_mem_alert": "disabled"
