@@ -72,13 +72,9 @@ MLNX_TOOLS = mlnx-tools_$(MLNX_TOOLS_VER)_arm64.deb
 $(MLNX_TOOLS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
 
 OFED_KERNEL_UTILS = mlnx-ofed-kernel-utils_$(OFED_KERNEL_VER_FULL)-1_arm64.deb
-
-$(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_UTILS)))
-
+$(OFED_KERNEL_UTILS)_DEPENDS = $(MLNX_TOOLS)
 OFED_KERNEL_DKMS = mlnx-ofed-kernel-dkms_$(OFED_KERNEL_VER_SHORT)-1_all.deb
 $(OFED_KERNEL_DKMS)_DEPENDS = $(OFED_KERNEL_UTILS)
-
-$(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_DKMS)))
 
 OFED_KERNEL = mlnx-ofed-kernel-modules-$(KVERSION)_$(OFED_KERNEL_VER_SHORT)_$(BUILD_ARCH).deb
 $(OFED_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
@@ -86,6 +82,11 @@ $(OFED_KERNEL)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
 
 ifeq ($(SDK_FROM_SRC), y)
 $(OFED_KERNEL)_DEPENDS += $(OFED_KERNEL_DKMS)
+
+$(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_UTILS)))
+$(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_DKMS)))
+else
+SDK_ONLINE_TARGETS += $(OFED_KERNEL_UTILS)
 endif
 
 export OFED_VER_SHORT OFED_VER_FULL OFED_KERNEL OFED_KERNEL_UTILS OFED_KERNEL_VER_FULL MLNX_TOOLS OFED_KERNEL_DKMS
@@ -115,26 +116,21 @@ RDMA_CORE = rdma-core_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(RDMA_CORE)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/rdma
 $(RDMA_CORE)_RDEPENDS = $(LIBNL3)
 $(RDMA_CORE)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
-RDMA_CORE_DBGSYM = rdma-core-dbgsym_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 
 IB_VERBS_PROV = ibverbs-providers_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(IB_VERBS_PROV)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
-IB_VERBS_PROV_DBGSYM = ibverbs-providers-dbgsym_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 
 IB_VERBS = libibverbs1_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(IB_VERBS)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 IB_VERBS_DEV = libibverbs-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(IB_VERBS_DEV)_DEPENDS = $(IB_VERBS) $(IB_VERBS_PROV)
-IB_VERBS_DBGSYM = libibverbs1-dbg_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 
 IB_UMAD = libibumad3_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 IB_UMAD_DEV = libibumad-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
-IB_UMAD_DBGSYM = libibumad3-dbg_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 
 RDMACM = librdmacm1_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 RDMACM_DEV = librdmacm-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(RDMACM_DEV)_DEPENDS = $(RDMACM) $(IB_VERBS_DEV)
-RDMACM_DBGSYM = librdmacm1-dbg_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS)))
@@ -144,32 +140,20 @@ $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD_DEV)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM_DEV)))
 
-ifeq ($(SDK_FROM_SRC),y)
-$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMA_CORE_DBGSYM)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV_DBGSYM)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_DBGSYM)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD_DBGSYM)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM_DBGSYM)))
-endif
+export RDMA_CORE
+export IB_VERBS IB_VERBS_DEV
+export IB_VERBS_PROV
+export IB_UMAD IB_UMAD_DEV
+export RDMACM RDMACM_DEV
 
-export RDMA_CORE RDMA_CORE_DBGSYM
-export IB_VERBS IB_VERBS_DEV IB_VERBS_DBGSYM
-export IB_VERBS_PROV IB_VERBS_PROV_DBGSYM
-export IB_UMAD IB_UMAD_DEV IB_UMAD_DBGSYM
-export RDMACM RDMACM_DEV RDMACM_DBGSYM
-
-RDMA_CORE_DERIVED_DEBS = $(RDMA_CORE_DBGSYM) \
+RDMA_CORE_DERIVED_DEBS = \
 		$(IB_VERBS) \
 		$(IB_VERBS_DEV) \
-		$(IB_VERBS_DBGSYM) \
 		$(IB_VERBS_PROV) \
-		$(IB_VERBS_PROV_DBGSYM) \
 		$(IB_UMAD) \
 		$(IB_UMAD_DEV) \
-		$(IB_UMAD_DBGSYM) \
 		$(RDMACM) \
-		$(RDMACM_DEV) \
-		$(RDMACM_DBGSYM)
+		$(RDMACM_DEV)
 
 export RDMA_CORE_DERIVED_DEBS
 
@@ -222,16 +206,10 @@ LIBGRPC_VER = $(call get_sdk_package_version_full,"grpc")
 
 LIBGRPC_DEV = libgrpc-dev_$(LIBGRPC_VER)_arm64.deb
 $(LIBGRPC_DEV)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/grpc
-LIBGRPC_DBG = libgrpc-dev-dbgsym_$(LIBGRPC_VER)_arm64.deb
 
-$(eval $(call add_derived_package,$(LIBGRPC_DEV),$(LIBGRPC_DBG)))
+export LIBGRPC_DEV LIBGRPC_VER
 
-export LIBGRPC_DEV LIBGRPC_DBG LIBGRPC_VER
-
-LIBGRPC_DERIVED_DEBS = $(LIBGRPC_DBG)
-export LIBGRPC_DERIVED_DEBS
-
-SDK_DEBS += $(LIBGRPC_DEV) $(LIBGRPC_DERIVED_DEBS)
+SDK_DEBS += $(LIBGRPC_DEV)
 SDK_SRC_TARGETS += $(LIBGRPC_DEV)
 
 # DOCA and derived packages
@@ -249,7 +227,7 @@ $(DOCA_COMMON_DEV)_DEPENDS = $(DOCA_COMMON)
 SDK_SRC_TARGETS += $(DOCA_COMMON)
 
 DOCA_DEV_DEBS += $(DOCA_COMMON_DEV)
-export DOCA_COMMON DOCA_COMMON_DEV DOCA_COMMON_DBG
+export DOCA_COMMON DOCA_COMMON_DEV
 
 DOCA_ARGP = doca-sdk-argp_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_ARGP)_DEPENDS += $(DOCA_COMMON)
@@ -258,7 +236,7 @@ $(DOCA_ARGP_DEV)_DEPENDS = $(DOCA_ARGP)
 
 DOCA_DEBS += $(DOCA_ARGP)
 DOCA_DEV_DEBS += $(DOCA_ARGP_DEV)
- export DOCA_ARGP DOCA_ARGP_DEV DOCA_ARGP_DBG
+ export DOCA_ARGP DOCA_ARGP_DEV
 
 DOCA_DPDK_BRIDGE = doca-sdk-dpdk-bridge_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_DPDK_BRIDGE)_DEPENDS += $(DOCA_COMMON)
@@ -267,7 +245,7 @@ $(DOCA_DPDK_BRIDGE_DEV)_DEPENDS = $(DOCA_DPDK_BRIDGE)
 
 DOCA_DEBS += $(DOCA_DPDK_BRIDGE)
 DOCA_DEV_DEBS += $(DOCA_DPDK_BRIDGE_DEV)
-export DOCA_DPDK_BRIDGE DOCA_DPDK_BRIDGE_DEV DOCA_DPDK_BRIDGE_DBG
+export DOCA_DPDK_BRIDGE DOCA_DPDK_BRIDGE_DEV
 
 DOCA_FLOW = doca-sdk-flow_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_FLOW)_DEPENDS += $(DOCA_COMMON)
@@ -276,24 +254,20 @@ $(DOCA_FLOW_DEV)_DEPENDS = $(DOCA_FLOW)
 
 DOCA_DEBS += $(DOCA_FLOW)
 DOCA_DEV_DEBS += $(DOCA_FLOW_DEV)
-DOCA_DBG_DEBS += $(DOCA_FLOW_DBG)
-export DOCA_FLOW DOCA_FLOW_DEV DOCA_FLOW_DBG
+
+export DOCA_FLOW DOCA_FLOW_DEV
 export DOCA_DEBS DOCA_DEV_DEBS
 
 SDK_DEBS += $(DOCA_DEBS) $(DOCA_DEV_DEBS)
 
 ifeq ($(SDK_FROM_SRC), y)
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_COMMON_DEV)))
-$(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_COMMON_DBG)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_ARGP)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_ARGP_DEV)))
-$(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_ARGP_DBG)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_DPDK_BRIDGE)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_DPDK_BRIDGE_DEV)))
-$(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_DPDK_BRIDGE_DBG)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_FLOW)))
 $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_FLOW_DEV)))
-$(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_FLOW_DBG)))
 else
 SONIC_ONLINE_DEBS += $(DOCA_DEBS) $(DOCA_DEV_DEBS)
 endif
