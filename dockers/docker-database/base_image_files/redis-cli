@@ -7,4 +7,4 @@ if [ -t 1 ] ; then
     DOCKER_EXEC_FLAGS+="t"
 fi
 
-docker exec -$DOCKER_EXEC_FLAGS database valkey-cli "$@"
+docker exec -$DOCKER_EXEC_FLAGS database redis-cli "$@"

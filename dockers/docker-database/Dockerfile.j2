@@ -38,8 +38,13 @@ RUN apt-get clean -y                                  && \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
              s/^databases [0-9]+$/databases 100/ \
              s/^unixsocketgroup wheel/# unixsocketgroup wheel/ \
-             s/^dir /var/lib/valkey/dir /var/lib/redis/ \
+             s/^dir \/var\/lib\/valkey/dir \/var\/lib\/redis/ \
             ' /etc/valkey/valkey.conf
+
+RUN mkdir -p /var/lib/redis
+RUN ln -s /etc/valkey/valkey.conf /etc/redis/redis.conf
+RUN ln -s /usr/bin/valkey-server /usr/bin/redis-server
+RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
