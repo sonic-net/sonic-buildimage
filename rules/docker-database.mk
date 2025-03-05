@@ -32,6 +32,6 @@ $(DOCKER_DATABASE)_RUN_OPT += -t --security-opt apparmor=unconfined --security-o
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
-$(DOCKER_DATABASE)_BASE_IMAGE_FILES += valkey-cli:/usr/bin/valkey-cli
+$(DOCKER_DATABASE)_BASE_IMAGE_FILES += redis-cli:/usr/bin/redis-cli
 $(DOCKER_DATABASE)_FILES += $(SYSCTL_NET_CONFIG) $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 $(DOCKER_DATABASE)_FILES += $(UPDATE_CHASSISDB_CONFIG_SCRIPT)
