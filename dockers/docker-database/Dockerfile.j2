@@ -37,6 +37,8 @@ RUN apt-get clean -y                                  && \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
              s/^databases [0-9]+$/databases 100/ \
+             s/^unixsocketgroup wheel/# unixsocketgroup wheel/ \
+             s/^dir /var/lib/valkey/dir /var/lib/redis/ \
             ' /etc/valkey/valkey.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
