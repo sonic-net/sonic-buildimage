@@ -47,7 +47,7 @@ stages:
             set -ex
 
             OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
-            make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+            make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz target/docker-auditd.gz
           displayName: Build SONiC image
         - script: |
             set -ex
@@ -98,7 +98,7 @@ stages:
               echo "INCLUDE_SYSTEM_TELEMETRY = n" >> rules/config.user
               echo "ENABLE_GNMI_TWO_PROCESS = y" >> rules/config.user
               echo "INCLUDE_SYSTEM_EVENTD = n" >> rules/config.user
-              make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+              make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/docker-auditd.gz
               mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
               mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
               rm -rf target/*.squashfs
@@ -159,7 +159,7 @@ stages:
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
               make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin
               mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
-              make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin
+              make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin target/docker-auditd.gz
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
               cp target/debs/bookworm/python-saithrift*.deb target/ || true
             displayName: Build SONiC image
@@ -187,7 +187,7 @@ stages:
           - script: |
               set -ex
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-armhf INCLUDE_DHCP_SERVER=y"
-              make $OPTIONS target/sonic-marvell-armhf.bin
+              make $OPTIONS target/sonic-marvell-armhf.bin target/docker-auditd.gz
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
