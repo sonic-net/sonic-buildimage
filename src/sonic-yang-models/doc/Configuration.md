@@ -2545,23 +2545,24 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name:prefix as the object key, where vnet_name is the name of the VNet and prefix is the prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: The IP address of the host VM (mandatory), IPv4 address. It is used to identify the endpoint of the tunnel.
-- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadecimal digit value.
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
+- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
 - VXLANID: The VNI value in the encapsulated packet (optional). It should be a numeric value.
 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
-    "Vnet1-1:10.0.0.0/24": {
-      "endpoint": "192.168.1.1",
-      "mac_address": "F9:22:83:99:22:A2",
-      "vxlanid": "10011"
+    "Vnet_2000|100.100.1.1/32": {
+        "name": "Vnet_2000|100.100.1.1/32",
+        "endpoint": "192.168.1.1",
+        "mac_address": "F9:22:83:99:22:A2"
     },
-    "Vnetv4_v4-0:10.0.1.0/24": {
-      "endpoint": "192.168.1.2",
-      "mac_address": "F8:22:83:99:22:A2",
-      "vxlanid": "10012"
+    "Vnetv4_v4-0|10.0.1.0/24": {
+        "name": "Vnetv4_v4-0|10.0.1.0/24",
+        "endpoint": "192.168.1.2",
+        "mac_address": "F8:22:83:99:22:A2",
+        "vxlanid": "10012"
     }
   }
 }
