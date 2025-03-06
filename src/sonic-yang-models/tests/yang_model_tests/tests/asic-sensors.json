@@ -4,7 +4,7 @@
     },
     "ASIC_SENSORS_INVALID_POLLER_INTERVAL": {
         "desc": "Configure an invalid ASIC Sensors polling interval",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
     "ASIC_SENSORS_INVALID_POLLER_ADMIN_STATUS": {
         "desc": "Configure an invalid ASIC Sensors polling admin status",

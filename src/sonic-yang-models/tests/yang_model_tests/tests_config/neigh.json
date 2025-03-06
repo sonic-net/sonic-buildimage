@@ -28,7 +28,7 @@
         }
     },
 
-    "NEIGH_MISSING_IPV4": {
+    "NEIGH_MISSING_IP": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [
