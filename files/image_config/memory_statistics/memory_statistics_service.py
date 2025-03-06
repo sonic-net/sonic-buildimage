@@ -198,12 +198,12 @@ class Utility:
                     raise ValueError(f"Could not parse date: {request[time_key]}")
                 formatted_date = parsed_date.strftime(date_format)
             except Exception as e:
-                raise ValueError(f"Date format error, input: {request[time_key]}, error: {str(e)}")
+                raise Exception(f"Date format error, input: {request[time_key]}, error: {str(e)}")
         else:
             formatted_date = datetime.now().strftime(date_format)
         
         return formatted_date
-
+    
     @staticmethod
     def _format_timedelta_as_dict(time_delta: timedelta) -> Dict[str, int]:
         """
@@ -577,6 +577,15 @@ class MemoryReportGenerator:
 
 
 class MemoryStatisticsCollector:
+    """
+    This class handles system memory statistics collection, management, and retention. It initializes with a specified
+    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
+    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
+    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
+    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
+    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+    """
+
     def __init__(self, sampling_interval: int, retention_period: int):
         """
         Initializes MemoryStatisticsCollector with data collection interval and retention period.
@@ -1069,11 +1078,7 @@ class MemoryStatisticsProcessor:
         Raises:
         - ValueError: If the sampling interval is not within the accepted range.
         """
-        if interval_minutes <= 0:
-            raise ValueError("Sampling interval must be a positive integer.")
-
         hourly_rate = 60 / int(interval_minutes)
-
         if hourly_rate > 20:
             raise ValueError(f"Invalid sampling interval, rate per hour: {hourly_rate}")
 
@@ -1117,6 +1122,7 @@ class MemoryStatisticsProcessor:
                     first_interval_unit, first_interval_rate, second_interval_unit):
         """
         Processes a single memory statistics file to extract and aggregate data.
+
         Parameters:
         - file_name (str): The filename containing memory statistics data.
         - start_time_obj (datetime): The starting time object for filtering.
@@ -1131,23 +1137,31 @@ class MemoryStatisticsProcessor:
         """
         if not os.path.exists(file_name) or os.path.getsize(file_name) <= 0:
             return
-        
-        with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
-            content = json.load(jfile)
-            entries = content if isinstance(content, list) else [content]
-            for memory_entry in entries:
-                self.process_memory_entry(
-                    memory_entry,
-                    start_time_obj, 
-                    end_time_obj, 
-                    step, 
-                    num_columns, 
-                    time_entry_summary, 
-                    request_data,
-                    first_interval_unit, 
-                    first_interval_rate, 
-                    second_interval_unit
-                )
+
+        try:
+            with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
+                try:
+                    content = json.load(jfile)
+
+                    entries = content if isinstance(content, list) else [content]
+
+                    for memory_entry in entries:
+                        self.process_memory_entry(
+                            memory_entry,
+                            start_time_obj, 
+                            end_time_obj, 
+                            step, 
+                            num_columns, 
+                            time_entry_summary, 
+                            request_data,
+                            first_interval_unit, 
+                            first_interval_rate, 
+                            second_interval_unit
+                        )
+                except json.JSONDecodeError as e:
+                    logger.log_error(f"Error decoding JSON from {file_name}: {e}")
+        except Exception as e:
+            logger.log_error(f"Error processing file {file_name}: {e}")    
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1184,14 +1198,14 @@ class MemoryStatisticsProcessor:
             num_columns (int): Number of columns (time slices) to process.
         """
         batch_size = max(1, min(num_columns // 4, 10))
-
+        
         last_entry = {SYSTEM_MEMORY_KEY: {"system": {}}}
-
+        
         time_group_list = time_entry_summary["time_group_list"]
-
+        
         for start in range(0, num_columns, batch_size):
             end = min(start + batch_size, num_columns)
-
+            
             try:
                 processed_batch = [
                     self.entry_manager.get_global_entry_data(
@@ -1201,10 +1215,10 @@ class MemoryStatisticsProcessor:
                         time_group_list[i]
                     ) for i in range(start, end)
                 ]
-
+                
                 time_group_list[start:end] = processed_batch
-
-            except (KeyError, IndexError, TypeError, ValueError) as e:
+            
+            except Exception as e:
                 logger.log_error(
                     f"Batch processing error: "
                     f"Columns {start}-{end}, "
@@ -1217,7 +1231,7 @@ class MemoryStatisticsProcessor:
                     }
                 )
                 continue
-
+        
         return time_group_list
 
     def generate_report(self, request_data, time_entry_summary, num_columns, step):
@@ -1407,18 +1421,12 @@ class SocketHandler:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(1.0) 
             self.listener_socket.bind(self.address)
-            os.chmod(self.address, 0o600)
-            os.chown(self.address, os.getuid(), -1)
+            os.chmod(self.address, 0o644)
             self.listener_socket.listen(5)  
             logger.log_info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
             logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
             raise
-
-    def validate_request(self, request_json):
-        """Validate incoming JSON request structure"""
-        required_keys = ['command']
-        return all(key in request_json for key in required_keys)
 
     def send_response(self, connection, response_data):
         """Sends a JSON response back to the client.
@@ -1445,7 +1453,6 @@ class SocketHandler:
         
         :param connection: The socket connection established with the client.
         """
-    def handle_connection(self, connection):
         error_response = {"status": False, "msg": None}
         try:
             request_data = connection.recv(4096)
@@ -1455,20 +1462,12 @@ class SocketHandler:
 
             request_json = json.loads(request_data.decode('utf-8'))
             logger.log_debug(f"Received request: {request_json}")
-
-            if not self.validate_request(request_json):
-                raise ValueError("Invalid request structure")
-
             command_name = request_json['command']
             command_data = request_json.get('data', {})
 
             response = self.command_handler(command_name, command_data)
-            self.send_response(connection, response)
 
-        except json.JSONDecodeError:
-            logger.log_error("Invalid JSON in request")
-            error_response['msg'] = "Invalid JSON format"
-            self.send_response(connection, error_response)
+            self.send_response(connection, response)
         except Exception as error:
             logger.log_error(f"Error handling request: {traceback.format_exc()}")
             error_response['msg'] = str(error)
@@ -1479,7 +1478,6 @@ class SocketHandler:
                 logger.log_debug("Connection closed")
             except Exception as e:
                 logger.log_error(f"Error closing connection: {e}")
-
 
     def stop_listening(self):
         """Stops the socket listener loop by setting stop_event."""
@@ -1869,11 +1867,11 @@ class MemoryStatisticsService:
         """
         logger.log_info("Starting configuration retrieval from ConfigDB")
         config_db = ConfigDBConnector()
-        
+
         try:
             config_db.connect()
             config = config_db.get_table('MEMORY_STATISTICS')
-            
+
             updates = {}
 
             sampling_interval = config.get('sampling_interval', 5)
@@ -1887,7 +1885,7 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as interval_error:
                 logger.log_warning(f"Invalid sampling interval: {interval_error}. Using default.")
                 updates['sampling_interval'] = 5
-            
+
             retention_period = config.get('retention_period', 15)
             try:
                 retention_period = int(retention_period)
@@ -1899,21 +1897,21 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as retention_error:
                 logger.log_warning(f"Invalid retention period: {retention_error}. Using default.")
                 updates['retention_period'] = 15
-            
+
             self.config.update(updates)
-            
+
             self.sampling_interval = updates.get('sampling_interval', 5) * 60
             self.retention_period = updates.get('retention_period', 15)
-            
+
             logger.log_info(f"Configuration updated: "
                             f"sampling_interval={self.sampling_interval // 60} minutes, "
                             f"retention_period={self.retention_period} days")
-        
+
         except Exception as error:
             logger.log_error(f"Configuration retrieval failed: {error}")
             self.sampling_interval = 5 * 60
             self.retention_period = 15
-        
+
         finally:
             try:
                 config_db.disconnect()
@@ -1939,11 +1937,10 @@ class MemoryStatisticsService:
     def memory_statistics_command_request_handler(self, request):
         """
         Thread-safe handler for memory statistics requests.
-        Now uses JSON-based memory statistics collection.
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
-            
+
             current_config = self.config.get_copy()
             sampling_interval = int(current_config.get('sampling_interval', 5)) * 60
             retention_period = int(current_config.get('retention_period', 15))
@@ -1956,7 +1953,7 @@ class MemoryStatisticsService:
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
                 logger.log_info(f"Current memory usage collected: {current_memory}")
-                
+
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1999,8 +1996,10 @@ class MemoryStatisticsService:
 
     def memory_collection(self):
         """
-        Memory collection thread function.
-        Now uses JSON-based storage format.
+        Collects memory statistics at intervals defined by `sampling_interval`. 
+        The collection process continues until the `stop_event` is set. Each cycle 
+        collects data, handles errors, and ensures the next collection happens 
+        after the remaining time in the sampling interval.
         """
         logger.log_info("Memory statistics collection thread started.")
         while not self.stop_event.is_set():
@@ -2016,7 +2015,7 @@ class MemoryStatisticsService:
                 logger.log_error(f"JSON encoding/decoding error during collection: {je}")
             except Exception as error:
                 logger.log_error(f"Error during memory statistics collection: {error}")
-            
+
             elapsed_time = (datetime.now() - start_time).total_seconds()
             sleep_time = max(0, self.sampling_interval - elapsed_time)
             if self.stop_event.wait(timeout=sleep_time):
@@ -2052,7 +2051,7 @@ class MemoryStatisticsService:
         """
         logger.log_info("Signaling threads to stop.")
         self.stop_event.set()
-        
+
         if self.socket_listener_thread and self.socket_listener_thread.is_alive():
             logger.log_info("Waiting for socket listener thread to stop...")
             self.socket_listener_thread.join(timeout=5)
@@ -2133,7 +2132,7 @@ if __name__ == '__main__':
     }
 
     logger = SyslogLogger(identifier="memstats#log", log_to_console=True)
-    
+
     service_name = "MemoryStatisticsService" 
     service = MemoryStatisticsService(memory_statistics_config, name=service_name)
     service.run()
