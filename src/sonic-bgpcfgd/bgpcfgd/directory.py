@@ -157,3 +157,10 @@ class Directory(object):
         for db, table, path in deps:
             slot = self.get_slot_name(db, table)
             self.notify[slot][path].append(handler)
+
+    def unsubscribe(self, deps):
+        for db, table, path in deps:
+            slot = self.get_slot_name(db, table)
+            if slot in self.notify:
+                if path in self.notify[slot]:
+                    del self.notify[slot][path]

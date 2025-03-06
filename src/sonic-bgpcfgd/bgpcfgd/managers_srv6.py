@@ -22,7 +22,7 @@ class SRv6Mgr(Manager):
         """
         super(SRv6Mgr, self).__init__(
             common_objs,
-            [],
+            set(),
             db,
             table,
         )
@@ -59,9 +59,11 @@ class SRv6Mgr(Manager):
         prefix_len = int(ip_prefix.split("/")[1])
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
-            log_err("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
+            log_warn("Found a SRv6 SID config entry with a locator that does not exist yet: {} | {}".format(key, data))
+            self.deps.add((self.db_name, "SRV6_MY_LOCATORS", locator_name))
+            self.directory.subscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)], self.on_deps_change)
             return False
-        
+
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
         if locator.block_len + locator.node_len > prefix_len:
             log_err("Found a SRv6 SID config entry with an invalid prefix length {} | {}".format(key, data))
@@ -70,11 +72,11 @@ class SRv6Mgr(Manager):
         if 'action' not in data:
             log_err("Found a SRv6 SID config entry that does not specify action: {} | {}".format(key, data))
             return False
-        
+
         if data['action'] not in supported_SRv6_behaviors:
             log_err("Found a SRv6 SID config entry associated with unsupported action: {} | {}".format(key, data))
             return False
-        
+
         sid = SID(locator_name, ip_prefix, data) # the information in data will be parsed into SID's attributes
 
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
@@ -102,6 +104,9 @@ class SRv6Mgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
         self.directory.remove(self.db_name, self.table_name, key)
+        if (self.db_name, "SRV6_MY_LOCATORS", locator_name) in self.deps:
+            self.deps.remove((self.db_name, "SRV6_MY_LOCATORS", locator_name))
+            self.directory.unsubscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)])
 
     def sids_del_handler(self, key):
         locator_name = key.split("|")[0]
@@ -134,7 +139,7 @@ class SID:
     def __init__(self, locator, ip_prefix, data):
         self.locator_name = locator
         self.ip_prefix = ip_prefix
-        
+
         self.action = data['action']
         self.decap_vrf = data['decap_vrf'] if 'decap_vrf' in data else DEFAULT_VRF
         self.adj = data['adj'].split(',') if 'adj' in data else []
