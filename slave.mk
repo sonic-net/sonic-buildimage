@@ -1118,7 +1118,6 @@ $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz :
 	$(HEADER)
 
 	rm -rf $@ $@.log
-	wget "$($*.gz_URL)" -O target/$(DOWNLOADED_DOCKER_IMAGES) $(LOG)
 	cp files/dsc/pensando-sonic-artifacts/docker-dpu-base.gz target/docker-dpu-base.gz
 
 	$(FOOTER)
