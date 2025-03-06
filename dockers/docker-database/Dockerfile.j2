@@ -44,7 +44,6 @@ RUN apt-get clean -y                                  && \
 RUN mkdir -p /var/lib/redis
 RUN ln -s /etc/valkey/valkey.conf /etc/redis/redis.conf
 RUN ln -s /usr/bin/valkey-server /usr/bin/redis-server
-RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
