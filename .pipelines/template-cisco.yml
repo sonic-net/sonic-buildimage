@@ -91,7 +91,7 @@ jobs:
     - script: |
         set -ex
         OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
-        make $OPTIONS target/sonic-cisco-8000.bin target/docker-auditd.gz
+        make $OPTIONS target/sonic-cisco-8000.bin target/docker-auditd.gz target/docker-auditd-watchdog.gz
         make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz || true
       displayName: Build SONiC image
       # cisco-8000 failed currently. TODO
