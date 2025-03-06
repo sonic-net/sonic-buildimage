@@ -25,25 +25,25 @@
    ],
    "data_type" : [
       {
-         "data_type" : "LY_TYPE_STRING",
-         "xpath" : "/test-port:port/test-port:PORT/test-port:PORT_LIST/test-port:port_name"
+         "data_type" : "string",
+         "xpath" : "/test-port:port/PORT/PORT_LIST/port_name"
       },
       {
-         "data_type" : "LY_TYPE_LEAFREF",
-         "xpath" : "/test-vlan:vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:vlanid"
+         "data_type" : "leafref",
+         "xpath" : "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST/vlanid"
       }
    ],
    "delete_nodes" : [
       {
-         "valid" : "False",
+         "valid" : false,
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet10']/speed"
       },
       {
-         "valid" : "True",
+         "valid" : true,
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet9']/mtu"
       },
       {
-         "valid" : "False",
+         "valid" : false,
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet20']/mtu"
       }
    ],
@@ -57,6 +57,52 @@
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet8']/port_name"
       },
       {
+         "dependencies" : [
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V6'][RULE_NAME='Rule_20']/ACL_TABLE_NAME",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-test'][RULE_NAME='rule_20']/ACL_TABLE_NAME",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V4'][RULE_NAME='Rule_20']/ACL_TABLE_NAME",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V4'][RULE_NAME='Rule_40']/ACL_TABLE_NAME"
+         ],
+         "xpath" : "/test-acl:acl/ACL_TABLE"
+      },
+      {
+         "dependencies" : [
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V6']/ports[.='Ethernet8']",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet2']/port",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet3']/vlanid",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='555'][ip-prefix='fe80::/10']/vlanid",
+            "/test-interface:interface/INTERFACE/INTERFACE_LIST[interface='Ethernet8'][ip-prefix='10.1.1.64/26']/interface",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='2000:f500:45:6709::/64']/vlanid",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet5']/vlanid",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet1']/port",
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V4']/ports[.='Ethernet0']",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet6']/port",
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V4']/ports[.='Ethernet2']",
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V6']/ports[.='Ethernet7']",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet3']/port",
+            "/test-interface:interface/INTERFACE/INTERFACE_LIST[interface='Ethernet8'][ip-prefix='2000:f500:40:a749::/126']/interface",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-test'][RULE_NAME='rule_20']/ACL_TABLE_NAME",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/port",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet5']/port",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet1']/vlanid",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='fe80::/10']/vlanid",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet4']/port",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V4'][RULE_NAME='Rule_20']/ACL_TABLE_NAME",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet2']/vlanid",
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V6']/ports[.='Ethernet9']",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet6']/vlanid",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V4'][RULE_NAME='Rule_40']/ACL_TABLE_NAME",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/vlanid",
+            "/test-acl:acl/ACL_RULE/ACL_RULE_LIST[ACL_TABLE_NAME='PACL-V6'][RULE_NAME='Rule_20']/ACL_TABLE_NAME",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='10.1.1.64/26']/vlanid",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet4']/vlanid",
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME='PACL-V4']/ports[.='Ethernet1']",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='555'][ip-prefix='2000:f500:41:4e9::/64']/vlanid",
+            "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='555'][ip-prefix='10.1.5.64/26']/vlanid"
+         ],
+         "xpath" : "/"
+      },
+      {
          "dependencies" : [],
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet8']/alias"
       }
@@ -67,11 +113,11 @@
          "xpath" : "/test-vlan:vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:vlanid"
       },
       {
-         "leafref_path" : "/test-port:port/test-port:PORT/test-port:PORT_LIST/test-port:port_name",
+         "leafref_path" : "/port:port/port:PORT/port:PORT_LIST/port:port_name",
          "xpath" : "/test-interface:interface/test-interface:INTERFACE/test-interface:INTERFACE_LIST/test-interface:interface"
       },
       {
-         "leafref_path" : "/test-port:port/test-port:PORT/test-port:PORT_LIST/test-port:port_name",
+         "leafref_path" : "/port:port/port:PORT/port:PORT_LIST/port:port_name",
          "xpath" : "/test-vlan:vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:port"
       },
       {
@@ -81,38 +127,38 @@
    ],
    "leafref_type" : [
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "uint16",
          "xpath" : "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='2000:f500:45:6709::/64']/vlanid"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "string",
          "xpath" : "/test-interface:interface/INTERFACE/INTERFACE_LIST[interface='Ethernet8'][ip-prefix='2000:f500:40:a749::/126']/interface"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "string",
          "xpath" : "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/port"
       },
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "uint16",
          "xpath" : "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/vlanid"
       }
    ],
    "leafref_type_schema" : [
       {
-         "data_type" : "LY_TYPE_UINT16",
-         "xpath" : "/test-vlan:vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:vlanid"
+         "data_type" : "uint16",
+         "xpath" : "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST/vlanid"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
-         "xpath" : "/test-interface:interface/test-interface:INTERFACE/test-interface:INTERFACE_LIST/test-interface:interface"
+         "data_type" : "string",
+         "xpath" : "/test-interface:interface/INTERFACE/INTERFACE_LIST/interface"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
-         "xpath" : "/test-vlan:vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:port"
+         "data_type" : "string",
+         "xpath" : "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST/port"
       },
       {
-         "data_type" : "LY_TYPE_UINT16",
-         "xpath" : "/test-vlan:vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:vlanid"
+         "data_type" : "uint16",
+         "xpath" : "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST/vlanid"
       }
    ],
    "members" : [
@@ -257,21 +303,21 @@
    "schema_dependencies" : [
       {
          "schema_dependencies" : [
-            "/test-acl:acl/test-acl:ACL_TABLE/test-acl:ACL_TABLE_LIST/test-acl:ports",
-            "/test-portchannel:portchannel/test-portchannel:PORTCHANNEL/test-portchannel:PORTCHANNEL_LIST/test-portchannel:members",
-            "/test-interface:interface/test-interface:INTERFACE/test-interface:INTERFACE_LIST/test-interface:interface",
-            "/test-vlan:vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:port"
+            "/test-acl:acl/ACL_TABLE/ACL_TABLE_LIST/ports",
+            "/test-portchannel:portchannel/PORTCHANNEL/PORTCHANNEL_LIST/members",
+            "/test-interface:interface/INTERFACE/INTERFACE_LIST/interface",
+            "/test-vlan:vlan/VLAN_MEMBER/VLAN_MEMBER_LIST/port"
          ],
-         "xpath" : "/test-port:port/test-port:PORT/test-port:PORT_LIST/test-port:port_name"
+         "xpath" : "/test-port:port/PORT/PORT_LIST/port_name"
       }
    ],
    "schema_nodes" : [
       {
-         "value" : "/test-vlan:vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:family",
+         "value" : "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST/family",
          "xpath" : "/test-vlan:vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='10.1.1.64/26']/family"
       },
       {
-         "value" : "/test-port:port/test-port:PORT/test-port:PORT_LIST/test-port:speed",
+         "value" : "/test-port:port/PORT/PORT_LIST/speed",
          "xpath" : "/test-port:port/PORT/PORT_LIST[port_name='Ethernet9']/speed"
       }
    ],

@@ -29,7 +29,7 @@ LIBYANG_PY3 = python3-yang_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBYANG_PY3)_DEPENDS += $(LIBYANG) $(LIBYANG_CPP)
 $(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_PY3)))
 
-$(eval $(call add_conflict_package,$(LIBYANG),$(LIBYANG1),$(LIBYANG2)))
-$(eval $(call add_conflict_package,$(LIBYANG_DEV),$(LIBYANG1_DEV),$(LIBYANG2_DEV)))
+#$(eval $(call add_conflict_package,$(LIBYANG),$(LIBYANG3)))
+$(eval $(call add_conflict_package,$(LIBYANG_DEV),$(LIBYANG3_DEV)))
 
 export LIBYANG LIBYANG_DBGSYM LIBYANG_DEV LIBYANG_CPP LIBYANG_PY3

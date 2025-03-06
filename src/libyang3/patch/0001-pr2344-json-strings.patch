@@ -1,0 +1,220 @@
+From 9ba71bf71bf77d4c660dabd1b05b5e5cda77cecf Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Fri, 14 Feb 2025 08:54:10 -0500
+Subject: [PATCH] data: option to allow json int/bool as strings
+
+Prior to v1.0.212 the default behavior was to allow numbers
+and boolean values to be in quotes, which is technically a
+violation of the spec.
+
+This adds a new `LYD_PARSE_JSON_STRING_DATATYPES` parse option
+which will restore the prior behavior when enabled.
+
+SONiC is using v1.0.73 currently and has a large installed base which
+may be in violation of the new behavior, so adding such a flag is
+required for this usecase.
+
+Signed-off-by: Brad House <brad@brad-house.com>
+---
+ src/parser_data.h                    |  5 ++++-
+ src/parser_json.c                    | 26 ++++++++++++++++----------
+ src/plugins_types.c                  |  9 ++++++---
+ src/tree_data.h                      |  1 +
+ tests/utests/data/test_parser_json.c | 15 +++++++++++++++
+ 5 files changed, 42 insertions(+), 14 deletions(-)
+
+diff --git a/src/parser_data.h b/src/parser_data.h
+index d7fbe1815..c6371ea4a 100644
+--- a/src/parser_data.h
++++ b/src/parser_data.h
+@@ -179,7 +179,10 @@ struct ly_in;
+ #define LYD_PARSE_JSON_NULL 0x4000000       /**< Allow using JSON empty value 'null' within JSON input, such nodes are
+                                                  silently skipped and treated as non-existent. By default, such values
+                                                  are invalid. */
+-
++#define LYD_PARSE_JSON_STRING_DATATYPES 0x8000000 /*!**< By default, JSON data values are validated to be in the proper format.
++                                                        For instance numbers are expected to not be enclosed in quotes, nor
++                                                        are boolean values.  Setting this option will disable this
++                                                        validation.  Prior to v1.0.212 this was the default behavior. */
+ #define LYD_PARSE_OPTS_MASK 0xFFFF0000      /**< Mask for all the LYD_PARSE_ options. */
+ 
+ /** @} dataparseroptions */
+diff --git a/src/parser_json.c b/src/parser_json.c
+index 5c3171231..83830c0d8 100644
+--- a/src/parser_json.c
++++ b/src/parser_json.c
+@@ -340,7 +340,7 @@ lydjson_get_snode(struct lyd_json_ctx *lydctx, ly_bool is_attr, const char *pref
+ /**
+  * @brief Get the hint for the data type parsers according to the current JSON parser context.
+  *
+- * @param[in] jsonctx JSON parser context. The context is supposed to be on a value.
++ * @param[in] lydctx JSON data parser context.
+  * @param[in,out] status Pointer to the current context status,
+  * in some circumstances the function manipulates with the context so the status is updated.
+  * @param[out] type_hint_p Pointer to the variable to store the result.
+@@ -348,8 +348,9 @@ lydjson_get_snode(struct lyd_json_ctx *lydctx, ly_bool is_attr, const char *pref
+  * @return LY_EINVAL in case of invalid context status not referring to a value.
+  */
+ static LY_ERR
+-lydjson_value_type_hint(struct lyjson_ctx *jsonctx, enum LYJSON_PARSER_STATUS *status_p, uint32_t *type_hint_p)
++lydjson_value_type_hint(struct lyd_json_ctx *lydctx, enum LYJSON_PARSER_STATUS *status_p, uint32_t *type_hint_p)
+ {
++    struct lyjson_ctx *jsonctx = lydctx->jsonctx;
+     *type_hint_p = 0;
+ 
+     if (*status_p == LYJSON_ARRAY) {
+@@ -383,6 +384,10 @@ lydjson_value_type_hint(struct lyjson_ctx *jsonctx, enum LYJSON_PARSER_STATUS *s
+         return LY_EINVAL;
+     }
+ 
++    if (lydctx->parse_opts & LYD_PARSE_JSON_STRING_DATATYPES) {
++        *type_hint_p |= LYD_VALHINT_STRING_DATATYPES;
++    }
++
+     return LY_SUCCESS;
+ }
+ 
+@@ -391,15 +396,16 @@ lydjson_value_type_hint(struct lyjson_ctx *jsonctx, enum LYJSON_PARSER_STATUS *s
+  *
+  * Checks for all the list's keys. Function does not revert the context state.
+  *
+- * @param[in] jsonctx JSON parser context.
++ * @param[in] lydctx JSON data parser context.
+  * @param[in] list List schema node corresponding to the input data object.
+  * @return LY_SUCCESS in case the data are ok for the @p list
+  * @return LY_ENOT in case the input data are not sufficient to fully parse the list instance.
+  */
+ static LY_ERR
+-lydjson_check_list(struct lyjson_ctx *jsonctx, const struct lysc_node *list)
++lydjson_check_list(struct lyd_json_ctx *lydctx, const struct lysc_node *list)
+ {
+     LY_ERR rc = LY_SUCCESS;
++    struct lyjson_ctx *jsonctx = lydctx->jsonctx;
+     enum LYJSON_PARSER_STATUS status = lyjson_ctx_status(jsonctx);
+     struct ly_set key_set = {0};
+     const struct lysc_node *snode;
+@@ -451,7 +457,7 @@ lydjson_check_list(struct lyjson_ctx *jsonctx, const struct lysc_node *list)
+                         goto cleanup;
+                     }
+ 
+-                    rc = lydjson_value_type_hint(jsonctx, &status, &hints);
++                    rc = lydjson_value_type_hint(lydctx, &status, &hints);
+                     LY_CHECK_GOTO(rc, cleanup);
+                     rc = ly_value_validate(NULL, snode, jsonctx->value, jsonctx->value_len, LY_VALUE_JSON, NULL, hints);
+                     LY_CHECK_GOTO(rc, cleanup);
+@@ -521,7 +527,7 @@ lydjson_data_check_opaq(struct lyd_json_ctx *lydctx, const struct lysc_node *sno
+         case LYS_LEAFLIST:
+         case LYS_LEAF:
+             /* value may not be valid in which case we parse it as an opaque node */
+-            if ((ret = lydjson_value_type_hint(jsonctx, &status, type_hint_p))) {
++            if ((ret = lydjson_value_type_hint(lydctx, &status, type_hint_p))) {
+                 break;
+             }
+ 
+@@ -533,14 +539,14 @@ lydjson_data_check_opaq(struct lyd_json_ctx *lydctx, const struct lysc_node *sno
+             break;
+         case LYS_LIST:
+             /* lists may not have all its keys */
+-            if (lydjson_check_list(jsonctx, snode)) {
++            if (lydjson_check_list(lydctx, snode)) {
+                 /* invalid list, parse as opaque if it misses/has invalid some keys */
+                 ret = LY_ENOT;
+             }
+             break;
+         }
+     } else if (snode->nodetype & LYD_NODE_TERM) {
+-        ret = lydjson_value_type_hint(jsonctx, &status, type_hint_p);
++        ret = lydjson_value_type_hint(lydctx, &status, type_hint_p);
+     }
+ 
+     /* restore parser */
+@@ -852,7 +858,7 @@ lydjson_metadata(struct lyd_json_ctx *lydctx, const struct lysc_node *snode, str
+         LY_CHECK_GOTO(rc = lyjson_ctx_next(lydctx->jsonctx, &status), cleanup);
+ 
+         /* get value hints */
+-        LY_CHECK_GOTO(rc = lydjson_value_type_hint(lydctx->jsonctx, &status, &val_hints), cleanup);
++        LY_CHECK_GOTO(rc = lydjson_value_type_hint(lydctx, &status, &val_hints), cleanup);
+ 
+         if (node->schema) {
+             /* create metadata */
+@@ -981,7 +987,7 @@ lydjson_create_opaq(struct lyd_json_ctx *lydctx, const char *name, size_t name_l
+         dynamic = lydctx->jsonctx->dynamic;
+         lydctx->jsonctx->dynamic = 0;
+ 
+-        LY_CHECK_RET(lydjson_value_type_hint(lydctx->jsonctx, status_inner_p, &type_hint));
++        LY_CHECK_RET(lydjson_value_type_hint(lydctx, status_inner_p, &type_hint));
+     }
+ 
+     /* get the module name */
+diff --git a/src/plugins_types.c b/src/plugins_types.c
+index d773a8a75..581ef278f 100644
+--- a/src/plugins_types.c
++++ b/src/plugins_types.c
+@@ -685,7 +685,8 @@ lyplg_type_check_hints(uint32_t hints, const char *value, size_t value_len, LY_D
+     case LY_TYPE_INT32:
+         LY_CHECK_ARG_RET(NULL, base, LY_EINVAL);
+ 
+-        if (!(hints & (LYD_VALHINT_DECNUM | LYD_VALHINT_OCTNUM | LYD_VALHINT_HEXNUM))) {
++        if (!(hints & (LYD_VALHINT_DECNUM | LYD_VALHINT_OCTNUM | LYD_VALHINT_HEXNUM)) &&
++            !(hints & LYD_VALHINT_STRING_DATATYPES)) {
+             return ly_err_new(err, LY_EVALID, LYVE_DATA, NULL, NULL, "Invalid non-number-encoded %s value \"%.*s\".",
+                     lys_datatype2str(type), (int)value_len, value);
+         }
+@@ -695,7 +696,8 @@ lyplg_type_check_hints(uint32_t hints, const char *value, size_t value_len, LY_D
+     case LY_TYPE_INT64:
+         LY_CHECK_ARG_RET(NULL, base, LY_EINVAL);
+ 
+-        if (!(hints & LYD_VALHINT_NUM64)) {
++        if (!(hints & LYD_VALHINT_NUM64) &&
++            !(hints & LYD_VALHINT_STRING_DATATYPES)) {
+             return ly_err_new(err, LY_EVALID, LYVE_DATA, NULL, NULL, "Invalid non-num64-encoded %s value \"%.*s\".",
+                     lys_datatype2str(type), (int)value_len, value);
+         }
+@@ -714,7 +716,8 @@ lyplg_type_check_hints(uint32_t hints, const char *value, size_t value_len, LY_D
+         }
+         break;
+     case LY_TYPE_BOOL:
+-        if (!(hints & LYD_VALHINT_BOOLEAN)) {
++        if (!(hints & LYD_VALHINT_BOOLEAN) &&
++            !(hints & LYD_VALHINT_STRING_DATATYPES)) {
+             return ly_err_new(err, LY_EVALID, LYVE_DATA, NULL, NULL, "Invalid non-boolean-encoded %s value \"%.*s\".",
+                     lys_datatype2str(type), (int)value_len, value);
+         }
+diff --git a/src/tree_data.h b/src/tree_data.h
+index 18bc6791b..ed362a198 100644
+--- a/src/tree_data.h
++++ b/src/tree_data.h
+@@ -944,6 +944,7 @@ struct lyd_node_any {
+ #define LYD_VALHINT_NUM64      0x0010 /**< value is allowed to be an int64 or uint64 */
+ #define LYD_VALHINT_BOOLEAN    0x0020 /**< value is allowed to be a boolean */
+ #define LYD_VALHINT_EMPTY      0x0040 /**< value is allowed to be empty */
++#define LYD_VALHINT_STRING_DATATYPES 0x0080 /**< boolean and numeric fields are allowed to be quoted */
+ /**
+  * @} lydvalhints
+  */
+diff --git a/tests/utests/data/test_parser_json.c b/tests/utests/data/test_parser_json.c
+index 1eff7819a..f752164c6 100644
+--- a/tests/utests/data/test_parser_json.c
++++ b/tests/utests/data/test_parser_json.c
+@@ -168,6 +168,21 @@ test_leaf(void **state)
+     PARSER_CHECK_ERROR(data, 0, LYD_VALIDATE_PRESENT, tree, LY_EVALID, "Invalid non-string-encoded string value \"\".", "/a:foo", 1);
+     CHECK_PARSE_LYD(data, LYD_PARSE_JSON_NULL, LYD_VALIDATE_PRESENT, tree);
+     assert_null(tree);
++
++    /* validate integer in quotes errors out by default */
++    data = "{\"a:foo3\":\"1234\"}";
++    PARSER_CHECK_ERROR(data, LYD_PARSE_STRICT, LYD_VALIDATE_PRESENT, tree, LY_EVALID,
++            "Invalid non-number-encoded uint32 value \"1234\".", "/a:foo3", 1);
++
++    /* validate integers are parsed correctly */
++    data = "{\"a:foo3\":1234}";
++    CHECK_PARSE_LYD(data, 0, LYD_VALIDATE_PRESENT, tree);
++    lyd_free_all(tree);
++
++    /* validate LYD_PARSE_JSON_STRING_DATATYPES parser flag allows integers in quotes */
++    data = "{\"a:foo3\":\"1234\"}";
++    CHECK_PARSE_LYD(data, LYD_PARSE_JSON_STRING_DATATYPES, LYD_VALIDATE_PRESENT, tree);
++    lyd_free_all(tree);
+ }
+ 
+ static void
