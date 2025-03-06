@@ -107,49 +107,44 @@ module sonic-vnet {
             description "ConfigDB VNET_ROUTE_TUNNEL table";
             
             list VNET_ROUTE_TUNNEL_LIST {
+                key "vnet_name prefix";
 
-                key "name";
-
-                leaf name {
-
-                    // Must condition to verify the vnet name before the pipe references a valid VNET
-                    must "substring-before(current(), '|') = /svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name"
-                    {
-                        error-message "VNET name in the key must reference a valid VNET in the VNET table";
+                leaf vnet_name {
+                    description "VNET name";
+                    type leafref {
+                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
                     }
-
-                    // Pattern enforce proper format: <vnet_name>|<ipv4_prefix>
-                    // The IPv4 prefix pattern matches IPv4 CIDR standards (e.g. 192.169.1.0/24)
-                    // VNET name:
-                    // [^|]+ - One or more characters that are not pipes
-                    // | - A pipe separator
-                    // IPv4 address:
-                    // (([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3} - First three components with dot
-                    // ([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]) - Last component
-                    // / - Slash for prefix length
-                    // (([1-2][0-9])|(3[0-2])) - Prefix length from 0 to 32
+                }
+                
+                leaf prefix {
+                    description "IPv4 prefix in CIDR format";
+                
+                    /* Pattern enforces proper format: <vnet_name>|<ipv4_prefix>
+                     The IPv4 prefix pattern matches IPv4 CIDR standards 
+                     IPv4 address:
+                     (([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3} - First three octets with dot
+                     ([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]) - Last octet 
+                     / - Slash for prefix length
+                     (([1-2][0-9])|(3[0-2])) - Prefix length from 0 to 32 */
                     type string {
-                        pattern "[^|]+[|]((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2])))";
+                        pattern "((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2])))";
                     }
-
-                    description "Combined key of vnet_name|prefix (e.g., 'Vnet1-1|10.0.0.0/24') where
-                                    vnet_name must exist in the VNET table and prefix is in IPv4 CIDR format";
                 }
                 
                 leaf endpoint {
+                    description "Endpoint/nexthop tunnel IP";
                     type inet:ipv4-address;
                     mandatory true;
-                    description "Endpoint/nexthop tunnel IP";
                 }
 
                 leaf mac_address {
-                    type yang:mac-address;
                     description "Inner dest mac in encapsulated packet";
+                    type yang:mac-address;
                 }
 
                 leaf vxlanid {
-                    type stypes:vnid_type;
                     description "A valid and active vni value in encapsulated packet";
+                    type stypes:vnid_type;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */
