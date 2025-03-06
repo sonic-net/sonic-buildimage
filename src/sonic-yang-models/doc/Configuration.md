@@ -2554,12 +2554,10 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 {
   "VNET_ROUTE_TUNNEL": {
     "Vnet_2000|100.100.1.1/32": {
-        "name": "Vnet_2000|100.100.1.1/32",
         "endpoint": "192.168.1.1",
         "mac_address": "F9:22:83:99:22:A2"
     },
     "Vnetv4_v4-0|10.0.1.0/24": {
-        "name": "Vnetv4_v4-0|10.0.1.0/24",
         "endpoint": "192.168.1.2",
         "mac_address": "F8:22:83:99:22:A2",
         "vxlanid": "10012"
