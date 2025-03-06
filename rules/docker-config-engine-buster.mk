@@ -7,6 +7,8 @@ $(DOCKER_CONFIG_ENGINE_BUSTER)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(LIBYANG) \
                                           $(LIBYANG_CPP) \
                                           $(LIBYANG_PY3) \
+                                          $(LIBYANG3) \
+                                          $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
                                           $(SONIC_DB_CLI)
 $(DOCKER_CONFIG_ENGINE_BUSTER)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
