@@ -10,6 +10,7 @@ parameters:
       - marvell-armhf
       - cisco-8000
       - cisco-8000-smartswitch
+      - nvidia-bluefield
   - name: BRANCH_FOLDER
     default: 'default'
 

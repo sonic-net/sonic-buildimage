@@ -10,10 +10,10 @@ steps:
       curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
       az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 --certificate /usr/local/CloudTest/ProvisioningScript/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
       # Install Azcopy
-      if [[ $PLATFORM_ARCH == arm* ]]; then
-        wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
-      else
+      if dpkg --print-architecture | grep amd64; then
         wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
+      else
+        wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
       fi
       sudo chmod a+x azcopy
       sudo mv -f azcopy /usr/local/bin/

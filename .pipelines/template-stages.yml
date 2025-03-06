@@ -167,6 +167,32 @@ stages:
             parameters:
               PLATFORM_NAME: mellanox
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+
+    - ${{ if containsValue(parameters.JOBS, 'nvidia-bluefield') }}:
+      - job: nvidia_bluefield
+        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+          timeoutInMinutes: 840
+        pool:
+          type: linux
+          isCustom: true
+          name: sonic-arm64
+        variables:
+          ob_artifactBaseName: sonic-buildimage.nvidia-bluefield
+        steps:
+          - template: /.pipelines/template-presteps.yml@self
+            parameters:
+              PLATFORM_NAME: nvidia-bluefield
+              PLATFORM_ARCH: arm64
+              OPTIONS: ${{ parameters.OPTIONS }}
+          - script: |
+              set -ex
+              OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/nvidia-bluefield"
+              make $OPTIONS target/sonic-nvidia-bluefield.bin
+            displayName: Build SONiC image
+          - template: /.pipelines/template-poststeps.yml@self
+            parameters:
+              PLATFORM_NAME: nvidia-bluefield
+              BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'marvell-armhf') }}:
       - job: marvell_armhf
         ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:

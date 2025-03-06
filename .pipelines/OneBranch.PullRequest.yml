@@ -35,6 +35,7 @@ parameters:
   - marvell-armhf
   - cisco-8000
   - cisco-8000-smartswitch
+  - nvidia-bluefield
 variables:
   - name: DOCKER_BUILD_TIMEOUT
     value: 5400

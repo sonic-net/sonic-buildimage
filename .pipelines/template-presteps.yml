@@ -15,6 +15,7 @@ parameters:
       - barefoot
       - marvell
       - cisco-8000
+      - nvidia-bluefield
   - name: OPTIONS
     type: string
 
