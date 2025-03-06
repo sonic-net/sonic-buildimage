@@ -45,6 +45,10 @@ RUN mkdir -p /var/lib/redis
 RUN ln -s /etc/valkey/valkey.conf /etc/redis/redis.conf
 RUN ln -s /usr/bin/valkey-server /usr/bin/redis-server
 
+# redis-cli already exist in base image as a script, original redis-tools installer will overwrite it
+RUN rm -f /usr/bin/redis-cli
+RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
+
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
 COPY ["docker-database-init.sh", "/usr/local/bin/"]
