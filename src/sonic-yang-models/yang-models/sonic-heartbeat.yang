@@ -39,7 +39,7 @@ module sonic-heartbeat {
                 leaf heartbeat_interval {
                     description "Heartbeat interval in millisecond";
                     type uint32;
-                    default "100000";
+                    default "10000";
                 }
 
                 leaf alert_interval {
