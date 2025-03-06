@@ -10,7 +10,7 @@ backcall==0.2.0
 bcrypt==3.2.2
 beautifulsoup4==4.11.2
 beniget==0.4.1
-bitarray==3.0.0
+bitarray==3.1.0
 blinker==1.5
 blkinfo==0.2.0
 brotli==1.0.9
@@ -39,7 +39,7 @@ executing==1.2.0
 fastentrypoints==0.12
 fonttools==4.38.0
 fs==2.4.16
-fsspec==2024.12.0
+fsspec==2025.2.0
 gast==0.5.2
 gbp==0.9.30
 gcovr==5.2
