@@ -157,6 +157,11 @@ module sonic-device_metadata {
                     type string;
                 }
 
+                leaf mgmt_type {
+                    type string;
+                    description "Indicates the management type of this device.";
+                }
+
                 leaf cluster {
                     type string;
                     description "The switch is a member of this cluster.";
@@ -277,6 +282,12 @@ module sonic-device_metadata {
                         enum disabled;
                     }
                     default disabled;
+                }
+
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
                 }
 
             }
