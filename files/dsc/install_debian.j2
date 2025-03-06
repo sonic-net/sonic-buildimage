@@ -15,7 +15,7 @@ image_dir=image-$image_version
 
 INSTALLER_PAYLOAD=fs.zip
 DOCKERFS_DIR=docker
-{% if BUILD_REDUCE_IMAGE_SIZE == "y" -%}
+{% if BUILD_REDUCE_IMAGE_SIZE | default("n") == "y" -%}
 FILESYSTEM_DOCKERFS=dockerfs.tar.zstd
 {%- else -%}
 FILESYSTEM_DOCKERFS=dockerfs.tar.gz
