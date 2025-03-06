@@ -42,8 +42,9 @@ RUN apt-get clean -y                                  && \
             ' /etc/valkey/valkey.conf
 
 RUN mkdir -p /var/lib/redis
-RUN ln -s /etc/valkey/valkey.conf /etc/redis/redis.conf
-RUN ln -s /usr/bin/valkey-server /usr/bin/redis-server
+RUN mkdir -p /etc/redis
+RUN cp /etc/valkey/valkey.conf /etc/redis/redis.conf
+RUN ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
 
 # redis-cli already exist in base image as a script, original redis-tools installer will overwrite it
 RUN rm -f /usr/bin/redis-cli
