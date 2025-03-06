@@ -13,7 +13,7 @@ $(DOCKER_BMP)_PYTHON_WHEELS = $(SONIC_BMPCFGD)
 $(DOCKER_BMP)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                              $(SONIC_BMPD) \
                              $(PYTHON3_SWSSCOMMON) \
-                             $(LIBYANG_PY3)
+                             $(LIBYANG3_PY3)
 
 $(DOCKER_BMP)_DBG_DEPENDS = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_DEPENDS)
 

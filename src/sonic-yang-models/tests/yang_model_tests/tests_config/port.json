@@ -180,7 +180,7 @@
                         "lanes": "65",
                         "speed": 25000,
                         "tpid": "0x8100",
-                        "autoneg": 0,
+                        "autoneg": "invalid",
                         "mode":"trunk"
                     }
                 ]
@@ -583,7 +583,7 @@
                         "lanes": "65",
                         "speed": 25000,
                         "tpid": "0x8100",
-                        "link_training": 0
+                        "link_training": "invalid"
                     }
                 ]
             }

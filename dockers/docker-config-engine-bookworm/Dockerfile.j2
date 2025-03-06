@@ -9,7 +9,8 @@ RUN apt-get update         && \
         apt-utils             \
         build-essential       \
         python3-dev           \
-        python3-yaml
+        python3-yaml          \
+        python3-cffi
 
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
 RUN apt-get install -y        \

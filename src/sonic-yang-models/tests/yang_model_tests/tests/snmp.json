@@ -4,22 +4,22 @@
     },
     "SNMP_SYSTEM_CONTACT_NEG_TEST": {
         "desc": "Load SNMP sysContact with empty string",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_SYSTEM_LOCATION_NEG_TEST": {
         "desc": "Load SNMP sysContact with empty string",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_COMMUNITY_TEST": {
         "desc": "Load SNMP community string."
     },
     "SNMP_COMMUNITY_MIN_NEG_TEST": {
         "desc": "Load SNMP community string of length < 3.",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_COMMUNITY_MAX_NEG_TEST": {
         "desc": "Load SNMP community string of lenth > 32.",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_COMMUNITY_WRONG_TYPE_TEST": {
         "desc": "Load SNMP community string with un supported type.",
@@ -33,7 +33,7 @@
     },
     "SNMP_USER_NAME_MIN_NEG_TEST": {
         "desc": "Load SNMP user with name < 4",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_USER_NAME_INVALID_NEG_TEST": {
         "desc": "Load SNMP user with invalid value",
@@ -112,7 +112,7 @@
     },
     "SNMP_USER_PRIV_LONG_ENCRYPT_PASS_NEG_TEST": {
         "desc": "Load SNMP user with user type Priv with long encryption password",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "SNMP_AGENT_ADDRESS_CONFIG": {
         "desc": "Load SNMP agent address config"
@@ -128,11 +128,11 @@
     },
     "SNMP_AGENT_ADDRESS_CONFIG_NO_VRF": {
         "desc": "Load SNMP agent address config with no vrf",
-	"eStr": ["Missing required element"]
+        "eStrKey": "ListKey"
     },
     "SNMP_AGENT_ADDRESS_CONFIG_INVALID_PORT": {
         "desc": "Load SNMP agent address config with invalid port",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
         "desc": "Load two SNMP agent address config same ip and port",
