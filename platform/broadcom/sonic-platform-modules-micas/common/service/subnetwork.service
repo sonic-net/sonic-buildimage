@@ -1,0 +1,13 @@
+[Unit]
+Description=Configuration eth0.4088 subnetwork
+After=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/subnetwork.py start
+ExecStop=/usr/local/bin/subnetwork.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
