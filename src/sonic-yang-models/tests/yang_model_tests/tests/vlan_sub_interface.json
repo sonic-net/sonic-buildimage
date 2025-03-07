@@ -70,8 +70,8 @@
     "VLAN_SUB_INTERFACE_WITH_VNET_PORTCHANNEL": {
         "desc": "Configure PortChannel VLAN sub interface with VNET reference."
     },
-    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET_MODULE": {
-        "desc": "Configure VLAN sub interface with VNET reference but no VNET module.",
+    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Configure VLAN sub interface with VNET reference but no VNET exsiting.",
         "eStrKey": "LeafRef"
     }
 }

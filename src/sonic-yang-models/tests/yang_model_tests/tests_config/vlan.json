@@ -1075,7 +1075,7 @@
         }
     },
     
-    "VLAN_INTERFACE_WITH_MISSING_VNET_MODULE": {
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [

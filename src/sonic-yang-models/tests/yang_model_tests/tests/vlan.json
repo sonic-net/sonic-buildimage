@@ -126,8 +126,8 @@
         "desc": "Configure a VLAN interface with reference to a non-existent VNET.",
         "eStrKey": "LeafRef"
     },
-    "VLAN_INTERFACE_WITH_MISSING_VNET_MODULE": {
-        "desc": "Attempt to reference VNET name without the VNET module being present.",
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Attempt to reference VNET name without the VNET being present.",
         "eStrKey": "LeafRef"
     }
 }

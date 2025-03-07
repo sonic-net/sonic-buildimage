@@ -747,7 +747,7 @@
             }
         }
     },
-    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET_MODULE": {
+    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
         "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
             "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
                 "VLAN_SUB_INTERFACE_LIST": [
