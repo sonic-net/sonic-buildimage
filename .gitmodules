@@ -135,4 +135,4 @@
 	url = https://github.com/sonic-net/sonic-platform-vpp.git
 [submodule "src/sonic-netconf-server"]
 	path = src/sonic-netconf-server
-	url = https://github.com/hussamsh/sonic-netconf
+	url = https://github.com/sonic-net/sonic-netconf-server
