@@ -2103,3 +2103,4 @@ sai_pfc_dlr_init_capability=0
 trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
+sai_instru_stat_accum_enable=1
