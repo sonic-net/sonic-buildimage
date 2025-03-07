@@ -1,0 +1,77 @@
+//
+// Copyright 2023 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+// This file defines the gNOI APIs used to gather specific debug information
+// from the network device.
+syntax = "proto3";
+
+package gnoi.debug;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/openconfig/gnoi/debug";
+
+option (types.gnoi_version) = "0.1.0";
+
+service Debug {
+  // Debug will execute the set of commands provided in the request.
+  // The command will be executed in the mode provided.
+  // All command modes must support an exit code on completion of the
+  // command. (e.g. Cli modes must exit after sending a command)
+  // Errors:
+  //  InvalidArgument: for unspecified mode
+  rpc Debug (DebugRequest) returns (stream DebugResponse);
+}
+
+message DebugRequest {
+  enum Mode {
+    MODE_UNSPECIFIED = 0;
+    MODE_SHELL = 1;
+    MODE_CLI = 2;
+  }
+  // Mode the commands will be executed in.
+  Mode mode = 1;
+  // Raw bytes for the command to be executed.
+  bytes command = 2;
+  // Truncate the amount of data returned for the command.
+  int64 byte_limit = 3;
+  // Timeout in nanoseconds.
+  int64 timeout = 4;
+  // Role account to use for the command.
+  string role_account = 5;
+}
+
+// DebugResponse stream will send the request in the first
+// message then stream all bytes returned by the command.
+// The last message will be a status message containing the exit
+// code and any error details.
+message DebugResponse {
+  oneof response {
+    DebugRequest request = 100;
+    bytes data = 101;
+    DebugStatus status = 102;
+  }
+}
+
+message DebugStatus {
+  // The status code, which should be the underlying OS exit status. 
+  int32 code = 1;
+  // Any returned error status string.
+  string message = 2;
+  // A list of messages that carry the error details.
+  repeated google.protobuf.Any details = 3;
+}
