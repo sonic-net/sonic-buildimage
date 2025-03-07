@@ -47,8 +47,13 @@ stages:
         - script: |
             set -ex
 
+<<<<<<< HEAD
             OPTIONS="${{ parameters.OPTIONS }} NOBUSTER=0 ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz 2>&1 | tee target/build.log
+=======
+            OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
+            make $OPTIONS INCLUDE_SMARTSWITCH_AZS=y target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+>>>>>>> eb76d1bcc0 (Add pipeline support for smartswitch-azs container build)
           displayName: Build SONiC image
         - script: |
             set -ex
