@@ -1,0 +1,62 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+PACKAGES += sswsyncd
+
+BUILDFLAGS_sswsyncd =
+
+.PHONY: clean
+
+binary: binary-arch
+
+binary-arch: binary-arch-sswsyncd
+
+binary-arch-sswsyncd: install-stamp-sswsyncd
+	dh_testdir
+	dh_testroot
+	dh_systemd_enable -p $*
+	dh_installinit -p $* --name=sswsyncd
+	dh_installdocs -p $*
+	dh_installchangelogs -p $*
+	dh_perl -p $*
+	dh_link -p $*
+	dh_compress -p $*
+	dh_fixperms -p $*
+	dh_strip -p $*
+	dh_makeshlibs -p $*
+	dh_shlibdeps -p $* -- -xlibsaibcm
+	dh_installdeb -p $*
+	dh_gencontrol -p $*
+	dh_md5sums -p $*
+	dh_builddeb -p $*
+
+install-stamp-sswsyncd: DESTDIR=$(CURDIR)/debian/sswsyncd
+install-stamp-sswsyncd: build-stamp-sswsyncd
+	dh_testdir
+	dh_testroot
+	@echo "!!! INSTALLING PACKAGE $*"
+	cp $(CURDIR)/debian/dirs.tmpl $(CURDIR)/debian/$*.dirs
+	dh_installdirs -p $*
+	$(MAKE) install DESTDIR=$(DESTDIR)
+	touch $@
+
+build-stamp-sswsyncd: BUILDFLAGS=$(BUILDFLAGS_sswsyncd)
+build-stamp-sswsyncd:
+	dh_testdir
+	dh_prep -p $*
+	@echo "!!! BUILDING PACKAGE $*"
+	$(MAKE) clean
+	$(MAKE) $(BUILDFLAGS)
+	touch $@
+
+clean:
+	rm -f *-stamp*
+	dh_clean

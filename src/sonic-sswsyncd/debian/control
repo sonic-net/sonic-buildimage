@@ -1,0 +1,20 @@
+Source: sswsyncd
+Section: main
+Priority: extra
+Maintainer: Guohan Lu <gulv@microsoft.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+#Vcs-Git: git://git.debian.org/collab-maint/ssw.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/ssw.git;a=summary
+
+Package: sswsyncd
+Architecture: amd64
+Depends: libsai, python-tabulate, ifupdown, ${shlibs:Depends}, ${misc:Depends}
+Conflicts: sswsyncd-saithrift
+Description: AzureCloudSwitch route sync daemon
+
+Package: sswsyncd-saithrift
+Architecture: amd64
+Depends: libsai, python-tabulate, ifupdown, ${shlibs:Depends}, ${misc:Depends}
+Conflicts: sswsyncd
+Description: AzureCloudSwitch route sync daemon
