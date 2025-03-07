@@ -40,10 +40,10 @@ module sonic-vlan {
 	import sonic-interface {
 		prefix intf;
 	}
-
+	
 	import sonic-vnet {
-        prefix svnet;
-    }
+		prefix svnet;
+	}
 
 	description "VLAN yang Module for SONiC OS";
 
@@ -96,9 +96,9 @@ module sonic-vlan {
 
 				leaf vnet_name {
 					description "Reference to the name of a VNET in sonic-vnet model";
-                    type leafref {
-                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
-                    }   
+					type leafref {
+						path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+					}   
                 }
 
 				leaf nat_zone {

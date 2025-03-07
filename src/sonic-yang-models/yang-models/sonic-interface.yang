@@ -21,10 +21,10 @@ module sonic-interface {
 	import sonic-vrf {
 		prefix vrf;
 	}
-
-    import sonic-vnet {
-        prefix svnet;
-    }
+	
+	import sonic-vnet {
+		prefix svnet;
+	}
 
 	description "INTERFACE yang Module for SONiC OS";
 
@@ -63,13 +63,13 @@ module sonic-interface {
 						path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
 					}
 				}
-
+				
 				leaf vnet_name {
 					description "Reference to the name of a VNET in sonic-vnet model";
-                    type leafref {
-                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
-                    }   
-                }
+					type leafref {
+						path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+					}   
+				}
 
 				leaf nat_zone {
 					description "NAT Zone for the interface";
