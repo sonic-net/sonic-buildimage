@@ -85,8 +85,8 @@ $(BCMCMD) : $(SDIR)/$(BCMCMD).cpp
 	$(CC) -o $(BIN_DIR)/$(BCMCMD) $^ $(CFLAGS) $(CFLAGS_COMMON) $(LIBS)
 
 install :
-	$(INSTALL) -D $(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
-	$(INSTALL) -D $(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
+	$(INSTALL) -D $(BIN_DIR)/$(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
+	$(INSTALL) -D $(BIN_DIR)/$(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
 
 clean:
 	rm -rf $(ODIR) $(BIN_DIR)
