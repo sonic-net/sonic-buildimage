@@ -72,5 +72,5 @@ check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
 # check if NTP is synchronized
-check program ntp with path "/usr/local/bin/check_ntp_status.sh"
-    if status != 0 for 3 cycle then alert repeat every 5 cycles
+#check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+#    if status != 0 for 3 cycle then alert repeat every 5 cycles
