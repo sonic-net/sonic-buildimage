@@ -4,7 +4,7 @@
       "monErrThreshRxCells": 61035156,
       "monPollThreshRecovery": 8,
       "monPollThreshIsolation": 1,
-      "monCapacityThreshWarn": 86,
+      "monCapacityThreshWarn": 62,
       "monState": "enable"
    }
 }
