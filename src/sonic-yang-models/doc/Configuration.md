@@ -2546,7 +2546,7 @@ monitoring sessions for the vnet routes and is optional.
 
 ### VNET_ROUTE_TUNNEL
 
-VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the prefix associated with the route tunnel. The table includes the following attributes:
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
 - ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
 - MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
 - VXLANID: The VNI value in the encapsulated packet (optional). It should be a numeric value.
