@@ -27,6 +27,8 @@ class SonicYang(SonicYangExtMixin):
         self.yangFiles = list()
         # map from TABLE in config DB to container and module
         self.confDbYangMap = dict()
+        # map of backlinks dict()[]
+        self.backlinkMap = None
         # JSON format of yang model [similar to pyang conversion]
         self.yJson = list()
         # config DB json input, will be cropped as yang models
@@ -461,6 +463,26 @@ class SonicYang(SonicYangExtMixin):
                 list.append(data_set.path())
             return list
 
+    def _cache_schema_dependencies(self):
+        if self.backlinkMap is not None:
+            return
+
+        leafRefPaths = self.ctx.find_backlinks_paths(None)
+        if leafRefPaths is None:
+            return None
+
+        self.backlinkMap = dict()
+
+        for path in leafRefPaths:
+            targets = self.ctx.find_leafref_path_target_paths(path)
+            if targets is None:
+                continue
+
+            for target in targets:
+                if self.backlinkMap.get(target) is None:
+                    self.backlinkMap[target] = list()
+                self.backlinkMap[target].append(path)
+
 
     """
     find_schema_dependencies():  find the schema dependencies from schema xpath
@@ -470,7 +492,23 @@ class SonicYang(SonicYangExtMixin):
     returns:  - list of xpath of the dependencies
     """
     def _find_schema_dependencies(self, match_path, match_ancestors: bool=False):
-        return self.ctx.find_backlinks_paths(match_path, match_ancestors=match_ancestors)
+        # Lazy building of cache
+        self._cache_schema_dependencies()
+
+        if match_path is not None and (match_path == "/" or len(match_path) == 0):
+            match_path = None
+
+        # This is an odd case where you want to know about the subtree.  Do a
+        # string prefix match and create a list.
+        if match_path is None or match_ancestors is True:
+            ret = []
+            for target, leafrefs in self.backlinkMap.items():
+                if match_path is None or target == match_path or target.startswith(match_path + "/"):
+                    ret.extend(leafrefs)
+            return ret
+
+        # Common case
+        return self.backlinkMap.get(match_path)
 
     """
     load_module_str_name(): load a module based on the provided string and return
@@ -536,12 +574,11 @@ class SonicYang(SonicYangExtMixin):
             if required_value is not None:
                 search_xpath = base_dnode.schema().schema_path()
                 match_ancestors = False
-
             lreflist = self._find_schema_dependencies(match_path=search_xpath, match_ancestors=match_ancestors)
             if lreflist is None:
                 raise Exception("no schema backlinks found")
         except Exception as e:
-            self.sysLog(msg='Failed to find node or dependencies for {}'.format(data_xpath), debug=syslog.LOG_ERR, doPrint=True)
+            self.sysLog(msg='Failed to find node or dependencies for {}:{}'.format(data_xpath, e), debug=syslog.LOG_ERR, doPrint=True)
             lreflist = []
             # Exception not expected by existing tests if backlinks not found, so don't raise.
             # raise SonicYangException("Failed to find node or dependencies for {}\n{}".format(data_xpath, str(e)))
