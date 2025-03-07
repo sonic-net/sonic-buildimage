@@ -2859,6 +2859,10 @@
                 "action": "uN",
                 "decap_dscp_mode": "pipe"
             }
+        },
+        "PREFIX_LIST": {
+            "ANCHOR_PREFIX|10.0.0.0/8" : {},
+            "ANCHOR_PREFIX|FC00::/48" : {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
