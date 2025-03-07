@@ -12,6 +12,7 @@ include $(PLATFORM_PATH)/platform-modules-cel.dep
 include $(PLATFORM_PATH)/platform-modules-delta.dep
 include $(PLATFORM_PATH)/platform-modules-quanta.dep
 #include $(PLATFORM_PATH)/platform-modules-mitac.dep
+include $(PLATFORM_PATH)/platform-modules-micas.dep
 include $(PLATFORM_PATH)/platform-modules-juniper.dep
 include $(PLATFORM_PATH)/platform-modules-ragile.dep
 include $(PLATFORM_PATH)/platform-modules-ruijie.dep
