@@ -30,7 +30,7 @@
 {% if 'name' in nbr_or_peer %}
  neighbor {{name_or_ip}} description {{nbr_or_peer['name']}}
 {% endif %}
-{% if 'admin_status' in nbr_or_peer and nbr_or_peer['admin_status'] == 'false' %}
+{% if 'admin_status' in nbr_or_peer and nbr_or_peer['admin_status'] in ['false', 'down'] %}
 {% if 'shutdown_message' in nbr_or_peer %}
  neighbor {{name_or_ip}} shutdown message {{nbr_or_peer['shutdown_message']}}
 {% else %}
