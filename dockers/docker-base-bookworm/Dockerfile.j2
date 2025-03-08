@@ -1,26 +1,12 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 {% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm
+FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm-slim
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM --platform=linux/arm64 {{ prefix }}debian:bookworm
+FROM --platform=linux/arm64 {{ prefix }}debian:bookworm-slim
 {% else %}
-FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bookworm
+FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bookworm-slim
 {% endif %}
-
-# Clean documentation in FROM image
-RUN find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
-
-# Clean doc directories that are empty or only contain empty directories
-RUN while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
-    rm -rf               \
-    /usr/share/man/*     \
-    /usr/share/groff/*   \
-    /usr/share/info/*    \
-    /usr/share/lintian/* \
-    /usr/share/linda/*   \
-    /var/cache/man/*     \
-    /usr/share/locale/*
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
