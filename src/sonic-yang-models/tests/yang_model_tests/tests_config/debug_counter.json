@@ -1,0 +1,119 @@
+{
+    "VALID_DEBUG_COUNTERS": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "alias": "Counter 1 alias",
+                        "desc": "Counter 1 description",
+                        "group": "Counter 1 group",
+                        "type": "SWITCH_INGRESS_DROPS"
+                    },
+                    {
+                        "name": "Counter 2",
+                        "alias": "Counter 2 alias",
+                        "desc": "Counter 2 description",
+                        "group": "Counter 2 group",
+                        "type": "PORT_INGRESS_DROPS"
+                    },
+                    {
+                        "name": "Counter 3",
+                        "type": "SWITCH_EGRESS_DROPS"
+                    },
+                    {
+                        "name": "Counter 4",
+                        "type": "PORT_EGRESS_DROPS"
+                    }
+                ]
+            }
+        }
+    },
+    "VALID_COUNTER_WITH_DROP_REASON": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "alias": "Counter 1 alias",
+                        "desc": "Counter 1 description",
+                        "group": "Counter 1 group",
+                        "type": "SWITCH_INGRESS_DROPS"
+                    }
+                ]
+            },
+            "sonic-debug-counter:DEBUG_COUNTER_DROP_REASON": {
+                "DEBUG_COUNTER_DROP_REASON_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "reason": "L2_ANY"
+                    }
+                ]
+            }
+        }
+    },
+    "INVALID_DEBUG_COUNTER_TYPE": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "type": "INVALID_TYPE"
+                    }
+                ]
+            }
+        }
+    },
+    "DEBUG_COUNTER_MISSING_COUNTER_TYPE": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1"
+                    }
+                ]
+            }
+        }
+    },
+    "NONEXIST_DEBUG_COUNTER_FOR_DROP_REASON": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "type": "PORT_INGRESS_DROPS"
+
+                    }
+                ]
+            },
+            "sonic-debug-counter:DEBUG_COUNTER_DROP_REASON": {
+                "DEBUG_COUNTER_DROP_REASON_LIST": [
+                    {
+                        "name": "Counter 2",
+                        "reason": "L2_ANY"
+                    }
+                ]
+            }
+        }
+    },
+    "INVALID_DROP_REASON": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_COUNTER": {
+                "DEBUG_COUNTER_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "type": "SWITCH_INGRESS_DROPS"
+                    }
+                ]
+            },
+            "sonic-debug-counter:DEBUG_COUNTER_DROP_REASON": {
+                "DEBUG_COUNTER_DROP_REASON_LIST": [
+                    {
+                        "name": "Counter 1",
+                        "reason": "INVALID_REASON"
+                    }
+                ]
+            }
+        }
+    }
+}
