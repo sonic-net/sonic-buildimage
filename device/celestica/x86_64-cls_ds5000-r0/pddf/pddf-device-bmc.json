@@ -23,32 +23,34 @@
                 "fpgapci"
             ]			
         },
+        "std_perm_kos":
+        [
+            "i2c-ismt",
+            "i2c-i801"
+        ],
         "std_kos":
         [
             "i2c_dev",
             "i2c_mux_pca954x",
             "ipmi_devintf",
-            "ipmi_si",			
+            "ipmi_si",
             "at24",
-            "optoe",
-            "i2c-i801"			
+            "optoe"
         ],
         "pddf_kos":
         [
             "pddf_client_module",
-            "pddf_custom_mux",
             "pddf_fpgapci_driver",
             "pddf_fpgapci_module",
             "pddf_cpld_module",
             "pddf_cpld_driver",
             "pddf_led_module",
-            "pddf_custom_xcvr",
+            "pddf_xcvr_driver",
             "pddf_xcvr_driver_module"
         ],
         "custom_kos":
         [
             "pddf_custom_fpga_algo",
-            "pddf_custom_xcvr_api",
             "pddf_custom_wdt"
         ]
     },
@@ -738,19 +740,6 @@
             }
         }
     },
-    "PORT1":
-    {
-        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT1", "device_parent":"MUX1"},
-        "dev_attr": { "dev_idx":"1"},
-        "i2c":
-        {
-            "interface":
-            [
-                { "itf":"control", "dev":"PORT1-CTRL" },
-                { "itf":"eeprom", "dev":"PORT1-EEPROM" }
-            ]
-        }
-    },
     "FAN-CTRL":
     {
         "dev_info": { "device_type":"FAN", "device_name":"FAN-CTRL"},
@@ -784,6 +773,19 @@
                     { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"}               
                 ]
             }
+        }
+    },
+    "PORT1":
+    {
+        "dev_info": { "device_type":"QSFP-DD", "device_name":"PORT1", "device_parent":"MUX1"},
+        "dev_attr": { "dev_idx":"1"},
+        "i2c":
+        {
+            "interface":
+            [
+                { "itf":"control", "dev":"PORT1-CTRL" },
+                { "itf":"eeprom", "dev":"PORT1-EEPROM" }
+            ]
         }
     },
     "PORT1-CTRL":

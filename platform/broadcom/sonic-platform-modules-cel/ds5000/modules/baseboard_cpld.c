@@ -1,6 +1,6 @@
 /*
- * cpld_b .c - The CPLD driver for the Base Board of Moonstone
- * The driver implement sysfs to access CPLD register on the baseboard of Moonstone via LPC bus.
+ * cpld_b .c - The CPLD driver for the Base Board of DS5000
+ * The driver implement sysfs to access CPLD register on the baseboard of DS5000 via LPC bus.
  * Copyright (C) 2018 Celestica Corp.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -176,7 +176,7 @@ static ssize_t setreg_store(struct device *dev, struct device_attribute *devattr
     addr = (uint16_t)strtoul(tok,&last,16);
     if(addr == 0 && tok == last){
         mutex_unlock(&cpld_data->cpld_lock);
-        kfree(pclone);  
+        kfree(pclone);
         return -EINVAL;
     }
 
@@ -227,26 +227,46 @@ begin:
 static BIN_ATTR_RO(dump, CPLD_REGISTER_SIZE);
 
 /**
- * Show system led status - on/off/1hz/4hz
+ * Show system led
  * @param  dev     kernel device
  * @param  devattr kernel device attribute
  * @param  buf     buffer for get value
- * @return         Hex string read from scratch register.
+ * @return         system led color (string).
  */
 static ssize_t sys_led_show(struct device *dev, struct device_attribute *devattr,
                 char *buf)
 {
+    char *led_color = "unknown";
     unsigned char data = 0;
     mutex_lock(&cpld_data->cpld_lock);
-    data = inb(SYS_LED_ADDR);
+    data = (inb(SYS_LED_ADDR)) & 0x33;
     mutex_unlock(&cpld_data->cpld_lock);
-    data = data & 0x3;
-    return sprintf(buf, "%s\n",
-            data == 0x03 ? "off" : data == 0x02 ? "4hz" : data ==0x01 ? "1hz": "on");
+
+    if (data == 0x33) {
+        led_color = "off";
+    } else if (data == 0x20) {
+        led_color = "amber";
+    } else if (data == 0x10) {
+        led_color = "green";
+    } else if (data == 0x01) {
+        led_color = "alternate_blink_1hz";
+    } else if (data == 0x02) {
+        led_color = "alternate_blink_4hz";
+    } else if (data == 0x21) {
+        led_color = "amber_blink_1hz";
+    } else if (data == 0x22) {
+        led_color = "amber_blink_4hz";
+    } else if (data == 0x11) {
+        led_color = "green_blink_1hz";
+    } else if (data == 0x12) {
+        led_color = "green_blink_4hz";
+    }
+
+    return sprintf(buf, "%s\n", led_color);
 }
 
 /**
- * Set the status of system led - on/off/1hz/4hz
+ * Set the system led
  * @param  dev     kernel device
  * @param  devattr kernel device attribute
  * @param  buf     buffer of set value
@@ -257,80 +277,39 @@ static ssize_t sys_led_store(struct device *dev, struct device_attribute *devatt
                 const char *buf, size_t count)
 {
     unsigned char led_status,data;
-    if(sysfs_streq(buf, "off")){
-        led_status = 0x03;
-    }else if(sysfs_streq(buf, "4hz")){
-        led_status = 0x02;
-    }else if(sysfs_streq(buf, "1hz")){
+    if (sysfs_streq(buf, "off")) {
+        led_status = 0x33;
+    } else if (sysfs_streq(buf, "amber")) {
+        led_status = 0x20;
+    } else if (sysfs_streq(buf, "green")) {
+        led_status = 0x10;
+    } else if (sysfs_streq(buf, "alternate_blink_1hz")) {
         led_status = 0x01;
-    }else if(sysfs_streq(buf, "on")){
-        led_status = 0x00;
-    }else{
+    } else if (sysfs_streq(buf, "alternate_blink_4hz")) {
+        led_status = 0x02;
+    } else if (sysfs_streq(buf, "amber_blink_1hz")) {
+        led_status = 0x21;
+    } else if (sysfs_streq(buf, "amber_blink_4hz")) {
+        led_status = 0x22;
+    } else if (sysfs_streq(buf, "green_blink_1hz")) {
+        led_status = 0x11;
+    } else if (sysfs_streq(buf, "green_blink_4hz")) {
+        led_status = 0x12;
+    } else {
         count = -EINVAL;
         return count;
     }
+
     mutex_lock(&cpld_data->cpld_lock);
-    data = inb(SYS_LED_ADDR);
-    data = data & ~(0x3);
-    data = data | led_status;
-    outb(data, SYS_LED_ADDR);
+    data = (inb(SYS_LED_ADDR)) & 0x33;
+    if (data != led_status) {
+        outb(led_status, SYS_LED_ADDR);
+    }
+
     mutex_unlock(&cpld_data->cpld_lock);
     return count;
 }
 static DEVICE_ATTR_RW(sys_led);
-
-/**
- * Show system led color - both/green/yellow/none
- * @param  dev     kernel device
- * @param  devattr kernel device attribute
- * @param  buf     buffer for get value
- * @return         Hex string read from scratch register.
- */
-static ssize_t sys_led_color_show(struct device *dev, struct device_attribute *devattr,
-                char *buf)
-{
-    unsigned char data = 0;
-    mutex_lock(&cpld_data->cpld_lock);
-    data = inb(SYS_LED_ADDR);
-    mutex_unlock(&cpld_data->cpld_lock);
-    data = (data >> 4) & 0x3;
-    return sprintf(buf, "%s\n",
-            data == 0x03 ? "off" : data == 0x02 ? "amber" : data ==0x01 ? "green": "both");
-}
-
-/**
- * Set the color of system led - both/green/yellow/none
- * @param  dev     kernel device
- * @param  devattr kernel device attribute
- * @param  buf     buffer of set value
- * @param  count   number of bytes in buffer
- * @return         number of bytes written, or error code < 0.
- */
-static ssize_t sys_led_color_store(struct device *dev, struct device_attribute *devattr,
-                const char *buf, size_t count)
-{
-    unsigned char led_status,data;
-    if(sysfs_streq(buf, "off")){
-        led_status = 0x03;
-    }else if(sysfs_streq(buf, "amber")){
-        led_status = 0x02;
-    }else if(sysfs_streq(buf, "green")){
-        led_status = 0x01;
-    }else if(sysfs_streq(buf, "both")){
-        led_status = 0x00;
-    }else{
-        count = -EINVAL;
-        return count;
-    }
-    mutex_lock(&cpld_data->cpld_lock);
-    data = inb(SYS_LED_ADDR);
-    data = data & ~( 0x3 << 4);
-    data = data | (led_status << 4);
-    outb(data, SYS_LED_ADDR);
-    mutex_unlock(&cpld_data->cpld_lock);
-    return count;
-}
-static DEVICE_ATTR_RW(sys_led_color);
 
 static ssize_t sys_led_raw_show(struct device *dev, struct device_attribute *devattr,
                 char *buf)
@@ -747,7 +726,6 @@ static struct attribute *cpld_b_attrs[] = {
     &dev_attr_getreg.attr,
     &dev_attr_setreg.attr,
     &dev_attr_sys_led.attr,
-    &dev_attr_sys_led_color.attr,
     &dev_attr_sys_led_raw.attr,
     &dev_attr_psu_led.attr,
     &dev_attr_alarm_led.attr,
@@ -789,7 +767,7 @@ static struct attribute_group cpld_b_attrs_grp = {
 static struct resource cpld_b_resources[] = {
     {
         .start  = 0xA100,
-        .end    = 0xA1FF,
+        .end    = 0xA1A5,
         .flags  = IORESOURCE_IO,
     },
 };
@@ -871,6 +849,6 @@ module_exit(cpld_b_exit);
 
 
 MODULE_AUTHOR("Celestica Inc.");
-MODULE_DESCRIPTION("CELESTICA MOONSTONE WHITEBOX CPLD baseboard driver");
+MODULE_DESCRIPTION("CELESTICA DS5000 WHITEBOX CPLD baseboard driver");
 MODULE_VERSION("0.0.8");
 MODULE_LICENSE("GPL");

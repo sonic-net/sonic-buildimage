@@ -46,15 +46,28 @@ class APIHelper():
         return status, result
         
     def get_register_value(self, getreg_path, register):
-        cmd = "echo {1} > {0}".format(getreg_path, register)
-        self.run_command(cmd)
-        cmd = "cat {0}".format(getreg_path)
-        return self.run_command(cmd)
+        try:
+            with open(register, "w+") as fd:
+                fd.write(getreg_path)
+                fd.flush()
+                fd.seek(0)
+                return (True, fd.read().strip())
+        except (FileNotFoundError, IOError):
+            pass
+
+        return (False, None)
         
     def set_register_value(self, setreg_path, register, value):
-        cmd = "echo {1} {2} > {0}".format(setreg_path, register, value)
-        status, result = self.run_command(cmd)
-        return status
+        try:
+            with open(register, "w") as fd:
+                set_str = register + " " + value
+                if fd.write() == len(set_str):
+                    fd.flush()
+                    return True
+        except (FileNotFoundError, IOError):
+            pass
+
+        return False
 
     def cpld_lpc_read(self, reg):
         register = "0x{:X}".format(reg)
@@ -73,6 +86,7 @@ class APIHelper():
         except IOError:
             pass
         return None
+
     def with_bmc(self):
         """
         Get the BMC card present status
@@ -88,9 +102,9 @@ class APIHelper():
     def fsc_enable(self, enable=True):
         if self.with_bmc():
             if enable:
-                status, result = self.run_command('ipmitool raw 0x2e 0x04 0xcf 0xc2 0x00 1 0 0')
+                status, result = self.run_command('/usr/bin/ipmitool raw 0x2e 0x04 0xcf 0xc2 0x00 1 0 0')
             else:
-                status, result = self.run_command('ipmitool raw 0x2e 0x04 0xcf 0xc2 0x00 1 0 1')
+                status, result = self.run_command('/usr/bin/ipmitool raw 0x2e 0x04 0xcf 0xc2 0x00 1 0 1')
             return status
         else:
             if os.path.isfile(policy_json):

@@ -26,6 +26,15 @@ bcm_device:
             sai_common_hash_crc: 1
             sai_fdb_entry_l2_discard_src_enable: 1
             sai_skip_create_sys_efp_grp: 1
+            sai_stats_support_mask: 0
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
 ...
 ---
 device:
@@ -35,6 +44,13 @@ device:
 
         TM_SCHEDULER_CONFIG:
             DYNAMIC_VOQ: 0
+
+        # Per pipe flex counter configuration
+        CTR_EFLEX_CONFIG:
+            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
 ...
 ---
 device:
