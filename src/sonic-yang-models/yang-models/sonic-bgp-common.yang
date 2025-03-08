@@ -386,6 +386,7 @@ module sonic-bgp-common {
             type leafref {
                 path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
             }
+            ordered-by user;
             description "Route-map filter for incoming routes";
             max-elements 1;
         }
@@ -394,6 +395,7 @@ module sonic-bgp-common {
             type leafref {
                 path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
             }
+            ordered-by user;
             description "Route-map filter for outgoing routes";
             max-elements 1;
         }
