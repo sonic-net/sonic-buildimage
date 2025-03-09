@@ -198,7 +198,7 @@ class Utility:
                     raise ValueError(f"Could not parse date: {request[time_key]}")
                 formatted_date = parsed_date.strftime(date_format)
             except Exception as e:
-                raise Exception(f"Date format error, input: {request[time_key]}, error: {str(e)}")
+                raise ValueError(f"Date format error, input: {request[time_key]}, error: {str(e)}")
         else:
             formatted_date = datetime.now().strftime(date_format)
         
@@ -1078,7 +1078,11 @@ class MemoryStatisticsProcessor:
         Raises:
         - ValueError: If the sampling interval is not within the accepted range.
         """
+        if interval_minutes <= 0:
+            raise ValueError("Sampling interval must be a positive integer.")
+
         hourly_rate = 60 / int(interval_minutes)
+
         if hourly_rate > 20:
             raise ValueError(f"Invalid sampling interval, rate per hour: {hourly_rate}")
 
@@ -1122,7 +1126,6 @@ class MemoryStatisticsProcessor:
                     first_interval_unit, first_interval_rate, second_interval_unit):
         """
         Processes a single memory statistics file to extract and aggregate data.
-
         Parameters:
         - file_name (str): The filename containing memory statistics data.
         - start_time_obj (datetime): The starting time object for filtering.
@@ -1137,31 +1140,23 @@ class MemoryStatisticsProcessor:
         """
         if not os.path.exists(file_name) or os.path.getsize(file_name) <= 0:
             return
-
-        try:
-            with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
-                try:
-                    content = json.load(jfile)
-
-                    entries = content if isinstance(content, list) else [content]
-
-                    for memory_entry in entries:
-                        self.process_memory_entry(
-                            memory_entry,
-                            start_time_obj, 
-                            end_time_obj, 
-                            step, 
-                            num_columns, 
-                            time_entry_summary, 
-                            request_data,
-                            first_interval_unit, 
-                            first_interval_rate, 
-                            second_interval_unit
-                        )
-                except json.JSONDecodeError as e:
-                    logger.log_error(f"Error decoding JSON from {file_name}: {e}")
-        except Exception as e:
-            logger.log_error(f"Error processing file {file_name}: {e}")    
+        
+        with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
+            content = json.load(jfile)
+            entries = content if isinstance(content, list) else [content]
+            for memory_entry in entries:
+                self.process_memory_entry(
+                    memory_entry,
+                    start_time_obj, 
+                    end_time_obj, 
+                    step, 
+                    num_columns, 
+                    time_entry_summary, 
+                    request_data,
+                    first_interval_unit, 
+                    first_interval_rate, 
+                    second_interval_unit
+                )    
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1217,8 +1212,8 @@ class MemoryStatisticsProcessor:
                 ]
                 
                 time_group_list[start:end] = processed_batch
-            
-            except Exception as e:
+
+            except (KeyError, IndexError, TypeError, ValueError) as e:
                 logger.log_error(
                     f"Batch processing error: "
                     f"Columns {start}-{end}, "
@@ -1421,7 +1416,8 @@ class SocketHandler:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(1.0) 
             self.listener_socket.bind(self.address)
-            os.chmod(self.address, 0o644)
+            os.chmod(self.address, 0o600)
+            os.chown(self.address, os.getuid(), -1)
             self.listener_socket.listen(5)  
             logger.log_info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
@@ -1708,7 +1704,6 @@ class MemoryStatisticsService:
     commands for memory statistics retrieval, while also managing
     configuration reloading and graceful shutdown procedures.
     """ 
-
     def __init__(self, memory_statistics_config, config_file_path='memory_statistics.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
@@ -2132,7 +2127,7 @@ if __name__ == '__main__':
         'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket'
     }
 
-    logger = SyslogLogger(identifier="memstats#log", log_to_console=True)
+    logger = SyslogLogger(identifier="memory_statistics", log_to_console=False)
 
     service_name = "MemoryStatisticsService" 
     service = MemoryStatisticsService(memory_statistics_config, name=service_name)
