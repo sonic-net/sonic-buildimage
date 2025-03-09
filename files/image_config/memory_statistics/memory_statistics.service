@@ -3,10 +3,10 @@ Description=Memory Statistics Daemon
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/memory_statistics_handler.py
+ExecStart=/usr/bin/memory_statistics_service.py
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=-/etc/memorystats.conf
+EnvironmentFile=-/etc/memory_statistics.conf
 
 [Install]
 WantedBy=multi-user.target
