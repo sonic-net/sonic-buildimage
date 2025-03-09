@@ -128,8 +128,9 @@ class SonicYangExtMixin:
 
             for grouping in groupings:
                 gName = grouping["@name"]
-                gLeaf = grouping["leaf"]
-                self.preProcessedYang['grouping'][moduleName][gName] = gLeaf
+                self.preProcessedYang['grouping'][moduleName][gName] = dict()
+                self.preProcessedYang['grouping'][moduleName][gName]["leaf"] = grouping.get('leaf')
+                self.preProcessedYang['grouping'][moduleName][gName]["leaf-list"] = grouping.get('leaf-list')
 
         except Exception as e:
             self.sysLog(msg="_preProcessYangGrouping failed:{}".format(str(e)), \
@@ -349,8 +350,11 @@ class SonicYangExtMixin:
                 else:
                     uses_module_name = table_module['@name']
                 grouping = uses['@name'].split(':')[-1].strip()
-                leafs = self.preProcessedYang['grouping'][uses_module_name][grouping]
-                self._fillLeafDict(leafs, leafDict)
+                groupdata = self.preProcessedYang['grouping'][uses_module_name][grouping]
+
+                self._fillLeafDict(groupdata.get('leaf'), leafDict)
+                # leaf-lists
+                self._fillLeafDict(groupdata.get('leaf-list'), leafDict, True)
         except Exception as e:
             self.sysLog(msg="_fillLeafDictUses failed:{}".format(str(e)), \
                 debug=syslog.LOG_ERR, doPrint=True)
