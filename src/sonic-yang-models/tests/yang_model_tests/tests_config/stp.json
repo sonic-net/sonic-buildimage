@@ -2,40 +2,15 @@
     "PVST_GLOBAL_VALID": {
         "sonic-spanning-tree:sonic-spanning-tree": {
             "sonic-spanning-tree:STP": {
-                "GLOBAL": [
+                "STP_LIST": [
                     {
-                        "global-stp-mode": "GLOBAL",
+                        "keyleaf": "GLOBAL",
                         "mode": "pvst",
                         "rootguard_timeout": 30,
                         "forward_delay": 15,
                         "hello_time": 2,
                         "max_age": 20,
                         "priority": 32768
-                    }
-                ]
-            }
-        }
-    },
-    "MSTP_GLOBAL_VALID": {
-        "sonic-spanning-tree:sonic-spanning-tree": {
-            "sonic-spanning-tree:STP": {
-                "GLOBAL": [
-                    {
-                        "global-stp-mode": "GLOBAL",
-                        "mode": "mst"
-                    }
-                ]
-            },
-            "sonic-spanning-tree:STP_MST": {
-                "GLOBAL": [
-                    {
-                        "global-stp-mode": "GLOBAL",
-                        "name": "region1",
-                        "revision": 0,
-                        "max_hops": 20,
-                        "max_age": 20,
-                        "hello_time": 2,
-                        "forward_delay": 15
                     }
                 ]
             }
