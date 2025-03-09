@@ -97,10 +97,11 @@ https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1-2
 https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1.orig.tar.xz==6ddb13b6111f601db08fc7c72afa0263
 https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py==b16e05ede6aed78f7abadae1185f487d
 https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/4.2.3/openapi-generator-cli-4.2.3.jar==cda48eb414c8b4585e280c3fb2656e24
-https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1-2+deb12u3.debian.tar.xz==d964cfd6d26adb608cd507af3007831a
-https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1-2+deb12u3.dsc==d72fe6644fab4225d7ca09c4e43446a3
+https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1-2+deb12u5.debian.tar.xz==5b7453ca259106ec2cfe413482f51ed2
+https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1-2+deb12u5.dsc==4598828e248aa58052ed6ae9509ca9f2
 https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1.orig.tar.gz==f78b2acac4bb299629a8c58ddc3fac63
-https://sh.rustup.rs==803438f3247334c786f7ad7efebf662e
+https://security.debian.org/pool/updates/main/o/openssh/openssh_9.2p1.orig.tar.gz.asc==4b8baeab4dd1ff732a02e94c227cf788
+https://sh.rustup.rs==635982ad66d588d7c934a07102b5bfb0
 https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_6.1.94-1.debian.tar.xz==d56c205bc0c7cf511619540631c58ab7
 https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_6.1.94-1.dsc==0fbe62084fd643bd0b67446bc5f14fcb
 https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_6.1.94.orig.tar.xz==eb98947ccae11f6bcd33e835b05a932f
@@ -272,9 +273,9 @@ https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_
 https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso==1d8b8d3fa37f842d0184b5205be22be9
 https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_x86_64_6_asic-r0.iso==58494305d4ac201daedf9364a1018a1b
 https://sonicstorage.blob.core.windows.net/public/sai/bcmpai/REL_3.11/3.11/libsaibroncos_3.11_amd64.deb==6e21a16126e833516a9659d4c35c284e
-https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init==21b27f4a24c066ff3c4158998d4f794b
-https://static.rust-lang.org/rustup/dist/armv7-unknown-linux-gnueabihf/rustup-init==13b8d6e5edef35414c2e28db31576656
-https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==eedd8a5a6ebbc921301660acb99646a5
+https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init==a5e99c90d522b8072a862beb06a74f86
+https://static.rust-lang.org/rustup/dist/armv7-unknown-linux-gnueabihf/rustup-init==6b36676bb95b65bc38085395d2465f7c
+https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init==0f2f9af4b867f369ba00b1e3a5081b7c
 https://storage.googleapis.com/golang/go1.15.15.linux-amd64.tar.gz==b75227438c6129b5013da053b3aa3f38
 https://storage.googleapis.com/golang/go1.15.15.linux-arm64.tar.gz==6d721146a9195592d92a80cf27d475f9
 https://storage.googleapis.com/golang/go1.15.15.linux-armv6l.tar.gz==23d140bbeedc978b954de1a199a22bdb
