@@ -26,6 +26,7 @@
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
   * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
+  * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -966,6 +967,43 @@ and value is a list of field-values representing the interface attributes, e.g. 
             "loopback_action": "drop"
         }
     }
+}
+```
+
+### DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON
+
+These tables contain information on drop counters which have been added
+
+DEBUG_COUNTER:
+```
+; DEBUG_COUNTER table
+
+key             = DEBUG_COUNTER_TABLE:name
+name            = string
+type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias           = string (optional)
+description     = string (optional)
+group           = string (optional)
+
+"DEBUG_COUNTER": {
+    "DEBUG_4": {
+        "alias": "BAD_DROPS",
+        "desc": "More port ingress drops",
+        "group": "BAD",
+        "type": "SWITCH_INGRESS_DROPS"
+    }
+}
+```
+```
+; DEBUG_COUNTER_DROP_REASON table
+
+key     = DEBUG_COUNTER_DROP_REASON_TABLE:name:reason
+name    = name of a counter in the DEBUG_COUNTER_TABLE
+reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (https://github.com/sonic-net/sonic-swss/blob/7a965caf4c7211afca5303191cf731858c791bcd/orchagent/debug_counter/drop_counter.cpp#L20)
+
+"DEBUG_COUNTER_DROP_REASON": {
+    "DEBUG_4|DIP_LINK_LOCAL": {},
+    "DEBUG_4|SIP_LINK_LOCAL": {}
 }
 ```
 
