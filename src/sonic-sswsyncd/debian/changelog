@@ -1,0 +1,33 @@
+sswsyncd (0.2-8) UNRELEASED; urgency=medium
+
+  * Add support for Mellanox switches
+
+ -- Pavel Shirshov <pavelsh@microsoft.com>  Wed, 13 Apr 2016 14:07:03 -0700
+
+sswsyncd (0.2-7) UNRELEASED; urgency=medium
+
+  * build two packages: one for production, one for development with saithrift server included
+
+ -- Pavel Shirshov <pavelsh@microsoft.com>  Wed, 06 Apr 2016 01:39:03 -0700
+
+sswsyncd (0.2-6) UNRELEASED; urgency=medium
+
+  * add init script
+  * consume libsai virtual package
+  * add interface syncer
+  * add dependency for socat in the init.d
+  * add sswsyncd.service for systemd
+
+ -- Guohan Lu <gulv@microsoft.com>  Fri, 17 Jul 2015 01:39:03 -0700
+
+sswsyncd (0.2-2) unstable; urgency=low
+
+  * Initial version based on SAI
+
+ -- Guohan Lu <gulv@microsoft.com>  Thu, 19 Feb 2015 06:37:50 -0800
+
+sswsyncd (0.2-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Guohan Lu <gulv@microsoft.com>  Thu, 13 Nov 2014 01:08:15 -0800
