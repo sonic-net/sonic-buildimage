@@ -395,6 +395,10 @@ start() {
             fi
         fi
         {%- endif %}
+    {%- if docker_container_name == "database" %}
+    elif [ -f /etc/sonic/chassisdb.conf ]; then
+        IS_SUPERVISOR=1
+    {%- endif %}
     fi
 
     {%- if sonic_asic_platform == "broadcom" %}
