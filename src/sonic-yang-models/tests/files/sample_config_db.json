@@ -2366,6 +2366,80 @@
             }
         },
 
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true",
+                "vlanid": "100"
+            },
+            "Vlan200": {
+                "forward_delay": "16",
+                "hello_time": "3",
+                "max_age": "22",
+                "priority": "16384",
+                "enabled": "true",
+                "vlanid": "200"
+            }
+        },
+        "STP_VLAN_PORT": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            },
+            "Vlan100|PortChannel2": {
+                "path_cost": "20000",
+                "priority": "64"
+            },
+            "Vlan200|Ethernet4": {
+                "path_cost": "200000",
+                "priority": "128"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "200000",
+                "priority": "128",
+                "portfast": "true",
+                "uplink_fast": "false"
+            },
+            "Ethernet4": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "true",
+                "bpdu_guard_do_disable": "true",
+                "path_cost": "200000",
+                "priority": "128",
+                "portfast": "false",
+                "uplink_fast": "false"
+            },
+            "PortChannel2": {
+                "enabled": "true",
+                "root_guard": "true",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "20000",
+                "priority": "64",
+                "portfast": "false",
+                "uplink_fast": "true"
+            }
+        },
 
         "MCLAG_DOMAIN": {
             "123": {
