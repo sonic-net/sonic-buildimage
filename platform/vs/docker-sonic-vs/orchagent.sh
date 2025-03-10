@@ -49,4 +49,10 @@ fi
 # Set mac address
 ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -R"
+fi
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
