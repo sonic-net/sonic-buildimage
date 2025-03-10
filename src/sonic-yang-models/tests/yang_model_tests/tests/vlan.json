@@ -91,6 +91,16 @@
         "desc": "Enable the ipv6 link-local as true.",
         "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
     },
+    "VLAN_INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "VLAN_INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "VLAN_INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStrKey": "Pattern"
+    },
     "VLAN_MEMBERS_WITHOUT_CREATING_VLAN":{
         "desc": "Vlan members without Creating Vlan",
         "eStrKey": "LeafRef"
