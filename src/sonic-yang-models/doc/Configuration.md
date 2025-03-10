@@ -1270,7 +1270,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "lag_hash": [
                 "DST_MAC",
@@ -1288,7 +1289,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "ecmp_hash_algorithm": "CRC",
             "lag_hash_algorithm": "CRC"
