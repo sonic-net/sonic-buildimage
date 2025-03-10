@@ -103,6 +103,9 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     else
         ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
     fi
+else
+    # enable for route performance
+    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
