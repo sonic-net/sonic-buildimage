@@ -2,8 +2,8 @@
     "VALID_DEBUG_COUNTERS": {
         "desc": "One debug counter of each valid type"
     },
-    "VALID_COUNTER_WITH_DROP_REASON": {
-        "desc": "One debug counter with valid drop reason"
+    "VALID_COUNTERS_WITH_DROP_REASONS": {
+        "desc": "Multiple counters with drop reasons added"
     },
     "INVALID_DEBUG_COUNTER_TYPE": {
         "desc": "One debug counter with invalid type",
