@@ -34,7 +34,7 @@
     },
 
     "VNET_ROUTE_TUNNEL_COMPLETE_TEST": {
-        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address and vxlanid) in VNET_ROUTE_TUNNEL_LIST table."
+        "desc": "Complete VNET route tunnel configuration with all optional fields (including mac_address and vni) in VNET_ROUTE_TUNNEL_LIST table."
     },
 
     "VNET_ROUTE_TUNNEL_TEST_DUPLICATE_NAME": {
@@ -52,7 +52,7 @@
         "eStr": "Value \"GG:HH:II:JJ:KK:LL\" does not satisfy the constraint \"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}\""
     },
 
-    "VNET_ROUTE_TUNNEL_TEST_INVALID_VXLANID": {
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_VNI": {
         "desc": "VNET route tunnel configuration with invalid VXLAN ID (exceeding max value of 16777215) in VNET_ROUTE_TUNNEL_LIST table.",
         "eStr": "Value \"16777216\" does not satisfy the constraint \"1..16777215\""
     },

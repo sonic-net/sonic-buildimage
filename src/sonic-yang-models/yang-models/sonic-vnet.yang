@@ -132,7 +132,7 @@ module sonic-vnet {
                     type yang:mac-address;
                 }
 
-                leaf vxlanid {
+                leaf vni {
                     description "A valid and active vni value in encapsulated packet";
                     type stypes:vnid_type;
                 }

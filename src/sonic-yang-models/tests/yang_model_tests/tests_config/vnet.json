@@ -249,13 +249,13 @@
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     },
                     {
                         "vnet_name": "Vnet2",
                         "prefix":"10.0.1.0/24",
                         "endpoint": "192.168.1.2",
-                        "vxlanid": "10012"
+                        "vni": "10012"
                     }
                 ]
             }
@@ -292,7 +292,7 @@
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
                         "mac_address": "00:aa:bb:cc:dd:ee",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
@@ -328,13 +328,13 @@
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     },
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.2",
-                        "vxlanid": "10012"
+                        "vni": "10012"
                     }
                 ]
             }
@@ -370,7 +370,7 @@
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "256.256.256.256",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
@@ -407,14 +407,14 @@
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
                         "mac_address": "GG:HH:II:JJ:KK:LL",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
         }
     },
 
-    "VNET_ROUTE_TUNNEL_TEST_INVALID_VXLANID": {
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_VNI": {
         "sonic-vxlan:sonic-vxlan": {
             "sonic-vxlan:VXLAN_TUNNEL": {
                 "VXLAN_TUNNEL_LIST": [
@@ -443,7 +443,7 @@
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "16777216"
+                        "vni": "16777216"
                     }
                 ]
             }
@@ -478,7 +478,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
@@ -514,7 +514,7 @@
                         "vnet_name": "Vnet1",
                         "prefix":"300.168.1.0/24",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
@@ -549,7 +549,7 @@
                     {
                         "vnet_name": "Vnet1",
                         "prefix":"10.0.0.0/24",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
@@ -585,7 +585,7 @@
                         "vnet_name": "NonexistentVnet",
                         "prefix":"10.0.0.0/24",
                         "endpoint": "192.168.1.1",
-                        "vxlanid": "10011"
+                        "vni": "10011"
                     }
                 ]
             }
