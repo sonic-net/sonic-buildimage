@@ -246,6 +246,32 @@
                 }
             }
         },
+        "SN4280": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "SN4800": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "R"],
+                    "dps460-i2c-*-5a": ["4", "L"],
+                    "dps460-i2c-*-5b": ["3", "L"]
+                }
+            }
+        },
         "SN5400": {
             "default": {
                 "bus": [
@@ -267,7 +293,34 @@
                     "dps460-i2c-*-5a": ["2", "R"]
                 }
             }
+        },
+        "SN5610n": {
+            "default": {
+                "bus": [
+
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"],
+                    "dps460-i2c-*-5a": ["4", "R"],
+                    "dps460-i2c-*-5b": ["3", "R"]
+                }
+            }
+        },
+        "SN5640": {
+            "default": {
+                "bus": [
+
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "L"],
+                    "dps460-i2c-*-59": ["1", "L"],
+                    "dps460-i2c-*-5a": ["4", "R"],
+                    "dps460-i2c-*-5b": ["3", "R"]
+                }
+            }
         }
+        
     },
 
     "psu": {
@@ -335,7 +388,7 @@
         "MTEF-AC-E": {
             "label": [
                 "in1 PSU 220V Rail (in)",
-                "in3 PSU 12V Rail (out)",
+                "in2 PSU 12V Rail (out)",
                 "fan1 PSU Fan 1",
                 "temp1 PSU Temp 1",
                 "temp2 PSU Temp 2",
