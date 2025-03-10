@@ -92,6 +92,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "SonicDpu"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -243,6 +253,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "resource_type": "resource_type_x"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "mgmt_type": "mgmt_type_x"
                 }
             }
         }
@@ -532,6 +551,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "nexthop_group": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_RING_THREAD_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "ring_thread_enabled": true
                 }
             }
         }
