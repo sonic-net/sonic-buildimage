@@ -5,6 +5,10 @@ module sonic-interface {
 	namespace "http://github.com/sonic-net/sonic-interface";
 	prefix intf;
 
+	import ietf-yang-types {
+		prefix yang;
+	}
+
 	import sonic-types {
 		prefix stypes;
 	}
@@ -79,6 +83,11 @@ module sonic-interface {
 					description "Enable/Disable IPv6 link local address on interface";
 					type stypes:mode-status;
 					default disable;
+				}
+
+				leaf mac_addr {
+					description "Assign administrator-provided MAC address to Interface";
+					type yang:mac-address;
 				}
 
                 leaf loopback_action {
