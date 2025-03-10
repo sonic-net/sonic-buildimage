@@ -50,6 +50,7 @@ files/Aboot/boot0
 files/dsc/MANIFEST
 files/dsc/install_debian
 files/dsc/fs.zip
+files/dsc/pensando-sonic-artifacts
 files/initramfs-tools/arista-convertfs
 files/initramfs-tools/union-mount
 
