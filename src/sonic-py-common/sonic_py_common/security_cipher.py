@@ -36,7 +36,8 @@ class master_key_mgr:
             if not os.path.exists(self._file_path):
                 with open(self._file_path, 'w') as file:
                     file.writelines("#Auto generated file for storing the encryption passwords\n")
-                    file.writelines("TACPLUS : \nRADIUS : \nLDAP :\n")
+                    for feature in self._feature_list[1:]:  # Skip the first "NA" entry
+                        file.write(f"{feature} : \n")
                     os.chmod(self._file_path, 0o640)
             self._initialized = True
 
@@ -119,15 +120,28 @@ class master_key_mgr:
                 return data[key]
         return False
 
-    def del_cipher_pass(self):
+
+    def del_cipher_pass(self, feature_type):
+        """
+        Removes only the password for the given feature_type while keeping the file structure intact.
+        """
         try:
-            # Check if the file exists
-            if os.path.exists(self._file_path):
-                # Attempt to delete the file
-                os.remove(self._file_path)
-                syslog.syslog(syslog.LOG_INFO, "del_cipher_pass: {} file has been removed".format((self._file_path)))
-            else:
-                syslog.syslog(syslog.LOG_INFO, "del_cipher_pass: {} file doesn't exist".format((self._file_path)))
+            os.chmod(self._file_path, 0o777)
+            with open(self._file_path, "r") as file:
+                lines = file.readlines()
+
+            updated_lines = []
+            for line in lines:
+                if line.strip().startswith(f"{feature_type} :"):
+                    updated_lines.append(f"{feature_type} : \n")  # Remove password but keep format
+                else:
+                    updated_lines.append(line)
+
+            with open(self._file_path, 'w') as file:
+                file.writelines(updated_lines)
+            os.chmod(self._file_path, 0o640)
+
+            syslog.syslog(syslog.LOG_INFO, "del_cipher_pass: Password for {} has been removed".format((feature_type)))
+
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "del_cipher_pass: {} Exception occurred: {}".format((e)))
-
