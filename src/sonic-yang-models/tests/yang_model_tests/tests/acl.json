@@ -218,7 +218,7 @@
     "ACL_INNERSRCMACREWRITE_NO_SRCIP": {
         "desc": "Configure INNERSRCMACREWRITE ACL with no src IP",
         "eStrKey": "Must",
-        "eStr": ["INNERSRCMACREWRITE", "SRC_IP"]
+        "eStr": ["INNERSRCMACREWRITE", "INNER_SRC_IP"]
     },
     "ACL_INNERSRCMACREWRITE_STAGE_INGRESS": {
         "desc": "Configure INNERSRCMACREWRITE ACL with stage as INGRESS",
