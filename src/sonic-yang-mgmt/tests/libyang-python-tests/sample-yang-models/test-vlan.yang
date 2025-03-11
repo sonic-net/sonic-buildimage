@@ -25,7 +25,7 @@ module test-vlan {
 		description "First Revision";
 	}
 
-	container vlan {
+	container test-vlan {
 		container VLAN_INTERFACE {
 
 			description "VLAN_INTERFACE part of config_db.json";
@@ -126,7 +126,7 @@ module test-vlan {
 					/* key elements are mandatory by default */
 					mandatory true;
 					type leafref {
-						path /port:port/port:PORT/port:PORT_LIST/port:port_name;
+						path /port:test-port/port:PORT/port:PORT_LIST/port:port_name;
 					}
 				}
 

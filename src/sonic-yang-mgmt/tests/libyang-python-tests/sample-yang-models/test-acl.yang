@@ -32,7 +32,7 @@ module test-acl {
 		description "First Revision";
 	}
 
-	container acl {
+	container test-acl {
 
 		container ACL_RULE {
 
@@ -44,7 +44,7 @@ module test-acl {
 
 				leaf ACL_TABLE_NAME {
 					type leafref {
-						path "/acl:acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST/acl:ACL_TABLE_NAME";
+						path "/acl:test-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST/acl:ACL_TABLE_NAME";
 					}
 				}
 
@@ -251,10 +251,10 @@ module test-acl {
                     /* union of leafref is allowed in YANG 1.1 */
 					type union {
 						type leafref {
-							path /port:port/port:PORT/port:PORT_LIST/port:port_name;
+							path /port:test-port/port:PORT/port:PORT_LIST/port:port_name;
 						}
 						type leafref {
-							path /lag:portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:portchannel_name;
+							path /lag:test-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:portchannel_name;
 						}
 					}
 				}

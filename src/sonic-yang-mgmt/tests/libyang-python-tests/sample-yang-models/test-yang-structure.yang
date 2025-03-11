@@ -22,7 +22,7 @@ module test-yang-structure {
     description "First Revision";
   }
 
-  container test-yang-container {
+  container test-yang-structure {
 
     container YANG_STRUCT_TEST {
 
