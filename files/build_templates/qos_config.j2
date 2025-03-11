@@ -2,6 +2,7 @@
 {%- set PORT_BP = [] %}
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
+{%- set PORT_QOS_BYPASS = [] %}
 
 {%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
@@ -31,6 +32,9 @@
 {%- if generate_bp_port_list is defined %}
     {%- if generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
 {%- endif %}
+{%- if generate_qos_bypass_port_list is defined %}
+    {%- if generate_qos_bypass_port_list(PORT_QOS_BYPASS) %} {% endif %}
+{%- endif %}
 
 {%- if PORT_ALL | sort_by_port_index %}{% endif %}
 
@@ -55,6 +59,7 @@
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
 {%- endif %}
+{%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_QOS_BYPASS) | list %}
 {%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
 
 {%- set port_names_list_active = [] %}
@@ -92,8 +97,22 @@
         ('resource_type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
+{% elif generate_tc_to_pg_map_per_sku is defined %}
+    {{- generate_tc_to_pg_map_per_sku() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
+{% if PORT_DPC %}
+        "AZURE_DPC": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "7"
+        },
+{% endif %}
         "AZURE": {
             "0": "0",
             "1": "0",
@@ -120,6 +139,8 @@
     },
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
+{% elif (generate_tc_to_queue_map_per_sku is defined) %}
+    {{ generate_tc_to_queue_map_per_sku() }}
 {% else %}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
@@ -156,6 +177,8 @@
          ('resource_type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
+{% elif (generate_dscp_to_tc_map_per_sku is defined) %}
+    {{ generate_dscp_to_tc_map_per_sku() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -267,6 +290,8 @@
             "weight": "5"
         }
     },
+{% elif generate_scheduler_per_sku is defined %}
+    {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -343,7 +368,11 @@
 {% endif %}
             "pfcwd_sw_enable" : "3,4",
 {% endif %}
+{% if port not in PORT_DPC %}
             "tc_to_pg_map"    : "AZURE",
+{% else %}
+            "tc_to_pg_map"    : "AZURE_DPC",
+{% endif %}
             "pfc_to_queue_map": "AZURE"
         }{% if not loop.last %},{% endif %}
 
@@ -408,6 +437,13 @@
         "{{ system_port }}|6": {
             "scheduler": "scheduler.0"
         }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+{% elif generate_single_queue_per_sku is defined %}
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        {{ generate_single_queue_per_sku(port) }}
+        {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }
 {% else %}

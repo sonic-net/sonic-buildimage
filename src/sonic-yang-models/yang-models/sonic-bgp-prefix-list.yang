@@ -1,0 +1,67 @@
+
+module sonic-bgp-prefix-list {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-bgp-prefix-list";
+    prefix bgppl;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-extension {
+        prefix ext;
+    }
+
+    description "SONIC Device-specfifc BGP prefix lists data";
+
+    revision 2025-02-17 {
+        description "Updated description and leafs for PREFIX_LIST_LIST";
+    }
+
+    revision 2025-02-05 {
+        description "Initial revision.";
+    }
+
+    container sonic-bgp-prefix-list {
+
+        container PREFIX_LIST {
+
+            description "PREFIX_LIST container consumed in BGP";
+
+            list PREFIX_LIST_LIST {
+
+                description "PREFIX_LIST part of config_db.json with prefix_type and ip-prefix";
+
+                key "prefix_type ip-prefix";
+
+                leaf prefix_type {
+                    type string;
+                    description "Prefix type";
+                }
+
+                leaf ip-prefix {
+                    type union {
+                        type stypes:sonic-ip4-prefix;
+                        type stypes:sonic-ip6-prefix;
+                    }
+                }
+
+                leaf family {
+
+                    /* family leaf needed for backward compatibility
+                       Both ip4 and ip6 address are string in IETF RFC 6021,
+                       so must statement can check based on : or ., family
+                       should be IPv4 or IPv6 according.
+                     */
+
+                    must "(contains(../ip-prefix, ':') and current()='IPv6') or
+                        (contains(../ip-prefix, '.') and current()='IPv4')";
+                    type stypes:ip-family;
+                }
+            }
+        }
+        /* end of PREFIX_LIST */
+    }
+}

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+if [ "X-$1" = "X-" -o "X-$2" = "X-" ]; then
+    echo "usage: $0 part path"
+    exit 1
+fi
+part=$1
+file=$2
+if [ ! -f $file ]; then
+    echo "$file: not found" >&2
+    exit 1
+fi
+s=`grep "[\"]$part[\"]" /proc/mtd`
+if [ $? -ne 0 ]; then
+    echo "partition $part not found" >&2
+    exit 1
+fi
+mtd=/dev/mtd`expr "$s" : 'mtd\([0-9][0-9]*\)'`
+sz=`stat -c '%s' $file`
+nblks=$((($sz + 65535) / 65536))
+echo -n "# Erasing..."
+flash_erase -q $mtd 0 0 
+echo " OK"
+echo -n "# Writing..."
+dd if=$file of=$mtd status=none
+echo " OK"
+echo -n "# Verifying..."
+parent_dir=$(dirname "$(realpath "$file")")
+t=$parent_dir/update$$$
+dd if=$mtd bs=65536 count=$nblks status=none | head -c $sz > $t
+cmp -s $t $file
+if [ $? -ne 0 ]; then
+    echo " FAILED"
+else
+    echo " OK"
+fi
+rm -f $t

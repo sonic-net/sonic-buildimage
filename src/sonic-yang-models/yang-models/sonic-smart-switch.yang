@@ -9,18 +9,28 @@ module sonic-smart-switch {
 		prefix inet;
 	}
 
-    import sonic-types {
-        prefix stypes;
-    }
+	import sonic-types {
+		prefix stypes;
+	}
 
 	import sonic-port {
-        prefix port;
-    }
+		prefix port;
+	}
+
+	organization
+		"SONiC";
+
+	contact
+		"SONiC";
 
 	description "Smart Switch yang Module for SONiC OS";
 
 	revision 2023-10-17 {
 		description "First Revision";
+	}
+
+	revision 2025-01-11 {
+		description "Add new container DPU_PORT";
 	}
 
 	container sonic-smart-switch {
@@ -74,6 +84,58 @@ module sonic-smart-switch {
 			/* end of container DPUS_LIST */
 		}
 		/* end of container DPUS */
+
+		container DPU_PORT {
+			description "DPU_PORTs part of config_db.json";
+
+			list DPU_PORT_LIST {
+				description "Name of the DPU port";
+				key "PORT_NAME";
+
+				leaf PORT_NAME {
+					description "Name of the DPU port";
+					type string {
+						pattern "[a-zA-Z]+[0-9]+";
+					}
+				}
+
+				leaf state {
+					description "Admin state of DPU device";
+					type stypes:admin_status;
+				}
+
+				leaf vip_ipv4 {
+					description "VIP IPv4 address from minigraph";
+					type inet:ipv4-address;
+				}
+
+				leaf vip_ipv6 {
+					description "VIP IPv6 address from minigraph";
+					type inet:ipv6-address;
+				}
+
+				leaf pa_ipv4 {
+					description "PA IPv4 address from minigraph";
+					type inet:ipv4-address;
+				}
+
+				leaf pa_ipv6 {
+					description "PA IPv6 address from minigraph";
+					type inet:ipv6-address;
+				}
+
+				leaf vdpu_id {
+					description "ID of VDPUs from minigraph";
+					type string;
+				}
+
+				leaf gnmi_port {
+					description "Port gNMI runs on.";
+					type inet:port-number;
+				}
+			}
+		}
+		/* end of container DPU_PORT */
 	}
 	/* end of container sonic-smart-switch */
 }

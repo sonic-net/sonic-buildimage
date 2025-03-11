@@ -292,15 +292,8 @@ create_bfb_image() {
         copy_bin $tool
     done
 
-    kernel_mft=$(dpkg -l | grep kernel-mft-dkms-modules | awk '/^ii/ {print $2}')
-    if [[ $kernel_mft == "" ]]; then
-        echo "ERROR: kernel-mft-dkms-modules package is not installed"
-        exit 1
-    fi
-
     for tool in `dpkg -L mft` \
             `dpkg -L mft-oem` \
-            `dpkg -L $kernel_mft` \
             `dpkg -L xmlstarlet | grep -v share`
     do
         if [ -d $tool ]; then

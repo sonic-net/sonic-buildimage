@@ -1,5 +1,10 @@
 /*
- * Copyright 2017-2024 Broadcom
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * Permission is granted to use, copy, modify and/or distribute this
+ * software under either one of the licenses below.
+ *
+ * License Option 1: GPL
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -12,11 +17,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 (GPLv2) along with this source code.
- */
-/*
- * $Id: $
- * $Copyright: (c) 2017 Broadcom Corp.
- * All Rights Reserved.$
+ *
+ *
+ * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+ *
+ * This software is governed by the Broadcom Open Network Switch APIs license:
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ *
+ *
  */
 
 /*
@@ -359,6 +367,7 @@ knet_netif_destroy_cb(struct net_device *dev, int unit, kcom_netif_t *netif)
     return retv;
 }
 #endif
+
 /*
  * Get statistics.
  * % cat /proc/linux-knet-cb

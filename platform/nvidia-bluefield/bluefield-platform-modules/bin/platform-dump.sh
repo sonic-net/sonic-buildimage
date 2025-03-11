@@ -49,5 +49,13 @@ dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "tail /sys/kernel/debug/mlxbf-ptm/monitors/status/*" "mlxbf-ptm-dump" "3"
 
+pushd /dev/mst/
+mstdevs=$(ls mt*)
+popd
+
+for mstdev in $mstdevs; do
+	dump_cmd "mstdump -full /dev/mst/$mstdev" "mstdump_$mstdev" "20"
+done
+
 tar czf /tmp/platform-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER

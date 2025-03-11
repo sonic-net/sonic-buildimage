@@ -2,7 +2,6 @@
 Description=Update banner config based on configdb
 Requires=config-setup.service
 After=config-setup.service
-Before=systemd-logind.service sshd.service
 BindsTo=database.service
 BindsTo=sonic.target
 

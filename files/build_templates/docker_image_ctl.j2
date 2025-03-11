@@ -339,6 +339,13 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -370,18 +377,6 @@ start() {
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
-    fi
-
-    # Parse the platform.json file to get the platform specific information
-    PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
-    if [ -f "$PLATFORM_JSON" ]; then
-        NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
-        jq -e '.DPU' $PLATFORM_JSON >/dev/null
-        if [[ $? -eq 0 ]]; then
-            IS_DPU_DEVICE="true"
-        else
-            IS_DPU_DEVICE="false"
-        fi
     fi
 
     {%- if sonic_asic_platform == "broadcom" %}
@@ -451,33 +446,28 @@ start() {
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
-        echo "Removing existing ${DOCKERNAME} container"
-        docker rm -f ${DOCKERNAME}
+        {%- if docker_container_name == "database" %}
+        DOCKERMOUNT=""
         {%- else %}
-            {%- if docker_container_name == "database" %}
-            DOCKERMOUNT=""
-            {%- else %}
-            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-            {%- endif %}
-            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-                CONTAINER_EXISTS="yes"
-                preStartAction
-                {%- if docker_container_name == "database" %}
-                echo "Starting existing ${DOCKERNAME} container"
-                docker start ${DOCKERNAME}
-                {%- else %}
-                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-                /usr/local/bin/container start ${DOCKERNAME}
-                {%- endif %}
-                postStartAction
-                exit $?
-            fi
-
-            # docker created with a different HWSKU, remove and recreate
-            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
-            docker rm -f ${DOCKERNAME}
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            CONTAINER_EXISTS="yes"
+            preStartAction
+            {%- if docker_container_name == "database" %}
+            echo "Starting existing ${DOCKERNAME} container"
+            docker start ${DOCKERNAME}
+            {%- else %}
+            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+            /usr/local/bin/container start ${DOCKERNAME}
+            {%- endif %}
+            postStartAction
+            exit $?
+        fi
+
+        # docker created with a different HWSKU, remove and recreate
+        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        docker rm -f ${DOCKERNAME}
     fi
 
     {%- if docker_container_name == "database" %}
@@ -626,6 +616,13 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
+{%- if docker_container_name == "pmon" %}
+    if [[ $NUM_DPU -gt 0 ]]; then
+        SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+    else
+        SMARTSWITCH_MNT= ""
+    fi
+{%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
 {%- if docker_container_name != "dhcp_server" %}
@@ -653,6 +650,7 @@ start() {
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
+        $SMARTSWITCH_MNT \
         -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /dev/shm:/dev/shm:rw \

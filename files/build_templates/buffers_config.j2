@@ -79,7 +79,9 @@ def
             {%- endif %}
         {%- endif %}
     {%- endfor %}
-    {%- if cable_len -%}
+    {%- if port_name in PORT_DPC -%}
+        {{ '0m' }}
+    {%- elif cable_len -%}
         {{ cable_len.0 }}
     {%- else %}
         {%- if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
@@ -115,6 +117,7 @@ def
 {%- set PORT_BP  = [] %}
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
+{%- set PORT_QOS_BYPASS = [] %}
 
 {%- if voq_chassis %}
     {%- for system_port in SYSTEM_PORT %}
@@ -144,6 +147,9 @@ def
     {%- if defs.generate_bp_port_list is defined %}
         {%- if defs.generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
     {%- endif %}
+    {%- if defs.generate_qos_bypass_port_list is defined %}
+        {%- if defs.generate_qos_bypass_port_list(PORT_QOS_BYPASS) %} {% endif %}
+    {%- endif %}
 {%- endif %}
 
 {%- set PORT_ACTIVE  = [] %}
@@ -166,6 +172,7 @@ def
         {%- endif %}
     {%- endfor %}
 {%- endif %}
+{%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_QOS_BYPASS) | list %}
 
 {%- set port_names_list_active  = [] %}
 {%- for port in PORT_ACTIVE %}
