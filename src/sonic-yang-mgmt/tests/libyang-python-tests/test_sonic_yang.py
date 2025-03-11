@@ -211,7 +211,7 @@ class Test_SonicYang(object):
         for node in data['schema_dependencies']:
             xpath = str(node['xpath'])
             list = node['schema_dependencies']
-            depend = yang_s._find_schema_dependencies(xpath)
+            depend = yang_s.find_schema_dependencies(xpath)
             assert set(depend) == set(list)
 
     #test merge data tree
