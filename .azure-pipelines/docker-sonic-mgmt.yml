@@ -90,7 +90,6 @@ stages:
         docker rm -f sonic-mgmt
 
         ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
-        exit 1
       displayName: 'Setup sonic-mgmt docker container'
 
     - task: Docker@2
