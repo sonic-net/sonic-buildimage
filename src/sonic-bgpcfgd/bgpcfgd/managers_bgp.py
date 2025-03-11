@@ -187,19 +187,12 @@ class BGPPeerMgrBase(Manager):
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
-            # The bgp session that belongs to a vnet cannot be advertised as the default BGP session.
-            # So we need to check whether this bgp session belongs to a vnet.
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
             interface = self.get_local_interface(data["local_addr"])
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
                 return False
-            vnet = self.get_vnet(interface)
-            if vnet:
-                # Ignore the bgp session that is in a vnet
-                log_info("Ignore the BGP peer '%s' as the interface '%s' is in vnet '%s'" % (nbr, interface, vnet))
-                return True
 
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
