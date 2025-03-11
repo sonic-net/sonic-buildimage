@@ -36,6 +36,7 @@
     "INTERFACE_INVALID_VNET_NAME": {
         "desc": "Configure non-existent VNET name for an interface.",
         "eStrKey": "LeafRef"
+    },
     "INTERFACE_MAC_ADDR": {
         "desc": "Set administrator-provided interface mac address."
     },
