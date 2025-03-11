@@ -216,11 +216,6 @@ def main():
         print("Expected containers not running: " + ", ".join(not_running_containers))
         sys.exit(3)
 
-    unexpected_running_containers = current_running_containers.difference(expected_running_containers)
-    if unexpected_running_containers:
-        print("Unexpected running containers: " + ", ".join(unexpected_running_containers))
-        sys.exit(4)
-
 
 if __name__ == "__main__":
     main()
