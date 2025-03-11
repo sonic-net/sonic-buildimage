@@ -24,7 +24,7 @@ ijson==3.2.3
 inotify==0.2.10
 ipaddr==2.2.0
 ipaddress==1.0.23
-j2cli==0.3.12b0
+jinjanator==25.1.0
 jinja2==3.1.2
 jsondiff==2.2.1
 jsonpatch==1.33

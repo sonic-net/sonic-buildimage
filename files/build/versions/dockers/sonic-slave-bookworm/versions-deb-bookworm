@@ -240,7 +240,7 @@ ipython3==8.5.0-4
 iso-codes==4.15.0-1
 isympy-common==1.11.1-1
 isympy3==1.11.1-1
-j2cli==0.3.12b-4
+jinjanator==25.1.0
 java-common==0.74
 java-wrappers==0.4
 javahelper==0.78

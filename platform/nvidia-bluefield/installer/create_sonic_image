@@ -354,7 +354,7 @@ main() {
     echo $@
     parse_args $@
     . $CDIR/onie-image-arm64.conf
-    # Export ENV Variables for j2cli
+    # Export ENV Variables for jinjanator
     CHROOT_DIR=$CDIR/$FILESYSTEM_ROOT
     if [[ ! -d "$CHROOT_DIR" ]]; then
         echo "[create_sonic_image] Error! Path to CHROOT not found"
