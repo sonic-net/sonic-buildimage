@@ -338,7 +338,7 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
-            }
+			}
 
             container WRED_ECN_PORT {
                 /* WRED_ECN_QUEUE_FLEX_COUNTER_GROUP */
@@ -386,6 +386,22 @@ module sonic-flex_counter {
             description "Flow counter route pattern of config_db.json";
 
             list FLOW_COUNTER_ROUTE_PATTERN_LIST {
+
+                key "ip_prefix";
+
+                leaf ip_prefix {
+                    type inet:ip-prefix;
+                }
+
+                leaf max_match_count {
+                    type uint32 {
+                        range 1..50;
+                    }
+                }
+
+            }
+
+            list ARS_NEXTHOP_GROUP_COUNTER_ROUTE_PATTERN_LIST {
 
                 key "ip_prefix";
 

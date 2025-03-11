@@ -3203,6 +3203,58 @@
                 "ber_threshold": "12"
             }
         }
+        "ARS_PROFILE": {
+            "global": {
+                "algorithm": "ewma",
+                "max_flows": "2048",
+                "sampling_interval": "10",
+                "past_load_min_value": "0",
+                "past_load_max_value": "10",
+                "past_load_weight": "6",
+                "future_load_min_value": "10",
+                "future_load_max_value": "50",
+                "future_load_weight": "10",
+                "current_load_min_value": "20",
+                "current_load_max_value": "30",
+                "ipv4_enable": "true",
+                "ipv6_enable": "true"
+            }
+        },
+        "ARS_NEXTHOP_GROUP": {
+            "192.168.0.0/32|default": {
+			    "profile_name": "global",
+                "assign_mode": "per_flowlet_quality",
+                "max_flows": "512",
+                "primary_path_threshold": "5"
+            }
+        },
+        "ARS_PORTCHANNEL": {
+            "PortChannel0003": {
+			    "profile_name": "global",
+                "assign_mode": "per_flowlet_quality",
+                "max_flows": "1024",
+                "primary_path_threshold": "2"
+            }
+        },
+        "ARS_INTERFACE": {
+            "Ethernet1": {},
+            "Ethernet3": {},
+            "Ethernet10":{}
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
         "UNKNOWN_TABLE": {

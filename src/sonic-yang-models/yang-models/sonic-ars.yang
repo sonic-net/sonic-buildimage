@@ -1,0 +1,268 @@
+module sonic-ars {
+    namespace "http://github.com/sonic-net/sonic-ars";
+    prefix sars;
+    yang-version 1.1;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+	import sonic-vrf {
+		prefix vrf;
+	}
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC Adaptive Routing and Switching";
+
+    revision 2024-10-01 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-ars {
+
+		container ARS_PROFILE {
+
+			list ARS_PROFILE_LIST {
+
+				key "profile_name";
+				max-elements 1;
+
+				leaf profile_name {
+					description "ARS Profile Name";
+					type string;
+				}
+
+				leaf algorithm {
+					description "ARS quality algorithm";
+					type enumeration {
+						enum ewma {
+							description "Exponentially Weighted Moving Average algorithm";
+						}
+					}
+				}
+
+				leaf max_flows {
+					type uint32;
+					description  "Maximum number of flows that can be maintained per ARS profile.";
+				}
+
+				leaf sampling_interval {
+					type uint32;
+					description  "Sampling interval in microseconds for quality measure computation.";
+				}
+
+				leaf past_load_min_value {
+					type uint16;
+					description "Past load min value.";
+				}
+
+				leaf past_load_max_value {
+					type uint16;
+					description "Past load max value.";
+				}
+
+				leaf past_load_weight {
+					type uint16;
+					description "Past load weight.";
+				}
+
+				leaf future_load_min_value {
+					type uint16;
+					description "Future load min value.";
+				}
+
+				leaf future_load_max_value {
+					type uint16;
+					description "Future load max value.";
+				}
+
+				leaf future_load_weight {
+					type uint16;
+					description "Future load weight.";
+				}
+
+				leaf current_load_min_value {
+					type uint16;
+					description "Current load min value.";
+				}
+
+				leaf current_load_max_value {
+					type uint16;
+					description "Current load max value.";
+				}
+
+				leaf ipv4_enable {
+					type boolean;
+					description "Whether ARS is enabled over IPv4 packets";
+				}
+
+				leaf ipv6_enable {
+					type boolean;
+					description "Whether ARS is enabled over IPv6 packets";
+				}
+			}
+			/* end of list ARS_PORIFLE_LIST */
+		}
+		/* end of container ARS_PORIFLE */
+
+		container ARS_INTERFACE {
+
+			list ARS_INTERFACE_LIST {
+				description  "List of interfaces participating in ARS";
+				key "if_name";
+
+				leaf if_name {
+					type union {
+						type leafref {
+							path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+						}
+						type leafref {
+							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+						}
+					}
+					description "ARS-enabled interface name";
+				}
+			}
+			/* end of list ARS_INTERFACE_LIST */
+		}
+		/* end of container ARS_INTERFACE */
+
+		container ARS_NEXTHOP_GROUP {
+
+			description "ARS-enabled Nexthop Groups";
+
+			list ARS_NEXTHOP_GROUP_LIST {
+
+				key "ip_prefix vrf_name";
+
+				leaf ip_prefix{
+					type stypes:sonic-ip-prefix;
+					description "Ip prefix which identifies nexthop group for which ARS behavior is desired";
+				}
+
+				leaf vrf_name {
+					type union {
+						type string {
+							pattern "default";
+						}
+						type leafref {
+							path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+						}
+					}
+					description "VRF name";
+				} 
+
+				leaf profile_name {
+					description "ARS profile Name";
+					type leafref {
+						path "/sars:sonic-ars/sars:ARS_PROFILE/sars:ARS_PROFILE_LIST/sars:profile_name";
+					}
+				}
+
+				leaf assign_mode {
+					type enumeration {
+						enum per_flowlet_quality{
+							description "Per flow-let assignment based on flow quality";
+						}
+						enum per_packet {
+							description "Per packet flow assignment based on port load";
+						}
+					}
+				}
+
+				leaf flowlet_idle_time {
+					type uint16;
+					description  "Idle duration in microseconds. This duration is to classifying a flow-let in a macro flow.";
+				}
+
+				leaf max_flows {
+					type uint32;
+					description  "Maximum number of flow states that can be maintained per ARS object.";
+				}
+
+				leaf primary_path_threshold {
+					type uint32;
+					description  "Primary path metric";
+				}
+			}
+			/* end of list ARS_NEXTHOP_GROUP_LIST */
+		}
+		/* end of container ARS_NEXTHOP_GROUP */
+
+
+		container ARS_PORTCHANNEL {
+
+			description "ARS-enabled LAGs";
+
+			list ARS_PORTCHANNEL_LIST {
+
+				key "if_name";
+
+				leaf if_name{
+					type leafref {
+						path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+					}
+					description "Interface name which identifies LAG for which ARS behavior is desired";
+				}
+
+				leaf profile_name {
+					description "ARS profile Name";
+					type leafref {
+						path "/sars:sonic-ars/sars:ARS_PROFILE/sars:ARS_PROFILE_LIST/sars:profile_name";
+					}
+				}
+
+				leaf assign_mode {
+					type enumeration {
+						enum per_flowlet_quality{
+							description "Per flow-let assignment based on flow quality";
+						}
+						enum per_packet {
+							description "Per packet flow assignment based on port load";
+						}
+					}
+				}
+
+				leaf flowlet_idle_time {
+					type uint16;
+					description  "Idle duration in microseconds. This duration is to classifying a flow-let in a macro flow.";
+				}
+
+				leaf max_flows {
+					type uint32;
+					description  "Maximum number of flow states that can be maintained per ARS object.";
+				}
+
+				leaf primary_path_threshold {
+					type uint32;
+					description  "Primary path metric";
+				}
+			}
+			/* end of list ARS_PORTCHANNEL_LIST */
+		}
+		/* end of container ARS_PORTCHANNEL */
+	}
+}
