@@ -1,0 +1,176 @@
+//
+// Copyright 2024 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package gnoi.pcap;
+
+option go_package = "github.com/openconfig/gnoi/packet_capture;pcap";
+
+// The PacketCapture service exported by targets.
+service PacketCapture {
+  // Pcap starts packet capture on the target and streams back the results as
+  // raw data packets that should be appropriately decoded by the receiver.
+  // For example, most commonly an Ethernet decoder would be used for a typical
+  // WiredRequest.  A WirelessRequest may require a Prism decoder or
+  // related 802.11 decoder.
+  rpc Pcap(PcapRequest) returns (stream PcapResponse) {}
+}
+
+enum OperatingBand {
+  BAND_2G = 0;
+  BAND_5G = 1;
+  BAND_6G = 2;
+  BAND_ALL = 3;
+}
+
+enum Protocol {
+  TCP = 0;
+  UDP = 1;
+}
+
+enum Direction {
+  // When applied to an interface, the Direction of packets to capture, receive
+  // transmit, or both.
+  RX = 0;
+  TX = 1;
+  BOTH = 2;
+}
+
+enum ChannelWidth {
+  WIDTH_20MHZ = 0;
+  WIDTH_40MHZ = 1;
+  WIDTH_80MHZ = 2;
+  WIDTH_160MHZ = 3;
+}
+
+// The capture is performed on the operating access radio(s) and it is not
+// client impacting.
+message AccessCaptureType {
+  // Operating band: 2.4G, 5G, 6G.
+  repeated OperatingBand operating_band = 1;
+  oneof filter_type {
+    // Optional, SSID of a VAP.
+    string ssid = 2;
+    // Optional, MAC addresss matching a BSSID or a client MAC.
+    string mac = 3;
+  }
+  // Capture packets in promiscuous mode.  When enabled, all possible packets
+  // meeting the criteria are captured.  When disabled, only own tx/rx packets
+  // meeting the criteria are captured.
+  bool promiscuous_mode = 4;
+}
+
+message ChannelInfo {
+  // Channels.
+  string channel = 1;
+  // Channel width: 20/40/80/160 MHz, if not specified defaults to 20MHz.
+  ChannelWidth channel_width = 2;
+}
+
+// BandChannelCombo specifies the bands and channels to capture on.  
+message BandChannelCombo {
+  // Operating band: 2.4G, 5G, 6G.
+  OperatingBand operating_band = 1;
+  // Channel Info.
+  repeated ChannelInfo channel_info = 2;
+}
+
+// A ScanCaptureType on a dedicated scan radio.  If a dedicated scan radio does
+// not exist, the device may turn an access radio(s) into scan radio(s), which
+// may impact clients.
+message ScanCaptureType {
+  repeated BandChannelCombo combo = 1;
+  // Channel capture duration in nanoseconds, if not specified
+  // defaults to something, supported by the platform.
+  uint64 dwell_time = 2;
+}
+
+message Filter {
+  // Different types of filtering options.
+
+  // filter_name can be a reference to a filter already configured on the device
+  // such as an ACL/class-map or other platform-specific abstraction that
+  // may allow for the configuration of other filtering not otherwise available.
+  string filter_name = 1;
+  // Source/destination net may be used to match traffic and should be specified
+  // using CIDR notation.  eg. 1.1.1.1/32
+  string src_net = 2;
+  string dest_net = 3;
+  repeated Protocol protocol = 4;
+  // The specific protocol port number to match, eg. HTTP=80.
+  repeated uint32 port = 5;
+  // A VLAN ID.
+  repeated uint32 vlan = 6;
+}
+
+message WiredRequest {
+  // Interface name.
+  string ifname = 1;
+  // The Direction to capture from, if not specified defaults to BOTH.
+  Direction direction = 2;
+  // Filtering based on protocols.
+  oneof filter_type {
+    // A tcpdump expression: https://www.tcpdump.org/manpages/pcap-filter.7.html
+    // if raw expressions are supported by the device.
+    string tcpdump_expression = 3;
+    // A Filter as defined in a message.
+    Filter filter = 4;
+  }
+}
+
+message WirelessRequest {
+  // A WirelessRequest may be on the access radio(s) or a dedicated scan
+  // radio(s). On a device with a dedicated scan radio, an AccessCaptureType or
+  // ScanCaptureType should not impact clients -- the access radios should not
+  // go off channel or stop servicing clients.  On a device *without* a
+  // dedicated scan radio, an AccessCaptureType should not be client impacting.
+  // If ScanCaptureType is used on a device without a dedicated scan radio; the
+  // device MAY impact clients and honor the packet capture requirements.
+  oneof capture_type {
+    // Access radio.
+    AccessCaptureType access_type = 1;
+    // Scan radio.
+    ScanCaptureType scan_type = 2;
+  }
+}
+
+message PcapRequest {
+  oneof request_type {
+    // Wired capture request.
+    WiredRequest wired_request = 1;
+    // Wireless capture request.
+    WirelessRequest wireless_request = 2;
+  }
+  // Bytes to trim the data during packet capture: 0 for entire packet.
+  uint32 trim_payload = 3;
+  // The number of pakets to capture, after which the capture will end; 0 for
+  // for unlimited.
+  uint32 packet_count = 4;
+  // Capture duration in nanoseconds; 0 for indefinite.
+  uint64 duration = 5;
+}
+
+message Packet {
+  // The raw bytes making up the packet.
+  bytes data = 1;
+}
+
+message PcapResponse {
+  // A packet is the raw network packet that must be decoded. Libraries exist
+  // for different languages for decoding.
+  // Python: https://scapy.readthedocs.io/en/latest/api/scapy.layers.html
+  // GoLang: https://github.com/google/gopacket/blob/master/layers/layertypes.go
+  repeated Packet packets = 1;
+}
