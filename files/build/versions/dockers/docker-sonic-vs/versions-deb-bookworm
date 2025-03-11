@@ -98,7 +98,7 @@ pkgconf==1.8.1-1
 protobuf-c-compiler==1.4.1-1+b1
 psmisc==23.6-1
 python3-scapy==2.5.0+dfsg-2
-redis-server==5:7.0.15-1~deb12u2
+redis-server==5:7.0.15-1~deb12u3
 rpcsvc-proto==1.4.3-1
 runit-helper==2.15.2
 sensible-utils==0.0.17+nmu1

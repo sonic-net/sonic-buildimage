@@ -173,7 +173,10 @@ def initialize_chassis_thermals():
                 thermal_list.append(create_indexable_thermal(rule, index, CHASSIS_THERMAL_SYSFS_FOLDER, position))
                 position += 1
         elif thermal_type == 'discrete':
-            thermal_list.extend(create_discrete_thermal(rule))
+            discrete_thermals = create_discrete_thermal(rule, position)
+            if discrete_thermals:
+                position += len(discrete_thermals)
+                thermal_list.extend(discrete_thermals)
         else:
             thermal_object = create_single_thermal(rule, CHASSIS_THERMAL_SYSFS_FOLDER, position)
             if thermal_object:
@@ -280,10 +283,9 @@ def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
         return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, high_th_default, high_crit_th_default, scale, position, presence_cb)
 
 
-def create_discrete_thermal(rule):
+def create_discrete_thermal(rule, position):
     search_pattern = rule.get('search_pattern')
     index_pattern = rule.get('index_pattern')
-    position = 1
     thermal_list = []
     for file_path in glob.iglob(search_pattern):
         file_name = os.path.basename(file_path)

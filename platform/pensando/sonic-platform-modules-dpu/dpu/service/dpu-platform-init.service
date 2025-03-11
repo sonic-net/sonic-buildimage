@@ -1,0 +1,16 @@
+[Unit]
+Description=Pensando DPU platform init service
+Requires=dpu.service
+
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/dpu_pensando_util.py
+RemainAfterExit=yes
+StandardOutput=syslog+console
+StandardError=syslog+console
+
+[Install]
+WantedBy=sonic.target

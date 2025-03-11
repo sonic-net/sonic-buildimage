@@ -79,7 +79,9 @@ def
             {%- endif %}
         {%- endif %}
     {%- endfor %}
-    {%- if cable_len -%}
+    {%- if port_name in PORT_DPC -%}
+        {{ '0m' }}
+    {%- elif cable_len -%}
         {{ cable_len.0 }}
     {%- else %}
         {%- if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
