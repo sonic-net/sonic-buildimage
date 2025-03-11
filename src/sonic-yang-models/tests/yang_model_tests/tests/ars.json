@@ -1,0 +1,37 @@
+{
+    "ARS_TEST": {
+        "desc": "Sample config in ARS."
+    },
+    "ARS_TEST_TOO_MANY_PROFILES": {
+        "desc": "ARS configuration with more than one profile ARS_PROFILE_LIST table.",
+        "eStr": "Too many ARS_PROFILE_LIST elements."
+    },
+    "ARS_TEST_OBJECT_INVALID_MODE": {
+        "desc": "Object configuration with invalid mode value in ARS_OBJECT_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "assign_mode"
+        ]
+    },
+    "ARS_PREFIX_TEST_INVALID_PREFIX": {
+        "desc": "Prefix configuration with invalid value in ARS_NEXTHOP_GROUP_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "ip_prefix"
+        ]
+    },
+    "ARS_INTERFACE_TEST_INVALID_LINK": {
+        "desc": "Interface configuration with invalid name in ARS_INTERFACE_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "if_name"
+        ]
+    },
+    "ARS_TEST_LAG_INVALID_NAME": {
+        "desc": "LAG with invalid name in ARS_PORTCHANNEL_LIST table.",
+        "eStrKey": "LeafRef",
+        "eStr": [
+           "PortChannel0001"
+	    ]
+    }
+}
