@@ -1,0 +1,21 @@
+!
+! template: bgpd/templates/msft.general/v6.leaf.spine.fairwater.backend/policy.conf.j2
+!
+bgp community-list standard LargeComputeAI_BackEnd_BT2 permit 8075:9326
+!
+route-map TO_BE_TIER2_V6 deny 100
+  match community LargeComputeAI_BackEnd_BT2
+!
+route-map TO_BE_TIER2_V6 permit 110
+!
+route-map FROM_BE_TIER2_V6 permit 100
+  set ipv6 next-hop prefer-global
+  on-match next
+!
+route-map FROM_BE_TIER2_V6 permit 110
+  set community 8075:9326 additive
+!
+route-map FROM_BE_TIER2_V6 permit 120
+!
+! end of template: bgpd/templates/msft.general/v6.leaf.spine.fairwater.backend/policy.conf.j2
+!

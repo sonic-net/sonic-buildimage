@@ -15,6 +15,12 @@
 {% else %}
 {% set is_compute_ai = "false" %}
 {% endif %}
+{% set mgmt_type = CONFIG_DB__DEVICE_METADATA['localhost']['MgmtType'] %}
+{% if mgmt_type is defined and mgmt_type == 'FairWater' %}
+{% set is_fairwater = "true" %}
+{% else %}
+{% set is_fairwater = "false" %}
+{% endif %}
 {% if neighbor_deployment_id is not defined or neighbor_deployment_id | length == 0 %}
 {% set neighbor_deployment_id = 0 %}
 {% endif %}
@@ -103,6 +109,12 @@
 {%             include path_template % "v6.tor.rotterdam" %}
 {%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v6.tor.rotterdam" %}
+{%         elif neighbor_type == 'BackEndToRRouter' and is_fairwater == 'true' and device_type == 'ToRRouter' %}
+{%             include path_template % "v6.tor.fairwater.frontend" %}
+{%         elif neighbor_type == 'BackEndLeafRouter' and is_fairwater == 'true' and device_type == 'BackEndToRRouter' %}
+{%             include path_template % "v6.tor.fairwater.backend" %}
+{%         elif neighbor_type == 'ToRRouter' and is_fairwater == 'true' and device_type == 'BackEndToRRouter' %}
+{%             include path_template % "v6.tor.fairwater.backend.frontend" %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' %}
 {%             include path_template % "v6.tor.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_compute_ai == 'true' and device_type == 'BackEndToRRouter' %}
@@ -115,13 +127,17 @@
 {%     elif device_type in ['LeafRouter', 'BackEndLeafRouter'] %}
 {%         if neighbor_type in ['SpineRouter', 'EdgeVpnAggregator', 'EdgeSpineRouter'] %}
 {%             include path_template % "v6.leaf.spine" %}
-{%         elif neighbor_type in ['ToRRouter', 'BackEndToRRouter', 'AggRouter', 'VpnAggregator'] %}
+{%         elif neighbor_type in ['ToRRouter', 'BackEndToRRouter', 'AggRouter', 'VpnAggregator', 'BackEndSpineRouter'] %}
 {%             if neighbor_deployment_id is defined and neighbor_deployment_id == '26' %}
 {%                 include path_template % "v6.leaf.tor.tycoon" %}
 {%             elif neighbor_deployment_id is defined and neighbor_deployment_id == '19' %}
 {%                 include path_template % "v6.leaf.tor.dnsagg" %}
 {%             elif neighbor_deployment_id is defined and neighbor_deployment_id == '21' %}
-{%                 include path_template % "v6.leaf.tor.dnsagg" %}				
+{%                 include path_template % "v6.leaf.tor.dnsagg" %}
+{%             elif neighbor_type == 'BackEndToRRouter' and is_fairwater == 'true' and device_type == 'BackEndLeafRouter' %}
+{%                 include path_template % "v6.leaf.tor.fairwater.backend" %}
+{%             elif neighbor_type == 'BackEndSpineRouter' and is_fairwater == 'true' and device_type == 'BackEndLeafRouter' %}
+{%                 include path_template % "v6.leaf.spine.fairwater.backend" %}
 {%             elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' and device_type == 'BackEndLeafRouter' %}
 {%                 include path_template % "v6.leaf.ai.backend" %}
 {%             else %}
@@ -136,13 +152,15 @@
 {%         else %}
 {%                 include path_template % "v6.leaf.tor.all" %}
 {%         endif %}
-{%     elif device_type in ['SpineRouter'] %}
+{%     elif device_type in ['SpineRouter', 'BackEndSpineRouter'] %}
 {%         if neighbor_type == 'RegionalHub' %}
 {%                 include path_template % "v6.spine.rh" %}
 {%         elif neighbor_type == 'AZNGHub' %}
 {%                 include path_template % "v6.spine.ah" %}
 {%         elif neighbor_type == 'LeafRouter' %}
 {%                 include path_template % "v6.spine.leaf" %}
+{%         elif neighbor_type == 'BackEndLeafRouter' and is_fairwater == 'true' and device_type == 'BackEndSpineRouter' %}
+{%                 include path_template % "v6.spine.leaf.fairwater.backend" %}
 {%         endif %}
 {%     elif device_type in ['VirtualMachine'] %}
 {%         include path_template % "v6.vm" %}
