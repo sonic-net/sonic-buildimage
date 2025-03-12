@@ -1118,7 +1118,17 @@ $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz :
 	$(HEADER)
 
 	rm -rf $@ $@.log
-	cp files/dsc/pensando-sonic-artifacts/docker-dpu-base.gz target/docker-dpu-base.gz
+	wget "$($*.gz_URL)" -O target/$(DOWNLOADED_DOCKER_IMAGES) $(LOG)
+
+	$(FOOTER)
+
+# Targets for copy docker images
+$(addprefix $(TARGET_PATH)/,$(COPY_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
+		$$(%.gz_DEP_FILES)
+	$(HEADER)
+
+	rm -rf $@ $@.log
+	cp "$($*.gz_PATH)/$*.gz"  target/$(DOWNLOADED_DOCKER_IMAGES) $(LOG) 
 
 	$(FOOTER)
 
@@ -1285,6 +1295,7 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES))
 DOCKER_LOAD_TARGETS = $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 		      $(SONIC_SIMPLE_DOCKER_IMAGES) \
 		      $(DOWNLOADED_DOCKER_IMAGES) \
+		      $(COPY_DOCKER_IMAGES) \
 		      $(DOCKER_IMAGES) \
 		      $(DOCKER_DBG_IMAGES)))
 
