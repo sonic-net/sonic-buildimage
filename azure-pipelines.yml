@@ -83,6 +83,11 @@ stages:
         variables:
            PLATFORM_NAME: marvell
            PLATFORM_ARCH: arm64
+      - name: pensando
+        pool: sonicbld-arm64
+        variables:
+           PLATFORM_NAME: pensando
+           PLATFORM_ARCH: arm64
       - name: marvell-armhf
         pool: sonicbld-armhf
         timeoutInMinutes: 1200
