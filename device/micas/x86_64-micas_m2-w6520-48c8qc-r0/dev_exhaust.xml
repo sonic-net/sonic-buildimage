@@ -57,22 +57,22 @@
         </fan>
     </fans>
     <temps>
-        <temp id="air_inlet_TL" >
+        <temp id="air_outlet_TL" >
             <property name="temp1_input" location="/sys/bus/i2c/devices/80-004f/hwmon/*/temp1_input" type="1" />
             <property name="temp1_max"     location="/sys/bus/i2c/devices/80-004f/hwmon/*/temp1_max" type="1" />
             <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/80-004f/hwmon/*/temp1_max_hyst" type="1"/>
         </temp>
-        <temp id="air_inlet_BL" >
+        <temp id="air_outlet_BL" >
             <property name="temp1_input" location="/sys/bus/i2c/devices/79-004b/hwmon/*/temp1_input" type="1" />
             <property name="temp1_max"     location="/sys/bus/i2c/devices/79-004b/hwmon/*/temp1_max" type="1" />
             <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/79-004b/hwmon/*/temp1_max_hyst" type="1"/>
         </temp>
-        <temp id="air_outlet_L" >
+        <temp id="air_inlet_L" >
             <property name="temp1_input" location="/sys/bus/i2c/devices/76-0048/hwmon/*/temp1_input" type="1" />
             <property name="temp1_max"     location="/sys/bus/i2c/devices/76-0048/hwmon/*/temp1_max" type="1" />
             <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/76-0048/hwmon/*/temp1_max_hyst" type="1"/>
         </temp>
-        <temp id="air_outlet_R" >
+        <temp id="air_inlet_R" >
             <property name="temp1_input" location="/sys/bus/i2c/devices/76-0049/hwmon/*/temp1_input" type="1" />
             <property name="temp1_max"     location="/sys/bus/i2c/devices/76-0049/hwmon/*/temp1_max" type="1" />
             <property name="temp1_max_hyst"       location="/sys/bus/i2c/devices/76-0049/hwmon/*/temp1_max_hyst" type="1"/>
