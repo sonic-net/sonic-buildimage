@@ -624,9 +624,6 @@ def is_dpu():
     if not platform:
         return False
 
-    if not is_smartswitch():
-        return False
-
     # Retrieve platform.json data
     platform_data = get_platform_json_data()
     if platform_data:
