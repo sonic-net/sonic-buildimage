@@ -98,7 +98,49 @@ module sonic-vnet {
                     type yang:mac-address;
                 }
             }
+            /* end of list VNET_LIST */
         }
-    }
-}
+        /* end of container VNET */
 
+        container VNET_ROUTE_TUNNEL {
+
+            description "ConfigDB VNET_ROUTE_TUNNEL table";
+            
+            list VNET_ROUTE_TUNNEL_LIST {
+                key "vnet_name prefix";
+
+                leaf vnet_name {
+                    description "VNET name";
+                    type leafref {
+                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                    }
+                }
+                
+                leaf prefix {
+                    description "IPv4 prefix in CIDR format";
+                    type stypes:sonic-ip4-prefix;
+                }
+                
+                leaf endpoint {
+                    description "Endpoint/nexthop tunnel IP";
+                    type inet:ipv4-address;
+                    mandatory true;
+                }
+
+                leaf mac_address {
+                    description "Inner dest mac in encapsulated packet";
+                    type yang:mac-address;
+                }
+
+                leaf vni {
+                    description "A valid and active vni value in encapsulated packet";
+                    type stypes:vnid_type;
+                }
+            }
+            /* end of list VNET_ROUTE_TUNNEL_LIST */
+        }
+        /* end of container VNET_ROUTE_TUNNEL */
+    }
+    /* end of container sonic-vnet */
+}
+/* end of module sonic-vnet */
