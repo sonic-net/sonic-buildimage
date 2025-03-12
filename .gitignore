@@ -50,7 +50,6 @@ files/Aboot/boot0
 files/dsc/MANIFEST
 files/dsc/install_debian
 files/dsc/fs.zip
-files/dsc/pensando-sonic-artifacts
 files/initramfs-tools/arista-convertfs
 files/initramfs-tools/union-mount
 
@@ -94,6 +93,7 @@ platform/broadcom/sonic-platform-modules-dell/z9100/modules/dell_ich.c
 platform/broadcom/sonic-platform-modules-dell/z9100/modules/dell_mailbox.c
 platform/broadcom/sonic-platform-modules-dell/z9264f/sonic_platform/ipmihelper.py
 platform/cisco-8000
+platform/pensando/pensando-sonic-artifacts
 
 # buildinfo
 files/build/buildinfo
