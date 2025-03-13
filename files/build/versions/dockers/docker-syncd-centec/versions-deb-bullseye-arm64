@@ -36,4 +36,4 @@ rpcbind==1.2.5-9
 sensible-utils==0.0.14
 swig==4.0.2-1
 swig4.0==4.0.2-1
-ucf==3.0043
+ucf==3.0043+deb11u2

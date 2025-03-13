@@ -106,7 +106,7 @@ docbook-xsl==1.79.2+dfsg-1
 docker-buildx-plugin==0.10.5-1~debian.11~bullseye
 docker-ce==5:24.0.2-1~debian.11~bullseye
 docker-ce-cli==5:24.0.2-1~debian.11~bullseye
-docker-ce-rootless-extras==5:27.5.0-1~debian.11~bullseye
+docker-ce-rootless-extras==5:27.5.1-1~debian.11~bullseye
 docker-compose-plugin==2.18.1-1~debian.11~bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
@@ -176,9 +176,9 @@ gir1.2-gtk-3.0==3.24.24-4+deb11u4
 gir1.2-harfbuzz-0.0==2.7.4-1
 gir1.2-packagekitglib-1.0==1.2.2-2
 gir1.2-pango-1.0==1.46.2-3
-git==1:2.30.2-1+deb11u3
+git==1:2.30.2-1+deb11u4
 git-buildpackage==0.9.22
-git-man==1:2.30.2-1+deb11u3
+git-man==1:2.30.2-1+deb11u4
 glib-networking==2.66.0-2
 glib-networking-common==2.66.0-2
 glib-networking-services==2.66.0-2
@@ -1884,7 +1884,7 @@ tipa==2:1.3-20.1
 tk==8.6.11+1
 tk8.6==8.6.11-2
 tk8.6-blt2.5==2.5.3+dfsg-4.1
-ucf==3.0043
+ucf==3.0043+deb11u2
 unattended-upgrades==2.8
 unzip==6.0-26+deb11u1
 uuid-dev==2.36.1-8+deb11u2

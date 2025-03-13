@@ -99,7 +99,7 @@ conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
 conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast']
-conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s unicast' % af]
+conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s %s' % (af, 'evpn' if af == 'l2vpn' else 'unicast')]
 
 bgp_globals_data = [
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'local_asn': 100},
@@ -131,6 +131,8 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}distance bgp 100 115 238']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-all-vni': 'true'},
                        conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-all-vni']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-svi-ip': 'true'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-svi-ip']),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'local_asn': 200},
                        conf_bgp_dft_cmd('Vrf_red', 200), False, conf_no_bgp_cmd('Vrf_red', 200), None, None, None),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'med_confed': 'true'},
@@ -149,9 +151,76 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
 ]
 
+# Add admin status test cases for BGP_NEIGHBOR_AF and BGP_PEER_GROUP_AF
+address_families = ['ipv4', 'ipv6', 'l2vpn']
+admin_states = [
+    ('true', '{}neighbor {} activate'),
+    ('false', '{}no neighbor {} activate'),
+    ('up', '{}neighbor {} activate'),
+    ('down', '{}no neighbor {} activate')
+]
+
+def create_af_test_data(table_name):
+    # Start with BGP globals setup
+    test_data = [
+        CmdMapTestInfo('BGP_GLOBALS', 'default',
+                      {'local_asn': '100'},
+                      conf_bgp_dft_cmd('default', 100),
+                      ignore_tail=None)
+    ]
+    for af in address_families:
+        af_key = f"{af}_{'evpn' if af == 'l2vpn' else 'unicast'}"
+        if af == 'ipv4':
+            entries = [('PG_IPV4_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+        elif af == 'ipv6':
+            entries = [('PG_IPV6_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('2001:db8::1', 'default')]
+        else:  # l2vpn case
+            entries = [('PG_EVPN_1', 'default')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                      [('10.0.0.1', 'default')]
+
+        for entry, vrf in entries:
+            for status, cmd_template in admin_states:
+                test_data.append(
+                    CmdMapTestInfo(
+                        table_name,
+                        f'{vrf}|{entry}|{af_key}',
+                        {'admin_status': status},
+                        conf_bgp_af_cmd(vrf, 100, af) + [cmd_template.format('', entry)]
+                    )
+                )
+    return test_data
+
+# Create test data for both neighbor and peer group AF
+neighbor_af_data = create_af_test_data('BGP_NEIGHBOR_AF')
+peer_group_af_data = create_af_test_data('BGP_PEER_GROUP_AF')
+
+# Create test data for neighbor shutdown
+neighbor_shutdown_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  ignore_tail=None),
+    # Then add neighbor shutdown configuration
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.1',
+                  {'admin_status': 'down', 'shutdown_message': 'maintenance'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 shutdown message maintenance']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.2',
+                  {'admin_status': 'false', 'shutdown_message': 'planned outage'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.2 shutdown message planned outage']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.4',
+                  {'admin_status': 'up'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.4 shutdown']),
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.5',
+                  {'admin_status': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
-def data_set_del_test(test_data, run_cmd):
+def data_set_del_test(test_data, run_cmd, skip_del=False):
     from frrcfgd.frrcfgd import BGPConfigDaemon
     daemon = BGPConfigDaemon()
     data_buf = {}
@@ -163,6 +232,10 @@ def data_set_del_test(test_data, run_cmd):
         CmdMapTestInfo.add_test_data(test)
         hdlr[0](test.table_name, test.key, CmdMapTestInfo.get_test_data(test))
         test.check_running_cmd(run_cmd, False)
+
+    if skip_del:
+        return
+
     # delete data in reverse direction
     for test in reversed(test_data):
         if test.no_del:
@@ -176,3 +249,18 @@ def data_set_del_test(test_data, run_cmd):
 
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
+
+def test_bgp_neighbor_af():
+    # The neighbor AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_af_data, skip_del=True)
+
+def test_bgp_peer_group_af():
+    # The peer group AF test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(peer_group_af_data, skip_del=True)
+
+def test_bgp_neighbor_shutdown():
+    # The neighbor shutdown msg test cases explicitly verify delete behavior, so skip the delete
+    # verification data_set_del_test (else it would try the del of 'no ' commands as well and fail)
+    data_set_del_test(neighbor_shutdown_data, skip_del=True)

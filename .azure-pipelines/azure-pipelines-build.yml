@@ -94,23 +94,23 @@ jobs:
           variables:
             dbg_image: yes
 
-        - name: marvell-armhf
+        - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-armhf
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
 
-        - name: marvell-arm64
+        - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-arm64
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
 
-        - name: marvell
+        - name: marvell-prestera
 
         - name: mellanox
           variables:
@@ -135,6 +135,10 @@ jobs:
           pool: sonicbld-arm64
           variables:
             PLATFORM_ARCH: arm64
+
+        - name: vpp
+          variables:
+            dbg_image: yes
 
     buildSteps:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
@@ -167,6 +171,12 @@ jobs:
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
               rm target/sonic-vs.img
             fi
+          elif [ $(GROUP_NAME) == vpp ]; then
+            if [ $(dbg_image) == yes ]; then
+              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
+              mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
+            fi
+            make $BUILD_OPTIONS target/sonic-vpp.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
