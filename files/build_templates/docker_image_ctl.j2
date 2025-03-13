@@ -212,7 +212,6 @@ function postStartAction()
            fi
 
            # Configure IP address and enable eth1
-           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + 10))
            slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + $ip_offset))
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
