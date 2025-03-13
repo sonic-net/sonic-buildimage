@@ -56,7 +56,6 @@ class Watchdog(WatchdogBase):
         ret_time = 0
         try:
             stat_output_list = self.exec_cmd(status_cmd).split('\n')
-            print(stat_output_list)
             bootctl_stat_dict = {item.split(': ')[0]: item.split(': ')[1] for item in stat_output_list}
             ret_status = bootctl_stat_dict.get('boot watchdog mode', 'disabled')
             ret_time = int(bootctl_stat_dict.get('boot watchdog interval', 0))
@@ -123,7 +122,6 @@ class Watchdog(WatchdogBase):
         """
         conf_mode, conf_time = self.get_conf_time_and_mode()
         armed = conf_mode == 'standard'
-        print(f"Armed value {armed} and conf_mode = {conf_mode}")
         if not time_check:
             return armed
         return armed and (time_check == conf_time)

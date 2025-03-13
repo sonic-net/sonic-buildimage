@@ -41,7 +41,7 @@ class TestUtils:
 
     def test_write_file(self):
         file_path = '/tmp/test.txt'
-        utils.write_file(file_path, '3.14 ')
+        utils.write_file(file_path, '3.14')
         assert utils.read_float_from_file(file_path) == 3.14
 
         with pytest.raises(IOError):
