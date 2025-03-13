@@ -52,10 +52,13 @@ def test_set_del():
         True,
         [
             ["router bgp 65100",
-             " no bgp network import-check"],
+             " no bgp network import-check",
+             "exit"],
             ["router bgp 65100",
              " address-family ipv4 unicast",
-             "  network 10.1.0.0/24"]
+             "  network 10.1.0.0/24",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -67,7 +70,9 @@ def test_set_del():
         [
             ["router bgp 65100",
              " address-family ipv6 unicast",
-             "  network fc00:10::/64"]
+             "  network fc00:10::/64",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -79,7 +84,9 @@ def test_set_del():
         [
             ["router bgp 65100",
              " address-family ipv4 unicast",
-             "  no network 10.1.0.0/24"]
+             "  no network 10.1.0.0/24",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -90,10 +97,13 @@ def test_set_del():
         True,
         [
             ["router bgp 65100",
-             " bgp network import-check"],
+             " bgp network import-check",
+             "exit"],
             ["router bgp 65100",
              " address-family ipv6 unicast",
-             "  no network fc00:10::/64"]
+             "  no network fc00:10::/64",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -107,10 +117,13 @@ def test_set_del_vrf():
         True,
         [
             ["router bgp 65100 vrf vrfRED",
-             " no bgp network import-check"],
+             " no bgp network import-check",
+             "exit"],
             ["router bgp 65100 vrf vrfRED",
              " address-family ipv4 unicast",
-             "  network 10.2.0.0/24"]
+             "  network 10.2.0.0/24",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -122,7 +135,9 @@ def test_set_del_vrf():
         [
             ["router bgp 65100 vrf vrfRED",
              " address-family ipv6 unicast",
-             "  network fc00:20::/64"]
+             "  network fc00:20::/64",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -134,7 +149,9 @@ def test_set_del_vrf():
         [
             ["router bgp 65100 vrf vrfRED",
              " address-family ipv4 unicast",
-             "  no network 10.2.0.0/24"]
+             "  no network 10.2.0.0/24",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -145,10 +162,13 @@ def test_set_del_vrf():
         True,
         [
             ["router bgp 65100 vrf vrfRED",
-             " bgp network import-check"],
+             " bgp network import-check",
+             "exit"],
             ["router bgp 65100 vrf vrfRED",
              " address-family ipv6 unicast",
-             "  no network fc00:20::/64"]
+             "  no network fc00:20::/64",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -169,10 +189,13 @@ def test_set_del_bgp_asn_change():
     test_set_del_bgp_asn_change.push_list_called = False
     expected_cmds = [
         ["router bgp 65100 vrf vrfRED",
-         " no bgp network import-check"],
+         " no bgp network import-check",
+         "exit"],
         ["router bgp 65100 vrf vrfRED",
          " address-family ipv4 unicast",
-         "  network 10.3.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM"]
+         "  network 10.3.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM",
+         " exit-address-family",
+         "exit"]
     ]
     def push_list(cmds):
         test_set_del_bgp_asn_change.push_list_called = True
@@ -197,10 +220,13 @@ def test_set_del_with_community():
         True,
         [
             ["router bgp 65100",
-             " no bgp network import-check"],
+             " no bgp network import-check",
+             "exit"],
             ["router bgp 65100",
              " address-family ipv4 unicast",
-             "  network 10.1.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM"]
+             "  network 10.1.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -214,7 +240,9 @@ def test_set_del_with_community():
         [
             ["router bgp 65100",
              " address-family ipv6 unicast",
-             "  network fc00:10::/64 route-map FROM_SDN_SLB_ROUTES_RM"]
+             "  network fc00:10::/64 route-map FROM_SDN_SLB_ROUTES_RM",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -226,7 +254,9 @@ def test_set_del_with_community():
         [
             ["router bgp 65100",
              " address-family ipv4 unicast",
-             "  no network 10.1.0.0/24"]
+             "  no network 10.1.0.0/24",
+             " exit-address-family",
+             "exit"]
         ]
     )
 
@@ -237,9 +267,12 @@ def test_set_del_with_community():
         True,
         [
             ["router bgp 65100",
-             " bgp network import-check"],
+             " bgp network import-check",
+             "exit"],
             ["router bgp 65100",
              " address-family ipv6 unicast",
-             "  no network fc00:10::/64"]
+             "  no network fc00:10::/64",
+             " exit-address-family",
+             "exit"]
         ]
     )
