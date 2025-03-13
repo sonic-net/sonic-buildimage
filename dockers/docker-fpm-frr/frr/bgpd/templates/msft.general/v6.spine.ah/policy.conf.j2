@@ -5,6 +5,9 @@ bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
 bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
 bgp community-list standard NO_EXPORT permit no-export
 bgp community-list standard DEVICE_INTERNAL_FALLBACK_COMMUNITY permit {{ constants.bgp.internal_fallback_community }}
+bgp community-list standard ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_route_community }}
+bgp community-list standard LOCAL_ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.local_anchor_route_community }}
+bgp community-list standard ANCHOR_CONTRIBUTING_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_contributing_route_community }}
 !
 bgp as-path access-list WAN_ASNS permit _8075_
 bgp as-path access-list WAN_ASNS permit _8074_
@@ -14,6 +17,14 @@ bgp as-path access-list RNG_ASNS permit _64945_
 bgp as-path access-list T2_LOOPBACK permit ^$
 !
 ipv6 prefix-list DEFAULT_IPV6 permit ::/0
+!
+route-map SELECTIVE_ROUTE_DOWNLOAD_V6 deny 10
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
+!
+route-map SELECTIVE_ROUTE_DOWNLOAD_V6 permit 1000
+!
+route-map TAG_ANCHOR_COMMUNITY permit 10
+  set community {{ constants.bgp.local_anchor_route_community }} {{ constants.bgp.anchor_route_community }} additive
 !
 route-map FROM_AZNG_MIGRATION_FILTER_V6 permit 1
  set ipv6 next-hop prefer-global
@@ -90,6 +101,9 @@ route-map TO_AZNG_MIGRATION_FILTER_V6 deny 4
 route-map TO_AH_V6 permit 10
   call TO_AZNG_MIGRATION_FILTER_V6
 {% endif %}
+!
+route-map TO_AH_V6 deny 1
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
 !
 route-map TO_AH_V6 permit 100
   match ipv6 address prefix-list DEFAULT_IPV6
