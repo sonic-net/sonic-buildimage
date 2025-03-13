@@ -1,0 +1,435 @@
+{#
+    Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+    Apache-2.0
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
+
+{% set PORT_DPC = [] %}
+{%- for port in PORT %}
+    {%- if 'role' in PORT[port] and PORT[port]['role'] == 'Dpc' %}
+        {%- if PORT_DPC.append(port) %}{%- endif %}
+    {%- endif %}
+{%- endfor %}
+
+{% set PROFILE_PORT_MAP = {
+    "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+        "Dpc": {
+            "active": {
+                "dynamic": "ingress_lossy_profile",
+                "static": "ingress_lossy_profile"
+            },
+            "inactive": {
+                "dynamic": "ingress_lossy_profile",
+                "static": "ingress_lossy_zero_profile"
+            }
+        },
+        "Ext": {
+            "active": {
+                "dynamic": "ingress_lossless_profile",
+                "static": "ingress_lossless_profile"
+            },
+            "inactive": {
+                "dynamic": "ingress_lossless_profile",
+                "static": "ingress_lossless_zero_profile"
+            }
+        }
+    },
+    "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+        "Dpc": {
+            "active": {
+                "dynamic": "egress_lossy_profile",
+                "static": "egress_lossy_profile"
+            },
+            "inactive": {
+                "dynamic": "egress_lossy_profile",
+                "static": "egress_lossy_zero_profile"
+            }
+        },
+        "Ext": {
+            "active": {
+                "dynamic": "egress_lossless_profile,egress_lossy_profile",
+                "static": "egress_lossless_profile,egress_lossy_profile"
+            },
+            "inactive": {
+                "dynamic": "egress_lossless_profile,egress_lossy_profile",
+                "static": "egress_lossless_zero_profile,egress_lossy_zero_profile"
+            }
+        }
+    },
+    "BUFFER_QUEUE": {
+        "Dpc": {
+            "active": {
+                "dynamic": "q_lossy_profile",
+                "static": "q_lossy_profile"
+            },
+            "inactive": {
+                "dynamic": "q_lossy_profile",
+                "static": "egress_lossy_zero_profile"
+            }
+        },
+        "Ext": {
+            "active": {
+                "dynamic": "egress_lossless_profile",
+                "static": "egress_lossless_profile"
+            },
+            "inactive": {
+                "dynamic": "egress_lossless_profile",
+                "static": "egress_lossless_zero_profile"
+            }
+        }
+    },
+    "BUFFER_PG": {
+        "Dpc": {
+            "active": {
+                "dynamic": "ingress_lossy_profile",
+                "static": "ingress_lossy_profile"
+            },
+            "inactive": {
+                "dynamic": "ingress_lossy_profile",
+                "static": "ingress_lossy_pg_zero_profile"
+            }
+        },
+        "Ext": {
+            "active": {
+                "dynamic": "NULL"
+            },
+            "inactive": {
+                "dynamic": "ingress_lossy_profile",
+                "static": "ingress_lossy_pg_zero_profile"
+            }
+        }
+    }
+} %}
+
+{%- macro find_profile_to_attach(table, port, active_status, dynamic_status) -%}
+{% if port in PORT_DPC %}
+"{{PROFILE_PORT_MAP[table]['Dpc'][active_status][dynamic_status]}}"
+{% else %}
+"{{PROFILE_PORT_MAP[table]['Ext'][active_status][dynamic_status]}}"
+{% endif %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
+    "BUFFER_POOL": {
+        {% if dynamic_mode is not defined and port_names_inactive|length > 0 -%}
+        "ingress_zero_pool" : {
+            "mode": "static",
+            "type": "ingress",
+            "size": "0"
+        },
+        {% endif -%}
+        "ingress_lossless_pool": {
+            {% if dynamic_mode is not defined -%}
+            "size": "{{ ingress_lossless_pool_size }}",
+            "xoff": "{{ ingress_lossless_pool_xoff }}",
+            {% endif -%}
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "{{ egress_lossless_pool_size }}",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossy_pool": {
+            {% if dynamic_mode is not defined -%}
+            "size": "{{ egress_lossy_pool_size }}",
+            {% endif -%}
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        {% if dynamic_mode is not defined and port_names_inactive|length > 0 -%}
+        "ingress_lossy_pg_zero_profile" : {
+          "pool":"ingress_zero_pool",
+          "size":"0",
+          "static_th":"0"
+        },
+        "ingress_lossless_zero_profile" : {
+          "pool":"ingress_lossless_pool",
+          "size":"0",
+          "dynamic_th":"-8"
+        },
+        "egress_lossless_zero_profile" : {
+          "pool":"egress_lossless_pool",
+          "size":"0",
+          "dynamic_th":"-8"
+        },
+        "egress_lossy_zero_profile" : {
+          "pool":"egress_lossy_pool",
+          "size":"0",
+          "dynamic_th":"-8"
+        },
+        {% endif -%}
+        "ingress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"7"
+        },
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"7"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"9216",
+            "dynamic_th":"7"
+        },
+        "q_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}
+
+{%- macro generate_profile_lists(port_names_active, port_names_inactive) %}
+    "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}": {
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_INGRESS_PROFILE_LIST', port, 'active', 'static')}}
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% if port_names_inactive|length > 0 %}
+,
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}": {
+{% if dynamic_mode is defined %}
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_INGRESS_PROFILE_LIST', port, 'inactive', 'dynamic')}}
+{% else %}
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_INGRESS_PROFILE_LIST', port, 'inactive', 'static')}}
+{% endif %}
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+    },
+    "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+{% for port in port_names_active.split(',') %}
+        "{{ port }}": {
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_EGRESS_PROFILE_LIST', port, 'active', 'static')}}
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% if port_names_inactive|length > 0 %}
+,
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}": {
+{% if dynamic_mode is defined %}
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_EGRESS_PROFILE_LIST', port, 'inactive', 'dynamic')}}
+{% else %}
+            "profile_list" : {{find_profile_to_attach('BUFFER_PORT_EGRESS_PROFILE_LIST', port, 'inactive', 'static')}}
+{% endif %}
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+    }
+{%- endmacro %}
+
+{%- macro generate_queue_buffers_with_extra_lossless_queues(port_names_active, port_names_extra_queues, port_names_inactive) %}
+    "BUFFER_QUEUE": {
+{% set q_loop = namespace(last_valid=false) %}
+{% for port in port_names_active.split(',') %}
+{% if port not in port_names_extra_queues.split(',') %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_QUEUE', port, 'active', 'static')}}
+        },
+{% endif %}
+{% endfor %}
+{% for port in port_names_active.split(',') %}
+{% if port not in port_names_extra_queues.split(',') %}
+        "{{ port }}|0-2": {
+            "profile" : "q_lossy_profile"
+        },
+{% endif %}
+{% endfor %}
+{% for port in port_names_active.split(',') %}
+{% if port not in port_names_extra_queues.split(',') %}
+{% if port_names_extra_queues|length > 0 %}
+        "{{ port }}|5-7": {
+{% else %}
+        "{{ port }}|5-6": {
+{% endif %}
+            "profile" : "q_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% set q_loop.last_valid = true %}
+{% else %}
+{% set q_loop.last_valid = false %}
+{% endif %}
+{% endfor %}
+{% if port_names_extra_queues|length > 0 %}
+{% if q_loop.last_valid %},{% endif %}
+{% for port in port_names_extra_queues.split(',') %}
+        "{{ port }}|0-1": {
+            "profile" : "q_lossy_profile"
+        },
+        "{{ port }}|2-4": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port }}|5": {
+            "profile" : "q_lossy_profile"
+        },
+        "{{ port }}|6": {
+            "profile" : "egress_lossless_profile"
+        },
+        "{{ port }}|7": {
+            "profile" : "q_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+{% if port_names_inactive|length > 0 %}
+,
+{% if dynamic_mode is defined %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_QUEUE', port, 'inactive', 'dynamic')}}
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|0-2": {
+            "profile" : "q_lossy_profile"
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+{% if port_names_extra_queues|length > 0 %}
+        "{{ port }}|5-7": {
+{% else %}
+        "{{ port }}|5-6": {
+{% endif %}
+            "profile" : "q_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% else %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_QUEUE', port, 'inactive', 'static')}}
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_zero_profile"
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+{% if port_names_extra_queues|length > 0 %}
+        "{{ port }}|5-7": {
+{% else %}
+        "{{ port }}|5-6": {
+{% endif %}
+            "profile" : "egress_lossy_zero_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+{% endif %}
+    }
+{%- endmacro %}
+
+{%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
+{{ generate_queue_buffers_with_extra_lossless_queues(port_names_active, "", port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_pg_profiles_with_extra_lossless_pgs(port_names_active, port_names_extra_pgs, port_names_inactive) %}
+    "BUFFER_PG": {
+{% set pg_loop = namespace(last_valid=false) %}
+{% for port in port_names_active.split(',') %}
+{% if port not in port_names_extra_pgs.split(',') %}
+{% if dynamic_mode is defined %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'dynamic')}}
+        },
+{% else %}
+{% if port in PORT_DPC %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'static')}}
+        },
+{% endif %}
+{% endif %}
+        "{{ port }}|0": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% set pg_loop.last_valid = true %}
+{% else %}
+{% set pg_loop.last_valid = false %}
+{% endif %}
+{% endfor %}
+{% if port_names_extra_pgs|length > 0 %}
+{% if pg_loop.last_valid %},{% endif %}
+{% for port in port_names_extra_pgs.split(',') %}
+{% if dynamic_mode is defined %}
+        "{{ port }}|2-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'dynamic')}}
+        },
+        "{{ port }}|6": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'dynamic')}}
+        },
+{% else %}
+{% if port in PORT_DPC %}
+        "{{ port }}|2-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'static')}}
+        },
+        "{{ port }}|6": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'active', 'static')}}
+        },
+{% endif %}
+{% endif %}
+        "{{ port }}|0": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+{% if port_names_inactive|length > 0 %}
+{%- for port in port_names_inactive.split(',') %}
+       {%- if loop.first -%},{%- endif -%}
+{% if dynamic_mode is defined %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'inactive', 'dynamic')}}
+        },
+{% else %}
+{% if port in PORT_DPC %}
+        "{{ port }}|3-4": {
+            "profile" : {{find_profile_to_attach('BUFFER_PG', port, 'inactive', 'static')}}
+        },
+{% endif %}
+{% endif %}
+       "{{ port }}|0": {
+{% if dynamic_mode is defined %}
+            "profile" : "ingress_lossy_profile"
+{% else %}
+            "profile" : "ingress_lossy_pg_zero_profile"
+{% endif %}
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+    }
+{%- endmacro %}
+
+{%- macro generate_pg_profiles(port_names_active, port_names_inactive) %}
+{{ generate_pg_profiles_with_extra_lossless_pgs(port_names_active, "", port_names_inactive) }}
+{%- endmacro %}
