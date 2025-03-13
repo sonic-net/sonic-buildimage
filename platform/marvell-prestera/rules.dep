@@ -1,6 +1,6 @@
-include $(PLATFORM_PATH)/docker-saiserver-mrvl.dep
-include $(PLATFORM_PATH)/docker-syncd-mrvl-rpc.dep
-include $(PLATFORM_PATH)/docker-syncd-mrvl.dep
+include $(PLATFORM_PATH)/docker-saiserver-mrvl-prestera.dep
+include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.dep
+include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.dep
 include $(PLATFORM_PATH)/libsaithrift-dev.dep
 include $(PLATFORM_PATH)/one-image.dep
 include $(PLATFORM_PATH)/platform-marvell.dep

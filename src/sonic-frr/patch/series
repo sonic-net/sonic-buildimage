@@ -61,5 +61,6 @@
 0078-vtysh-de-conditionalize-and-reorder-install-node.patch
 0079-staticd-add-support-for-srv6.patch
 0080-SRv6-vpn-route-and-sidlist-install.patch
+0081-bgpd-Optimize-evaluate-paths-for-a-peer-going-down.patch
 0082-Revert-bgpd-upon-if-event-evaluate-bnc-with-matching.patch
 0083-staticd-add-cli-to-support-steering-of-ipv4-traffic-over-srv6-sid-list.patch

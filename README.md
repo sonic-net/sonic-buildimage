@@ -5,8 +5,8 @@
 [![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=master&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=master)
 [![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=master&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
 [![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=master&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=master)
-[![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=master&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
-[![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=master&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
+[![Marvell-Prestera(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell-prestera/Azure.sonic-buildimage.official.marvell-prestera-armhf?branchName=master&label=Marvell-Prestera-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
+[![Marvell-Prestera(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell-prestera/Azure.sonic-buildimage.official.marvell-prestera-arm64?branchName=master&label=Marvell-Prestera-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
 [![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=master&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=master)
 [![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=master&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=master)
 [![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=master&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=master)
@@ -209,12 +209,12 @@ The supported ASIC vendors are:
 
 * PLATFORM=barefoot
 * PLATFORM=broadcom
-* PLATFORM=marvell
+* PLATFORM=marvell-prestera
+* PLATFORM=marvell-teralynx
 * PLATFORM=mellanox
 * PLATFORM=centec
 * PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
-* PLATFORM=marvell-teralynx
 * PLATFORM=vs
 
 ## Usage for ARM Architecture
@@ -235,22 +235,22 @@ make target/sonic-[ASIC_VENDER]-armhf.bin
 _example:_
 
 ```shell
-make configure PLATFORM=marvell PLATFORM_ARCH=armhf
-make target/sonic-marvell-armhf.bin
+make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
+make target/sonic-marvell-prestera-armhf.bin
 ```
 
-To build Arm32 bit for (ARMHF) Marvell platform on amd64 host for debian buster
+To build Arm32 bit for (ARMHF) Marvell Prestera platform on amd64 host for debian buster
 using cross-compilation, run the following commands:
 
 ```shell
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
 NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 \
-make configure PLATFORM=marvell PLATFORM_ARCH=armhf
+make configure PLATFORM=marvell-prestera PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
-NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-armhf.bin
+NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 make target/sonic-marvell-prestera-armhf.bin
 ```
 
 Running the above Arm32 build using cross-compilation instead of qemu emulator
@@ -265,7 +265,7 @@ make configure PLATFORM=[ASIC_VENDOR] PLATFORM_ARCH=arm64
 
 # example:
 
-make configure PLATFORM=marvell PLATFORM_ARCH=arm64
+make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
 ```
 
  **NOTE**:
@@ -374,6 +374,8 @@ on the SAI version for each SONiC release.
     and Nephos switch ASIC (gzip tar archive)
   * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
     and Marvell-Teralynx switch ASIC (gzip tar archive)
+  * docker-syncd-mrvl-prestera.gz: docker image for the daemon to sync database
+    and Marvell-Prestera switch ASIC (gzip tar archive)
   * docker-sonic-p4.gz: docker image for all-in-one for p4 software switch
     (gzip tar archive)
   * docker-sonic-vs.gz: docker image for all-in-one for software virtual switch
