@@ -90,7 +90,9 @@ stages:
         docker rm -f sonic-mgmt
 
         ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
-      displayName: 'Setup sonic-mgmt docker container'
+
+        docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
+      displayName: 'Setup sonic-mgmt docker container and verify'
 
     - task: Docker@2
       displayName: Upload image
