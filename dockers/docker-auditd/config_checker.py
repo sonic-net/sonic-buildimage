@@ -43,8 +43,8 @@ def get_hwsku():
 
 
 def is_auditd_rules_configured():
-    EXPECTED_HASH = "317040ff8516bd74f97e5f5570834955f52c28b6"
-    NOKIA_EXPECTED_HASH = "65a4379b1401159cf2699f34a2a014f1b50c021d"
+    EXPECTED_HASH = "f88174f901ec8709bacaf325158f10ec62909d13"
+    NOKIA_EXPECTED_HASH = "bd574779fb4e1116838d18346187bb7f7bd089c9"
     hwsku = get_hwsku()
     if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
         EXPECTED_HASH = NOKIA_EXPECTED_HASH
@@ -80,9 +80,10 @@ def main():
     is_configured = True
     hwsku = get_hwsku()
     if not is_auditd_rules_configured():
+        run_command("rm -f {}/*.rules".format(RULES_DIR))
         run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
-            run_command('for file in {}/*.rules.nokia; do sudo cp "$file" {}/$(basename "$file" .nokia); done'.format(CONFIG_FILES, RULES_DIR))
+            run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         is_configured = False
 
     if not is_syslog_conf_configured():

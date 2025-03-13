@@ -80,18 +80,12 @@ fn check_auditd_conf() -> String {
     }
 }
 
-// Check syslog.conf sha1sum
+// Check syslog.conf
 fn check_syslog_conf() -> String {
-    let cmd = format!(r#"{NSENTER_CMD} cat /etc/audit/plugins.d/syslog.conf | sha1sum"#);
+    let cmd = format!(r#"{NSENTER_CMD} grep '^active = yes' /etc/audit/plugins.d/syslog.conf"#);
     match run_command(&cmd) {
-        Ok(s) => {
-            if s.contains("9939d57c7a895b3a12f5334d191b786b89ecd022") {
-                "OK".to_string()
-            } else {
-                format!("FAIL (syslog.conf sha1 = {})", s.trim())
-            }
-        }
-        Err(e) => format!("FAIL ({})", e),
+        Ok(_) => "OK".to_string(),
+        Err(e) => format!("FAIL (syslog.conf does not contain 'active = yes': {})", e),
     }
 }
 
@@ -107,9 +101,9 @@ fn check_auditd_rules() -> String {
     };
 
     let expected = if hwsku.contains("Nokia-7215") || hwsku.contains("Nokia-M0-7215") {
-        "65a4379b1401159cf2699f34a2a014f1b50c021d"
+        "bd574779fb4e1116838d18346187bb7f7bd089c9"
     } else {
-        "317040ff8516bd74f97e5f5570834955f52c28b6"
+        "f88174f901ec8709bacaf325158f10ec62909d13"
     };
 
     let cmd = format!(
@@ -129,23 +123,17 @@ fn check_auditd_rules() -> String {
     }
 }
 
-// Check auditd.service file sha1sum
-fn check_auditd_service_sha1() -> String {
-    let cmd = format!(r#"{NSENTER_CMD} cat /lib/systemd/system/auditd.service | sha1sum"#);
+// Check auditd.service
+fn check_auditd_service() -> String {
+    let cmd = format!(r#"{NSENTER_CMD} grep '^CPUQuota=10%' /lib/systemd/system/auditd.service"#);
     match run_command(&cmd) {
-        Ok(s) => {
-            if s.contains("86ad795f89cda625220472965c1d880088796621") {
-                "OK".to_string()
-            } else {
-                format!("FAIL (auditd.service sha1 = {})", s.trim())
-            }
-        }
-        Err(e) => format!("FAIL ({})", e),
+        Ok(_) => "OK".to_string(),
+        Err(e) => format!("FAIL (auditd.service does not contain 'CPUQuota=10%': {})", e),
     }
 }
 
 // Check that auditd is active
-fn check_auditd_service_status() -> String {
+fn check_auditd_active() -> String {
     let cmd = format!(r#"{NSENTER_CMD} systemctl is-active auditd"#);
     match run_command(&cmd) {
         Ok(s) => {
@@ -157,6 +145,15 @@ fn check_auditd_service_status() -> String {
             }
         }
         Err(e) => format!("FAIL ({})", e),
+    }
+}
+
+// Check reload auditd rules
+fn check_auditd_reload_status() -> String {
+    let cmd = format!(r#"{NSENTER_CMD} auditctl -R /etc/audit/audit.rules"#);
+    match run_command(&cmd) {
+        Ok(_) => "OK".to_string(),
+        Err(e) => format!("FAIL (error message = {})", e),
     }
 }
 
@@ -181,8 +178,9 @@ fn main() {
                 let conf_result      = check_auditd_conf();
                 let syslog_result    = check_syslog_conf();
                 let rules_result     = check_auditd_rules();
-                let svc_file_sha1    = check_auditd_service_sha1();
-                let svc_status       = check_auditd_service_status();
+                let srvc_result      = check_auditd_service();
+                let srvc_active      = check_auditd_active();
+                let reload_result    = check_auditd_reload_status();
 
                 // Build a JSON object
                 let json_body = format!(
@@ -190,18 +188,20 @@ fn main() {
   "cpu_usage":"{}",
   "mem_usage":"{}",
   "auditd_conf":"{}",
-  "syslog_conf_sha1":"{}",
-  "auditd_rules_sha1":"{}",
-  "auditd_service_sha1":"{}",
-  "auditd_service_status":"{}"
+  "syslog_conf":"{}",
+  "auditd_rules":"{}",
+  "auditd_service":"{}",
+  "auditd_active":"{}",
+  "auditd_reload":"{}"
 }}"#,
                     cpu_result,
                     mem_result,
                     conf_result,
                     syslog_result,
                     rules_result,
-                    svc_file_sha1,
-                    svc_status
+                    srvc_result,
+                    srvc_active,
+                    reload_result
                 );
 
                 // Determine overall status
@@ -211,8 +211,9 @@ fn main() {
                     &conf_result,
                     &syslog_result,
                     &rules_result,
-                    &svc_file_sha1,
-                    &svc_status
+                    &srvc_result,
+                    &srvc_active,
+                    &reload_result
                 ];
                 let all_passed = all_results.iter().all(|r| r.starts_with("OK"));
 

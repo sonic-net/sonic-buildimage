@@ -36,6 +36,4 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY --from=builder /watchdog/target/release/watchdog /usr/bin/auditd_watchdog
 RUN chmod +x /usr/bin/auditd_watchdog
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl --fail-with-body http://localhost:8080
-
 ENTRYPOINT ["/usr/local/bin/supervisord"]
