@@ -20,7 +20,6 @@ findutils==4.8.0-1
 framework==1.0.0
 framework-dbg==1.0.0
 gcc-10-base==10.2.1-6
-gcc-9-base==9.3.0-22
 gdb==10.1-1.7
 gdbserver==10.1-1.7
 gpgv==2.2.27-2+deb11u2
