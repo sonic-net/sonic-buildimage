@@ -71,7 +71,7 @@ RUN pip3 install --upgrade pip
 RUN apt purge -y python3-pip
 
 # For templating
-RUN pip3 install jinjanator
+RUN pip3 install j2cli
 
 # Install supervisor
 RUN pip3 install supervisor==4.2.5

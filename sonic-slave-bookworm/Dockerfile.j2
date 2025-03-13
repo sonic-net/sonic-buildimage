@@ -306,7 +306,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
         libxslt-dev \
 {%- endif %}
-        jinjanator \
+        j2cli \
 # For lockfile
         procmail \
 # For gtest

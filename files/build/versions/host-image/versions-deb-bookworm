@@ -79,7 +79,7 @@ iptables==1.8.9-2
 iptables-persistent==1.0.20
 iputils-ping==3:20221126-1+deb12u1
 isc-dhcp-client==4.4.3-P1-2
-jinjanator==25.1.0
+j2cli==0.3.12b-4
 jq==1.6-2.1
 kdump-tools==1:1.8.1
 kernel-mft-dkms-modules-6.1.0-22-2-amd64==4.30.2
