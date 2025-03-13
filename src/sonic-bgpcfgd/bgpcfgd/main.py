@@ -22,7 +22,9 @@ from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
+from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
+from .managers_prefix_list import PrefixListMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
@@ -78,11 +80,18 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
-        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # Prefix List Manager
+        PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
     ]
 
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
+
+    switch_type = device_info.get_localhost_info("switch_type")
+    if switch_type and switch_type == "dpu":
+        log_notice("switch type is dpu, starting bfd manager")
+        managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
