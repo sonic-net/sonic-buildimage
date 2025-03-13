@@ -27,6 +27,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
     import os
+    from sonic_py_common import device_info
     from functools import reduce
     from .utils import extract_RJ45_ports_index
     from . import module_host_mgmt_initializer
@@ -56,6 +57,8 @@ REBOOT_CAUSE_READY_FILE = '/run/hw-management/config/reset_attr_ready'
 REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
+
+SYS_DISPLAY = "SYS_DISPLAY"
 
 # Global logger class instance
 logger = Logger()
@@ -742,8 +745,15 @@ class Chassis(ChassisBase):
         Returns:
             string: Model/part number of device
         """
-        self.initialize_eeprom()
-        return self._eeprom.get_part_number()
+        model = None
+        if self._read_model_from_vpd():
+            if not self.vpd_data:
+                self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
+            model = self.vpd_data.get(SYS_DISPLAY, "N/A")
+        else:
+            self.initialize_eeprom()
+            model = self._eeprom.get_part_number()
+        return model
 
     def get_base_mac(self):
         """
@@ -943,6 +953,20 @@ class Chassis(ChassisBase):
             logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
 
         return result
+
+    def _read_model_from_vpd(self):
+        """
+        Returns if model number should be returned from VPD file
+
+        Returns:
+            Returns True if spectrum version is higher than Spectrum-4 according to sku number
+        """
+        sku = device_info.get_hwsku()
+        sku_num = re.search('[0-9]{4}', sku).group()
+        # fallback to spc1 in case sku number is not available
+        if sku_num is None:
+            sku_num = 2700
+        return int(sku_num) >= 5000
 
     def _verify_reboot_cause(self, filename):
         '''
