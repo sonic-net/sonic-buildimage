@@ -45,7 +45,7 @@ RUN apt-get update &&        \
         python3-pip          \
         rsyslog              \
         vim-tiny             \
-# Install dependencies of valkey-tools
+# Install dependencies of redis-tools
         libatomic1           \
         libjemalloc2         \
         liblua5.1-0          \
@@ -63,6 +63,7 @@ RUN apt-get update &&        \
 # for sairedis zmq rpc channel
         libzmq5
 
+# Install redis-tools
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN curl -k -o redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
 RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y

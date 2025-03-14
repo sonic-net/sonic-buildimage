@@ -43,6 +43,8 @@ RUN apt-get update &&        \
         python               \
         python-pip           \
         vim-tiny             \
+# Install redis-tools
+        redis-tools=5:5.0.3-3~bpo9+2     \
 # common dependencies
         libpython2.7         \
         libdaemon0           \
@@ -60,6 +62,7 @@ RUN apt-get update &&        \
 RUN apt-get -y -t stretch-backports install rsyslog
 
 # Install redis-tools
+
 {% if CONFIGURED_ARCH == "armhf" %}
     RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
