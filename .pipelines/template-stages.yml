@@ -193,8 +193,8 @@ stages:
             parameters:
               PLATFORM_NAME: nvidia-bluefield
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-    - ${{ if containsValue(parameters.JOBS, 'marvell-armhf') }}:
-      - job: marvell_armhf
+    - ${{ if containsValue(parameters.JOBS, 'marvell-prestera-armhf') }}:
+      - job: marvell_prestera_armhf
         ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
           timeoutInMinutes: 840
         pool:
@@ -202,18 +202,18 @@ stages:
           isCustom: true
           name: sonic-armhf
         variables:
-          ob_artifactBaseName: sonic-buildimage.marvell-armhf
+          ob_artifactBaseName: sonic-buildimage.marvell-prestera-armhf
           PLATFORM_ARCH: armhf
         steps:
           - template: /.pipelines/template-presteps.yml@self
             parameters:
-              PLATFORM_NAME: marvell
+              PLATFORM_NAME: marvell-prestera
               PLATFORM_ARCH: armhf
               OPTIONS: ${{ parameters.OPTIONS }}
           - script: |
               set -ex
-              OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-armhf INCLUDE_DHCP_SERVER=y"
-              make $OPTIONS target/sonic-marvell-armhf.bin
+              OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-prestera-armhf INCLUDE_DHCP_SERVER=y"
+              make $OPTIONS target/sonic-marvell-prestera-armhf.bin
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
