@@ -1,11 +1,11 @@
-# sonic marvell one image installer
+# sonic marvell-prestera one image installer
 
 ifeq ($(CONFIGURED_ARCH),$(filter $(CONFIGURED_ARCH),arm64 armhf))
-SONIC_ONE_IMAGE = sonic-marvell-$(CONFIGURED_ARCH).bin
+SONIC_ONE_IMAGE = sonic-marvell-prestera-$(CONFIGURED_ARCH).bin
 else
-SONIC_ONE_IMAGE = sonic-marvell.bin
+SONIC_ONE_IMAGE = sonic-marvell-prestera.bin
 endif
-$(SONIC_ONE_IMAGE)_MACHINE = marvell
+$(SONIC_ONE_IMAGE)_MACHINE = marvell-prestera
 $(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie
 $(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
 ifeq ($(CONFIGURED_ARCH),arm64)

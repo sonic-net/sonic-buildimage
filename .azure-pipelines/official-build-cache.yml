@@ -45,9 +45,9 @@ stages:
           variables:
             docker_syncd_rpc_image: yes
             platform_rpc: mlnx
-        - name: marvell-armhf
+        - name: marvell-prestera-armhf
           pool: sonicbld-armhf
           timeoutInMinutes: 1200
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf

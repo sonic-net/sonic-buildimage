@@ -1483,6 +1483,56 @@ def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
     daemon.upd_nh_set = ip_nh_set
     return cmd_list
 
+def hdl_admin_status(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 1:
+        return None
+
+    cmd_list = []
+    status = args[st_idx]
+
+    # Convert up/down to true/false if needed
+    if status == 'up':
+        status = 'true'
+    elif status == 'down':
+        status = 'false'
+    elif status not in ['true', 'false']:
+        return None
+
+    # For delete operation, treat as 'false'
+    if op == CachedDataWithOp.OP_DELETE:
+        status = 'false'
+
+    # Apply the command with appropriate no prefix
+    cmd_list.append(cmd_str.format(
+        CommandArgument(daemon, True, args[0]),
+        no=CommandArgument(daemon, (status == 'true'))))
+
+    return cmd_list
+
+def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 2:
+        return None
+
+    cmd_list = []
+    status = args[st_idx]
+    shutdown_msg = args[st_idx + 1] if op != CachedDataWithOp.OP_DELETE else ""
+
+    # Convert up/down to true/false if needed
+    if status == 'up':
+        status = 'true'
+    elif status == 'down':
+        status = 'false'
+    elif status not in ['true', 'false']:
+        return None
+
+    # Apply the command with appropriate no prefix
+    cmd_list.append(cmd_str.format(
+        CommandArgument(daemon, True, args[0]),
+        CommandArgument(daemon, True, shutdown_msg),
+        no=CommandArgument(daemon, (status == 'false'))).rstrip())
+
+    return cmd_list
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -1760,7 +1810,6 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
-                      ('srv6_locator',                                  '{no:no-prefix}srv6-locator {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -1844,7 +1893,7 @@ class BGPConfigDaemon:
     cmn_key_map = [('asn&peer_type',                        '{no:no-prefix}neighbor {} remote-as {}'),
                    (['local_asn', '+local_as_no_prepend',
                      '+local_as_replace_as'],               '{no:no-prefix}neighbor {} local-as {} {:no-prepend} {:replace-as}'),
-                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', ['false', 'true']),
+                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', hdl_admin_status_shutdown_msg),
                    ('local_addr',                           '{no:no-prefix}neighbor {} update-source {}'),
                    ('name',                                 '{no:no-prefix}neighbor {} description {}'),
                    (['ebgp_multihop', '+ebgp_multihop_ttl'],'{no:no-prefix}neighbor {} ebgp-multihop {}', ['true', 'false']),
@@ -1871,9 +1920,9 @@ class BGPConfigDaemon:
     nbr_key_map = [('peer_group_name',  '{no:no-prefix}neighbor {} peer-group {}')]
 
     nbr_af_key_map = [(['allow_as_in', '+allow_as_count&allow_as_origin'],  '{no:no-prefix}neighbor {} allowas-in {:allow-as-in}', ['true', 'false']),
-                      ('admin_status|ipv4',                                 '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
-                      ('admin_status|ipv6',                                 '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
-                      ('admin_status|l2vpn',                                '{no:no-prefix}neighbor {} activate', ['true', 'false', False]),
+                      ('admin_status|ipv4',                                 '{no:no-prefix}neighbor {} activate', hdl_admin_status),
+                      ('admin_status|ipv6',                                 '{no:no-prefix}neighbor {} activate', hdl_admin_status),
+                      ('admin_status|l2vpn',                                '{no:no-prefix}neighbor {} activate', hdl_admin_status),
                       (['send_default_route', '+default_rmap'],             '{no:no-prefix}neighbor {} default-originate {:default-rmap}', ['true', 'false']),
                       ('default_rmap',                                      '{no:no-prefix}neighbor {} default-originate route-map {}'),
                       (['max_prefix_limit', '++max_prefix_warning_threshold',
@@ -2689,6 +2738,14 @@ class BGPConfigDaemon:
                         syslog.syslog(syslog.LOG_ERR, 'local ASN for VRF %s was not configured' % vrf)
                         continue
                     cmd_prefix = ['configure terminal', 'router bgp {} vrf {}'.format(local_asn, vrf)]
+                    if 'srv6_locator' in data:
+                        cmd =  "vtysh -c 'configure terminal' "
+                        cmd += " -c 'router bgp {} vrf {}' ".format(local_asn, vrf)
+                        cmd += " -c 'segment-routing srv6' "
+                        cmd += " -c 'locator {}' ".format(data['srv6_locator'].data)
+                        if not self.__run_command(table, cmd):
+                            syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
+                            continue
                     if not key_map.run_command(self, table, data, cmd_prefix):
                         syslog.syslog(syslog.LOG_ERR, 'failed running BGP global config command')
                         continue
