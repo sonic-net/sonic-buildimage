@@ -66,6 +66,10 @@
                 "WRED_ECN_PORT": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 1000
+                },
+                "SRV6": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 1000
                 }
             }
         }
