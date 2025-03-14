@@ -197,9 +197,6 @@
         "desc": "Configure INNERSRCMACREWRITE ACL with invalid VNI ID",
         "eStrKey": "Pattern"
     },
-    "ACL_INNERSRCMACREWRITE_NO_VNI": {
-        "desc": "Configure INNERSRCMACREWRITE ACL with no VNI ID"
-    },
     "ACL_RULE_WITH_VNI":{
         "desc": "Configure a ACL rule with VNI ID"
     },
