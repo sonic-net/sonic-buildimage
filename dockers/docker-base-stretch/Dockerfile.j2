@@ -43,8 +43,8 @@ RUN apt-get update &&        \
         python               \
         python-pip           \
         vim-tiny             \
-# Install redis-tools
-        redis-tools=5:5.0.3-3~bpo9+2     \
+# Install valkey-tools: TODO remove this after redis replace verified
+        valkey-tools         \
 # common dependencies
         libpython2.7         \
         libdaemon0           \
@@ -62,7 +62,7 @@ RUN apt-get update &&        \
 RUN apt-get -y -t stretch-backports install rsyslog
 
 # Install redis-tools
-
+{# Test replace redis with valkey
 {% if CONFIGURED_ARCH == "armhf" %}
     RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
@@ -76,6 +76,7 @@ RUN apt-get -y -t stretch-backports install rsyslog
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb
 {% endif %}
+#}
 
 # Some Python packages require setuptools (or pkg_resources, which is supplied by setuptools)
 # and some require wheel
@@ -119,5 +120,6 @@ COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
+RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]

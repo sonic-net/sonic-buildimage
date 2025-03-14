@@ -47,8 +47,8 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
-# Install redis-tools
-        redis-tools          \
+# Install valkey-tools
+        valkey-tools          \
 # common dependencies
         libdaemon0           \
         libdbus-1-3          \
@@ -110,5 +110,6 @@ COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
+RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
