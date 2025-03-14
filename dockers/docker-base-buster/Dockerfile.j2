@@ -63,13 +63,6 @@ RUN apt-get update &&        \
 # for sairedis zmq rpc channel
         libzmq5
 
-# Install redis-tools
-RUN apt-get update &&        \
-    apt-get -y install       \
-# Install valkey-tools: TODO remove this after redis replace verified
-        valkey-tools
-
-{# Test replace redis with valkey
 {% if CONFIGURED_ARCH == "armhf" %}
 RUN curl -k -o redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
 RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
@@ -83,7 +76,6 @@ RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.cor
 RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f -y
 RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb
 {% endif %}
-#}
 
 # Upgrade pip via PyPI and uninstall the Debian version
 RUN pip3 install --upgrade pip
@@ -130,6 +122,5 @@ COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
-RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
