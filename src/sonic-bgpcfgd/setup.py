@@ -11,6 +11,7 @@ setuptools.setup(
     entry_points = {
         'console_scripts': [
             'bgpcfgd = bgpcfgd.main:main',
+            'staticroutebfd = staticroutebfd.main:main',
             'bgpmon = bgpmon.bgpmon:main',
         ]
     },
