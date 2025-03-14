@@ -53,7 +53,7 @@ setup(
     packages=find_packages(),
     version='1.0',
     zip_safe=False,
-    entry_point = {
+    entry_points = {
         'console_scripts' : [
             'smartswitch-azs=smartswitch_azs.smartswitch_azs:main'
         ]
