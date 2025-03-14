@@ -1,40 +1,42 @@
-From 51b3d58afef6796fe0568deb4c3765e24cc828c9 Mon Sep 17 00:00:00 2001
-From: liuh-80 <liuh@microsoft.com>
-Date: Fri, 30 Sep 2022 16:57:03 +0800
+From 776e45613ae6352adadf1eb11c256e0a6793be5f Mon Sep 17 00:00:00 2001
+From: ab952469 <asha.behera@broadcom.com>
+Date: Thu, 13 Mar 2025 14:46:03 +0530
 Subject: [PATCH] Export remote info for authorization. authorization.
 
 ---
- auth.c    | 11 +++++++++++
+ auth.c    | 14 ++++++++++++++
  auth.h    |  3 +++
  session.c |  3 +++
  sshd.c    |  5 +++++
- 4 files changed, 22 insertions(+)
+ 4 files changed, 25 insertions(+)
 
 diff --git a/auth.c b/auth.c
-index c3693ba3f..96d551922 100644
+index 88578ec..2c64ee7 100644
 --- a/auth.c
 +++ b/auth.c
-@@ -764,3 +764,14 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
- 		fatal_f("failed to restrict session");
- 	sshauthopt_free(restricted);
+@@ -1103,3 +1103,17 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
+ 
+ 	return 0;
  }
 +
 +/* Export remote IP address and port for authorization. */
 +void
 +export_remote_info(struct ssh *ssh)
 +{
-+	const char *remote_ip = ssh_remote_ipaddr(ssh);
-+	const int remote_port = ssh_remote_port(ssh);
-+	const char remote_addr_port[32 + INET6_ADDRSTRLEN];
-+	snprintf(remote_addr_port, sizeof(remote_addr_port), "%s %d", remote_ip, remote_port);
-+	setenv("SSH_CLIENT_IPADDR_PORT", remote_addr_port, 1);
++	if (ssh != NULL)
++	{
++		const char *remote_ip = ssh_remote_ipaddr(ssh);
++		const int remote_port = ssh_remote_port(ssh);
++		const char remote_addr_port[32 + INET6_ADDRSTRLEN];
++		snprintf(remote_addr_port, sizeof(remote_addr_port), "%s %d", remote_ip, remote_port);
++		setenv("SSH_CLIENT_IPADDR_PORT", remote_addr_port, 1);
++	}
 +}
-\ No newline at end of file
 diff --git a/auth.h b/auth.h
-index 3cfce0eaf..3a34742b1 100644
+index 5da9fe7..95483ac 100644
 --- a/auth.h
 +++ b/auth.h
-@@ -229,6 +229,9 @@ struct passwd *fakepw(void);
+@@ -234,6 +234,9 @@ pid_t	subprocess(const char *, struct passwd *,
  
  int	 sys_auth_passwd(struct ssh *, const char *);
  
@@ -45,10 +47,10 @@ index 3cfce0eaf..3a34742b1 100644
  krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
  #endif
 diff --git a/session.c b/session.c
-index a638ceef1..c615cb3d0 100644
+index 4128d26..3fa7c02 100644
 --- a/session.c
 +++ b/session.c
-@@ -619,6 +619,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
+@@ -624,6 +624,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
  		/* Close the extra descriptor for the pseudo tty. */
  		close(ttyfd);
  
@@ -59,10 +61,10 @@ index a638ceef1..c615cb3d0 100644
  #ifndef HAVE_OSF_SIA
  		do_login(ssh, s, command);
 diff --git a/sshd.c b/sshd.c
-index 3ef0c1452..2f67a0304 100644
+index e894ad6..3e0e295 100644
 --- a/sshd.c
 +++ b/sshd.c
-@@ -1737,6 +1737,8 @@ main(int ac, char **av)
+@@ -1668,6 +1668,8 @@ main(int ac, char **av)
  			test_flag = 2;
  			break;
  		case 'C':
@@ -71,7 +73,7 @@ index 3ef0c1452..2f67a0304 100644
  			connection_info = get_connection_info(ssh, 0, 0);
  			if (parse_server_match_testspec(connection_info,
  			    optarg) == -1)
-@@ -2252,6 +2254,9 @@ main(int ac, char **av)
+@@ -2196,6 +2198,9 @@ main(int ac, char **av)
  	 */
  	remote_ip = ssh_remote_ipaddr(ssh);
  
@@ -82,5 +84,5 @@ index 3ef0c1452..2f67a0304 100644
  	audit_connection_from(remote_ip, remote_port);
  #endif
 -- 
-2.35.1.windows.2
+2.7.4
 
