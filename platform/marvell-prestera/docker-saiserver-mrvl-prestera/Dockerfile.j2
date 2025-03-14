@@ -15,13 +15,13 @@ RUN apt-get update              \
       libthrift-0.17.0
 
 COPY \
-{% for deb in docker_saiserver_mrvl_debs.split(' ') -%}
+{% for deb in docker_saiserver_mrvl_prestera_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
 RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_saiserver_mrvl_debs.split(' ') -%}
+{% for deb in docker_saiserver_mrvl_prestera_debs.split(' ') -%}
 dpkg_apt debs/{{ deb }}{{'; '}}
 {%- endfor %}
 
