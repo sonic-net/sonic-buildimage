@@ -206,7 +206,7 @@ dependent_startup_wait_for=bgpd:running
 
 {% endif %}
 
-{% if DEVICE_METADATA.localhost.switch_type is defined and DEVICE_METADATA.localhost.switch_type == "dpu" %}
+{% if FEATURE is defined and FEATURE.software_bfd is defined and FEATURE.software_bfd.state is defined and FEATURE.software_bfd.state == "enabled" %}
 [program:bfdmon]
 command=/usr/local/bin/bfdmon
 priority=6
