@@ -65,34 +65,6 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 :::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
 
 #
-# Set the default permissions for all log files.
-#
-$FileOwner root
-$FileGroup adm
-$FileCreateMode 0640
-$DirCreateMode 0755
-$Umask 0022
-
-#
-# Where to place spool and state files
-#
-$WorkDirectory /var/spool/rsyslog
-
-#
-# Include all config files in /etc/rsyslog.d/
-#
-$IncludeConfig /etc/rsyslog.d/*.conf
-
-#
-# Suppress duplicate messages and report "message repeated n times"
-#
-$RepeatedMsgReduction on
-
-###############
-#### RULES ####
-###############
-
-#
 # Remote syslog logging
 #
 
@@ -134,3 +106,31 @@ $RepeatedMsgReduction on
 *.{{ severity }}
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
+
+#
+# Set the default permissions for all log files.
+#
+$FileOwner root
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+
+#
+# Where to place spool and state files
+#
+$WorkDirectory /var/spool/rsyslog
+
+#
+# Include all config files in /etc/rsyslog.d/
+#
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+#
+# Suppress duplicate messages and report "message repeated n times"
+#
+$RepeatedMsgReduction on
+
+###############
+#### RULES ####
+###############
