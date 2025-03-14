@@ -113,6 +113,8 @@ function preStartAction()
 {%- elif docker_container_name == "snmp" %}
     if decode-syseeprom -s > /dev/null 2>&1; then
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    else
+	    echo "Cannot fetch system eeprom information. Leaving chassis serial number empty."
     fi
 {%- else %}
     : # nothing
