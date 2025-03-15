@@ -6,11 +6,11 @@
                     {
                         "keyleaf": "GLOBAL",
                         "mode": "pvst",
-                        "rootguard_timeout": 30,
-                        "forward_delay": 15,
-                        "hello_time": 2,
-                        "max_age": 20,
-                        "priority": 32768
+                        "rootguard_timeout": "30",
+                        "forward_delay": "15",
+                        "hello_time": "2",
+                        "max_age": "20",
+                        "priority": "32768"
                     }
                 ]
             },
@@ -18,12 +18,12 @@
                 "STP_VLAN_LIST": [
                     {
                         "name": "Vlan100",
-                        "vlanid": 100,
-                        "enabled": true,
-                        "forward_delay": 15,
-                        "hello_time": 2,
-                        "max_age": 20,
-                        "priority": 32768
+                        "vlanid": "100",
+                        "enabled": "true",
+                        "forward_delay": "15",
+                        "hello_time": "2",
+                        "max_age": "20",
+                        "priority": "32768"
                     }
                 ]
             },
@@ -32,8 +32,8 @@
                     {
                         "vlan-name": "Vlan100",
                         "ifname": "Ethernet0",
-                        "path_cost": 150,
-                        "priority": 128
+                        "path_cost": "150",
+                        "priority": "128"
                     }
                 ]
             },
@@ -41,18 +41,17 @@
                 "STP_PORT_LIST": [
                     {
                         "ifname": "Ethernet0",
-                        "enabled": true,
-                        "root_guard": false,
-                        "bpdu_guard": false,
-                        "bpdu_guard_do_disable": false,
-                        "uplink_fast": false,
-                        "portfast": true,
-                        "path_cost": 200,
-                        "priority": 128
+                        "enabled": "true",
+                        "root_guard": "false",
+                        "bpdu_guard": "false",
+                        "bpdu_guard_do_disable": "false",
+                        "uplink_fast": "false",
+                        "portfast": "false",
+                        "path_cost": "200",
+                        "priority": "128"
                     }
                 ]
             }
-
         }
     }
 }

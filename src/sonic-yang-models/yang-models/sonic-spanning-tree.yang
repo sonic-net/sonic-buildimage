@@ -290,8 +290,8 @@ module sonic-spanning-tree {
                     type boolean;
                     /*must "current()!='true' or ../../../STP/STP_LIST[keyleaf='GLOBAL']/mode='pvst'" {}*/
                     /*must "not(.) or (/stp:sonic-spanning-tree/stp:STP/stp:STP_LIST[stp:keyleaf = 'GLOBAL']/stp:mode = 'pvst')" {}*/
-                    /*must "(current()!='true') or (/sonic-spanning-tree:sonic-spanning-tree/sonic-spanning-tree:STP/sonic-spanning-tree:STP_LIST[sonic-spanning-tree:keyleaf = 'GLOBAL']/sonic-spanning-tree:mode = 'pvst')" {}*/
                     must "(current()!='true') or (/stp:sonic-spanning-tree/stp:STP/stp:STP_LIST[stp:keyleaf = 'GLOBAL']/stp:mode = 'pvst')" {
+                    /*must "(current()!='true') or (/stp:sonic-spanning-tree/stp:STP/stp:STP_LIST[stp:keyleaf = 'GLOBAL']/stp:mode = 'pvst')" {}*/
                         error-message "PortFast configuration allowed in PVST mode only";
                         /*error-app-tag stp-invalid;*/
                     }

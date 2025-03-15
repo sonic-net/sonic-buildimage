@@ -2411,9 +2411,9 @@
                 "root_guard": "false",
                 "bpdu_guard": "false",
                 "bpdu_guard_do_disable": "false",
-                "path_cost": "200000",
+                "path_cost": "200",
                 "priority": "128",
-                "portfast": "true",
+                "portfast": "false",
                 "uplink_fast": "false"
             },
             "Ethernet4": {
@@ -2423,7 +2423,7 @@
                 "bpdu_guard_do_disable": "true",
                 "path_cost": "200000",
                 "priority": "128",
-                "portfast": "false",
+                "portfast": "true",
                 "uplink_fast": "false"
             },
             "PortChannel2": {
@@ -2437,6 +2437,7 @@
                 "uplink_fast": "true"
             }
         },
+
         "STP": {
             "GLOBAL": {
                 "mode": "mst",
