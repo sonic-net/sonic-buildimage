@@ -1,15 +1,13 @@
 try:
-    from sonic_platform_pddf_base.pddf_eeprom import PddfEeprom
     import os
+    from sonic_platform_pddf_base.pddf_eeprom import PddfEeprom
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 
-CACHE_ROOT = '/var/cache/sonic/decode-syseeprom'
-CACHE_FILE = 'syseeprom_cache'
+EEPROM_TMP_FILE = '/tmp/eeprom_dump.bin'
 
 class Eeprom(PddfEeprom):
-
     _TLV_DISPLAY_VENDOR_EXT = True
     _TLV_INFO_MAX_LEN = 256
     pddf_obj = {}
@@ -29,31 +27,20 @@ class Eeprom(PddfEeprom):
 
         super(PddfEeprom, self).__init__(self.eeprom_path, 0, '', True)
         self.eeprom_tlv_dict = dict()
-
-        # Create the cache directory if not created
-        if not os.path.exists(CACHE_ROOT):
-            try:
-                os.makedirs(CACHE_ROOT)
-            except Exception as e:
-                print("Error in creating Eeprom cache directory - {}".format(str(e)))
-
-        # Assign cache_name in eeprom_base.py
         try:
-            self.set_cache_name(os.path.join(CACHE_ROOT, CACHE_FILE))
-        except:
-            pass
-        try:
-            self.eeprom_data = self.read_eeprom()
+            if os.path.exists(EEPROM_TMP_FILE):
+                with open(EEPROM_TMP_FILE, 'rb') as b_fd:
+                    self.eeprom_data = bytearray(b_fd.read())
+            else:
+                self.eeprom_data = self.read_eeprom()
+                with open(EEPROM_TMP_FILE, 'wb') as b_fd:
+                    b_fd.write(self.eeprom_data)
+                os.chmod(EEPROM_TMP_FILE, 0o444)
         except Exception as e:
             self.eeprom_data = "N/A"
             raise RuntimeError("PddfEeprom is not Programmed - Error: {}".format(str(e)))
         else:
             eeprom = self.eeprom_data
-
-            try:
-                self.update_cache(eeprom)
-            except:
-                pass
 
             if not self.is_valid_tlvinfo_header(eeprom):
                 return
@@ -74,8 +61,8 @@ class Eeprom(PddfEeprom):
                     name = "Vendor Extension"
                     value = ""
                     if self._TLV_DISPLAY_VENDOR_EXT:
-                       for c in tlv[2:2 + tlv[1]]:
-                           value += "0x%02X " % c
+                        for c in tlv[2:2 + tlv[1]]:
+                            value += "0x%02X " % c
                 else:
                     name, value = self.decoder(None, tlv)
 
@@ -83,15 +70,10 @@ class Eeprom(PddfEeprom):
                 if (eeprom[tlv_index]) == self._TLV_CODE_CRC_32:
                     break
 
-                tlv_index += (eeprom[tlv_index+1]) + 2
+                tlv_index += (eeprom[tlv_index + 1]) + 2
 
+    def get_revision(self):
+        return self.eeprom_tlv_dict.get('0x26', 'N/A')
 
-    # Provide the functions/variables below for which implementation is to be overwritten
-    def revision_str(self):
-        (is_valid, results) = self.get_tlv_field(self.eeprom_data, self._TLV_CODE_DEVICE_VERSION)
-        if not is_valid:
-            "N/A"
-        if type(results[2]) is bytearray:
-            return str(int.from_bytes(results[2], byteorder='little'))
-
-        return results[2].decode('ascii')
+    def get_vendor_extn(self):
+        return self.eeprom_tlv_dict.get('0xFD', 'N/A')

@@ -2,53 +2,28 @@
 
 import os
 import re
-import struct
 import subprocess
 import json
 
-BMC_PRES_SYS_PATH = '/sys/devices/platform/sys_cpld/bmc_present_l'
+BMC_PRESENCE_SYSFS_PATH = '/sys/devices/platform/sys_cpld/bmc_presence'
 policy_json = "/usr/share/sonic/platform/thermal_policy.json"
 
 class APIHelper():
 
     def __init__(self):
-        pass
+        self._bmc_presence = None
 
     def run_command(self, command):
-        args = []
-        cmds = []
-        result = ""
-        status = False      
-
-        if '|' in command:
-            args = command.split('|')
-        else:
-            args.append(command)
-        for arg in args:
-            tmp = shlex.split(arg)
-            cmds.append(tmp)
-
         try:
-            for index, subcmd in enumerate(cmds):
-                if index == 0:
-                    p = subprocess.Popen(subcmd, universal_newlines=True, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                else:
-                    p = subprocess.Popen(subcmd, universal_newlines=True, shell=False, stdin=p.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            while p.poll() is None:
-                time.sleep(0.01)
-
-            if p.returncode == 0:
-                status = True
-            result = p.communicate()[0].strip()
-        except Exception:
-            status = False
-
-        return status, result
+            output = subprocess.check_output(command.split(' '), universal_newlines=True)
+            return (True, output.strip())
+        except subprocess.CalledProcessError:
+            return (False, None)
         
     def get_register_value(self, getreg_path, register):
         try:
-            with open(register, "w+") as fd:
-                fd.write(getreg_path)
+            with open(getreg_path, "w+") as fd:
+                fd.write(register)
                 fd.flush()
                 fd.seek(0)
                 return (True, fd.read().strip())
@@ -59,7 +34,7 @@ class APIHelper():
         
     def set_register_value(self, setreg_path, register, value):
         try:
-            with open(register, "w") as fd:
+            with open(setreg_path, "w") as fd:
                 set_str = register + " " + value
                 if fd.write() == len(set_str):
                     fd.flush()
@@ -88,16 +63,18 @@ class APIHelper():
         return None
 
     def with_bmc(self):
-        """
-        Get the BMC card present status
+        if self._bmc_presence == None:
+            try:
+               with open(BMC_PRESENCE_SYSFS_PATH) as fd:
+                   data = fd.read().strip()
+               if data == "1":
+                   self._bmc_presence = True
+               else:
+                   self._bmc_presence = False
+            except (FileNotFoundError, IOError):
+                pass
 
-        Returns:
-            A boolean, True if present, False if absent
-        """
-        presence = self.read_txt_file(BMC_PRES_SYS_PATH)
-        if presence == None:
-            print("Failed to get BMC card presence status")
-        return True if presence == "0" else False
+        return self._bmc_presence
 
     def fsc_enable(self, enable=True):
         if self.with_bmc():
@@ -157,15 +134,3 @@ class APIHelper():
             if i < (num_bytes - 1): 
                 data += " "
         return data
-
-    @staticmethod
-    def get_bmc_status():
-        """
-        get bmc present by pddf-device.json
-        return: True(present), False(absent)
-        """
-        pddf_device_path = '/usr/share/sonic/platform/pddf/pddf-device.json'
-        with open(pddf_device_path) as f:
-            json_data = json.load(f)
-        bmc_present = json_data["PLATFORM"]["bmc_present"]
-        return True if bmc_present == "True" else False

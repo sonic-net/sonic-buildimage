@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import time
+import subprocess
 
 #############################################################################
 # Celestica
@@ -16,45 +16,52 @@ try:
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
+PSU_PRESENCE_SYSFS_PATH = "/sys/devices/platform/sys_cpld/psu{}_presence"
+PSU_PWRGOOD_SYSFS_PATH = "/sys/devices/platform/sys_cpld/psu{}_pwrgood"
 
 class Psu(PddfPsu):
     """PDDF Platform-Specific PSU class"""
 
-    PSU_IPMI_FRU_ID_MAP = {
-        1: 215,
-        2: 26,
-        3: 128,
-        4: 154
-    }
-
-    STATUS_LED_COLOR_BLUE = 'blue'
-
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
         PddfPsu.__init__(self, index, pddf_data, pddf_plugin_data)
         self._api_helper = APIHelper()
+
+        self._presence = None
+        self._model = None
+        self._mfr_id = None
+        self._serial = None
+        self._revision = None
         
     # Provide the functions/variables below for which implementation is to be overwritten
 
     def get_presence(self):
+        presence = False
 
-        idx = self.psu_index - 1
-        status, result = self._api_helper.cpld_lpc_read(0xA15E)
-        
-        if (int(result, 16) & (1 << idx) == 0) and status == True:
-            return True
-        else:
-            return False
+        try:
+            with open(PSU_PRESENCE_SYSFS_PATH.format(self.psu_index)) as fd:
+                data = fd.read().strip()
+
+            if data == "1":
+                presence = True
+        except (FileNotFoundError, IOError):
+            pass
+
+        self._presence = presence
+        return self._presence
 
     def get_powergood_status(self):
+        pwrgood = False
 
-        idx = self.psu_index - 1        
-        status, result = self._api_helper.cpld_lpc_read(0xA160)
-        mask = (1 << idx + 4) | (1 << idx)
-        
-        if (int(result, 16) & mask == mask) and status == True:
-            return True
-        else:
-            return False
+        try:
+            with open(PSU_PWRGOOD_SYSFS_PATH.format(self.psu_index)) as fd:
+                data = fd.read().strip()
+
+            if data == "1":
+                pwrgood = True
+        except (FileNotFoundError, IOError):
+            pass
+
+        return pwrgood
 
     def get_type(self):
         return 'AC'
@@ -68,83 +75,98 @@ class Psu(PddfPsu):
     def get_voltage_high_threshold(self):
         return 14
 
-    def set_status_led(self, color):
-        return False
+    def get_temperature_high_threshold(self):
+        return 60
 
     def get_status_led(self):
-        """
-        Gets the state of the psu status LED
-        Returns:
-            A string, one of the predefined STATUS_LED_COLOR_* strings above
-
-        Note:
-            STATUS_LED_COLOR_GREEN = "green"
-            STATUS_LED_COLOR_AMBER = "amber"
-            STATUS_LED_COLOR_RED = "red"
-            STATUS_LED_COLOR_OFF = "off"
-        """
-        index = str(self.psu_index-1)
-        psu_led_device = "PSU{}".format(self.psu_index) + "_LED"
-
-        if psu_led_device not in self.pddf_obj.data.keys():
-            if self.get_presence():
-                if self.get_powergood_status():
-                    return self.STATUS_LED_COLOR_BLUE
-                else:
-                    return self.STATUS_LED_COLOR_AMBER
+        if self._presence:
+            if self.get_powergood_status():
+                return "blue"
             else:
-                return self.STATUS_LED_COLOR_OFF
+                return "amber"
+        else:
+            return "N/A"
 
-        device_name = self.pddf_obj.data[psu_led_device]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
-        return (color)      
-
-    def get_revision(self):
+    def _get_revision(self):
         """
         Retrieves the revision of the device
         Returns:
             string: revision of device
         """
-        if not self.get_presence():
-            return 'N/A'
-
-        if self._api_helper.with_bmc():
-            cmd = "ipmitool fru list {} | grep 'Product Version'".format(self.PSU_IPMI_FRU_ID_MAP.get(self.psu_index))
-            status, output = self._api_helper.run_command(cmd)
-            if status == True:
-                rev = output.split()[-1]
-                return rev
-        else:
+        if not self._api_helper.with_bmc():
             output = self._api_helper.i2c_read(84 + self.psu_index - 1, 0x50, 0x40, 3)
             return bytes.fromhex(output.replace('0x', '').replace(" ", "")).decode("utf-8")
+
         return 'N/A'
-    
-    def get_temperature(self):
-        """
-        Retrieves current temperature reading from PSU
 
-        Returns:
-            A float number of current temperature in Celsius up to nearest thousandth
-            of one degree Celsius, e.g. 30.125
-        """
-        device = "PSU{}".format(self.psu_index)
-        output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_input")
-        if not output:
-            return 0.0
+    # In Open BMC FRU ID changes on FRU replacement hence we fetch the
+    # FRU fields in groups and cache them for optimization.
+    # Cached value is returned when fetched.
 
-        temp1 = output['status']
-        if temp1.isalpha():
-            attr_value = None
+    def _get_fru_info(self, field):
+        if self._presence == None:
+            self.get_presence()
+
+        if self._presence == False:
+            if self._model != None:
+                self._model = None
+                self._mfr_id = None
+                self._serial = None
+                self._revision = None
+                
+            return 'N/A'
         else:
-            attr_value = float(temp1)
+            if self._model == None:
+                try:
+                    ipmi_cmd = ['ipmitool', 'fru', 'list']
+                    output = subprocess.check_output(ipmi_cmd, universal_newlines=True)
+                    if output:
+                        output = output.split('FRU Device Description : ')
+                        for fru_data in output:
+                            if fru_data.startswith('PSU{}_FRU'.format(self.psu_index)):
+                                for field_data in fru_data.split('\n'):
+                                    if 'Product Manufacturer' in field_data:
+                                        self._mfr_id = field_data.split(':')[1].strip()
+                                    elif 'Product Name' in field_data:
+                                        self._model = field_data.split(':')[1].strip()
+                                    elif 'Product Version' in field_data:
+                                        self._revision = field_data.split(':')[1].strip()
+                                    elif 'Product Serial' in field_data:
+                                        self._serial = field_data.split(':')[1].strip()
+                except subprocess.CalledProcessError:
+                    pass
 
-        if output['mode'] == 'bmc':
-            return attr_value
+        if field == 'mfr_id':
+            return self._mfr_id
+        elif field == 'model':
+            return self._model
+        elif field == 'revision':
+            return self._revision
+        elif field == 'serial':
+            return self._serial
+
+        return 'N/A'
+    def get_model(self):
+        if self._api_helper.with_bmc():
+            return self._get_fru_info('model')
         else:
-            return (attr_value/float(1000))
+            return super().get_model()
 
-    def get_temperature_high_threshold(self):
-        return 60
+    def get_mfr_id(self):
+        if self._api_helper.with_bmc():
+            return self._get_fru_info('mfr_id')
+        else:
+            return super().get_mfr_id()
+
+    def get_serial(self):
+        if self._api_helper.with_bmc():
+            return self._get_fru_info('serial')
+        else:
+            return super().get_serial()
+
+    def get_revision(self):
+        if self._api_helper.with_bmc():
+            return self._get_fru_info('revision')
+        else:
+            return self._get_revision()
+

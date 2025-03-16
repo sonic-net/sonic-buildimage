@@ -1,8 +1,6 @@
 {
     "services_to_ignore": [],
     "devices_to_ignore": [
-        "psu.temperature",
-        "psu.voltage",
         "PSU 1 Fan 1",
         "PSU 2 Fan 1",
         "PSU 3 Fan 1",

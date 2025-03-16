@@ -25,6 +25,7 @@ try:
     import sys
     import subprocess
     import shutil
+    import re
     from sonic_py_common import device_info
     from sonic_platform_base.sfp_base import SfpBase
 except ImportError as e:
@@ -35,7 +36,7 @@ RESET_SOURCE_BIOS_REG = 0xA107
 
 ORG_HW_REBOOT_CAUSE_FILE="/host/reboot-cause/hw-reboot-cause.txt"
 TMP_HW_REBOOT_CAUSE_FILE="/tmp/hw-reboot-cause.txt"
-SYS_LED_SYSFS_PATH = "/sys/bus/platform/devices/sys_cpld/sys_led"
+SYS_LED_SYSFS_PATH = "/sys/devices/platform/sys_cpld/sys_led"
 
 class Chassis(PddfChassis):
     """
@@ -44,43 +45,28 @@ class Chassis(PddfChassis):
 
     # Provide the functions/variables below for which implementation is to be overwritten
     
-    STATUS_LED_COLOR_AUTO = 'auto'
-    STATUS_LED_COLOR_MIX_BLINK_1HZ = 'mix_blink_1hz'
-    STATUS_LED_COLOR_MIX_BLINK_4HZ = 'mix_blink_4hz'
-    STATUS_LED_COLOR_GREEN_BLINK_1HZ = 'green_blink_1hz'
-    STATUS_LED_COLOR_GREEN_BLINK_4HZ = 'green_blink_4hz'
-    STATUS_LED_COLOR_AMBER_BLINK_1HZ = 'amber_blink_1hz'
-    STATUS_LED_COLOR_AMBER_BLINK_4HZ = 'amber_blink_4hz'
-    STATUS_LED_COLOR_UNKNOWN = 'unknown'
     sfp_status_dict = {}
     
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
 
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
+        self._airflow_direction = None
+        self._watchdog = None
         self._api_helper = APIHelper()          
         self.__initialize_components()
 
         for port_idx in range(1, self.platform_inventory['num_ports'] + 1):
             self.sfp_status_dict[port_idx] = self.get_sfp(port_idx).get_presence()
 
-        thermal_count = len(self._thermal_list)
         if not self._api_helper.with_bmc():
+            thermal_count = len(self._thermal_list)
             for idx, name in enumerate(NONPDDF_THERMAL_SENSORS):
                 thermal = NonPddfThermal(thermal_count + idx, name)
                 self._thermal_list.append(thermal)
-        else:
-            thermal = NonPddfThermal(thermal_count + 0, "CPU_TEMP")
-            self._thermal_list.append(thermal)
-            thermal = NonPddfThermal(thermal_count + 1, "TH5_CORE_TEMP")
-            self._thermal_list.append(thermal)
-            thermal = NonPddfThermal(thermal_count + 2, "STORAGE_TEMP")
-            self._thermal_list.append(thermal)
-            thermal = NonPddfThermal(thermal_count + 3, "OSFP_TEMP")
-            self._thermal_list.append(thermal)
 
     def __initialize_components(self):
 
-        self.NUM_COMPONENT = 8
+        self.NUM_COMPONENT = 9
     
         if self._api_helper.with_bmc(): 
             self.NUM_COMPONENT = self.NUM_COMPONENT + 1
@@ -92,21 +78,9 @@ class Chassis(PddfChassis):
     def get_name(self):
         return "DS5000"
 
-    def get_all_components(self):
-        return self._component_list
-
-    def get_all_modules(self):
-        return []
-            
     def initizalize_system_led(self):
         return True
 
-    def get_eeprom(self):
-        return self._eeprom
-        
-    def get_all_sfps(self):
-        return self._sfp_list
-        
     def get_sfp(self, index):
         sfp = None
 
@@ -115,7 +89,7 @@ class Chassis(PddfChassis):
                 raise IndexError
             sfp = self._sfp_list[index - 1]
         except IndexError:
-            sys.stderr.write("override: SFP index {} out of range (1-{})\n".format(
+            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                 index, len(self._sfp_list)))
 
         return sfp
@@ -191,137 +165,26 @@ class Chassis(PddfChassis):
         
     @staticmethod
     def is_replaceable():
-        return True  
+        return False
 
     def get_status_led(self):
-        sys_led_color = "unknown"
+        led_color = "unknown"
         try:
             with open(SYS_LED_SYSFS_PATH, "r") as fd:
-                sys_led_color = fd.read().rstrip('\n')
-        except Exception as err:
-            print(f"Failed to get status LED due to: {err}")
-        return sys_led_color
+                led_color = fd.read().strip()
+        except (FileNotFoundError, IOError):
+            pass
+
+        return led_color
 
     def set_status_led(self, color):     
         try:
             with open(SYS_LED_SYSFS_PATH, "w") as fd:
                 fd.write(color)
-        except Exception as err:
-            print(f"Failed to set status LED due to: {err}")
+        except (FileNotFoundError, IOError):
             return False
+
         return True
-
-    def set_system_led(self, device_name, color):
-        if device_name == "ALARM_LED":
-            color_dict = {
-                self.STATUS_LED_COLOR_GREEN: 0x10,
-                self.STATUS_LED_COLOR_AMBER: 0x20,
-                self.STATUS_LED_COLOR_MIX_BLINK_1HZ: 0xcd,
-                self.STATUS_LED_COLOR_MIX_BLINK_4HZ: 0xce,
-                self.STATUS_LED_COLOR_GREEN_BLINK_1HZ: 0xdd,
-                self.STATUS_LED_COLOR_GREEN_BLINK_4HZ: 0xde,
-                self.STATUS_LED_COLOR_AMBER_BLINK_1HZ: 0xed,
-                self.STATUS_LED_COLOR_AMBER_BLINK_4HZ: 0xee,
-                self.STATUS_LED_COLOR_OFF: 0x30
-            }
-            val = color_dict.get(color, 0xf)
-            if val == 0xf: return False                
-            return self._api_helper.cpld_lpc_write(0xA163, val)
-        elif device_name == "PSU_Front_LED":
-            color_dict = {
-                self.STATUS_LED_COLOR_GREEN: 0x2,
-                self.STATUS_LED_COLOR_AMBER: 0x1,
-                self.STATUS_LED_COLOR_OFF: 0x3,
-                self.STATUS_LED_COLOR_AUTO: 0x8
-            }
-            val = color_dict.get(color, 0x0)
-            if val == 0x0: return False
-            return self._api_helper.cpld_lpc_write(0xA161, val)
-        elif device_name == "FAN_Front_LED":
-            color_dict = {
-                self.STATUS_LED_COLOR_GREEN: 0x2,
-                self.STATUS_LED_COLOR_AMBER: 0x1,
-                self.STATUS_LED_COLOR_OFF: 0x3,
-                self.STATUS_LED_COLOR_AUTO: 0x8
-            }
-            val = color_dict.get(color, 0x0)
-            if val == 0x0: return False
-            return self._api_helper.cpld_lpc_write(0xA165, val)
-        elif device_name == "FANTRAY1_LED":
-            return self._fan_list[0].set_status_led(color)
-        elif device_name == "FANTRAY2_LED":
-            return self._fan_list[1].set_status_led(color)
-        elif device_name == "FANTRAY3_LED":
-            return self._fan_list[2].set_status_led(color)
-        else:
-            raise NotImplementedError   
-
-    def get_system_led(self, device_name):               
-        if device_name == "ALARM_LED":
-            status, result = self._api_helper.cpld_lpc_read(0xA163)
-            if status == True:
-                result = int(result, 16) & 0x33
-            else:
-                return self.STATUS_LED_COLOR_UNKNOWN
-
-            status_led = {
-                0x30: self.STATUS_LED_COLOR_OFF,
-                0x33: self.STATUS_LED_COLOR_OFF,
-                0x10: self.STATUS_LED_COLOR_GREEN,
-                0x20: self.STATUS_LED_COLOR_AMBER,
-                0x01: self.STATUS_LED_COLOR_MIX_BLINK_1HZ,
-                0x02: self.STATUS_LED_COLOR_MIX_BLINK_4HZ,
-                0x11: self.STATUS_LED_COLOR_GREEN_BLINK_1HZ,
-                0x12: self.STATUS_LED_COLOR_GREEN_BLINK_4HZ,
-                0x21: self.STATUS_LED_COLOR_AMBER_BLINK_1HZ,
-                0x22: self.STATUS_LED_COLOR_AMBER_BLINK_4HZ
-            }
-            
-            return status_led.get(result, self.STATUS_LED_COLOR_UNKNOWN)
-        if device_name == "PSU_Front_LED":
-            status, result = self._api_helper.cpld_lpc_read(0xA161)
-            if status == True:
-                result = int(result, 16) & 0x3
-            else:
-                return self.STATUS_LED_COLOR_UNKNOWN
-
-            status_led = {
-                0x0: self.STATUS_LED_COLOR_OFF,
-                0x3: self.STATUS_LED_COLOR_OFF,
-                0x2: self.STATUS_LED_COLOR_GREEN,
-                0x1: self.STATUS_LED_COLOR_AMBER,
-            }
-            return status_led.get(result)
-        if device_name == "FAN_Front_LED":
-            status, result = self._api_helper.cpld_lpc_read(0xA165)
-            if status == True:
-                result = int(result, 16) & 0x3
-            else:
-                return self.STATUS_LED_COLOR_UNKNOWN
-
-            status_led = {
-                0x0: self.STATUS_LED_COLOR_OFF,
-                0x3: self.STATUS_LED_COLOR_OFF,
-                0x2: self.STATUS_LED_COLOR_GREEN,
-                0x1: self.STATUS_LED_COLOR_AMBER,
-            }
-            return status_led.get(result)
-        elif device_name == "FANTRAY1_LED":
-            return self._fan_list[0].get_status_led()
-        elif device_name == "FANTRAY2_LED":
-            return self._fan_list[1].get_status_led()
-        elif device_name == "FANTRAY3_LED":
-            return self._fan_list[2].get_status_led()
-        elif device_name == "PSU1_LED":
-            return self._psu_list[0].get_status_led()
-        elif device_name == "PSU2_LED":
-            return self._psu_list[1].get_status_led()
-        elif device_name == "PSU3_LED":
-            return self._psu_list[2].get_status_led()
-        elif device_name == "PSU4_LED":
-            return self._psu_list[3].get_status_led()
-        else:
-            raise NotImplementedError 
 
     def get_port_or_cage_type(self, index):
         if index in range(1, 64+1):
@@ -375,7 +238,7 @@ class Chassis(PddfChassis):
 
         return True, {'sfp': {}}  # Timeout
 
-def get_thermal_manager(self):
+    def get_thermal_manager(self):
         """
         Retrieves thermal manager class on this chasssis
         Returns:
@@ -386,3 +249,21 @@ def get_thermal_manager(self):
             from .thermal_manager import ThermalManager
             return ThermalManager
         return None
+
+    def get_airflow_direction(self):
+        if self._airflow_direction == None:
+            try:
+                vendor_extn = self._eeprom.get_vendor_extn()
+                airflow_type = vendor_extn.split()[2][2:4] # either 0xfb or 0xbf
+                if airflow_type == 'FB':
+                    direction = 'exhaust'
+                elif airflow_type == 'BF':
+                    direction = 'intake'
+                else:
+                    direction = 'N/A'
+            except (AttributeError, IndexError):
+                direction = 'N/A'
+
+            self._airflow_direction = direction
+
+        return self._airflow_direction

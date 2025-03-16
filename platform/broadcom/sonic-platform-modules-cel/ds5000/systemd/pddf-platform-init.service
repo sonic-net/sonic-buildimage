@@ -1,7 +1,7 @@
 [Unit]
 Description=PDDF module and device initialization service
 Before=syncd.service pmon.service watchdog-control.service
-Before=opennsl-modules.service
+Before=opennsl-modules.service system-health.service determine-reboot-cause.service
 DefaultDependencies=no
 
 [Service]

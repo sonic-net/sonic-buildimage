@@ -85,7 +85,7 @@ struct cpld_wdt {
 static const struct watchdog_info cpld_wdt_ident = {
 	.options	= WDIOF_KEEPALIVEPING | WDIOF_SETTIMEOUT |
 			  WDIOF_MAGICCLOSE,
-	.identity	= "celestica cpld Watchdog",
+	.identity	= "Celestica CPLD Watchdog",
 };
 
 extern void cpld_b_lock(void);

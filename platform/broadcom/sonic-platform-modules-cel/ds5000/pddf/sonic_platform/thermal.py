@@ -23,76 +23,69 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 SENSORS_THRESHOLD_MAP = {
-    "12V_ENTRY_LEFT":      { "high_threshold": 90, "high_crit_threshold": 93},
-    "12V_ENTRY_RIGHT":     { "high_threshold": 90, "high_crit_threshold": 93},
-    "BB_BUSBAR_TEMP":      { "high_threshold": 90, "high_crit_threshold": 93},
-    "BB_OUTLET_TEMP":      { "high_threshold": 90, "high_crit_threshold": 93},
-    "TH5_REAR_LEFT":       { "high_threshold": 90, "high_crit_threshold": 93},
-    "TH5_REAR_RIGHT":      { "high_threshold": 90, "high_crit_threshold": 93},
-    "PSU 1 Temp1":         { "high_threshold": 60},
-    "PSU 2 Temp1":         { "high_threshold": 60},
-    "PSU 3 Temp1":         { "high_threshold": 60},
-    "PSU 4 Temp1":         { "high_threshold": 60},
-    "PSU 1 Temp2":         { "high_threshold": 60},
-    "PSU 2 Temp2":         { "high_threshold": 60},
-    "PSU 3 Temp2":         { "high_threshold": 60},
-    "PSU 4 Temp2":         { "high_threshold": 60},
-    "PSU 1 Temp3":         { "high_threshold": 60},
-    "PSU 2 Temp3":         { "high_threshold": 60},
-    "PSU 3 Temp3":         { "high_threshold": 60},
-    "PSU 4 Temp3":         { "high_threshold": 60},
-    "PSU 1 Temp4":         { "high_threshold": 60},
-    "PSU 2 Temp4":         { "high_threshold": 60},
-    "PSU 3 Temp4":         { "high_threshold": 60},
-    "PSU 4 Temp4":         { "high_threshold": 60},
-    "DIMM0_TEMP":          { "high_threshold": 85, "high_crit_threshold": 88},
-    "DIMM1_TEMP":          { "high_threshold": 85, "high_crit_threshold": 88},
-    "XP0R8V_TEMP":         { "high_threshold": 90},
-    "XP3R3V_E_TEMP":       { "high_threshold": 90},
-    "XP3R3V_W_TEMP":       { "high_threshold": 90},
-    "XP0R9V_0_TEMP":       { "high_threshold": 90},
-    "XP1R2V_0_TEMP":       { "high_threshold": 90},
-    "XP0R9V_1_TEMP":       { "high_threshold": 90},
-    "XP1R2V_1_TEMP":       { "high_threshold": 90},
-    "XP0R75V_0_TEMP":      { "high_threshold": 90},
-    "XP0R75V_1_TEMP":      { "high_threshold": 90}}
+    "12V_ENTRY_LEFT":      { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "12V_ENTRY_RIGHT":     { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "BB_BUSBAR_TEMP":      { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "BB_OUTLET_TEMP":      { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "TH5_REAR_LEFT":       { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "TH5_REAR_RIGHT":      { "high_threshold": 90.0, "high_crit_threshold": 93.0 },
+    "PSU 1 TEMP 1":        { "high_threshold": 60.0 },
+    "PSU 2 TEMP 1":        { "high_threshold": 60.0 },
+    "PSU 3 TEMP 1":        { "high_threshold": 60.0 },
+    "PSU 4 TEMP 1":        { "high_threshold": 60.0 },
+    "PSU 1 SR TEMP":       { "high_threshold": 60.0 },
+    "PSU 2 SR TEMP":       { "high_threshold": 60.0 },
+    "PSU 3 SR TEMP":       { "high_threshold": 60.0 },
+    "PSU 4 SR TEMP":       { "high_threshold": 60.0 },
+    "PSU 1 PFC TEMP":      { "high_threshold": 60.0 },
+    "PSU 2 PFC TEMP":      { "high_threshold": 60.0 },
+    "PSU 3 PFC TEMP":      { "high_threshold": 60.0 },
+    "PSU 4 PFC TEMP":      { "high_threshold": 60.0 },
+    "CPU_TEMP":            { "high_threshold": 105.0, "high_crit_threshold": 108.0 },
+    "DIMM0_TEMP":          { "high_threshold": 85.0, "high_crit_threshold": 88.0 },
+    "DIMM1_TEMP":          { "high_threshold": 85.0, "high_crit_threshold": 88.0 },
+    "TH5_CORE_TEMP":       { "high_threshold": 103.0, "high_crit_threshold": 110.0 },
+    "XP0R8V_TEMP":         { "high_threshold": 90.0 },
+    "XP3R3V_E_TEMP":       { "high_threshold": 90.0 },
+    "XP3R3V_W_TEMP":       { "high_threshold": 90.0 },
+    "XP0R9V_0_TEMP":       { "high_threshold": 90.0 },
+    "XP1R2V_0_TEMP":       { "high_threshold": 90.0 },
+    "XP0R9V_1_TEMP":       { "high_threshold": 90.0 },
+    "XP1R2V_1_TEMP":       { "high_threshold": 90.0 },
+    "XP0R75V_0_TEMP":      { "high_threshold": 90.0 },
+    "XP0R75V_1_TEMP":      { "high_threshold": 90.0 }
+}
 
 class Thermal(PddfThermal):
     """PDDF Platform-Specific Thermal class"""
 
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None, is_psu_thermal=False, psu_index=0):
         PddfThermal.__init__(self, index, pddf_data, pddf_plugin_data, is_psu_thermal, psu_index)
-        self._api_helper = APIHelper()      
+        self._api_helper = APIHelper()
 
     # Provide the functions/variables below for which implementation is to be overwritten
-    
-    def set_high_threshold(self, temperature):
-        return False
 
-    def set_low_threshold(self, temperature):
-        return False
-
-    def get_temperature(self):
-        if self._api_helper.with_bmc() and self.is_psu_thermal:
-            return PddfThermal.get_temperature(self) * 1000
-        else:
-            return PddfThermal.get_temperature(self)
-
+    # Using static thresholds as it is not allowed to change the thresholds
     def get_high_threshold(self):
+        threshold = None
         thermal_data = SENSORS_THRESHOLD_MAP.get(self.get_name(), None)
         if thermal_data != None:
             threshold = thermal_data.get("high_threshold", None)
-            if threshold != None:
-                return (threshold/float(1))
-        return super().get_high_threshold()
+
+        return threshold
 
     def get_high_critical_threshold(self):
         thermal_data = SENSORS_THRESHOLD_MAP.get(self.get_name(), None)
         if thermal_data != None:
             threshold = thermal_data.get("high_crit_threshold", None)
-            if threshold != None:
-                return (threshold/float(1))
-        return super().get_high_critical_threshold()
+
+        return threshold
+
+    def get_low_threshold(self):
+        return None
+
+    def get_low_critical_threshold(self):
+        return None
 
     def get_temp_label(self):
         label = super().get_temp_label()

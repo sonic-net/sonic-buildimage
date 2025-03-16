@@ -37,13 +37,6 @@
                "1": "PSU 4 Fan 1"
             }
         },
-        "thermal_name":
-        {
-            "1": "PSU 1 Temp1",
-            "2": "PSU 2 Temp1",
-            "3": "PSU 3 Temp1",
-            "4": "PSU 4 Temp1"
-        },
         "psu_present": 
         {
             "i2c":
@@ -52,8 +45,8 @@
             },
             "bmc":
             {
-                "valmap": { "ok":true, "0":false }
-            }			
+                "valmap": { "1":true, "0":false }
+            }
         },
         "psu_power_good": 
         {
@@ -63,8 +56,8 @@
             },
             "bmc":
             {
-                "valmap": { "ok": true, "1":false }
-            }			
+                "valmap": { "1":true, "0":false }
+            }
         },
         "psu_fan_dir":
         {
@@ -81,13 +74,6 @@
     },
     "FAN":
     {
-        "direction":
-        {
-            "i2c":
-            {
-                "valmap": {"1":"EXHAUST", "0":"INTAKE"}
-            }
-        },
         "drawer_name":
         {
             "1": "Fantray 1",
@@ -117,8 +103,18 @@
             "i2c":
             {
                 "valmap": {"1":false, "0":true}
+            },
+            "bmc":
+            {
+                "valmap": {"0":false, "1":true}
             }
         },
+
+        "FAN_MAX_RPM_SPEED":
+        {
+            "exhaust": {"0": "18000", "1": "16000"}
+        },
+
         "duty_cycle_to_pwm": "lambda dc: dc*255/100",
 
         "pwm_to_duty_cycle": "lambda pwm: pwm/255*100"

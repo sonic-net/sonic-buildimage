@@ -17,24 +17,18 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-FPGA_VERSION_PATH = "/sys/devices/platform/cls_sw_fpga/FPGA/version"
-UNKNOWN_VER = "Unknown"
-
-BMC_EXIST = APIHelper().get_bmc_status()
-
 COMPONENT_LIST = [
     ("BIOS",         "Basic Input/Output System"),
     ("ONIE",         "Open Network Install Environment"),
-    ("FPGA",         "FPGA for transceiver EEPROM access and other component I2C access"),
+    ("BMC",          "Baseboard Management Controller"),
+    ("FPGA",         "FPGA for transceiver EEPROM access, as MUX for I2C access and port control SFP(65-66)"),
     ("CPLD COMe",    "COMe board CPLD"),
-    ("CPLD BASE",    "CPLD for board functions and watchdog"),
+    ("CPLD BASE",    "CPLD for board functions LED, fan and watchdog control"),
     ("CPLD SW1",     "CPLD for port control OSFP(1-32)"),
     ("CPLD SW2",     "CPLD for port control OSFP(33-64)"),
-    ("SSD",          "Solid State Drive firmware"),
+    ("SSD1",         "Primary Solid State Drive"),
+    ("SSD2",         "Secondary Solid State Drive"),
 ]
-
-if BMC_EXIST:
-    COMPONENT_LIST.insert(2,("BMC","Baseboard Management Controller"))
 
 class Component(ComponentBase):
     """Platform-specific Component class"""
@@ -44,78 +38,110 @@ class Component(ComponentBase):
     def __init__(self, component_index):
         ComponentBase.__init__(self)
         self.index = component_index
-        self.name = self.get_name()
         self._api_helper = APIHelper()
+        self._name = None
+        self._desc = None
 
-    def __get_switch_cpld1_ver(self):
-        cmd = "cat /sys/devices/platform/cls_sw_fpga/CPLD1/version"
-        status, sw_cpld1_ver = self._api_helper.run_command(cmd)
-        if status:
-           return sw_cpld1_ver
+        if not self._api_helper.with_bmc() and component_index >= 2:
+            # skip the BMC from the list
+            self._component_info = COMPONENT_LIST[component_index + 1]
         else:
-           return UNKNOWN_VER
+            self._component_info = COMPONENT_LIST[component_index]
 
-    def __get_switch_cpld2_ver(self):
-        cmd = "cat /sys/devices/platform/cls_sw_fpga/CPLD2/version"
-        status, sw_cpld2_ver = self._api_helper.run_command(cmd)
+    def __get_cpld_ver(self, bus, addr):
+        ver = "N/A"
+        cmd = "/usr/sbin/i2cget -y -f {} {} 0".format(bus, addr)
+        status, output = self._api_helper.run_command(cmd)
         if status:
-           return sw_cpld2_ver
-        else:
-           return UNKNOWN_VER
-
-    def __get_base_cpld_ver(self):
-        status, ver = self._api_helper.cpld_lpc_read(0xA100)
-        if status:
-           return ver
-        else:
-           return UNKNOWN_VER
-
-    def __get_come_cpld_ver(self):
-        status, ver = self._api_helper.cpld_lpc_read(0xA1E0)
-        if status:
-           return ver
-        else:
-           return UNKNOWN_VER
-
-    def __get_bmc_ver(self):
-        ver = "Unknown"
-        cmd = "ipmitool mc info | grep 'Firmware Revision'"
-        status, result = self._api_helper.run_command(cmd)
-        if status:
-            ver_data = result.split(":")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
-            return ver 
-        else:
-           return "N/A"
-
-    def __get_ssd_ver(self):
-        ver = "Unknown"
-        cmd = "ssdutil -v | grep 'Firmware'"
-        status, result = self._api_helper.run_command(cmd)
-        if status:
-            ver_data = result.split(":")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+            ver = "{}.{}".format(int(output[2],16), int(output[3],16))
+        
         return ver
 
-    def __get_onie_ver(self):
-        ver = "Unknown"
-        cmd = "cat /host/machine.conf | grep 'onie_version'"
-        status, result = self._api_helper.run_command(cmd)
+    def __get_switch_cpld1_ver(self):
+        return self.__get_cpld_ver(2, "0x30")
+
+    def __get_switch_cpld2_ver(self):
+        return self.__get_cpld_ver(2, "0x31")
+
+    def __get_base_cpld_ver(self):
+        ver = "N/A"
+        status, output = self._api_helper.cpld_lpc_read(0xA100)
         if status:
-            ver_data = result.split("=")
-            ver = ver_data[-1].strip() if len(ver_data) > 1 else ver
+            ver = "{}.{}".format(int(output[2],16), int(output[3],16))
+
+        return ver
+
+    def __get_come_cpld_ver(self):
+        ver = "N/A"
+        status, output = self._api_helper.cpld_lpc_read(0xA1E0)
+        if status:
+            ver = "{}.{}".format(int(output[2],16), int(output[3],16))
+
+        return ver
+
+    def __get_bmc_ver(self):
+        ver = "N/A"
+        cmd = "/usr/bin/ipmitool mc info"
+        status, output = self._api_helper.run_command(cmd)
+        if status:
+            for line in output.split('\n'):
+                if line.startswith('Firmware Revision'):
+                    ver = line.split(':')[1].strip()
+                    break
+
+        return ver
+
+    def __get_ssd_ver(self, path):
+        ver = "N/A"
+        cmd = "/usr/sbin/smartctl -i {}".format(path)
+        status, output = self._api_helper.run_command(cmd)
+        if status:
+            for line in output.split('\n'):
+                if line.startswith('Firmware Version'):
+                    ver = line.split(':')[1].strip()
+                    break
+
+        return ver
+
+    def __get_ssd1_ver(self):
+        return self.__get_ssd_ver('/dev/sda')
+
+    def __get_ssd2_ver(self):
+        return self.__get_ssd_ver('/dev/sdb')
+
+    def __get_onie_ver(self):
+        ver = "N/A"
+        try:
+            with open("/host/machine.conf") as fd:
+                output = fd.read()
+            for line in output.split('\n'):
+                if line.startswith('onie_version'):
+                    ver = line.split('=')[1].strip()
+        except (FileNotFoundError, IOError):
+            pass
+
         return ver
 
     def __get_fpga_ver(self):
-        status, fpga_version = self._api_helper.run_command("cat %s" % FPGA_VERSION_PATH)
-        if not status:
-            return UNKNOWN_VER
-        return fpga_version.replace("0x", "")
+        ver = "N/A"
+        try:
+            with open("/sys/devices/platform/cls_sw_fpga/FPGA/version") as fd:
+                output = fd.read().strip()
+            output = output[2:]
+            ver = output.upper()
+        except (FileNotFoundError, IOError):
+            pass
+
+        return ver
 
     def __get_bios_ver(self):
-        cmd = "dmidecode -s bios-version"
-        status, result = self._api_helper.run_command(cmd)
-        return result
+        ver = "N/A"
+        cmd = "/usr/sbin/dmidecode -s bios-version"
+        status, output = self._api_helper.run_command(cmd)
+        if status:
+            ver = output
+
+        return ver
 
     def get_name(self):
         """
@@ -123,7 +149,10 @@ class Component(ComponentBase):
          Returns:
             A string containing the name of the component
         """
-        return COMPONENT_LIST[self.index][0]
+        if self._name == None:
+            self._name = self._component_info[0]
+
+        return self._name
 
     def get_description(self):
         """
@@ -131,7 +160,10 @@ class Component(ComponentBase):
             Returns:
             A string containing the description of the component
         """
-        return COMPONENT_LIST[self.index][1]
+        if self._desc == None:
+            self._desc = self._component_info[1]
+
+        return self._desc
 
     def get_firmware_version(self):
         """
@@ -139,52 +171,20 @@ class Component(ComponentBase):
         Returns:
             string: The firmware versions of the module
         """
-        fw_version = None
 
-        if "BIOS" in self.name:
-            fw_version = self.__get_bios_ver()
-        elif "ONIE" in self.name:
-            fw_version = self.__get_onie_ver()
-        elif "CPLD" in self.name:
-            fw_version = self.__get_cpld_ver()
-        elif self.name == "FPGA":
-            fw_version = self.__get_fpga_ver()
-        elif "BMC" in self.name:
-            fw_version = self.__get_bmc_ver()
-        elif "SSD" in self.name:
-            fw_version = self.__get_ssd_ver()
-        return fw_version
-
-    def __get_cpld_ver(self):
-        version = "N/A"
-        cpld_version_dict = dict()
-        cpld_ver_info = {
-            'CPLD BASE': self.__get_base_cpld_ver(),
-            'CPLD SW1': self.__get_switch_cpld1_ver(),
-            'CPLD SW2': self.__get_switch_cpld2_ver(),
-            'CPLD COMe': self.__get_come_cpld_ver(),
+        get_fw_version = {
+            "BIOS": self.__get_bios_ver,
+            "ONIE": self.__get_onie_ver,
+            "BMC": self.__get_bmc_ver,
+            "FPGA": self.__get_fpga_ver,
+            "CPLD COMe": self.__get_come_cpld_ver,
+            "CPLD BASE": self.__get_base_cpld_ver,
+            "CPLD SW1": self.__get_switch_cpld1_ver,
+            "CPLD SW2": self.__get_switch_cpld2_ver,
+            "SSD1": self.__get_ssd1_ver,
+            "SSD2": self.__get_ssd2_ver,
         }
-        if self.name in cpld_ver_info.keys():
-            version = cpld_ver_info[self.name]
-            ver = version.lstrip("0x")
-            version1 = int(ver.strip()) / 10
-            version2 = int(ver.strip()) % 10
-            version = "%d.%d" % (version1, version2)
-            return version
 
-    @staticmethod
-    def install_firmware(image_path):
-        """
-        Install firmware to module
-        Args:
-            image_path: A string, path to firmware image
-        Returns:
-            A boolean, True if install successfully, False if not
-        """
-        return False
+        fw_version = get_fw_version[self.get_name()]()
 
-    @staticmethod
-    def update_firmware(image_path):
-        # Not support
-        return False
- 
+        return fw_version

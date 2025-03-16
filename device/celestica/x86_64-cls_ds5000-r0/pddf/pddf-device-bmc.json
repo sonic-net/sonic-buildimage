@@ -5,7 +5,7 @@
         "num_fantrays":3,
         "num_fans_pertray":2,
         "num_ports":66,
-        "num_temps":17,
+        "num_temps":27,
         "bmc_present" : "True",
         "pddf_dev_types":
         {
@@ -42,14 +42,16 @@
             "pddf_client_module",
             "pddf_fpgapci_driver",
             "pddf_fpgapci_module",
+            "pddf_mux_module",
             "pddf_cpld_module",
             "pddf_cpld_driver",
             "pddf_led_module",
-            "pddf_xcvr_driver",
+            "pddf_xcvr_module",
             "pddf_xcvr_driver_module"
         ],
         "custom_kos":
         [
+            "pddf_custom_xcvr_api",
             "pddf_custom_fpga_algo",
             "pddf_custom_wdt"
         ]
@@ -313,18 +315,17 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 215", "raw":"0", "field_name":"Product Name", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 215", "raw":"0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 215", "raw":"0", "field_name":"Product Serial", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x49", "raw":"1", "type":"raw", "index":"0", "multiplier":"1.18"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4a",  "raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x0", "raw":"1","type":"raw", "index":"0", "multiplier":"0.078"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1", "raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1e", "raw":"1", "type":"raw", "index":"0", "multiplier":"11.8"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1f", "raw":"1", "type":"raw", "index":"0","multiplier":"11800000"},
-                    { "attr_name":"psu_p_out_max", "bmc_cmd":"ipmitool raw 0x04 0x27 0x1f", "raw":"1", "type":"raw", "index":"4","multiplier":"11.8"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1a","raw":"1", "type":"raw", "index":"0","multiplier":"118"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x31","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"psu_present", "raw": "0", "type":"discrete sensor", "name":"PSU1_STATUS", "pattern":"\\[Predictive failure\\]", "true":"0", "false":"1"},
+                    { "attr_name":"psu_power_good", "raw": "0", "type":"discrete sensor", "name":"PSU1_STATUS", "pattern":"\\[Presence detected\\]", "true":"1", "false":"0"},
+                    { "attr_name":"psu_v_in", "raw": "0", "type":"analog sensor", "name":"PSU1_VoltIn", "field":"SR"},
+                    { "attr_name":"psu_v_out", "raw": "0", "type":"analog sensor", "name":"PSU1_VoltOut", "field":"SR"},
+                    { "attr_name":"psu_i_in", "raw": "0", "type":"analog sensor", "name":"PSU1_CurrIn", "field":"SR"},
+                    { "attr_name":"psu_i_out", "raw": "0", "type":"analog sensor", "name":"PSU1_CurrOut", "field":"SR"},
+                    { "attr_name":"psu_p_in", "raw": "0", "type":"analog sensor", "name":"PSU1_PowerIn", "field":"SR"},
+                    { "attr_name":"psu_p_out", "raw": "0", "type":"analog sensor", "name":"PSU1_PowerOut", "field":"SR"},
+                    { "attr_name":"psu_fan1_speed_rpm", "raw": "0", "type":"analog sensor", "name":"PSU1_FanSpeed", "field":"SR"},
+                    { "attr_name":"psu_temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP1", "field":"SR"},
+                    { "attr_name":"psu_temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP1", "field":"UNC"}
                 ]
             }
         }
@@ -337,18 +338,17 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 26", "raw":"0", "field_name":"Product Name", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 26", "raw":"0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 26", "raw":"0", "field_name":"Product Serial", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4b", "raw":"1", "type":"raw", "index":"0","multiplier":"1.18"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4c", "raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x2 ", "raw":"1", "type":"raw", "index":"0","multiplier":"0.078"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw  0x04 0x2d 0x3 ", "raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x20",  "raw":"1", "type":"raw", "index":"0","multiplier":"11.8"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x21", "raw":"1", "type":"raw", "index":"0", "multiplier":"11800000"},
-                    { "attr_name":"psu_p_out_max", "bmc_cmd":"ipmitool raw 0x04 0x027 0x21", "raw":"1", "type":"raw", "index":"4","multiplier":"11.8"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x02d 0x1b", "raw":"1", "type":"raw", "index":"0","multiplier":"118"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x34",  "raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"psu_present", "raw": "0", "type":"discrete sensor", "name":"PSU2_STATUS", "pattern":"\\[Predictive failure\\]", "true":"0", "false":"1"},
+                    { "attr_name":"psu_power_good", "raw": "0", "type":"discrete sensor", "name":"PSU2_STATUS", "pattern":"\\[Presence detected\\]", "true":"1", "false":"0"},
+                    { "attr_name":"psu_v_in", "raw": "0", "type":"analog sensor", "name":"PSU2_VoltIn", "field":"SR"},
+                    { "attr_name":"psu_v_out", "raw": "0", "type":"analog sensor", "name":"PSU2_VoltOut", "field":"SR"},
+                    { "attr_name":"psu_i_in", "raw": "0", "type":"analog sensor", "name":"PSU2_CurrIn", "field":"SR"},
+                    { "attr_name":"psu_i_out", "raw": "0", "type":"analog sensor", "name":"PSU2_CurrOut", "field":"SR"},
+                    { "attr_name":"psu_p_in", "raw": "0", "type":"analog sensor", "name":"PSU2_PowerIn", "field":"SR"},
+                    { "attr_name":"psu_p_out", "raw": "0", "type":"analog sensor", "name":"PSU2_PowerOut", "field":"SR"},
+                    { "attr_name":"psu_fan1_speed_rpm", "raw": "0", "type":"analog sensor", "name":"PSU2_FanSpeed", "field":"SR"},
+                    { "attr_name":"psu_temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP1", "field":"SR"},
+                    { "attr_name":"psu_temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP1", "field":"UNC"}
                 ]
             }
         }
@@ -361,18 +361,17 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 128", "raw":"0", "field_name":"Product Name", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 128", "raw":"0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 128", "raw":"0", "field_name":"Product Serial", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4d", "raw":"1", "type":"raw", "index":"0","multiplier":"1.18"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4e","raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4", "raw":"1", "type":"raw", "index":"0","multiplier":"0.078"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x5 ","raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x22", "raw":"1", "type":"raw", "index":"0", "multiplier":"11.8"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x23", "raw":"1", "type":"raw", "index":"0", "multiplier":"11800000"},
-                    { "attr_name":"psu_p_out_max", "bmc_cmd":"ipmitool raw 0x04 0x27 0x23", "raw":"1", "type":"raw", "index":"4", "multiplier":"11.8"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1c", "raw":"1", "type":"raw", "index":"0", "multiplier":"118"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x37","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"psu_present", "raw": "0", "type":"discrete sensor", "name":"PSU3_STATUS", "pattern":"\\[Predictive failure\\]", "true":"0", "false":"1"},
+                    { "attr_name":"psu_power_good", "raw": "0", "type":"discrete sensor", "name":"PSU3_STATUS", "pattern":"\\[Presence detected\\]", "true":"1", "false":"0"},
+                    { "attr_name":"psu_v_in", "raw": "0", "type":"analog sensor", "name":"PSU3_VoltIn", "field":"SR"},
+                    { "attr_name":"psu_v_out", "raw": "0", "type":"analog sensor", "name":"PSU3_VoltOut", "field":"SR"},
+                    { "attr_name":"psu_i_in", "raw": "0", "type":"analog sensor", "name":"PSU3_CurrIn", "field":"SR"},
+                    { "attr_name":"psu_i_out", "raw": "0", "type":"analog sensor", "name":"PSU3_CurrOut", "field":"SR"},
+                    { "attr_name":"psu_p_in", "raw": "0", "type":"analog sensor", "name":"PSU3_PowerIn", "field":"SR"},
+                    { "attr_name":"psu_p_out", "raw": "0", "type":"analog sensor", "name":"PSU3_PowerOut", "field":"SR"},
+                    { "attr_name":"psu_fan1_speed_rpm", "raw": "0", "type":"analog sensor", "name":"PSU3_FanSpeed", "field":"SR"},
+                    { "attr_name":"psu_temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP1", "field":"SR"},
+                    { "attr_name":"psu_temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP1", "field":"UNC"}
                 ]
             }
         }
@@ -385,18 +384,17 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"psu_model_name", "bmc_cmd":"ipmitool fru print 154", "raw":"0", "field_name":"Product Name", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_mfr_id", "bmc_cmd":"ipmitool fru print 154", "raw":"0", "field_name":"Product Manufacturer", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_serial_num", "bmc_cmd":"ipmitool fru print 154", "raw":"0", "field_name":"Product Serial", "separator":":", "field_pos":"2"},
-                    { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x4f", "raw":"1", "type":"raw", "index":"0","multiplier":"1.18"},
-                    { "attr_name":"psu_v_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x50","raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x6","raw":"1", "type":"raw", "index":"0","multiplier":"0.078"},
-                    { "attr_name":"psu_i_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x7 ", "raw":"1", "type":"raw", "index":"0","multiplier":"1000"},
-                    { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x24","raw":"1", "type":"raw", "index":"0","multiplier":"11.8"},
-                    { "attr_name":"psu_p_out", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x25", "raw":"1", "type":"raw", "index":"0","multiplier":"11800000"},
-                    { "attr_name":"psu_p_out_max", "bmc_cmd":"ipmitool raw 0x04 0x27 0x25", "raw":"1", "type":"raw", "index":"4","multiplier":"11.8"},
-                    { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x1d","raw":"1", "type":"raw", "index":"0","multiplier":"118"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x3a", "raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"psu_present", "raw": "0", "type":"discrete sensor", "name":"PSU4_STATUS", "pattern":"\\[Predictive failure\\]", "true":"0", "false":"1"},
+                    { "attr_name":"psu_power_good", "raw": "0", "type":"discrete sensor", "name":"PSU4_STATUS", "pattern":"\\[Presence detected\\]", "true":"1", "false":"0"},
+                    { "attr_name":"psu_v_in", "raw": "0", "type":"analog sensor", "name":"PSU4_VoltIn", "field":"SR"},
+                    { "attr_name":"psu_v_out", "raw": "0", "type":"analog sensor", "name":"PSU4_VoltOut", "field":"SR"},
+                    { "attr_name":"psu_i_in", "raw": "0", "type":"analog sensor", "name":"PSU4_CurrIn", "field":"SR"},
+                    { "attr_name":"psu_i_out", "raw": "0", "type":"analog sensor", "name":"PSU4_CurrOut", "field":"SR"},
+                    { "attr_name":"psu_p_in", "raw": "0", "type":"analog sensor", "name":"PSU4_PowerIn", "field":"SR"},
+                    { "attr_name":"psu_p_out", "raw": "0", "type":"analog sensor", "name":"PSU4_PowerOut", "field":"SR"},
+                    { "attr_name":"psu_fan1_speed_rpm", "raw": "0", "type":"analog sensor", "name":"PSU4_FanSpeed", "field":"SR"},
+                    { "attr_name":"psu_temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP1", "field":"SR"},
+                    { "attr_name":"psu_temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP1", "field":"UNC"}
                 ]
             }
         }
@@ -404,12 +402,16 @@
     "TEMP1":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 1 Temp2"},
+        "dev_attr": {"display_name":"PSU 1 SR TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input","bmc_cmd":"ipmitool raw 0x04 0x2d 0x32","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP2", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP2", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP2", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP2", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP2", "field":"LCR"}
                 ]
             }
         }
@@ -417,13 +419,16 @@
     "TEMP2":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 1 Temp3"},
+        "dev_attr": {"display_name":"PSU 1 PFC TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x33","raw":"1", "type":"raw", "index":"0"}
-                    
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP3", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP3", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP3", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP3", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU1_TEMP3", "field":"LCR"}
                 ]
             }
         }
@@ -431,12 +436,16 @@
     "TEMP3":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 2 Temp2"},
+        "dev_attr": {"display_name":"PSU 2 SR TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input","bmc_cmd":"ipmitool raw 0x04 0x2d 0x35","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP2", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP2", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP2", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP2", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP2", "field":"LCR"}
                 ]
             }
         }
@@ -444,12 +453,16 @@
     "TEMP4":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 2 Temp3"},
+        "dev_attr": {"display_name":"PSU 2 PFC TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input","bmc_cmd":"ipmitool raw 0x04 0x2d 0x36","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP3", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP3", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP3", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP3", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU2_TEMP3", "field":"LCR"}
                 ]
             }
         }
@@ -457,12 +470,16 @@
     "TEMP5":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 3 Temp2"},
+        "dev_attr": {"display_name":"PSU 3 SR TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x38","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP2", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP2", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP2", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP2", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP2", "field":"LCR"}
                 ]
             }
         }
@@ -470,13 +487,16 @@
     "TEMP6":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 3 Temp3"},
+        "dev_attr": {"display_name":"PSU 3 PFC TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x39","raw":"1", "type":"raw", "index":"0"}
-                    
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP3", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP3", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP3", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP3", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU3_TEMP3", "field":"LCR"}
                 ]
             }
         }
@@ -484,12 +504,16 @@
     "TEMP7":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 4 Temp2"},
+        "dev_attr": {"display_name":"PSU 4 SR TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x3b","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP2", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP2", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP2", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP2", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP2", "field":"LCR"}
                 ]
             }
         }
@@ -497,12 +521,16 @@
     "TEMP8":
     {
         "dev_info": {"device_type":"TEMP_SENSOR"},
-        "dev_attr": {"display_name":"PSU 4 Temp3"},
+        "dev_attr": {"display_name":"PSU 4 PFC TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x3c","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP3", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP3", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP3", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP3", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"PSU4_TEMP3", "field":"LCR"}
                 ]
             }
         }
@@ -515,9 +543,11 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x2a","raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x2a","raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x2a","raw":"1", "type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_LEFT", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_LEFT", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_LEFT", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_LEFT", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_LEFT", "field":"LCR"}
                 ]
             }
         }
@@ -530,9 +560,11 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input","bmc_cmd":"ipmitool raw 0x04 0x2d 0x2b","raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold","bmc_cmd":"ipmitool raw 0x04 0x27 0x2b","raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold","bmc_cmd":"ipmitool raw 0x04 0x27 0x2b","raw":"1","type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_RIGHT", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_RIGHT", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_RIGHT", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_RIGHT", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"12V_ENTRY_RIGHT", "field":"LCR"}
                 ]
             }
         }
@@ -545,9 +577,11 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x2c","raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold","bmc_cmd":"ipmitool raw 0x04 0x27 0x2c","raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold","bmc_cmd":"ipmitool raw 0x04 0x27 0x2c","raw":"1", "type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"BB_BUSBAR_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"BB_BUSBAR_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"BB_BUSBAR_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"BB_BUSBAR_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"BB_BUSBAR_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -560,9 +594,11 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x2d","raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold","bmc_cmd":"ipmitool raw 0x04 0x27 0x2d", "raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x2d", "raw":"1", "type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"BB_OUTLET_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"BB_OUTLET_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"BB_OUTLET_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"BB_OUTLET_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"BB_OUTLET_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -570,14 +606,16 @@
     "TEMP13":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"TH5_REAR_LEFT"},
+        "dev_attr": { "display_name":"TH5_CORE_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x3e", "raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x3e", "raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x3e", "raw":"1", "type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_CORE_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_CORE_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"TH5_CORE_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_CORE_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_CORE_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -585,14 +623,16 @@
     "TEMP14":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"TH5_REAR_RIGHT"},
+        "dev_attr": { "display_name":"TH5_REAR_LEFT"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x3f","raw":"1", "type":"raw", "index":"0"},
-                    { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x3f", "raw":"1", "type":"raw", "index":"4"},
-                    { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool raw 0x04 0x27 0x3f", "raw":"1", "type":"raw", "index":"5"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_LEFT", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_LEFT", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_LEFT", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_LEFT", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_LEFT", "field":"LCR"}
                 ]
             }
         }
@@ -600,12 +640,16 @@
     "TEMP15":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP0R8V_TEMP"},
+        "dev_attr": { "display_name":"TH5_REAR_RIGHT"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x40", "raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_RIGHT", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_RIGHT", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_RIGHT", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_RIGHT", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"TH5_REAR_RIGHT", "field":"LCR"}
                 ]
             }
         }
@@ -613,12 +657,16 @@
     "TEMP16":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP0R9V_0_TEMP"},
+        "dev_attr": { "display_name":"XP0R8V_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x41", "raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R8V_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R8V_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP0R8V_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R8V_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R8V_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -626,12 +674,16 @@
     "TEMP17":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP0R9V_1_TEMP"},
+        "dev_attr": { "display_name":"XP0R9V_0_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x42","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_0_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_0_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP0R9V_0_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_0_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_0_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -639,12 +691,16 @@
     "TEMP18":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP0R75V_0_TEMP"},
+        "dev_attr": { "display_name":"XP0R9V_1_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x43","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_1_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_1_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP0R9V_1_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_1_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R9V_1_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -652,12 +708,16 @@
     "TEMP19":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP0R75V_1_TEMP"},
+        "dev_attr": { "display_name":"XP0R75V_0_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x44","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_0_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_0_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP0R75V_0_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_0_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_0_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -665,12 +725,16 @@
     "TEMP20":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP1R2V_0_TEMP"},
+        "dev_attr": { "display_name":"XP0R75V_1_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x45","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_1_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_1_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP0R75V_1_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_1_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP0R75V_1_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -678,12 +742,16 @@
     "TEMP21":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP1R2V_1_TEMP"},
+        "dev_attr": { "display_name":"XP1R2V_0_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x46","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_0_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_0_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP1R2V_0_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_0_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_0_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -691,12 +759,16 @@
     "TEMP22":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP3R3V_E_TEMP"},
+        "dev_attr": { "display_name":"XP1R2V_1_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x47","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_1_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_1_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP1R2V_1_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_1_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP1R2V_1_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -704,12 +776,16 @@
     "TEMP23":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"XP3R3V_W_TEMP"},
+        "dev_attr": { "display_name":"XP3R3V_E_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x48","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_E_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_E_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP3R3V_E_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_E_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_E_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -717,12 +793,16 @@
     "TEMP24":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
-        "dev_attr": { "display_name":"DIMM0_TEMP"},
+        "dev_attr": { "display_name":"XP3R3V_W_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x2f","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_W_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_W_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"XP3R3V_W_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_W_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"XP3R3V_W_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -730,12 +810,50 @@
     "TEMP25":
     {
         "dev_info": { "device_type":"TEMP_SENSOR"},
+        "dev_attr": { "display_name":"CPU_TEMP"},
+        "bmc": {
+            "ipmitool" : {
+                "attr_list":
+                [
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"CPU_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"CPU_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"CPU_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"CPU_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"CPU_TEMP", "field":"LCR"}
+                ]
+            }
+        }
+    },
+    "TEMP26":
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR"},
+        "dev_attr": { "display_name":"DIMM0_TEMP"},
+        "bmc": {
+            "ipmitool" : {
+                "attr_list":
+                [
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM0_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM0_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"DIMM0_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM0_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM0_TEMP", "field":"LCR"}
+                ]
+            }
+        }
+    },
+    "TEMP27":
+    {
+        "dev_info": { "device_type":"TEMP_SENSOR"},
         "dev_attr": { "display_name":"DIMM1_TEMP"},
         "bmc": {
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"temp1_input", "bmc_cmd":"ipmitool raw 0x04 0x2d 0x30","raw":"1", "type":"raw", "index":"0"}
+                    { "attr_name":"temp1_high_crit_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM1_TEMP", "field":"UCR"},
+                    { "attr_name":"temp1_high_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM1_TEMP", "field":"UNC"},
+                    { "attr_name":"temp1_input", "raw": "0", "type":"analog sensor", "name":"DIMM1_TEMP", "field":"SR"},
+                    { "attr_name":"temp_low_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM1_TEMP", "field":"LNC"},
+                    { "attr_name":"temp1_low_crit_threshold", "raw": "0", "type":"analog sensor", "name":"DIMM1_TEMP", "field":"LCR"}
                 ]
             }
         }
@@ -747,30 +865,23 @@
             "ipmitool" : {
                 "attr_list":
                 [
-                    { "attr_name":"fan1_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan1_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan1_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"},
-                    { "attr_name":"fan2_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan2_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan2_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan2_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"},
-                    { "attr_name":"fan3_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan3_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan3_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan3_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"},
-                    { "attr_name":"fan4_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan4_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan4_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan4_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"},
-                    { "attr_name":"fan5_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan5_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan5_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan5_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"},
-                    { "attr_name":"fan6_present", "bmc_cmd":"ipmitool raw 0x36 0xB9 0x4C 0x1C 0x00 0x02", "raw": "1", "type":"mask", "mask":"0x01"},
-                    { "attr_name":"fan6_direction", "bmc_cmd":"ipmitool raw 0x0a 0x11 0x00 0x19 0x00 0x01",  "raw": "1", "type":"raw"},
-                    { "attr_name":"fan6_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "Fan_SYS_1_1", "field_pos":"2"},
-                    { "attr_name":"fan6_pwm", "bmc_cmd":"ipmitool raw 0x30 0xd6 0x00 0x00", "raw": "1", "type":"raw"}               
+                    { "attr_name":"fan1_present", "raw": "0", "type":"discrete sensor", "name":"FAN1_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan1_input", "raw": "0", "type":"analog sensor", "name":"Fan1_Front_Speed", "field":"SR"},
+
+                    { "attr_name":"fan2_present", "raw": "0", "type":"discrete sensor", "name":"FAN1_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan2_input", "raw": "0", "type":"analog sensor", "name":"Fan1_Rear_Speed", "field":"SR"},
+
+                    { "attr_name":"fan3_present", "raw": "0", "type":"discrete sensor", "name":"FAN2_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan3_input", "raw": "0", "type":"analog sensor", "name":"Fan2_Front_Speed", "field":"SR"},
+
+                    { "attr_name":"fan4_present", "raw": "0", "type":"discrete sensor", "name":"FAN2_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan4_input", "raw": "0", "type":"analog sensor", "name":"Fan2_Rear_Speed", "field":"SR"},
+
+                    { "attr_name":"fan5_present", "raw": "0", "type":"discrete sensor", "name":"FAN3_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan5_input", "raw": "0", "type":"analog sensor", "name":"Fan3_Front_Speed", "field":"SR"},
+
+                    { "attr_name":"fan6_present", "raw": "0", "type":"discrete sensor", "name":"FAN3_STATUS", "pattern":"\\[Device Absent\\]", "true":"0", "false":"1"},
+                    { "attr_name":"fan6_input", "raw": "0", "type":"analog sensor", "name":"Fan3_Rear_Speed", "field":"SR"}
                 ]
             }
         }
