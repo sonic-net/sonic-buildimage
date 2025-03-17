@@ -7,17 +7,33 @@ docker_name=$pipeline
 if [ "$pipeline" == "rudra" ]; then
     docker_name="dpu"
 fi
-hex_val=$(docker exec -i $docker_name cpldapp -r 0xA | tr -d '\r')
-val=$((hex_val))
+
+iteration=10
+val=""
+echo "DPU Provisioning log" > /boot/first_boot.log
+for i in $(seq $iteration); do
+    hex_val=$(docker exec -i $docker_name cpldapp -r 0xA | tr -d '\r')
+    echo "Iteration : $i" >> /boot/first_boot.log
+    if [[ -n "$hex_val" ]]; then
+        val=$((hex_val))
+        echo "$hex_val, $val" >> /boot/first_boot.log
+        break
+    fi
+    sleep 1
+    if [[ $i -eq $iteration ]]; then
+        echo "Command failed after $iteration attempts" >> /boot/first_boot.log
+        exit 1
+    fi
+done
 
 echo "dpu provisioning for dpu $val"
 
 if [ -f /boot/first_boot ]; then
     if [ "$platform" == "arm64-elba-asic-flash128-r0" ]; then
-        echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
-        python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
-        echo "cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json"
-        cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json
+        cp /usr/share/sonic/device/$platform/init_cfg.json /etc/sonic/platform_init.json
+        cp /usr/share/sonic/device/$platform/minigraph.xml /etc/sonic/minigraph.xml
+        sonic-cfggen -H -m /etc/sonic/minigraph.xml --print-data > /etc/sonic/minigraph.json
+        sonic-cfggen -j /etc/sonic/minigraph.json -j /etc/sonic/platform_init.json -j /etc/sonic/init_cfg.json --print-data > /etc/sonic/config_db.json
 
         jq_command=$(cat <<EOF
         jq --arg val "$val" '
@@ -33,6 +49,9 @@ EOF
 
         echo "$jq_command"
         eval "$jq_command"
+
+        sonic-cfggen -H -j /etc/sonic/config_db.json --write-to-db
+        echo "config_db.json written to db"
 
         # Update platform_components.json dynamically
         platform_components="/usr/share/sonic/device/$platform/platform_components.json"
@@ -51,13 +70,8 @@ EOF
         else
             echo "platform_components.json not found, skipping update."
         fi
-    else
-        echo "cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json"
-        cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json
     fi
 
-    echo "cp /etc/sonic/config_db.json /etc/sonic/init_cfg.json"
-    cp /etc/sonic/config_db.json /etc/sonic/init_cfg.json
     echo "File copied successfully."
     rm /boot/first_boot
 else
@@ -65,11 +79,5 @@ else
 fi
 
 mkdir -p /host/images
+mkdir -p /data
 chmod +x /boot/install_file
-
-sleep 5
-INTERFACE="eth0-midplane"
-if ip link show "$INTERFACE" &> /dev/null; then
-    echo "dhclient $INTERFACE"
-    dhclient $INTERFACE
-fi

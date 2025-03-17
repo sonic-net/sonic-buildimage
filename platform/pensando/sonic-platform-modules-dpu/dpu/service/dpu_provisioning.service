@@ -4,10 +4,13 @@ Requires=docker.service
 After=docker.service
 After=dpu.service
 Requires=dpu.service
-Before=database.service
+After=database.service
+Before=config-setup.service
 
 [Service]
 User=root
+Type=oneshot
+RemainAfterExit=yes
 ExecStart=/usr/local/bin/dpu_provisioning.sh
 StandardOutput=syslog
 StandardError=syslog
