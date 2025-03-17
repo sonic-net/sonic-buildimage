@@ -92,7 +92,6 @@ stages:
           docker rm -f sonic-mgmt
 
           ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
-
           docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
         displayName: 'Setup sonic-mgmt docker container'
 
