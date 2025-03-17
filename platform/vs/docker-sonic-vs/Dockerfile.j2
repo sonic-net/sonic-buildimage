@@ -56,7 +56,7 @@ RUN apt-get install -y net-tools \
                        libasan6 \
                        {%- endif %}
                        dbus \
-                       valkey-server \
+                       redis-server \
                        # For libkrb5-dev
                        comerr-dev \
                        libgssrpc4 \
@@ -117,18 +117,11 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
              s/^# unixsocket/unixsocket/;                \
-             s/\/run\/valkey\/valkey-server.sock/\/run\/redis\/redis.sock/g;           \
+             s/redis-server.sock/redis.sock/g;           \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
-             s/^databases [0-9]+$/databases 100/; \
-             s/^unixsocketgroup wheel/# unixsocketgroup wheel/; \
-             s/^dir \/var\/lib\/valkey/dir \/var\/lib\/redis/ \
-            ' /etc/valkey/valkey.conf
-
-RUN mkdir -p /var/lib/redis
-RUN mkdir -p /etc/redis
-RUN cp /etc/valkey/valkey.conf /etc/redis/redis.conf
-RUN ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
+             s/^databases [0-9]+$/databases 100/ \
+            ' /etc/redis/redis.conf
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
 COPY ["start.sh", "orchagent.sh", "files/update_chassisdb_config", "/usr/bin/"]
