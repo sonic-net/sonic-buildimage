@@ -122,31 +122,18 @@ submodule_prs () {
   echo ""
   # Use this to cherry-pick PRs that have not yet been merged to github.
   # args for submodule cherry-picks here: <directory> <user> <https-url> <commit-id>
-  _submodule_add src/sonic-swss-common mlok https://github.com/mlok-nokia/sonic-swss-common.git ed4137c7a2cb
-  # _submodule_add src/sonic-swss-common mlok https://github.com/mlok-nokia/sonic-swss-common.git ed4137c7a2cb
-  # _submodule_add src/sonic-sairedis/SAI saksarav-nokia https://github.com/saksarav-nokia/SAI.git 063fbd4
-  # PR To fix the issue: show_techsupport & saidump errors during testbed testing by replacing redis-rdb-tool with rdb-cli
-  # https://github.com/sonic-net/sonic-buildimage/pull/19268
-  # https://github.com/sonic-net/sonic-sairedis/pull/1391
-  _submodule_add src/sonic-sairedis Junhong https://github.com/JunhongMao/sonic-sairedis.git 4b32eaf
-  _submodule_add src/sonic-sairedis Junhong https://github.com/JunhongMao/sonic-sairedis.git fb2185c
-  _submodule_add ./ Junhong https://github.com/JunhongMao/sonic-buildimage.git 69c914f
-  # PR https://github.com/sonic-net/sonic-swss/pull/3247 - fabric link monitor fix
-  _submodule_add src/sonic-swss jfeng-arista https://github.com/jfeng-arista/sonic-swss.git 04d5b15^..82bd7cd
+
+  ############################################################################################################################
+  #
+  # IMPORTANT:  Please include the PR number info of the cherry-pick PR
+  #   Example:
+  #     # https://github.com/sonic-net/sonic-platform-daemons/pull/573
+  #     _submodule_add src/sonic-platform-daemons mlok-nokia https://github.com/mlok-nokia/sonic-platform-daemons.git 70caabb
+  #
+  ############################################################################################################################
 
 
-  # https://github.com/sonic-net/sonic-platform-daemons/pull/573
-  _submodule_add src/sonic-platform-daemons mlok-nokia https://github.com/mlok-nokia/sonic-platform-daemons.git 70caabb
-  
-  # https://github.com/sonic-net/sonic-utilities/pull/3676  -- show_tech with BERT info
-  _submodule_add src/sonic-utilities mlok-nokia https://github.com/mlok-nokia/sonic-utilities.git 9b9e3b3^..8349ac1
-   
-  # Revert SAI counter enhancement that breaks SAI 11.X (remove when updated to SAI 12.x)
-  _submodule_revert src/sonic-sairedis/SAI f23185d
-
-  # https://github.com/sonic-net/sonic-swss/pull/3329  <-- 34k routes
-  _submodule_add src/sonic-swss upstream https://github.com/sonic-net/sonic-swss.git d006374
-  # apply patches
+    # apply patches
   apply_patch_files
 }
 
@@ -159,10 +146,10 @@ configure()
       make PLATFORM=broadcom configure
       ;;
     armhf)
-      make PLATFORM=marvell PLATFORM_ARCH=armhf configure
+      make PLATFORM=marvell-prestera PLATFORM_ARCH=armhf configure
       ;;
     aarch64)
-      make PLATFORM=marvell PLATFORM_ARCH=arm64 configure
+      make PLATFORM=marvell-prestera PLATFORM_ARCH=arm64 configure
       ;;
   esac
 }
@@ -176,12 +163,12 @@ build()
         ( rm -f target/*.bin && make target/sonic-broadcom.bin )
       ;;
     armhf)
-      make target/sonic-marvell-armhf.bin || \
-        ( rm -f target/*.bin && make target/sonic-marvell-armhf.bin )
+      make target/sonic-marvell-prestera-armhf.bin || \
+        ( rm -f target/*.bin && make target/sonic-marvell-prestera-armhf.bin )
       ;;
     aarch64)
-      make target/sonic-marvell-arm64.bin || \
-        ( rm -f target/*.bin && make target/sonic-marvell-arm64.bin )
+      make target/sonic-marvell-prestera-arm64.bin || \
+        ( rm -f target/*.bin && make target/sonic-marvell-prestera-arm64.bin )
       ;;
   esac
 
