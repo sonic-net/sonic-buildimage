@@ -1,0 +1,26 @@
+From 8ee8e2511328e8c27ad7c16bd0854cc4335df399 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Tue, 1 Oct 2024 09:23:26 -0400
+Subject: [PATCH 2/4] bgpd: remove apis from bgp_route.h
+
+Remove a couple of apis that don't exist.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+
+diff --git a/bgpd/bgp_route.h b/bgpd/bgp_route.h
+index 61492980a..39e282712 100644
+--- a/bgpd/bgp_route.h
++++ b/bgpd/bgp_route.h
+@@ -885,9 +885,6 @@ extern bool subgroup_announce_check(struct bgp_dest *dest,
+ 				    const struct prefix *p, struct attr *attr,
+ 				    struct attr *post_attr);
+ 
+-extern void bgp_peer_clear_node_queue_drain_immediate(struct peer *peer);
+-extern void bgp_process_queues_drain_immediate(void);
+-
+ /* for encap/vpn */
+ extern struct bgp_dest *bgp_safi_node_lookup(struct bgp_table *table,
+ 					     safi_t safi,
+-- 
+2.43.2
+
