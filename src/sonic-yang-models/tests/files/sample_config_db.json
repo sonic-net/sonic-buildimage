@@ -134,7 +134,8 @@
                 "PortChannel0003": {
                     "nat_zone": "1",
                     "loopback_action": "drop",
-                    "ipv6_use_link_local_only": "enable"
+                    "ipv6_use_link_local_only": "enable",
+                    "mac_addr": "02:26:9b:73:c1:1a"
                 },
                 "PortChannel0004": {"vrf_name": "Vrf_blue"},
                 "PortChannel42|10.1.0.1/31": {},
@@ -151,7 +152,8 @@
             "Vlan111": {
                 "nat_zone": "0",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "disable"
+                "ipv6_use_link_local_only": "disable",
+                "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -1201,7 +1203,8 @@
             "Ethernet18": {
                 "nat_zone": "1",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "enable"
+                "ipv6_use_link_local_only": "enable",
+                "mac_addr": "12:34:56:78:90:ab"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -2335,6 +2338,13 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            }
+        },
+        "VNET_ROUTE_TUNNEL" : {
+            "vnet1|10.0.0.0/24" : {
+                "endpoint": "192.168.1.2",
+                "mac_address": "f9:22:83:99:22:a2",
+                "vni": "10011"
             }
         },
         "PORT_QOS_MAP": {

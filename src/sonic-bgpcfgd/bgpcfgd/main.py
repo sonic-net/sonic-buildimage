@@ -5,6 +5,7 @@ import syslog
 import threading
 import traceback
 
+from swsscommon.swsscommon import ConfigDBConnector
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
@@ -88,9 +89,11 @@ def do_work():
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
-    switch_type = device_info.get_localhost_info("switch_type")
-    if switch_type and switch_type == "dpu":
-        log_notice("switch type is dpu, starting bfd manager")
+    config_db = ConfigDBConnector()
+    config_db.connect()
+    features = config_db.get_table('FEATURE')
+    if 'software_bfd' in features and 'state' in features['software_bfd'] and features['software_bfd']['state'] == 'enabled':
+        log_notice("software_bfd feature is enabled, starting bfd manager")
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     runner = Runner(common_objs['cfg_mgr'])
