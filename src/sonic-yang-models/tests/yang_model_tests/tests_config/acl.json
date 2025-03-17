@@ -1781,14 +1781,14 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "L3"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE_TYPE": {
                 "ACL_TABLE_TYPE_LIST": [
                     {
-                        "ACL_TABLE_TYPE_NAME": "L2",
+                        "ACL_TABLE_TYPE_NAME": "L3",
                         "ACTIONS": [
                             "INNER_SRC_MAC_REWRITE_ACTION"
                         ],
@@ -1853,7 +1853,7 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "L3"
                     }
                 ]
             }
@@ -1907,7 +1907,7 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "L3"
                     }
                 ]
             }
@@ -1961,7 +1961,7 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "L3"
                     }
                 ]
             }
@@ -2069,7 +2069,7 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "L3"
                     }
                 ]
             }
