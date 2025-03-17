@@ -65,10 +65,10 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform or "cisco" in DEVICE_METADATA.localhost.platform %}
-            "dscp_mode":"pipe",
-{% else %}
+{% if "broadcom" in sonic_asic_platform %}
             "dscp_mode":"uniform",
+{% else %}
+            "dscp_mode":"pipe",
 {% endif %}
 {% if "mlnx" in DEVICE_METADATA.localhost.platform %}
             "ecn_mode":"standard",
@@ -145,10 +145,10 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform or "cisco" in DEVICE_METADATA.localhost.platform %}
-            "dscp_mode":"pipe",
-{% else %}
+{% if "broadcom" in sonic_asic_platform %}
             "dscp_mode":"uniform",
+{% else %}
+            "dscp_mode":"pipe",
 {% endif %}
 {% if "mlnx" in DEVICE_METADATA.localhost.platform %}
             "ecn_mode":"standard",
