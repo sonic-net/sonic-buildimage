@@ -618,9 +618,9 @@ start() {
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
-        SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+        SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
     else
-        SMARTSWITCH_MNT= ""
+        SMARTSWITCH_MNT=""
     fi
 {%- endif %}
 {%- endif %}

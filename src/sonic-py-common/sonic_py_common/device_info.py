@@ -624,9 +624,6 @@ def is_dpu():
     if not platform:
         return False
 
-    if not is_smartswitch():
-        return False
-
     # Retrieve platform.json data
     platform_data = get_platform_json_data()
     if platform_data:
@@ -803,7 +800,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell'):
+    elif (version_info['asic_type'] == 'marvell-prestera'):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
