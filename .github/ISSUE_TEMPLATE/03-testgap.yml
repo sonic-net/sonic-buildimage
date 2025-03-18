@@ -4,57 +4,9 @@ title: "Test Gap:"
 labels: ["Test gap"]
 projects: ["sonic-buildimage"]
 body:
-  - type: dropdown
-    id: tc-tg-platform
+  - type: markdown
     attributes:
-      label: Is it platform specific
-      description: Platform name
-      options:
-        - generic
-        - barefoot
-        - broadcom
-        - cavium
-        - centec
-        - innovium
-        - marvell
-        - mellanox
-        - nephos
-      default: 0
-    validations:
-      required: true
+      value: |
+        Thanks for taking the time to fill out this report!
 
-  - type: dropdown
-    id: tc-tg-severity
-    attributes:
-      label: Importance or Severity
-      options:
-        - Critical
-        - High
-        - Medium
-        - Low
-    validations:
-      required: true
-
-  - type: textarea
-    id: tc-tg-description
-    attributes:
-      label: Description of the test gap
-      description: Description of the test gap
-    validations:
-      required: true
-
-  - type: textarea
-    id: tc-tg-aa
-    attributes:
-      label: Affected Area
-      description: Affected Area
-    validations:
-      required: true
-
-  - type: textarea
-    id: tc-tg-impact-pb
-    attributes:
-      label: Impact of missing tests and proposed tests
-      description: Impact of missing tests and proposed tests
-    validations:
-      required: true
+        Test Gaps are tracked on the sonic-mgmt repository. [Click here to open a new test gap issue](https://github.com/sonic-net/sonic-mgmt/issues/new?template=03-testgap.yml)
