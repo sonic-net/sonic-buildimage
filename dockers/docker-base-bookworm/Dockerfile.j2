@@ -113,3 +113,16 @@ RUN ln /usr/bin/vim.tiny /usr/bin/vim
 RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+
+# Setup user 'redis' for compatibility, valkey will run with 'redis' account
+RUN adduser --system --home /var/lib/redis --quiet --group redis || true
+RUN chown -R redis: /var/lib/redis
+RUN chmod 750 /var/log/redis
+
+RUN ln -s /var/log/valkey /var/log/redis
+RUN chown -R redis: /var/log/redis
+RUN chmod 2750 /var/log/redis
+
+RUN ln -s /etc/valkey /etc/redis
+RUN chown -R redis: /etc/redis
+RUN chmod 2770 /var/log/redis
