@@ -1,6 +1,1 @@
-{
-    "skip_ledd": true,
-    "skip_fancontrol": true,
-    "delay_xcvrd": false,
-    "skip_xcvrd_cmis_mgr": false
-}
+../Mellanox-SN4280-O28/pmon_daemon_control.json
