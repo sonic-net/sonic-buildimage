@@ -269,7 +269,6 @@ class DpuModule(ModuleBase):
         self.DHCP_IP_ADDRESS_KEY = "ips@"
         self.config_db = ConfigDBConnector(use_unix_socket_path=False)
         self.config_db.connect()
-        self.midplane_ip = None
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
@@ -452,9 +451,7 @@ class DpuModule(ModuleBase):
         Returns:
             A string, the IP-address of the module reachable over the midplane
         """
-        if not self.midplane_ip:
-            self.midplane_ip = self.config_db.get(self.CONFIG_DB_NAME, self.DHCP_SERVER_HASH, self.DHCP_IP_ADDRESS_KEY)
-        return self.midplane_ip
+        return f"169.254.200.{int(self.dpu_id) + 1}"
 
     def is_midplane_reachable(self):
         """
