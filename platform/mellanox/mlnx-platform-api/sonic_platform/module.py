@@ -267,8 +267,6 @@ class DpuModule(ModuleBase):
         self.CONFIG_DB_NAME = "CONFIG_DB"
         self.DHCP_SERVER_HASH = f"DHCP_SERVER_IPV4_PORT|bridge-midplane|{self._name.lower()}"
         self.DHCP_IP_ADDRESS_KEY = "ips@"
-        self.config_db = ConfigDBConnector(use_unix_socket_path=False)
-        self.config_db.connect()
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
