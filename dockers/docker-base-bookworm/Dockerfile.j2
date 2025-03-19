@@ -47,8 +47,12 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
-# Install valkey-tools
-        valkey-tools         \
+# Install dependencies of keydb-tools
+        libatomic1           \
+        libjemalloc2         \
+        liblua5.1-0          \
+        lua-bitop            \
+        lua-cjson            \
 # common dependencies
         libdaemon0           \
         libdbus-1-3          \
@@ -62,6 +66,10 @@ RUN apt update &&            \
         libzmq5              \
         libwrap0            \
         libatomic1
+
+RUN curl -o keydb-tools_6.3.4-1%2Bdeb11u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian11_bullseye/amd64/keydb-latest/keydb-tools_6.3.4-1%2Bdeb11u1_amd64.deb"
+RUN dpkg -i keydb-tools_6.3.4-1%2Bdeb11u1_amd64.deb || apt-get install -f -y
+RUN rm keydb-tools_6.3.4-1%2Bdeb11u1_amd64.deb
 
 # Add a config file to allow pip to install packages outside of apt/the Debian repos
 COPY ["pip.conf", "/etc/pip.conf"]
@@ -110,7 +118,7 @@ COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
-RUN ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
+RUN ln -s /usr/bin/keydb-cli /usr/bin/redis-cli
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
 
