@@ -1,0 +1,102 @@
+name: Report a bug
+description: File a bug report
+title: "Bug:"
+labels: ['Bug :bug:']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this report!
+
+        If you are reporting a new issue, make sure that we do not have any duplicates already open. You can ensure this by searching the issue list for this repository. If there is a duplicate, please close your issue and add a comment to the existing issue instead.
+
+        If you suspect your issue is a bug, please edit your issue description to include the BUG REPORT INFORMATION shown below. If you fail to provide this information within 7 days, we cannot debug your issue and will close it. We will however, reopen it if you later provide the information.
+
+        For more information about reporting issues, see [SONiC Issue Reporting Page](https://github.com/sonic-net/SONiC/wiki#report-issues)
+
+  - type: markdown
+    id: tc-bug-contact-links
+    attributes:
+      value: |
+        Please ask and answer questions here at the [SONiC Support Forums](https://groups.google.com/forum/#!forum/sonicproject)
+
+  - type: dropdown
+    id: tc-bug-platform
+    attributes:
+      label: Is it platform specific
+      description: Platform name
+      options:
+        - generic
+        - barefoot
+        - broadcom
+        - cavium
+        - centec
+        - innovium
+        - marvell
+        - mellanox
+        - nephos
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tc-bug-severity
+    attributes:
+      label: Importance or Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-bug-description
+    attributes:
+      label: Description of the bug
+      description: Description of the bug
+      placeholder: Description of the bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-bug-steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to Reproduce
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-bug-actual-behavior-expected-behavior
+    attributes:
+      label: Actual Behavior and Expected Behavior
+      description: Actual Behavior and Expected Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-bug-logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+
+  - type: textarea
+    id: tc-bug-output
+    attributes:
+      label: Output of `show version`, `show techsupport`
+      description: Please copy and paste output of `show version`, `show techsupport`. This will be automatically formatted into code, so no need for backticks
+      render: shell
+
+  - type: markdown
+    id: tc-bug-attach-logs
+    attributes:
+      value: |
+        Attach debug file (if any) from: `sudo generate_dump` or other logs.
+
+  - type: textarea
+    id: tc-bug-attachments
+    attributes:
+      label: Attach files (if any)
