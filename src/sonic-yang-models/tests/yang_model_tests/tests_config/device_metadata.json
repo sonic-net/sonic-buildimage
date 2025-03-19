@@ -97,7 +97,7 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "bgp_asn": "65002",
-                    "type": "SonicDpu"
+                    "type": "SmartSwitchDpu"
                 }
             }
         }
