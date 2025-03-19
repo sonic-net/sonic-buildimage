@@ -2,7 +2,6 @@ name: Report a bug
 description: File a bug report
 title: "Bug:"
 labels: ['Bug :bug:']
-projects: ["sonic-buildimage"]
 body:
   - type: markdown
     attributes:

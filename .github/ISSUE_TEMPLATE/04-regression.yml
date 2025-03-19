@@ -2,7 +2,6 @@ name: Report a regression
 description: Report a regression issue
 title: "Regression:"
 labels: ['regression', 'Bug :bug:']
-projects: ["sonic-buildimage"]
 body:
   - type: markdown
     attributes:

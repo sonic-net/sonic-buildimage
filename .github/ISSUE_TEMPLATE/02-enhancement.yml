@@ -2,7 +2,6 @@ name: Enhancement Request
 description: Enhancement Request
 title: "Enhancement:"
 labels: ['Enhancement :heavy_plus_sign:']
-projects: ["sonic-buildimage"]
 body:
   - type: markdown
     id: tc-en-contact-links
