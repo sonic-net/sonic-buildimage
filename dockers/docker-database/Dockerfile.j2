@@ -41,8 +41,6 @@ RUN apt-get clean -y                                  && \
              s/^dir \/var\/lib\/valkey/dir \/var\/lib\/redis/ \
             ' /etc/valkey/valkey.conf
 
-RUN mkdir -p /var/lib/redis
-RUN mkdir -p /etc/redis
 RUN cp /etc/valkey/valkey.conf /etc/redis/redis.conf
 RUN chown -R redis: /etc/redis/redis.conf
 RUN ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
