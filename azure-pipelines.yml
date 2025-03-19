@@ -12,6 +12,8 @@ trigger:
     exclude:
       - .github
 
+
+
 pr:
   branches:
     include:
