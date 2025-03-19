@@ -119,7 +119,7 @@ COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
 # Setup user 'redis' for compatibility, valkey will run with 'redis' account
 RUN mkdir -p /var/lib/redis
 RUN adduser --system --home /var/lib/redis --quiet --group redis || true
-RUN chown -R redis: /var/lib/redis
+RUN chown -R redis:redis /var/lib/redis
 RUN chmod 750 /var/lib/redis
 
 RUN mkdir -p /var/log/redis
@@ -127,5 +127,5 @@ RUN chown -R redis:adm  /var/log/redis
 RUN chmod 2750 /var/log/redis
 
 RUN mkdir -p /etc/redis
-RUN chown -R redis: /etc/redis
+RUN chown -R redis:redis /etc/redis
 RUN chmod 2770 /etc/redis

@@ -126,7 +126,7 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
             ' /etc/valkey/valkey.conf
 
 RUN cp /etc/valkey/valkey.conf /etc/redis/redis.conf
-RUN chown -R redis: /etc/redis/redis.conf
+RUN chown -R redis:redis /etc/redis/redis.conf
 RUN ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
