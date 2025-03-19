@@ -289,5 +289,23 @@
          "xpath" : "/test-vlan:test-vlan/VLAN/VLAN_LIST[vlanid='111']/description"
       }
    ],
+   "configdb_path_to_xpath": [
+      {
+         "configdb_path": "/VLAN_MEMBER/Vlan1000|Ethernet8/tagging_mode",
+         "schema_xpath": false,
+         "xpath": "/test-vlan:test-vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='Vlan1000'][port='Ethernet8']/tagging_mode"
+      },
+      {
+         "configdb_path": "/VLAN_MEMBER/Vlan1000|Ethernet8/tagging_mode",
+         "schema_xpath": true,
+         "xpath": "/test-vlan:test-vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:tagging_mode"
+      }
+   ],
+   "xpath_to_configdb_path": [
+      {
+         "xpath": "/test-vlan:test-vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='Vlan1000'][port='Ethernet8']/tagging_mode",
+         "configdb_path": "/VLAN_MEMBER/Vlan1000|Ethernet8/tagging_mode"
+      }
+   ],
    "yang_dir" : "./tests/libyang-python-tests/sample-yang-models/"
 }

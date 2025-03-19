@@ -8,6 +8,7 @@ from json import dump, dumps, loads
 from xmltodict import parse
 from glob import glob
 import copy
+from sonic_yang_path import SonicYangPathMixin
 
 Type_1_list_maps_model = [
     'DSCP_TO_TC_MAP_LIST',
@@ -43,7 +44,7 @@ class SonicYangException(Exception):
     pass
 
 # class sonic_yang methods, use mixin to extend sonic_yang
-class SonicYangExtMixin:
+class SonicYangExtMixin(SonicYangPathMixin):
 
     """
     load all YANG models, create JSON of yang models. (Public function)

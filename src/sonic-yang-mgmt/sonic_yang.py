@@ -4,13 +4,14 @@ import syslog
 from json import dump
 from glob import glob
 from sonic_yang_ext import SonicYangExtMixin, SonicYangException
+from sonic_yang_path import SonicYangPathMixin
 
 """
 Yang schema and data tree python APIs based on libyang python
 Here, sonic_yang_ext_mixin extends funtionality of sonic_yang,
 i.e. it is mixin not parent class.
 """
-class SonicYang(SonicYangExtMixin):
+class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
     def __init__(self, yang_dir, debug=False, print_log_enabled=True, sonic_yang_options=0):
         self.yang_dir = yang_dir
@@ -44,6 +45,8 @@ class SonicYang(SonicYangExtMixin):
         # below dict will store preProcessed yang objects, which may be needed by
         # all yang modules, such as grouping.
         self.preProcessedYang = dict()
+        # Lazy caching for configdb to xpath
+        self.configPathCache = dict()
         # element path for CONFIG DB. An example for this list could be:
         # ['PORT', 'Ethernet0', 'speed']
         self.elementPath = []
