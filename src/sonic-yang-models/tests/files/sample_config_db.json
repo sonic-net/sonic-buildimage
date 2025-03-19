@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},
@@ -127,7 +134,8 @@
                 "PortChannel0003": {
                     "nat_zone": "1",
                     "loopback_action": "drop",
-                    "ipv6_use_link_local_only": "enable"
+                    "ipv6_use_link_local_only": "enable",
+                    "mac_addr": "02:26:9b:73:c1:1a"
                 },
                 "PortChannel0004": {"vrf_name": "Vrf_blue"},
                 "PortChannel42|10.1.0.1/31": {},
@@ -144,7 +152,8 @@
             "Vlan111": {
                 "nat_zone": "0",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "disable"
+                "ipv6_use_link_local_only": "disable",
+                "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -328,6 +337,12 @@
                 "SRC_IP": "1.1.1.1/32",
                 "BTH_OPCODE": "0x11/0xbf",
                 "AETH_SYNDROME": "0x60/0x60"
+            },
+            "DATAACL|RULE0": {
+                "PRIORITY": "999",
+                "PACKET_ACTION": "FORWARD",
+                "TUNNEL_TERM": "true",
+                "DST_IP": "1.1.1.1/32"
             }
         },
         "SWITCH_HASH": {
@@ -1188,7 +1203,8 @@
             "Ethernet18": {
                 "nat_zone": "1",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "enable"
+                "ipv6_use_link_local_only": "enable",
+                "mac_addr": "12:34:56:78:90:ab"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -1331,7 +1347,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50051"
+                "port": "50051",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "TELEMETRY_CLIENT": {
@@ -1368,7 +1386,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50052"
+                "port": "50052",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "GNMI_CLIENT_CERT": {
@@ -1761,6 +1781,10 @@
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
                 "max_ibgp_paths": "2"
+            },
+            "default|l2vpn_evpn": {
+                "advertise-all-vni": "true",
+                "advertise-svi-ip": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1894,6 +1918,9 @@
                 "admin_status": "down"
             },
             "FABRIC-CARD1": {
+                "admin_status": "down"
+            },
+            "DPU2": {
                 "admin_status": "down"
             }
         },
@@ -2255,6 +2282,17 @@
             }
         },
 
+        "TC_TO_DSCP_MAP": {
+           "tc_to_dscp_map1": {
+              "1": "1",
+              "2": "2"
+            },
+           "tc_to_dscp_map2": {
+              "3": "3",
+              "4": "4"
+            }
+        },
+
         "MAP_PFC_PRIORITY_TO_QUEUE": {
            "pfc_prio_to_q_map1": {
               "1": "1",
@@ -2302,10 +2340,18 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE_TUNNEL" : {
+            "vnet1|10.0.0.0/24" : {
+                "endpoint": "192.168.1.2",
+                "mac_address": "f9:22:83:99:22:a2",
+                "vni": "10011"
+            }
+        },
         "PORT_QOS_MAP": {
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
                "dscp_to_tc_map": "Dscp_to_tc_map1",
+               "tc_to_dscp_map": "tc_to_dscp_map1",
                "tc_to_queue_map": "tc_to_q_map1",
                "tc_to_pg_map": "tc_to_pg_map1",
                "pfc_to_queue_map": "pfc_prio_to_q_map1",
@@ -2317,12 +2363,13 @@
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
               "dscp_to_tc_map": "Dscp_to_tc_map2",
-	          "tc_to_queue_map": "tc_to_q_map2",
-	          "tc_to_pg_map": "tc_to_pg_map2",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map2",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_dscp_map": "tc_to_dscp_map2",
+              "tc_to_queue_map": "tc_to_q_map2",
+              "tc_to_pg_map": "tc_to_pg_map2",
+              "pfc_to_queue_map": "pfc_prio_to_q_map2",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             }
         },
 
@@ -2744,10 +2791,43 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "DPU_PORT": {
+            "dpu0": {
+                "state": "up",
+                "vip_ipv4": "192.168.1.1",
+                "vip_ipv6": "2001:db8::10",
+                "pa_ipv4": "192.168.1.10",
+                "pa_ipv6": "2001:db8::10",
+                "vdpu_id": "vdpu0",
+                "gnmi_port": "50052"
+            },
+            "dpu1": {
+                "state": "down",
+                "vip_ipv4": "192.168.1.2",
+                "vip_ipv6": "2001:db8::20",
+                "pa_ipv4": "192.168.1.20",
+                "pa_ipv6": "2001:db8::20",
+                "vdpu_id": "vdpu1",
+                "gnmi_port": "50052"
+            }
+        },
 	"XCVRD_LOG": {
 	    "Y_CABLE": {
 		"log_verbosity": "notice"
 	    }
+	},
+	"GRPCCLIENT": {
+            "config": {
+                "type": "secure",
+                "auth_level": "server",
+                "log_level": "info"
+            },
+            "certs": {
+                "client_crt": "grpcclient.crt",
+                "client_key": "grpcclient.key",
+                "ca_crt": "root.pem",
+                "grpc_ssl_credential": "azureclient.ms"
+            }
 	},
         "BANNER_MESSAGE": {
             "global": {
@@ -2756,6 +2836,36 @@
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
             }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
+            }
+        },
+        "PREFIX_LIST": {
+            "ANCHOR_PREFIX|10.0.0.0/8" : {},
+            "ANCHOR_PREFIX|FC00::/48" : {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

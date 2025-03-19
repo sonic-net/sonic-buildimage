@@ -30,7 +30,7 @@ if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
 fi
 # toggle the mux to standby if dualtor and any mux active
 if
-[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]] &&
+[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]] &&
 [[ $(show mux status | grep active | wc -l) > 0 ]];
 then
   logger -t TSA -p user.info "Toggle all mux mode to standby"
@@ -43,6 +43,11 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
      [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
       echo "Stopping $service before configuring TSA"
       systemctl stop $service
+      if sonic-db-cli STATE_DB HDEL "ALL_SERVICE_STATUS|tsa_tsb_service" "running" >/dev/null; then
+        echo "Successfully removed TSA-TSB service flag."
+      else
+        echo "Failed to remove TSA-TSB service flag!" >&2
+      fi
   fi
 fi
 

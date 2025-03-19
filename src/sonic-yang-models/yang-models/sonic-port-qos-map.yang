@@ -38,6 +38,11 @@ module sonic-port-qos-map {
         prefix sch;
     }
 
+    import sonic-tc-dscp-map {
+        prefix tdm;
+    }
+
+
     organization
         "SONiC";
 
@@ -115,6 +120,13 @@ module sonic-port-qos-map {
                         path "/dtm:sonic-dscp-tc-map/dtm:DSCP_TO_TC_MAP/dtm:DSCP_TO_TC_MAP_LIST/dtm:name";
                     }
                 }
+
+                leaf tc_to_dscp_map {
+                    type leafref {
+                        path "/tdm:sonic-tc-dscp-map/tdm:TC_TO_DSCP_MAP/tdm:TC_TO_DSCP_MAP_LIST/tdm:name";
+                    }
+                }
+
 
                 leaf dot1p_to_tc_map {
                     type leafref {

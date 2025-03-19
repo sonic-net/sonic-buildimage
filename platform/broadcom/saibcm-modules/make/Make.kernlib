@@ -30,10 +30,6 @@
 
 .SECONDARY:: ${BOBJS}
 
-targetlibsoname = ${lib}.so.${SHAREDLIBVER}
-targetlibrealname = ${targetlibsoname}
-targetlibso = ${LIBDIR}/${targetlibrealname}
-
 LIBSUFFIX=a
 
 ${LIBDIR}/%.a: ${BOBJS}
@@ -42,11 +38,6 @@ ifdef QUIET
 endif
 	$Q$(RM) $@
 	$Q$(AR) ${ARFLAGS} $@ $(sort ${BOBJS})
-ifeq ($(LINUX_MAKE_SHARED_LIB),1)
-ifeq ($(targetbase),unix)
-	$(CC) -shared -Wl,-soname,${targetlibsoname} -o ${targetlibso} ${BOBJS} -lc
-endif
-endif # LINUX_MAKE_SHARED_LIB #
 
 targetlib = ${LIBDIR}/${lib}.${LIBSUFFIX}
 
@@ -60,7 +51,6 @@ ifdef QUIET
 endif
 	$Q$(RM) ${BOBJS}
 	$Q$(RM) ${targetlib}
-	$Q$(RM) ${targetlibso}
 
 distclean:: clean
 

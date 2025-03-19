@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,24 +22,18 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-dpu_id=$1
+rshim_name="rshim$1"
+pcie=$(dpumap.sh rshim2pcie $rshim_name)
 
-declare -A dpu2pcie
-dpu2pcie[0]="08:00.0"
-dpu2pcie[1]="07:00.0"
-dpu2pcie[2]="01:00.0"
-dpu2pcie[3]="02:00.0"
-
-if [ -z "${dpu2pcie[$dpu_id]}" ]; then
-    echo "Error: Invalid dpu index $dpu_id"
+if [ $? -ne 0 ]; then
+    echo "Error: Invalid rshim index $1"
     exit 1
 fi
 
-pcie=${dpu2pcie[$dpu_id]}
 
-if ! lspci | grep $pcie > /dev/null; then
+if ! lspci -D | grep $pcie > /dev/null; then
     echo "PCIE device $pcie is not available"
     exit 1
 fi
 
-/usr/sbin/rshim -i $dpu_id -d pcie-0000:$pcie
+/usr/sbin/rshim -i $1 -d pcie-$pcie

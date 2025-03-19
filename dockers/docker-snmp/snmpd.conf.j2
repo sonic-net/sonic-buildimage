@@ -26,7 +26,7 @@
 
 {% if SNMP_AGENT_ADDRESS_CONFIG %}
 {% for (agentip, port, vrf) in SNMP_AGENT_ADDRESS_CONFIG %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if port %}:{{ port }}{% endif %}{% if vrf %}%{{ vrf }}{% endif %}{{ "" }}
+agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if vrf %}@{{ vrf }}{% endif %}{% if port %}:{{ port }}{% endif %}{{ "" }}
 {% endfor %}
 {% else %}
 agentAddress udp:161
@@ -194,6 +194,9 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
+agentXTimeout   5
+agentXRetries   4
+
 # internal socket to allow extension to other docker containers
 # Currently the other container using this is docker-fpm-frr
 # make sure this line matches bgp:/etc/snmp/frr.conf 

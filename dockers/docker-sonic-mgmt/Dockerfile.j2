@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          build-essential \
                                          ca-certificates \
                                          cmake \
+                                         conserver-client \
                                          curl \
                                          default-jre \
                                          git \
@@ -92,6 +93,7 @@ RUN python3 -m pip install aiohttp \
                  pytest-xdist==1.28.0 \
                  python-dateutil \
                  pytest==7.4.0 \
+                 pytest-stress \
                  PyYAML \
                  redis \
                  requests \
@@ -140,14 +142,17 @@ RUN python2 -m pip install allure-pytest==2.8.22 \
                 "future>=0.16.0" \
                 gitpython \
                 ipaddr \
+                ipaddress \
                 ipython==5.4.1 \
                 ixload \
                 ixnetwork-restpy==1.0.64 \
                 ixnetwork-open-traffic-generator==0.0.79 \
-                jinja2==2.10.1 \
+                snappi_ixload==0.0.5 \
+                jinja2==3.1.2 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
                 lxml \
+                macaddress \
                 mock \
                 msrest==0.6.21 \
                 natsort \
@@ -207,11 +212,6 @@ RUN mkdir -p /etc/apt/keyrings \
     && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update && apt-get install -y azure-cli
 
-## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/
-
-RUN dpkg -i debs/sonic-device-data_*.deb
-
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
@@ -225,13 +225,10 @@ RUN mkdir -p /tmp/protobuf \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
-# Install dash-api
-RUN cd /tmp \
-    && mkdir -p /usr/lib/python3/dist-packages/dash_api \
-    && wget https://raw.githubusercontent.com/sonic-net/sonic-dash-api/master/misc/pypkg/dash_api/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
-    && git clone https://github.com/sonic-net/sonic-dash-api.git \
-    && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
-    && rm -rf /tmp/sonic-dash-api
+## Copy and install sonic-mgmt docker dependencies
+COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
+
+RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
 
 RUN mkdir /var/run/sshd
 EXPOSE 22
@@ -269,11 +266,13 @@ USER root
 WORKDIR /azp
 COPY start.sh \
      0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+     0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
      ./
 RUN chmod +x start.sh \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf `which pip3` /usr/bin/pip \
     && ln -sf `which pip3` /usr/local/sbin/pip \
+    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
 
 USER $user

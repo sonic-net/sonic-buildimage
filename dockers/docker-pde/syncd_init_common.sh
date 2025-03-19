@@ -153,19 +153,7 @@ config_syncd_centec()
     [ -e /dev/net/tun ] || ( mkdir -p /dev/net && mknod /dev/net/tun c 10 200 )
 }
 
-config_syncd_cavium()
-{
-    CMD_ARGS+=" -p $HWSKU_DIR/sai.profile -d"
-
-    export XP_ROOT=/usr/bin/
-
-    # Wait until redis-server starts
-    until [ $(sonic-db-cli PING | grep -c PONG) -gt 0 ]; do
-        sleep 1
-    done
-}
-
-config_syncd_marvell()
+config_syncd_marvell_prestera()
 {
     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
 
@@ -207,11 +195,11 @@ config_syncd_vs()
     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
 }
 
-config_syncd_innovium()
+config_syncd_marvell_teralynx()
 {
     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
     ulimit -s 65536
-    export II_ROOT="/var/log/invm"
+    export II_ROOT="/var/log/mrvl_teralynx"
     export II_APPEND_LOG=1
     mkdir -p $II_ROOT
 }
@@ -224,20 +212,18 @@ config_syncd()
         config_syncd_bcm
     elif [ "$SONIC_ASIC_TYPE" == "mellanox" ]; then
         config_syncd_mlnx
-    elif [ "$SONIC_ASIC_TYPE" == "cavium" ]; then
-        config_syncd_cavium
     elif [ "$SONIC_ASIC_TYPE" == "centec" ]; then
         config_syncd_centec
-    elif [ "$SONIC_ASIC_TYPE" == "marvell" ]; then
-        config_syncd_marvell
+    elif [ "$SONIC_ASIC_TYPE" == "marvell-prestera" ]; then
+        config_syncd_marvell_prestera
      elif [ "$SONIC_ASIC_TYPE" == "barefoot" ]; then
          config_syncd_barefoot
     elif [ "$SONIC_ASIC_TYPE" == "nephos" ]; then
         config_syncd_nephos
     elif [ "$SONIC_ASIC_TYPE" == "vs" ]; then
         config_syncd_vs
-    elif [ "$SONIC_ASIC_TYPE" == "innovium" ]; then
-        config_syncd_innovium
+    elif [ "$SONIC_ASIC_TYPE" == "marvell-teralynx" ]; then
+        config_syncd_marvell_teralynx
     else
         echo "Unknown ASIC type $SONIC_ASIC_TYPE"
         exit 1

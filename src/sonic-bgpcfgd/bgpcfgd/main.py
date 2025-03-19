@@ -5,6 +5,7 @@ import syslog
 import threading
 import traceback
 
+from swsscommon.swsscommon import ConfigDBConnector
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
@@ -22,6 +23,9 @@ from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
+from .managers_bfd import BfdMgr
+from .managers_srv6 import SRv6Mgr
+from .managers_prefix_list import PrefixListMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
@@ -75,10 +79,22 @@ def do_work():
         RouteMapMgr(common_objs, "APPL_DB", swsscommon.APP_BGP_PROFILE_TABLE_NAME),
         # Device Global Manager
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
+        # SRv6 Manager
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
+        # Prefix List Manager
+        PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
     ]
 
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
+
+    config_db = ConfigDBConnector()
+    config_db.connect()
+    features = config_db.get_table('FEATURE')
+    if 'software_bfd' in features and 'state' in features['software_bfd'] and features['software_bfd']['state'] == 'enabled':
+        log_notice("software_bfd feature is enabled, starting bfd manager")
+        managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
