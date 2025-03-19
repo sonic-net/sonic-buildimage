@@ -132,8 +132,8 @@ module sonic-smart-switch {
 					description "PA IPv6 address from minigraph";
 					type inet:ipv6-address;
 				}
-
-                leaf dpu_id {
+				
+				leaf dpu_id {
 					description "ID of the DPU from minigraph";
 					type string {
 						pattern [0-7];
