@@ -13,7 +13,6 @@ trigger:
       - .github
 
 
-
 pr:
   branches:
     include:
