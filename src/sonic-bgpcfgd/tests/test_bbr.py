@@ -309,9 +309,12 @@ def test___set_prepare_config_enabled():
         'router bgp 65500',
         ' address-family ipv4',
         '  neighbor PEER_V4 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  neighbor PEER_V4 allowas-in 1',
         '  neighbor PEER_V6 allowas-in 1',
+        " exit-address-family",
+        "exit"
         ])
 
 def test___set_prepare_config_disabled():
@@ -322,9 +325,12 @@ def test___set_prepare_config_disabled():
         'router bgp 65500',
         ' address-family ipv4',
         '  no neighbor PEER_V4 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  no neighbor PEER_V4 allowas-in 1',
         '  no neighbor PEER_V6 allowas-in 1',
+        " exit-address-family",
+        "exit"
     ])
 
 def test___set_prepare_config_enabled_part():
@@ -336,9 +342,12 @@ def test___set_prepare_config_enabled_part():
         'router bgp 65500',
         ' address-family ipv4',
         '  neighbor PEER_V4 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  neighbor PEER_V4 allowas-in 1',
         '  neighbor PEER_V6 allowas-in 1',
+        " exit-address-family",
+        "exit"
     ])
 
 def test___set_prepare_config_disabled_part():
@@ -350,9 +359,12 @@ def test___set_prepare_config_disabled_part():
         'router bgp 65500',
         ' address-family ipv4',
         '  no neighbor PEER_V4 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  no neighbor PEER_V4 allowas-in 1',
         '  no neighbor PEER_V6 allowas-in 1',
+        " exit-address-family",
+        "exit"
     ])
 def test___set_prepare_config_enabled_multiple_peers():
     __set_prepare_config_common("enabled", {
@@ -365,10 +377,13 @@ def test___set_prepare_config_enabled_multiple_peers():
         '  neighbor PEER_V4 allowas-in 1',
         '  neighbor PEER_V4_DEPLOYMENT_ID_0 allowas-in 1',
         '  neighbor PEER_V4_DEPLOYMENT_ID_1 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  neighbor PEER_V6 allowas-in 1',
         '  neighbor PEER_V6_DEPLOYMENT_ID_0 allowas-in 1',
         '  neighbor PEER_V6_DEPLOYMENT_ID_1 allowas-in 1',
+        " exit-address-family",
+        "exit"
         ],
         {"PEER_V4", "PEER_V4_DEPLOYMENT_ID_0", "PEER_V4_DEPLOYMENT_ID_1", "PEER_V6", "PEER_V6_DEPLOYMENT_ID_0", "PEER_V6_DEPLOYMENT_ID_1"})
 
@@ -383,10 +398,13 @@ def test___set_prepare_config_disabled_multiple_peers():
         '  no neighbor PEER_V4 allowas-in 1',
         '  no neighbor PEER_V4_DEPLOYMENT_ID_0 allowas-in 1',
         '  no neighbor PEER_V4_DEPLOYMENT_ID_1 allowas-in 1',
+        " exit-address-family",
         ' address-family ipv6',
         '  no neighbor PEER_V6 allowas-in 1',
         '  no neighbor PEER_V6_DEPLOYMENT_ID_0 allowas-in 1',
         '  no neighbor PEER_V6_DEPLOYMENT_ID_1 allowas-in 1',
+        " exit-address-family",
+        "exit"
         ],
         {"PEER_V4", "PEER_V4_DEPLOYMENT_ID_0", "PEER_V4_DEPLOYMENT_ID_1", "PEER_V6", "PEER_V6_DEPLOYMENT_ID_0", "PEER_V6_DEPLOYMENT_ID_1"})
 

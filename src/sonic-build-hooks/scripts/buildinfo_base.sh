@@ -256,7 +256,7 @@ download_packages()
         if [ $result -eq 0 ]; then
             break
         fi
-        log_err "Try $i: $REAL_COMMAND failed to get: ${parameters[@]}. Retry.."
+        log_err "Try $i: $REAL_COMMAND failed to get: ${parameters[*]}. Retry.."
     done
 
     # Return if there is any error
