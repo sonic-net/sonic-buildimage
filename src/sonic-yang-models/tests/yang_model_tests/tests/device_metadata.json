@@ -46,7 +46,7 @@
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
-        "desc": "DEVICE_METADATA value as SmartSwitchDpu for Type field"
+        "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "desc": "DEVICE_METADATA value as SonicHost for Type field"
