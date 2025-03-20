@@ -7,7 +7,7 @@ steps:
       sudo sed -i 's/1/0/' /etc/apt/apt.conf.d/20auto-upgrades
 
       # Install Azure cli
-      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sed 's/apt-get/apt-get -o DPkg::Lock::Timeout=600 -o DPkg::Lock::Tries=3/' | sudo bash
       az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 --certificate /usr/local/CloudTest/ProvisioningScript/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
       # Install Azcopy
       if dpkg --print-architecture | grep amd64; then
