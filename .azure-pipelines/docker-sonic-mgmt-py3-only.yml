@@ -102,4 +102,4 @@ stages:
           containerRegistry: ${{ parameters.registry_conn }}
           repository: docker-sonic-mgmt
           command: push
-          tags: latest
+          tags: py3only
