@@ -7,7 +7,9 @@ ARG docker_container_name
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Update apt's cache of available packages
-RUN apt-get update
+RUN apt update &&            \
+    apt -y install           \
+        systemd
 
 RUN curl -o keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian12_bookworm/amd64/keydb-latest/keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb"
 RUN dpkg -i keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb || apt-get install -f -y
