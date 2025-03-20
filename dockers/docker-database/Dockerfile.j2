@@ -9,10 +9,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update apt's cache of available packages
 RUN apt-get update
 
-# Install keydb-server, redis deprecated
-RUN curl -o keydb-server_6.3.4-1%2Bdeb11u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian11_bullseye/amd64/keydb-latest/keydb-server_6.3.4-1%2Bdeb11u1_amd64.deb"
-RUN dpkg -i keydb-server_6.3.4-1%2Bdeb11u1_amd64.deb || apt-get install -f -y
-RUN rm keydb-server_6.3.4-1%2Bdeb11u1_amd64.deb
+RUN curl -o keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian12_bookworm/amd64/keydb-latest/keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb"
+RUN dpkg -i keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb || apt-get install -f -y
+RUN rm keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb
 
 # Install click for CLI
 RUN pip3 install click
