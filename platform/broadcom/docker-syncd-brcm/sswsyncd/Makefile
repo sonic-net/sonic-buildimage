@@ -2,6 +2,7 @@ CXX := g++
 CXXFLAGS := -std=c++11 -O2
 LDFLAGS := -lpthread
 
+# Output binaries to the current directory
 all: bcmcmd dsserve
 
 bcmcmd: bcmcmd.cpp
