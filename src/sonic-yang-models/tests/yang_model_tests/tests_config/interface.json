@@ -275,6 +275,106 @@
             }
         }
     },
+    "INTERFACE_VALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "vnet_name": "Vnet1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode": "trunk"
+                    }
+                ]
+            }
+        }
+    },
+    "INTERFACE_INVALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "vnet_name": "NonExistentVnet"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode": "trunk"
+                    }
+                ]
+            }
+        }
+    },
     "INTERFACE_MAC_ADDR": {
         "sonic-interface:sonic-interface": {
             "sonic-interface:INTERFACE": {
