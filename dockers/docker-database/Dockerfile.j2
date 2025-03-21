@@ -9,7 +9,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update apt's cache of available packages
 RUN apt-get update
 
-# Install valkey-server, redis deprecated
+# Install redis-server and valkey-server
+RUN apt-get install -y redis-server
 RUN apt-get install -y valkey-server
 
 # Install click for CLI
@@ -33,6 +34,18 @@ RUN apt-get clean -y                                  && \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
              s/^# unixsocket/unixsocket/;                \
+             s/redis-server.sock/redis.sock/g;           \
+             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
+             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^databases [0-9]+$/databases 100/ \
+            ' /etc/redis/redis.conf
+
+# Config valkey
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
+             s/^daemonize yes$/daemonize no/;            \
+             s/^logfile .*$/logfile ""/;                 \
+             s/^# syslog-enabled no$/syslog-enabled no/; \
+             s/^# unixsocket/unixsocket/;                \
              s/\/run\/valkey\/valkey-server.sock/\/run\/redis\/redis.sock/g;           \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
@@ -41,7 +54,7 @@ RUN apt-get clean -y                                  && \
              s/^dir \/var\/lib\/valkey/dir \/var\/lib\/redis/ \
             ' /etc/valkey/valkey.conf
 
-RUN cp /etc/valkey/valkey.conf /etc/redis/redis.conf
+RUN cp /etc/redis/redis.conf /etc/redis/redis.conf.ori
 RUN chown -R redis:redis /etc/redis/redis.conf
 RUN ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
 
