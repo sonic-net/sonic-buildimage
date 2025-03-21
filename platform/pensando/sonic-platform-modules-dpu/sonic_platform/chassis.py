@@ -361,8 +361,12 @@ class Chassis(ChassisBase):
     def get_my_slot(self):
         cmd = "cpldapp -r 0xA"
         try:
-            slot_id = self._api_helper.runCMD(cmd)
-            return int(slot_id,16)
+            try:
+                (status, slot_id) = self._api_helper.runCMD(cmd)
+                return int(slot_id,16)
+            except:
+                slot_id = self._api_helper.run_docker_cmd(cmd)
+                return int(slot_id,16)
         except:
             return -1
 

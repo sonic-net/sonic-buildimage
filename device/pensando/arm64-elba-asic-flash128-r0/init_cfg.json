@@ -1,0 +1,12 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "switch_type": "dpu"
+        }
+    },
+    "FEATURE": {
+        "polaris": {
+            "state": "enabled"
+        }
+    }
+}
