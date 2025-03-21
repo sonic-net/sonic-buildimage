@@ -2561,10 +2561,10 @@
             "autoneg": "off"
         },
         "Ethernet512": {
-            "default_brkout_mode": "1x10G[25G]"
+            "default_brkout_mode": "1x25G[10G]"
         },
         "Ethernet520": {
-            "default_brkout_mode": "1x10G[25G]"
+            "default_brkout_mode": "1x25G[10G]"
         }
     }
 }
