@@ -1763,10 +1763,10 @@
                     },
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
-                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
                         "PRIORITY": 999960,
                         "RULE_NAME": "Rule_9",
                         "INNER_SRC_IP": "10.166.0.0/15",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:46:BD:08:19:68",
                         "VNI": 47
                     }
                 ]
@@ -1781,14 +1781,14 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE_TYPE": {
                 "ACL_TABLE_TYPE_LIST": [
                     {
-                        "ACL_TABLE_TYPE_NAME": "L2",
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
                         "ACTIONS": [
                             "INNER_SRC_MAC_REWRITE_ACTION"
                         ],
@@ -1853,7 +1853,25 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
                     }
                 ]
             }
@@ -1907,7 +1925,25 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
                     }
                 ]
             }
@@ -1961,7 +1997,25 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
                     }
                 ]
             }
@@ -2055,7 +2109,7 @@
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
                         "PRIORITY": 999960,
                         "RULE_NAME": "Rule_16",
-                        "VNI": "16777213"
+                        "VNI": 16777213
                     }
                 ]
             },
@@ -2069,10 +2123,29 @@
                             "Ethernet1"
                         ],
                         "stage": "EGRESS",
-                        "type": "L2"
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
                     }
                 ]
             }
+            
         },
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
