@@ -2,8 +2,23 @@
 
 is_chassis_supervisor() {
     if [ -f /etc/sonic/chassisdb.conf ]; then
-        true
-        return
+        # if /etc/sonic/chassisdb.con exists, check platform_env.conf and its supervisor=1 definition
+        # to determinate if it is a Supervisor or Pizzabox with database-chassis support
+        PLATFORM="$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)"
+        PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+        if [ -f "$PLATFORM_ENV_CONF" ]; then
+            source $PLATFORM_ENV_CONF
+            if [ -v supervisor ]; then
+                if [ $supervisor -eq 1 ]; then
+                    true
+                    return
+                fi
+            fi
+        else
+            # return true if there is no platform_env.conf file
+            true
+            return
+        fi
     fi
     false
     return

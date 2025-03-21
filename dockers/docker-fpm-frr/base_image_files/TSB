@@ -4,6 +4,7 @@
 source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
 
 ${SMARTSWITCH:=false}
+${IS_SUPERVISOR:=false}
 
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
@@ -11,7 +12,7 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
+if [ "$IS_SUPERVISOR" = true ] && [ "$SMARTSWITCH" = false ] ; then
   CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "false""
   CONFIG_DB_TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "false"}}}'
   current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
