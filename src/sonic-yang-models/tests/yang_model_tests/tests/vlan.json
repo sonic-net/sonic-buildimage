@@ -128,5 +128,16 @@
     "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
         "desc": "Add to Vlan port that is router interface",
         "eStr": "Port is a router interface"
+    },
+    "VLAN_INTERFACE_WITH_VNET_AND_IP_PREFIXES": {
+        "desc": "Configure a VLAN interface with VNET and both IPv4 and IPv6 prefixes."
+    },
+    "VLAN_INTERFACE_WITH_INVALID_VNET_NAME_REFERENCE": {
+        "desc": "Configure a VLAN interface with reference to a non-existent VNET.",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
+        "desc": "Attempt to reference VNET name without the VNET being present.",
+        "eStrKey": "LeafRef"
     }
 }
