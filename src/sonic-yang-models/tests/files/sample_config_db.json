@@ -2874,5 +2874,11 @@
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
         }
+    },
+    "HEARTBEAT": {
+        "orchagent": {
+            "heartbeat_interval"   : "10000",
+            "alert_interval"       : "60000"
+        }
     }
 }
