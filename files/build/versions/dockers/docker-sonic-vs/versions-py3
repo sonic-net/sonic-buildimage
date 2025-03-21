@@ -26,7 +26,7 @@ pexpect==4.8.0
 prefixed==0.7.0
 prettyprinter==0.18.0
 ptyprocess==0.7.0
-pycairo==1.24.0
+pycairo==1.26.1
 pycparser==2.21
 pygments==2.16.1
 pygobject==3.46.0
