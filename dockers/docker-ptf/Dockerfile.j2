@@ -92,7 +92,8 @@ RUN apt-get update          \
         automake            \
         iproute2            \
         wireshark-common    \
-        freeradius
+        freeradius          \
+        quilt
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
@@ -261,9 +262,14 @@ RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
-RUN git clone https://github.com/lguohan/gnxi.git \
+RUN git clone https://github.com/google/gnxi.git \
     && cd gnxi \
-    && git checkout 3adf8b9 \
+    && git checkout 208acfa85f5b5b8717e14896e9d6ee93cfda9d5f
+
+COPY gnxi-patches/ gnxi/patches/
+
+RUN cd gnxi \
+    && quilt push -a \
     && cd gnmi_cli_py \
 {% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt

@@ -4,7 +4,7 @@
             "hwsku": "SS-DPU-1x400Gb",
             "hostname": "sonic",
             "switch_type": "dpu",
-            "type": "SonicDpu",
+            "type": "SmartSwitchDPU",
             "subtype": "SmartSwitch",
             "bgp_asn": "65100"
         }
