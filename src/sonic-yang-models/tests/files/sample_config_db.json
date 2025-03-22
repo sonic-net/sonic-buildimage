@@ -2791,24 +2791,30 @@
                 "midplane_interface": "dpu1"
             }
         },
-        "DPU_PORT": {
-            "dpu0": {
+        "DPU": {
+            "str-8102-t1-dpu0": {
                 "state": "up",
+                "local_port": "Ethernet228",
                 "vip_ipv4": "192.168.1.1",
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "dpu_id": "0",
                 "vdpu_id": "vdpu0",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50"
             },
-            "dpu1": {
+            "str-8102-t1-dpu1": {
                 "state": "down",
+                "local_port": "Ethernet232",
                 "vip_ipv4": "192.168.1.2",
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "dpu_id": "1",
                 "vdpu_id": "vdpu1",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50"
             }
         },
 	"XCVRD_LOG": {
