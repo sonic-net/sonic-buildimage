@@ -1215,6 +1215,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 ```
 {
 	"FLEX_COUNTER_TABLE": {
+		"PFC_STAT_HISTORY": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "1000"
+		},
 		"PFCWD": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "10000"
