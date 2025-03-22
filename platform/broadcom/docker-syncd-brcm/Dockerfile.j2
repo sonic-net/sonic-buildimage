@@ -23,6 +23,10 @@ RUN apt-get install -yf kmod
 ## BRCM uses ethtool to set host interface speed
 RUN apt-get install -y ethtool
 
+# Copy built binaries for bcmcmd and dsserve
+COPY ["sswsyncd/bcmcmd", "sswsyncd/dsserve", "/usr/bin/"]
+RUN chmod +x /usr/bin/bcmcmd /usr/bin/dsserve
+
 COPY ["files/dsserve", "files/bcmcmd", "start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd /usr/bin/rdb-cli
 
