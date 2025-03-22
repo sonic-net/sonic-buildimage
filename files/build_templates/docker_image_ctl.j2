@@ -111,7 +111,7 @@ function preStartAction()
         systemctl stop watchdog-control.service
     fi
 {%- elif docker_container_name == "snmp" %}
-    $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -d -s)
 {%- else %}
     : # nothing
 {%- endif %}
