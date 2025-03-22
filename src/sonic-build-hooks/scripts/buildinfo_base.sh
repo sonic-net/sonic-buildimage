@@ -86,6 +86,17 @@ check_if_url_exist()
     fi
 }
 
+check_if_url_contains_credential()
+{
+    local url=$1
+    # Check if contains the blob sas key
+    if echo "$url" | grep -qE "https://.*\.blob\.core..*\?.*sig="; then
+        echo y
+    else
+        echo n
+    fi
+}
+
 get_version_cache_option()
 {
 	#SONIC_VERSION_CACHE="cache"
@@ -200,6 +211,12 @@ download_packages()
                         fi
                     fi
                 fi
+            fi
+
+            # Skip to use the proxy, if the url contains credential
+            local has_credential=$(check_if_url_contains_credential $url)
+            if [ "$has_credential" == y ]; then
+                continue
             fi
 
             if [ "$ENABLE_VERSION_CONTROL_WEB" == y ]; then
