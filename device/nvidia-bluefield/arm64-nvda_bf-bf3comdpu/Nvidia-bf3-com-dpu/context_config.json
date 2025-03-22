@@ -13,7 +13,7 @@
             "switches": [
                 {
                     "index" : 0,
-                    "hwinfo" : "Nvidia-bf3-com-dpu"
+                    "hwinfo" : ""
                 }
             ]
         }
