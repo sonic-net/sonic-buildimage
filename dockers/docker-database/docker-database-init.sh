@@ -137,4 +137,16 @@ chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
 chown -R redis:redis $REDIS_BMP_DIR
 
+# switch redis/valkey by CONFIG_DB
+DB_SERVICE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "db_service"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"valkey" ]]; then
+    cp /etc/valkey/valkey.conf /etc/redis/redis.conf
+    chown -R redis:redis /etc/redis/redis.conf
+    ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
+else
+    cp /etc/redis/redis.conf.ori /etc/redis/redis.conf
+    chown -R redis:redis /etc/redis/redis.conf
+    ln -s /usr/bin/redis-check-rdb /usr/bin/redis-server
+fi
+
 exec /usr/local/bin/supervisord
