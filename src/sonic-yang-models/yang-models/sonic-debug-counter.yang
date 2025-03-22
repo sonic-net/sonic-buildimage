@@ -1,0 +1,75 @@
+module sonic-debug-counter {
+    namespace "http://github.com/sonic-net/sonic-debug-counter";
+    prefix dbgcnt;
+    yang-version 1.1;
+
+    import sonic-types {
+		prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC Debug Counter Yang Model";
+
+    revision 2024-03-07 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-debug-counter{
+        container DEBUG_COUNTER {
+            list DEBUG_COUNTER_LIST {
+                key "name";
+
+                leaf name {
+                    type string;
+                }
+
+                leaf alias {
+                    type string;
+                    description "Alias of the counter";
+                }
+
+                leaf desc {
+                    type string;
+                    description "Description of counter (can include counter type, intended use, etc.)";
+                }
+
+                leaf group {
+                    type string;
+                    description "Group name to organize counters";
+                }
+
+                leaf type {
+                    type stypes:debug_counter_type;
+                    mandatory true;
+                    description "Counter type indicating scope (switch or port) and direction (ingress or egress)";
+                }
+            }
+        }
+
+        container DEBUG_COUNTER_DROP_REASON {
+            list DEBUG_COUNTER_DROP_REASON_LIST {
+                key "name reason";
+
+                leaf name {
+                    /* Counter must first be created in DEBUG_COUNTER_TABLE before we can add reasons to it */
+                    must "(current() = ../../../DEBUG_COUNTER/DEBUG_COUNTER_LIST[name=current()]/name)" {
+                        error-message "The counter does not exist in the DEBUG_COUNTER table";
+                    }
+                    type string;
+                }
+
+                leaf reason {
+                    type stypes:counter_drop_reason;
+                    description "Drop reason which will cause the counter to increment";
+                }
+            }
+        }
+    }
+}
