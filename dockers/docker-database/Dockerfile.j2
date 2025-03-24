@@ -11,11 +11,11 @@ RUN apt-get update
 
 RUN curl -o keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian12_bookworm/amd64/keydb-latest/keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb"
 # install keydb will setup systemd service, SONiC don't want that service, only need some config file 
-RUN dpkg -x  keydb-server_6.3.4-1+deb12u1_amd64.deb ./keydb_deb_files
+RUN dpkg -x  keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb ./keydb_deb_files
 RUN cp ./keydb_deb_files/etc/keydb/keydb.conf /etc/redis/redis.conf
 RUN cp ./keydb_deb_files/etc/logrotate.d/keydb-server /etc/logrotate.d/keydb-server
 RUN rm -rf ./keydb_deb_files
-RUN rm keydb-server_6.3.4-1+deb12u1_amd64.deb
+RUN rm keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb
 
 # Install click for CLI
 RUN pip3 install click
