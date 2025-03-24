@@ -43,9 +43,8 @@ RUN apt-get clean -y                                  && \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
              s/^databases [0-9]+$/databases 100/; \
              s/^dir \/var\/lib\/keydb/dir \/var\/lib\/redis/; \
-            ' /etc/keydb/keydb.conf
+            ' /etc/redis/redis.conf
 
-RUN cp /etc/keydb/keydb.conf /etc/redis/redis.conf
 RUN chown -R redis:redis /etc/redis/redis.conf
 RUN ln -s /usr/bin/keydb-check-rdb /usr/bin/redis-server
 
