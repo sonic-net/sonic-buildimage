@@ -56,7 +56,6 @@ RUN sed -ri 's/^# save ""$/save ""/g;                    \
             ' /etc/valkey/valkey.conf
 
 RUN mv /etc/redis/redis.conf /etc/redis/redis.conf.ori
-RUN chown -R redis:redis /etc/redis/redis.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
