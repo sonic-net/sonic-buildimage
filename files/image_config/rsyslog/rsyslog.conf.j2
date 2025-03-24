@@ -93,9 +93,8 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 
 {% set fmodifier = '!' if filter == 'exclude' else '' %}
 {% set device = vrf if vrf != '' and vrf != 'default' -%}
-{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
 
-{% format == 'welf' %}
+{% if format == 'welf' %}
 {% set template = 'WelfRemoteFormat'%}
 {% else if forward_with_osversion and forward_with_osversion == "true"%}
 {% set template = 'SONiCForwardFormatWithOsVersion'%}
