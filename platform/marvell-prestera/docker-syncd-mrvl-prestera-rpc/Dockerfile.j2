@@ -1,0 +1,59 @@
+FROM docker-syncd-mrvl-prestera-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files %}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY \
+{% for deb in docker_syncd_mrvl_prestera_rpc_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get purge -y syncd
+
+## Pre-install the fundamental packages ##
+RUN apt-get update \
+ && apt-get -y install  \
+    net-tools           \
+    python3-pip		\
+    python3-setuptools	\
+    build-essential     \
+    libssl-dev          \
+    libffi-dev          \
+    python3-dev          \
+    wget                \
+    libqt5core5a        \
+    libqt5network5      \
+    libboost-atomic1.74.0 \
+    libthrift-0.17.0      \
+    libnanomsg5           \
+    libnanomsg-dev
+
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
+{% for deb in docker_syncd_mrvl_prestera_rpc_debs.split(' ') -%}
+dpkg_apt debs/{{ deb }}{{'; '}}
+{%- endfor %}
+
+RUN pip3 install cffi    \
+ && pip3 install nnpy    \
+ && mkdir -p /opt       \
+ && cd /opt             \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
+
+COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
+
+{% if docker_syncd_mrvl_prestera_rpc_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_syncd_mrvl_prestera_rpc_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_syncd_mrvl_prestera_rpc_whls.split(' ')) }}
+{% endif %}
+
+## Clean up
+RUN apt-get purge -y libyaml-dev python3-dev libffi-dev libssl-dev wget build-essential
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /root/deps
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

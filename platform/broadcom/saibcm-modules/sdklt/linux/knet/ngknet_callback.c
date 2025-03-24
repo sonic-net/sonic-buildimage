@@ -29,6 +29,7 @@ static struct ngknet_callback_ctrl callback_ctrl;
 void
 ngknet_callback_init(struct ngknet_dev *devs)
 {
+    INIT_LIST_HEAD(&callback_ctrl.dev_init_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.netif_create_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.netif_destroy_cb_list);
     INIT_LIST_HEAD(&callback_ctrl.filter_cb_list);
@@ -38,10 +39,16 @@ ngknet_callback_init(struct ngknet_dev *devs)
 void
 ngknet_callback_cleanup(void)
 {
+    dev_cb_t *dev_cb;
     netif_cb_t *netif_cb;
     filter_cb_t *filter_cb;
 
-    /* Destroy any create/destroy netif which is not unregistered */
+    while (!list_empty(&callback_ctrl.dev_init_cb_list)) {
+        dev_cb = list_entry(callback_ctrl.dev_init_cb_list.next,
+                            dev_cb_t, list);
+        list_del(&dev_cb->list);
+        kfree(dev_cb);
+    }
     while (!list_empty(&callback_ctrl.netif_create_cb_list)) {
         netif_cb = list_entry(callback_ctrl.netif_create_cb_list.next,
                               netif_cb_t, list);
@@ -77,10 +84,26 @@ ngknet_callback_control_get(struct ngknet_callback_ctrl **cbc)
 int
 ngknet_dev_init_cb_register(ngknet_dev_init_cb_f dev_init_cb)
 {
-    if (callback_ctrl.dev_init_cb != NULL) {
+    struct list_head *list;
+    dev_cb_t *dev_cb;
+
+    if (dev_init_cb == NULL) {
         return -1;
     }
-    callback_ctrl.dev_init_cb = dev_init_cb;
+
+    list_for_each(list, &callback_ctrl.dev_init_cb_list) {
+        dev_cb = list_entry(list, dev_cb_t, list);
+        if (dev_cb->cb == dev_init_cb) {
+            return -1;
+        }
+    }
+
+    dev_cb = kmalloc(sizeof(*dev_cb), GFP_KERNEL);
+    if (dev_cb == NULL) {
+        return -1;
+    }
+    dev_cb->cb = dev_init_cb;
+    list_add_tail(&dev_cb->list, &callback_ctrl.dev_init_cb_list);
 
     return 0;
 }
@@ -88,12 +111,23 @@ ngknet_dev_init_cb_register(ngknet_dev_init_cb_f dev_init_cb)
 int
 ngknet_dev_init_cb_unregister(ngknet_dev_init_cb_f dev_init_cb)
 {
-    if (dev_init_cb == NULL || callback_ctrl.dev_init_cb != dev_init_cb) {
+    struct list_head *list, *list_next;
+    dev_cb_t *dev_cb;
+
+    if (dev_init_cb == NULL) {
         return -1;
     }
-    callback_ctrl.dev_init_cb = NULL;
 
-    return 0;
+    list_for_each_safe(list, list_next, &callback_ctrl.dev_init_cb_list) {
+        dev_cb = list_entry(list, dev_cb_t, list);
+        if (dev_cb->cb == dev_init_cb) {
+            list_del(list);
+            kfree(dev_cb);
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 int
@@ -281,7 +315,7 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
         return -1;
     }
     fcb->cb = filter_cb;
-    strcpy(fcb->desc, desc);
+    strlcpy(fcb->desc, desc, sizeof(fcb->desc));
     list_add_tail(&fcb->list, &callback_ctrl.filter_cb_list);
 
     /* Check if any existing filter matches the registered name */

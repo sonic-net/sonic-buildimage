@@ -45,7 +45,7 @@ bcmpkt_util_dev_type_get(const char *dev_name);
  * Device and variant names are case-insensitive.
  *
  * \param [in] dev_name Device name, e.g. "bcm56000_a0".
- * \param [in] var_name Variant name, e.g. "utltm".
+ * \param [in] var_name Variant name, e.g. "dna_6_5_30_1_1".
  *
  * \return Variant dispatch type or BCMLRD_VARIANT_T_NONE if not found.
  */

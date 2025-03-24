@@ -45,6 +45,9 @@
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
+    },
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "desc": "DEVICE_METADATA value as SonicHost for Type field"
     },
@@ -90,6 +93,9 @@
     },
     "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
         "desc": "Verifying resource type configuration."
+    },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "desc": "Verifying mgmt type configuration."
     },
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."

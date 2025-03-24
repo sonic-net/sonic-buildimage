@@ -1,103 +1,103 @@
-=======
 # SONiC Configuration Database Manual
 
-Table of Contents
-=================
 
-   * [Introduction](#introduction)
-   * [Configuration](#configuration)
-   * [<strong>Config Load and Save</strong>](#config-load-and-save)
+**Table of Contents**
 
-         * [Incremental Configuration](#incremental-configuration)
-   * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
-
-         * [ACL and Mirroring](#acl-and-mirroring)
-         * [BGP BBR](#bgp-bbr)
-         * [ASIC SDK health event](#asic-sdk-health-event)
-         * [BGP Device Global](#bgp-device-global)
-         * [BGP Sessions](#bgp-sessions)
-         * [BUFFER_PG](#buffer_pg)
-         * [Buffer pool](#buffer-pool)
-         * [Buffer profile](#buffer-profile)
-         * [Buffer queue](#buffer-queue)
-         * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
-         * [Buffer port egress profile list](#buffer-port-egress-profile-list)
-         * [Cable length](#cable-length)
-         * [Chassis module](#chassis-module)
-         * [COPP_TABLE](#copp_table)
-         * [Console](#console)
-         * [CRM](#crm)
-         * [CRM DASH](#crm-dash)
-         * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
-         * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
-         * [Device Metadata](#device-metadata)
-         * [Device neighbor metada](#device-neighbor-metada)
-         * [DHCP_RELAY](#dhcp_relay)
-         * [DHCP Server IPV4](#dhcp_server_ipv4)
-         * [BMP](#bmp)
-         * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
-         * [FG_NHG](#fg_nhg)
-         * [FG_NHG_MEMBER](#fg_nhg_member)
-         * [FG_NHG_PREFIX](#fg_nhg_prefix)
-         * [FABRIC_MONITOR](#fabric-monitor)
-         * [FABRIC_PORT](#fabric-port)
-         * [FLEX_COUNTER_TABLE](#flex_counter_table)
-         * [GRPCCLIENT](#grpcclient)
-         * [Hash](#hash)
-         * [IPv6 Link-local] (#ipv6-link-local)
-         * [KDUMP](#kdump)
-         * [Kubernetes Master](#kubernetes-master)
-         * [L2 Neighbors](#l2-neighbors)
-         * [Loopback Interface](#loopback-interface)
-         * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
-         * [Memory Statistics](#memory-statistics)
-         * [Management Interface](#management-interface)
-         * [Management port](#management-port)
-         * [Management VRF](#management-vrf)
-         * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
-         * [MUX_CABLE](#mux_cable)
-         * [MUX_LINKMGR](#mux_linkmgr)
-         * [NEIGH](#neigh)
-         * [NTP Global Configuration](#ntp-global-configuration)
-         * [NTP Servers](#ntp-servers)
-         * [Peer Switch](#peer-switch)
-         * [Policer](#policer)
-         * [Port](#port)
-         * [Port Channel](#port-channel)
-         * [Portchannel member](#portchannel-member)
-         * [Scheduler](#scheduler)
-         * [Port QoS Map](#port-qos-map)
-         * [Queue](#queue)
-         * [Syslog Global Configuration](#syslog-global-configuration)
-         * [Syslog Servers](#syslog-servers)
-         * [Sflow](#sflow)
-         * [Restapi](#restapi)
-         * [System Port](#system-port)
-         * [Tacplus Server](#tacplus-server)
-         * [TC to Priority group map](#tc-to-priority-group-map)
-         * [TC to Queue map](#tc-to-queue-map)
-         * [Telemetry](#telemetry)
-         * [Telemetry client](#telemetry-client)
-         * [Tunnel](#tunnel)
-         * [Versions](#versions)
-         * [VLAN](#vlan)
-         * [VLAN_MEMBER](#vlan_member)
-         * [VNET](#vnet)
-         * [VOQ Inband Interface](#voq-inband-interface)
-         * [VXLAN](#vxlan)
-         * [Virtual router](#virtual-router)
-         * [LOGGER](#logger)
-         * [WRED_PROFILE](#wred_profile)
-         * [XCVRD_LOG](#xcvrd_log)
-         * [PASSWORD_HARDENING](#password_hardening)
-         * [SSH_SERVER](#ssh_server)
-         * [SYSTEM_DEFAULTS table](#systemdefaults-table)
-         * [RADIUS](#radius)
-         * [Static DNS](#static-dns)
-   * [For Developers](#for-developers)
-      * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
-      * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
-
+* [Introduction](#introduction)
+* [Configuration](#configuration)
+* [<strong>Config Load and Save</strong>](#config-load-and-save)
+  * [Incremental Configuration](#incremental-configuration)
+* [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
+  * [ACL and Mirroring](#acl-and-mirroring)
+  * [BGP BBR](#bgp-bbr)
+  * [ASIC SDK health event](#asic-sdk-health-event)
+  * [BGP Device Global](#bgp-device-global)
+  * [BGP Sessions](#bgp-sessions)
+  * [BUFFER_PG](#buffer_pg)
+  * [Buffer pool](#buffer-pool)
+  * [Buffer profile](#buffer-profile)
+  * [Buffer queue](#buffer-queue)
+  * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
+  * [Buffer port egress profile list](#buffer-port-egress-profile-list)
+  * [Cable length](#cable-length)
+  * [Chassis module](#chassis-module)
+  * [COPP_TABLE](#copp_table)
+  * [Console](#console)
+  * [CRM](#crm)
+  * [CRM DASH](#crm-dash)
+  * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
+  * [Device Metadata](#device-metadata)
+  * [Device neighbor metada](#device-neighbor-metada)
+  * [DHCP_RELAY](#dhcp_relay)
+  * [DHCP Server IPV4](#dhcp_server_ipv4)
+  * [BMP](#bmp)
+  * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [FG_NHG](#fg_nhg)
+  * [FG_NHG_MEMBER](#fg_nhg_member)
+  * [FG_NHG_PREFIX](#fg_nhg_prefix)
+  * [FABRIC_MONITOR](#fabric-monitor)
+  * [FABRIC_PORT](#fabric-port)
+  * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GRPCCLIENT](#grpcclient)
+  * [Hash](#hash)
+  * [KDUMP](#kdump)
+  * [Kubernetes Master](#kubernetes-master)
+  * [L2 Neighbors](#l2-neighbors)
+  * [L3 Interfaces](#l3-interfaces)
+  * [Loopback Interface](#loopback-interface)
+  * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
+  * [Memory Statistics](#memory-statistics)
+  * [Management Interface](#management-interface)
+  * [Management port](#management-port)
+  * [Management VRF](#management-vrf)
+  * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
+  * [MUX_CABLE](#mux_cable)
+  * [MUX_LINKMGR](#mux_linkmgr)
+  * [NEIGH](#neigh)
+  * [NTP Global Configuration](#ntp-global-configuration)
+  * [NTP Servers](#ntp-servers)
+  * [Peer Switch](#peer-switch)
+  * [Policer](#policer)
+  * [Port](#port)
+  * [Port Channel](#port-channel)
+  * [Portchannel member](#portchannel-member)
+  * [Scheduler](#scheduler)
+  * [Port QoS Map](#port-qos-map)
+  * [Queue](#queue)
+  * [Syslog Global Configuration](#syslog-global-configuration)
+  * [Syslog Servers](#syslog-servers)
+  * [Sflow](#sflow)
+  * [Restapi](#restapi)
+  * [System Port](#system-port)
+  * [Tacplus Server](#tacplus-server)
+  * [TC to Priority group map](#tc-to-priority-group-map)
+  * [TC to Queue map](#tc-to-queue-map)
+  * [Telemetry](#telemetry)
+  * [Telemetry client](#telemetry-client)
+  * [Tunnel](#tunnel)
+  * [Versions](#versions)
+  * [VLAN](#vlan)
+  * [VLAN_MEMBER](#vlan_member)
+  * [VNET](#vnet)
+  * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
+  * [VOQ Inband Interface](#voq-inband-interface)
+  * [VXLAN](#vxlan)
+  * [Virtual router](#virtual-router)
+  * [LOGGER](#logger)
+  * [WRED_PROFILE](#wred_profile)
+  * [XCVRD_LOG](#xcvrd_log)
+  * [PASSWORD_HARDENING](#password_hardening)
+  * [SSH_SERVER](#ssh_server)
+  * [SUBNET_DECAP](#subnet_decap)
+  * [SYSTEM_DEFAULTS table](#systemdefaults-table)
+  * [RADIUS](#radius)
+  * [Static DNS](#static-dns)
+  * [ASIC_SENSORS](#asic_sensors)  
+  * [SRv6](#srv6)
+  * [Prefix List](#prefix-list)
+* [For Developers](#for-developers)
+  * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
+  * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
 
 
 # Introduction
@@ -928,47 +928,6 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 }
 ```
 
-### Data Plane L3 Interfaces
-
-IP configuration for data plane are defined in **INTERFACE**, **VLAN_SUB_INTERFACE**,
-**PORTCHANNEL_INTERFACE** and **VLAN_INTERFACE** table. The objects
-in all four tables have the interface (could be physical port, port
-channel, vlan or vlan sub interface) that IP address is attached to as first-level key, and
-IP prefix as second-level key. IP interface address objects don't have any attributes.
-IP interface attributes, resides in those tables as well, key is the interface name
-and value is a list of field-values representing the interface attributes, e.g. loopback action.
-
-```
-{
-"INTERFACE": {
-        "Ethernet0|10.0.0.0/31": {},
-        "Ethernet4|10.0.0.2/31": {},
-        "Ethernet8|10.0.0.4/31": {}
-        "Ethernet8": {
-            "loopback_action": "drop"
-        }
-    },
-
-"PORTCHANNEL_INTERFACE": {
-        "PortChannel01|10.0.0.56/31": {},
-        "PortChannel01|FC00::71/126": {},
-        "PortChannel02|10.0.0.58/31": {},
-        "PortChannel02|FC00::75/126": {}
-    },
-
-"VLAN_INTERFACE": {
-        "Vlan1000|192.168.0.1/27": {}
-    },
-
-"VLAN_SUB_INTERFACE": {
-        "Ethernet4.1|10.0.0.2/31": {},
-        "Ethernet4.1": {
-            "loopback_action": "drop"
-        }
-    }
-}
-```
-
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
@@ -1312,7 +1271,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "lag_hash": [
                 "DST_MAC",
@@ -1330,37 +1290,14 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "ecmp_hash_algorithm": "CRC",
             "lag_hash_algorithm": "CRC"
         }
     }
 }
-```
-
-### IPv6 Link-local
-```
-{
-    "INTERFACE": {
-        "Ethernet8": {
-            "ipv6_use_link_local_only": "disable"
-        }
-    },
-
-    "PORTCHANNEL_INTERFACE": {
-        "PortChannel01": {
-            "ipv6_use_link_local_only": "enable"
-        }
-    },
-
-    "VLAN_INTERFACE": {
-        "Vlan1000": {
-            "ipv6_use_link_local_only": "enable"
-        }
-    }
-}
-
 ```
 
 ### KDUMP
@@ -1371,7 +1308,10 @@ The configuration is applied globally for each ECMP and LAG on a switch.
         "config": {
             "enabled": "true",
             "num_dumps": "3",
-            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
+            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
+            "remote": "true",
+            "ssh_string": "username@ipaddress",
+            "ssh_path": "a/b/c"
          }
      }
 }
@@ -1443,6 +1383,96 @@ loopback address can also be defined.
                 "type": "LeafRouter",
                 "port": "Ethernet1"
         }
+    }
+}
+```
+
+### L3 Interfaces
+
+Configuration for L3 data plane interfaces are defined in the `INTERFACE`,
+`VLAN_INTERFACE`, `VLAN_SUB_INTERFACE` and `PORTCHANNEL_INTERFACE` tables,
+respectively.
+
+The objects in all four tables have the interface as the key with the following
+required patterns:
+- `INTERFACE`: Any valid port name from the `PORT` table.  Typically `Ethernet{0-999}`.
+- `VLAN_INTERFACE`: `Vlan{1-4095}`
+- `PORTCHANNEL_INTERFACE`: `PortChannel{0-9999}`
+- `VLAN_SUB_INTERFACE`: Any valid `INTERFACE` or `PORTCHANNEL_INTERFACE` name followed by a `.` and a number between 1 and 4094.  E.g. `Ethernet1.4`
+
+
+These tables have a number of shared attributes as described below:
+ * `vrf_name`: Valid VRF name from the `VRF` table.  Default: `default`
+ * `nat_zone`: NAT Zone for this interface. `0..3`
+ * `mpls`: Enable/disable MPLS routing for the interface. `enable` or `disable`. Default `disable`.
+ * `ipv6_use_link_local_only`: Enable/Disable IPv6 link local address on interface. `enable` or `disable`. Default `disable`.
+ * `mac_addr`: Assign administrator-provided MAC address to Interface.  If not specified will use the system MAC (same for all interfaces). Not applicable to `VLAN_SUB_INTERFACE` as it will use the parent interface's mac address.
+ * `loopback_action`: Packet action when a packet ingress and gets routed on the same IP interface. `drop` or `forward`.
+
+
+```json
+
+{
+    "INTERFACE": {
+        "Ethernet0": {
+            "ipv6_use_link_local_only": "enable",
+            "mac_addr": "12:34:56:78:90:ab"
+        },
+        "Ethernet1": {
+            "loopback_action": "drop"
+        }
+    },
+    "VLAN_INTERFACE": {
+        "Vlan201": {
+            "vrf_name": "red",
+            "mac_addr": "AB:CD:EF:12:34:56"
+        }
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel101": {
+            "mac_addr": "1c:23:a8:56:de:2f"
+        }
+    },
+    "VLAN_SUB_INTERFACE": {
+        "Ethernet0.555": {
+            "vrf_name": "Blue",
+            "vlan": "555"
+        }
+    }
+}
+```
+
+#### Assigning IP addresses to L3 Interfaces
+
+The interface name and IP prefix act as multi-level key for the interface
+objects.  The IP prefixes are stored in the same tables as the interface
+attributes: `INTERFACE`, `VLAN_INTERFACE`, `VLAN_SUB_INTERFACE` and `PORTCHANNEL_INTERFACE`.
+
+In the example below we will show one interface with attributes for clarity,
+but otherwise this is simply an example of how IP addresses may be configured.
+
+```json
+{
+    "INTERFACE": {
+        "Ethernet0": {
+            "ipv6_use_link_local_only": "enable",
+            "mac_addr": "12:34:56:78:90:ab"
+        },
+        "Ethernet0|10.0.0.0/31": {},
+        "Ethernet4|10.0.0.2/31": {},
+        "Ethernet8|10.0.0.4/31": {},
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel01|10.0.0.56/31": {},
+        "PortChannel01|FC00::71/126": {},
+        "PortChannel02|10.0.0.58/31": {},
+        "PortChannel02|FC00::75/126": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan1000|192.168.0.1/27": {}
+    },
+    "VLAN_SUB_INTERFACE": {
+        "Ethernet4.1|10.0.0.2/31": {}
     }
 }
 ```
@@ -2540,6 +2570,29 @@ monitoring sessions for the vnet routes and is optional.
 }
 ```
 
+### VNET_ROUTE_TUNNEL
+
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
+- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
+- VNI: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+
+```
+{
+  "VNET_ROUTE_TUNNEL": {
+    "Vnet_2000|100.100.1.1/32": {
+        "endpoint": "192.168.1.1",
+        "mac_address": "f9:22:83:99:22:a2"
+    },
+    "Vnetv4_v4-0|10.0.1.0/24": {
+        "endpoint": "192.168.1.2",
+        "mac_address": "f8:22:83:99:22:a2",
+        "vni": "10012"
+    }
+  }
+}
+```
+
 ### VOQ INBAND INTERFACE
 
 VOQ_INBAND_INTERFACE holds the name of the inband system port dedicated for cpu communication. At this time, only inband_type of "port" is supported
@@ -2814,6 +2867,20 @@ The method could be:
 }
 ```
 
+### SUBNET_DECAP
+
+The **SUBNET_DECAP** table is used for subnet decap configuration.
+
+```
+"SUBNET_DECAP": {
+    "AZURE": {
+        "status": "enable",
+        "src_ip": "10.10.10.0/24",
+        "src_ip_v6": "20c1:ba8::/64"
+    }
+}
+```
+
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
@@ -2873,6 +2940,42 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 }
 ```
 
+### SRv6
+
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
+An example is as follows:
+```
+{
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
+           "action": "uN"
+        },
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
+        }
+    }
+}
+```
+
+### Prefix List
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+
+An example is as follows:
+```json
+{
+    "PREFIX_LIST": {
+        "ANCHOR_PREFIX|fc00::/48": {}
+    }
+}
+```
+
 ### FIPS
 
 The FIPS table introduces FIPS  configuration.
@@ -2919,18 +3022,76 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
 }
 ```
 
-#### 5.2.3 Update value directly in db memory
+### ASIC_SENSORS
 
-For Developers
-==============
+The ASIC_SENSORS table introduces the asic sensors polling configuration when they are available on the platform.
 
-Generating Application Config by Jinja2 Template
-------------------------------------------------
+```json
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        }
+    }
+}
+```
+
+### DPU Configuration
+
+The **DPU** table introduces the configuration for the DPUs(Data Processing Unit) information available on the platform.
+
+```json
+{
+    "DPU": {
+        "str-8102-t1-dpu0": {
+            "state": "up",
+            "local_port": "Ethernet228",
+            "vip_ipv4": "192.168.1.1",
+            "vip_ipv6": "2001:db8::10",
+            "pa_ipv4": "192.168.1.10",
+            "pa_ipv6": "2001:db8::10",
+            "dpu_id": "0",
+            "vdpu_id": "vdpu0",
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
+        },
+        "str-8102-t1-dpu1": {
+            "state": "down",
+            "local_port": "Ethernet232",
+            "vip_ipv4": "192.168.1.2",
+            "vip_ipv6": "2001:db8::20",
+            "pa_ipv4": "192.168.1.20",
+            "pa_ipv6": "2001:db8::20",
+            "dpu_id": "1",
+            "vdpu_id": "vdpu1",
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
+        }
+    }
+}
+```
+
+**state**: Administrative status of the DPU (`up` or `down`).
+**local_port**: local port mapped to DPU port on the switch.
+**vip_ipv4**: VIP IPv4 address from minigraph.
+**vip_ipv6**: VIP IPv6 address from minigraph.
+**pa_ipv4**: PA IPv4 address from minigraph.
+**pa_ipv6**: PA IPv6 address from minigraph.
+**dpu_id**: Id of the DPU from minigraph.
+**vdpu_id**: ID of VDPUs from minigraph.
+**gnmi_port**: TCP listening port for gnmi service on DPU.
+**orchagent_zmq_port**: TCP listening port for ZMQ service on DPU orchagent.
+
+# For Developers
+
+## Generating Application Config by Jinja2 Template
 
 To be added.
 
-Incremental Configuration by Subscribing to ConfigDB
-----------------------------------------------------
+## Incremental Configuration by Subscribing to ConfigDB
 
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that

@@ -72,7 +72,7 @@
 #define KCOM_M_CLOCK_CMD        52 /* Clock Commands */
 #define KCOM_M_PCIE_LINK_STATUS 53 /* PCIe link status */
 
-#define KCOM_VERSION            16 /* Protocol version */
+#define KCOM_VERSION            17 /* Protocol version */
 
 /*
  * Message status codes
@@ -126,10 +126,11 @@ typedef struct kcom_msg_hdr_s {
 #define KCOM_NETIF_T_PORT       1
 #define KCOM_NETIF_T_META       2
 
-#define KCOM_NETIF_F_ADD_TAG    (1U << 0)
-#define KCOM_NETIF_F_RCPU_ENCAP (1U << 1)
+#define KCOM_NETIF_F_ADD_TAG           (1U << 0)
+#define KCOM_NETIF_F_RCPU_ENCAP        (1U << 1)
 /* If a netif has this flag, the packet sent to the netif can't be stripped tag or added tag */
-#define KCOM_NETIF_F_KEEP_RX_TAG (1U << 2)
+#define KCOM_NETIF_F_KEEP_RX_TAG       (1U << 2)
+#define KCOM_NETIF_F_USE_SHARED_NDEV   (1U << 3)
 
 #define KCOM_NETIF_NAME_MAX     16
 
@@ -331,7 +332,7 @@ typedef struct kcom_eth_hw_config_s {
 } kcom_eth_hw_config_t;
 
 #ifndef KCOM_HW_INFO_OAMP_PORT_MAX
-#define KCOM_HW_INFO_OAMP_PORT_MAX     4
+#define KCOM_HW_INFO_OAMP_PORT_MAX     8
 #endif
 
 /*
@@ -370,7 +371,7 @@ typedef struct kcom_msg_version_s {
 
 typedef struct kcom_clock_info_s {
     uint8 cmd;
-    int32 data[8];
+    int32 data[12];
 } kcom_clock_info_t;
 
 /*
@@ -587,6 +588,7 @@ typedef struct kcom_msg_hw_info_s {
     uint32 udh_length_type[4];
     uint32 udh_size;
     uint32 oamp_punted;
+    uint32 enet_channels;
     uint8 no_skip_udh_check;
     uint8 oam_dm_tod_exist;
     uint8 system_headers_mode;
