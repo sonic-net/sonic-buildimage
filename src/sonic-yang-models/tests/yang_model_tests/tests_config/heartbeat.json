@@ -2,7 +2,7 @@
     "HEARTBEAT_TABLE_WITH_INVALID_HEARTBEAT_INTERVAL": {
         "sonic-heartbeat:sonic-heartbeat": {
             "sonic-heartbeat:HEARTBEAT": {
-                "AAA_LIST": [{
+                "HEARTBEAT_LIST": [{
                     "name"   : "orchagent",
                     "heartbeat_interval"   : "invalid",
                     "alert_interval"       : "60000"
@@ -13,7 +13,7 @@
     "HEARTBEAT_TABLE_WITH_INVALID_ALERT_INTERVAL": {
         "sonic-heartbeat:sonic-heartbeat": {
             "sonic-heartbeat:HEARTBEAT": {
-                "AAA_LIST": [{
+                "HEARTBEAT_LIST": [{
                     "name"   : "orchagent",
                     "heartbeat_interval"   : "10000",
                     "alert_interval"       : "invalid"
@@ -24,7 +24,7 @@
     "HEARTBEAT_TABLE_WITH_VALID_CONFIG": {
         "sonic-heartbeat:sonic-heartbeat": {
             "sonic-heartbeat:HEARTBEAT": {
-                "AAA_LIST": [{
+                "HEARTBEAT_LIST": [{
                     "name"   : "orchagent",
                     "heartbeat_interval"   : "10000",
                     "alert_interval"       : "60000"
