@@ -42,7 +42,10 @@ class PddfThermal(ThermalBase):
 
     def get_name(self):
         if self.is_psu_thermal:
-            return "PSU{}_TEMP{}".format(self.thermals_psu_index, self.thermal_index)
+            if 'thermal_name' in self.plugin_data['PSU']:
+                return self.plugin_data['PSU']['thermal_name'][str(self.thermals_psu_index)]
+
+            return "PSU {} TEMP {}".format(self.thermals_psu_index, self.thermal_index)
         else:
             if 'dev_attr' in self.thermal_obj.keys():
                 if 'display_name' in self.thermal_obj['dev_attr']:
@@ -86,7 +89,7 @@ class PddfThermal(ThermalBase):
             if not output:
                 return None
 
-            if output['status'].isalpha():
+            if output['status'].isalpha() or output['status'] == 'N/A':
                 attr_value = None
             else:
                 attr_value = float(output['status'])
@@ -102,7 +105,7 @@ class PddfThermal(ThermalBase):
             if not output:
                 return None
 
-            if output['status'].isalpha():
+            if output['status'].isalpha()  or output['status'] == 'N/A':
                 attr_value = None
             else:
                 attr_value = float(output['status'])
@@ -121,7 +124,7 @@ class PddfThermal(ThermalBase):
             if not output:
                 return None
 
-            if output['status'].isalpha():
+            if output['status'].isalpha() or output['status'] == 'N/A':
                 attr_value = None
             else:
                 attr_value = float(output['status'])
@@ -177,7 +180,7 @@ class PddfThermal(ThermalBase):
             if not output:
                 return None
 
-            if output['status'].isalpha():
+            if output['status'].isalpha() or output['status'] == 'N/A':
                 attr_value = None
             else:
                 attr_value = float(output['status'])
@@ -202,7 +205,7 @@ class PddfThermal(ThermalBase):
             if not output:
                 return None
 
-            if output['status'].isalpha():
+            if output['status'].isalpha() or output['status'] == 'N/A':
                 attr_value = None
             else:
                 attr_value = float(output['status'])
