@@ -71,7 +71,7 @@ class PddfFan(FanBase):
             idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
             attr_name = "fan" + str(idx) + "_present"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr_name)
-            if not output:
+            if not output or output['status'] == None:
                 return False
 
             mode = output['mode']
@@ -102,7 +102,7 @@ class PddfFan(FanBase):
         if self.is_psu_fan:
             device = "PSU{}".format(self.fans_psu_index)
             output = self.pddf_obj.get_attr_name_output(device, "psu_fan_dir")
-            if not output:
+            if not output or output['status'] == None:
                 return None
 
             mode = output['mode']
@@ -120,7 +120,7 @@ class PddfFan(FanBase):
             idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
             attr = "fan" + str(idx) + "_direction"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
-            if not output:
+            if not output or output['status'] == None:
                 return None
 
             mode = output['mode']
@@ -147,7 +147,7 @@ class PddfFan(FanBase):
             attr = "psu_fan{}_speed_rpm".format(self.fan_index)
             device = "PSU{}".format(self.fans_psu_index)
             output = self.pddf_obj.get_attr_name_output(device, attr)
-            if not output:
+            if not output or output['status'] == None:
                 return 0
 
             output['status'] = output['status'].rstrip()
@@ -170,7 +170,7 @@ class PddfFan(FanBase):
             attr = "fan" + str(idx) + "_input"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
 
-            if output is None:
+            if not output or output['status'] == None:
                 return 0
 
             output['status'] = output['status'].rstrip()
@@ -203,7 +203,7 @@ class PddfFan(FanBase):
             attr = "psu_fan{}_speed_rpm".format(self.fan_index)
             device = "PSU{}".format(self.fans_psu_index)
             output = self.pddf_obj.get_attr_name_output(device, attr)
-            if not output:
+            if not output or output['status'] == None:
                 return 0
 
             output['status'] = output['status'].rstrip()
@@ -220,7 +220,7 @@ class PddfFan(FanBase):
             attr = "fan" + str(idx) + "_input"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
 
-            if output is None:
+            if not output or output['status'] == None:
                 return 0
 
             output['status'] = output['status'].rstrip()
@@ -248,7 +248,7 @@ class PddfFan(FanBase):
             attr = "fan" + str(idx) + "_pwm"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
 
-            if not output:
+            if not output or output['status'] == None:
                 return 0
 
             output['status'] = output['status'].rstrip()
@@ -305,7 +305,7 @@ class PddfFan(FanBase):
                 idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
                 attr = "fan" + str(idx) + "_pwm"
                 output = self.pddf_obj.set_attr_name_output("FAN-CTRL", attr, pwm)
-                if not output:
+                if not output or output['status'] == None:
                     return False
 
                 status = output['status']
