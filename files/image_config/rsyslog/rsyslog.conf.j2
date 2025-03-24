@@ -96,7 +96,7 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 
 {% if format == 'welf' %}
 {% set template = 'WelfRemoteFormat'%}
-{% else if forward_with_osversion and forward_with_osversion == "true"%}
+{% elif forward_with_osversion and forward_with_osversion == "true"%}
 {% set template = 'SONiCForwardFormatWithOsVersion'%}
 {% else%}
 {% set template = 'SONiCForwardFormat'%}
