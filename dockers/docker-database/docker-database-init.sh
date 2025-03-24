@@ -139,6 +139,7 @@ chown -R redis:redis $REDIS_BMP_DIR
 
 # switch redis/valkey by CONFIG_DB
 DB_SERVICE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "db_service"`
+rm /etc/redis/redis.conf
 rm /usr/bin/redis-server
 rm /usr/bin/redis-cli
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"valkey" ]]; then

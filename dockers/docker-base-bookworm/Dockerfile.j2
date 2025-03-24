@@ -111,6 +111,6 @@ COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
-RUN mv /usr/bin/redis-cli /usr/bin/redis-cli.ori
+RUN cp /usr/bin/redis-cli /usr/bin/redis-cli.ori
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
