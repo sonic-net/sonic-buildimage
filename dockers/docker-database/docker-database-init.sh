@@ -149,7 +149,7 @@ if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"valkey" ]]; then
 else
     cp /etc/redis/redis.conf.ori /etc/redis/redis.conf
     ln -s /usr/bin/redis-check-rdb /usr/bin/redis-server
-    ln -s /usr/bin//usr/bin/redis-cli.ori /usr/bin/redis-cli
+    ln -s /usr/bin/redis-cli.ori /usr/bin/redis-cli
 fi
 chown -R redis:redis /etc/redis/redis.conf
 
