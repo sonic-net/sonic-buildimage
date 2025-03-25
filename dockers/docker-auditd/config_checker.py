@@ -24,7 +24,7 @@ AUDIT_CONF_HASH_CMD = "cat {} | sha1sum".format(AUDIT_CONF)
 def run_command(cmd):
     p = subprocess.Popen(cmd,
                          text=True,
-                         shell=True, # no semgrep
+                         shell=True, # nosemgrep
                          executable='/bin/bash',
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
