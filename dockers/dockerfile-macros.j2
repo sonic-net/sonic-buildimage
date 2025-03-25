@@ -1,5 +1,5 @@
 {% macro install_debian_packages(packages) -%}
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; }; \
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f --no-remove; } || return 1; }; \
     {%- for deb in packages %}
         dpkg_apt /debs/{{ deb }} {%- if not loop.last %} && \ {%- endif %}
     {%- endfor %}
