@@ -1,0 +1,12 @@
+{
+    "QOS_CAPABILITY_TABLE|qos": {
+        "buffer_mode": "lossless",
+        "buffer_dynamic_tuning": "true",
+        "pool_xoff_default": "22438080",
+        "pool_xoff_max": "1023324",
+        "profile_static_th": "82138128",
+        "profile_xoff_min": "90948",
+        "profile_xoff_max": "1023324",
+        "roce_hash": "true"
+    }
+}
