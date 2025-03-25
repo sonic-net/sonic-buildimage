@@ -1,100 +1,132 @@
 {
     "interfaces": {
         "Ethernet1": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet5": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet9": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet13": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet17": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet21": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet25": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet29": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet33": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet37": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet41": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet45": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet49": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet53": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet57": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet61": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet65": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet69": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet73": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet77": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet81": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet85": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet89": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet93": {
-            "default_brkout_mode": "1x200G"
+            "default_brkout_mode": "1x200G",
+            "autoneg": "off"
         },
         "Ethernet97": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet105": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet113": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet121": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet129": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet137": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet145": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         },
         "Ethernet153": {
-            "default_brkout_mode": "1x400G"
+            "default_brkout_mode": "1x400G",
+            "autoneg": "off"
         }
     }
 }
