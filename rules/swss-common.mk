@@ -41,6 +41,11 @@ $(eval $(call add_derived_package,$(LIBSWSSCOMMON),$(LIBSWSSCOMMON_DBG)))
 SONIC_DB_CLI = sonic-db-cli_$(LIBSWSSCOMMON_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(LIBSWSSCOMMON),$(SONIC_DB_CLI)))
 
+SONIC_DB_CLI_DBG = sonic-db-cli-dbgsym_$(LIBSWSSCOMMON_VERSION)_$(CONFIGURED_ARCH).deb
+$(SONIC_DB_CLI_DBG)_DEPENDS += $(SONIC_DB_CLI)
+$(SONIC_DB_CLI_DBG)_RDEPENDS += $(SONIC_DB_CLI)
+$(eval $(call add_derived_package,$(LIBSWSSCOMMON),$(SONIC_DB_CLI_DBG)))
+
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.
 #
