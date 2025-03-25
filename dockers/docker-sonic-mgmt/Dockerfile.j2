@@ -225,6 +225,15 @@ RUN mkdir -p /tmp/protobuf \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
+# Install bats-core v1.11.1
+RUN mkdir -p /tmp/bats-core \
+    && cd /tmp/bats-core \
+    && curl -L https://github.com/bats-core/bats-core/archive/refs/tags/v1.11.1.tar.gz -o bats-core.tar.gz \
+    && tar -xzf bats-core.tar.gz --strip-components=1 \
+    && ./install.sh /usr/local \
+    && cd / \
+    && rm -rf /tmp/bats-core
+
 ## Copy and install sonic-mgmt docker dependencies
 COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
 
