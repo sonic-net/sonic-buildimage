@@ -1133,24 +1133,6 @@
                 "stage": "EGRESS",
                 "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
             }
-        },
-        "ACL_TABLE_TYPE": {
-            "ACL_TABLE_TYPE_LIST": [
-                {
-                    "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
-                    "ACTIONS": [
-                        "INNER_SRC_MAC_REWRITE_ACTION"
-                    ],
-                    "MATCHES": [
-                        "INNER_SRC_IP",
-                        "VNI"
-                    ],
-                    "BIND_POINTS": [
-                        "PORT",
-                        "PORTCHANNEL"
-                    ]
-                }
-            ]
         }, 
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
@@ -2652,7 +2634,20 @@
                      "PORT",
                      "PORTCHANNEL"
                  ]
-             }
+             },
+             "INNER_SRC_MAC_REWRITE_TABLE_TYPE": {
+                "ACTIONS": [
+                    "INNER_SRC_MAC_REWRITE_ACTION"
+                ],
+                "MATCHES": [
+                    "INNER_SRC_IP",
+                    "VNI"
+                ],
+                "BIND_POINTS": [
+                    "PORT",
+                    "PORTCHANNEL"
+                ]
+            }
         },
 
         "SNMP": {
