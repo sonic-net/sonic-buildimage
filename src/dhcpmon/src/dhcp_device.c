@@ -38,6 +38,10 @@
 #define DHCP_OPTIONS_HEADER_SIZE 240
 /** Offset of DHCP GIADDR */
 #define DHCP_GIADDR_OFFSET 24
+/** Offset of magic cookie */
+#define MAGIC_COOKIE_OFFSET 236
+/** 32-bit decimal of 99.130.83.99 (indicate DHCP packets), Refer to RFC 2131 */
+#define DHCP_MAGIC_COOKIE 1669485411
 
 #define OP_LDHA     (BPF_LD  | BPF_H   | BPF_ABS)   /** bpf ldh Abs */
 #define OP_LDHI     (BPF_LD  | BPF_H   | BPF_IND)   /** bpf ldh Ind */
@@ -190,6 +194,15 @@ static void read_callback(int fd, short event, void *arg)
                                            DHCP_TX : DHCP_RX;
             int offset = 0;
             int stop_dhcp_processing = 0;
+
+            uint32_t magic_cookie = dhcphdr[MAGIC_COOKIE_OFFSET] << 24 | dhcphdr[MAGIC_COOKIE_OFFSET + 1] << 16 |
+            dhcphdr[MAGIC_COOKIE_OFFSET + 2] << 8 | dhcphdr[MAGIC_COOKIE_OFFSET + 3];
+            // If magic cookie not equals to DHCP value, its format is not DHCP format, shouldn't count as DHCP packets.
+            if (magic_cookie != DHCP_MAGIC_COOKIE) {
+                context->counters[DHCP_COUNTERS_CURRENT][dir][BOOTP_MESSAGE]++;
+                aggregate_dev.counters[DHCP_COUNTERS_CURRENT][dir][BOOTP_MESSAGE]++;
+                return;
+            }
             while ((offset < (dhcp_option_sz + 1)) && dhcp_option[offset] != 255) {
                 switch (dhcp_option[offset])
                 {
