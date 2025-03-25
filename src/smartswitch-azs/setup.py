@@ -49,13 +49,6 @@ setup(
     include_package_data=True,
     keywords='sonic-smartswitch-azs',
     name='sonic-smartswitch-azs',
-    py_modules=['configutil'],
-    packages=find_packages(),
     version='1.0',
     zip_safe=False,
-    entry_points = {
-        'console_scripts' : [
-            'smartswitch-azs=smartswitch_azs.smartswitch_azs:main'
-        ]
-    }
 )
