@@ -40,6 +40,7 @@ module sonic-hash {
             enum INNER_SRC_IP;
             enum INNER_L4_DST_PORT;
             enum INNER_L4_SRC_PORT;
+            enum IPV6_FLOW_LABEL;
         }
     }
 
