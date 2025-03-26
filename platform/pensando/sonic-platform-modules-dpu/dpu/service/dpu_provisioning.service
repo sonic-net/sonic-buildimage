@@ -5,7 +5,8 @@ After=docker.service
 After=dpu.service
 Requires=dpu.service
 After=database.service
-Before=config-setup.service
+After=config-setup.service
+Before=swss.service
 
 [Service]
 User=root

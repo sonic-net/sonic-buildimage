@@ -30,27 +30,8 @@ echo "dpu provisioning for dpu $val"
 
 if [ -f /boot/first_boot ]; then
     if [ "$platform" == "arm64-elba-asic-flash128-r0" ]; then
-        cp /usr/share/sonic/device/$platform/init_cfg.json /etc/sonic/platform_init.json
-        cp /usr/share/sonic/device/$platform/minigraph.xml /etc/sonic/minigraph.xml
-        sonic-cfggen -H -m /etc/sonic/minigraph.xml --print-data > /etc/sonic/minigraph.json
-        sonic-cfggen -j /etc/sonic/minigraph.json -j /etc/sonic/platform_init.json -j /etc/sonic/init_cfg.json --print-data > /etc/sonic/config_db.json
 
-        jq_command=$(cat <<EOF
-        jq --arg val "$val" '
-        .INTERFACE |= with_entries(
-            if .key | test("Ethernet0\\\\|18\\\\.\\\\d+\\\\.202\\\\.1/31") then
-                .key = (.key | gsub("18\\\\.\\\\d+\\\\.202\\\\.1"; "18.\($val).202.1"))
-            else
-                .
-            end
-        )' /etc/sonic/config_db.json > /etc/sonic/config_db.json.tmp && mv /etc/sonic/config_db.json.tmp /etc/sonic/config_db.json
-EOF
-        )
-
-        echo "$jq_command"
-        eval "$jq_command"
-
-        sonic-cfggen -H -j /etc/sonic/config_db.json --write-to-db
+        sonic-cfggen -a "{\"INTERFACE\": {\"Ethernet0\": {},\"Ethernet0|18.$val.202.1/31\": {}}}" --write-to-db
         echo "config_db.json written to db"
 
         # Update platform_components.json dynamically
