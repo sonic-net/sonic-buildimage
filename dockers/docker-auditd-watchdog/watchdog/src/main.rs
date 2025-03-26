@@ -178,11 +178,11 @@ fn check_auditd_reload_status() -> String {
 }
 
 fn main() {
-    // Start a HTTP server listening on port 8080
-    let listener = TcpListener::bind("0.0.0.0:8080")
-        .expect("Failed to bind to 0.0.0.0:8080");
+    // Start a HTTP server listening on port 50058
+    let listener = TcpListener::bind("0.0.0.0:50058")
+        .expect("Failed to bind to 0.0.0.0:50058");
 
-    println!("Watchdog HTTP server running on http://0.0.0.0:8080");
+    println!("Watchdog HTTP server running on http://0.0.0.0:50058");
 
     for stream_result in listener.incoming() {
         match stream_result {
