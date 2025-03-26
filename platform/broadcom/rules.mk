@@ -41,12 +41,17 @@ include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.mk
 endif
 
 BCMCMD = bcmcmd
-$(BCMCMD)_URL = "https://sonicstorage.blob.core.windows.net/public/20190307/bcmcmd"
+$(BCMCMD)_SRC_PATH = $(PLATFORM_PATH)/sswsyncd
+$(BCMCMD)_DEPENDS += $(LIBNL3_DEV)
 
 DSSERVE = dsserve
-$(DSSERVE)_URL = "https://sonicstorage.blob.core.windows.net/public/20190307/dsserve"
+$(DSSERVE)_SRC_PATH = $(PLATFORM_PATH)/sswsyncd
+$(DSSERVE)_DEPENDS += $(LIBNL3_DEV)
 
-SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
+SONIC_MAKE_FILES += $(BCMCMD) $(DSSERVE)
+
+# Commented out online files as we will build them locally
+#SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_ONE_ABOOT_IMAGE) \
              $(DOCKER_FPM)
