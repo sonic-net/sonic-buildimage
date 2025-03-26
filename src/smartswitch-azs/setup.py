@@ -5,7 +5,7 @@ with open('README.rst') as readme_file:
     readme = readme_file.read()
 
 setup(
-    author="AzS Platform Team",
+    author="Anf Rotterdam",
     author_email='anishsdirects@microsoft.com',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     classifiers=[
