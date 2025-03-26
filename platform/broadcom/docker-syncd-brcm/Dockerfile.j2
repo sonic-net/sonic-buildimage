@@ -24,11 +24,12 @@ RUN apt-get install -yf kmod
 RUN apt-get install -y ethtool
 
 # Copy built binaries for bcmcmd and dsserve
-COPY ["sswsyncd/bcmcmd", "sswsyncd/dsserve", "/usr/bin/"]
+COPY ["files/sswsyncd-bcmcmd.bin", "/usr/bin/bcmcmd"]
+COPY ["files/sswsyncd-dsserve.bin", "/usr/bin/dsserve"]
 RUN chmod +x /usr/bin/bcmcmd /usr/bin/dsserve
 
 COPY ["start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
-RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd /usr/bin/rdb-cli
+RUN chmod +x /usr/bin/rdb-cli
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]

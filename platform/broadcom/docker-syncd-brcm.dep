@@ -3,12 +3,10 @@ DPATH       := $($(DOCKER_SYNCD_BASE)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/docker-syncd-brcm.mk platform/broadcom/docker-syncd-brcm.dep platform/broadcom/sai.mk
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
-DEP_FILES   += platform/broadcom/docker-syncd-brcm/sswsyncd/Makefile
 
 $(DOCKER_SYNCD_BASE)_CACHE_MODE  := GIT_CONTENT_SHA
 $(DOCKER_SYNCD_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(DOCKER_SYNCD_BASE)_DEP_FILES   := $(DEP_FILES)
-$(DOCKER_SYNCD_BASE)_DEPENDS += platform/broadcom/docker-syncd-brcm/sswsyncd/bcmcmd
-$(DOCKER_SYNCD_BASE)_DEPENDS += platform/broadcom/docker-syncd-brcm/sswsyncd/dsserve
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SSWSYNCD_BCMCMD) $(SSWSYNCD_DSSERVE)
 
 $(eval $(call add_dbg_docker,$(DOCKER_SYNCD_BASE),$(DOCKER_SYNCD_BASE_DBG)))
