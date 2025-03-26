@@ -18,5 +18,6 @@ COPY ["readiness_probe_hook", "/usr/bin"]
 COPY ["start.sh", "/usr/bin"]
 
 RUN chmod +x /usr/bin/readiness_probe_hook
+RUN chmod +x /usr/bin/start.sh
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
