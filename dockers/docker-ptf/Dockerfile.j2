@@ -201,7 +201,7 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
 RUN python3 -m pip install --upgrade --ignore-installed pip
 {% endif %}
 
-# For py3 image 4 offending packages below do not use the updated 
+# For py3 image the following offending packages below do not use the updated 
 # setuptools on Python 3.9. The packages downgrade setuptools 
 # to 40.x causing further installations to fail
 {% if PTF_ENV_PY_VER == "py3" %}
@@ -212,7 +212,11 @@ RUN pip3 install setuptools \
         && pip3 install supervisor \
         && pip3 install ipython==5.4.1 \
         && pip3 install exabgp \
-        && pip3 install grpcio-tools
+        && pip3 install grpcio-tools \
+        && pip3 install pybrctl \
+        && pip3 install pyrasite \
+        && pip3 install scapy==2.5.0 \
+        && pip3 install thrift
 {% endif %}
 
 # Install all python modules from pypi. python3-scapy is exception, 
