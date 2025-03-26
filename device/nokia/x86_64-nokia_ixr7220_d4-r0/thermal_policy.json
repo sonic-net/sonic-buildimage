@@ -1,0 +1,84 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "false",
+        "fan_speed_when_suspend": "60"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "any fan absence",
+            "conditions": [
+                {
+                    "type": "fan.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal_control.control",
+                    "status": "false"
+                },
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "all f2b fan presence",
+            "conditions": [
+                {
+                    "type": "fan.f2b.all.presence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.temp_check_and_set_all_f2b_fan_speed",
+                    "default_speed": "41",
+                    "threshold1_speed": "46",
+                    "threshold2_speed": "69",
+                    "hightemp_speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "all b2f fan presence",
+            "conditions": [
+                {
+                    "type": "fan.b2f.all.presence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.temp_check_and_set_all_b2f_fan_speed",
+                    "default_speed": "41",
+                    "threshold1_speed": "46",
+                    "threshold2_speed": "53",
+                    "hightemp_speed": "100"
+                }
+            ]
+        },
+	    {
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.shutdown"
+                }
+            ]
+        }
+    ]
+}
