@@ -100,6 +100,8 @@ class AdvertiseRouteMgr(Manager):
                 "BGPAdvertiseRouteMgr:: %sbgp %s network %s"
                 % ("Remove " if op == self.OP_DELETE else "Update ", bgp_asn, vrf + "|" + ip_prefix)
             )
+        cmd_list.append(" exit-address-family")
+        cmd_list.append("exit")
 
         self.cfg_mgr.push_list(cmd_list)
         log_debug("BGPAdvertiseRouteMgr::Done")
@@ -112,6 +114,7 @@ class AdvertiseRouteMgr(Manager):
         else:
             cmd_list.append("router bgp %s vrf %s" % (bgp_asn, vrf))
         cmd_list.append(" %sbgp network import-check" % ("" if op == self.OP_DELETE else "no "))
+        cmd_list.append("exit")
 
         self.cfg_mgr.push_list(cmd_list)
 

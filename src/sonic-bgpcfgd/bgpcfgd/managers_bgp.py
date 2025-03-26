@@ -65,9 +65,9 @@ class BGPPeerGroupMgr(object):
             return False
 
         if kwargs['vrf'] == 'default':
-            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm
+            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm + "\nexit"
         else:
-            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm
+            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm + "\nexit"
         self.update_entity(cmd, "Peer-group for peer '%s'" % name)
         return True
 
@@ -314,9 +314,9 @@ class BGPPeerMgrBase(Manager):
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         enable_bgp_suppress_fib_pending_cmd = 'bgp suppress-fib-pending'
         if vrf == 'default':
-            cmd = ('router bgp %s\n %s\n' % (bgp_asn, enable_bgp_suppress_fib_pending_cmd)) + cmd
+            cmd = ('router bgp %s\n %s\n' % (bgp_asn, enable_bgp_suppress_fib_pending_cmd)) + cmd + "\nexit"
         else:
-            cmd = ('router bgp %s vrf %s\n %s\n' % (bgp_asn, vrf, enable_bgp_suppress_fib_pending_cmd)) + cmd
+            cmd = ('router bgp %s vrf %s\n %s\n' % (bgp_asn, vrf, enable_bgp_suppress_fib_pending_cmd)) + cmd + "\nexit"
         self.cfg_mgr.push(cmd)
         return True
 

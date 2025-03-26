@@ -23,7 +23,7 @@ libteam-utils==1.31-1
 libteam-utils-dbgsym==1.31-1
 libteamdctl0-dbgsym==1.31-1
 libunwind8==1.6.2-3
-openssh-client==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 sensible-utils==0.0.17+nmu1
 sshpass==1.09-1+b1

@@ -136,7 +136,7 @@ class MuxStateWriter(object):
         tunnel_key_pattern = 'ASIC_STATE:SAI_OBJECT_TYPE_TUNNEL:*'
         return len(self.asic_db.keys('ASIC_DB', tunnel_key_pattern)) > 0
 
-    def wait_for_tunnel(self, interval=1, timeout=90):
+    def wait_for_tunnel(self, interval=1, timeout=160):
         """
         Waits until the IP-in-IP tunnel has been created
 

@@ -15,6 +15,7 @@ RUN apt-get update &&   \
     apt-get install -y  \
         build-essential \
         python3-dev     \
+        ipmitool        \
         librrd8         \
         librrd-dev      \
         rrdtool         \
@@ -60,6 +61,8 @@ RUN pip3 install psutil
 # Install blkinfo for block device information gathering operations
 RUN pip3 install blkinfo
 
+# Install smbus2 for SMBus/PMBus I2C transactions
+RUN pip3 install smbus2
 
 {% if docker_platform_monitor_debs.strip() -%}
 # Copy locally-built Debian package dependencies

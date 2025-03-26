@@ -150,6 +150,12 @@ if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
 fi
 
+# Install Python module for smbus2
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install smbus2
+
+# Install Python module for telnetlib3
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install telnetlib3
+
 # Install sonic-py-common Python 3 package
 SONIC_PY_COMMON_PY3_WHEEL_NAME=$(basename {{sonic_py_common_py3_wheel_path}})
 sudo cp {{sonic_py_common_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_PY_COMMON_PY3_WHEEL_NAME
@@ -963,6 +969,8 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-man
 {% for package in sonic_local_packages.strip().split() -%}
 {% set name, path, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
+name_repo=$(basename {{name}} .gz)
+sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
 {% endfor -%}
 
 sudo umount $FILESYSTEM_ROOT/target

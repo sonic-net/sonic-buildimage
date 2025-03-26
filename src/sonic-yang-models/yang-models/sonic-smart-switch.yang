@@ -33,6 +33,10 @@ module sonic-smart-switch {
 		description "Add new container DPU_PORT";
 	}
 
+	revision 2025-03-19 {
+		description "Modify DPU_PORT to DPU and add new fields";
+	}
+
 	container sonic-smart-switch {
 
 		container MID_PLANE_BRIDGE {
@@ -85,23 +89,28 @@ module sonic-smart-switch {
 		}
 		/* end of container DPUS */
 
-		container DPU_PORT {
-			description "DPU_PORTs part of config_db.json";
+		container DPU {
+			description "DPUs part of config_db.json";
 
-			list DPU_PORT_LIST {
-				description "Name of the DPU port";
-				key "PORT_NAME";
+			list DPU_LIST {
+				description "Name of the DPU";
+				key "dpu_name";
 
-				leaf PORT_NAME {
-					description "Name of the DPU port";
+				leaf dpu_name {
+					description "Name of the DPU";
 					type string {
-						pattern "[a-zA-Z]+[0-9]+";
+						pattern "[a-zA-Z0-9-]+[0-9]";
 					}
 				}
 
 				leaf state {
 					description "Admin state of DPU device";
 					type stypes:admin_status;
+				}
+
+				leaf local_port {
+					description "DPU Physical port name on the switch";
+					type stypes:interface_name;
 				}
 
 				leaf vip_ipv4 {
@@ -123,6 +132,13 @@ module sonic-smart-switch {
 					description "PA IPv6 address from minigraph";
 					type inet:ipv6-address;
 				}
+				
+				leaf dpu_id {
+					description "ID of the DPU from minigraph";
+					type string {
+						pattern [0-7];
+					}
+				}
 
 				leaf vdpu_id {
 					description "ID of VDPUs from minigraph";
@@ -130,12 +146,17 @@ module sonic-smart-switch {
 				}
 
 				leaf gnmi_port {
-					description "Port gNMI runs on.";
+					description "TCP listening port for gnmi service on DPU";
+					type inet:port-number;
+				}
+
+				leaf orchagent_zmq_port {
+					description "TCP listening port for ZMQ service on DPU orchagent";
 					type inet:port-number;
 				}
 			}
 		}
-		/* end of container DPU_PORT */
+		/* end of container DPU */
 	}
 	/* end of container sonic-smart-switch */
 }
