@@ -41,17 +41,26 @@ include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.mk
 endif
 
 BCMCMD = bcmcmd
-$(BCMCMD)_SRC_PATH = $(PLATFORM_PATH)/sswsyncd
-$(BCMCMD)_DEPENDS += $(LIBNL3_DEV)
+$(BCMCMD)_URL = "https://sonicstorage.blob.core.windows.net/public/20190307/bcmcmd"
 
 DSSERVE = dsserve
-$(DSSERVE)_SRC_PATH = $(PLATFORM_PATH)/sswsyncd
-$(DSSERVE)_DEPENDS += $(LIBNL3_DEV)
+$(DSSERVE)_URL = "https://sonicstorage.blob.core.windows.net/public/20190307/dsserve"
 
-SONIC_MAKE_FILES += $(BCMCMD) $(DSSERVE)
+# Source files for compilation in docker
+BCMCMD_SRC = platform/broadcom/sswsyncd/bcmcmd.cpp
+$(BCMCMD_SRC)_PATH = $(PLATFORM_PATH)/sswsyncd/bcmcmd.cpp
 
-# Commented out online files as we will build them locally
-#SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
+DSSERVE_SRC = platform/broadcom/sswsyncd/dsserve.cpp
+$(DSSERVE_SRC)_PATH = $(PLATFORM_PATH)/sswsyncd/dsserve.cpp
+
+DSSERVE_H = platform/broadcom/sswsyncd/dsserve.h
+$(DSSERVE_H)_PATH = $(PLATFORM_PATH)/sswsyncd/dsserve.h
+
+SSWSYNCD_MAKEFILE = platform/broadcom/sswsyncd/Makefile
+$(SSWSYNCD_MAKEFILE)_PATH = $(PLATFORM_PATH)/sswsyncd/Makefile
+
+SONIC_COPY_FILES += $(BCMCMD_SRC) $(DSSERVE_SRC) $(DSSERVE_H) $(SSWSYNCD_MAKEFILE)
+SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_ONE_ABOOT_IMAGE) \
              $(DOCKER_FPM)
