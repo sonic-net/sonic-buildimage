@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +38,7 @@ endif
 
 BF_FW_FILES = $(BF3_FW_FILE)
 
+export BF3_FW_VERSION
 export BF3_FW_FILE
 export BF_FW_FILES
 
