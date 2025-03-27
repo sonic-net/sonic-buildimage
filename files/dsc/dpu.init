@@ -68,6 +68,7 @@ function start_polaris()
         platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
         echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
         python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+        rm /boot/first_boot
     fi
 
     sleep 5

@@ -80,7 +80,7 @@ def setup_platform_components_json(slot_id):
     except Exception as e:
         log_err("failed to setup platform_components.json due to {}".format(e))
 
-def first_boot_setup():
+def config_setup():
     try:
         from sonic_platform.chassis import Chassis
         slot_id = Chassis().get_my_slot()
@@ -168,8 +168,7 @@ def main():
     time.sleep(5)
     configure_iptable_rules()
     fetch_dpu_files()
-    if os.path.exists("/boot/first_boot"):
-        first_boot_setup()
+    config_setup()
     time.sleep(5)
     set_onie_version()
     pcie_tx_setup()
