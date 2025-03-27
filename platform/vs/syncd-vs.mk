@@ -5,7 +5,7 @@ $(SYNCD_VS)_RDEPENDS += $(LIBSAIREDIS) $(LIBSAIMETADATA) $(LIBSAIVS)
 
 ifeq ($(BLDENV),bookworm)
 # dash-sai only support sonic-vs.img.gz. it don't support docker-sonic-vs.gz
-ifneq ($(TARGET), docker-sonic-vs.gz)
+ifeq ($(findstring docker-sonic-vs, $(TARGET)), )
   $(LIBSAIREDIS)_DEB_BUILD_PROFILES += dashsai
   $(LIBSAIREDIS)_DEPENDS += $(DASH_SAI)
   $(SYNCD_VS)_RDEPENDS += $(DASH_SAI)
