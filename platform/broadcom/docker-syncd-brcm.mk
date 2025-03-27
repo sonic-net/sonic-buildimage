@@ -5,12 +5,7 @@ include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(BRCM_XGS_SAI)
-
-# Keep binary files for compatibility with other components
 $(DOCKER_SYNCD_BASE)_FILES += $(DSSERVE) $(BCMCMD) $(RDB-CLI)
-
-# Add source files to be compiled in Docker
-$(DOCKER_SYNCD_BASE)_FILES += $(BCMCMD_SRC) $(DSSERVE_SRC) $(DSSERVE_H) $(SSWSYNCD_MAKEFILE)
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
