@@ -493,7 +493,6 @@ SONIC_SLAVE_USER_BUILD = \
 
 SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            -f slave.mk \
-                           TARGET=$@ \
                            PLATFORM=$(PLATFORM) \
                            PLATFORM_ARCH=$(PLATFORM_ARCH) \
                            MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON)  \
@@ -615,7 +614,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)" 
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
