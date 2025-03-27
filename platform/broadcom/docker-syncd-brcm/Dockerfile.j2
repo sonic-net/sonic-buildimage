@@ -32,7 +32,7 @@ COPY ["files/bcmcmd.cpp", "files/dsserve.cpp", "files/dsserve.h", "files/sswsync
 
 ## Build bcmcmd and dsserve from source
 WORKDIR /tmp/sswsyncd
-RUN make && make install
+RUN make -f sswsyncd.mk && make -f sswsyncd.mk install
 
 COPY ["start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd /usr/bin/rdb-cli
