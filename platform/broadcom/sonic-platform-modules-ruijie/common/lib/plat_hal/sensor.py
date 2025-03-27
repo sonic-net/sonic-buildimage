@@ -103,9 +103,9 @@ class sensor(devicebase):
         val_list = []
         for i in range(0, read_times):
             ret, real_value = self.get_value(value_config)
-            if i != (read_times - 1):
-                time.sleep(0.01)
             if ret is False or real_value is None:
+                if i != (read_times - 1):
+                    time.sleep(0.01)
                 continue
             val_list.append(real_value)
         val_list.sort()

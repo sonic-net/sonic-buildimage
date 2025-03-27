@@ -32,7 +32,7 @@ class rotor(devicebase):
 
     def getRunning(self):
         ret, val = self.get_value(self.rotor_run_conf)
-        if ret is False or val is None:
+        if ret is False or val is None or val == "no_support" or val == "NA":
             return False
         if isinstance(val, str):
             value = int(val, 16)
@@ -120,7 +120,7 @@ class rotor(devicebase):
         ret, val = self.get_value(self.rotor_HwAlarm_conf)
         mask = self.rotor_HwAlarm_conf.get("mask")
         no_alarm_value = self.rotor_HwAlarm_conf.get("no_alarm")
-        if ret is False or val is None:
+        if ret is False or val is None or val == "NA":
             return False
         if isinstance(val, str):
             value = int(val, 16)

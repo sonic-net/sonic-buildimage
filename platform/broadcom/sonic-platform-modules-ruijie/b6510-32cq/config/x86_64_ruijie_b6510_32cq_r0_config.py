@@ -1042,7 +1042,7 @@ AIR_FLOW_CONF = {
     },
 
     "fanairflow": {
-        "intake": ['M1HFAN III-F'],
+        "intake": ['M1HFAN I-F'],
         "exhaust": ['M1HFAN III-R']
     },
 

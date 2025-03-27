@@ -428,7 +428,7 @@ class psu(devicebase):
     @property
     def present(self):
         ret, val = self.get_value(self.__presentconfig)
-        if ret is False or val is None:
+        if ret is False or val is None or val == "no_support" or val == "NA":
             return False
         mask = self.__presentconfig.get("mask")
         if isinstance(val, str):
