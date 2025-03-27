@@ -57,6 +57,52 @@ def fetch_dpu_files():
     cmd = "sudo docker cp {}:/usr/bin/mmc /usr/local/bin".format(docker_id)
     run_cmd(cmd)
 
+def setup_platform_components_json(slot_id):
+    try:
+        api_helper_platform = apiHelper.get_platform()
+        platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
+        filename = "/usr/share/sonic/device/{}/platform_components.json".format(platform)
+        with open(filename, "r") as f:
+            data = json.load(f)
+
+        def replace_keys(obj):
+            if isinstance(obj, dict):
+                return {key.replace("-0", f"-{slot_id}"): replace_keys(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [replace_keys(item) for item in obj]
+            return obj
+
+        updated_data = replace_keys(data)
+
+        with open(filename, "w") as f:
+            json.dump(updated_data, f, indent=4)
+        log_info("successfully updated platform_components.json")
+    except Exception as e:
+        log_err("failed to setup platform_components.json due to {}".format(e))
+
+def first_boot_setup():
+    try:
+        from sonic_platform.chassis import Chassis
+        slot_id = Chassis().get_my_slot()
+    except Exception as e:
+        log_err("failed to get slot id due to {}".format(e))
+
+    try:
+        cmd = f'sonic-cfggen -a "{{\\"INTERFACE\\": {{\\"Ethernet0\\": {{}},\\"Ethernet0|18.{slot_id}.202.1/31\\": {{}}}}}}" --write-to-db'
+        run_cmd(cmd)
+    except Exception as e:
+        log_err("failed to set Ethernet0 ip due to {}".format(e))
+
+    setup_platform_components_json(slot_id)
+
+    try:
+        run_cmd("mkdir -p /host/images")
+        run_cmd("mkdir -p /data")
+        run_cmd("chmod +x /boot/install_file")
+    except Exception as e:
+        log_err("failed to setup fwutil due to {}".format(e))
+
+
 def set_onie_version():
     api_helper_platform = apiHelper.get_platform()
     platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
@@ -119,9 +165,11 @@ def main():
         set_ubootenv_config()
     except:
         pass
-    time.sleep(10)
+    time.sleep(5)
     configure_iptable_rules()
     fetch_dpu_files()
+    if os.path.exists("/boot/first_boot"):
+        first_boot_setup()
     time.sleep(5)
     set_onie_version()
     pcie_tx_setup()
