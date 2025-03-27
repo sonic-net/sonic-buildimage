@@ -37,3 +37,10 @@ COPY \
     {%- endfor %}
     {{ dest }}
 {%- endmacro %}
+
+{% macro install_offending_packages(packages) -%}
+    {%- for pkg in packages %}
+        RUN pip3 install {{ pkg }}
+        RUN pip3 install setuptools==51.0.0
+    {%- endfor %}
+{%- endmacro %}
