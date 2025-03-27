@@ -13,7 +13,7 @@ parameters:
       - broadcom
       - mellanox
       - barefoot
-      - marvell
+      - marvell-prestera
       - cisco-8000
       - nvidia-bluefield
   - name: OPTIONS

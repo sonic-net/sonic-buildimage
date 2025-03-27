@@ -49,7 +49,7 @@ parameters:
   - vs
   - broadcom
   - mellanox
-  - marvell-armhf
+  - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
   - nvidia-bluefield

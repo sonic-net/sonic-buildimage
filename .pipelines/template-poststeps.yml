@@ -7,7 +7,7 @@ parameters:
       - broadcom
       - mellanox
       - barefoot
-      - marvell-armhf
+      - marvell-prestera
       - cisco-8000
       - cisco-8000-smartswitch
       - nvidia-bluefield
