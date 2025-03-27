@@ -48,21 +48,6 @@ $(DSSERVE)_URL = "https://sonicstorage.blob.core.windows.net/public/20190307/dss
 
 SONIC_ONLINE_FILES += $(BCMCMD) $(DSSERVE)
 
-# Source files for compilation in docker
-BCMCMD_SRC = bcmcmd.cpp
-$(BCMCMD_SRC)_PATH = platform/broadcom/sswsyncd
-
-DSSERVE_SRC = dsserve.cpp
-$(DSSERVE_SRC)_PATH = platform/broadcom/sswsyncd
-
-DSSERVE_H = dsserve.h
-$(DSSERVE_H)_PATH = platform/broadcom/sswsyncd
-
-SSWSYNCD_MAKEFILE = sswsyncd.mk
-$(SSWSYNCD_MAKEFILE)_PATH = platform/broadcom/sswsyncd
-
-SONIC_COPY_FILES += $(BCMCMD_SRC) $(DSSERVE_SRC) $(DSSERVE_H) $(SSWSYNCD_MAKEFILE)
-
 SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_ONE_ABOOT_IMAGE) \
              $(DOCKER_FPM)
 

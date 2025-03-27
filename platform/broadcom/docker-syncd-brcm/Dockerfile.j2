@@ -23,15 +23,7 @@ RUN apt-get install -yf kmod
 ## BRCM uses ethtool to set host interface speed
 RUN apt-get install -y ethtool
 
-## Create source directory and copy the source files
-RUN mkdir -p /tmp/sswsyncd
-COPY ["files/bcmcmd.cpp", "files/dsserve.cpp", "files/dsserve.h", "files/sswsyncd.mk", "/tmp/sswsyncd/"]
-
-## Build bcmcmd and dsserve from source
-WORKDIR /tmp/sswsyncd
-RUN make -f sswsyncd.mk && make -f sswsyncd.mk install
-
-COPY ["start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
+COPY ["files/dsserve", "files/bcmcmd", "start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd /usr/bin/rdb-cli
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
@@ -40,7 +32,6 @@ COPY ["critical_processes", "/etc/supervisor/"]
 
 ## Clean up
 RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs /tmp/sswsyncd
+RUN rm -rf /debs
 
-WORKDIR /root
 ENTRYPOINT ["/usr/local/bin/supervisord"]

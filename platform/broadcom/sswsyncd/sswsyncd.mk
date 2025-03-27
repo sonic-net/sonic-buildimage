@@ -17,7 +17,7 @@ LIBS = -lpthread -lutil
 DSSERVE = dsserve
 BCMCMD = bcmcmd
 
-.phony: all clean install
+.PHONY: all clean install deb
 
 all: $(DSSERVE) $(BCMCMD)
 
@@ -28,8 +28,15 @@ $(BCMCMD): bcmcmd.cpp dsserve.h
 	$(CC) -o $@ $< $(CFLAGS) $(CFLAGS_COMMON) $(LIBS)
 
 install:
+	install -d $(DESTDIR)/usr/sbin
 	install -D $(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
 	install -D $(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
 
+deb:
+	dpkg-buildpackage -us -uc -b
+
 clean:
 	rm -f $(DSSERVE) $(BCMCMD)
+	rm -rf debian/.debhelper
+	rm -rf debian/sswsyncd
+	rm -f debian/files debian/*.substvars debian/*.log debian/*.debhelper

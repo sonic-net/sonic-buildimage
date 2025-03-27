@@ -147,7 +147,7 @@
          else
          {
              /* print orphaned message to the stdout */
-             printf("%.*s", rc, data);
+             printf("%.*s", (int)rc, data);
              fflush(stdout);
          }
      }
