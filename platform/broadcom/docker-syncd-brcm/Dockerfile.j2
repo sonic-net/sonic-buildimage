@@ -28,14 +28,13 @@ RUN apt-get install -y build-essential g++ libutil-linux-dev
 
 ## Create source directory and copy the source files
 RUN mkdir -p /tmp/sswsyncd
-COPY platform/broadcom/sswsyncd/bcmcmd.cpp platform/broadcom/sswsyncd/dsserve.cpp platform/broadcom/sswsyncd/dsserve.h platform/broadcom/sswsyncd/Makefile /tmp/sswsyncd/
+COPY ["files/bcmcmd.cpp", "files/dsserve.cpp", "files/dsserve.h", "files/sswsyncd.mk", "/tmp/sswsyncd/"]
 
 ## Build bcmcmd and dsserve from source
 WORKDIR /tmp/sswsyncd
 RUN make && make install
 
-## Also copy the binaries from online files as a fallback
-COPY ["files/dsserve", "files/bcmcmd", "start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
+COPY ["start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd /usr/bin/rdb-cli
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
