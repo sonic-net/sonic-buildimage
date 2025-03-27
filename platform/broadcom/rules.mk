@@ -55,7 +55,7 @@ $(BCMCMD_SRC)_PATH = platform/broadcom/sswsyncd
 DSSERVE_SRC = dsserve.cpp
 $(DSSERVE_SRC)_PATH = platform/broadcom/sswsyncd
 
-DSSERVE_H = platform/broadcom/sswsyncd/dsserve.h
+DSSERVE_H = dsserve.h
 $(DSSERVE_H)_PATH = platform/broadcom/sswsyncd
 
 SSWSYNCD_MAKEFILE = sswsyncd.mk
