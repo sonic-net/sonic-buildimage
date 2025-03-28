@@ -26,18 +26,28 @@ fn run_command(cmd: &str) -> Result<String, String> {
 // Check CPU usage for auditd
 fn check_cpu_usage() -> String {
     let cmd = format!(
-        r#"{NSENTER_CMD} top -b -n1 -p $(pidof auditd) | grep auditd | awk '{{print $9}}'"#
+        r#"{NSENTER_CMD} top -b -n5 -d2 -p $(pidof auditd) | grep auditd | awk '{{print $9}}'"#
     );
+
     match run_command(&cmd) {
         Ok(s) => {
-            if let Ok(value) = s.trim().parse::<f32>() {
-                if value <= 0.8 {
-                    "OK".to_string()
-                } else {
-                    format!("FAIL (CPU usage {:.2} > 0.8)", value)
-                }
+            let samples: Vec<f32> = s
+                .trim()
+                .lines()
+                .filter_map(|line| line.trim().parse::<f32>().ok())
+                .collect();
+
+            if samples.is_empty() {
+                return format!("FAIL (no valid CPU usage samples found: {})", s.trim());
+            }
+
+            let avg = samples.iter().sum::<f32>() / samples.len() as f32;
+            let threshold = 30.0;
+
+            if avg <= threshold {
+                "OK".to_string()
             } else {
-                format!("FAIL (could not parse CPU usage: {})", s.trim())
+                format!("FAIL (average CPU usage {:.2}% > {:.1}%)", avg, threshold)
             }
         }
         Err(e) => format!("FAIL ({})", e),
@@ -47,18 +57,28 @@ fn check_cpu_usage() -> String {
 // Check memory usage for auditd
 fn check_mem_usage() -> String {
     let cmd = format!(
-        r#"{NSENTER_CMD} top -b -n1 -p $(pidof auditd) | grep auditd | awk '{{print $10}}'"#
+        r#"{NSENTER_CMD} top -b -n5 -d2 -p $(pidof auditd) | grep auditd | awk '{{print $10}}'"#
     );
+
     match run_command(&cmd) {
         Ok(s) => {
-            if let Ok(value) = s.trim().parse::<f32>() {
-                if value <= 0.8 {
-                    "OK".to_string()
-                } else {
-                    format!("FAIL (MEM usage {:.2} > 0.8)", value)
-                }
+            let samples: Vec<f32> = s
+                .trim()
+                .lines()
+                .filter_map(|line| line.trim().parse::<f32>().ok())
+                .collect();
+
+            if samples.is_empty() {
+                return format!("FAIL (no valid MEM usage samples found: {})", s.trim());
+            }
+
+            let avg = samples.iter().sum::<f32>() / samples.len() as f32;
+            let threshold = 30.0;
+
+            if avg <= threshold {
+                "OK".to_string()
             } else {
-                format!("FAIL (could not parse MEM usage: {})", s.trim())
+                format!("FAIL (average MEM usage {:.2}% > {:.1}%)", avg, threshold)
             }
         }
         Err(e) => format!("FAIL ({})", e),
@@ -158,11 +178,11 @@ fn check_auditd_reload_status() -> String {
 }
 
 fn main() {
-    // Start a HTTP server listening on port 8080
-    let listener = TcpListener::bind("0.0.0.0:8080")
-        .expect("Failed to bind to 0.0.0.0:8080");
+    // Start a HTTP server listening on port 50058
+    let listener = TcpListener::bind("127.0.0.1:50058")
+        .expect("Failed to bind to 127.0.0.1:50058");
 
-    println!("Watchdog HTTP server running on http://0.0.0.0:8080");
+    println!("Watchdog HTTP server running on http://127.0.0.1:50058");
 
     for stream_result in listener.incoming() {
         match stream_result {
