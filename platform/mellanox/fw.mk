@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ MLNX_FW_BASE_PATH = $(MLNX_SDK_BASE_PATH)
 # Place an URL here to FW if you want to download FW instead
 MLNX_FW_BASE_URL =
 
-SIMX_VERSION = 25.1-1070
+SIMX_VERSION = 25.1-1095
 
 FW_FROM_URL = y
 
