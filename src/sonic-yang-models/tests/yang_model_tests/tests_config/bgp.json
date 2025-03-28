@@ -948,6 +948,62 @@
         }
     },
 
+    "BGP_NEIGHBOR_AF_ROUTE_MAP_VALID": {
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    {
+                        "name": "ALLOW"
+                    }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "ALLOW",
+                    "stmt_name": 1,
+                    "route_operation": "permit"
+                }
+                ]
+            }
+        },
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-neighbor:sonic-bgp-neighbor": {
+            "sonic-bgp-neighbor:BGP_NEIGHBOR": {
+                "BGP_NEIGHBOR_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "neighbor": "20.0.0.1",
+                        "local_asn": 1,
+                        "name": "BGP nbr 1",
+                        "asn": 65003
+                    }
+                ]
+            },
+            "sonic-bgp-neighbor:BGP_NEIGHBOR_AF": {
+                "BGP_NEIGHBOR_AF_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "neighbor": "20.0.0.1",
+                        "afi_safi": "ipv4_unicast",
+                        "admin_status": "up",
+                        "route_map_in": [ "ALLOW" ],
+                        "route_map_out": [ "ALLOW" ]
+                    }
+                ]
+            }
+        }
+    },
+
     "BGP_NEIGHBOR_AF_NEG_INVALID_MAP_IN": {
         "sonic-route-map:sonic-route-map": {
             "sonic-route-map:ROUTE_MAP_SET": {
@@ -1300,6 +1356,62 @@
                         "afi_safi": "ipv4_unicast",
                         "admin_status": "up",
                         "send_community": "foobar"
+                    }
+                ]
+            }
+        }
+    },
+
+    "BGP_PEERGROUP_AF_ROUTE_MAP_VALID": {
+         "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP_SET": {
+                "ROUTE_MAP_SET_LIST": [
+                    {
+                        "name": "ALLOW"
+                    }
+                ]
+            },
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "ALLOW",
+                    "stmt_name": 1,
+                    "route_operation": "permit"
+                }
+                ]
+            }
+        },
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "local_asn": 65001
+                    }
+                ]
+            }
+        },
+        "sonic-bgp-peergroup:sonic-bgp-peergroup": {
+            "sonic-bgp-peergroup:BGP_PEER_GROUP": {
+                "BGP_PEER_GROUP_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "peer_group_name": "PG1",
+                        "local_asn": 1,
+                        "name": "BGP PeerGroup 01",
+                        "asn": 65003
+                    }
+                ]
+            },
+            "sonic-bgp-peergroup:BGP_PEER_GROUP_AF": {
+                "BGP_PEER_GROUP_AF_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "peer_group_name": "PG1",
+                        "afi_safi": "ipv4_unicast",
+                        "admin_status": "up",
+                        "route_map_in": [ "ALLOW" ],
+                        "route_map_out": [ "ALLOW" ]
                     }
                 ]
             }

@@ -90,6 +90,9 @@
         "eStrKey" : "InvalidValue",
         "eStr": ["send_community"]
     },
+    "BGP_NEIGHBOR_AF_ROUTE_MAP_VALID": {
+        "desc": "Reference valid route map"
+    },
     "BGP_NEIGHBOR_AF_NEG_ROUTE_MAP_NOT_EXIST": {
         "desc": "Reference to non-existent route-map.",
         "eStrKey" : "LeafRef"
@@ -133,6 +136,9 @@
         "desc": "Invalid value for send community type in peergroup AF.",
         "eStrKey" : "InvalidValue",
         "eStr": ["send_community"]
+    },
+    "BGP_PEERGROUP_AF_ROUTE_MAP_VALID": {
+        "desc": "Validate route-map reference in peergroup AF."
     },
     "BGP_PEERGROUP_AF_ROUTE_MAP_NOT_EXIST": {
         "desc": "Missing or non-existent route-map reference in peergroup AF.",
