@@ -1,0 +1,9 @@
+{
+    "PFC_STAT_HISTORY_VALID": {
+        "desc": "PFC_STAT_HISTORY_VALID no failure"
+    },
+    "PFC_STAT_HISTORY_INVALID_PORT_VALUE": {
+        "desc": "PFC_STAT_HISTORY_INVALID_PORT_VALUE pattern failure",
+        "eStr": "invalid"
+    }
+}
