@@ -93,7 +93,7 @@ module sonic-system-tacacs {
 
                 leaf passkey {
                     type string {
-                        length "1..65";
+                        length "1..256";
                         pattern "[^ #,]*" {
                             error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
@@ -131,9 +131,14 @@ module sonic-system-tacacs {
                     default 5;
                 }
 
+		leaf key_encrypt {
+		    type boolean;
+		    description "Indicates if the passkey is encrypted.";
+		}
+
                 leaf passkey {
                     type string {
-                        length "1..65";
+                        length "1..256";
                         pattern "[^ #,]*" {
                             error-message 'TACACS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
                         }
