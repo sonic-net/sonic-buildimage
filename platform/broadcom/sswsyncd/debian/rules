@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE) -f sswsyncd.mk
+
+override_dh_auto_install:
+	$(MAKE) -f sswsyncd.mk install DESTDIR=$(CURDIR)/debian/tmp
+
+override_dh_auto_clean:
+	$(MAKE) -f sswsyncd.mk clean
