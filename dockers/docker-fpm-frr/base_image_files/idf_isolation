@@ -12,8 +12,13 @@ if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* 
     exit 1
 fi
 
+# Source the platform_utils script
+source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
+
+${IS_SUPERVISOR:=false}
+
 # Skip operation on chassis supervisor
-if [ -f /etc/sonic/chassisdb.conf ]; then  
+if [ "$IS_SUPERVISOR" = true ]; then  
     echo "Skipping Operation on chassis supervisor"
     exit 0
 fi
