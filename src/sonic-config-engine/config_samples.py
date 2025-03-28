@@ -167,6 +167,13 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
     crmconfig.update(dash_crm_thresholds)
 
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        data['FEATURE'] = {
+            "polaris": {
+                "state": "enabled"
+            }
+        }
+
     return data
 
 def generate_t1_smartswitch_sample_config(data):
