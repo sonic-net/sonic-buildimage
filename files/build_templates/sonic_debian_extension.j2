@@ -421,6 +421,7 @@ sudo cp $IMAGE_CONFIGS/ntp/ntp-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/ntp/ntp.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/ntp/ntp.keys.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/libexec/ntpsec/
+sudo cp $IMAGE_CONFIGS/ntp/ntpsec.default $FILESYSTEM_ROOT_ETC/default/ntpsec
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/ntpsec.service.d
 sudo cp $IMAGE_CONFIGS/ntp/sonic-target.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/ntpsec.service.d/
 echo "ntpsec.service" | sudo tee -a $GENERATED_SERVICE_FILE
