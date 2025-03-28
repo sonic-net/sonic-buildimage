@@ -29,10 +29,7 @@ resources:
 variables:
   - template: .azure-pipelines/template-variables.yml@buildimage
   - name: BUILD_BRANCH
-    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-      value: $(System.PullRequest.TargetBranch)
-    ${{ else }}:
-      value: $(Build.SourceBranchName)
+    value: $(Build.SourceBranchName)
 
 stages:
   - stage: BuildVS
