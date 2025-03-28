@@ -1,6 +1,7 @@
 # MRVL_TERALYNX SAI
 
-MRVL_TERALYNX_SAI_ONLINE = https://github.com/Marvell-switching/sonic-marvell-teralynx-binaries/raw/main/debian/master
+SAI_RELEASE = T5.0.0
+MRVL_TERALYNX_SAI_ONLINE = https://github.com/Marvell-switching/sonic-marvell-teralynx-binaries/raw/main/debian/202411/$(SAI_RELEASE)
 
 MRVL_TERALYNX_LIBSAI = isai.deb
 MRVL_TERALYNX_HSAI   = saihdr.deb

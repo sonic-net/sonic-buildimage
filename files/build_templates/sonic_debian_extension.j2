@@ -367,22 +367,6 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-db-cli_*.deb || \
 # Install sonic-rsyslog-plugin
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-rsyslog-plugin_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-
-# Generate host conf for rsyslog_plugin
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/host_events.conf
-sudo cp $BUILD_TEMPLATES/monit_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/sshd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/systemd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/kernel_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/dockerd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/seu_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/zebra_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-sudo cp $BUILD_TEMPLATES/bgpd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
-
-j2 -f json $BUILD_TEMPLATES/rsyslog_plugin.conf.j2 $BUILD_TEMPLATES/syncd_events_info.json | sudo tee $FILESYSTEM_ROOT_ETC/rsyslog.d/syncd_events.conf
-sudo cp $BUILD_TEMPLATES/syncd_regex.json $FILESYSTEM_ROOT_ETC/rsyslog.d/
-
 {% endif %}
 
 # Install custom-built monit package and SONiC configuration files
@@ -431,6 +415,9 @@ sudo cp $IMAGE_CONFIGS/ntp/ntp.keys.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATE
 sudo cp $IMAGE_CONFIGS/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/libexec/ntpsec/
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/ntpsec.service.d
 sudo cp $IMAGE_CONFIGS/ntp/sonic-target.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/ntpsec.service.d/
+sudo cp $IMAGE_CONFIGS/ntp/hwclock.service $FILESYSTEM_ROOT/etc/systemd/system/
+sudo cp $IMAGE_CONFIGS/ntp/hwclock.timer $FILESYSTEM_ROOT/etc/systemd/system/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable hwclock.timer
 echo "ntpsec.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy DNS templates

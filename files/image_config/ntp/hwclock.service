@@ -1,0 +1,7 @@
+[Unit]
+Description=Sync the system clock to the hardware clock
+ConditionPathExists=/dev/rtc0
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/hwclock --rtc=/dev/rtc0 --systohc

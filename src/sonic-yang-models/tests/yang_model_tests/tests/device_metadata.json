@@ -91,6 +91,9 @@
     "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
         "desc": "Verifying resource type configuration."
     },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "desc": "Verifying mgmt type configuration."
+    },
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."
     },

@@ -247,6 +247,15 @@
             }
         }
     },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "mgmt_type": "mgmt_type_x"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_CLUSTER": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {

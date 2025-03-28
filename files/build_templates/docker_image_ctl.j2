@@ -201,8 +201,18 @@ function postStartAction()
            ip link set dev ns-eth1"$NET_NS" netns "$NET_NS"
            ip netns exec "$NET_NS" ip link set ns-eth1"$NET_NS" name eth1
 
+           if [[ -n "$lc_ip_offset" ]]; then
+	       # Use ip offset provided by platform vendor via chassisdb.conf to prevent any conflict
+	       # with any platform IP range, e.g., LC eth1-midplane IP.
+               ip_offset=$lc_ip_offset
+           else
+	       # If Vendor has not provided an ip offset, Use 10 as default offset. Platform vendor should
+	       # ensure there is no conflict with platform IP range for any slot.
+               ip_offset=10
+           fi
+
            # Configure IP address and enable eth1
-           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + 10))
+           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + $ip_offset))
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
            ip netns exec "$NET_NS" ip link set dev eth1 up
@@ -338,6 +348,13 @@ function postStartAction()
         if [ -z "$exist" ]; then
             docker cp $PSENSOR pmon:/usr/bin/
         fi
+    fi
+{%- elif docker_container_name == "eventd" %}
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
     fi
 {%- else %}
     : # nothing
