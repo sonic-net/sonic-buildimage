@@ -302,6 +302,15 @@ RUN cd gnxi \
     && pip3 install -r /tmp/requirements.txt
 {% endif %}
 
+# Install gnoic tool
+RUN git clone https://github.com/karimra/gnoic.git \
+    && cd gnoic \
+    && git checkout 57aac3d \
+    && chmod +x install.sh \
+    && ./install.sh \
+    && cd .. \
+    && rm -rf gnoic
+
 COPY \
 {% for deb in docker_ptf_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
@@ -315,8 +324,8 @@ debs/{{ deb }}{{' '}}
 
 {% if PTF_ENV_PY_VER == "py3" %}
 # Create symlink so that test scripts and ptf_runner invocation path
-# is same across python 2 and python 3 envs. Note that for virtual-env 
-# ptf is under /root/env-python3/bin. 
+# is same across python 2 and python 3 envs. Note that for virtual-env
+# ptf is under /root/env-python3/bin.
 # TODO - cleanup when the supported PTF image is py3only across all branches
 RUN mkdir -p /root/env-python3/bin \
     && ln -s /usr/local/bin/ptf /usr/bin/ptf \
