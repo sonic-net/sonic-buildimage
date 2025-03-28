@@ -217,7 +217,7 @@ stages:
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
-              PLATFORM_NAME: marvell-prestera
+              PLATFORM_NAME: marvell-prestera-armhf
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'cisco-8000') }}:
       - template: template-cisco.yml
