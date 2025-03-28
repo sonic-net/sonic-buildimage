@@ -341,6 +341,12 @@
                 "PACKET_ACTION": "FORWARD",
                 "TUNNEL_TERM": "true",
                 "DST_IP": "1.1.1.1/32"
+            },
+            "SRC-MAC-REWRITE-TABLE|RULE0": {
+                "PRIORITY": "999960",
+                "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",                     
+                "INNER_SRC_IP": "1.1.1.1/32",
+                "VNI": "45"
             }
         },
         "SWITCH_HASH": {
@@ -1104,6 +1110,22 @@
                     "Ethernet0",
                     "PortChannel0003"
                 ]
+            },
+            "SRC-MAC-REWRITE-TABLE": {
+                "ports": [
+                    "Ethernet14",
+                    "Ethernet15",
+                    "Ethernet23",
+                    "Ethernet30",
+                    "Ethernet31",
+                    "Ethernet18",
+                    "Ethernet19",
+                    "Ethernet25",
+                    "Ethernet24",
+                    "PortChannel0003"
+                ],
+                "stage": "EGRESS",
+                "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
             }
 
         },
@@ -2607,7 +2629,20 @@
                      "PORT",
                      "PORTCHANNEL"
                  ]
-             }
+             },
+             "INNER_SRC_MAC_REWRITE_TABLE_TYPE": {
+                "ACTIONS": [
+                    "INNER_SRC_MAC_REWRITE_ACTION"
+                ],
+                "MATCHES": [
+                    "INNER_SRC_IP",
+                    "VNI"
+                ],
+                "BIND_POINTS": [
+                    "PORT",
+                    "PORTCHANNEL"
+                ]
+            }
         },
 
         "SNMP": {
