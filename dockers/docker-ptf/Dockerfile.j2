@@ -16,6 +16,7 @@ LABEL maintainer="Pavel Shirshov"
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
