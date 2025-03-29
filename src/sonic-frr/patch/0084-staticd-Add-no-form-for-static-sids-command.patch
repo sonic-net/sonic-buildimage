@@ -1,0 +1,292 @@
+From 9c19ed0995a76d16a671579682d6e21a44a7079c Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 26 Feb 2025 10:17:56 +0100
+Subject: [PATCH 1/5] staticd: Convert `static-sids` command to DEFPY
+
+This commit converts the `static-sids` command from `DEFUN` to `DEFPY`
+to simplify the parsing of the command string definition.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_vty.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index 4163441a0..ba8770569 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1234,7 +1234,7 @@ DEFUN_YANG_NOSH (no_static_srv6, no_static_srv6_cmd,
+ 	return nb_cli_apply_changes(vty, "%s", xpath);
+ }
+ 
+-DEFUN_NOSH (static_srv6_sids, static_srv6_sids_cmd,
++DEFPY_NOSH (static_srv6_sids, static_srv6_sids_cmd,
+       "static-sids",
+       "Segment Routing SRv6 SIDs\n")
+ {
+-- 
+2.34.1
+
+
+From 77ac68282f167d94eaa297ff2a6cdba31bf0802a Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 26 Feb 2025 15:34:19 +0100
+Subject: [PATCH 2/5] staticd: Add `no` form for `static-sids` command
+
+Currently, when the user tries to delete all static SIDs with the
+`no static-sids` command, staticd returns an error.
+
+```
+router# config
+router(config)# segment-routing
+router(sr)# srv6
+router(srv6)# no static-sids
+% Unknown command: no  static-sids
+```
+
+The problem is the `static-sids` command does not support the `no` form.
+
+This PR enables the `no` form for the `static-sids` command.
+
+```
+router# config
+router(config)# segment-routing
+router(sr)# srv6
+router(srv6)# no static-sids
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_vty.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index ba8770569..01324e8d1 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1234,10 +1234,22 @@ DEFUN_YANG_NOSH (no_static_srv6, no_static_srv6_cmd,
+ 	return nb_cli_apply_changes(vty, "%s", xpath);
+ }
+ 
+-DEFPY_NOSH (static_srv6_sids, static_srv6_sids_cmd,
+-      "static-sids",
++DEFPY_YANG_NOSH (static_srv6_sids, static_srv6_sids_cmd,
++      "[no] static-sids",
++	  NO_STR
+       "Segment Routing SRv6 SIDs\n")
+ {
++	char xpath[XPATH_MAXLEN];
++
++	if (no) {
++		snprintf(xpath, sizeof(xpath), "/frr-routing:routing/control-plane-protocols/control-plane-protocol[type='%s'][name='%s'][vrf='%s']/frr-staticd:staticd/segment-routing/srv6/local-sids",
++			 "frr-staticd:staticd", "staticd", VRF_DEFAULT_NAME);
++
++		nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
++
++		return nb_cli_apply_changes(vty, "%s", xpath);
++	}
++
+ 	VTY_PUSH_CONTEXT_NULL(SRV6_SIDS_NODE);
+ 	return CMD_SUCCESS;
+ }
+-- 
+2.34.1
+
+
+From 3997bd8a75a6a7938a7fde7f75b5139ea4b160c5 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 27 Feb 2025 12:12:39 +0100
+Subject: [PATCH 3/5] vtysh: Add `no static-sids` command
+
+Previous commits introduced the `no` form for the `static-sids` command.
+This change allow users to remove all static SIDs at once.
+
+This commit makes the `no static-sids` command available in vtysh.
+
+```
+router# config
+router(config)# segment-routing
+router(sr)# srv6
+router(srv6)# no static-sids
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ vtysh/vtysh.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/vtysh/vtysh.c b/vtysh/vtysh.c
+index d8a5dfa7d..f684e0b6b 100644
+--- a/vtysh/vtysh.c
++++ b/vtysh/vtysh.c
+@@ -1712,6 +1712,14 @@ DEFUNSH(VTYSH_MGMTD, srv6_sids, srv6_sids_cmd,
+ 	return CMD_SUCCESS;
+ }
+ 
++DEFUNSH(VTYSH_MGMTD, no_srv6_sids, no_srv6_sids_cmd,
++	"no static-sids",
++	NO_STR
++	"Segment-Routing SRv6 SIDs configuration\n")
++{
++	return CMD_SUCCESS;
++}
++
+ DEFUNSH(VTYSH_ZEBRA, srv6_locators, srv6_locators_cmd,
+ 	"locators",
+ 	"Segment-Routing SRv6 locators configuration\n")
+@@ -5270,6 +5278,7 @@ void vtysh_init_vty(void)
+ 	install_element(SRV6_NODE, &vtysh_end_all_cmd);
+ 	install_element(SRV6_NODE, &srv6_encap_cmd);
+ 	install_element(SRV6_NODE, &srv6_sids_cmd);
++	install_element(SRV6_NODE, &no_srv6_sids_cmd);
+ 
+ 	install_element(SRV6_SIDS_NODE, &exit_srv6_sids_config_cmd);
+ 	install_element(SRV6_SIDS_NODE, &vtysh_end_all_cmd);
+-- 
+2.34.1
+
+
+From 19786d2246e0d75340bf1f8c3cbf8cf7b3c016ee Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 26 Feb 2025 15:36:00 +0100
+Subject: [PATCH 4/5] tests: Add test case to verify `no static-sids` command
+
+Add a test case to verify that staticd removes all SIDs when the
+`no static-sids` command is executed.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../expected_srv6_sids_delete_all.json        |  1 +
+ .../static_srv6_sids/test_static_srv6_sids.py | 37 +++++++++++++++++++
+ 2 files changed, 38 insertions(+)
+ create mode 100644 tests/topotests/static_srv6_sids/expected_srv6_sids_delete_all.json
+
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_delete_all.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_delete_all.json
+new file mode 100644
+index 000000000..9e26dfeeb
+--- /dev/null
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_delete_all.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+index 195ecf938..f2b3a0025 100755
+--- a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
++++ b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+@@ -84,6 +84,43 @@ def test_srv6_static_sids():
+     check_srv6_static_sids(router, "expected_srv6_sids.json")
+ 
+ 
++def test_srv6_static_sids_sid_delete_all():
++    """
++    Remove all static SIDs and verify they get removed
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    def _check_srv6_static_sids(router, expected_route_file):
++        logger.info("checking zebra srv6 static sids")
++        output = json.loads(router.vtysh_cmd("show ipv6 route static json"))
++        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++        return topotest.json_cmp(output, expected, exact=True)
++
++    def check_srv6_static_sids(router, expected_file):
++        func = functools.partial(_check_srv6_static_sids, router, expected_file)
++        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++        assert result is None, "Failed"
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         segment-routing
++          srv6
++           no static-sids
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++
++    logger.info("Test for srv6 sids configuration")
++    check_srv6_static_sids(router, "expected_srv6_sids_delete_all.json")
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+-- 
+2.34.1
+
+
+From 906895f8600726179f9c77bc248a48a936efc961 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Wed, 26 Feb 2025 15:38:06 +0100
+Subject: [PATCH 5/5] tests: Add test case to verify that SIDs can be re-added
+
+Add a test case to verify that staticd is able to re-install all SIDs
+after deleting and re-adding them.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../static_srv6_sids/test_static_srv6_sids.py | 42 +++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+
+diff --git a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+index f2b3a0025..25879a375 100755
+--- a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
++++ b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+@@ -121,6 +121,48 @@ def test_srv6_static_sids_sid_delete_all():
+     check_srv6_static_sids(router, "expected_srv6_sids_delete_all.json")
+ 
+ 
++def test_srv6_static_sids_sid_readd_all():
++    """
++    Re-add the static SIDs and verify the routing table
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    def _check_srv6_static_sids(router, expected_route_file):
++        logger.info("checking zebra srv6 static sids")
++        output = json.loads(router.vtysh_cmd("show ipv6 route static json"))
++        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++        return topotest.json_cmp(output, expected)
++
++    def check_srv6_static_sids(router, expected_file):
++        func = functools.partial(_check_srv6_static_sids, router, expected_file)
++        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++        assert result is None, "Failed"
++
++    router.vtysh_cmd(
++        """
++        configure terminal
++         segment-routing
++          srv6
++           static-sids
++            sid fcbb:bbbb:1::/48 locator MAIN behavior uN
++            sid fcbb:bbbb:1:fe10::/64 locator MAIN behavior uDT4 vrf Vrf10
++            sid fcbb:bbbb:1:fe20::/64 locator MAIN behavior uDT6 vrf Vrf20
++            sid fcbb:bbbb:1:fe30::/64 locator MAIN behavior uDT46 vrf Vrf30
++            sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
++        """
++    )
++
++    # FOR DEVELOPER:
++    # If you want to stop some specific line and start interactive shell,
++    # please use tgen.mininet_cli() to start it.
++
++    logger.info("Test for srv6 sids configuration")
++    check_srv6_static_sids(router, "expected_srv6_sids.json")
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
+-- 
+2.34.1
+
