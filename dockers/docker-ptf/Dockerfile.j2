@@ -18,6 +18,7 @@ LABEL maintainer="Pavel Shirshov"
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -87,8 +88,9 @@ RUN apt-get update          \
         gdb                 \
         automake            \
         iproute2            \
-        wireshark-common
-
+        wireshark-common    \
+        freeradius          \
+        quilt
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 \
@@ -156,6 +158,7 @@ RUN rm -rf /debs \
     && pip install pysubnettree \
     && pip install paramiko \
     && pip install flask   \
+    && pip install tornado \
     && pip install exabgp==3.4.17\
     && pip install pyaml   \
     && pip install pybrctl pyro4 rpyc yabgp \
@@ -244,9 +247,14 @@ RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
-RUN git clone https://github.com/lguohan/gnxi.git \
+RUN git clone https://github.com/google/gnxi.git \
     && cd gnxi \
-    && git checkout 3adf8b9 \
+    && git checkout 208acfa85f5b5b8717e14896e9d6ee93cfda9d5f
+
+COPY gnxi-patches/ gnxi/patches/
+
+RUN cd gnxi \
+    && quilt push -a \
     && cd gnmi_cli_py \
 {% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt
