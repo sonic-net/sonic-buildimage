@@ -187,19 +187,12 @@ class BGPPeerMgrBase(Manager):
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
-            # The bgp session that belongs to a vnet cannot be advertised as the default BGP session.
-            # So we need to check whether this bgp session belongs to a vnet.
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
             interface = self.get_local_interface(data["local_addr"])
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
                 return False
-            vnet = self.get_vnet(interface)
-            if vnet:
-                # Ignore the bgp session that is in a vnet
-                log_info("Ignore the BGP peer '%s' as the interface '%s' is in vnet '%s'" % (nbr, interface, vnet))
-                return True
 
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
@@ -249,6 +242,8 @@ class BGPPeerMgrBase(Manager):
         """
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
+        elif "ip_range" in data and self.peer_type == 'dynamic':
+            self.change_ip_range(vrf, nbr, data)
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 
@@ -285,6 +280,83 @@ class BGPPeerMgrBase(Manager):
             log_info("Peer '%s|%s' admin state is set to '%s'" % print_data)
         else:
             log_err("Can't set peer '%s|%s' admin state to '%s'." % print_data)
+    
+    def change_ip_range(self, vrf, nbr, data):
+        """
+        Change ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param data: associated data
+        :return: True if this adding was successful, False otherwise
+        """
+        if data['ip_range']:
+            log_info("Peer '(%s|%s)' ip range is going to be updated with range: %s" % (vrf, nbr, data['ip_range']))
+            new_ip_range = data["ip_range"].split(",")
+            ip_ranges_to_add = new_ip_range
+            ip_ranges_to_del = []
+            existing_ipv4_range, existing_ipv6_range = self.get_existing_ip_ranges(vrf, nbr)
+            if existing_ipv4_range:
+                for ipv4_range in existing_ipv4_range:
+                    if ipv4_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv4_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv4_range)
+            if existing_ipv6_range:
+                for ipv6_range in existing_ipv6_range:
+                    if ipv6_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv6_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv6_range)
+            if ip_ranges_to_del or ip_ranges_to_add:
+                log_info("Peer '(%s|%s)' ip range is going to be updated. Ranges to delete: %s Ranges to add: %s" % (vrf, nbr, ip_ranges_to_del, ip_ranges_to_add))
+                self.apply_range_changes(vrf, nbr, ip_ranges_to_add, ip_ranges_to_del)
+
+    def get_existing_ip_ranges(self, vrf, nbr):
+        """
+        Get existing ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :return: existing ip range of a peer
+        """
+        ipv4_ranges = []
+        ipv6_ranges = []
+        command = ["vtysh", "-c", "show bgp vrf %s peer-group %s json" % (vrf, nbr)]
+        try:
+            ret_code, out, err = run_command(command)
+            if ret_code == 0:
+                js_bgp = json.loads(out)
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv4' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv4']:
+                    ipv4_ranges= js_bgp[nbr]['dynamicRanges']['IPv4']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV4 range: %s" % (vrf, nbr, ipv4_ranges))
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv6' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv6']:
+                    ipv6_ranges= js_bgp[nbr]['dynamicRanges']['IPv6']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV6 range: %s" % (vrf, nbr, ipv6_ranges))
+                return ipv4_ranges, ipv6_ranges
+            else:
+                log_err("Can't read ip range of peer '%s|%s': %s" % (vrf, nbr, str(err)))
+                return ipv4_ranges, ipv6_ranges
+        except Exception as e:
+            log_err("Error in parsing ip range: %s" % str(e))
+            return ipv4_ranges, ipv6_ranges
+
+    def apply_range_changes(self, vrf, nbr, new_ip_range, ip_ranges_to_del):
+        """
+        Apply changes of ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param new_ip_range: new ip range
+        :param ip_ranges_to_del: ip ranges to delete
+        """
+        cmd = ""
+        for ip_range in ip_ranges_to_del:
+            cmd += "no bgp listen range %s peer-group %s\n" % (ip_range, nbr)
+        for ip_range in new_ip_range:
+            cmd += "bgp listen range %s peer-group %s\n" % (ip_range, nbr)
+        ret_code = self.apply_op(cmd, vrf)
+        if ret_code:
+            log_info("Peer '(%s|%s)' ip range has been updated." % (vrf, nbr))
+        else:
+            log_err("Peer '(%s|%s)' couldn't update ip range." % (vrf, nbr))
 
     def del_handler(self, key):
         """
