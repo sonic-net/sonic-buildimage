@@ -70,3 +70,7 @@ check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check
 check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
     every 1 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
+
+# check if NTP is synchronized
+#check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+#    if status != 0 for 3 cycle then alert repeat every 5 cycles
