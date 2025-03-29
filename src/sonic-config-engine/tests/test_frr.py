@@ -80,5 +80,5 @@ class TestCfgGen(TestCase):
         self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr_dualtor.conf', extra_data=extra_data))
 
     def test_bgpd_frr_bmp(self):
-        extra_data = {"FEATURE": {"bmp": {"state": "enabled"}}}
+        extra_data = {"FEATURE": {"frr_bmp": {"state": "enabled"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp.conf', extra_data=extra_data))
