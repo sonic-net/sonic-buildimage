@@ -1,0 +1,6 @@
+-w /etc/crontab -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
+-w /etc/cron.d -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
+-w /etc/cron.daily -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
+-w /etc/cron.hourly -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
+-w /etc/cron.weekly -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
+-w /etc/cron.monthly -p wa -F auid>=1000 -F auid!=4294967295 -k cron_changes
