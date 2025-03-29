@@ -1111,7 +1111,7 @@
                     "PortChannel0003"
                 ]
             },
-            "SRC-MAC-REWRITE-TABLE-TEST": {
+            "SRC-MAC-REWRITE-TABLE": {
                 "ports": [
                     "Ethernet14",
                     "Ethernet15",
