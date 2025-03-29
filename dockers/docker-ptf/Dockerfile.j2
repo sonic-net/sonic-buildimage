@@ -12,7 +12,7 @@ FROM {{ prefix }}debian:buster
 USER root
 WORKDIR /root
 
-MAINTAINER Pavel Shirshov
+LABEL maintainer="Pavel Shirshov"
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
@@ -75,7 +75,9 @@ RUN apt-get update          \
         gdb                 \
         automake            \
         iproute2            \
-        wireshark-common
+        wireshark-common    \
+        freeradius          \
+        quilt
 
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step
@@ -96,6 +98,7 @@ RUN rm -rf /debs \
     && rm -fr scapy-vxlan \
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
+    && git checkout v6.04 \
     && ./boot.sh \
     && ./configure \
     && make \
@@ -128,6 +131,7 @@ RUN rm -rf /debs \
     && pip install pysubnettree \
     && pip install paramiko \
     && pip install flask   \
+    && pip install tornado \
     && pip install exabgp==3.4.17\
     && pip install pyaml   \
     && pip install pybrctl pyro4 rpyc yabgp \
@@ -160,10 +164,11 @@ RUN python3 -m pip install setuptools \
     && pip3 install ipaddress \
     && pip3 install pysubnettree \
     && pip3 install paramiko \
+    && pip3 install tornado \
     && pip3 install Flask   \
     && pip3 install exabgp \
     && pip3 install pyaml   \
-    && pip3 install pybrctl pyro4 rpyc yabgp \
+    && pip3 install pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
     && pip3 install pyrasite \
     && pip3 install python-libpcap \
@@ -207,9 +212,14 @@ RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
-RUN git clone https://github.com/lguohan/gnxi.git \
+RUN git clone https://github.com/google/gnxi.git \
     && cd gnxi \
-    && git checkout f2b11e4 \
+    && git checkout 208acfa85f5b5b8717e14896e9d6ee93cfda9d5f
+
+COPY gnxi-patches/ gnxi/patches/
+
+RUN cd gnxi \
+    && quilt push -a \
     && cd gnmi_cli_py \
     && pip install -r requirements.txt
 
