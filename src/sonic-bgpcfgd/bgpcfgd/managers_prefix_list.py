@@ -75,6 +75,7 @@ class PrefixListMgr(Manager):
                 return True
             data["prefix_list_name"] = prefix_list_name
             data["prefix"] = str(prefix.cidr)
+            data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
             # Generate the prefix list configuration
             if self.generate_prefix_list_config(data, add=True):
@@ -96,6 +97,7 @@ class PrefixListMgr(Manager):
             data = {}
             data["prefix_list_name"] = prefix_list_name
             data["prefix"] = str(prefix.cidr)
+            data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
             # remove the prefix list configuration
             if self.generate_prefix_list_config(data, add=False):
