@@ -293,15 +293,15 @@ function postStartAction()
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-        if [ $IS_SUPERVISOR -eq 1 ] && [[ -z "$DEV" ]]; then
-            tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
-            if [[ -n "$tsa_cfg" ]]; then
-                docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
-                OP_CODE=$?
-                if [ $OP_CODE -ne 0 ]; then
-                    echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
-                fi
-            fi
+        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregatedT2 -ne 1 ]]; then
+           tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+           if [[ -n "$tsa_cfg" ]]; then
+              docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+              OP_CODE=$?
+              if [ $OP_CODE -ne 0 ]; then
+                echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
+              fi
+           fi
         fi
 
         # Add redis UDS to the redis group and give read/write access to the group
@@ -387,19 +387,8 @@ start() {
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
-        {%- if docker_container_name == "database" %}
-        IS_SUPERVISOR=0
-        if [ -v supervisor ]; then
-            if [ $supervisor -eq 1 ]; then
-                IS_SUPERVISOR=1
-            fi
-        fi
-        {%- endif %}
-    {%- if docker_container_name == "database" %}
-    elif [ -f /etc/sonic/chassisdb.conf ]; then
-        IS_SUPERVISOR=1
-    {%- endif %}
     fi
+
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}

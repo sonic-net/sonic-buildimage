@@ -4,7 +4,6 @@
 source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
 
 ${SMARTSWITCH:=false}
-${IS_SUPERVISOR:=false}
 
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
@@ -12,7 +11,13 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-if [ "$IS_SUPERVISOR" = true ] && [ "$SMARTSWITCH" = false ] ; then
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+if [ -f $PLATFORM_ENV_CONF_FILE ]; then
+  source $PLATFORM_ENV_CONF_FILE
+fi
+
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggregatedT2 -ne 1 ]]; then
   if [[ $1 == "no-stats" ]]; then
     rexec all -c "sudo TSC no-stats"
   else

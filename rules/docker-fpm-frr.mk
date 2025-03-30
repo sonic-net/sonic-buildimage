@@ -42,7 +42,6 @@ $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TSC:/usr/bin/TSC
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TS:/usr/bin/TS
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += idf_isolation:/usr/bin/idf_isolation
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += prefix_list:/usr/bin/prefix_list
-$(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += platform_utils:/usr/bin/platform_utils
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_FPM_FRR)
 SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_FPM_FRR_DBG)

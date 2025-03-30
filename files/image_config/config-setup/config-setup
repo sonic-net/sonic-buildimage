@@ -320,29 +320,7 @@ check_all_config_db_present()
 
     return 0   
 }
-is_supervisor()
-{
-    if [[ -f /etc/sonic/chassisdb.conf ]]; then
-        # if /etc/sonic/chassisdb.conf exists, check platform_env.conf file and its supervisor=1 definition
-        # to determinate if it is Supervisor or Pizzabox with database-chassis support 
-        PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
-        PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
-        if [ -e "$PLATFORM_ENV_CONF_FILE" ]; then
-            source $PLATFORM_ENV_CONF_FILE
-            if [ -v supervisor ]; then
-                if [ $supervisor -eq 1 ]; then
-                    true
-                    return
-                fi
-            fi
-        else
-            true
-            return
-        fi
-    fi
-    false
-    return
-}
+
 # DB schema is subject to change between two images
 # Perform DB schema migration after loading backup config/minigraph from previous image
 do_db_migration()
@@ -354,7 +332,7 @@ do_db_migration()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-    if is_supervisor; then
+    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregatedT2 -ne 1 ]]; then
        tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
        sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
        OP_CODE=$?
@@ -474,6 +452,10 @@ if [[ -f "$ASIC_CONF" ]]; then
     source $ASIC_CONF
 fi
 
+PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
+    source $PLATFORM_ENV_CONF_FILE
+fi
 
 CMD=$1
 # Default command is boot
