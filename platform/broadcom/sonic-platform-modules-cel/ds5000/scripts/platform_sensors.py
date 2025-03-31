@@ -81,24 +81,37 @@ def get_reading_by_name(sensor_name, sdr_elist_dump):
 
 def read_temperature_sensors():
     sensor_list = [\
-        ('BB_OUTLET_TEMP', 'BaseBoard Outlet'),\
-        ('TH5_REAR_LEFT', 'Asic Rear Left'),\
-        ('TH5_REAR_RIGHT','Asic Rear Right'),\
-        ('CPU_TEMP', 'CPU TEMP'),\
-        ('XP3R3V_W_TEMP','XP3R3V W Temp'),\
-        ('XP3R3V_E_TEMP','XP3R3V E Temp')
+        '12V_ENTRY_LEFT',\
+        '12V_ENTRY_RIGHT',\
+        'BB_BUSBAR_TEMP',\
+        'BB_OUTLET_TEMP',\
+        'CPU_TEMP',\
+        'DIMM0_TEMP',\
+        'DIMM1_TEMP',\
+        'TH5_CORE_TEMP',\
+        'TH5_REAR_LEFT',\
+        'TH5_REAR_RIGHT',\
+        'XP0R8V_TEMP',\
+        'XP0R9V_0_TEMP',\
+        'XP0R9V_1_TEMP',\
+        'XP0R75V_0_TEMP',\
+        'XP0R75V_1_TEMP',\
+        'XP1R2V_0_TEMP',\
+        'XP1R2V_1_TEMP',\
+        'XP3R3V_E_TEMP',\
+        'XP3R3V_W_TEMP'
     ]
 
     output = ''
     sensor_format = '{0:{width}}{1}\n'
     # Find max length of sensor calling name
-    max_name_width = max(len(sensor[1]) for sensor in sensor_list)
+    max_name_width = max(len(sensor) for sensor in sensor_list)
 
     output += "Temperature Sensors\n"
     output += "Adapter: IPMI adapter\n"
     for sensor in sensor_list:
-        output += sensor_format.format('{}:'.format(sensor[1]),\
-                                       sensor_dict[sensor[0]],\
+        output += sensor_format.format('{}:'.format(sensor),\
+                                       sensor_dict[sensor],\
                                        width=str(max_name_width+1))
     output += '\n'
     return output
@@ -107,8 +120,8 @@ def read_fan_sensors(num_fans):
 
     sensor_list = [\
         ('FAN{}_STATUS', 'Fan Drawer {} Status'),\
-        ('Fan{}_Front_Speed',  'Fan {} front'),\
-        ('Fan{}_Rear_Speed',   'Fan {} rear'),\
+        ('Fan{}_Front_Speed',  'Fan {} Front Speed'),\
+        ('Fan{}_Rear_Speed',   'Fan {} Rear Speed'),\
     ]
 
     output = ''
@@ -132,13 +145,13 @@ def read_psu_sensors(num_psus):
 
     sensor_list = [\
         ('PSU{}_STATUS', 'PSU {} Status'),\
-        ('PSU{}_FanSpeed',    'PSU {} Fan 1'),\
+        ('PSU{}_FanSpeed',    'PSU {} Fan 1 Speed'),\
         ('PSU{}_VoltIn',    'PSU {} Input Voltage'),\
         ('PSU{}_CurrIn',    'PSU {} Input Current'),\
         ('PSU{}_PowerIn',    'PSU {} Input Power'),\
         ('PSU{}_TEMP1',  'PSU {} Temp1'),\
-        ('PSU{}_TEMP2',  'PSU {} Temp2'),\
-        ('PSU{}_TEMP3',  'PSU {} Temp3'),\
+        ('PSU{}_TEMP2',  'PSU {} SR'),\
+        ('PSU{}_TEMP3',  'PSU {} PFC'),\
         ('PSU{}_VoltOut',   'PSU {} Output Voltage'),\
         ('PSU{}_CurrOut',   'PSU {} Output Current'),\
         ('PSU{}_PowerOut',   'PSU {} Output Power'),\
