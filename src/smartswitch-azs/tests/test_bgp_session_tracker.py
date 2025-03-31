@@ -34,6 +34,7 @@ class TestBgpSessionTracker(object):
         
         #TESTCASE 1: Delete 1 nexthop from the default route. Interface should not be brought down
         route_tbl.set(DEFAULT_ROUTE_KEY, {"nexthop": "10.0.0.1"})
+        db_monitor.cache_t1_bgp_sessions(config_db)
         db_monitor.process_default_route_update(DEFAULT_ROUTE_KEY, route_tbl, config_db)
         assert db_monitor.interfaces_down == False
         assert config_db.get_table("PORTCHANNEL")["Po1031"]["admin_status"] == "up"
