@@ -8,7 +8,6 @@ bcm_device:
             l3_alpm_template: 1
             l3_alpm2_bnk_threshold: 100
             svi_my_station_optimization: 1
-            sai_nbr_bcast_ifp_optimized: 2
             uft_mode: 1
             l3_enable: 1
             l2_hitbit_enable: 0
