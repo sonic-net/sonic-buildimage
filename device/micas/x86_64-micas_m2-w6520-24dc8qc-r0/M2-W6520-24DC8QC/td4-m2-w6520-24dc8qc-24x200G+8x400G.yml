@@ -10,7 +10,7 @@ bcm_device:
             svi_my_station_optimization: 1
             uft_mode: 1
             l3_enable: 1
-            l2_hitbit_enable: 0
+            l2_hitbit_enable: 1
             pktio_mode: 1
             sai_optimized_mmu: 1
             sai_pfc_defaults_disable: 1
