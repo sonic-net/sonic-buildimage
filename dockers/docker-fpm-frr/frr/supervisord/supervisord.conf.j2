@@ -206,7 +206,7 @@ dependent_startup_wait_for=bgpd:running
 
 {% endif %}
 
-{% if FEATURE is defined and FEATURE.software_bfd is defined and FEATURE.software_bfd.state is defined and FEATURE.software_bfd.state == "enabled" %}
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.software_bfd is defined and SYSTEM_DEFAULTS.software_bfd.status is defined and SYSTEM_DEFAULTS.software_bfd.status == "enabled" %}
 [program:bfdmon]
 command=/usr/local/bin/bfdmon
 priority=6
