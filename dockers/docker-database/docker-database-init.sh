@@ -139,7 +139,6 @@ chown -R redis:redis $REDIS_BMP_DIR
 
 # switch redis/valkey by CONFIG_DB
 VALKEY_FLAG="/var/run/redis/sonic-db/db-valkey"
-if [ -e "$FILE" ];
 rm /etc/redis/redis.conf
 rm /usr/bin/redis-server
 rm /usr/bin/redis-cli
