@@ -1,6 +1,7 @@
 bcrypt==3.2.2
 bitarray==1.5.3
 click==7.0
+psutil==5.9.5
 requests==2.31.0
 urllib3==2.0.5
 zipp==1.2.0
