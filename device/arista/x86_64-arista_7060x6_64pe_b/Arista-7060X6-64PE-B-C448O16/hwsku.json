@@ -192,11 +192,5 @@
         "Ethernet504": {
             "default_brkout_mode": "8x100G"
         },
-        "Ethernet512": {
-            "default_brkout_mode": "1x10G"
-        },
-        "Ethernet513": {
-            "default_brkout_mode": "1x10G"
-        }
     }
 }
