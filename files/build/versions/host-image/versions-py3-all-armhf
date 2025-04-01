@@ -1,5 +1,5 @@
 colorful==0.5.6
-cryptography==3.3.1
+cryptography==3.3.2
 docker-image-py==0.1.13
 enlighten==1.12.4
 filelock==3.15.4
