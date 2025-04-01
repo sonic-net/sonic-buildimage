@@ -1,0 +1,61 @@
+From 8384d41144496019725c1e250abd0ceea854341f Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Tue, 25 Mar 2025 13:54:24 +0200
+Subject: [PATCH] lib: Return duplicate prefix-list entry test If we do e.g.:
+
+ip prefix-list PL_LoopbackV4 permit 10.1.0.32/32
+ip prefix-list PL_LoopbackV4 permit 10.1.0.32/32
+ip prefix-list PL_LoopbackV4 permit 10.1.0.32/32
+
+We end up, having duplicate records with a different sequence number only.
+Also ported the same changes for ipv6 also.
+---
+ lib/filter_cli.c | 25 ++++++++++++++++---------
+ 1 file changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/lib/filter_cli.c b/lib/filter_cli.c
+index c40c2a75f..2012fa987 100644
+--- a/lib/filter_cli.c
++++ b/lib/filter_cli.c
+@@ -1206,10 +1206,14 @@ DEFPY_YANG(
+ 	snprintf(xpath, sizeof(xpath),
+ 		 "/frr-filter:lib/prefix-list[type='ipv4'][name='%s']", name);
+ 	if (seq_str == NULL) {
+-		/* Use XPath to find the next sequence number. */
+-		sseq = acl_get_seq(vty, xpath, false);
+-		if (sseq < 0)
+-			return CMD_WARNING_CONFIG_FAILED;
++		if (plist_is_dup(vty->candidate_config->dnode, &pda))
++			sseq = pda.pda_seq;
++		else {
++			/* Use XPath to find the next sequence number. */
++			sseq = acl_get_seq(vty, xpath, false);
++			if (sseq < 0)
++				return CMD_WARNING_CONFIG_FAILED;
++		}
+ 
+ 		snprintfrr(xpath_entry, sizeof(xpath_entry),
+ 			   "%s/entry[sequence='%" PRId64 "']", xpath, sseq);
+@@ -1396,11 +1400,14 @@ DEFPY_YANG(
+ 	snprintf(xpath, sizeof(xpath),
+ 		 "/frr-filter:lib/prefix-list[type='ipv6'][name='%s']", name);
+ 	if (seq_str == NULL) {
+-		/* Use XPath to find the next sequence number. */
+-		sseq = acl_get_seq(vty, xpath, false);
+-		if (sseq < 0)
+-			return CMD_WARNING_CONFIG_FAILED;
+-
++		if (plist_is_dup(vty->candidate_config->dnode, &pda))
++			sseq = pda.pda_seq;
++		else {
++			/* Use XPath to find the next sequence number. */
++			sseq = acl_get_seq(vty, xpath, false);
++			if (sseq < 0)
++				return CMD_WARNING_CONFIG_FAILED;
++		}
+ 		snprintfrr(xpath_entry, sizeof(xpath_entry),
+ 			   "%s/entry[sequence='%" PRId64 "']", xpath, sseq);
+ 	} else
+-- 
+2.39.4
+
