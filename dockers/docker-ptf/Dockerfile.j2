@@ -12,8 +12,6 @@ FROM {{ prefix }}debian:buster
 USER root
 WORKDIR /root
 
-LABEL maintainer="Pavel Shirshov"
-
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 
