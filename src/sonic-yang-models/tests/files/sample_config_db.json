@@ -344,7 +344,7 @@
             },
             "SRC-MAC-REWRITE-TABLE|RULE0": {
                 "PRIORITY": "999960",
-                "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",                     
+                "INNER_SRC_MAC_REWRITE_ACTION": "60:45:bd:08:19:68",                     
                 "INNER_SRC_IP": "1.1.1.1/32",
                 "VNI": "45"
             }
