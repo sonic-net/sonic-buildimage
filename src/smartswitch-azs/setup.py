@@ -5,7 +5,7 @@ with open('README.rst') as readme_file:
     readme = readme_file.read()
 
 setup(
-    author="Anf Rotterdam",
+    author="AzS Platform Team",
     author_email='anishsdirects@microsoft.com',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     classifiers=[
@@ -54,10 +54,4 @@ setup(
     packages=find_packages(),
     version='1.0',
     zip_safe=False,
-    entry_points = {
-        'console_scripts' : [
-            'smartswitch-azs=smartswitch_azs.smartswitch_azs:main',
-            'bgp_session_tracker=bgp_session_tracker.bgp_session_tracker:main'
-        ]
-    }
 )

@@ -23,7 +23,7 @@ class BgpSessionTracker():
         self.should_monitor_run = False
         self.interfaces_down = False
         self.bgp_sessions_up = True
-        self.downstream_portchannels = ['Po1031', 'Po1032']
+        self.downstream_portchannels = ['PortChannel1031', 'PortChannel1032']
         self.appl_db = daemon_base.db_connect(APPL_DB_NAME)
         self.sel = swsscommon.Select()
         self.tbl = swsscommon.SubscriberStateTable(self.appl_db, ROUTE_TABLE_NAME)
@@ -167,11 +167,9 @@ class BgpSessionTracker():
             config_db.connect()
             device_metadata = config_db.get_table('DEVICE_METADATA')
             if 'localhost' not in device_metadata or 'resource_type' not in device_metadata['localhost'] or device_metadata['localhost']['resource_type'] != '<placeholder>':
-                logger_helper.log_notice("Device is not an AzS ToRRouter. BGP session tracker not supported")
                 return False
             feature = config_db.get_table('FEATURE')
             if 'AzSBgpSessionTracker' not in feature or feature['AzSBgpSessionTracker']['state'] != 'enabled':
-                logger_helper.log_notice("Feature: AzSBgpSessionTracker not enabled")
                 return False
         except Exception as e:
             logger_helper.log_warning("Exception when checking if AzSBgpSessionTracker feature can run: {}".format(e))
@@ -194,9 +192,9 @@ class BgpSessionTracker():
         SELECT_TIMEOUT_MSECS = 1000
 
         if (self.can_run_bgp_session_tracker()):
-            logger_helper("Starting active monitoring for default route.")
+            logger_helper.log_notice("Starting active monitoring for default route.")
             self.perform_initial_setup()
-            logger_helper("Initial setup and checks completed.")
+            logger_helper.log_notice("Initial setup and checks completed.")
             while True:
                 self.should_monitor_run = self.can_run_bgp_session_tracker()
                 if not self.should_monitor_run:
