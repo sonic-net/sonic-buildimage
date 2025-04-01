@@ -3,8 +3,6 @@ use std::net::TcpListener;
 use std::process::Command;
 use chrono::{TimeZone};
 
-static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
-
 // Helper to run commands
 fn run_command(cmd: &str) -> Result<String, String> {
     let output = Command::new("sh")
@@ -52,9 +50,7 @@ fn main() {
 
                 // Build a JSON object
                 let json_body = format!(
-                    r#"{{
-  "gnmi_status":"{}"
-}}"#,
+                    r#"{{"gnmi_status":"{}"}}"#,
                     gnmi_result
                 );
 

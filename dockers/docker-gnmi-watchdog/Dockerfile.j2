@@ -28,6 +28,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
+# Remove build-essential after building
+RUN apt-get remove -y build-essential && apt-get autoremove -y
 
 # Copy supervisord.conf into final stage
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
