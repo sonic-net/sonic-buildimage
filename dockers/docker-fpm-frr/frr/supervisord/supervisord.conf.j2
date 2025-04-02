@@ -82,6 +82,18 @@ dependent_startup=true
 dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:vrrpd]
+command=/usr/lib/frr/vrrpd -A 127.0.0.1
+priority=4
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+
 [program:bfdd]
 command=/usr/lib/frr/bfdd -A 127.0.0.1 -P 0
 priority=4
@@ -143,6 +155,17 @@ stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
+
+[program:vrrpmgrd]
+command=vrrpmgrd
+priority=6
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=vrrpd:running
 {% endif %}
 
 [program:fpmsyncd]

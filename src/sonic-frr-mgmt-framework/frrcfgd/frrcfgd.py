@@ -13,6 +13,7 @@ import signal
 import re
 import logging
 import netaddr
+import ipaddress
 import io
 import struct
 
@@ -75,7 +76,7 @@ def extract_cmd_daemons(cmd_str):
 class BgpdClientMgr(threading.Thread):
     VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
-    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'mgmtd']
+    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'vrrpd', 'mgmtd']
     TABLE_DAEMON = {
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
@@ -118,9 +119,12 @@ class BgpdClientMgr(threading.Thread):
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
-            'SRV6_MY_LOCATORS': ['zebra'],
+            'VRRP': ['vrrpd'],
+            'VRRP6': ['vrrpd'],
+            'VRRP_TRACK': ['vrrpd'],
+            'VRRP6_TRACK': ['vrrpd'],
+            'SRV6_LOCATOR': ['zebra'],
             'SRV6_MY_SIDS': ['mgmtd']
-
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
                         (r'show ip mroute($|\s+\S+)', ['pimd']),
@@ -135,6 +139,7 @@ class BgpdClientMgr(threading.Thread):
                         (r'show ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip sla($|\s+\S+)', ['iptrackd']),
                         (r'clear ip igmp($|\s+\S+)', ['pimd']),
+                        (r'show vrrp($|\s+\S+)', ['vrrpd']),
                         (r'.*', ['bgpd'])]
     @staticmethod
     def __create_proxy_socket():
@@ -2294,6 +2299,10 @@ class BGPConfigDaemon:
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
+            ('VRRP', self.vrrp_handler),
+            ('VRRP6', self.vrrp6_handler),
+            ('VRRP_TRACK', self.vrrp_track_handler),
+            ('VRRP6_TRACK', self.vrrp6_track_handler),
             ('NEIGHBOR_SET', self.bgp_table_handler_common),
             ('NEXTHOP_SET', self.bgp_table_handler_common),
             ('TAG_SET', self.bgp_table_handler_common),
@@ -2393,6 +2402,237 @@ class BGPConfigDaemon:
                 elif param == 'admin_status' and data[param] == 'down':
                     command = command + " -c 'shutdown'"
             self.__run_command(table, command)
+
+    def vrrp_handler(self, table, key, data):
+        syslog.syslog(syslog.LOG_INFO, '[vrrp cfgd](vrrp) value for {} changed to {}'.format(key, data))
+        #get frr vrrp session key
+        key_params = key.split('|')
+        intf_cmd = 'interface {}'.format(key_params[0])
+        cmd = 'vrrp {}'.format(key_params[1])
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        comb_attr_list = ['vip']
+        if not data:
+            #VRRP instance is deleted
+            command = "vtysh -c 'configure terminal' -c '{}' -c 'no {}'".format(intf_cmd, cmd)
+            self.__run_command(table, command)
+            #del cache data
+            del(self.table_data_cache[table_key])
+        else:
+            #create/update case
+            command = "vtysh -c 'configure terminal' -c '{}'".format(intf_cmd)
+            self.__add_op_to_data(table_key, data, comb_attr_list)
+            cached_data = self.table_data_cache.setdefault(table_key, {})
+            for param in data:
+                if param == 'vid':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    elif 'vip' not in data:
+                        command = command + " -c '{}'".format(cmd)
+                elif param == 'vip':
+                    if 'vip' in cached_data:
+                        cache_address = cached_data[param]
+                        data_address = data[param].data
+                        # add vip
+                        for d_address in data_address:
+                            if d_address in cache_address:
+                                continue
+                            elif d_address != "":
+                                d_addr = d_address.split('/')
+                                try:
+                                    ip_address = ipaddress.ip_interface(d_addr[0])
+                                except ValueError as err:
+                                    syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IP address is not valid:{}'.format(err))
+                                if ip_address.version == 4:
+                                    command = command + " -c '{} ip {}'".format(cmd, d_addr[0])
+                        # del vip
+                        for c_address in cache_address:
+                            if c_address in data_address:
+                                continue
+                            elif c_address != "":
+                                c_addr = c_address.split('/')
+                                try:
+                                    ip_address = ipaddress.ip_interface(c_addr[0])
+                                except ValueError as err:
+                                    syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IP address is not valid:{}'.format(err))
+                                if ip_address.version == 4:
+                                    command = command + " -c 'no {} ip {}'".format(cmd, c_addr[0])
+                    else:
+                        # first time to config
+                        data_address = data[param].data
+                        for d_address in data_address:
+                            d_addr = d_address.split('/')
+                            try:
+                                ip_address = ipaddress.ip_interface(d_addr[0])
+                            except ValueError as err:
+                                syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IP address is not valid:{}'.format(err))
+                            if ip_address.version == 4:
+                                command = command + " -c '{} ip {}'".format(cmd, d_addr[0])
+                elif param == 'priority':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} priority {}'".format(cmd, data[param].data)
+                elif param == 'adv_interval':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} advertisement-interval {}'".format(cmd, int(data[param].data) * 1000)
+                elif param == 'version':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} version {}'".format(cmd, data[param].data)
+                elif param == 'admin_status':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        if data[param].data == 'down':
+                            command = command + " -c '{} shutdown'".format(cmd)
+                        elif data[param].data == 'up' or data[param].data == '':
+                            command = command + " -c 'no {} shutdown'".format(cmd)
+                elif param == 'preempt':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        if data[param].data == 'enabled':
+                            command = command + " -c '{} preempt'".format(cmd)
+                        elif data[param].data == 'disabled':
+                            command = command + " -c 'no {} preempt'".format(cmd)
+                data[param].status = CachedDataWithOp.STAT_SUCC
+            self.__update_cache_data(table_key, data)
+            self.__run_command(table, command)
+
+    def vrrp6_handler(self, table, key, data):
+        syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrrp6) value for {} changed to {}'.format(key, data))
+        #get frr vrrp6 session key
+        key_params = key.split('|')
+        intf_cmd = 'interface {}'.format(key_params[0])
+        cmd = 'vrrp6 {}'.format(key_params[1])
+        table_key = ExtConfigDBConnector.get_table_key(table, key)
+        comb_attr_list = ['vip']
+        if not data:
+            #VRRP instance is deleted
+            command = "vtysh -c 'configure terminal' -c '{}' -c 'no {}'".format(intf_cmd, cmd)
+            self.__run_command(table, command)
+            #del cache data
+            del(self.table_data_cache[table_key])
+        else:
+            #create/update case
+            command = "vtysh -c 'configure terminal' -c '{}'".format(intf_cmd)
+            self.__add_op_to_data(table_key, data, comb_attr_list)
+            cached_data = self.table_data_cache.setdefault(table_key, {})
+            for param in data:
+                if param == 'vid':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    elif 'vip' not in data:
+                        command = command + " -c '{}'".format(cmd)
+                elif param == 'vip':
+                    if 'vip' in cached_data:
+                        cache_address = cached_data[param]
+                        data_address = data[param].data
+                        for d_address in data_address:
+                            if d_address in cache_address:
+                                continue
+                            elif d_address != "":
+                                d_addr = d_address.split('/')
+                                try:
+                                    ip_address = ipaddress.ip_interface(d_addr[0])
+                                except ValueError as err:
+                                    syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IPv6 address is not valid:{}'.format(err))
+                                if ip_address.version == 6:
+                                    command = command + " -c '{} ipv6 {}'".format(cmd, d_addr[0])
+
+                        for c_address in cache_address:
+                            if c_address in data_address:
+                                continue
+                            elif c_address != "":
+                                c_addr = c_address.split('/')
+                                try:
+                                    ip_address = ipaddress.ip_interface(c_addr[0])
+                                except ValueError as err:
+                                    syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IPv6 address is not valid:{}'.format(err))
+                                if ip_address.version == 6:
+                                    command = command + " -c 'no {} ipv6 {}'".format(cmd, c_addr[0])
+                    else:
+                        # first time to config 
+                        data_address = data[param].data
+                        for d_address in data_address:
+                            d_addr = d_address.split('/')
+                            try:
+                                ip_address = ipaddress.ip_interface(d_addr[0])
+                            except ValueError as err:
+                                syslog.syslog(syslog.LOG_ERR, '[bgp vrrpd] IPv6 address is not valid:{}'.format(err))
+                            if ip_address.version == 6:
+                                command = command + " -c '{} ipv6 {}'".format(cmd, d_addr[0])
+                elif param == 'priority':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} priority {}'".format(cmd, data[param].data)
+                elif param == 'adv_interval':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} advertisement-interval {}'".format(cmd, int(data[param].data) * 1000)
+                elif param == 'version':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        command = command + " -c '{} version {}'".format(cmd, data[param].data)
+                elif param == 'admin_status':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        if data[param].data == 'down':
+                            command = command + " -c '{} shutdown'".format(cmd)
+                        elif data[param].data == 'up' or data[param].data == '':
+                            command = command + " -c 'no {} shutdown'".format(cmd)
+                elif param == 'preempt':
+                    if param in cached_data and data[param].data == cached_data[param]:
+                        continue
+                    else:
+                        if data[param].data == 'enabled':
+                            command = command + " -c '{} preempt'".format(cmd)
+                        elif data[param].data == 'disabled':
+                            command = command + " -c 'no {} preempt'".format(cmd)
+                data[param].status = CachedDataWithOp.STAT_SUCC
+            self.__update_cache_data(table_key, data)
+            self.__run_command(table, command)
+
+    def vrrp_track_handler(self, table, key, data):
+        syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrrp track) value for {} changed to {}'.format(key, data))
+        #get frr vrrp track key
+        key_params = key.split('|')
+        intf_cmd = 'interface {}'.format(key_params[0])
+        cmd = 'vrrp {} track-interface {}'.format(key_params[1], key_params[2])
+
+        if not data:
+            #VRRP track instance is deleted
+            command = "vtysh -c 'configure terminal' -c '{}' -c 'no {}'".format(intf_cmd, cmd)
+            self.__run_command(table, command)
+        else:
+            #create/update case
+            if 'priority_increment' in data:
+                command = "vtysh -c 'configure terminal' -c '{}' -c '{} priority-dec {}'".format(intf_cmd, cmd, data['priority_increment'])
+                self.__run_command(table, command)
+
+    def vrrp6_track_handler(self, table, key, data):
+        syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrrp6 track) value for {} changed to {}'.format(key, data))
+        #get frr vrrp6 track key
+        key_params = key.split('|')
+        intf_cmd = 'interface {}'.format(key_params[0])
+        cmd = 'vrrp6 {} track-interface {}'.format(key_params[1], key_params[2])
+
+        if not data:
+            #VRRP track instance is deleted
+            command = "vtysh -c 'configure terminal' -c '{}' -c 'no {}'".format(intf_cmd, cmd)
+            self.__run_command(table, command)
+        else:
+            #create/update case
+            if 'priority_increment' in data:
+                command = "vtysh -c 'configure terminal' -c '{}' -c '{} priority-dec {}'".format(intf_cmd, cmd, data['priority_increment'])
+                self.__run_command(table, command)
 
     def vrf_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrf) value for {} changed to {}'.format(key, data))
