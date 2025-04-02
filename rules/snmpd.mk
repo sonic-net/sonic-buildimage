@@ -27,7 +27,7 @@ $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPTRAPD)))
 SNMPTRAPD_DBG = snmptrapd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(SNMPTRAPD_DBG)_DEPENDS += $(SNMPTRAPD)
 $(SNMPTRAPD_DBG)_RDEPENDS += $(SNMPTRAPD)
-$(eval $(call add_derived_package,$(SNMPTRAPD),$(SNMPTRAPD_DBG)))
+$(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPTRAPD_DBG)))
 
 SNMP = snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(SNMP)_DEPENDS += $(LIBSNMP)
@@ -78,7 +78,7 @@ $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP_PERL)))
 LIBSNMP_PERL_DBG = libsnmp-perl-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(LIBSNMP_PERL_DBG)_DEPENDS += $(LIBSNMP_PERL)
 $(LIBSNMP_PERL_DBG)_RDEPENDS += $(LIBSNMP_PERL)
-$(eval $(call add_derived_package,$(LIBSNMP_PERL),$(LIBSNMP_PERL_DBG)))
+$(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP_PERL_DBG)))
 
 TKMIB = tkmib_$(SNMPD_VERSION_FULL)_all.deb
 $(TKMIB)_DEPENDS += $(LIBSNMP_PERL)
