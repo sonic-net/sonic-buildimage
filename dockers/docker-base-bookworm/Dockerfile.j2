@@ -74,12 +74,6 @@ RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
 
-RUN apt-get -y purge   \
-    exim4              \
-    exim4-base         \
-    exim4-config       \
-    exim4-daemon-light
-
 {% if docker_base_bookworm_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_base_bookworm_debs.split(' '), "/debs/") }}
