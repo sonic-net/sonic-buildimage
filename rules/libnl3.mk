@@ -13,8 +13,6 @@ $(LIBNL3)_SRC_PATH = $(SRC_PATH)/libnl3
 SONIC_MAKE_DEBS += $(LIBNL3)
 
 LIBNL3_DBG = libnl-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
-$(LIBNL3_DBG)_DEPENDS += $(LIBNL3)
-$(LIBNL3_DBG)_RDEPENDS += $(LIBNL3)
 $(eval $(call add_derived_package,$(LIBNL3),$(LIBNL3_DBG)))
 
 LIBNL3_DEV = libnl-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
@@ -28,7 +26,7 @@ $(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_GENL3)))
 LIBNL_GENL3_DBG = libnl-genl-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_GENL3_DBG)_DEPENDS += $(LIBNL_GENL3)
 $(LIBNL_GENL3_DBG)_RDEPENDS += $(LIBNL_GENL3)
-$(eval $(call add_derived_package,$(LIBNL_GENL3),$(LIBNL_GENL3_DBG)))
+$(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_GENL3_DBG)))
 
 LIBNL_GENL3_DEV = libnl-genl-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_GENL3_DEV)_DEPENDS += $(LIBNL_GENL3) $(LIBNL3_DEV)
@@ -41,7 +39,7 @@ $(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_ROUTE3)))
 LIBNL_ROUTE3_DBG = libnl-route-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_ROUTE3_DBG)_DEPENDS += $(LIBNL_ROUTE3)
 $(LIBNL_ROUTE3_DBG)_RDEPENDS += $(LIBNL_ROUTE3)
-$(eval $(call add_derived_package,$(LIBNL_ROUTE3),$(LIBNL_ROUTE3_DBG)))
+$(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_ROUTE3_DBG)))
 
 LIBNL_ROUTE3_DEV = libnl-route-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_ROUTE3_DEV)_DEPENDS += $(LIBNL_ROUTE3) $(LIBNL3_DEV)
@@ -69,7 +67,7 @@ $(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_CLI)))
 LIBNL_CLI_DBG = libnl-cli-3-200-dbgsym_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_CLI_DBG)_DEPENDS += $(LIBNL_CLI)
 $(LIBNL_CLI_DBG)_RDEPENDS += $(LIBNL_CLI)
-$(eval $(call add_derived_package,$(LIBNL_CLI),$(LIBNL_CLI_DBG)))
+$(eval $(call add_derived_package,$(LIBNL3),$(LIBNL_CLI_DBG)))
 
 LIBNL_CLI_DEV = libnl-cli-3-dev_$(LIBNL3_VERSION_SONIC)_$(CONFIGURED_ARCH).deb
 $(LIBNL_CLI_DEV)_DEPENDS += $(LIBNL_CLI) $(LIBNL_GENL3_DEV) $(LIBNL_NF3_DEV) $(LIBNL_ROUTE3_DEV)
