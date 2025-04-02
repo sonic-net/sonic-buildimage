@@ -614,7 +614,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:
