@@ -69,4 +69,7 @@ else
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 fi
 
+# Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
+trap '' SIGHUP
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
