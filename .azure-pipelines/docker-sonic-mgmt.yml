@@ -73,6 +73,7 @@ stages:
     steps:
     - checkout: sonic-mgmt
       clean: true
+      fetchDepth: 0
       displayName: 'Checkout sonic-mgmt'
 
     - download: current
