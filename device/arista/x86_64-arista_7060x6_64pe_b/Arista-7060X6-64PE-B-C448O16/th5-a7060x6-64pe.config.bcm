@@ -2835,14 +2835,6 @@ device:
             :
                 PC_PHYS_PORT_ID: 504
             ?
-                PORT_ID: 118 # MGMT PORT
-            :
-                PC_PHYS_PORT_ID: 513
-            ?
-                PORT_ID: 424 # MGMT PORT
-            :
-                PC_PHYS_PORT_ID: 515
-            ?
                 PORT_ID: 0 # CPU PORT
             :
                 PC_PHYS_PORT_ID: 0
@@ -3362,13 +3354,6 @@ device:
                 NUM_LANES: 1
                 FEC_MODE: PC_FEC_RS544
                 MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: [[118, 118], [424, 424]]
-            :
-                ENABLE: 0
-                MAX_FRAME_SIZE: 9416
-                SPEED: 10000
-                NUM_LANES: 1
 ...
 ---
 bcm_device:
