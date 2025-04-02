@@ -27,7 +27,8 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1",
-                        "nat_zone": "4"
+                        "nat_zone": "4",
+                        "admin_status": "up"
                     }
                 ]
             }
@@ -47,7 +48,8 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1",
-                        "nat_zone": "2"
+                        "nat_zone": "2",
+                        "admin_status": "up"
                     }
                 ]
             }
@@ -67,7 +69,8 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1lo1lo1lo1lo1lo1",
-                        "nat_zone": "2"
+                        "nat_zone": "2",
+                        "admin_status": "up"
                     }
                 ]
             }

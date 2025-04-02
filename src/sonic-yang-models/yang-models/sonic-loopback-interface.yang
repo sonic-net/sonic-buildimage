@@ -55,6 +55,10 @@ module sonic-loopback-interface {
                     }
                     default "0";
                 }
+
+                leaf admin_status {
+                    type stypes:admin_status;
+                }
             }
             /* end of LOOPBACK_INTERFACE_LIST */
 
