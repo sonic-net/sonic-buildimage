@@ -168,17 +168,12 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     crmconfig.update(dash_crm_thresholds)
 
     if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
-        data['FEATURE'] = {
+        if "SYSTEM_DEFAULTS" not in data:
+            data["SYSTEM_DEFAULTS"] = {}
+
+        data['SYSTEM_DEFAULTS'] = {
             "polaris": {
-                "auto_restart": "enabled",
-                "check_up_status": "False",
-                "delayed": "False",
-                "has_global_scope": "True",
-                "has_per_asic_scope": "False",
-                "high_mem_alert": "disabled",
-                "set_owner": "local",
-                "state": "enabled",
-                "support_syslog_rate_limit": "False"
+                "status": "enabled"
             }
         }
 

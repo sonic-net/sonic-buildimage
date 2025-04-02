@@ -38,24 +38,28 @@ def fetch_dpu_files():
     api_helper_platform = apiHelper.get_platform()
     platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
     docker_id = apiHelper.get_dpu_docker_imageID()
-    cmd = "sudo docker cp {}:/nic/bin/cpldapp /usr/local/bin".format(docker_id)
-    run_cmd(cmd)
-    cmd = "sudo docker cp {}:/nic/lib/libpal.so /lib/libpal.so".format(docker_id)
-    run_cmd(cmd)
-    cmd = "sudo docker cp {}:/nic/lib/liblogger.so /lib/liblogger.so".format(docker_id)
-    run_cmd(cmd)
     cmd = "sudo docker cp {}:/tmp/fru.json /usr/share/sonic/device/{}/fru.json".format(docker_id, platform)
-    run_cmd(cmd)
-    cmd = "sudo cp /usr/local/bin/cpldapp /usr/share/sonic/device/{}/cpldapp".format(platform)
-    run_cmd(cmd)
-    cmd = "sudo cp /lib/libpal.so /usr/share/sonic/device/{}/libpal.so".format(platform)
-    run_cmd(cmd)
-    cmd = "sudo cp /lib/liblogger.so /usr/share/sonic/device/{}/liblogger.so".format(platform)
     run_cmd(cmd)
     cmd = "sudo docker cp {}:/nic/etc/VERSION.json /usr/share/sonic/device/{}/VERSION.json".format(docker_id, platform)
     run_cmd(cmd)
     cmd = "sudo docker cp {}:/usr/bin/mmc /usr/local/bin".format(docker_id)
     run_cmd(cmd)
+    try:
+        slot_id = apiHelper.run_docker_cmd("cpldapp -r 0xA").strip()
+        file = "/usr/share/sonic/device/{}/dpu_slot_id".format(apiHelper.get_platform())
+        with open(file, "w") as f:
+            f.write(slot_id)
+    except Exception as e:
+        log_err("failed to setup slot_id at platform dir due to {}".format(e))
+
+    try:
+        board_id = apiHelper.run_docker_cmd("cpldapp -r 0x80").strip()
+        file = "/usr/share/sonic/device/{}/dpu_board_id".format(apiHelper.get_platform())
+        with open(file, "w") as f:
+            f.write(board_id)
+    except Exception as e:
+        log_err("failed to setup board_id at platform dir due to {}".format(e))
+
 
 def setup_platform_components_json(slot_id):
     try:
@@ -145,7 +149,7 @@ def configure_iptable_rules():
         pass
 
 def pcie_tx_setup():
-    dpu_slot_id = int(run_cmd("cpldapp -r 0xA").strip(), 16)
+    dpu_slot_id = int(apiHelper.run_docker_cmd("cpldapp -r 0xA").strip(), 16)
     if dpu_slot_id == 6 or dpu_slot_id == 7:
         run_cmd("docker exec polaris /nic/tools/run-aacs-server.sh -p 9001 export SERDES_DUT_IP=localhost:9001")
         run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl serdes -addr 1:39 -pre 0 -post 0 -atten 10")
