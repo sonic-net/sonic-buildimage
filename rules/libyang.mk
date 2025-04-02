@@ -28,16 +28,16 @@ $(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_CPP)))
 LIBYANG_CPP_DBG = libyang-cpp-dbgsym_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBYANG_CPP_DBG)_DEPENDS += $(LIBYANG_CPP)
 $(LIBYANG_CPP_DBG)_RDEPENDS += $(LIBYANG_CPP)
-$(eval $(call add_derived_package,$(LIBYANG_CPP),$(LIBYANG_CPP_DBG)))
+$(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_CPP_DBG)))
 
 LIBYANG_PY3 = python3-yang_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBYANG_PY3)_DEPENDS += $(LIBYANG) $(LIBYANG_CPP)
 $(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_PY3)))
 
 LIBYANG_PY3_DBG = python3-yang-dbgsym_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
-$(LIBYANG_PY3_DBG)_DEPENDS += $(PYTHON3_YANGCLI)
-$(LIBYANG_PY3_DBG)_RDEPENDS += $(PYTHON3_YANGCLI)
-$(eval $(call add_derived_package,$(PYTHON3_YANGCLI),$(LIBYANG_PY3_DBG)))
+$(LIBYANG_PY3_DBG)_DEPENDS += $(LIBYANG_PY3)
+$(LIBYANG_PY3_DBG)_RDEPENDS += $(LIBYANG_PY3)
+$(eval $(call add_derived_package,$(LIBYANG),$(LIBYANG_PY3_DBG)))
 
 #$(eval $(call add_conflict_package,$(LIBYANG),$(LIBYANG3)))
 $(eval $(call add_conflict_package,$(LIBYANG_DEV),$(LIBYANG3_DEV)))

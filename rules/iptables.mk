@@ -9,8 +9,6 @@ $(IPTABLES)_SRC_PATH = $(SRC_PATH)/iptables
 SONIC_MAKE_DEBS += $(IPTABLES)
 
 IPTABLES_DBG = iptables-dbgsym_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-$(IPTABLES_DBG)_DEPENDS += $(IPTABLES)
-$(IPTABLES_DBG)_RDEPENDS += $(IPTABLES)
 $(eval $(call add_derived_package,$(IPTABLES),$(IPTABLES_DBG)))
 
 IPTABLESIP4TC = libip4tc2_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
@@ -19,7 +17,7 @@ $(eval $(call add_derived_package,$(IPTABLES),$(IPTABLESIP4TC)))
 LIBIP4TC_DBG = libip4tc2-dbgsym_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(LIBIP4TC_DBG)_DEPENDS += $(IPTABLESIP4TC)
 $(LIBIP4TC_DBG)_RDEPENDS += $(IPTABLESIP4TC)
-$(eval $(call add_derived_package,$(IPTABLESIP4TC),$(LIBIP4TC_DBG)))
+$(eval $(call add_derived_package,$(IPTABLES),$(LIBIP4TC_DBG)))
 
 IPTABLESIP6TC = libip6tc2_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(IPTABLES),$(IPTABLESIP6TC)))
@@ -27,7 +25,7 @@ $(eval $(call add_derived_package,$(IPTABLES),$(IPTABLESIP6TC)))
 LIBIP6TC_DBG = libip6tc2-dbgsym_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(LIBIP6TC_DBG)_DEPENDS += $(IPTABLESIP6TC)
 $(LIBIP6TC_DBG)_RDEPENDS += $(IPTABLESIP6TC)
-$(eval $(call add_derived_package,$(IPTABLESIP6TC),$(LIBIP6TC_DBG)))
+$(eval $(call add_derived_package,$(IPTABLES),$(LIBIP6TC_DBG)))
 
 IPTABLESIPTC = libiptc0_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(IPTABLES),$(IPTABLESIPTC)))
@@ -38,7 +36,7 @@ $(eval $(call add_derived_package,$(IPTABLES),$(IPXTABLES12)))
 LIBXTABLES_DBG = libxtables12-dbgsym_$(IPTABLES_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(LIBXTABLES_DBG)_DEPENDS += $(IPXTABLES12)
 $(LIBXTABLES_DBG)_RDEPENDS += $(IPXTABLES12)
-$(eval $(call add_derived_package,$(IPXTABLES12),$(LIBXTABLES_DBG)))
+$(eval $(call add_derived_package,$(IPTABLES),$(LIBXTABLES_DBG)))
 
 # Export these variables so they can be used in a sub-make
 export IPTABLES_VERSION
