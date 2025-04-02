@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -343,12 +343,13 @@ class TestModule:
                 return 1
             else:
                 return 0
-        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'None']
+        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
         reboot_cause_list = [
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
         ]
         with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):

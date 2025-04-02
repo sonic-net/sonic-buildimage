@@ -1106,14 +1106,6 @@ sudo install -m 755 platform/mellanox/rshim/files/rshim.sh $FILESYSTEM_ROOT/usr/
 
 # Install rshim services
 sudo cp platform/mellanox/rshim/files/rshim@.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-sudo cp platform/mellanox/rshim/files/rshim-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-
-# Install dpuctl script and config file
-sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpuctl.sh $FILESYSTEM_ROOT/usr/bin/dpuctl.sh
-sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpu.conf $FILESYSTEM_ROOT_ETC/mlnx/
-
-# Install dpuctl services
-sudo cp platform/mellanox/smartswitch/dpuctl/dpuctl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
 # Install dpumap script
 sudo install -m 755 platform/mellanox/smartswitch/dpumap.sh $FILESYSTEM_ROOT/usr/bin/dpumap.sh
