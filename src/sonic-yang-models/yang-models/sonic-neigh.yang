@@ -11,6 +11,9 @@ module sonic-neigh {
 		prefix yang;
 	}
 
+	import sonic-portchannel {
+		prefix lag;
+	}
 	// TODO: Uncomment the following lines when sonic-vlan.yang is available
 	// import sonic-vlan {
 	// 	prefix svlan;
@@ -29,18 +32,22 @@ module sonic-neigh {
 		container NEIGH {
 			description "NEIGH configuration";
 			list NEIGH_LIST {
-				key "vlan neighbor";
+				key "port neighbor";
 
-				leaf vlan {
-					// TODO: Remove the following lines when sonic-vlan.yang is available
-					description "Neighbor Vlan interface ex. Vlan1000";
-					type string {
-						pattern "Vlan[0-9]+";
+				leaf port {
+					description "Neighbor interface ex. Vlan1000, PortChannel1024";
+					type union {
+						type leafref {
+							path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+						}
+						type string {
+							pattern "Vlan[0-9]+";
+						}
+						// TODO: Uncomment the following lines when sonic-vlan.yang is available
+						// type leafref {
+						// 	path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+						// }
 					}
-					// TODO: Uncomment the following lines when sonic-vlan.yang is available
-					// type leafref {
-					// 	path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
-					// }
 				}
 
 				leaf neighbor {
