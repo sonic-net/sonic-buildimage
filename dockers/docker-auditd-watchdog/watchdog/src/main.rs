@@ -23,68 +23,6 @@ fn run_command(cmd: &str) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-// Check CPU usage for auditd
-fn check_cpu_usage() -> String {
-    let cmd = format!(
-        r#"{NSENTER_CMD} top -b -n5 -d2 -p $(pidof auditd) | grep auditd | awk '{{print $9}}'"#
-    );
-
-    match run_command(&cmd) {
-        Ok(s) => {
-            let samples: Vec<f32> = s
-                .trim()
-                .lines()
-                .filter_map(|line| line.trim().parse::<f32>().ok())
-                .collect();
-
-            if samples.is_empty() {
-                return format!("FAIL (no valid CPU usage samples found: {})", s.trim());
-            }
-
-            let avg = samples.iter().sum::<f32>() / samples.len() as f32;
-            let threshold = 30.0;
-
-            if avg <= threshold {
-                "OK".to_string()
-            } else {
-                format!("FAIL (average CPU usage {:.2}% > {:.1}%)", avg, threshold)
-            }
-        }
-        Err(e) => format!("FAIL ({})", e),
-    }
-}
-
-// Check memory usage for auditd
-fn check_mem_usage() -> String {
-    let cmd = format!(
-        r#"{NSENTER_CMD} top -b -n5 -d2 -p $(pidof auditd) | grep auditd | awk '{{print $10}}'"#
-    );
-
-    match run_command(&cmd) {
-        Ok(s) => {
-            let samples: Vec<f32> = s
-                .trim()
-                .lines()
-                .filter_map(|line| line.trim().parse::<f32>().ok())
-                .collect();
-
-            if samples.is_empty() {
-                return format!("FAIL (no valid MEM usage samples found: {})", s.trim());
-            }
-
-            let avg = samples.iter().sum::<f32>() / samples.len() as f32;
-            let threshold = 30.0;
-
-            if avg <= threshold {
-                "OK".to_string()
-            } else {
-                format!("FAIL (average MEM usage {:.2}% > {:.1}%)", avg, threshold)
-            }
-        }
-        Err(e) => format!("FAIL ({})", e),
-    }
-}
-
 // Check auditd.conf sha1sum
 fn check_auditd_conf() -> String {
     let cmd = format!(r#"{NSENTER_CMD} cat /etc/audit/auditd.conf | sha1sum"#);
@@ -193,8 +131,6 @@ fn main() {
                     println!("Received request: {}", req_str);
                 }
 
-                let cpu_result       = check_cpu_usage();
-                let mem_result       = check_mem_usage();
                 let conf_result      = check_auditd_conf();
                 let syslog_result    = check_syslog_conf();
                 let rules_result     = check_auditd_rules();
@@ -205,8 +141,6 @@ fn main() {
                 // Build a JSON object
                 let json_body = format!(
                     r#"{{
-  "cpu_usage":"{}",
-  "mem_usage":"{}",
   "auditd_conf":"{}",
   "syslog_conf":"{}",
   "auditd_rules":"{}",
@@ -214,8 +148,6 @@ fn main() {
   "auditd_active":"{}",
   "auditd_reload":"{}"
 }}"#,
-                    cpu_result,
-                    mem_result,
                     conf_result,
                     syslog_result,
                     rules_result,
@@ -226,8 +158,6 @@ fn main() {
 
                 // Determine overall status
                 let all_results = vec![
-                    &cpu_result,
-                    &mem_result,
                     &conf_result,
                     &syslog_result,
                     &rules_result,
