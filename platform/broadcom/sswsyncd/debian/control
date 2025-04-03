@@ -2,7 +2,7 @@ Source: sswsyncd
 Section: net
 Priority: optional
 Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
-Build-Depends: debhelper (>= 12), g++
+Build-Depends: debhelper (>= 12)
 Standards-Version: 4.5.1
 Homepage: https://github.com/sonic-net/sonic-buildimage
 
