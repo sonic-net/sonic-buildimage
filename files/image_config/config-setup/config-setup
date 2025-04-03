@@ -332,7 +332,7 @@ do_db_migration()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregatedT2 -ne 1 ]]; then
+    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
        tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
        sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
        OP_CODE=$?

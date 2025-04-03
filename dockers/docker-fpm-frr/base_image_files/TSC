@@ -17,7 +17,7 @@ if [ -f $PLATFORM_ENV_CONF_FILE ]; then
   source $PLATFORM_ENV_CONF_FILE
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggregatedT2 -ne 1 ]]; then
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] && [[ $disaggregated_chassis -ne 1 ]]; then
   if [[ $1 == "no-stats" ]]; then
     rexec all -c "sudo TSC no-stats"
   else

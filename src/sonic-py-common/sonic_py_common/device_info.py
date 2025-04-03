@@ -609,7 +609,7 @@ def is_disaggregated_chassis():
             tokens = line.split('=')
             if len(tokens) < 2:
                continue
-            if tokens[0] == 'disaggregatedT2':
+            if tokens[0] == 'disaggregated_chassis':
                 val = tokens[1].strip()
                 if val == '1':
                     return True

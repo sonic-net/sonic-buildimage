@@ -5,7 +5,7 @@ PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
 [ -f $PLATFORM_ENV_CONF ] && . $PLATFORM_ENV_CONF
 
 is_chassis_supervisor() {
-    if [ -f /etc/sonic/chassisdb.conf ] && [[ $disaggregatedT2 -ne 1 ]]; then
+    if [ -f /etc/sonic/chassisdb.conf ] && [[ $disaggregated_chassis -ne 1 ]]; then
         true
         return
     fi

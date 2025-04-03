@@ -20,7 +20,7 @@ if [ -f /etc/sonic/chassisdb.conf ]; then
     if [ -f "$PLATFORM_ENV_CONF_FILE" ]; then
         source $PLATFORM_ENV_CONF_FILE
     fi
-    if [[ $disaggregatedT2 -ne 1 ]]; then
+    if [[ $disaggregated_chassis -ne 1 ]]; then
         echo "Skipping Operation on chassis supervisor"
         exit 0
     fi
