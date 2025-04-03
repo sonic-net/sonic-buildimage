@@ -2924,5 +2924,16 @@
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
         }
-    }
+    },
+    "ZTP" : {
+        "mode" : {
+            "profile" : "active",
+            "inband" : "true",
+            "out-of-band" : "true",
+            "ipv4" : "true",
+            "ipv6" : "true",
+            "product-name" : "product name",
+            "serial-no" : "1234-5678-91A"
+        }
+   }
 }
