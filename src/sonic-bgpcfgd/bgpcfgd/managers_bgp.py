@@ -100,7 +100,7 @@ class BGPPeerMgrBase(Manager):
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
             "add":         self.fabric.from_file(base_template + "instance.conf.j2"),
-            "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
+            "delete":      self.fabric.from_file(base_template + "instance_del.conf.j2"),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
         }
@@ -293,6 +293,7 @@ class BGPPeerMgrBase(Manager):
         """
         vrf, nbr = self.split_key(key)
         peer_key = (vrf, nbr)
+        log_info("Peer '(%s|%s)' has been scheduled to be removed" % (vrf, nbr))
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))
             return
