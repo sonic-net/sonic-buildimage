@@ -225,11 +225,11 @@ RUN mkdir -p /tmp/protobuf \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
-# Install bats-core v1.11.1
+# Install bats-core by checking out the repo to 3172a45e55a58bbaf952e971a4b7347483842ba7 and running install.sh
 RUN mkdir -p /tmp/bats-core \
     && cd /tmp/bats-core \
-    && curl -L https://github.com/bats-core/bats-core/archive/refs/tags/v1.11.1.tar.gz -o bats-core.tar.gz \
-    && tar -xzf bats-core.tar.gz --strip-components=1 \
+    && git clone https://github.com/bats-core/bats-core.git . \
+    && git checkout 3172a45e55a58bbaf952e971a4b7347483842ba7 \
     && ./install.sh /usr/local \
     && cd / \
     && rm -rf /tmp/bats-core
