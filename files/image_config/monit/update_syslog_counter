@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+
+"""
+update_syslog_counter
+
+This script will get recent 10 minutes syslog count and update to COUNTERS_DB
+"""
+
 import syslog
 import os
 from swsscommon import swsscommon
