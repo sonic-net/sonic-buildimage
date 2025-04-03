@@ -244,10 +244,27 @@ def test_del_handler(mocked_log_info):
         m = constructor(constant)
         m.del_handler("10.10.10.1")
         mocked_log_info.assert_called_with("Peer '(default|10.10.10.1)' has been removed")
+    
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_del_handler_dynamic_template_exists(mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        mocked_log_info.assert_called_with("Using delete template found at %s" % "bgpd/templates/dynamic/delete.conf.j2")
+        m.del_handler("10.10.10.1")
+        mocked_log_info.assert_called_with("Peer '(default|10.10.10.1)' has been removed")
 
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_del_handler_nonexist_peer(mocked_log_warn):
     for constant in load_constant_files():
         m = constructor(constant)
+        m.del_handler("40.40.40.1")
+        mocked_log_warn.assert_called_with("Peer '(default|40.40.40.1)' has not been found")
+
+@patch('bgpcfgd.managers_bgp.log_info')
+@patch('bgpcfgd.managers_bgp.log_warn')
+def test_del_handler_dynamic_nonexist_peer_template_exists(mocked_log_warn, mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        mocked_log_info.assert_called_with("Using delete template found at %s" % "bgpd/templates/dynamic/delete.conf.j2")
         m.del_handler("40.40.40.1")
         mocked_log_warn.assert_called_with("Peer '(default|40.40.40.1)' has not been found")

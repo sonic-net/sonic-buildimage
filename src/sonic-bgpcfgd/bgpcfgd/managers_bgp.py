@@ -109,6 +109,9 @@ class BGPPeerMgrBase(Manager):
 
         if (os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "update.conf.j2")):
             self.templates["update"] = self.fabric.from_file(base_template + "update.conf.j2")
+        if os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "delete.conf.j2"):
+            self.templates["delete"] = self.fabric.from_file(base_template + "delete.conf.j2")
+            log_info("Using delete template found at %s" % (base_template + "delete.conf.j2"))
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
@@ -440,7 +443,18 @@ class BGPPeerMgrBase(Manager):
                         log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
                     else:
                         log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
-        cmd = self.templates["delete"].render(neighbor_addr=nbr)
+        
+        kwargs = {
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
+            'neighbor_addr': nbr,
+            'vrf': vrf
+        }
+
+        try:
+            cmd = self.templates["delete"].render(**kwargs)
+        except jinja2.TemplateError as e:
+            log_err("Peer '(%s|%s)'. Error in rendering the template for 'DEL' command '%s'" % (vrf, nbr, str(e)))
+
         ret_code = self.apply_op(cmd, vrf)
         if ret_code:
             self.update_state_db(vrf, nbr, {}, "DEL")
