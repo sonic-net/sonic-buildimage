@@ -293,7 +293,6 @@ class BGPPeerMgrBase(Manager):
         """
         vrf, nbr = self.split_key(key)
         peer_key = (vrf, nbr)
-        log_info("Peer '(%s|%s)' has been scheduled to be removed" % (vrf, nbr))
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))
             return
