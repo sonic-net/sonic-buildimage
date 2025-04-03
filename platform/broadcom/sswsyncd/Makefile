@@ -34,6 +34,3 @@ install:
 
 clean:
 	rm -f $(DSSERVE) $(BCMCMD)
-	rm -rf debian/.debhelper
-	rm -rf debian/sswsyncd
-	rm -f debian/files debian/*.substvars debian/*.log debian/*.debhelper
