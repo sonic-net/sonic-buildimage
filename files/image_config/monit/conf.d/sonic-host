@@ -74,3 +74,9 @@ check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status.py"
 # check if NTP is synchronized
 #check program ntp with path "/usr/local/bin/check_ntp_status.sh"
 #    if status != 0 for 3 cycle then alert repeat every 5 cycles
+
+# update_syslog_counter will get recent 10 minutes log count and update to COUNTERS_DB
+# This script will run every 10 minutes = 30 seconds * 20 cycles
+# Counter value can be read with: 'sonic-db-cli COUNTERS_DB hget  SYSLOG_COUNTER  "COUNT"'
+check program container_checker with path "/usr/bin/update_syslog_counter"
+    every 20 cycles
