@@ -254,7 +254,7 @@ libxext6==2:1.3.4-1+b1
 libxml2==2.9.14+dfsg-1.3~deb12u1
 libxnvctrl0==525.85.05-3~deb12u1
 libz3-4==4.8.12-3.1
-linux-libc-dev==6.1.124-1
+linux-libc-dev==6.1.128-1
 llvm==1:14.0-55.7~deb12u1
 llvm-14==1:14.0.6-12
 llvm-14-linker-tools==1:14.0.6-12
@@ -268,7 +268,7 @@ nss-plugin-pem==1.0.8+1-1
 ocl-icd-libopencl1==2.3.1-1
 openmpi-bin==4.1.4-3+b1
 openmpi-common==4.1.4-3
-openssh-client==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 p4lang-bmv2==1.15.0-7
 p4lang-p4c==1.2.4.2-2
