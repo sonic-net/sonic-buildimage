@@ -213,10 +213,10 @@ class Psu(PsuBase):
 
     def get_input_voltage(self):
         """
-        Retrieves current PSU voltage output
+        Retrieves current PSU voltage input
 
         Returns:
-            A float number, the output voltage in volts,
+            A float number, the input voltage in volts,
             e.g. 12.1
         """
         voltage_in = 0.0

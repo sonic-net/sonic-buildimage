@@ -72,6 +72,13 @@ class Chassis(ChassisBase):
         for index in range(1, self.__num_of_ports + 1):
             self.__xcvr_presence[index] = self._sfp_list[index-1].get_presence()
 
+        # Initialize components
+        from sonic_platform.component import ComponentBIOS, ComponentBMC, ComponentCPLD, ComponentPCIE
+        self._component_list.append(ComponentBIOS())
+        self._component_list.append(ComponentBMC())
+        self._component_list.extend(ComponentCPLD.get_component_list())
+        self._component_list.append(ComponentPCIE())
+
 ##############################################
 # Device methods
 ##############################################
@@ -189,19 +196,7 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        hw_reboot_cause = ""
-        with open("/sys/class/watchdog/watchdog0/reboot_reason", "r") as f:
-            hw_reboot_cause = f.read().strip('\n')
-
-        if hw_reboot_cause == "2":
-            reboot_cause = self.REBOOT_CAUSE_WATCHDOG
-            description = 'Hardware Watchdog Reset'
-        else:
-            reboot_cause = self.REBOOT_CAUSE_NON_HARDWARE
-            description = 'Unknown reason'
-
-        return (reboot_cause, description)
-
+        return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Invalid Reason")
 
     ##############################################
     # Other methods
@@ -239,10 +234,10 @@ class Chassis(ChassisBase):
                 cur_xcvr_presence = self._sfp_list[index-1].get_presence()
                 if cur_xcvr_presence != self.__xcvr_presence[index]:
                     if cur_xcvr_presence is True:
-                        xcvr_change_event_dict[str(index)] = '1'
+                        xcvr_change_event_dict[index] = '1'
                         self.__xcvr_presence[index] = True
                     elif cur_xcvr_presence is False:
-                        xcvr_change_event_dict[str(index)] = '0'
+                        xcvr_change_event_dict[index] = '0'
                         self.__xcvr_presence[index] = False
                     event = True
 

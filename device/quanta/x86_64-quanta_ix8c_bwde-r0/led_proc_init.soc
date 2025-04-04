@@ -1,4 +1,2 @@
-sleep 10
-m0 Load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
-led auto on
+m0 load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
 led start

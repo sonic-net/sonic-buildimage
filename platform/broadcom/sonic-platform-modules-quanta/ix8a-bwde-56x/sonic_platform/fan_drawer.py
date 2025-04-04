@@ -28,7 +28,7 @@ class FanDrawer(FanDrawerBase):
             Returns:
             string: The name of the device
         """
-        return 'Fan {}'.format(self._index)
+        return 'Fantray{}'.format(self._index)
 
     def get_presence(self):
         """
