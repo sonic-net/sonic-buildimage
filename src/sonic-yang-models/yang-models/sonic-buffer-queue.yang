@@ -88,10 +88,9 @@ module sonic-buffer-queue {
                 }
 
                 leaf port {
-                    type string {
-                        length 1..128;
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
-
                     description "port name.";
                 }
 
