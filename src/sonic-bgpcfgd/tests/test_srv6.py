@@ -170,16 +170,20 @@ def test_out_of_order_add():
     loc_mgr.cfg_mgr.push_list = MagicMock()
     sid_mgr.cfg_mgr.push_list = MagicMock()
 
-    # add the sid first
+    # add two sids first
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
     sid_mgr.handler(op='SET', key="loc2|FCBB:BBBB:21::/48", data={'action': 'uN'})
 
     # verify that the sid is not added
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
 
-    # add the locator
+    # add the locator loc2
     loc_mgr.handler(op='SET', key="loc2", data={'prefix': 'fcbb:bbbb:21::'})
 
     time.sleep(3)
 
-    # verify that the sid is added after locator config was there
+    # verify that the sid of loc2 is programmed and the sid of loc1 is not prrogrammed
+    # after locator config was added
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
