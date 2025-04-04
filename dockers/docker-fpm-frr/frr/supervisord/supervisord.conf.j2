@@ -88,7 +88,9 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
-{% if FEATURE is defined and FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled" %}
+{% if FEATURE is defined and
+      (FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
+      (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled") %}
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp -M bmp
 {% else %}
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
