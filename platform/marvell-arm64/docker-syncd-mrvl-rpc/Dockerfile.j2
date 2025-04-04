@@ -15,7 +15,8 @@ RUN apt-get purge -y syncd
 RUN apt-get update \
  && apt-get -y install  \
     net-tools           \
-    python-pip          \
+    python3-pip		\
+    python3-setuptools	\
     build-essential     \
     libssl-dev          \
     libffi-dev          \
@@ -24,7 +25,7 @@ RUN apt-get update \
     cmake               \
     libqt5core5a        \
     libqt5network5      \
-    libboost-atomic1.71.0
+    libboost-atomic1.74.0
 
 RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
 {% for deb in docker_syncd_mrvl_rpc_debs.split(' ') -%}
@@ -41,9 +42,9 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && cd ..               \
  && rm -fr nanomsg-1.0.0 \
  && rm -f 1.0.0.tar.gz  \
- && pip install cffi==1.7.0    \
- && pip install --upgrade cffi==1.7.0 \
- && pip install nnpy    \
+ && pip3 install cffi==1.7.0    \
+ && pip3 install --upgrade cffi==1.7.0 \
+ && pip3 install nnpy    \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
