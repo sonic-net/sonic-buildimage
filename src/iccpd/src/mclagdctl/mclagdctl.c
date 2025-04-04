@@ -308,6 +308,18 @@ int mclagdctl_parse_dump_state(char *msg, int data_len)
         fprintf(stdout, "%s: %s\n", "Local Ip", state_info->local_ip);
         fprintf(stdout, "%s: %s\n", "Peer Ip", state_info->peer_ip);
         fprintf(stdout, "%s: %s\n", "Peer Link Interface", state_info->peer_link_if);
+
+        char* peer_link_state = "";
+        if (state_info->peer_link_state == PORT_STATE_UP)
+            peer_link_state = "Up";
+        else if (state_info->peer_link_state == PORT_STATE_DOWN)
+            peer_link_state = "Down";
+        else if (state_info->peer_link_state == PORT_STATE_ADMIN_DOWN)
+            peer_link_state = "Admin-down";
+        else if (state_info->peer_link_state == PORT_STATE_TEST)
+            peer_link_state = "Test";
+        fprintf(stdout, "Peer Link state: %s\n", peer_link_state);
+
         fprintf(stdout, "%s: %d\n", "Keepalive time",      state_info->keepalive_time);
         fprintf(stdout, "%s: %d\n", "sesssion Timeout ",   state_info->session_timeout);
 
