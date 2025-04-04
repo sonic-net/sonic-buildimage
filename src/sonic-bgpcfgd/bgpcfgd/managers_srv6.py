@@ -25,6 +25,7 @@ class SRv6Mgr(Manager):
             set(),
             db,
             table,
+            wait_for_all_deps=False
         )
 
     def set_handler(self, key, data):
