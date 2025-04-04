@@ -28,6 +28,7 @@ try:
     import logging.handlers
     import time
     from sonic_platform import platform
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -186,8 +187,8 @@ def as9716_32d_set_fan_speed(pwm):
 
 
 def power_off_dut():
-    cmd_str = "i2cset -y -f 19 0x60 0x60 0x10"
-    status, output = subprocess.getstatusoutput(cmd_str)
+    cmd_str = ['i2cset', '-y', '-f', '19', '0x60,' '0x60,' '0x10']
+    status, output = getstatusoutput_noshell(cmd_str)
     return status
 
 # If only one PSU insert(or one of PSU pwoer fail), and watt >800w. Must let DUT fan pwm >= 75% in AFO.
