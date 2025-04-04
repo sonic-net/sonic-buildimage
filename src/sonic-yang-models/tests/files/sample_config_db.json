@@ -1938,6 +1938,9 @@
             "LINE-CARD0": {
                 "admin_status": "down"
             },
+            "DPU0": {
+                "admin_status": "down"
+            },
             "FABRIC-CARD1": {
                 "admin_status": "down"
             },
