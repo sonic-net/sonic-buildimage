@@ -20,8 +20,10 @@ if [ $# -eq 0 ]; then
     echo "Usage: $0 <index>"
     exit 1
 fi
+rshim_name="rshim$1"
 
-dpu_id=$1
+# First try rshim_bus_info
+pcie=$(dpumap.sh rshim2pcie $rshim_name)
 
 declare -A dpu2pcie
 dpu2pcie[0]="08:00.0"
@@ -34,11 +36,20 @@ if [ -z "${dpu2pcie[$dpu_id]}" ]; then
     exit 1
 fi
 
-pcie=${dpu2pcie[$dpu_id]}
+# Check if rshim_bus_info exists in PCI tree
+if ! lspci -D | grep $pcie > /dev/null; then
+    # If not found, try getting bus_info
+    dpu=$(dpumap.sh rshim2dpu $rshim_name)
+    if [ $? -ne 0 ]; then
+        echo "Error: Could not find DPU for rshim$1"
+        exit 1
+    fi
 
-if ! lspci | grep $pcie > /dev/null; then
-    echo "PCIE device $pcie is not available"
-    exit 1
+    pcie=$(dpumap.sh dpu2pcie $dpu)
+    if [ $? -ne 0 ] || ! lspci -D | grep $pcie > /dev/null; then
+        echo "PCIE device not found under rshim_bus_info or bus_info"
+        exit 1
+    fi
 fi
 
 /usr/sbin/rshim -i $dpu_id -d pcie-0000:$pcie
