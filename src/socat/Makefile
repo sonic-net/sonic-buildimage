@@ -3,6 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = socat_$(SOCAT_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = socat-dbgsym_$(SOCAT_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files
