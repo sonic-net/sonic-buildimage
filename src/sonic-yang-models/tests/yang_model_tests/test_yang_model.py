@@ -49,6 +49,7 @@ class Test_yang_models:
             'MinElements': ['Too few'],
             'MaxElements': ['Too many'],
             'UnknownElement': ['Unknown element'],
+            'Missing': ['Missing required element'],
             'None': []
         }
 
