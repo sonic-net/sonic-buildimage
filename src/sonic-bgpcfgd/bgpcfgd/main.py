@@ -91,8 +91,8 @@ def do_work():
 
     config_db = ConfigDBConnector()
     config_db.connect()
-    features = config_db.get_table('FEATURE')
-    if 'software_bfd' in features and 'state' in features['software_bfd'] and features['software_bfd']['state'] == 'enabled':
+    sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
+    if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':
         log_notice("software_bfd feature is enabled, starting bfd manager")
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 

@@ -151,6 +151,12 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
 
+    data['SYSTEM_DEFAULTS'] = {
+        "software_bfd": {
+            "status": "enabled"
+        }
+    }
+
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
         data['PORT'][port]['mtu'] = '9100'
