@@ -5,7 +5,7 @@ from .log import log_debug, log_err
 
 class Manager(object):
     """ This class represents a SONiC DB table """
-    def __init__(self, common_objs, deps, database, table_name):
+    def __init__(self, common_objs, deps, database, table_name, wait_for_all_deps=True):
         """
         Initialize class
         :param common_objs: common object dictionary
@@ -19,6 +19,7 @@ class Manager(object):
         self.deps = deps
         self.db_name = database
         self.table_name = table_name
+        self.wait_for_all_deps = wait_for_all_deps  # control whether the manager should wait for all dependencies to be set before processing any 'SET' command
         self.set_queue = []
         self.directory.subscribe(deps, self.on_deps_change)  # subscribe this class method on directory changes
 
@@ -38,7 +39,7 @@ class Manager(object):
         :param data: associated data of the event. Empty for 'DEL' operation.
         """
         if op == swsscommon.SET_COMMAND:
-            if self.directory.available_deps(self.deps):  # all required dependencies are set in the Directory?
+            if (not self.wait_for_all_deps) or self.directory.available_deps(self.deps):  # all required dependencies are set in the Directory?
                 res = self.set_handler(key, data)
                 if not res:  # set handler returned False, which means it is not ready to process is. Save it for later.
                     log_debug("'SET' handler returned NOT_READY for the Manager: %s" % self.__class__)
@@ -53,7 +54,7 @@ class Manager(object):
 
     def on_deps_change(self):
         """ This method is being executed on every dependency change """
-        if not self.directory.available_deps(self.deps):
+        if self.wait_for_all_deps and not self.directory.available_deps(self.deps):
             return
         new_queue = []
         for key, data in self.set_queue:
