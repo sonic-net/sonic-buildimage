@@ -60,8 +60,11 @@ class SRv6Mgr(Manager):
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_warn("Found a SRv6 SID config entry with a locator that does not exist yet: {} | {}".format(key, data))
-            self.deps.add((self.db_name, "SRV6_MY_LOCATORS", locator_name))
-            self.directory.subscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)], self.on_deps_change)
+            if (self.db_name, "SRV6_MY_LOCATORS", locator_name) not in self.deps:
+                # add the dependency to the deps set
+                # this will trigger a subscription to the locator table
+                self.deps.add((self.db_name, "SRV6_MY_LOCATORS", locator_name))
+                self.directory.subscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)], self.on_deps_change)
             return False
 
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
