@@ -137,4 +137,20 @@ chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
 chown -R redis:redis $REDIS_BMP_DIR
 
+# switch redis/valkey by CONFIG_DB
+VALKEY_FLAG="/var/run/redis/sonic-db/db-valkey"
+rm /etc/redis/redis.conf
+rm /usr/bin/redis-server
+rm /usr/bin/redis-cli
+if [ -e "$VALKEY_FLAG" ]; then
+    cp /etc/valkey/valkey.conf /etc/redis/redis.conf
+    ln -s /usr/bin/valkey-check-rdb /usr/bin/redis-server
+    ln -s /usr/bin/valkey-cli /usr/bin/redis-cli
+else
+    cp /etc/redis/redis.conf.ori /etc/redis/redis.conf
+    ln -s /usr/bin/redis-check-rdb /usr/bin/redis-server
+    ln -s /usr/bin/redis-cli.ori /usr/bin/redis-cli
+fi
+chown -R redis:redis /etc/redis/redis.conf
+
 exec /usr/local/bin/supervisord

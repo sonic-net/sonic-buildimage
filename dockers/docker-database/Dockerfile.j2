@@ -9,8 +9,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update apt's cache of available packages
 RUN apt-get update
 
-# Install redis-server
-RUN apt-get install -y redis-tools redis-server
+# Install redis-server and valkey-server
+RUN apt-get install -y redis-server
+RUN apt-get install -y valkey-server
+RUN cp /usr/bin/redis-server /usr/bin/redis-server.ori
 
 # Install click for CLI
 RUN pip3 install click
@@ -38,6 +40,22 @@ RUN apt-get clean -y                                  && \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
              s/^databases [0-9]+$/databases 100/ \
             ' /etc/redis/redis.conf
+
+RUN cp /etc/redis/redis.conf /etc/redis/redis.conf.ori
+
+# Config valkey
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
+             s/^daemonize yes$/daemonize no/;            \
+             s/^logfile .*$/logfile ""/;                 \
+             s/^# syslog-enabled no$/syslog-enabled no/; \
+             s/^# unixsocket/unixsocket/;                \
+             s/\/run\/valkey\/valkey-server.sock/\/run\/redis\/redis.sock/g;           \
+             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
+             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^databases [0-9]+$/databases 100/; \
+             s/^unixsocketgroup wheel/# unixsocketgroup wheel/; \
+             s/^dir \/var\/lib\/valkey/dir \/var\/lib\/redis/ \
+            ' /etc/valkey/valkey.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
