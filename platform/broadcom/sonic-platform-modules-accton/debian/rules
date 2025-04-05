@@ -22,6 +22,7 @@ MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS := as7712-32x as5712-54x as7816-64x as7716-32x as7716-32xb as7312-54x
 MODULE_DIRS += as7326-56x as6712-32x as7726-32x as4630-54pe as4630-54te minipack as5812-54x
 MODULE_DIRS += as5835-54x as9716-32d as9726-32d as5835-54t as7312-54xs as7315-27xb as5812-54t
+MODULE_DIRS += as7535-28xb
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
