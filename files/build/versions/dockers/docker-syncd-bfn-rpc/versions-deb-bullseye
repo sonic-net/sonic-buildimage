@@ -5,12 +5,12 @@ libboost-atomic1.74.0==1.74.0-9
 libdouble-conversion3==3.1.5-6.1
 libjsoncpp24==1.9.4-4
 libpcre2-16-0==10.36-2+deb11u1
-libqt5core5a==5.15.2+dfsg-9
-libqt5dbus5==5.15.2+dfsg-9
-libqt5network5==5.15.2+dfsg-9
+libqt5core5a==5.15.2+dfsg-9+deb11u1
+libqt5dbus5==5.15.2+dfsg-9+deb11u1
+libqt5network5==5.15.2+dfsg-9+deb11u1
 librhash0==1.4.1-2
 libthrift0==0.14.1
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 mailcap==3.69
 mime-support==3.66
 python-pip-whl==20.3.4-4+deb11u1
