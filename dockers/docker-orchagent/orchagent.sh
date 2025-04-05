@@ -103,6 +103,9 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     else
         ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
     fi
+else
+    # enable for route performance
+    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
@@ -112,9 +115,10 @@ if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
 fi
 
 # Enable ring buffer
-ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
-if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
-    ORCHAGENT_ARGS+=" -R"
-fi
+#ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+#if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+#    ORCHAGENT_ARGS+=" -R"
+#fi
+
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
