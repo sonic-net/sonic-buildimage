@@ -1,14 +1,40 @@
 case $reason in
     BOUND6|RENEW6|REBIND6|REBOOT)
-        current_dhcp6_fqdn=`hostname`
-        if [ "$current_dhcp6_fqdn" != "$new_dhcp6_fqdn" ] && [ -n "$new_dhcp6_fqdn" ]
-        then
-            echo $new_dhcp6_fqdn > /etc/hostname
-            hostname -F /etc/hostname
-            sed -i "/\s$current_dhcp6_fqdn$/d" /etc/hosts
-            sed -i "/\s$new_dhcp6_fqdn$/d" /etc/hosts
-            echo "127.0.0.1 $new_dhcp6_fqdn" >> /etc/hosts
-            echo ":: $new_dhcp6_fqdn" >> /etc/hosts
+        if [ -n "${dhcp6_new_host_name:-}" ]; then
+            # Check hostname for dots. Fall back to adding
+            # dhcp6_new_domain_name or $(hostname -d).
+            if [ "${dhcp6_new_host_name%.*}" != "$dhcp6_new_host_name" ]; then
+                # It has dots. Assume FQDN.
+                my_hostname=${dhcp6_new_host_name%%.*}
+                my_domain=${dhcp6_new_host_name#*.}
+                my_fqdn=${my_hostname}.${my_domain}
+            elif [ -n "${dhcp6_new_domain_name:-}" ]; then
+                # No dots in dhcp6_new_host_name, and
+                # dhcp6_new_domain_name exists. Add it.
+                my_hostname=$dhcp6_new_host_name
+                my_domain=$dhcp6_new_domain_name
+                my_fqdn=${my_hostname}.${my_domain}
+            else
+                # No domain supplied. Take pre-existing domain.
+                my_hostname=$dhcp6_new_host_name
+                my_domain=$(hostname -d 2>/dev/null || true)
+                if [ -n "$my_domain" ]; then
+                    my_fqdn=${my_hostname}.${my_domain}
+                else
+                    my_fqdn=$my_hostname  # alas, no domain at all
+                fi
+            fi
+
+            current_fqdn=$(hostname -f)  # might be short if no domain was set
+            if [ "$current_fqdn" != "$my_fqdn" ]; then
+                # Set the host name as received from DHCP; might be FQDN.
+                echo $dhcp6_new_host_name > /etc/hostname
+                hostname -F /etc/hostname
+                # Store both the determined FQDN and the short hostname in
+                # /etc/hosts.
+                echo "127.0.0.1 $my_fqdn $my_hostname" >> /etc/hosts
+                sed -i "/\s$current_fqdn\s\+${current_fqdn%%.*}$/d" /etc/hosts
+            fi
         fi
         ;;
 esac
