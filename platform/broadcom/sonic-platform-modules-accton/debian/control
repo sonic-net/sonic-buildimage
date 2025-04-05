@@ -73,6 +73,10 @@ Package: sonic-platform-accton-as9726-32d
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
 
+Package: sonic-platform-accton-as9736-64d
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
 Package: sonic-platform-accton-as5835-54t
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
