@@ -1,0 +1,37 @@
+{
+    "chassis": {
+        "M2-W6920-32QC2X": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/cpu_cpld_upgrade_header.vme",
+                    "version": "31230518"
+                },
+                "CTRL_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/base_cpld_upgrade_header.vme",
+                    "version": "cd231012"
+                },
+                "MAC_CPLDA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/mac_cplda_upgrade_header.vme",
+                    "version": "01230926"
+                },
+                "MAC_CPLDB": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/mac_cpldb_upgrade_header.vme",
+                    "version" : "01230918"
+                },
+                "FAN_CPLD": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/fan_cpld_upgrade_header.vme",
+                    "version" : "04231012"
+                },
+                "MAC_FPGA": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/fpga_upgrade_header.bin",
+                    "version" : "7a322203"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-32qc2x-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "3BARZA611"
+                }
+            }
+        }
+    }
+}
+
