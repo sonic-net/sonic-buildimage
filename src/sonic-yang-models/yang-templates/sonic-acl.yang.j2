@@ -41,6 +41,10 @@ module sonic-acl {
 		prefix sms;
 	}
 
+	import sonic-policer {
+		prefix policer;
+	}
+
 	description "ACL YANG Module for SONiC OS";
 
 	revision 2019-07-01 {
@@ -75,6 +79,12 @@ module sonic-acl {
 
 				/* Validating 'PACKET_ACTION' exist if ACL type is 'CTRLPLANE' */
 				must "(not(../../ACL_TABLE/ACL_TABLE_LIST[ACL_TABLE_NAME=current()/ACL_TABLE_NAME]/type = 'CTRLPLANE')) or (boolean(PACKET_ACTION))";
+
+				leaf POLICER_ACTION {
+					type leafref {
+						path "/policer:sonic-policer/policer:POLICER/policer:POLICER_LIST/policer:name";
+					}
+				}
 
 				leaf MIRROR_INGRESS_ACTION {
 					type leafref {
