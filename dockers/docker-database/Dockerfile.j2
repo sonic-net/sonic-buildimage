@@ -9,8 +9,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update apt's cache of available packages
 RUN apt-get update
 
-# Install redis-server
-RUN apt-get install -y redis-tools redis-server
+RUN curl -o keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb "https://download.keydb.dev/pkg/open_source/deb/debian12_bookworm/amd64/keydb-latest/keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb"
+# install keydb will setup systemd service, SONiC don't want that service, only need some config file 
+RUN dpkg -x  keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb ./keydb_deb_files
+RUN cp ./keydb_deb_files/etc/keydb/keydb.conf /etc/redis/redis.conf
+RUN cp ./keydb_deb_files/etc/logrotate.d/keydb-server /etc/logrotate.d/keydb-server
+RUN rm -rf ./keydb_deb_files
+RUN rm keydb-server_6.3.4-1%2Bdeb12u1_amd64.deb
 
 # Install click for CLI
 RUN pip3 install click
@@ -33,11 +38,15 @@ RUN apt-get clean -y                                  && \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
              s/^# unixsocket/unixsocket/;                \
-             s/redis-server.sock/redis.sock/g;           \
+             s/\/tmp\/keydb.sock/\/run\/redis\/redis.sock/g;           \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
-             s/^databases [0-9]+$/databases 100/ \
+             s/^databases [0-9]+$/databases 100/; \
+             s/^dir \/var\/lib\/keydb/dir \/var\/lib\/redis/; \
             ' /etc/redis/redis.conf
+
+RUN chown -R redis:redis /etc/redis/redis.conf
+RUN ln -s /usr/bin/keydb-check-rdb /usr/bin/redis-server
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
