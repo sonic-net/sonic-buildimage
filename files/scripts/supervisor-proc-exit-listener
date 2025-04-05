@@ -162,7 +162,11 @@ def main(argv):
                 group_name = payload_headers['groupname']
 
                 if (process_name in critical_process_list or group_name in critical_group_list) and expected == 0:
-                    is_auto_restart = get_autorestart_state(container_name, use_unix_socket_path)
+                    # If redis crashes, get_autorestart_state() will hang
+                    if container_name == "database" and process_name == "redis":
+                        is_auto_restart = "always_enabled"
+                    else:
+                        is_auto_restart = get_autorestart_state(container_name, use_unix_socket_path)
                     if is_auto_restart != "disabled":
                         MSG_FORMAT_STR = "Process '{}' exited unexpectedly. Terminating supervisor '{}'"
                         msg = MSG_FORMAT_STR.format(payload_headers['processname'], container_name)
