@@ -68,3 +68,15 @@ class Chassis(PddfChassis):
 
     def set_status_led(self, color):
         return self.set_system_led(self.SYSLED_DEV_NAME, color)
+
+
+    def get_port_or_cage_type(self, port):
+        from sonic_platform_base.sfp_base import SfpBase
+        if port in range(1, 49):
+            return SfpBase.SFP_PORT_TYPE_BIT_RJ45
+        elif port in range(49, 53):
+            return SfpBase.SFP_PORT_TYPE_BIT_SFP | SfpBase.SFP_PORT_TYPE_BIT_SFP_PLUS | SfpBase.SFP_PORT_TYPE_BIT_SFP28
+        else:
+            return SfpBase.SFP_PORT_TYPE_BIT_QSFP | SfpBase.SFP_PORT_TYPE_BIT_QSFP_PLUS | SfpBase.SFP_PORT_TYPE_BIT_QSFP28
+
+
