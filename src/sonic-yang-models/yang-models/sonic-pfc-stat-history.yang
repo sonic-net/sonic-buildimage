@@ -1,0 +1,41 @@
+module sonic-pfc-stat-history {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-pfc-stat-history";
+
+    prefix pfc-stat-history;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    description "PFC_STAT_HISTORY YANG Module for SONiC OS";
+
+    revision 2025-02-21 {
+        description
+            "First revision";
+    }
+
+    container sonic-pfc-stat-history {
+        container PFC_STAT_HISTORY {
+            description "Ports on which PFC Statistical History is enabled.";
+
+            list PFC_STAT_HISTORY_LIST {
+                key "port";
+
+                leaf port {
+                    type leafref {
+                        path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                    }
+                    description "Interface name.";
+                }
+
+                leaf status {
+                    type string {
+                        pattern "enabled";
+                    }
+                }
+            }
+        } /* end of container PFC_STAT_HISTORY */
+    } /* end of container sonic-pfc-stat-history */
+} /* end of module sonic-pfc-stat-history */

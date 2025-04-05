@@ -1,0 +1,58 @@
+{
+    "PFC_STAT_HISTORY_VALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-pfc-stat-history:sonic-pfc-stat-history": {
+            "sonic-pfc-stat-history:PFC_STAT_HISTORY": {
+                "PFC_STAT_HISTORY_LIST": [
+                    {
+                        "port": "Ethernet4",
+                        "status": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_STAT_HISTORY_INVALID_PORT_VALUE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-pfc-stat-history:sonic-pfc-stat-history": {
+            "sonic-pfc-stat-history:PFC_STAT_HISTORY": {
+                "PFC_STAT_HISTORY_LIST": [
+                    {
+                        "port": "invalid",
+                        "status": "enabled"
+                    }
+                ]
+            }
+        }
+    }
+}

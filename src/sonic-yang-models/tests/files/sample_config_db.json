@@ -1585,6 +1585,11 @@
                 "kbps": "20000"
             }
         },
+        "PFC_STAT_HISTORY": {
+            "Ethernet9": {
+               "status": "enabled"
+            }
+        },
         "PFC_WD": {
             "Ethernet9": {
                "action": "drop",
