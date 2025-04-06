@@ -12,7 +12,7 @@ CFLAGS_COMMON = -ansi -fPIC -std=c++11 -Wall -Wcast-align -Wcast-qual \
     -Wconversion -Wlong-long
 
 CFLAGS += -g -std=c++11
-LIBS = -lpthread -lutil
+LIBS += -lpthread -lutil
 
 DSSERVE = dsserve
 BCMCMD = bcmcmd
@@ -22,15 +22,15 @@ BCMCMD = bcmcmd
 all: $(DSSERVE) $(BCMCMD)
 
 $(DSSERVE): dsserve.cpp dsserve.h
-    $(CC) -o $@ $< $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $< $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS)
 
 $(BCMCMD): bcmcmd.cpp dsserve.h
-    $(CC) -o $@ $< $(CFLAGS) $(CFLAGS_COMMON) $(CPPFLAGS) $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $< $(CFLAGS) $(CFLAGS_COMMON) $(CPPFLAGS) $(LDFLAGS) $(LIBS)
 
 install:
-    install -d $(DESTDIR)/usr/sbin
-    install -D $(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
-    install -D $(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
+	install -d $(DESTDIR)/usr/sbin
+	install -D $(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
+	install -D $(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
 
 clean:
-    rm -f $(DSSERVE) $(BCMCMD)
+	rm -f $(DSSERVE) $(BCMCMD)
