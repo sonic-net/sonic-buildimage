@@ -375,8 +375,6 @@ sudo cp $IMAGE_CONFIGS/monit/control_plane_drop_check $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/control_plane_drop_check
 sudo cp $IMAGE_CONFIGS/monit/mgmt_oper_status.py $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mgmt_oper_status.py
-sudo cp $IMAGE_CONFIGS/monit/update_syslog_counter $FILESYSTEM_ROOT/usr/bin/
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/update_syslog_counter
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
 # TODO: are mismatching versions fine for bookworm?
@@ -1034,6 +1032,10 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 
 # Copy mark_dhcp_packet script
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
+
+# Install update syslog counter script
+sudo LANG=C cp $SCRIPTS_DIR/update_syslog_counter.py $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
 
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
