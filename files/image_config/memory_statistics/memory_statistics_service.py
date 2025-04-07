@@ -1226,7 +1226,7 @@ class MemoryStatisticsProcessor:
                     }
                 )
                 continue
-        
+           
         return time_group_list
 
     def generate_report(self, request_data, time_entry_summary, num_columns, step):
