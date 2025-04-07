@@ -80,7 +80,7 @@
     },
     "DEVICE_METADATA_INCORRECT_BUFFER_MODEL_PATTERN": {
         "desc": "DEVICE_METADATA wrong value for BUFFER_MODEL field.",
-        "eStr": ["pattern", "does not satisfy"]
+        "eStrKey": "Pattern"
     },
     "DEVICE_METADATA_FRR_MGMT_FWK_CONFIG": {
         "desc": "Verifying FRR MGMT framework configuration."
@@ -121,7 +121,7 @@
     },
     "DEVICE_METADATA_INVALID_PEER_SWITCH": {
         "desc": "Verifying test fails with hostname that is too long",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "DEVICE_METADATA_VALID_STORAGE_DEVICE": {
         "desc": "Verifying valid storage device value"
@@ -172,7 +172,7 @@
     },
     "DEVICE_METADATA_INVALID_TIMEZONE": {
         "desc": "Verifying invalid timezone value",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
         "desc": "Verifying the create_only_config_db_buffers value"
