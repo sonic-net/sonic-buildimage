@@ -7,10 +7,10 @@ Subject: [PATCH] Revert "bgpd: upon if event, evaluate bnc with matching
 This reverts commit 58592be57783a3b24e7351af2a5afc61299768df.
 
 diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
-index 196cc00385..78eb1a9183 100644
+index 2ef7ec97e..8482188d7 100644
 --- a/bgpd/bgp_nht.c
 +++ b/bgpd/bgp_nht.c
-@@ -751,10 +751,6 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
+@@ -763,10 +763,6 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
  				     struct interface *ifp, bool up)
  {
  	struct bgp_nexthop_cache *bnc;
@@ -21,7 +21,7 @@ index 196cc00385..78eb1a9183 100644
  
  	if (ifp->ifindex == IFINDEX_INTERNAL) {
  		zlog_warn("%s: The interface %s ignored", __func__, ifp->name);
-@@ -762,42 +758,9 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
+@@ -774,42 +770,9 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
  	}
  
  	frr_each (bgp_nexthop_cache, table, bnc) {
@@ -65,7 +65,7 @@ index 196cc00385..78eb1a9183 100644
  		bnc->last_update = monotime(NULL);
  		bnc->change_flags = 0;
  
-@@ -810,7 +773,6 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
+@@ -822,7 +785,6 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
  		if (up) {
  			SET_FLAG(bnc->flags, BGP_NEXTHOP_VALID);
  			SET_FLAG(bnc->change_flags, BGP_NEXTHOP_CHANGED);

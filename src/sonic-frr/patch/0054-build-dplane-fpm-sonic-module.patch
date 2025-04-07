@@ -8,7 +8,6 @@ From: Carmine Scarpitta <cscarpit@cisco.com>
 Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
 ---
  debian/frr.install | 1 +
- redhat/frr.spec.in | 1 +
  zebra/subdir.am    | 6 ++++++
  3 files changed, 8 insertions(+)
 
@@ -24,23 +23,11 @@ index d4b904b6e..375f0dadd 100644
  usr/lib/*/frr/modules/zebra_cumulus_mlag.so
  usr/lib/*/frr/modules/zebra_fpm.so
  usr/lib/*/frr/modules/pathd_pcep.so
-diff --git a/redhat/frr.spec.in b/redhat/frr.spec.in
-index 13d5b8689..ffbe872c4 100644
---- a/redhat/frr.spec.in
-+++ b/redhat/frr.spec.in
-@@ -723,6 +723,7 @@ fi
- %endif
- %{_libdir}/frr/modules/zebra_cumulus_mlag.so
- %{_libdir}/frr/modules/dplane_fpm_nl.so
-+%{_libdir}/frr/modules/dplane_fpm_sonic.so
- %{_libdir}/frr/modules/bgpd_bmp.so
- %{_libdir}/libfrr_pb.so*
- %{_libdir}/libfrrfpm_pb.so*
 diff --git a/zebra/subdir.am b/zebra/subdir.am
-index d9c8d9045..ecc7195ae 100644
+index f76744736..c222984ae 100644
 --- a/zebra/subdir.am
 +++ b/zebra/subdir.am
-@@ -245,6 +245,12 @@ zebra_dplane_fpm_nl_la_LDFLAGS = $(MODULE_LDFLAGS)
+@@ -252,6 +252,12 @@ zebra_dplane_fpm_nl_la_LDFLAGS = $(MODULE_LDFLAGS)
  zebra_dplane_fpm_nl_la_LIBADD  =
  endif
  

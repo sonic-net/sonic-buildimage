@@ -20,11 +20,47 @@ ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
 
 Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
 ---
- staticd/static_vty.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ doc/user/static.rst                                |   14 +++
+ staticd/static_vty.c                               |   24 +++++-
+ tests/topotests/srv6_static_route_ipv4/__init__.py |    0 
+ .../expected_srv6_route.json                       |   28 +++++++
+ tests/topotests/srv6_static_route_ipv4/r1/frr.conf |    7 ++
+ tests/topotests/srv6_static_route_ipv4/r1/setup.sh |    2 
+ .../srv6_static_route_ipv4/test_srv6_route.py      |   82 ++++++++++++++++++++
+ 7 files changed, 153 insertions(+), 4 deletions(-)
+ create mode 100644 tests/topotests/srv6_static_route_ipv4/__init__.py
+ create mode 100644 tests/topotests/srv6_static_route_ipv4/expected_srv6_route.json
+ create mode 100644 tests/topotests/srv6_static_route_ipv4/r1/frr.conf
+ create mode 100644 tests/topotests/srv6_static_route_ipv4/r1/setup.sh
+ create mode 100755 tests/topotests/srv6_static_route_ipv4/test_srv6_route.py
 
+diff --git a/doc/user/static.rst b/doc/user/static.rst
+index 5bf5004a6..0ce6e2107 100644
+--- a/doc/user/static.rst
++++ b/doc/user/static.rst
+@@ -177,6 +177,20 @@ multiple segments instructions.
+   [..]
+   S>* 2005::/64 [1/0] is directly connected, ens3, seg6 2001:db8:aaaa::7,2002::4,2002::3,2002::2, weight 1, 00:00:06
+ 
++STATIC also supports steering of IPv4 traffic over an SRv6 SID list, as shown in the example below.
++
++.. code-block:: frr
++
++  ip route A.B.C.D <A.B.C.D|nexthop> segments U:U::U:U/Y:Y::Y:Y/Z:Z::Z:Z
++
++::
++
++  router(config)# ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
++
++  router# show ip route
++  [..]
++  S>* 10.0.0.0/24 [1/0] is directly connected, sr0, seg6 fcbb:bbbb:1:2:3:fe00::, weight 1, 00:00:06
++
+ SRv6 Static SIDs Commands
+ =========================
+ 
 diff --git a/staticd/static_vty.c b/staticd/static_vty.c
-index ed2805d3eab9..ce414121dca3 100644
+index a6b4415e2..994028062 100644
 --- a/staticd/static_vty.c
 +++ b/staticd/static_vty.c
 @@ -564,6 +564,7 @@ DEFPY_YANG(ip_route_address_interface,
@@ -54,39 +90,7 @@ index ed2805d3eab9..ce414121dca3 100644
  	};
  
  	return static_route_nb_run(vty, &args);
-
-From e1e31e086983ac9d18fa973172697436b9368495 Mon Sep 17 00:00:00 2001
-From: Carmine Scarpitta <cscarpit@cisco.com>
-Date: Tue, 24 Dec 2024 08:57:28 +0100
-Subject: [PATCH 2/6] staticd: Extend `ip_route_address_interface_vrf` to
- support SRv6 traffic steering
-
-staticd already has a CLI to steer IPv6 traffic over a given SRv6 SID
-list:
-
-```
-vrf vrf10
- ipv6 route 2001:db8:1:1::/64 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-This PR extends the existing CLI `ip route` to support steering of IPv4
-traffic over an SRv6 SID list.
-
-```
-vrf vrf10
- ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
----
- staticd/static_vty.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/staticd/static_vty.c b/staticd/static_vty.c
-index ce414121dca3..cabcf00b034d 100644
---- a/staticd/static_vty.c
-+++ b/staticd/static_vty.c
-@@ -635,6 +635,7 @@ DEFPY_YANG(ip_route_address_interface_vrf,
+@@ -631,6 +635,7 @@ DEFPY_YANG(ip_route_address_interface_vrf,
  	  |onlink$onlink                               \
  	  |color (1-4294967295)                        \
  	  |bfd$bfd [{multi-hop$bfd_multi_hop|source A.B.C.D$bfd_source|profile BFDPROF$bfd_profile}] \
@@ -94,7 +98,7 @@ index ce414121dca3..cabcf00b034d 100644
  	  }]",
        NO_STR IP_STR
        "Establish static routes\n"
-@@ -659,7 +660,9 @@ DEFPY_YANG(ip_route_address_interface_vrf,
+@@ -655,7 +660,9 @@ DEFPY_YANG(ip_route_address_interface_vrf,
        BFD_INTEGRATION_SOURCE_STR
        BFD_INTEGRATION_SOURCEV4_STR
        BFD_PROFILE_STR
@@ -105,7 +109,7 @@ index ce414121dca3..cabcf00b034d 100644
  {
  	struct static_route_args args = {
  		.delete = !!no,
-@@ -681,6 +684,7 @@ DEFPY_YANG(ip_route_address_interface_vrf,
+@@ -677,6 +684,7 @@ DEFPY_YANG(ip_route_address_interface_vrf,
  		.bfd_multi_hop = !!bfd_multi_hop,
  		.bfd_source = bfd_source_str,
  		.bfd_profile = bfd_profile,
@@ -113,37 +117,7 @@ index ce414121dca3..cabcf00b034d 100644
  	};
  
  	return static_route_nb_run(vty, &args);
-
-From 885181acb441dcb1b78bacea2c4287ac20e5d043 Mon Sep 17 00:00:00 2001
-From: Carmine Scarpitta <cscarpit@cisco.com>
-Date: Tue, 24 Dec 2024 08:58:41 +0100
-Subject: [PATCH 3/6] staticd: Extend `ip_route` CLI to support SRv6 traffic
- steering
-
-staticd already has a CLI to steer IPv6 traffic over a given SRv6 SID
-list:
-
-```
-ipv6 route 2001:db8:1:1::/64 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-This PR extends the existing CLI `ip route` to support steering of IPv4
-traffic over an SRv6 SID list.
-
-```
-ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
----
- staticd/static_vty.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/staticd/static_vty.c b/staticd/static_vty.c
-index cabcf00b034d..b84e3b6a6cb9 100644
---- a/staticd/static_vty.c
-+++ b/staticd/static_vty.c
-@@ -704,6 +704,7 @@ DEFPY_YANG(ip_route,
+@@ -696,6 +704,7 @@ DEFPY_YANG(ip_route,
  	  |nexthop-vrf NAME                            \
  	  |color (1-4294967295)                        \
  	  |bfd$bfd [{multi-hop$bfd_multi_hop|source A.B.C.D$bfd_source|profile BFDPROF$bfd_profile}] \
@@ -151,7 +125,7 @@ index cabcf00b034d..b84e3b6a6cb9 100644
            }]",
        NO_STR IP_STR
        "Establish static routes\n"
-@@ -728,7 +729,9 @@ DEFPY_YANG(ip_route,
+@@ -720,7 +729,9 @@ DEFPY_YANG(ip_route,
        BFD_INTEGRATION_SOURCE_STR
        BFD_INTEGRATION_SOURCEV4_STR
        BFD_PROFILE_STR
@@ -162,7 +136,7 @@ index cabcf00b034d..b84e3b6a6cb9 100644
  {
  	struct static_route_args args = {
  		.delete = !!no,
-@@ -749,6 +752,7 @@ DEFPY_YANG(ip_route,
+@@ -741,6 +752,7 @@ DEFPY_YANG(ip_route,
  		.bfd_multi_hop = !!bfd_multi_hop,
  		.bfd_source = bfd_source_str,
  		.bfd_profile = bfd_profile,
@@ -170,39 +144,7 @@ index cabcf00b034d..b84e3b6a6cb9 100644
  	};
  
  	return static_route_nb_run(vty, &args);
-
-From 39613ec8be65240f1dfd4ec623c259076062b91c Mon Sep 17 00:00:00 2001
-From: Carmine Scarpitta <cscarpit@cisco.com>
-Date: Tue, 24 Dec 2024 08:59:18 +0100
-Subject: [PATCH 4/6] staticd: Extend `ip_route_vrf` CLI to support SRv6
- traffic steering
-
-staticd already has a CLI to steer IPv6 traffic over a given SRv6 SID
-list:
-
-```
-vrf vrf10
- ipv6 route 2001:db8:1:1::/64 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-This PR extends the existing CLI `ip route` to support steering of IPv4
-traffic over an SRv6 SID list.
-
-```
-vrf vrf10
- ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
-```
-
-Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
----
- staticd/static_vty.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/staticd/static_vty.c b/staticd/static_vty.c
-index b84e3b6a6cb9..7c425f4a33df 100644
---- a/staticd/static_vty.c
-+++ b/staticd/static_vty.c
-@@ -771,6 +771,7 @@ DEFPY_YANG(ip_route_vrf,
+@@ -759,6 +771,7 @@ DEFPY_YANG(ip_route_vrf,
  	  |nexthop-vrf NAME                            \
  	  |color (1-4294967295)                        \
  	  |bfd$bfd [{multi-hop$bfd_multi_hop|source A.B.C.D$bfd_source|profile BFDPROF$bfd_profile}] \
@@ -210,7 +152,7 @@ index b84e3b6a6cb9..7c425f4a33df 100644
            }]",
        NO_STR IP_STR
        "Establish static routes\n"
-@@ -794,7 +795,9 @@ DEFPY_YANG(ip_route_vrf,
+@@ -782,7 +795,9 @@ DEFPY_YANG(ip_route_vrf,
        BFD_INTEGRATION_SOURCE_STR
        BFD_INTEGRATION_SOURCEV4_STR
        BFD_PROFILE_STR
@@ -221,7 +163,7 @@ index b84e3b6a6cb9..7c425f4a33df 100644
  {
  	struct static_route_args args = {
  		.delete = !!no,
-@@ -815,6 +818,7 @@ DEFPY_YANG(ip_route_vrf,
+@@ -803,6 +818,7 @@ DEFPY_YANG(ip_route_vrf,
  		.bfd_multi_hop = !!bfd_multi_hop,
  		.bfd_source = bfd_source_str,
  		.bfd_profile = bfd_profile,
@@ -229,70 +171,12 @@ index b84e3b6a6cb9..7c425f4a33df 100644
  	};
  
  	return static_route_nb_run(vty, &args);
-
-From 478550efc404332cf44ed05905aecec8c9c3eaba Mon Sep 17 00:00:00 2001
-From: Carmine Scarpitta <cscarpit@cisco.com>
-Date: Tue, 24 Dec 2024 09:22:52 +0100
-Subject: [PATCH 5/6] doc: Add documentation for SRv6 IPv4 traffic steering
-
-Add an example of how to steer IPv4 traffic over an SRv6 SID list.
-
-Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
----
- doc/user/static.rst | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
-
-diff --git a/doc/user/static.rst b/doc/user/static.rst
-index 5bf5004a66fb..0ce6e2107e7c 100644
---- a/doc/user/static.rst
-+++ b/doc/user/static.rst
-@@ -177,2 +177,16 @@ multiple segments instructions.
-   [..]
-   S>* 2005::/64 [1/0] is directly connected, ens3, seg6 2001:db8:aaaa::7,2002::4,2002::3,2002::2, weight 1, 00:00:06
-+
-+STATIC also supports steering of IPv4 traffic over an SRv6 SID list, as shown in the example below.
-+
-+.. code-block:: frr
-+
-+  ip route A.B.C.D <A.B.C.D|nexthop> segments U:U::U:U/Y:Y::Y:Y/Z:Z::Z:Z
-+
-+::
-+
-+  router(config)# ip route 10.0.0.0/24 sr0 segments fcbb:bbbb:1:2:3:fe00::
-+
-+  router# show ip route
-+  [..]
-+  S>* 10.0.0.0/24 [1/0] is directly connected, sr0, seg6 fcbb:bbbb:1:2:3:fe00::, weight 1, 00:00:06
-\ No newline at end of file 
-
-From 1add31d129ddbe53afd8ac83717f7818c1fb228a Mon Sep 17 00:00:00 2001
-From: Carmine Scarpitta <cscarpit@cisco.com>
-Date: Tue, 24 Dec 2024 09:42:34 +0100
-Subject: [PATCH 6/6] tests: Add topotest for SRv6 IPv4 traffic steering
-
-Add a topotest to verify the newly introduced CLI to support
-steering of IPv4 traffic over an SRv6 SID list.
-
-Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
----
- .../srv6_static_route_ipv4/__init__.py        |  0
- .../expected_srv6_route.json                  | 28 +++++++
- .../srv6_static_route_ipv4/r1/frr.conf        |  7 ++
- .../srv6_static_route_ipv4/r1/setup.sh        |  2 +
- .../srv6_static_route_ipv4/test_srv6_route.py | 82 +++++++++++++++++++
- 5 files changed, 119 insertions(+)
- create mode 100644 tests/topotests/srv6_static_route_ipv4/__init__.py
- create mode 100644 tests/topotests/srv6_static_route_ipv4/expected_srv6_route.json
- create mode 100644 tests/topotests/srv6_static_route_ipv4/r1/frr.conf
- create mode 100644 tests/topotests/srv6_static_route_ipv4/r1/setup.sh
- create mode 100755 tests/topotests/srv6_static_route_ipv4/test_srv6_route.py
-
 diff --git a/tests/topotests/srv6_static_route_ipv4/__init__.py b/tests/topotests/srv6_static_route_ipv4/__init__.py
 new file mode 100644
-index 000000000000..e69de29bb2d1
+index 000000000..e69de29bb
 diff --git a/tests/topotests/srv6_static_route_ipv4/expected_srv6_route.json b/tests/topotests/srv6_static_route_ipv4/expected_srv6_route.json
 new file mode 100644
-index 000000000000..57f4c4488dbd
+index 000000000..57f4c4488
 --- /dev/null
 +++ b/tests/topotests/srv6_static_route_ipv4/expected_srv6_route.json
 @@ -0,0 +1,28 @@
@@ -326,7 +210,7 @@ index 000000000000..57f4c4488dbd
 +}
 diff --git a/tests/topotests/srv6_static_route_ipv4/r1/frr.conf b/tests/topotests/srv6_static_route_ipv4/r1/frr.conf
 new file mode 100644
-index 000000000000..8ff23ec1b886
+index 000000000..8ff23ec1b
 --- /dev/null
 +++ b/tests/topotests/srv6_static_route_ipv4/r1/frr.conf
 @@ -0,0 +1,7 @@
@@ -339,7 +223,7 @@ index 000000000000..8ff23ec1b886
 +ip route 192.0.2.0/24 sr0 segments fcbb:bbbb:1:2:3:4:5:6/fcbb:bbbb:7:8:fe00::
 diff --git a/tests/topotests/srv6_static_route_ipv4/r1/setup.sh b/tests/topotests/srv6_static_route_ipv4/r1/setup.sh
 new file mode 100644
-index 000000000000..4b6cce89f89d
+index 000000000..4b6cce89f
 --- /dev/null
 +++ b/tests/topotests/srv6_static_route_ipv4/r1/setup.sh
 @@ -0,0 +1,2 @@
@@ -347,7 +231,7 @@ index 000000000000..4b6cce89f89d
 +ip link set sr0 up
 diff --git a/tests/topotests/srv6_static_route_ipv4/test_srv6_route.py b/tests/topotests/srv6_static_route_ipv4/test_srv6_route.py
 new file mode 100755
-index 000000000000..b49a9cec8928
+index 000000000..b49a9cec8
 --- /dev/null
 +++ b/tests/topotests/srv6_static_route_ipv4/test_srv6_route.py
 @@ -0,0 +1,82 @@

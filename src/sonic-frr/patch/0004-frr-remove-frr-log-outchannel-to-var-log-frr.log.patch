@@ -9,10 +9,10 @@ Subject: [PATCH] From 0417036a3aece862c95111d4646ca7508a028165 Mon Sep 17
 
 
 diff --git a/tools/etc/rsyslog.d/45-frr.conf b/tools/etc/rsyslog.d/45-frr.conf
-index 75b20d76b..9cdd55762 100644
+index ef37d66d8..2e8e1e12d 100644
 --- a/tools/etc/rsyslog.d/45-frr.conf
 +++ b/tools/etc/rsyslog.d/45-frr.conf
-@@ -2,29 +2,6 @@
+@@ -2,30 +2,6 @@
  # to /var/log/frr/frr.log, then drops the message so it does
  # not also go to /var/log/syslog, so the messages are not duplicated
  
@@ -25,6 +25,7 @@ index 75b20d76b..9cdd55762 100644
 -    $programname == 'isisd' or
 -    $programname == 'fabricd' or
 -    $programname == 'ldpd' or
+-    $programname == 'mgmtd' or
 -    $programname == 'nhrpd' or
 -    $programname == 'ospf6d' or
 -    $programname == 'ospfd' or

@@ -7,10 +7,10 @@ Subject: [PATCH] From ca66350aecf7db3354019480d11754fabae3a97c Mon Sep 17
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
 
 diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
-index 0a9fecc9d..b18a96353 100644
+index b8dbabb60..3332638cc 100644
 --- a/zebra/dplane_fpm_nl.c
 +++ b/zebra/dplane_fpm_nl.c
-@@ -814,6 +814,15 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
+@@ -944,6 +944,15 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
  		|| op == DPLANE_OP_NH_UPDATE))
  		return 0;
  

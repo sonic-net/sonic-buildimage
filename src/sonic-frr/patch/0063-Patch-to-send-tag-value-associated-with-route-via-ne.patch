@@ -10,10 +10,10 @@ Signed-off-by: Abhishek Dosi <abdosi@microsoft.com>
  1 file changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 976c245c3..1f73f5759 100644
+index 9b0599899..b94ced7e5 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -2348,10 +2348,28 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
+@@ -2551,10 +2551,28 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
  	 * path(s)
  	 * by the routing protocol and for communicating with protocol peers.
  	 */

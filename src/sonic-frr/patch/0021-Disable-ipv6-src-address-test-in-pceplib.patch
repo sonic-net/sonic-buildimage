@@ -8,10 +8,10 @@ Subject: [PATCH] From dfe0158344ea581370dd2dba8e4db189cf369147 Mon Sep 17
 
 
 diff --git a/pceplib/test/pcep_socket_comm_test.c b/pceplib/test/pcep_socket_comm_test.c
-index 116531f12..8b71a5090 100644
+index c0b73c3db..4a70e49fb 100644
 --- a/pceplib/test/pcep_socket_comm_test.c
 +++ b/pceplib/test/pcep_socket_comm_test.c
-@@ -92,7 +92,7 @@ void pcep_socket_comm_test_setup()
+@@ -80,7 +80,7 @@ void pcep_socket_comm_test_setup()
  	inet_pton(AF_INET, "127.0.0.1", &(test_host_ip));
  	inet_pton(AF_INET, "127.0.0.1", &(test_src_ip));
  	inet_pton(AF_INET6, "::1", &(test_host_ipv6));

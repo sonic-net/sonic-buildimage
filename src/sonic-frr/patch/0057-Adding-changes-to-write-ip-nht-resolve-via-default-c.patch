@@ -11,10 +11,10 @@ Subject: [PATCH] Adding changes to write ip nht resolve-via-default
  3 files changed, 37 insertions(+)
 
 diff --git a/zebra/zebra_vrf.c b/zebra/zebra_vrf.c
-index e464e47b1..ae8624a5e 100644
+index 7bfe07b4c..1b55da453 100644
 --- a/zebra/zebra_vrf.c
 +++ b/zebra/zebra_vrf.c
-@@ -541,6 +541,40 @@ int zebra_vrf_netns_handler_create(struct vty *vty, struct vrf *vrf,
+@@ -570,6 +570,40 @@ int zebra_vrf_netns_handler_create(struct vty *vty, struct vrf *vrf,
  	return CMD_SUCCESS;
  }
  
@@ -56,22 +56,22 @@ index e464e47b1..ae8624a5e 100644
  void zebra_vrf_init(void)
  {
 diff --git a/zebra/zebra_vrf.h b/zebra/zebra_vrf.h
-index 5cbfab1dd..36f42a3db 100644
+index 334bb9368..b2b997bfc 100644
 --- a/zebra/zebra_vrf.h
 +++ b/zebra/zebra_vrf.h
-@@ -246,6 +246,7 @@ extern struct zebra_vrf *zebra_vrf_lookup_by_name(const char *);
- extern vrf_id_t zebra_vrf_lookup_by_table(uint32_t table_id, ns_id_t ns_id);
+@@ -250,6 +250,7 @@ extern vrf_id_t zebra_vrf_lookup_by_table(uint32_t table_id, ns_id_t ns_id);
  extern struct zebra_vrf *zebra_vrf_alloc(struct vrf *vrf);
  extern struct route_table *zebra_vrf_table(afi_t, safi_t, vrf_id_t);
+ int zebra_vrf_lookup_tableid(vrf_id_t vrf_id, ns_id_t ns_id);
 +extern void zebra_vrf_config_write(struct vty *vty);
  
  /*
   * API to associate a VRF with a NETNS.
 diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
-index 9a68d5ae9..ce772b818 100644
+index a1731712d..90ef45705 100644
 --- a/zebra/zebra_vty.c
 +++ b/zebra/zebra_vty.c
-@@ -3809,6 +3809,8 @@ static int config_write_protocol(struct vty *vty)
+@@ -3683,6 +3683,8 @@ static int config_write_protocol(struct vty *vty)
  
  	zebra_pbr_config_write(vty);
  

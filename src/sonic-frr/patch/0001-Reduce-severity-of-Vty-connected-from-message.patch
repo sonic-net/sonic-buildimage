@@ -7,10 +7,10 @@ Subject: [PATCH] From 15274a197e4d3b7ac0f11ca63a5274f1168739f5 Mon Sep 17
 
 
 diff --git a/lib/vty.c b/lib/vty.c
-index ab98ac14e..c32fc13ba 100644
+index 1d04e75bf..ecbbd73db 100644
 --- a/lib/vty.c
 +++ b/lib/vty.c
-@@ -1843,7 +1843,7 @@ static void vty_accept(struct thread *thread)
+@@ -1968,7 +1968,7 @@ static void vty_accept(struct event *thread)
  		zlog_info("can't set sockopt to vty_sock : %s",
  			  safe_strerror(errno));
  
