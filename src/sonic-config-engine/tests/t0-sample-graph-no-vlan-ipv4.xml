@@ -358,6 +358,11 @@
           <AttachTo>Vlan2000</AttachTo>
           <Prefix>192.168.200.1/27</Prefix>
         </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan99</AttachTo>
+          <Prefix>fc02:1099::1/64</Prefix>
+        </IPInterface>
       </IPInterfaces>
       <DataAcls/>
       <AclInterfaces>
