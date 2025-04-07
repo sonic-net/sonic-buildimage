@@ -103,7 +103,7 @@ stages:
           docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:py3only
         env:
           REGISTRY_SERVER: ${{ parameters.registry_url }}
-        displayName: 'Tag sonic-mgmt docker image'
+        displayName: 'Tag docker-sonic-mgmt'
 
       - task: Docker@2
         displayName: Upload image
