@@ -191,6 +191,6 @@
         },
         "Ethernet504": {
             "default_brkout_mode": "8x100G"
-        },
+        }
     }
 }
