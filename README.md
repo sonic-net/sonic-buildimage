@@ -151,11 +151,11 @@ A good choice of OS for building SONiC is currently Ubuntu 20.04.
 ## Prerequisites
 
 * Install pip and jinja in host build machine, execute below commands
-   if j2/j2cli is not available:
+   if j2/jinjanator is not available:
 
 ```shell
 sudo apt install -y python3-pip
-pip3 install --user j2cli
+pip3 install --user jinjanator
 ```
 
 * Install [Docker](https://docs.docker.com/engine/install/) and configure your

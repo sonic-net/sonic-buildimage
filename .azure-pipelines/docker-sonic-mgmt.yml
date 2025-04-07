@@ -25,6 +25,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
+    ref: master
     endpoint: sonic-net
 
 parameters:
@@ -73,6 +74,7 @@ stages:
     steps:
     - checkout: sonic-mgmt
       clean: true
+      fetchDepth: 0
       displayName: 'Checkout sonic-mgmt'
 
     - download: current
