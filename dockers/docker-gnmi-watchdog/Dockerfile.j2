@@ -1,0 +1,41 @@
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}} AS builder
+
+# Update apt's cache of available packages
+RUN apt-get update && apt-get install -y \
+    build-essential
+
+# Install Rust/Cargo via rustup
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c \
+    'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+ENV RUSTUP_HOME=$RUST_ROOT
+ENV PATH $PATH:$RUST_ROOT/bin
+
+# Copy watchdog source into /watchdog
+WORKDIR /watchdog
+COPY watchdog/ ./
+
+# Build from within /watchdog
+RUN cargo build --release
+
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IMAGE_VERSION=$image_version
+
+RUN apt-get update
+# Remove build-essential after building
+RUN apt-get remove -y build-essential && apt-get autoremove -y
+
+# Copy supervisord.conf into final stage
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+# Copy the compiled Rust binary from the builder stage
+COPY --from=builder /watchdog/target/release/watchdog /usr/bin/gnmi_watchdog
+RUN chmod +x /usr/bin/gnmi_watchdog
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
