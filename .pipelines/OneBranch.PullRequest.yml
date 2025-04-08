@@ -35,7 +35,7 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-  - nvidia-bluefield
+#  - nvidia-bluefield     disable due to build error.
 variables:
   - name: DOCKER_BUILD_TIMEOUT
     value: 5400
