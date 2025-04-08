@@ -51,6 +51,8 @@ RUN apt-get update && apt-get install -y \
         libswitch-perl \
         libzmq5 \
         libzmq3-dev \
+        uuid-dev \
+        uuid-runtime \
         jq \
         cron \
 # For quagga build
@@ -390,6 +392,11 @@ RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fip
  && ln -sf /usr/lib/go-1.15 /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- endif %}
+
+RUN wget -O golang-go.tar.gz https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+RUN mkdir -p /usr/local/go1.20.3
+RUN tar -C /usr/local/go1.20.3 -xzf golang-go.tar.gz
+RUN rm -f golang-go.tar.gz
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip python3-yaml
