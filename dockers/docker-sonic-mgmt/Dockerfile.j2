@@ -39,7 +39,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          sudo \
                                          tcpdump \
                                          telnet \
-                                         vim
+                                         vim \
+                                         bats
 
 RUN python3 -m pip install --upgrade pip setuptools wheel
 RUN python3 -m pip install aiohttp \
@@ -224,15 +225,6 @@ RUN mkdir -p /tmp/protobuf \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
-
-# Install bats-core by checking out the repo to 3172a45e55a58bbaf952e971a4b7347483842ba7 and running install.sh
-RUN mkdir -p /tmp/bats-core \
-    && cd /tmp/bats-core \
-    && git clone https://github.com/bats-core/bats-core.git . \
-    && git checkout 3172a45e55a58bbaf952e971a4b7347483842ba7 \
-    && ./install.sh /usr/local \
-    && cd / \
-    && rm -rf /tmp/bats-core
 
 ## Copy and install sonic-mgmt docker dependencies
 COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
