@@ -1035,6 +1035,7 @@ sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/m
 
 # Install update syslog counter script
 sudo LANG=C cp $SCRIPTS_DIR/update_syslog_counter.py $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
+sudo chown root $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
 
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
