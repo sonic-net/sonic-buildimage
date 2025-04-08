@@ -61,7 +61,7 @@ fi
 if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
   if [[ "$1" != "chassis" ]] ; then
       echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
-      if [[ $disaggregated_chassis -ne 1 ]; then
+      if [[ $disaggregated_chassis -ne 1 ]]; then
           echo -e "\nWARNING: Please execute 'TSA' on all other linecards of the chassis to fully isolate this device"
       fi
   fi
