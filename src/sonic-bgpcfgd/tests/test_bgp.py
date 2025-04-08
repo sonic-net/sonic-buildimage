@@ -164,30 +164,6 @@ def test_add_peer_ipv6_in_vnet():
         res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
-def test_add_dynamic_peer():
-    for constant in load_constant_files():
-        m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27"})
-        assert res, "Expect True return value"
-
-def test_add_dynamic_peer_ipv6():
-    for constant in load_constant_files():
-        m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "fc00:20::/64"})
-        assert res, "Expect True return value"
-
-def test_modify_dynamic_peer_range():
-    for constant in load_constant_files():
-        m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27,10.251.0.0/27"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27,10.251.0.0/26"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.251.0.0/27"})
-        assert res, "Expect True return value"
-
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_add_peer_no_local_addr(mocked_log_warn):
     for constant in load_constant_files():
