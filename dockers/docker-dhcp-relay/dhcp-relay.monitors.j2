@@ -1,44 +1,25 @@
 [group:dhcpmon]
 programs=
 {%- set add_preceding_comma = { 'flag': False } %}
-{% set monitor_instance = { 'flag': False } %}
-{% for vlan_name in VLAN_INTERFACE %}
-{% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
-{% set _dummy = monitor_instance.update({'flag': True}) %}
-{%- endif %}
-{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
-{% set _dummy = monitor_instance.update({'flag': True}) %}
-{%- endif %}
-{% if monitor_instance.flag %}
-{% if add_preceding_comma.flag %},{% endif %}
-{% set _dummy = add_preceding_comma.update({'flag': True}) %}
+{% set vlan_list = [] %}
+{# Go through Vlan interfaces, if not ipv4 address or dhcpv4 server configured, then do not generate dhcpmon for them #}
+{% for (vlan_name, prefix) in VLAN_INTERFACE | pfx_filter %}
+    {%- if prefix | ipv4 and VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
+        {%- for dhcp_server in VLAN[vlan_name]['dhcp_servers'] %}
+            {%- if dhcp_server | ipv4 %}
+                {%- set _ = vlan_list.append(vlan_name) %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{% endfor %}
+{% for vlan_name in vlan_list | unique %}
+    {%- if add_preceding_comma.flag %},{% endif %}
+        {%- set _dummy = add_preceding_comma.update({'flag': True}) %}
 dhcpmon-{{ vlan_name }}
-{%- set _dummy = monitor_instance.update({'flag': False}) %}
-{%- endif %}
-{% endfor %}
+{%- endfor%}
 
 
-{# Create a program entry for each DHCP MONitor instance #}
-{% set relay_for_ipv4 = { 'flag': False } %}
-{% set relay_for_ipv6 = { 'flag': False } %}
-{% for vlan_name in VLAN_INTERFACE %}
-{# Check DHCPv4 agents #}
-{% if VLAN and vlan_name in VLAN and 'dhcp_servers' in VLAN[vlan_name] and VLAN[vlan_name]['dhcp_servers']|length > 0 %}
-{% for dhcp_server in VLAN[vlan_name]['dhcp_servers'] %}
-{% if dhcp_server | ipv4 %}
-{% set _dummy = relay_for_ipv4.update({'flag': True}) %}
-{% endif %}
-{% endfor %}
-{% endif %}
-{# Check DHCPv6 agents #}
-{% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
-{% for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
-{% if dhcpv6_server | ipv6 %}
-{% set _dummy = relay_for_ipv6.update({'flag': True}) %}
-{% endif %}
-{% endfor %}
-{% endif %}
-{% if relay_for_ipv4.flag or relay_for_ipv6.flag %}
+{% for vlan_name in vlan_list | unique %}
 [program:dhcpmon-{{ vlan_name }}]
 {# We treat this VLAN as a downstream interface (-id), as we only want to listen for requests #}
 command=/usr/sbin/dhcpmon -id {{ vlan_name }}
@@ -68,11 +49,6 @@ stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
-dependent_startup_wait_for=
-{%- if relay_for_ipv4.flag %}isc-dhcpv4-relay-{{ vlan_name }}:running {% endif %}
+dependent_startup_wait_for=isc-dhcpv4-relay-{{ vlan_name }}:running
 
-
-{% set _dummy = relay_for_ipv4.update({'flag': False}) %}
-{% set _dummy = relay_for_ipv6.update({'flag': False}) %}
-{% endif %}
 {% endfor %}
