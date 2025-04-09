@@ -30,7 +30,7 @@ if [ -z "$syslog_with_osversion" ]; then
     syslog_with_osversion="false"
 fi
 
-os_version=$(`sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version`)
+os_version=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
 if [ -z "$os_version" ]; then
     os_version="Unknown"
 fi
