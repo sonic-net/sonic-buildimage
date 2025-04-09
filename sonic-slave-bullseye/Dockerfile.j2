@@ -401,7 +401,7 @@ RUN pip3 install wheel==0.38.1
 {%- if CONFIGURED_ARCH == "armhf" %}
 # Allow only manylinux wheels on armhf, to ensure that binaries/libraries work correctly on armhf
 COPY ["disable-non-manylinux.patch", "/"]
-{%- if CROSS_BUILD_ENVIRON == "y" %}
+{%- if CROSS_BUILD_ENVIRON | default("n") == "y" %}
 RUN patch -p1 -i /disable-non-manylinux.patch /python_virtualenv/env3/lib/python3.9/site-packages/pip/_vendor/packaging/tags.py
 {%- else %}
 RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.9/dist-packages/pip/_vendor/packaging/tags.py
