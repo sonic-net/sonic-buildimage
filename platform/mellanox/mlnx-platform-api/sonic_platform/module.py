@@ -265,8 +265,6 @@ class DpuModule(ModuleBase):
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
-        self.DHCP_SERVER_HASH = f"DHCP_SERVER_IPV4_PORT|bridge-midplane|{self._name.lower()}"
-        self.DHCP_IP_ADDRESS_KEY = "ips@"
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
