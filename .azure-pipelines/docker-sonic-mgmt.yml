@@ -45,6 +45,7 @@ stages:
     steps:
     - template: cleanup.yml
     - checkout: self
+      fetchDepth: 0
       clean: true
     - script: |
         set -x
