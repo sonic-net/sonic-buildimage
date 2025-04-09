@@ -25,7 +25,7 @@ fi
 
 hostname=$(hostname)
 
-syslog_with_osversion=$(`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion"`)
+syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
 if [ -z "$syslog_with_osversion" ]; then
     syslog_with_osversion="false"
 fi
