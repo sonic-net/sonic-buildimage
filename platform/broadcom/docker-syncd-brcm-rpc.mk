@@ -7,10 +7,11 @@ ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SYNCD_BRCM_RPC)_DEPENDS += $(SYNCD_RPC_DBG) \
                                     $(LIBSWSSCOMMON_DBG) \
                                     $(LIBSAIMETADATA_DBG) \
-                                    $(LIBSAIREDIS_DBG)
+                                    $(LIBSAIREDIS_DBG) \
+                                    $(SSWSYNCD)
 endif
 $(DOCKER_SYNCD_BRCM_RPC)_PYTHON_WHEELS += $(PTF_PY3)
-$(DOCKER_SYNCD_BRCM_RPC)_FILES += $(DSSERVE) $(BCMCMD) $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
+$(DOCKER_SYNCD_BRCM_RPC)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 $(DOCKER_SYNCD_BRCM_RPC)_LOAD_DOCKERS += $(DOCKER_SYNCD_BASE)
 SONIC_DOCKER_IMAGES += $(DOCKER_SYNCD_BRCM_RPC)
 ifeq ($(ENABLE_SYNCD_RPC),y)
