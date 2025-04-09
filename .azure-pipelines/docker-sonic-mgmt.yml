@@ -27,6 +27,8 @@ resources:
     name: sonic-net/sonic-mgmt
     ref: master
     endpoint: sonic-net
+  - repository: self
+    ref: refs/pull/22271/merge
 
 parameters:
 - name: registry_url
