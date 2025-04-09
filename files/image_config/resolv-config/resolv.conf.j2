@@ -1,3 +1,23 @@
 {% for ip in DNS_NAMESERVER|sort %}
 nameserver {{ ip }}
 {% endfor -%}
+
+{%- if DNS_OPTIONS is defined %}
+{%   set search = DNS_OPTIONS.get('search') %}
+{%   if search is not none %}
+search {{ search.split(",") | join(" ") }}
+{%   endif %}
+{%   set options="" %}
+{%   if DNS_OPTIONS["ndots"] is defined %}
+{%     set options = options ~ ' ndots:' ~ DNS_OPTIONS["ndots"] %}
+{%   endif %}
+{%   if DNS_OPTIONS["timeout"] is defined %}
+{%     set options = options ~ ' timeout:' ~ DNS_OPTIONS["timeout"] %}
+{%   endif %}
+{%   if DNS_OPTIONS["attempts"] is defined %}
+{%     set options = options ~ ' attempts:' ~ DNS_OPTIONS["attempts"] %}
+{%   endif %}
+{%   if options|length > 0 %}
+options{{ options }}
+{%   endif %}
+{% endif -%}
