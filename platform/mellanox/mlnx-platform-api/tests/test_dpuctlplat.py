@@ -125,6 +125,16 @@ class TestDpuClass:
             mock_add_watch.return_value = True
             assert dpuctl_obj.dpu_power_off(False)
             assert mock_obj.call_args_list[1].args[0] == "Skipping DPU power off as DPU is already powered off"
+            mock_power_off.assert_not_called()
+            mock_power_off_force.assert_not_called()
+        # Test skip_pre_post parameter
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_RUN.value)), \
+             patch.object(dpuctl_obj, 'dpu_pre_shutdown') as mock_pre_shutdown:
+            assert dpuctl_obj.dpu_power_off(False, skip_pre_post=True)
+            mock_pre_shutdown.assert_not_called()
+            assert dpuctl_obj.dpu_power_off(False, skip_pre_post=False)
+            mock_pre_shutdown.assert_called_once()
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('multiprocessing.Process.start', MagicMock(return_value=True))
@@ -198,6 +208,12 @@ class TestDpuClass:
             assert written_data[1]["file"].endswith(
                 f"{dpuctl_obj.get_hwmgmt_name()}_rst")
             assert "1" == written_data[1]["data"]
+            written_data = []
+            with patch.object(dpuctl_obj, 'dpu_post_startup') as mock_post_startup:
+                assert dpuctl_obj.dpu_power_on(False, skip_pre_post=True)
+                mock_post_startup.assert_not_called()
+                assert dpuctl_obj.dpu_power_on(False, skip_pre_post=False)
+                mock_post_startup.assert_called_once()
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('multiprocessing.Process.start', MagicMock(return_value=None))

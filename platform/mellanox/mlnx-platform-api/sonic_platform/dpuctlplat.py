@@ -313,7 +313,7 @@ class DpuCtlPlat():
             self.log_info(f"Failed to rescan")
         return False
 
-    def dpu_power_on(self, forced=False):
+    def dpu_power_on(self, forced=False, skip_pre_post=False):
         """Per DPU Power on API"""
         with self.boot_prog_context():
             self.log_info(f"Power on with force = {forced}")
@@ -327,13 +327,15 @@ class DpuCtlPlat():
                 return_value = self._power_on_force()
             else:
                 return_value = self._power_on()
-            self.dpu_post_startup()
+            if not skip_pre_post:
+                self.dpu_post_startup()
             return return_value
 
-    def dpu_power_off(self, forced=False):
+    def dpu_power_off(self, forced=False, skip_pre_post=False):
         """Per DPU Power off API"""
         with self.boot_prog_context():
-            self.dpu_pre_shutdown()
+            if not skip_pre_post:
+                self.dpu_pre_shutdown()
             self.log_info(f"Power off with force = {forced}")
             if self.read_boot_prog() == BootProgEnum.RST.value:
                 self.log_info(f"Skipping DPU power off as DPU is already powered off")

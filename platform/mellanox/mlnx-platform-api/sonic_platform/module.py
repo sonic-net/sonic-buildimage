@@ -492,12 +492,10 @@ class DpuModule(ModuleBase):
         Returns:
             Returns the PCI bus information in BDF format like "[DDDD:]BB:SS:F"
         """
-        if not self.bus_info:
-            # Cache the data to prevent multiple platform.json parsing
-            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.PCIE_INT.value)
-            # If we are unable to parse platform.json for midplane interface raise RunTimeError
-            if not self.bus_info:
-                raise RuntimeError(f"Unable to obtain bus info from platform.json for {self.get_name()}")
+        if self.bus_info:
+            return self.bus_info
+        # Cache the data to prevent multiple platform.json parsing
+        self.bus_info = self.dpuctl_obj.get_pci_dev_path()
         return self.bus_info
 
     def pci_detach(self):
