@@ -4,6 +4,8 @@ SHELL = /bin/bash
 
 MAIN_TARGET = wpasupplicant_$(WPASUPPLICANT_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = wpasupplicant-dbgsym_$(WPASUPPLICANT_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS += hostapd_$(HOSTAPD_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS += hostapd-dbgsym_$(HOSTAPD_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Clone wpa repo
