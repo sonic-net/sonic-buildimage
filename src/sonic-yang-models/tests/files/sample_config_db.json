@@ -3246,6 +3246,7 @@
             "ASIC_SENSORS_POLLER_STATUS": {
                 "admin_status": "enable"
             }
+        }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
         "UNKNOWN_TABLE": {
