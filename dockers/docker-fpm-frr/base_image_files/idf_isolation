@@ -12,10 +12,18 @@ if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* 
     exit 1
 fi
 
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+
 # Skip operation on chassis supervisor
-if [ -f /etc/sonic/chassisdb.conf ]; then  
-    echo "Skipping Operation on chassis supervisor"
-    exit 0
+if [ -f /etc/sonic/chassisdb.conf ]; then
+    PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+    if [ -f "$PLATFORM_ENV_CONF_FILE" ]; then
+        source $PLATFORM_ENV_CONF_FILE
+    fi
+    if [[ $disaggregated_chassis -ne 1 ]]; then
+        echo "Skipping Operation on chassis supervisor"
+        exit 0
+    fi
 fi
 
 idf_isolation_states=("isolated_no_export" "isolated_withdraw_all" "unisolated" "status")
@@ -37,8 +45,6 @@ IDF_ISOLATION_STATE="{\"BGP_DEVICE_GLOBAL\":{\"STATE\":{\"idf_isolation_state\":
 
 # read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
-
-PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
 
 # Parse the device specific asic conf file, if it exists
 ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
