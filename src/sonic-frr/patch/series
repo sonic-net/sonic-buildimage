@@ -42,3 +42,5 @@
 0060-bgpd-Validate-both-nexthop-information-NEXTHOP-and-N.patch
 0061-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch
 0062-zebra-lib-use-internal-rbtree-per-ns.patch
+0063-lib-Return-duplicate-prefix-list-entry-test.patch
+0064-mgmtd-clean-session-config-only-when-it-is-needed.patch

@@ -1,0 +1,167 @@
+From 210a082dea671accfc10a8dcce1431329f0153ae Mon Sep 17 00:00:00 2001
+From: Ying Xie <ying.xie@microsoft.com>
+Date: Sat, 29 Mar 2025 15:30:37 +0000
+Subject: [PATCH 63/63] [mgmtd] clean session config only when it is needed
+
+mgmtd configuration management has an issue where any session
+can clean up outstanding configuration upon destruction.
+
+When a long-lived session is taking configuration changes, and
+another short-lived session which never took any configuration
+closes, the outstanding configuration would be lost because
+the configuration clearing doesn't have protection during session
+closing.
+
+This change keeps track if a session has received any configuration,
+and if the configuration has been applied or cleared.
+
+The outstanding configuration should be applied or cleared before
+session closure (assertion).
+
+When clearing the outstanding session structure, only attempt to
+clear configuration when the closing session has outstanding
+configurations.
+
+Signed-off-by: Ying Xie <ying.xie@microsoft.com>
+---
+ mgmtd/mgmt_fe_adapter.c | 57 +++++++++++++++++++++++++++++------------
+ 1 file changed, 41 insertions(+), 16 deletions(-)
+
+diff --git a/mgmtd/mgmt_fe_adapter.c b/mgmtd/mgmt_fe_adapter.c
+index ec8e77335..27171dfa2 100644
+--- a/mgmtd/mgmt_fe_adapter.c
++++ b/mgmtd/mgmt_fe_adapter.c
+@@ -45,6 +45,8 @@ struct mgmt_fe_session_ctx {
+ 	uint8_t ds_locked[MGMTD_DS_MAX_ID];
+ 	struct event *proc_cfg_txn_clnp;
+ 	struct event *proc_show_txn_clnp;
++	uint32_t config_count;
++	uint32_t committed_count;
+ 
+ 	struct mgmt_fe_sessions_item list_linkage;
+ };
+@@ -118,7 +120,10 @@ mgmt_fe_session_cfg_txn_cleanup(struct mgmt_fe_session_ctx *session)
+ 	 * Ensure any uncommitted changes in Candidate DS
+ 	 * is discarded.
+ 	 */
+-	mgmt_ds_copy_dss(mm->running_ds, mm->candidate_ds, false);
++	if (session->config_count > 0) {
++		mgmt_ds_copy_dss(mm->running_ds, mm->candidate_ds, false);
++		session->config_count = 0;
++	}
+ 
+ 	/*
+ 	 * Destroy the actual transaction created earlier.
+@@ -278,6 +283,8 @@ mgmt_fe_create_session(struct mgmt_fe_client_adapter *adapter,
+ 	session->adapter = adapter;
+ 	session->txn_id = MGMTD_TXN_ID_NONE;
+ 	session->cfg_txn_id = MGMTD_TXN_ID_NONE;
++	session->config_count = 0;
++	session->committed_count = 0;
+ 	mgmt_fe_adapter_lock(adapter);
+ 	mgmt_fe_sessions_add_tail(&adapter->fe_sessions, session);
+ 	if (!mgmt_fe_next_session_id)
+@@ -373,9 +380,11 @@ static int fe_adapter_send_set_cfg_reply(struct mgmt_fe_session_ctx *session,
+ 
+ 	assert(session->adapter);
+ 
+-	if (implicit_commit && session->cfg_txn_id)
++	if (implicit_commit && session->cfg_txn_id) {
++		session->committed_count += session->config_count;
+ 		mgmt_fe_session_register_event(
+ 			session, MGMTD_FE_SESSION_CFG_TXN_CLNUP);
++    }
+ 
+ 	mgmtd__fe_set_config_reply__init(&setcfg_reply);
+ 	setcfg_reply.session_id = session->session_id;
+@@ -443,9 +452,11 @@ static int fe_adapter_send_commit_cfg_reply(
+ 	 */
+ 	if (session->cfg_txn_id
+ 	    && ((result == MGMTD_SUCCESS && !validate_only)
+-		|| (result == MGMTD_NO_CFG_CHANGES)))
++		|| (result == MGMTD_NO_CFG_CHANGES))) {
++		session->committed_count += session->config_count;
+ 		mgmt_fe_session_register_event(
+ 			session, MGMTD_FE_SESSION_CFG_TXN_CLNUP);
++	}
+ 
+ 	if (mm->perf_stats_en)
+ 		gettimeofday(&session->adapter->cmt_stats.last_end, NULL);
+@@ -919,6 +930,7 @@ mgmt_fe_adapter_handle_msg(struct mgmt_fe_client_adapter *adapter,
+ 			       Mgmtd__FeMessage *fe_msg)
+ {
+ 	struct mgmt_fe_session_ctx *session;
++	static int session_cnt = 0;
+ 
+ 	/*
+ 	 * protobuf-c adds a max size enum with an internal, and changing by
+@@ -941,27 +953,37 @@ mgmt_fe_adapter_handle_msg(struct mgmt_fe_client_adapter *adapter,
+ 		    && fe_msg->session_req->id_case
+ 			== MGMTD__FE_SESSION_REQ__ID_CLIENT_CONN_ID) {
+ 			__dbg("Got SESSION_REQ (create) for client-id %" PRIu64
+-			      " from '%s'",
+-			      fe_msg->session_req->client_conn_id,
+-			      adapter->name);
++				  " from '%s' session_cnt %d",
++				  fe_msg->session_req->client_conn_id,
++				  adapter->name, session_cnt);
+ 
+ 			session = mgmt_fe_create_session(
+ 				adapter, fe_msg->session_req->client_conn_id);
++			if (session) {
++				session_cnt++;
++			}
+ 			fe_adapter_send_session_reply(adapter, session, true,
+ 						      session ? true : false);
+ 		} else if (
+ 			!fe_msg->session_req->create
+ 			&& fe_msg->session_req->id_case
+ 				== MGMTD__FE_SESSION_REQ__ID_SESSION_ID) {
+-			__dbg("Got SESSION_REQ (destroy) for session-id %" PRIu64
+-			      "from '%s'",
+-			      fe_msg->session_req->session_id, adapter->name);
+-
+ 			session = mgmt_session_id2ctx(
+ 				fe_msg->session_req->session_id);
+-			fe_adapter_send_session_reply(adapter, session, false,
+-						      true);
+-			mgmt_fe_cleanup_session(&session);
++
++			__dbg("Got SESSION_REQ (destroy) for session-id %" PRIu64
++				  " from '%s' session_cnt %d session %p config_count %u committed_count %u",
++				  fe_msg->session_req->session_id, adapter->name,
++				  session_cnt, session, session ? session->config_count : -1,
++				  session ? session->committed_count : -1);
++
++			if (session) {
++				assert(session->config_count == 0);
++				fe_adapter_send_session_reply(adapter, session, false,
++							      true);
++				mgmt_fe_cleanup_session(&session);
++				session_cnt--;
++			}
+ 		}
+ 		break;
+ 	case MGMTD__FE_MESSAGE__MESSAGE_LOCKDS_REQ:
+@@ -979,12 +1001,15 @@ mgmt_fe_adapter_handle_msg(struct mgmt_fe_client_adapter *adapter,
+ 		session = mgmt_session_id2ctx(
+ 				fe_msg->setcfg_req->session_id);
+ 		session->adapter->setcfg_stats.set_cfg_count++;
++		session->config_count++;
+ 		__dbg("Got SETCFG_REQ (%d Xpaths, Implicit:%c) on DS:%s for session-id %" PRIu64
+-		      " from '%s'",
+-		      (int)fe_msg->setcfg_req->n_data,
++		      " from '%s' session %p config_count %u committed_count %u",
++			  (int)fe_msg->setcfg_req->n_data,
+ 		      fe_msg->setcfg_req->implicit_commit ? 'T' : 'F',
+ 		      mgmt_ds_id2name(fe_msg->setcfg_req->ds_id),
+-		      fe_msg->setcfg_req->session_id, adapter->name);
++			  fe_msg->setcfg_req->session_id, adapter->name,
++			  session, session->config_count,
++			  session->committed_count);
+ 
+ 		mgmt_fe_session_handle_setcfg_req_msg(
+ 			session, fe_msg->setcfg_req);
+-- 
+2.25.1
+

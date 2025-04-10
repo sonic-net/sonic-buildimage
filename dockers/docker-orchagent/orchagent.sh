@@ -110,4 +110,7 @@ if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -v mgmt"
 fi
 
+# Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
+trap '' SIGHUP
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
