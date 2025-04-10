@@ -581,5 +581,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "anchor_route_source": "local"
+                }
+            }
+        }
     }
 }
