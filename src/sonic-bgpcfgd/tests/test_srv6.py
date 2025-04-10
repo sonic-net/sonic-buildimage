@@ -165,6 +165,17 @@ def test_invalid_add():
 
     assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21:f1::\\64")
 
+def test_add_unmatched_sid():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:20::'})
+
+    # test the addition of a SID with a non-matching locator
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:21::/48", {
+        'action': 'uN'
+    }), expected_ret=False, expected_cmds=[])
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:21::\\48")
+
 def test_out_of_order_add():
     loc_mgr, sid_mgr = constructor()
     loc_mgr.cfg_mgr.push_list = MagicMock()

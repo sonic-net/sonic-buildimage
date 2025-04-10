@@ -1,6 +1,6 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
-from ipaddress import IPv6Address
+from ipaddress import IPv6Network
 from swsscommon import swsscommon
 
 supported_SRv6_behaviors = {
@@ -65,8 +65,10 @@ class SRv6Mgr(Manager):
             return False
 
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
-        if locator.block_len + locator.node_len > prefix_len:
-            log_err("Found a SRv6 SID config entry with an invalid prefix length {} | {}".format(key, data))
+        locator_prefix = IPv6Network(locator.prefix)
+        sid_prefix = IPv6Network(ip_prefix)
+        if not locator_prefix.supernet_of(sid_prefix):
+            log_err("Found a SRv6 SID config entry that does not match the locator prefix: {} | {}; locator {}".format(key, data, locator))
             return False
 
         if 'action' not in data:
