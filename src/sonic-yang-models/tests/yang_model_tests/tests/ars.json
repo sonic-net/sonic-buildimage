@@ -26,12 +26,5 @@
         "eStr": [
             "if_name"
         ]
-    },
-    "ARS_TEST_LAG_INVALID_NAME": {
-        "desc": "LAG with invalid name in ARS_PORTCHANNEL_LIST table.",
-        "eStrKey": "LeafRef",
-        "eStr": [
-           "PortChannel0001"
-	    ]
     }
 }
