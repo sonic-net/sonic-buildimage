@@ -563,5 +563,23 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "t2_group_asns": ["65000", "65001", "65002"]
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "t2_group_asns": ["str"]
+                }
+            }
+        }
     }
 }
