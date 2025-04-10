@@ -63,8 +63,8 @@ while /bin/true; do
               fi
           done
 
-          sleep 150
           if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+            sleep 150
             # skip the rest of the script if running on a packet chassis
             continue
           fi
