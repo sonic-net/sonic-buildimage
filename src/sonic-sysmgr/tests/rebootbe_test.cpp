@@ -74,7 +74,7 @@ class RebootBETestWithoutStop : public ::testing::Test {
   void force_warm_start_state(bool enabled) {
     swss::Table enable_table(&m_db, STATE_WARM_RESTART_ENABLE_TABLE_NAME);
     enable_table.hset("system", "enable", enabled ? "true" : "false");
-    enable_table.hset("sonic-framework", "enable", enabled ? "true" : "false");
+    enable_table.hset("sonic-sysmgr", "enable", enabled ? "true" : "false");
 
     swss::Table restart_table(&m_db, STATE_WARM_RESTART_TABLE_NAME);
     restart_table.hset("rebootbackend", "restore_count", enabled ? "0" : "");
