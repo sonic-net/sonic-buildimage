@@ -28,5 +28,25 @@
     "SSH_SERVER_INVALID_MAX_SESSIONS": {
         "desc": "Configure invalid max_sessions value in SSH_SERVER.",
         "eStrKey": "Range"
+    },
+    "SSH_SERVER_INVALID_PERMIT_ROOT_LOGIN": {
+        "desc": "Configure invalid permit_root_login value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_PASSWORD_AUTHENTICATION": {
+        "desc": "Configure invalid password_authentication value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_CIPHERS": {
+        "desc": "Configure invalid ciphers value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_KEX_ALGORITHMS": {
+        "desc": "Configure invalid kex_algorithms value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SSH_SERVER_INVALID_MACS": {
+        "desc": "Configure invalid macs value in SSH_SERVER.",
+        "eStrKey": "InvalidValue"
     }
 }
