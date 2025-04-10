@@ -131,7 +131,7 @@ class ServiceChecker(HealthChecker):
                     expected_running_containers.add(container_name)
                     container_feature_dict[container_name] = container_name
                     
-        if device_info.is_supervisor():
+        if device_info.is_supervisor() or device_info.is_disaggregated_chassis():
             expected_running_containers.add("database-chassis")
             container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict

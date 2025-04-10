@@ -441,6 +441,7 @@ $(info "BLDENV"                          : "$(BLDENV)")
 $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
+$(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
 $(info "INCLUDE_SYSTEM_TELEMETRY"        : "$(INCLUDE_SYSTEM_TELEMETRY)")
 $(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
 $(info "INCLUDE_SYSTEM_BMP"              : "$(INCLUDE_SYSTEM_BMP)")
@@ -783,7 +784,7 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS))
 #     $(SOME_NEW_DEB)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
 #     SONIC_DPKG_DEBS += $(SOME_NEW_DEB)
-$(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
+$(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
 			$$(addprefix $(FILES_PATH)/,$$($$*_AFTER_FILES)) \
 			$(call dpkg_depend,$(DEBS_PATH)/%.dep )
@@ -1451,6 +1452,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
+	export include_stpd="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
@@ -1460,6 +1462,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export kube_docker_proxy="$(KUBE_DOCKER_PROXY)"
 	export enable_pfcwd_on_start="$(ENABLE_PFCWD_ON_START)"
 	export installer_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$($*_INSTALLS) $(FIPS_BASEIMAGE_INSTALLERS))"
+	export installer_python_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(FIPS_BASEIMAGE_PYTHON_INSTALLERS))"
 	export lazy_installer_debs="$(foreach deb, $($*_LAZY_INSTALLS),$(foreach device, $($(deb)_PLATFORM),$(addprefix $(device)@, $(IMAGE_DISTRO_DEBS_PATH)/$(deb))))"
 	export lazy_build_installer_debs="$(foreach deb, $($*_LAZY_BUILD_INSTALLS), $(addprefix $($(deb)_MACHINE)|,$(deb)))"
 	export installer_images="$(foreach docker, $($*_DOCKERS),\

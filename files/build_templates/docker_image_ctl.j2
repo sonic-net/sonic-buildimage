@@ -111,7 +111,12 @@ function preStartAction()
         systemctl stop watchdog-control.service
     fi
 {%- elif docker_container_name == "snmp" %}
-    $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    if decode-syseeprom -s > /dev/null 2>&1; then
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    else
+        echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -201,8 +206,18 @@ function postStartAction()
            ip link set dev ns-eth1"$NET_NS" netns "$NET_NS"
            ip netns exec "$NET_NS" ip link set ns-eth1"$NET_NS" name eth1
 
+           if [[ -n "$lc_ip_offset" ]]; then
+	       # Use ip offset provided by platform vendor via chassisdb.conf to prevent any conflict
+	       # with any platform IP range, e.g., LC eth1-midplane IP.
+               ip_offset=$lc_ip_offset
+           else
+	       # If Vendor has not provided an ip offset, Use 10 as default offset. Platform vendor should
+	       # ensure there is no conflict with platform IP range for any slot.
+               ip_offset=10
+           fi
+
            # Configure IP address and enable eth1
-           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + 10))
+           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + $ip_offset))
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
            ip netns exec "$NET_NS" ip link set dev eth1 up
@@ -283,7 +298,7 @@ function postStartAction()
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]]; then
+        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
            tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
            if [[ -n "$tsa_cfg" ]]; then
               docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
@@ -339,6 +354,13 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -371,6 +393,7 @@ start() {
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
     fi
+
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
@@ -611,9 +634,9 @@ start() {
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
-        SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+        SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
     else
-        SMARTSWITCH_MNT= ""
+        SMARTSWITCH_MNT=""
     fi
 {%- endif %}
 {%- endif %}
@@ -655,7 +678,7 @@ start() {
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
-        --shm-size=${SYNCD_SHM_SIZE:-64m} \
+        --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
 {%- endif %}
 {%- endif %}

@@ -5,6 +5,10 @@ module sonic-interface {
 	namespace "http://github.com/sonic-net/sonic-interface";
 	prefix intf;
 
+	import ietf-yang-types {
+		prefix yang;
+	}
+
 	import sonic-types {
 		prefix stypes;
 	}
@@ -21,8 +25,16 @@ module sonic-interface {
 	import sonic-vrf {
 		prefix vrf;
 	}
+	
+	import sonic-vnet {
+		prefix svnet;
+	}
 
 	description "INTERFACE yang Module for SONiC OS";
+
+	revision 2025-03-06 {
+		description "Add leaf vnet_name";
+	}
 
 	revision 2021-03-30 {
 		description "Modify the type of vrf name";
@@ -55,6 +67,13 @@ module sonic-interface {
 						path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
 					}
 				}
+				
+				leaf vnet_name {
+					description "Reference to the name of a VNET in sonic-vnet model";
+					type leafref {
+						path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+					}   
+				}
 
 				leaf nat_zone {
 					description "NAT Zone for the interface";
@@ -79,6 +98,11 @@ module sonic-interface {
 					description "Enable/Disable IPv6 link local address on interface";
 					type stypes:mode-status;
 					default disable;
+				}
+
+				leaf mac_addr {
+					description "Assign administrator-provided MAC address to Interface";
+					type yang:mac-address;
 				}
 
                 leaf loopback_action {

@@ -94,14 +94,16 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
         }
     }
     dhcp_server_ports = {}
+    dpu_midplane_dict = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
         midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
+        dpu_midplane_dict[dpu_name] = {'midplane_interface': midplane_interface}
         dpu_id = int(midplane_interface.replace('dpu', ''))
         dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
 
     if dhcp_server_ports:
-        data['DPUS'] = ss_config['DPUS']
+        data['DPUS'] = dpu_midplane_dict
 
         data['FEATURE'] = {
             "dhcp_relay": {
@@ -145,7 +147,7 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
-    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
 

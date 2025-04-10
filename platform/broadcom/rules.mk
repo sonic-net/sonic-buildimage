@@ -1,5 +1,6 @@
 include $(PLATFORM_PATH)/sai-modules.mk
 include $(PLATFORM_PATH)/sai.mk
+include $(PLATFORM_PATH)/sswsyncd.mk
 # TODO: re-enable once the following have been updated for bookworm:
 # * Nokia
 # * Juniper

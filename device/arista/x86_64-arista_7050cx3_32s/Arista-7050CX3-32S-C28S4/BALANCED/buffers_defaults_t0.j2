@@ -1,0 +1,59 @@
+{%- set default_cable = '300m' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,32) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- set ingress_lossless_pool_size = '32689152' %}
+{%- set egress_lossless_pool_size = '32340992' %}
+{%- if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'] == 'DualToR') %}
+    {%- set ingress_lossless_pool_size = '32441856' %}
+    {%- set egress_lossless_pool_size = '32441856' %}
+{%- endif %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "{{ingress_lossless_pool_size }}",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "2058240"
+        },
+        "egress_lossy_pool": {
+            "size": "24192256",
+            "type": "egress",
+            "mode": "dynamic"
+        },
+        "egress_lossless_pool": {
+            "size": "{{egress_lossless_pool_size }}",
+            "type": "egress",
+            "mode": "static"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "static_th":"{{ingress_lossless_pool_size }}"
+        },
+        "egress_lossless_profile": {
+            "pool":"egress_lossless_pool",
+            "size":"0",
+            "static_th":"{{egress_lossless_pool_size }}"
+        },
+        "egress_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"1792",
+            "dynamic_th":"3"
+        }
+    },
+{%- endmacro %}
+
+{% import 'buffers_extra_queues.j2' as defs with context %}
+
+{%- macro generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) %}
+{{ defs.generate_queue_buffers_with_extra_lossless_queues(port_names, port_names_require_extra_buffer) }}
+{%- endmacro %}
