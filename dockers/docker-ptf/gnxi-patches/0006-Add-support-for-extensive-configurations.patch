@@ -34,12 +34,12 @@ index 0ea6f3d..00549e3 100644
  def main():
    argparser = _create_parser()
    args = vars(argparser.parse_args())
-+  # Replace input args with args from arg_file if specified
++  # Merge input args with args from arg_file if specified
 +  if args['arg_file']:
 +      with open(args['arg_file'], 'r') as file:
 +          file_content = file.read()
 +          simulated_args = shlex.split(file_content)
-+          args = vars(argparser.parse_args(simulated_args))
++          args.update(vars(argparser.parse_args(simulated_args)))
    if args['version']:
      print(__version__)
      sys.exit()
