@@ -12,7 +12,7 @@ parameters:
     default: 'SONIC_DPKG_CACHE_METHOD=rcache'
   - name: OPTIONS
     default: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker MIRROR_SNAPSHOT=y DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y
-              SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_BUILD_JOBS=4 BUILD_PROCESS_TIMEOUT=7200
+              SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_BUILD_JOBS=4 BUILD_PROCESS_TIMEOUT=7200 NOBUSTER=1 NOBULLSEYE=1
               PASSWORD=$(SONIC_PASSWORD) INCLUDE_RESTAPI=y ENABLE_FIPS=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y ENABLE_DHCP_GRAPH_SERVICE=y'
 stages:
 - ${{ if containsValue(parameters.JOBS, 'vs') }}:
@@ -32,7 +32,8 @@ stages:
           parameters:
             PLATFORM_NAME: vs
             PLATFORM_ARCH: amd64
-            OPTIONS: ${{ parameters.OPTIONS }}
+            # docker-ptf is using buster, it will migrate to bullseye
+            OPTIONS: ${{ parameters.OPTIONS }} NOBUSTER=0
         - script: |
             # skip because internal branch 3 kvmtest cases keeps failing.
             echo "$(System.PullRequest.SourceBranch)"
@@ -46,7 +47,7 @@ stages:
         - script: |
             set -ex
 
-            OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
+            OPTIONS="${{ parameters.OPTIONS }} NOBUSTER=0 ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
           displayName: Build SONiC image
         - script: |
@@ -223,13 +224,13 @@ stages:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000
-          OPTIONS: ${{ parameters.OPTIONS }}
+          OPTIONS: ${{ parameters.OPTIONS }} NOBULLSEYE=0
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'cisco-8000-smartswitch') }}:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000-smartswitch
-          OPTIONS: '${{ parameters.OPTIONS }} SMARTSWITCH=1'
+          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
