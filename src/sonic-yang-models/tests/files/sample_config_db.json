@@ -2288,7 +2288,7 @@
                 "type": "DWRR",
                 "weight": "10"
             }
-	},
+        },
 
         "WRED_PROFILE": {
             "Wred1": {
@@ -3078,12 +3078,12 @@
                 "dpu_bfd_probe_multiplier": "3"
             }
         },
-	"XCVRD_LOG": {
-	    "Y_CABLE": {
-		"log_verbosity": "notice"
-	    }
-	},
-	"GRPCCLIENT": {
+	    "XCVRD_LOG": {
+	        "Y_CABLE": {
+                "log_verbosity": "notice"
+	        }
+	    },
+	    "GRPCCLIENT": {
             "config": {
                 "type": "secure",
                 "auth_level": "server",
@@ -3095,7 +3095,7 @@
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
             }
-	},
+        },
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
@@ -3202,7 +3202,7 @@
                 "guard_time": "2",
                 "ber_threshold": "12"
             }
-        }
+        },
         "ARS_PROFILE": {
             "global": {
                 "algorithm": "ewma",
@@ -3221,23 +3221,14 @@
             }
         },
         "ARS_NEXTHOP_GROUP": {
-            "192.168.0.0/32|default": {
-			    "profile_name": "global",
+            "default|192.168.0.0/32": {
+                "profile_name": "global",
                 "assign_mode": "per_flowlet_quality",
-                "max_flows": "512",
-                "primary_path_threshold": "5"
-            }
-        },
-        "ARS_PORTCHANNEL": {
-            "PortChannel0003": {
-			    "profile_name": "global",
-                "assign_mode": "per_flowlet_quality",
-                "max_flows": "1024",
-                "primary_path_threshold": "2"
+                "max_flows": "512"
             }
         },
         "ARS_INTERFACE": {
-            "Ethernet1": {},
+            "Ethernet1": {"scaling_factor": "100"},
             "Ethernet3": {},
             "Ethernet10":{}
         },
