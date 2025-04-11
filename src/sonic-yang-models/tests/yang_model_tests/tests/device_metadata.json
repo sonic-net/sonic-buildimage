@@ -42,6 +42,12 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
@@ -111,6 +117,9 @@
     },
     "DEVICE_METADATA_VALID_SUBTYPE3": {
         "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value LowerSpine"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
