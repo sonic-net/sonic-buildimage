@@ -2906,6 +2906,18 @@
         "PREFIX_LIST": {
             "ANCHOR_PREFIX|10.0.0.0/8" : {},
             "ANCHOR_PREFIX|FC00::/48" : {}
+        },
+        "DEBUG_COUNTER": {
+            "DEBUG_4": {
+                "alias": "BAD_DROPS",
+                "desc": "More port ingress drops",
+                "group": "BAD",
+                "type": "SWITCH_INGRESS_DROPS"
+            }
+        },
+        "DEBUG_COUNTER_DROP_REASON": {
+            "DEBUG_4|DIP_LINK_LOCAL": {},
+            "DEBUG_4|SIP_LINK_LOCAL": {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

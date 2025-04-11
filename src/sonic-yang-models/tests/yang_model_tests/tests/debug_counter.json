@@ -1,0 +1,24 @@
+{
+    "VALID_DEBUG_COUNTERS": {
+        "desc": "One debug counter of each valid type"
+    },
+    "VALID_COUNTERS_WITH_DROP_REASONS": {
+        "desc": "Multiple counters with drop reasons added"
+    },
+    "INVALID_DEBUG_COUNTER_TYPE": {
+        "desc": "One debug counter with invalid type",
+        "eStrKey": "InvalidValue"
+    },
+    "DEBUG_COUNTER_MISSING_COUNTER_TYPE": {
+        "desc": "One debug counter with missing type",
+        "eStrKey": "Missing"
+    },
+    "NONEXIST_DEBUG_COUNTER_FOR_DROP_REASON": {
+        "desc": "Add a drop reason for a non-existent counter",
+        "eStr": "The counter does not exist in the DEBUG_COUNTER table"
+    },
+    "INVALID_DROP_REASON": {
+        "desc": "Add an invalid drop reason to a counter",
+        "eStrKey": "InvalidValue"
+    }
+}

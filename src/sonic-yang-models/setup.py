@@ -110,6 +110,7 @@ setup(
                          './yang-models/sonic-console.yang',
                          './yang-models/sonic-crm.yang',
                          './yang-models/sonic-dash.yang',
+                         './yang-models/sonic-debug-counter.yang',
                          './yang-models/sonic-default-lossless-buffer-parameter.yang',
                          './yang-models/sonic-device_metadata.yang',
                          './yang-models/sonic-device_neighbor.yang',
@@ -293,7 +294,8 @@ setup(
                          './cvlyang-models/sonic-macsec.yang',
                          './cvlyang-models/sonic-bmp.yang',
                          './cvlyang-models/sonic-serial-console.yang',
-                         './cvlyang-models/sonic-bgp-sentinel.yang']),
+                         './cvlyang-models/sonic-bgp-sentinel.yang',
+                         './cvlyang-models/sonic-debug-counter.yang']),
     ],
     zip_safe=False,
 )
