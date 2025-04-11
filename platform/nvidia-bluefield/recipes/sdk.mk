@@ -122,8 +122,9 @@ $(IB_VERBS_PROV)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 
 IB_VERBS = libibverbs1_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(IB_VERBS)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
+$(IB_VERBS)_RDEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 IB_VERBS_DEV = libibverbs-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
-$(IB_VERBS_DEV)_DEPENDS = $(IB_VERBS) $(IB_VERBS_PROV)
+$(IB_VERBS_DEV)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV) $(IB_VERBS) $(IB_VERBS_PROV)
 
 IB_UMAD = libibumad3_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 IB_UMAD_DEV = libibumad-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
@@ -131,14 +132,6 @@ IB_UMAD_DEV = libibumad-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 RDMACM = librdmacm1_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 RDMACM_DEV = librdmacm-dev_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(RDMACM_DEV)_DEPENDS = $(RDMACM) $(IB_VERBS_DEV)
-
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_DEV)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD_DEV)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM)))
-$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM_DEV)))
 
 export RDMA_CORE
 export IB_VERBS IB_VERBS_DEV
@@ -157,8 +150,19 @@ RDMA_CORE_DERIVED_DEBS = \
 
 export RDMA_CORE_DERIVED_DEBS
 
-SDK_DEBS += $(RDMA_CORE) $(RDMA_CORE_DERIVED_DEBS)
 SDK_SRC_TARGETS += $(RDMA_CORE)
+
+ifeq ($(SDK_FROM_SRC), y)
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_DEV)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD_DEV)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(RDMACM_DEV)))
+else
+SDK_ONLINE_TARGETS += $(RDMA_CORE_DERIVED_DEBS)
+endif
 
 # DPDK and derived packages
 
