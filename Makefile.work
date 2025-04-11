@@ -64,6 +64,9 @@
 #  * ENABLE_MULTIDB: Enable multiple redis database instances.
 #  *                 Default: unset
 #  *                 Values: y
+#  * ENABLE_VALKEY_DB: Replace redis database with valkey database.
+#  *                 Default: unset
+#  *                 Values: y
 ###############################################################################
 
 SHELL = /bin/bash
@@ -576,6 +579,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+                           ENABLE_VALKEY_DB=$(ENABLE_VALKEY_DB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
