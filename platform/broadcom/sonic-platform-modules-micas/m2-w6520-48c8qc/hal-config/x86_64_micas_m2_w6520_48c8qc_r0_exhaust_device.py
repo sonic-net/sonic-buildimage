@@ -32,8 +32,8 @@ class threshold:
     PSU_TEMP_MIN = -10 * 1000
     PSU_TEMP_MAX = 60 * 1000
 
-    PSU_FAN_SPEED_MIN = 2000
-    PSU_FAN_SPEED_MAX = 28000
+    PSU_FAN_SPEED_MIN = 3000
+    PSU_FAN_SPEED_MAX = 30000
 
     PSU_OUTPUT_VOLTAGE_MIN = 11 * 1000
     PSU_OUTPUT_VOLTAGE_MAX = 14 * 1000
@@ -58,16 +58,16 @@ class threshold:
     PSU_INPUT_CURRENT_MIN = 0.2 * 1000
     PSU_INPUT_CURRENT_MAX = 7 * 1000
 
-    FRONT_FAN_SPEED_MAX = 25000
-    REAR_FAN_SPEED_MAX = 22000
-    FAN_SPEED_MIN = 2000
+    FRONT_FAN_SPEED_MAX = 32500
+    REAR_FAN_SPEED_MAX = 30500
+    FAN_SPEED_MIN = 2800
 
 devices = {
     "onie_e2": [
         {
             "name": "ONIE_E2",
             "e2loc": {"loc": "/sys/bus/i2c/devices/1-0056/eeprom", "way": "sysfs"},
-            "airflow": "intake"
+            "airflow": "exhaust"
         },
     ],
     "psus": [
@@ -278,7 +278,7 @@ devices = {
             "temp_id": "TEMP3",
             "api_name": "Inlet",
             "Temperature": {
-                "value": {"loc": "/sys/bus/i2c/devices/80-004f/hwmon/hwmon*/temp1_input", "way": "sysfs"},
+                "value": {"loc": "/sys/bus/i2c/devices/76-0048/hwmon/hwmon*/temp1_input", "way": "sysfs"},
                 "Min": -10000,
                 "Low": 0,
                 "High": 40000,
@@ -292,7 +292,7 @@ devices = {
             "temp_id": "TEMP4",
             "api_name": "Outlet",
             "Temperature": {
-                "value": {"loc": "/sys/bus/i2c/devices/76-0048/hwmon/hwmon*/temp1_input", "way": "sysfs"},
+                "value": {"loc": "/sys/bus/i2c/devices/80-004f/hwmon/hwmon*/temp1_input", "way": "sysfs"},
                 "Min": -10000,
                 "Low": 0,
                 "High": 70000,

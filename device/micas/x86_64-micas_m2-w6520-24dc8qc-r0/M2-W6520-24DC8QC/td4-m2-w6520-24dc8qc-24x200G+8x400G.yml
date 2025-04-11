@@ -5,13 +5,12 @@ bcm_device:
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 0
             shared_block_mask_section: uc_bc
-            l3_alpm_template: 2
+            l3_alpm_template: 1
             l3_alpm2_bnk_threshold: 100
             svi_my_station_optimization: 1
-            sai_nbr_bcast_ifp_optimized: 2
             uft_mode: 1
             l3_enable: 1
-            l2_hitbit_enable: 0
+            l2_hitbit_enable: 1
             pktio_mode: 1
             sai_optimized_mmu: 1
             sai_pfc_defaults_disable: 1

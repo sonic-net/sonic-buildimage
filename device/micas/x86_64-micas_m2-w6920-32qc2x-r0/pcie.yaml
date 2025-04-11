@@ -107,12 +107,6 @@
     11)'
 - bus: '00'
   dev: 1f
-  fn: '1'
-  id: 19dd
-  name: 'Memory controller: Intel Corporation Atom Processor C3000 Series Primary
-    to Side Band (P2SB) Bridge (rev 11)'
-- bus: '00'
-  dev: 1f
   fn: '2'
   id: 19de
   name: 'Memory controller: Intel Corporation Atom Processor C3000 Series Power Management
