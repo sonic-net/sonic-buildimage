@@ -279,12 +279,14 @@ WORKDIR /azp
 COPY start.sh \
      0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
      0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+     0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
      ./
 RUN chmod +x start.sh \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf `which pip3` /usr/bin/pip \
     && ln -sf `which pip3` /usr/local/sbin/pip \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
 
 USER $user
