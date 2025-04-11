@@ -8,6 +8,9 @@ LIBPAM_RADIUS = libpam-radius-auth_$(PAM_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBPAM_RADIUS)_SRC_PATH = $(SRC_PATH)/radius/pam
 SONIC_MAKE_DEBS += $(LIBPAM_RADIUS)
 
+LIBPAM_RADIUS_DBG = libpam-radius-auth-dbgsym_$(PAM_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(LIBPAM_RADIUS),$(LIBPAM_RADIUS_DBG)))
+
 SONIC_STRETCH_DEBS += $(LIBPAM_RADIUS)
 
 # libnss-radius packages
@@ -20,5 +23,7 @@ LIBNSS_RADIUS = libnss-radius_$(NSS_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBNSS_RADIUS)_SRC_PATH = $(SRC_PATH)/radius/nss
 SONIC_MAKE_DEBS += $(LIBNSS_RADIUS)
 
-SONIC_STRETCH_DEBS += $(LIBNSS_RADIUS)
+LIBNSS_RADIUS_DBG = libnss-radius-dbgsym_$(NSS_RADIUS_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(LIBNSS_RADIUS),$(LIBNSS_RADIUS_DBG)))
 
+SONIC_STRETCH_DEBS += $(LIBNSS_RADIUS)
