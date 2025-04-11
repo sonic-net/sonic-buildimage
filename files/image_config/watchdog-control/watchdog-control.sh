@@ -3,6 +3,11 @@
 VERBOSE=no
 WATCHDOG_UTIL="/usr/local/bin/watchdogutil"
 
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+PLATFORM=${PLATFORM:-$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)}
+PLATFORM_JSON="/usr/share/sonic/device/$PLATFORM/platform.json"
+
 function debug()
 {
     /usr/bin/logger "$0 : $1"
@@ -34,8 +39,27 @@ function getBootType()
     echo "${TYPE}"
 }
 
+function is_smart_switch_dpu()
+{
+    if [[ ! -f "$PLATFORM_JSON" ]]; then
+        return 1
+    fi
+
+    if jq -e 'has("DPU")' "$PLATFORM_JSON" > /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function disable_watchdog()
 {
+    # Check if the image is built for DPU
+    if is_smart_switch_dpu; then
+        debug "Skipping Watchdog disable as the system is a DPU"
+        return
+    fi
+
     # Obtain boot type from kernel arguments
     BOOT_TYPE=`getBootType`
     if [[ -x ${WATCHDOG_UTIL} ]]; then
