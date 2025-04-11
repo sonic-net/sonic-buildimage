@@ -1,0 +1,17 @@
+{%- set default_cable = '5m' %}
+
+{# Skip BUFFER_POOL, BUFFER_PROFILE #}
+{%- macro generate_buffer_pool_and_profiles() %}
+{%- endmacro %}
+
+{# Skip BUFFER_QUEUE #}
+{%- macro generate_queue_buffers(ports) %}
+    "BUFFER_QUEUE": {
+    }
+{%- endmacro %}
+
+{# Skip BUFFER_PG #}
+{%- macro generate_pg_profils(ports) %}
+    "BUFFER_PG": {
+    },
+{%- endmacro %}
