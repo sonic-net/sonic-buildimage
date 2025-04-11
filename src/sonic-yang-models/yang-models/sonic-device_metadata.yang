@@ -295,6 +295,10 @@ module sonic-device_metadata {
                     description "ASNs inner same group";
                 }
 
+                leaf anchor_route_source {
+                    type string;
+                    description "Set source of anchor route";
+                }
             }
             /* end of container localhost */
         }
