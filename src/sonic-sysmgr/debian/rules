@@ -31,8 +31,8 @@ override_dh_auto_configure:
 	dh_auto_configure -- $(configure_opts)
 
 override_dh_auto_install:
-	dh_auto_install --destdir=debian/framework
+	dh_auto_install --destdir=debian/sysmgr
 
 override_dh_strip: 
-	dh_strip -pframework --dbg-package=framework-dbg
+	dh_strip -psysmgr --dbg-package=sysmgr-dbg
 
