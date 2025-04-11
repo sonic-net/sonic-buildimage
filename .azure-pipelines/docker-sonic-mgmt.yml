@@ -27,6 +27,8 @@ resources:
     name: sonic-net/sonic-mgmt
     ref: master
     endpoint: sonic-net
+  - repository: self
+    ref: refs/pull/22271/merge
 
 parameters:
 - name: registry_url
@@ -45,6 +47,7 @@ stages:
     steps:
     - template: cleanup.yml
     - checkout: self
+      fetchDepth: 0
       clean: true
     - script: |
         set -x
@@ -96,11 +99,11 @@ stages:
         docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
       displayName: 'Setup sonic-mgmt docker container and verify'
 
-    - task: Docker@2
-      displayName: Upload image
-      condition: succeeded()
-      inputs:
-        containerRegistry: ${{ parameters.registry_conn }}
-        repository: docker-sonic-mgmt
-        command: push
-        tags: latest
+#    - task: Docker@2
+#      displayName: Upload image
+#      condition: succeeded()
+#      inputs:
+#        containerRegistry: ${{ parameters.registry_conn }}
+#        repository: docker-sonic-mgmt
+#        command: push
+#        tags: latest
