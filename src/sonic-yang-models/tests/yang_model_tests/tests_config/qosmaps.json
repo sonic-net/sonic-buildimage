@@ -881,6 +881,64 @@
         }
     },
 
+    "PORT_QOS_MAP_APPLY_EMPTY_PFC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfc_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_EMPTY_PFCWD": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "pfcwd_sw_enable": ""
+                    }
+                ]
+            }
+        }
+    },
+
     "TC_TO_DSCP_MAP_CRETAE": {
         "sonic-tc-dscp-map:sonic-tc-dscp-map": {
             "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
