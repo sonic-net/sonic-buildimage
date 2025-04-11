@@ -45,8 +45,8 @@
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
-	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr-10.0.1
+	url = https://github.com/cscarpitta/sonic-frr.git   # to be switched back to sonic-net/sonic-frr once the branch it is created 
+	branch = frr-10.3
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git

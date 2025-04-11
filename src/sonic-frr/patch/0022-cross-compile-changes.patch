@@ -37,11 +37,11 @@ index 5a1b74cfc..000000000
 -build/doc/manpages/_build/man/mtracebis.8
 -build/doc/manpages/_build/man/vtysh.1
 diff --git a/debian/rules b/debian/rules
-index 43e5d7e61..aa13106fe 100755
+index 74573c9a0..e0b626fbf 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -33,10 +33,17 @@ else
-   CONF_PIM6=--disable-pim6d
+@@ -39,10 +39,17 @@ else
+   CONF_GRPC=--enable-grpc
  endif
  
 +DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
@@ -59,7 +59,7 @@ index 43e5d7e61..aa13106fe 100755
  
  override_dh_auto_configure:
  	$(shell dpkg-buildflags --export=sh); \
-@@ -74,10 +81,10 @@ override_dh_auto_configure:
+@@ -80,10 +87,10 @@ override_dh_auto_configure:
  override_dh_auto_install:
  	dh_auto_install
  
