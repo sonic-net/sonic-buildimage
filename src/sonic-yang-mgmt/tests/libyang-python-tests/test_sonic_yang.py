@@ -211,7 +211,7 @@ class Test_SonicYang(object):
         for node in data['schema_dependencies']:
             xpath = str(node['xpath'])
             list = node['schema_dependencies']
-            depend = yang_s._find_schema_dependencies(xpath)
+            depend = yang_s.find_schema_dependencies(xpath)
             assert set(depend) == set(list)
 
     #test merge data tree
@@ -260,6 +260,56 @@ class Test_SonicYang(object):
             expected_type = yang_s._str_to_type(expected)
             data_type = yang_s._get_leafref_type_schema(xpath)
             assert expected_type == data_type
+
+    def test_configdb_path_to_xpath(self, yang_s, data):
+        yang_s.loadYangModel()
+        for node in data['configdb_path_to_xpath']:
+            configdb_path = str(node['configdb_path'])
+            schema_xpath = bool(node['schema_xpath'])
+            expected = node['xpath']
+            received = yang_s.configdb_path_to_xpath(configdb_path, schema_xpath=schema_xpath)
+            assert received == expected
+
+    def test_xpath_to_configdb_path(self, yang_s, data):
+        yang_s.loadYangModel()
+        for node in data['xpath_to_configdb_path']:
+            xpath = str(node['xpath'])
+            expected = node['configdb_path']
+            received = yang_s.xpath_to_configdb_path(xpath)
+            assert received == expected
+
+    def test_configdb_path_split(self, yang_s, data):
+        def check(path, tokens):
+            expected=tokens
+            actual=yang_s.configdb_path_split(path)
+            assert expected == actual
+
+        check("", [])
+        check("/", [])
+        check("/token", ["token"])
+        check("/more/than/one/token", ["more", "than", "one", "token"])
+        check("/has/numbers/0/and/symbols/^", ["has", "numbers", "0", "and", "symbols", "^"])
+        check("/~0/this/is/telda", ["~", "this", "is", "telda"])
+        check("/~1/this/is/forward-slash", ["/", "this", "is", "forward-slash"])
+        check("/\\\\/no-escaping", ["\\\\", "no-escaping"])
+        check("////empty/tokens/are/ok", ["", "", "", "empty", "tokens", "are", "ok"])
+
+    def configdb_path_join(self, yang_s, data):
+        def check(tokens, path):
+            expected=path
+            actual=yang_s.configdb_path_join(tokens)
+            assert expected == actual
+
+        check([], "/",)
+        check([""], "/",)
+        check(["token"], "/token")
+        check(["more", "than", "one", "token"], "/more/than/one/token")
+        check(["has", "numbers", "0", "and", "symbols", "^"], "/has/numbers/0/and/symbols/^")
+        check(["~", "this", "is", "telda"], "/~0/this/is/telda")
+        check(["/", "this", "is", "forward-slash"], "/~1/this/is/forward-slash")
+        check(["\\\\", "no-escaping"], "/\\\\/no-escaping")
+        check(["", "", "", "empty", "tokens", "are", "ok"], "////empty/tokens/are/ok")
+        check(["~token", "telda-not-followed-by-0-or-1"], "/~0token/telda-not-followed-by-0-or-1")
 
     """
     This is helper function to load YANG models for tests cases, which works
