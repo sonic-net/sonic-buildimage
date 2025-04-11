@@ -8,6 +8,5 @@ lazy-object-proxy==1.10.0
 m2crypto==0.42.0
 pexpect==4.9.0
 prefixed==0.8.0
-pycairo==1.26.0
 pygments==2.18.0
 wcwidth==0.2.13
