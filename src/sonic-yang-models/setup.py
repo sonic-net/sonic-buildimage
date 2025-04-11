@@ -272,6 +272,7 @@ setup(
                          './cvlyang-models/sonic-gnmi.yang',
                          './cvlyang-models/sonic-types.yang',
                          './cvlyang-models/sonic-versions.yang',
+                         './cvlyang-models/sonic-vnet.yang',
                          './cvlyang-models/sonic-vlan.yang',
                          './cvlyang-models/sonic-vrf.yang',
                          './cvlyang-models/sonic-warm-restart.yang',

@@ -64,3 +64,5 @@
 0081-bgpd-Optimize-evaluate-paths-for-a-peer-going-down.patch
 0082-Revert-bgpd-upon-if-event-evaluate-bnc-with-matching.patch
 0083-staticd-add-cli-to-support-steering-of-ipv4-traffic-over-srv6-sid-list.patch
+0084-lib-Return-duplicate-prefix-list-entry-test.patch
+0085-This-error-happens-when-we-try-to-write-to-a-socket.patch

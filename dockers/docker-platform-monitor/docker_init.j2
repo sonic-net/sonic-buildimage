@@ -9,6 +9,7 @@ FANCONTROL_CONF_FILE="/usr/share/sonic/platform/fancontrol"
 SUPERVISOR_CONF_TEMPLATE="/usr/share/sonic/templates/docker-pmon.supervisord.conf.j2"
 SUPERVISOR_CONF_FILE="/etc/supervisor/conf.d/supervisord.conf"
 MODULAR_CHASSISDB_CONF_FILE="/usr/share/sonic/platform/chassisdb.conf"
+PLATFORM_ENV_CONF_FILE="/usr/share/sonic/platform/platform_env.conf"
 
 HAVE_SENSORS_CONF=0
 HAVE_FANCONTROL_CONF=0
@@ -115,7 +116,11 @@ if [ -e $FANCONTROL_CONF_FILE ]; then
     /bin/cp -f $FANCONTROL_CONF_FILE /etc/
 fi
 
-if [ -e $MODULAR_CHASSISDB_CONF_FILE ]; then
+if [ -e $PLATFORM_ENV_CONF_FILE ]; then
+    source $PLATFORM_ENV_CONF_FILE
+fi
+
+if [ -e $MODULAR_CHASSISDB_CONF_FILE ] && [[ $disaggregated_chassis -ne 1 ]]; then
     IS_MODULAR_CHASSIS=1
 fi
 

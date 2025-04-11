@@ -9,7 +9,7 @@ FROM {{ prefix}}debian:buster
 FROM {{ prefix }}debian:bullseye
 {% endif %}
 
-{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files %}
+{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
 
 USER root
 WORKDIR /root
@@ -92,7 +92,8 @@ RUN apt-get update          \
         automake            \
         iproute2            \
         wireshark-common    \
-        freeradius
+        freeradius          \
+        quilt
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
@@ -180,7 +181,11 @@ RUN git clone https://github.com/facebook/tac_plus \
     && ./configure \
     && make install \
     && ln -s /usr/local/sbin/tac_plus /usr/sbin/tac_plus \
-    && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd
+    && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd \
+    && mkdir /etc/tacacs+ \
+    && chmod 0755 /etc/tacacs+
+COPY ["tacacs_plus", "/etc/init.d"]
+COPY ["tacacs+", "/etc/default"]
 {% endif %}
 
 {% if PTF_ENV_PY_VER == "mixed" %}
@@ -194,14 +199,37 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
 
 {% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m pip install --upgrade --ignore-installed pip
-{% else %}
-RUN pip3 install --upgrade --ignore-installed pip
 {% endif %}
 
-# Install all python modules from pypi. python3-scapy is exception, ptf debian package requires python3-scapy
+# For py3 image the following offending packages below do not use the updated 
+# setuptools on Python 3.9. The packages downgrade setuptools 
+# to 40.x causing further installations to fail
+{% if PTF_ENV_PY_VER == "py3" %}
+{% set offending_packages = ["supervisor", "ipython==5.4.1", "exabgp", "grpcio-tools", "pybrctl", "pyrasite", "scapy==2.5.0", "thrift"] %}
+{{ install_offending_packages(offending_packages) }}
+{% else %}
 RUN pip3 install setuptools \
-    && pip3 install supervisor \
-    && pip3 install ipython==5.4.1 \
+        && pip3 install supervisor \
+        && pip3 install ipython==5.4.1 \
+        && pip3 install exabgp \
+        && pip3 install grpcio-tools \
+        && pip3 install pybrctl \
+        && pip3 install pyrasite \
+        && pip3 install scapy==2.5.0 \
+        && pip3 install thrift
+{% endif %}
+
+# Install all python modules from pypi. python3-scapy is exception, 
+# ptf debian package requires python3-scapy
+{% if PTF_ENV_PY_VER == "py3" %}
+# Werkzeug 3.1.3 has a bug and causes announce routes to fail
+# by returning 413 Request Entity Too Large though request buffers
+# have been increased.
+RUN pip3 install Flask==3.0.3   \
+    && pip3 install Werkzeug==3.1.2 \
+{% else %}
+RUN pip3 install Flask \
+{% endif %}
     && pip3 install Cython \
     && pip3 install cffi    \
     && pip3 install nnpy    \
@@ -213,20 +241,16 @@ RUN pip3 install setuptools \
     && pip3 install Flask   \
     && pip3 install exabgp \
     && pip3 install pyaml   \
-    && pip3 install pybrctl pyro4 rpyc \
+    && pip3 install pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
-    && pip3 install pyrasite \
     && pip3 install python-libpcap \
     && pip3 install enum34 \
     && pip3 install grpcio \
-    && pip3 install grpcio-tools \
     && pip3 install protobuf \
     && pip3 install six==1.16.0 \
     && pip3 install itsdangerous \
     && pip3 install retrying \
-    && pip3 install jinja2 \
-    && pip3 install scapy==2.5.0 \
-    && pip3 install thrift
+    && pip3 install jinja2
 
 {% if docker_ptf_whls.strip() -%}
 # Copy locally-built Python wheel dependencies
@@ -261,16 +285,31 @@ RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
-RUN git clone https://github.com/lguohan/gnxi.git \
+RUN git clone https://github.com/google/gnxi.git \
     && cd gnxi \
-    && git checkout 3adf8b9 \
+    && git checkout 208acfa85f5b5b8717e14896e9d6ee93cfda9d5f
+
+COPY gnxi-patches/ gnxi/patches/
+
+RUN cd gnxi \
+    && quilt push -a \
     && cd gnmi_cli_py \
 {% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt
 {% else %}
+    && pip3 install setuptools==51.0.0 \
     && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
     && pip3 install -r /tmp/requirements.txt
 {% endif %}
+
+# Install gnoic tool
+RUN git clone https://github.com/karimra/gnoic.git \
+    && cd gnoic \
+    && git checkout 57aac3d \
+    && chmod +x install.sh \
+    && ./install.sh \
+    && cd .. \
+    && rm -rf gnoic
 
 COPY \
 {% for deb in docker_ptf_debs.split(' ') -%}
@@ -285,8 +324,8 @@ debs/{{ deb }}{{' '}}
 
 {% if PTF_ENV_PY_VER == "py3" %}
 # Create symlink so that test scripts and ptf_runner invocation path
-# is same across python 2 and python 3 envs. Note that for virtual-env 
-# ptf is under /root/env-python3/bin. 
+# is same across python 2 and python 3 envs. Note that for virtual-env
+# ptf is under /root/env-python3/bin.
 # TODO - cleanup when the supported PTF image is py3only across all branches
 RUN mkdir -p /root/env-python3/bin \
     && ln -s /usr/local/bin/ptf /usr/bin/ptf \

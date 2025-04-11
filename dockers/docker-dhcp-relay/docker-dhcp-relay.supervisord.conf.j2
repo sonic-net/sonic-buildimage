@@ -63,8 +63,12 @@ dependent_startup_wait_for=rsyslogd:running
 {# Create a program entry for each DHCP relay agent instance #}
 {% set relay_for_ipv4 = { 'flag': False } %}
 {% set relay_for_ipv6 = { 'flag': False } %}
-{% for vlan_name in VLAN_INTERFACE %}
-{% include 'dhcpv4-relay.agents.j2' %}
+{% set added_vlan = []%}
+{% for (vlan_name, prefix) in VLAN_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 and vlan_name not in added_vlan %}
+        {%- include 'dhcpv4-relay.agents.j2' %}
+        {%- set _ = added_vlan.append(vlan_name) %}
+    {%- endif %}
 {% endfor %}
 
 {% include 'dhcpv6-relay.agents.j2' %}
