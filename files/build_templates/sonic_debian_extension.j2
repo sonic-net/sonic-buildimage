@@ -496,7 +496,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable resolvconf.service
 sudo mkdir -p $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
 
-# Copy the systemd service file for memory_statistics_feature
+# Copy the systemd service file for memory_statistics_feature 
 #sudo cp $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 # Copy the daemon executable
 #sudo cp $IMAGE_CONFIGS/memory_statistics/memory_statistics_service.py $FILESYSTEM_ROOT/usr/bin/
