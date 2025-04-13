@@ -60,7 +60,7 @@ parameterized==0.8.1
 parse==1.6.6
 pexpect==4.8.0
 pillow==9.4.0
-pip==23.2.1
+pip==24.2
 pluggy==0.13.0
 protobuf==4.25.2
 ptyprocess==0.7.0
