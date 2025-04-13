@@ -45,6 +45,18 @@
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtLeafRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
