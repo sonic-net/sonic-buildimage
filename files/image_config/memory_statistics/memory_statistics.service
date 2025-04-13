@@ -10,4 +10,4 @@ RestartSec=5
 EnvironmentFile=-/etc/memory_statistics/memory_statistics.conf
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target 
