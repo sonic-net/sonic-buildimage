@@ -19,7 +19,7 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-SRPMS_URL = $(MLNX_BSD_RSHIM_SRC_BASE_URL)/build/install/distro/SRPMS/
+SRPMS_URL = $(MLNX_BSD_RSHIM_SRC_BASE_URL)/install/distro/SRPMS/
 RSHIM_URL = $(shell lynx --listonly --nonumbers -dump $(SRPMS_URL) | grep rshim)
 
 $(addprefix $(DEST)/, $(MLNX_RSHIM)): $(DEST)/% :
