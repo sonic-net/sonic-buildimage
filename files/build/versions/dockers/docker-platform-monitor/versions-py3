@@ -12,7 +12,7 @@ more-itertools==4.2.0
 netifaces==0.11.0
 protobuf==4.24.3
 pyrsistent==0.15.5
-python_sdk_api==4.6.4082
+python_sdk_api==4.6.4122
 requests==2.31.0
 thrift==0.13.0
 urllib3==2.0.5

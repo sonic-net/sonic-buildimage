@@ -3,5 +3,5 @@ importlib-metadata==1.6.0
 jsonschema==3.2.0
 more-itertools==4.2.0
 pyrsistent==0.15.5
-python_sdk_api==4.6.4082
+python_sdk_api==4.6.4122
 zipp==1.0.0
