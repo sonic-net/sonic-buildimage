@@ -167,4 +167,13 @@
     },
 {%- endmacro %}
 
+{%- macro generate_lossless_tc_list(lossless_tc_list) %}
+{#
+    This macro intentionally does nothing, leaving LOSSLESS_TC as an empty list
+    Use the following to generate other lists like 3, 4
+    {%- if lossless_tc_list.append('3') -%}{%- endif -%}
+    {%- if lossless_tc_list.append('4') -%}{%- endif -%}
+#}
+{%- endmacro %}
+
 {%- include 'qos_config.j2' %}
