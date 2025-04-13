@@ -3,6 +3,7 @@ from swsscommon import swsscommon
 
 import jinja2
 import netaddr
+import os
 
 from .log import log_warn, log_err, log_info, log_debug, log_crit
 from .manager import Manager
@@ -100,6 +101,7 @@ class BGPPeerMgrBase(Manager):
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
             "add":         self.fabric.from_file(base_template + "instance.conf.j2"),
+            "update":      self.fabric.from_file(base_template + "instance_update.conf.j2"),
             "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
@@ -243,7 +245,10 @@ class BGPPeerMgrBase(Manager):
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
         elif "ip_range" in data and self.peer_type == 'dynamic':
-            self.change_ip_range(vrf, nbr, data)
+            if (os.path.exists(self.templates["update"])):
+                self.change_ip_range(vrf, nbr, data)
+            else:
+                log_err("Peer '(%s|%s)': Can't update the peer. Template 'update' doesn't exist" % (vrf, nbr))
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 

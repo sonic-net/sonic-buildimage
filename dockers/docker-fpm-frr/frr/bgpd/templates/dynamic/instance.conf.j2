@@ -3,15 +3,6 @@
 !
 {% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
 !
-{% if operation is defined and operation == 'update' %}
-{% for ip_range in delete_ranges %}
-  no bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
-{% endfor %}
-{% for ip_range in add_ranges %}
-  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
-{% endfor %}
-{% else %}
-!
   neighbor {{ bgp_session['name'] }} peer-group
   neighbor {{ bgp_session['name'] }} passive
   neighbor {{ bgp_session['name'] }} ebgp-multihop 255
@@ -42,8 +33,6 @@
   address-family ipv6
     neighbor {{ bgp_session['name'] }} activate
   exit-address-family
-!
-{% endif %}
 !
 ! end of template: bgpd/templates/dynamic/instance.conf.j2
 !
