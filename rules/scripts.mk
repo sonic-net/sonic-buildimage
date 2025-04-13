@@ -35,6 +35,9 @@ $(COPP_CONFIG_TEMPLATE)_PATH = files/image_config/copp
 RSYSLOG_PLUGIN_CONF_J2 = rsyslog_plugin.conf.j2
 $(RSYSLOG_PLUGIN_CONF_J2)_PATH = files/build_templates
 
+GITHUB_GET = github_get.py
+$(GITHUB_GET)_PATH = scripts
+
 SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(ARP_UPDATE_SCRIPT) \
                     $(ARP_UPDATE_VARS_TEMPLATE) \
@@ -46,4 +49,5 @@ SONIC_COPY_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                     $(UPDATE_CHASSISDB_CONFIG_SCRIPT) \
                     $(SWSS_VARS_TEMPLATE) \
                     $(RSYSLOG_PLUGIN_CONF_J2) \
+                    $(GITHUB_GET) \
                     $(COPP_CONFIG_TEMPLATE)

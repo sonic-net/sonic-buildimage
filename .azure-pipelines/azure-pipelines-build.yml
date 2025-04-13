@@ -94,23 +94,23 @@ jobs:
           variables:
             dbg_image: yes
 
-        - name: marvell-armhf
+        - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-armhf
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
 
-        - name: marvell-arm64
+        - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-arm64
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
 
-        - name: marvell
+        - name: marvell-prestera
 
         - name: mellanox
           variables:

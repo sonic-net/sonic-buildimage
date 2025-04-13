@@ -535,5 +535,122 @@
                 ]
             }
         }
+    },
+    "PORTCHANNEL_INTERFACE_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "02:26:9b:73:c1:1a"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_UPPER_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "02:AB:CD:EF:12:34"
+                    }
+                ]
+            }
+        }
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "name": "PortChannel0001",
+                        "mode": "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_INTERFACE": {
+                "PORTCHANNEL_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "mac_addr": "badaddr"
+                    }
+                ]
+            }
+        }
     }
 }

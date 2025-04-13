@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -282,6 +282,8 @@ class DpuModule(ModuleBase):
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            f'{self.reboot_base_path}reset_pwr_off':
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)

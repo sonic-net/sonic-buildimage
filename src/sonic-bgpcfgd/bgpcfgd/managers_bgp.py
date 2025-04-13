@@ -101,11 +101,12 @@ class BGPPeerMgrBase(Manager):
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
             "add":         self.fabric.from_file(base_template + "instance.conf.j2"),
-            "update":      self.fabric.from_file(base_template + "instance_update.conf.j2"),
             "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
         }
+        if (os.path.exists("/usr/share/sonic/templates/" + base_template + "update.conf.j2")):
+            self.templates["update"] = self.fabric.from_file(base_template + "update.conf.j2")
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
@@ -189,19 +190,12 @@ class BGPPeerMgrBase(Manager):
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
-            # The bgp session that belongs to a vnet cannot be advertised as the default BGP session.
-            # So we need to check whether this bgp session belongs to a vnet.
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
             interface = self.get_local_interface(data["local_addr"])
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
                 return False
-            vnet = self.get_vnet(interface)
-            if vnet:
-                # Ignore the bgp session that is in a vnet
-                log_info("Ignore the BGP peer '%s' as the interface '%s' is in vnet '%s'" % (nbr, interface, vnet))
-                return True
 
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
@@ -251,11 +245,8 @@ class BGPPeerMgrBase(Manager):
         """
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
-        elif "ip_range" in data and self.peer_type == 'dynamic':
-            if (os.path.exists(self.templates["update"])):
-                self.change_ip_range(vrf, nbr, data)
-            else:
-                log_err("Peer '(%s|%s)': Can't update the peer. Template 'update' doesn't exist" % (vrf, nbr))
+        elif "update" in self.templates and "ip_range" in data and self.peer_type == 'dynamic':
+            self.change_ip_range(vrf, nbr, data)
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 
@@ -364,15 +355,14 @@ class BGPPeerMgrBase(Manager):
         """
         print_data = vrf, nbr, data
         kwargs = {
-            'operation': 'update',
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
             'vrf': vrf,
-            'neighbor_addr': nbr,
             'bgp_session': data,
             'delete_ranges': ip_ranges_to_del,
             'add_ranges': new_ip_range
         }
         try:
-            cmd = self.templates["add"].render(**kwargs)
+            cmd = self.templates["update"].render(**kwargs)
         except jinja2.TemplateError as e:
             msg = "Peer '(%s|%s)'. Error in rendering the template for 'SET' command '%s'" % print_data
             log_err("%s: %s" % (msg, str(e)))

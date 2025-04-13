@@ -1,0 +1,2 @@
+-a always,exclude -F msgtype=EOE
+-a always,exclude -F msgtype=EXECVE

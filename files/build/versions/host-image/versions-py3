@@ -17,8 +17,8 @@ docker==7.1.0
 docker-image-py==0.1.13
 enlighten==1.13.0
 filelock==3.17.0
-grpcio==1.51.1
-grpcio-tools==1.51.1
+grpcio==1.58.0
+grpcio-tools==1.58.0
 idna==3.10
 ijson==3.2.3
 inotify==0.2.10
@@ -48,7 +48,7 @@ ply==3.11
 prefixed==0.9.0
 prettyprinter==0.18.0
 protobuf==4.25.6
-psutil==6.1.1
+psutil==7.0.0
 ptyprocess==0.7.0
 pyang==2.6.1
 pyangbind==0.8.2

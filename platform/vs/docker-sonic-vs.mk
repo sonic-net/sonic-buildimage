@@ -11,7 +11,8 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_CPP) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
-                              $(SONIC_HOST_SERVICES_DATA)
+                              $(SONIC_HOST_SERVICES_DATA) \
+                              $(FRAMEWORK)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
@@ -24,7 +25,8 @@ ifeq ($(INSTALL_DEBUG_TOOLS), y)
 $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
                               $(LIBSAIREDIS_DBG) \
                               $(LIBSAIVS_DBG) \
-                              $(SYNCD_VS_DBG)
+                              $(SYNCD_VS_DBG) \
+                              $(FRAMEWORK_DBG)
 endif
 
 ifeq ($(SONIC_ROUTING_STACK), frr)

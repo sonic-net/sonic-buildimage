@@ -142,14 +142,17 @@ RUN python2 -m pip install allure-pytest==2.8.22 \
                 "future>=0.16.0" \
                 gitpython \
                 ipaddr \
+                ipaddress \
                 ipython==5.4.1 \
                 ixload \
                 ixnetwork-restpy==1.0.64 \
                 ixnetwork-open-traffic-generator==0.0.79 \
-                jinja2==2.10.1 \
+                snappi_ixload==0.0.5 \
+                jinja2==3.1.2 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
                 lxml \
+                macaddress \
                 mock \
                 msrest==0.6.21 \
                 natsort \
@@ -209,6 +212,8 @@ RUN mkdir -p /etc/apt/keyrings \
     && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update && apt-get install -y azure-cli
 
+# Remove old python protobuf package if existing
+RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
@@ -226,6 +231,16 @@ RUN mkdir -p /tmp/protobuf \
 COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
 
 RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
+
+# Install dash-pipeline-utils
+COPY ["files/github_get.py", "/usr/bin"]
+RUN cd /tmp \
+    && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
+    && cd utils \
+    && python3 setup.py bdist_wheel \
+    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && cd / \
+    && rm -rf /tmp/utils
 
 RUN mkdir /var/run/sshd
 EXPOSE 22

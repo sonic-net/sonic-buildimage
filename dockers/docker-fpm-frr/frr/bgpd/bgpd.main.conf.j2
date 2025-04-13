@@ -88,8 +88,10 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bgp graceful-restart select-defer-time {{ constants.bgp.graceful_restart.select_defer_time | default(45) }}
 {% endif %}
 !
-{# set bmp info #}
-{% if (FEATURE is defined) and ('bmp' in FEATURE) and ('state' in FEATURE['bmp']) and (FEATURE['bmp']['state'] == 'enabled') %}
+{# set frr_bmp info #}
+{% if (FEATURE is defined) and
+      (('frr_bmp' in FEATURE and 'state' in FEATURE['frr_bmp'] and FEATURE['frr_bmp']['state'] == 'enabled') or
+      ('bmp' in FEATURE and 'state' in FEATURE['bmp'] and FEATURE['bmp']['state'] == 'enabled')) %}
 !
   bmp mirror buffer-limit 4294967214
 !
@@ -97,7 +99,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bmp stats interval 1000
   bmp monitor ipv4 unicast pre-policy
   bmp monitor ipv6 unicast pre-policy
-  bmp connect 127.0.0.1 port 5000 min-retry 1000 max-retry 2000
+  bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000
 !
 !
 {% endif %}

@@ -147,9 +147,15 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
-    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    data['SYSTEM_DEFAULTS'] = {
+        "software_bfd": {
+            "status": "enabled"
+        }
+    }
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
