@@ -516,7 +516,7 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/memory_statistics/
 sudo mkdir -p $FILESYSTEM_ROOT/var/log/memory_statistics/
 
 # Copy and set permissions for systemd service file
-sudo install -m 0644 $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo install -m 0600 $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
 # Copy and set executable permissions for daemon
 sudo install -m 0755 $IMAGE_CONFIGS/memory_statistics/memory_statistics_service.py $FILESYSTEM_ROOT/usr/bin/
