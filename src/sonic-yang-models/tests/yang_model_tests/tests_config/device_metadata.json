@@ -586,7 +586,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "anchor_route_source": "local"
+                    "anchor_route_source": ["local"]
                 }
             }
         }
