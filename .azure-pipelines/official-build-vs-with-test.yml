@@ -8,7 +8,10 @@ schedules:
     branches:
       include:
         - master
-        - 202???
+        - 202305
+        - 202311
+        - 202405
+        - 202411
 
 trigger: none
 pr: none
