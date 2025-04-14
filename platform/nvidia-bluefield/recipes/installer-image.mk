@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +57,7 @@ SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGE
 $(foreach feature, $(DISABLED_FEATURE_FLAGS), $(eval override $(feature)=n ))
 
 $(SONIC_BF_IMAGE_BASE)_DOCKERS = $(filter-out $(DISABLED_DOCKERS), $(SONIC_INSTALL_DOCKER_IMAGES))
-$(SONIC_BF_IMAGE_BASE)_FILES = $(BF_FW_FILES)
+$(SONIC_BF_IMAGE_BASE)_FILES = $(BF_FW_FILES) $(COMPONENT_VERSIONS_FILE)
 
 # The traditional *.bin image. Works for sonic-sonic upgrade.
 SONIC_BF_IMAGE_BIN = $(SONIC_BF_IMAGE_BASE).bin
