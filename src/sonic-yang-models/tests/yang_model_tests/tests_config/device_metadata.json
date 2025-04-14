@@ -92,6 +92,46 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtToRRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtLeafRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtSpineRouter"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "MgmtAccessRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
