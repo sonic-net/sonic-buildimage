@@ -1226,7 +1226,7 @@ class MemoryStatisticsProcessor:
                     }
                 )
                 continue
-        
+
         return time_group_list
 
     def generate_report(self, request_data, time_entry_summary, num_columns, step):
@@ -2097,7 +2097,7 @@ class MemoryStatisticsService:
             logger.log_error(f"Error flushing log handlers: {e}")
 
         logger.log_info("Cleanup complete.")
- 
+
     def run(self):
         """
         Runs the Memory Statistics Service.
