@@ -513,7 +513,7 @@ sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/reso
 
 # Create memory statistics directories
 sudo mkdir -p $FILESYSTEM_ROOT/etc/memory_statistics/
-sudo mkdir -p $FILESYSTEM_ROOT/var/log/memory_statistics/
+sudo mkdir -p $FILESYSTEM_ROOT/var/log/memory_statistics/ 
 
 # Copy and set permissions for systemd service file
 sudo install -m 0600 $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
