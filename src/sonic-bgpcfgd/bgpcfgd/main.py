@@ -26,6 +26,7 @@ from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
 from .managers_prefix_list import PrefixListMgr
+from .managers_as_path import AsPathMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
@@ -82,12 +83,16 @@ def do_work():
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
-        # Prefix List Manager
-        PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST")
     ]
 
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
+
+    device_metadata = config_db.get_table("DEVICE_METADATA")
+    if "localhost" in device_metadata and "type" in device_metadata["localhost"] and device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC":
+        # Prefix List Manager
+        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+        managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
 
     config_db = ConfigDBConnector()
     config_db.connect()
