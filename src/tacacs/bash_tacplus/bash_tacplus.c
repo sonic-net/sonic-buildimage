@@ -235,14 +235,14 @@ void get_remote_address(char* dst, size_t size)
     // SSHD will create environment variable SSH_CONNECTION after user session created.
     char *ssh_connection = getenv("SSH_CONNECTION");
     if (ssh_connection != NULL) {
-        snprintf(dst, size, ssh_connection);
+        snprintf(dst, size, "%s", ssh_connection);
         return;
     }
 
     // Before user session created, SSHD will create environment variable SSH_CLIENT_IPADDR_PORT.
     char *client_ip = getenv("SSH_CLIENT_IPADDR_PORT");
     if (client_ip != NULL) {
-        snprintf(dst, size, client_ip);
+        snprintf(dst, size, "%s", client_ip);
         return;
     }
 }
