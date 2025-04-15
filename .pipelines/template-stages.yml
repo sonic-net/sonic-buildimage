@@ -48,7 +48,7 @@ stages:
             set -ex
 
             OPTIONS="${{ parameters.OPTIONS }} NOBUSTER=0 ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
-            make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+            make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz 2>&1 | tee target/build.log
           displayName: Build SONiC image
         - script: |
             set -ex
@@ -99,7 +99,7 @@ stages:
               echo "INCLUDE_SYSTEM_TELEMETRY = n" >> rules/config.user
               echo "ENABLE_GNMI_TWO_PROCESS = y" >> rules/config.user
               echo "INCLUDE_SYSTEM_EVENTD = n" >> rules/config.user
-              make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+              make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi 2>&1 | tee target/buildslim.log
               mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
               mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
               rm -rf target/*.squashfs
@@ -108,21 +108,21 @@ stages:
               echo "==== Finished building slim images"
               echo "==== Building swi images"
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
-              make $OPTIONS target/sonic-aboot-broadcom.swi
+              make $OPTIONS target/sonic-aboot-broadcom.swi 2>&1 | tee target/buildswi.log
               mv target/sonic-aboot-broadcom.swi target/release/
               rm -rf target/*.squashfs
               rm rules/config.user
               echo "==== Finished building swi images"
               echo "==== Building regular images"
-              make $OPTIONS target/sonic-broadcom.bin
+              make $OPTIONS target/sonic-broadcom.bin 2>&1 | tee target/buildregular.log
               mv target/sonic-broadcom.bin target/sonic-broadcom-dnx.bin target/release/
               rm -rf target/*.squashfs
               echo "==== Finished building regular images"
               echo "==== Building syncd-rpc docker"
-              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
+              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz 2>&1 | tee target/buildrpc.log
               echo "==== Finished building syncd-rpc docker"
               echo "==== Building one debug image"
-              make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin
+              make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin 2>&1 | tee target/builddbg.log
               mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
               echo "==== Finished building one debug image"
               mv target/release/* target/
@@ -158,10 +158,10 @@ stages:
           - script: |
               set -ex
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
-              make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin
+              make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin 2>&1 | tee target/buildss.log
               mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
-              make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin
-              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
+              make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
+              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz 2>&1 | tee target/buildrpc.log
               cp target/debs/bookworm/python-saithrift*.deb target/ || true
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
@@ -188,7 +188,7 @@ stages:
           - script: |
               set -ex
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/nvidia-bluefield"
-              make $OPTIONS target/sonic-nvidia-bluefield.bin
+              make $OPTIONS target/sonic-nvidia-bluefield.bin 2>&1 | tee target/build.log
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
@@ -214,7 +214,7 @@ stages:
           - script: |
               set -ex
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-prestera-armhf INCLUDE_DHCP_SERVER=y"
-              make $OPTIONS target/sonic-marvell-prestera-armhf.bin
+              make $OPTIONS target/sonic-marvell-prestera-armhf.bin 2>&1 | tee target/build.log
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:

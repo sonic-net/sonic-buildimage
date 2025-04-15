@@ -15,6 +15,15 @@ parameters:
     default: 'default'
 
 steps:
+  - script: |
+      set -ex
+      logfiles=$(find target/ -name *.log)
+      if grep -B 20 -e "Err:" -e "Failed to run the command with constraint, try to install with the original command" $logfiles; then
+        exit 1
+      fi
+      exit 0
+    continueOnError: true
+    displayName: Log Scan
   - ${{ if eq(variables['Build.DefinitionName'], 'Networking-acs-buildimage-Official-OneBranch') }}:
     # Only enable BinSkim on VS platform, because they share same way of compiling
     # Only enable on VS platform can maximum reduce the affection to current build logic

@@ -48,7 +48,7 @@ steps:
       set -ex
 
       rm -f target/sonic-installers
-      make PLATFORM=${{ parameters.PLATFORM_NAME }} PLATFORM_ARCH=${{ parameters.PLATFORM_ARCH }} ${{ parameters.OPTIONS }} configure
+      make PLATFORM=${{ parameters.PLATFORM_NAME }} PLATFORM_ARCH=${{ parameters.PLATFORM_ARCH }} ${{ parameters.OPTIONS }} configure 2>&1 | tee target/build-slave.log
     displayName: 'Make configure'
   - task: CodeQL3000Init@0
     inputs:

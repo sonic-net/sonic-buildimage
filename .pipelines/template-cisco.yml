@@ -91,8 +91,8 @@ jobs:
     - script: |
         set -ex
         OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
-        make $OPTIONS target/sonic-cisco-8000.bin
-        make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz
+        make $OPTIONS target/sonic-cisco-8000.bin 2>&1 | tee target/build.log
+        make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz 2>&1 | tee target/buildrpc.log
       displayName: Build SONiC image
     - template: /.pipelines/template-poststeps.yml@self
       parameters:
