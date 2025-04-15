@@ -1120,6 +1120,12 @@ device:
 ---
 device:
     0:
+        # Per pipe flex counter configuration
+        CTR_EFLEX_CONFIG:
+            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
 ...
@@ -1138,6 +1144,15 @@ bcm_device:
             pktio_mode: 1
             sai_pfc_defaults_disable: 1
             sai_optimized_mmu: 1
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
+            flowtracker_flexctr_alloc_enable: 1
             sai_postinit_cmd_file: /usr/share/sonic/platform/postinit_cmd_file.soc
 ...
 

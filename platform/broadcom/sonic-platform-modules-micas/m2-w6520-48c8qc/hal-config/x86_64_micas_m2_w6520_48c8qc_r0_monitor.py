@@ -97,6 +97,8 @@ monitor = {
 
     "fancontrol_para": {
         "interval": 5,
+        "fan_air_flow_monitor": 1,
+        "psu_air_flow_monitor": 1,
         "fan_status_interval": 0.5,
         "max_pwm": 0xff,
         "min_pwm": 0x80,
@@ -194,10 +196,10 @@ monitor = {
         "board_fan_led": [
             {"led_name": "FRONT_FAN_LED"},
         ],
-        "psu_air_flow_monitor": 0,
-        "fan_air_flow_monitor": 0,
-        "psu_air_flow_amber_num": 0,
-        "fan_air_flow_amber_num": 0,
+        "psu_air_flow_monitor": 1,
+        "fan_air_flow_monitor": 1,
+        "psu_air_flow_amber_num": 1,
+        "fan_air_flow_amber_num": 1,
     },
 
     "otp_reboot_judge_file": {
