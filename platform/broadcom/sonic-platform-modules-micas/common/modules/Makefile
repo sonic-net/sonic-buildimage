@@ -45,6 +45,7 @@ obj-m += wb_ucd9081.o
 obj-m += wb_indirect_dev.o
 obj-m += wb_ssd_power.o
 
+
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(S3IP_SYSFS_DIR)
