@@ -88,18 +88,18 @@ def do_work():
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
-    device_metadata = config_db.get_table("DEVICE_METADATA")
-    if "localhost" in device_metadata and "type" in device_metadata["localhost"] and device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC":
-        # Prefix List Manager
-        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
-        managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
-
     config_db = ConfigDBConnector()
     config_db.connect()
     sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
     if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':
         log_notice("software_bfd feature is enabled, starting bfd manager")
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
+
+    device_metadata = config_db.get_table("DEVICE_METADATA")
+    if "localhost" in device_metadata and "type" in device_metadata["localhost"] and device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC":
+        # Prefix List Manager
+        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+        managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:

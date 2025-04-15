@@ -28,28 +28,26 @@ class AsPathMgr(Manager):
     
     def set_handler(self, key, data):
         log_info("AsPathMgr: set handler")
-        if not "|" in key:
-            log_info("AsPathMgr: no \"|\" in {}".format(key))
-            return True
-        splits = key.split("|")
-        if splits != 2 or splits[0] != "localhost" or "t2_group_asns" not in splits[1]:
-            log_info("AsPathMgr: Cannot find t2_group_asns")
-            return True
-        for asn in splits[1]:
-            log_info("AsPathMgr: Add asn {} to {}".format(asn, T2_GROUP_ASNS))
-            self.cfg_mgr.push("bgp as-path access-list {} permit _{}_".format(T2_GROUP_ASNS, asn))
+        if key != "localhost":
+            return
+        asns = None
+        for key_inside, value in data.items():
+            if key_inside == "t2_group_asns":
+                asns = value
+                break
+        log_info("AsPathMgr: Clear asns group {}".format(T2_GROUP_ASNS))
+        self.cfg_mgr.push("no bgp as-path access-list {}".format(T2_GROUP_ASNS))
+        if asns is not None:
+            for asn in asns.split(","):
+                log_info("AsPathMgr: Add asn {} to {}".format(asn, T2_GROUP_ASNS))
+                self.cfg_mgr.push("bgp as-path access-list {} permit _{}_".format(T2_GROUP_ASNS, asn))
         return True
 
-    def del_handler(self, key, data):
+    def del_handler(self, key):
         log_info("AsPathMgr: del handler")
-        if not "|" in key:
-            log_info("AsPathMgr: no \"|\" in {}".format(key))
+        if key != "localhost":
             return True
-        splits = key.split("|")
-        if splits != 2 or splits[0] != "localhost" or "t2_group_asns" not in splits[1]:
-            log_info("AsPathMgr: Cannot find t2_group_asns")
-            return True
-        for asn in splits[1]:
-            log_info("AsPathMgr: Add asn {} to {}".format(asn, T2_GROUP_ASNS))
-            self.cfg_mgr.push("bgp as-path access-list {} permit _{}_".format(T2_GROUP_ASNS, asn))
+        # It would be trigger when we deleta all `localhost` entry in DEVICE_METADATA, then clear t2 group asns
+        log_info("AsPathMgr: Clear asns group {}".format(T2_GROUP_ASNS))
+        self.cfg_mgr.push("no bgp as-path access-list {}".format(T2_GROUP_ASNS))
         return True
