@@ -8,3 +8,4 @@ obj-m += wb_fpga_i2c_bus_device.o
 obj-m += wb_lpc_drv_device.o
 obj-m += wb_i2c_dev_device.o
 obj-m += wb_io_dev_device.o
+obj-m += wb_ssd_power_device.o

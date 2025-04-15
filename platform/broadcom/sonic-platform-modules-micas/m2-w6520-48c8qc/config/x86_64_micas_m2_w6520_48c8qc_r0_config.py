@@ -926,6 +926,8 @@ DRIVERLISTS = [
     {"name": "plat_psu", "delay": 0},
     {"name": "plat_sff", "delay": 0},
     {"name": "hw_test", "delay": 0},
+    {"name": "wb_ssd_power", "delay": 0},
+    {"name": "wb_ssd_power_device", "delay": 0},
 ]
 
 DEVICE = [
