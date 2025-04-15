@@ -2,16 +2,17 @@
 
 psu_fan_airflow = {
     "intake": ['DPS-1300AB-6 S', 'GW-CRPS1300D'],
-    "exhaust": []
+    "exhaust": ['CRPS1300D3R', 'DPS-1300AB-11 C']
 }
 
 fanairflow = {
     "intake": ['M1HFAN II-F'],
-    "exhaust": [],
+    "exhaust": ['M1HFAN IV-R'],
 }
 
 psu_display_name = {
     "PA1300I-F": ['GW-CRPS1300D', 'DPS-1300AB-6 S'],
+    "PA1300I-R": ['CRPS1300D3R', 'DPS-1300AB-11 C']
 }
 
 psutypedecode = {
@@ -361,8 +362,9 @@ devices = {
             "led_type": "SYS_LED",
             "led": {"bus": 2, "addr": 0x2d, "offset": 0x47, "way": "i2c"},
             "led_attrs": {
-                "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
-                "flash": 0xff, "light": 0xff, "off": 0, "mask": 0xff
+                "off": 0x00, "red_flash": 0x01, "red": 0x02,
+                "green_flash": 0x03, "green": 0x04, "amber_flash": 0x05,
+                "amber": 0x06, "mask": 0x07
             },
         },
         {
@@ -370,8 +372,9 @@ devices = {
             "led_type": "PSU_LED",
             "led": {"bus": 2, "addr": 0x2d, "offset": 0x4a, "way": "i2c"},
             "led_attrs": {
-                "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
-                "flash": 0xff, "light": 0xff, "off": 0, "mask": 0xff
+                "off": 0x00, "red_flash": 0x01, "red": 0x02,
+                "green_flash": 0x03, "green": 0x04, "amber_flash": 0x05,
+                "amber": 0x06, "mask": 0x07
             },
         },
         {
@@ -379,8 +382,9 @@ devices = {
             "led_type": "FAN_LED",
             "led": {"bus": 2, "addr": 0x2d, "offset": 0x49, "way": "i2c"},
             "led_attrs": {
-                "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
-                "flash": 0xff, "light": 0xff, "off": 0, "mask": 0xff
+                "off": 0x00, "red_flash": 0x01, "red": 0x02,
+                "green_flash": 0x03, "green": 0x04, "amber_flash": 0x05,
+                "amber": 0x06, "mask": 0x07
             },
         },
     ],
