@@ -8,10 +8,9 @@ bcm_device:
             l3_alpm_template: 1
             l3_alpm2_bnk_threshold: 100
             svi_my_station_optimization: 1
-            sai_nbr_bcast_ifp_optimized: 2
             uft_mode: 1
             l3_enable: 1
-            l2_hitbit_enable: 0
+            l2_hitbit_enable: 1
             pktio_mode: 1
             sai_optimized_mmu: 1
             sai_pfc_defaults_disable: 1
@@ -33,119 +32,6 @@ bcm_device:
         port:
             "*":
                 encap_mode: IEEE
-                dport_map_enable: 1
-            20:
-              dport_map_port: 1
-            21:
-              dport_map_port: 2
-            22:
-              dport_map_port: 3
-            23:
-              dport_map_port: 4
-            24:
-              dport_map_port: 5
-            25:
-              dport_map_port: 6
-            26:
-              dport_map_port: 7
-            27:
-              dport_map_port: 8
-            28:
-              dport_map_port: 9
-            29:
-              dport_map_port: 10
-            30:
-              dport_map_port: 11
-            31:
-              dport_map_port: 12
-            3:
-              dport_map_port: 13
-            4:
-              dport_map_port: 14
-            5:
-              dport_map_port: 15
-            6:
-              dport_map_port: 16
-            7:
-              dport_map_port: 17
-            8:
-              dport_map_port: 18
-            9:
-              dport_map_port: 19
-            10:
-              dport_map_port: 20
-            11:
-              dport_map_port: 21
-            12:
-              dport_map_port: 22
-            13:
-              dport_map_port: 23
-            14:
-              dport_map_port: 24
-            40:
-              dport_map_port: 25
-            41:
-              dport_map_port: 26
-            42:
-              dport_map_port: 27
-            43:
-              dport_map_port: 28
-            44:
-              dport_map_port: 29
-            45:
-              dport_map_port: 30
-            46:
-              dport_map_port: 31
-            47:
-              dport_map_port: 32
-            48:
-              dport_map_port: 33
-            49:
-              dport_map_port: 34
-            50:
-              dport_map_port: 35
-            51:
-              dport_map_port: 36
-            64:
-              dport_map_port: 37
-            65:
-              dport_map_port: 38
-            66:
-              dport_map_port: 39
-            67:
-              dport_map_port: 40
-            68:
-              dport_map_port: 41
-            69:
-              dport_map_port: 42
-            70:
-              dport_map_port: 43
-            71:
-              dport_map_port: 44
-            72:
-              dport_map_port: 45
-            73:
-              dport_map_port: 46
-            74:
-              dport_map_port: 47
-            75:
-                dport_map_port: 48
-            1:
-                dport_map_port: 49
-            15:
-                dport_map_port: 50
-            34:
-                dport_map_port: 51
-            32:
-                dport_map_port: 52
-            52:
-                dport_map_port: 53
-            54:
-                dport_map_port: 54
-            62:
-                dport_map_port: 55
-            60:
-                dport_map_port: 56
 ...
 
 ---
@@ -683,8 +569,7 @@ device:
                           64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75,
                           1, 15, 32, 34, 52, 54, 60, 62]
             :
-                MEDIUM_TYPE_AUTO: 0
-                MEDIUM_TYPE: PC_PHY_MEDIUM_COPPER
+                MEDIUM_TYPE_AUTO: 1
 ...
 
 ---

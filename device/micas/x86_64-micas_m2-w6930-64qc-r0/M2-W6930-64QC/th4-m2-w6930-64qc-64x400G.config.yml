@@ -16,7 +16,7 @@ bcm_device:
             sai_pfc_defaults_disable: 1
             sai_optimized_mmu: 1
             sai_postinit_cmd_file: /usr/share/sonic/platform/postinit_cmd_file.soc
-            sai_port_pmap_phy_lanes: 1
+            sai_port_pmap_phy_lanes: 0
 ...
 
 ---
