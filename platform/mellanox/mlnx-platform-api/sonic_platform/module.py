@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -265,11 +265,6 @@ class DpuModule(ModuleBase):
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
-        self.DHCP_SERVER_HASH = f"DHCP_SERVER_IPV4_PORT|bridge-midplane|{self._name.lower()}"
-        self.DHCP_IP_ADDRESS_KEY = "ips@"
-        self.config_db = ConfigDBConnector(use_unix_socket_path=False)
-        self.config_db.connect()
-        self.midplane_ip = None
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
@@ -282,6 +277,8 @@ class DpuModule(ModuleBase):
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            f'{self.reboot_base_path}reset_pwr_off':
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
@@ -450,9 +447,7 @@ class DpuModule(ModuleBase):
         Returns:
             A string, the IP-address of the module reachable over the midplane
         """
-        if not self.midplane_ip:
-            self.midplane_ip = self.config_db.get(self.CONFIG_DB_NAME, self.DHCP_SERVER_HASH, self.DHCP_IP_ADDRESS_KEY)
-        return self.midplane_ip
+        return f"169.254.200.{int(self.dpu_id) + 1}"
 
     def is_midplane_reachable(self):
         """
