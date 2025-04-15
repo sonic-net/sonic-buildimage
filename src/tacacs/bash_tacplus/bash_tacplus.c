@@ -17,6 +17,9 @@
 /* Default value for getpwent */
 #define DEFAULT_GETPWENT_SIZE_MAX     4096
 
+/* Remote IP address size */
+#define REMOTE_ADDRESS_SIZE     64
+
 /* Return value for is_local_user method */
 #define IS_LOCAL_USER              0
 #define IS_REMOTE_USER             1
@@ -110,7 +113,7 @@ int send_authorization_message(
     int tac_fd,
     const char *user,
     const char *tty,
-    const char *host,
+    const char *remote,
     uint16_t taskid,
     const char *cmd,
     char **args,
@@ -147,8 +150,8 @@ int send_authorization_message(
     }
 
     re.msg = NULL;
-    output_debug("send authorizatiom message with user: %s, tty: %s, host: %s\n", user, tty, host);
-    retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)host, attr);
+    output_debug("send authorizatiom message with user: %s, tty: %s, remote: %s\n", user, tty, remote);
+    retval = tac_author_send(tac_fd, (char *)user, (char *)tty, (char *)remote, attr);
     output_debug("authorization result: %d\n", retval);
 
     if(retval < 0) {
@@ -184,7 +187,7 @@ int send_authorization_message(
 int tacacs_authorization(
     const char *user,
     const char *tty,
-    const char *host,
+    const char *remote,
     const char *cmd,
     char **args,
     int argc)
@@ -202,7 +205,7 @@ int tacacs_authorization(
 
         // increase connected servers
         connected_servers++;
-        result = send_authorization_message(server_fd, user, tty, host, task_id, cmd, args, argc);
+        result = send_authorization_message(server_fd, user, tty, remote, task_id, cmd, args, argc);
         close(server_fd);
         if(result) {
             // authorization failed
@@ -225,19 +228,39 @@ int tacacs_authorization(
 }
 
 /*
+ * Get current SSH session remote address from environment variable
+ */
+void get_remote_address(char* dst, size_t size)
+{
+    // SSHD will create environment variable SSH_CONNECTION after user session created.
+    char *ssh_connection = getenv("SSH_CONNECTION");
+    if (ssh_connection != NULL) {
+        snprintf(dst, size, ssh_connection);
+        return;
+    }
+
+    // Before user session created, SSHD will create environment variable SSH_CLIENT_IPADDR_PORT.
+    char *client_ip = getenv("SSH_CLIENT_IPADDR_PORT");
+    if (client_ip != NULL) {
+        snprintf(dst, size, client_ip);
+        return;
+    }
+}
+
+/*
  * Send authorization request.
  * This method based on build_auth_req in https://github.com/daveolson53/tacplus-auth/blob/master/tacplus-auth.c
  */
 int authorization_with_host_and_tty(const char *user, const char *cmd, char **argv, int argc)
 {
     // try get host name
-    char hostname[64];
-    memset(&hostname, 0, sizeof(hostname));
+    char remote[REMOTE_ADDRESS_SIZE];
+    memset(&remote, 0, sizeof(remote));
 
-    (void)gethostname(hostname, sizeof(hostname) -1);
-    if (!hostname[0]) {
-        snprintf(hostname, sizeof(hostname), "UNK");
-        output_error("Failed to determine hostname, passing %s\n", hostname);
+    (void)get_remote_address(remote, sizeof(remote));
+    if (!remote[0]) {
+        snprintf(remote, sizeof(remote), "UNK");
+        output_error("Failed to determine remote address, passing %s\n", remote);
     }
 
     // try get tty name
@@ -262,7 +285,7 @@ int authorization_with_host_and_tty(const char *user, const char *cmd, char **ar
     }
 
     // send tacacs authorization request
-    return tacacs_authorization(user, ttyname, hostname, cmd, argv, argc);
+    return tacacs_authorization(user, ttyname, remote, cmd, argv, argc);
 }
 
 /*
