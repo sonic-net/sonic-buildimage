@@ -5,14 +5,14 @@ Priority: optional
 Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
 Standards-Version: 1.0.0
 
-Package: framework
+Package: sysmgr
 Architecture: any
 Depends: ${shlibs:Depends}
-Description: This package contains framework service.
+Description: This package contains sysmgr service.
 
-Package: framework-dbg
+Package: sysmgr-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: framework (=${binary:Version})
-Description: debugging symbols for framework
+Depends: sysmgr (=${binary:Version})
+Description: debugging symbols for sysmgr

@@ -12,12 +12,12 @@ RUN apt-get update        && \
         libdbus-1-3          \
         libdbus-c++-1-0v5
 
-{% if docker_framework_debs.strip() -%}
+{% if docker_sysmgr_debs.strip() -%}
 # Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_framework_debs.split(' '), "/debs/") }}
+{{ copy_files("debs/", docker_sysmgr_debs.split(' '), "/debs/") }}
 
 # Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_framework_debs.split(' ')) }}
+{{ install_debian_packages(docker_sysmgr_debs.split(' ')) }}
 {%- endif %}
 
 RUN apt-get clean -y      && \
