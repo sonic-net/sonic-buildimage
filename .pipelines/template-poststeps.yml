@@ -165,6 +165,5 @@ steps:
     inputs:
       targetPath: $(Build.ArtifactStagingDirectory)
       artifact: 'sonic-buildimage.${{ parameters.PLATFORM_NAME }}'
-  - template: /.pipelines/post-build-steps.yml
   - template: /.azure-pipelines/cleanup.yml
 
