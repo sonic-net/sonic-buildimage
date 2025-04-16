@@ -22,6 +22,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+*.whl
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -57,3 +58,11 @@ docs/_build/
 target/
 
 yang-models/sonic_yang_tree
+tests/yang-models/sonic_yang_tree
+
+# Auto-generated YANG models
+yang-models/sonic-acl.yang
+yang-models/sonic-extension.yang
+yang-models/sonic-policer.yang
+yang-models/sonic-types.yang
+cvlyang-models/
