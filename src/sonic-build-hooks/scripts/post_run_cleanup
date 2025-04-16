@@ -21,7 +21,7 @@ apt-get autoremove -y --purge
 rm -f /var/cache/apt/archives/*.deb /var/cache/apt/*.bin
 
 if [[ ! ${IMAGENAME} =~ -slave- ]]; then
-	rm -f /var/lib/apt/lists/*
+	rm -rf /var/lib/apt/lists/*
 fi
 
 rm -rf /sonic/target /ssh
