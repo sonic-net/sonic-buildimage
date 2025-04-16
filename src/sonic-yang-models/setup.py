@@ -115,6 +115,7 @@ setup(
                          './yang-models/sonic-device_neighbor.yang',
                          './yang-models/sonic-device_neighbor_metadata.yang',
                          './yang-models/sonic-dhcp-server.yang',
+                         './yang-models/sonic-dhcpv4-relay.yang',
                          './yang-models/sonic-dhcpv6-relay.yang',
                          './yang-models/sonic-dns.yang',
                          './yang-models/sonic-events-bgp.yang',
