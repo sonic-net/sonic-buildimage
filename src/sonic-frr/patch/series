@@ -24,3 +24,4 @@
 0087-staticd-Add-support-for-SRv6-uA-behavior.patch
 0088-Fpm-problems.patch
 0089-Translate-tableid-for-dplane-route-notify.patch
+0090-Dont-skip-kernel-routes-uninstall.patch
