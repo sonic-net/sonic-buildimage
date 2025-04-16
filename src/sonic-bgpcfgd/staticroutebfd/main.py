@@ -414,7 +414,7 @@ class StaticRouteBfd(object):
         if nh_vrf_list is None and nh_list is not None:
             nh_vrf_list = [vrf] * len(nh_list) if len(nh_list) > 0 else None
             data['nexthop-vrf'] = ','.join(nh_vrf_list) if nh_vrf_list else ''
-        else: # preprocess empty nexthop-vrf member
+        elif nh_vrf_list is not None: # preprocess empty nexthop-vrf member
             for index in range(len(nh_vrf_list)):
                 if len(nh_vrf_list[index]) == 0:
                     nh_vrf_list[index] = vrf
@@ -423,7 +423,7 @@ class StaticRouteBfd(object):
         bkh_list    = arg_list(data['blackhole']) if 'blackhole' in data else None
         intf_list   = arg_list(data['ifname']) if 'ifname' in data else None
         dist_list   = arg_list(data['distance']) if 'distance' in data else None
-        if 'true' in bkh_list:
+        if bkh_list is not None and 'true' in bkh_list:
             log_info("Blackholing static route encountered, skipping it")
             return True
         if intf_list is None or nh_list is None or nh_vrf_list is None or \
