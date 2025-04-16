@@ -39,7 +39,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          sudo \
                                          tcpdump \
                                          telnet \
-                                         vim
+                                         vim \
+                                         bats
 
 RUN python3 -m pip install --upgrade pip setuptools wheel
 RUN python3 -m pip install aiohttp \
