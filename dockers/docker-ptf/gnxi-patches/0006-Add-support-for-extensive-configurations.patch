@@ -1,0 +1,48 @@
+From 5c8bc9e0142952748b327375ea2a45813dfe297f Mon Sep 17 00:00:00 2001
+From: ganglyu <ganglv@microsoft.com>
+Date: Wed, 9 Apr 2025 16:04:04 +0800
+Subject: [PATCH] Add args file to support huge configurations
+
+The command line has a length limitation, which restricts the number of configurations it can support. To overcome this limitation, introduce a new argument: arg_file. Users can place extensive configurations within the arg_file, enabling the GNMI client to handle a larger and more complex set of configurations.
+
+---
+ gnmi_cli_py/py_gnmicli.py | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 0ea6f3d..00549e3 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -35,6 +35,7 @@ import json
+ import logging
+ import os
+ import re
++import shlex
+ import ssl
+ import sys
+ import string
+@@ -94,6 +95,8 @@ def _create_parser():
+       '\npython py_gnmicli.py -t 127.0.0.1 -p 8080 -x \'/access-points/'
+       'access-point[hostname=test-ap]/\' -rcert ~/certs/target-cert.crt -o '
+       'openconfig.example.com')
++  parser.add_argument('--arg_file', type=str, help='The args file',
++                      required=False)
+   parser.add_argument('-t', '--target', type=str, help='The gNMI Target',
+                       required=True)
+   parser.add_argument('-p', '--port', type=str, help='The port the gNMI Target '
+@@ -533,6 +536,12 @@ def subscribe_start(stub, options, req_iterator):
+ def main():
+   argparser = _create_parser()
+   args = vars(argparser.parse_args())
++  # Merge input args with args from arg_file if specified
++  if args['arg_file']:
++      with open(args['arg_file'], 'r') as file:
++          file_content = file.read()
++          simulated_args = shlex.split(file_content)
++          args.update(vars(argparser.parse_args(simulated_args)))
+   if args['version']:
+     print(__version__)
+     sys.exit()
+-- 
+2.48.1.windows.1
+

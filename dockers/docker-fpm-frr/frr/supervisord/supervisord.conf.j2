@@ -98,7 +98,9 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
-{% if FEATURE is defined and FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled" %}
+{% if FEATURE is defined and
+      (FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
+      (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled") %}
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
 {% else %}
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
@@ -206,7 +208,7 @@ dependent_startup_wait_for=bgpd:running
 
 {% endif %}
 
-{% if FEATURE is defined and FEATURE.software_bfd is defined and FEATURE.software_bfd.state is defined and FEATURE.software_bfd.state == "enabled" %}
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.software_bfd is defined and SYSTEM_DEFAULTS.software_bfd.status is defined and SYSTEM_DEFAULTS.software_bfd.status == "enabled" %}
 [program:bfdmon]
 command=/usr/local/bin/bfdmon
 priority=6

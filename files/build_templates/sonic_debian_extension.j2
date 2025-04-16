@@ -1082,8 +1082,11 @@ sudo mkdir -p $FILESYSTEM_ROOT/etc/mlnx/cpld/
 for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
     sudo cp $files_path/$MLNX_CPLD_ARCHIVE $FILESYSTEM_ROOT/etc/mlnx/cpld/
 done
-sudo cp platform/mellanox/get_component_versions/get_component_versions.py $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+
+j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
@@ -1133,6 +1136,13 @@ install_deb_package $debs_path/libdashapi_*.deb
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install xmlstarlet
 
+# Copy component-versions file
+sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
+
+# Install current running versions script
+j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}

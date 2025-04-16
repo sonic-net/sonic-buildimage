@@ -25,6 +25,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
+    ref: master
     endpoint: sonic-net
 
 parameters:
@@ -75,6 +76,7 @@ stages:
     steps:
       - checkout: sonic-mgmt
         clean: true
+        fetchDepth: 0
         displayName: 'Checkout sonic-mgmt'
 
       - download: current
@@ -94,6 +96,14 @@ stages:
           ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
           docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
         displayName: 'Setup sonic-mgmt docker container'
+
+      - bash: |
+          set -ex
+
+          docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:py3only
+        env:
+          REGISTRY_SERVER: ${{ parameters.registry_url }}
+        displayName: 'Tag docker-sonic-mgmt'
 
       - task: Docker@2
         displayName: Upload image
