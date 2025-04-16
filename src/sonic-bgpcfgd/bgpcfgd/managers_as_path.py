@@ -27,27 +27,24 @@ class AsPathMgr(Manager):
 
     def set_handler(self, key, data):
         if key != "localhost":
-            return
+            return True
         asns = None
         for key_inside, value in data.items():
             if key_inside == "t2_group_asns":
                 asns = value
                 break
-        cmd = "no bgp as-path access-list {}".format(T2_GROUP_ASNS)
-        log_info("AsPathMgr: Clear asns group with cmd: [{}]".format(cmd))
-        self.cfg_mgr.push(cmd)
+        log_info("AsPathMgr: Clear asns group {}".format(T2_GROUP_ASNS))
+        self.cfg_mgr.push("no bgp as-path access-list {}".format(T2_GROUP_ASNS))
         if asns is not None:
             for asn in asns.split(","):
-                cmd = "bgp as-path access-list {} permit _{}_".format(T2_GROUP_ASNS, asn)
-                log_info("AsPathMgr: Add as-path with cmd: [{}]".format(cmd))
-                self.cfg_mgr.push(cmd)
+                log_info("AsPathMgr: Add as-path {} to group {}".format(asn, T2_GROUP_ASNS))
+                self.cfg_mgr.push("bgp as-path access-list {} permit _{}_".format(T2_GROUP_ASNS, asn))
         return True
 
     def del_handler(self, key):
         if key != "localhost":
             return True
         # It would be trigger when we deleta all `localhost` entry in DEVICE_METADATA, then clear t2 group asns
-        cmd = "no bgp as-path access-list {}".format(T2_GROUP_ASNS)
-        log_info("AsPathMgr: Clear asns group with cmd: [{}]".format(cmd))
-        self.cfg_mgr.push(cmd)
+        log_info("AsPathMgr: Clear asns group {}".format(T2_GROUP_ASNS))
+        self.cfg_mgr.push("no bgp as-path access-list {}".format(T2_GROUP_ASNS))
         return True

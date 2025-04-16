@@ -37,40 +37,36 @@ def del_handler_test(manager, key):
 
 
 # test if T2_GROUP_ASNS has been cleared
-@patch('bgpcfgd.managers_as_path.log_info')
-def test_metadata_without_asns(mocked_log_info):
+def test_metadata_without_asns():
     m = constructor()
-    set_handler_test(m, "DEVICE_METADATA|localhost", {"bgp_asn": "65100", "type": "SpineRouter",
-                                                      "subtype": "UpstreamLC"})
-    mocked_log_info.assert_called_with("AsPathMgr: Clear asns group with cmd: " + 
-                                       "[no bgp as-path access-list T2_GROUP_ASNS]")
+    set_handler_test(m, "localhost", {"bgp_asn": "65100", "type": "SpineRouter",
+                                      "subtype": "UpstreamLC"})
+    m.cfg_mgr.push.assert_called_with("no bgp as-path access-list T2_GROUP_ASNS")
 
 
 # test if T2_GROUP_ASNS has been added
-@patch('bgpcfgd.managers_as_path.log_info')
-def test_metadata_with_asns(mocked_log_info):
+def test_metadata_with_asns():
     m = constructor()
-    set_handler_test(m, "DEVICE_METADATA|localhost",
+    set_handler_test(m, "localhost",
                      {"bgp_asn": "65100", "type": "SpineRouter",
-                      "subtype": "UpstreamLC", "t2_group_asns": ["64120", "64121"]})
-    mocked_log_info.assert_has_calls([
-            call("AsPathMgr: Clear asns group with cmd: [no bgp as-path access-list T2_GROUP_ASNS]"),
-            call("AsPathMgr: Add as-path with cmd: [bgp as-path access-list T2_GROUP_ASNS permit _64120_]"),
-            call("AsPathMgr: Add as-path with cmd: [bgp as-path access-list T2_GROUP_ASNS permit _64121_]")
-        ])
+                      "subtype": "UpstreamLC", "t2_group_asns": "64120,64121"})
+    m.cfg_mgr.push.assert_has_calls([
+        call("no bgp as-path access-list T2_GROUP_ASNS"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64121_")
+    ])
 
 
 # test if T2_GROUP_ASNS has been cleared
-@patch('bgpcfgd.managers_as_path.log_info')
-def test_del_handler(mocked_log_info):
+def test_del_handler():
     m = constructor()
-    set_handler_test(m, "DEVICE_METADATA|localhost",
+    set_handler_test(m, "localhost",
                      {"bgp_asn": "65100", "type": "SpineRouter",
-                      "subtype": "UpstreamLC", "t2_group_asns": ["64120", "64121"]})
-    del_handler_test(m, "DEVICE_METADATA|localhost")
-    mocked_log_info.assert_has_calls([
-            call("AsPathMgr: Clear asns group with cmd: [no bgp as-path access-list T2_GROUP_ASNS]"),
-            call("AsPathMgr: Add as-path with cmd: [bgp as-path access-list T2_GROUP_ASNS permit _64120_]"),
-            call("AsPathMgr: Add as-path with cmd: [bgp as-path access-list T2_GROUP_ASNS permit _64121_]"),
-            call("AsPathMgr: Clear asns group with cmd: [no bgp as-path access-list T2_GROUP_ASNS]")
-        ])
+                      "subtype": "UpstreamLC", "t2_group_asns": "64120,64121"})
+    del_handler_test(m, "localhost")
+    m.cfg_mgr.push.assert_has_calls([
+        call("no bgp as-path access-list T2_GROUP_ASNS"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64121_"),
+        call("no bgp as-path access-list T2_GROUP_ASNS")
+    ])
