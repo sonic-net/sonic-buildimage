@@ -428,7 +428,7 @@ class StaticRouteBfd(object):
             return True
         if intf_list is None or nh_list is None or nh_vrf_list is None or \
                 len(intf_list) != len(nh_list) or len(intf_list) != len(nh_vrf_list):
-            log_err("Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty.")
+            log_warn("Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty.")
             return True
 
         if not bfd_enabled:
