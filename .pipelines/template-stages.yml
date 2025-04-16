@@ -228,13 +228,13 @@ stages:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000
-          OPTIONS: ${{ parameters.OPTIONS }} NOBULLSEYE=0 INCLUDE_SMARTSWITCH_AZS=y
+          OPTIONS: ${{ parameters.OPTIONS }} NOBULLSEYE=0
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'cisco-8000-smartswitch') }}:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000-smartswitch
-          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1'
+          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SMARTSWITCH_AZS=y'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
