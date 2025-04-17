@@ -259,7 +259,7 @@ int get_environment_variable_first_part(char* dst, socklen_t size, const char* n
         return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
     }
 
-    strcpy_s(dst, size, first_part);
+    snprintf(dst, size, "%s", first_part);
     output_debug("Remote address=%s", dst);
     return GET_ENV_VARIABLE_OK;
 }
