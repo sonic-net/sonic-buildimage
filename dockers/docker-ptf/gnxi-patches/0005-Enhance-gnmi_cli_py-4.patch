@@ -140,7 +140,7 @@ index c46592a..0ea6f3d 100644
    Returns:
      a gnmi_pb2.GetResponse object representing a gNMI GetResponse.
    """
-@@ -300,35 +362,36 @@ def _get(stub, paths, username, password, prefix):
+@@ -300,35 +366,40 @@ def _get(stub, paths, username, password, prefix):
    if username:  # User/pass supplied for Authentication.
      kwargs = {'metadata': [('username', username), ('password', password)]}
    return stub.Get(
@@ -171,13 +171,17 @@ index c46592a..0ea6f3d 100644
 -
 +  delete_list = []
 +  update_list = []
++  replace_list = []
 +  for path, value in zip(paths, value_list):
 +    val = _get_val(value)
 +    if val is None:
 +      delete_list.append(path)
-+    else:
++    elif set_type == 'update':
 +      path_val = gnmi_pb2.Update(path=path, val=val,)
 +      update_list.append(path_val)
++    elif set_type == 'replace':
++      path_val = gnmi_pb2.Update(path=path, val=val,)
++      replace_list.append(path_val)
    kwargs = {}
    if username:
      kwargs = {'metadata': [('username', username), ('password', password)]}
@@ -186,7 +190,7 @@ index c46592a..0ea6f3d 100644
 -  elif set_type == 'update':
 -    return stub.Set(gnmi_pb2.SetRequest(update=[path_val]), **kwargs)
 -  return stub.Set(gnmi_pb2.SetRequest(replace=[path_val]), **kwargs)
-+  return stub.Set(gnmi_pb2.SetRequest(prefix=prefix, delete=delete_list, update=update_list), **kwargs)
++  return stub.Set(gnmi_pb2.SetRequest(prefix=prefix, delete=delete_list, update=update_list, replace=replace_list), **kwargs)
  
  
  def _build_creds(target, port, get_cert, certs, notls):
