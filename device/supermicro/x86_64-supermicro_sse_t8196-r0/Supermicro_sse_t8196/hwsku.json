@@ -372,6 +372,10 @@
             "default_brkout_mode": "1x400G",
             "fec": "rs"
         },
+        "Ethernet500": {
+            "default_brkout_mode": "1x400G",
+            "fec": "rs"
+        },
         "Ethernet504": {
             "default_brkout_mode": "1x400G",
             "fec": "rs"
