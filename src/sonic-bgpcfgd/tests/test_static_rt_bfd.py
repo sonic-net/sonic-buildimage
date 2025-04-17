@@ -701,55 +701,52 @@ def test_set_del_blackhole_route():
 
     test_set_del_blackhole_route.logs = []
 
-    _log_info = log_info
-    log_info = lambda msg: test_set_del_blackhole_route.logs.append(msg)
+    with patch('staticroutebfd.main.log_info', new=lambda msg: test_set_del_blackhole_route.logs.append(msg)):
+        set_del_test(dut, "srt",
+            "SET",
+            ("2.2.2.0/24", {
+                "blackhole": "true",
+            }),
+            {},
+            {}
+        )
 
-    set_del_test(dut, "srt",
-        "SET",
-        ("2.2.2.0/24", {
-            "blackhole": "true",
-        }),
-        {},
-        {}
-    )
-
-    set_del_test(dut, "srt",
-        "DEL",
-        ("2.2.2.0/24", {
-            "blackhole": "true",
-        }),
-        {},
-        {}
-    )
+        set_del_test(dut, "srt",
+            "DEL",
+            ("2.2.2.0/24", {
+                "blackhole": "true",
+            }),
+            {},
+            {}
+        )
 
     assert "Blackholing static route encountered, skipping it" in test_set_del_blackhole_route.logs
-    log_info = _log_info
+
 
 def test_set_del_ifname_only_route():
     dut = constructor()
     intf_setup(dut)
 
-    _log_warn = log_warn
-    log_warn = lambda msg: test_set_del_ifname_only_route.logs.append(msg)
+    test_set_del_ifname_only_route.logs = []
 
-    set_del_test(dut, "srt",
-        "SET",
-        ("2.2.2.0/24", {
-            "ifname": "if1,if2",
-        }),
-        {},
-        {}
-    )
+    with patch('staticroutebfd.main.log_warn', new=lambda msg: test_set_del_ifname_only_route.logs.append(msg)):
+        set_del_test(dut, "srt",
+            "SET",
+            ("2.2.2.0/24", {
+                "ifname": "if1,if2",
+            }),
+            {},
+            {}
+        )
 
-    set_del_test(dut, "srt",
-        "DEL",
-        ("2.2.2.0/24", {
-            "ifname": "if1,if2",
-        }),
-        {},
-        {}
-    )
+        set_del_test(dut, "srt",
+            "DEL",
+            ("2.2.2.0/24", {
+                "ifname": "if1,if2",
+            }),
+            {},
+            {}
+        )
 
     assert "Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty."\
         in test_set_del_ifname_only_route.logs
-    log_warn = _log_warn
