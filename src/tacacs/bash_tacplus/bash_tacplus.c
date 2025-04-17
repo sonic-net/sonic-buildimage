@@ -268,7 +268,7 @@ int get_environment_variable_first_part(char* dst, socklen_t size, const char* n
         return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
     }
 
-    strncpy(dst, first_part, size);
+    strcpy_s(dst, size, first_part);
     if (debug) {
         syslog(LOG_DEBUG, "%s: remote address=%s", nssname, dst);
     }
