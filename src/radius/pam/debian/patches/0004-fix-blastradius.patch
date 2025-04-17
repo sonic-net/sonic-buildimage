@@ -1,0 +1,389 @@
+diff --git a/USAGE b/USAGE
+index e769dbf..82d0d08 100644
+--- a/USAGE
++++ b/USAGE
+@@ -105,5 +105,8 @@ prompt_attribute - Enable honoring of Prompt attribute sent from server for
+                    input. Without this option all user input during 
+                    challenge-response will be echoed. See RFC2869 Section 5.10
+ 
++require_message_authenticator - Discard Access-Accept, Access-Challenge, and
++		Access-Reject packets which do not contain Message-Authenticator.
++
+ ---------------------------------------------------------------------------
+ 
+diff --git a/src/md5.c b/src/md5.c
+index bb4546e..30cad65 100644
+--- a/src/md5.c
++++ b/src/md5.c
+@@ -173,6 +173,79 @@ void MD5Final(unsigned char digest[16], struct MD5Context *ctx)
+ 	memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
+ }
+ 
++/** Calculate HMAC using internal MD5 implementation
++ *
++ * @param digest Caller digest to be filled in.
++ * @param text Pointer to data stream.
++ * @param text_len length of data stream.
++ * @param key Pointer to authentication key.
++ * @param key_len Length of authentication key.
++ *
++ */
++void hmac_md5(uint8_t digest[16], uint8_t const *text, size_t text_len,
++		 uint8_t const *key, size_t key_len)
++{
++	MD5_CTX context;
++	uint8_t k_ipad[65];    /* inner padding - key XORd with ipad */
++	uint8_t k_opad[65];    /* outer padding - key XORd with opad */
++	uint8_t tk[16];
++	int i;
++
++	/* if key is longer than 64 bytes reset it to key=MD5(key) */
++	if (key_len > 64) {
++		MD5_CTX tctx;
++
++		MD5Init(&tctx);
++		MD5Update(&tctx, key, key_len);
++		MD5Final(tk, &tctx);
++
++		key = tk;
++		key_len = 16;
++	}
++
++	/*
++	 * the HMAC_MD5 transform looks like:
++	 *
++	 * MD5(K XOR opad, MD5(K XOR ipad, text))
++	 *
++	 * where K is an n byte key
++	 * ipad is the byte 0x36 repeated 64 times
++
++	 * opad is the byte 0x5c repeated 64 times
++	 * and text is the data being protected
++	 */
++
++	/* start out by storing key in pads */
++	memset( k_ipad, 0, sizeof(k_ipad));
++	memset( k_opad, 0, sizeof(k_opad));
++	memcpy( k_ipad, key, key_len);
++	memcpy( k_opad, key, key_len);
++
++	/* XOR key with ipad and opad values */
++	for (i = 0; i < 64; i++) {
++		k_ipad[i] ^= 0x36;
++		k_opad[i] ^= 0x5c;
++	}
++	/*
++	 * perform inner MD5
++	 */
++	MD5Init(&context);		   /* init context for 1st
++					      * pass */
++	MD5Update(&context, k_ipad, 64);      /* start with inner pad */
++	MD5Update(&context, text, text_len); /* then text of datagram */
++	MD5Final(digest, &context);	  /* finish up 1st pass */
++	/*
++	 * perform outer MD5
++	 */
++	MD5Init(&context);		   /* init context for 2nd
++					      * pass */
++	MD5Update(&context, k_opad, 64);     /* start with outer pad */
++	MD5Update(&context, digest, 16);     /* then results of 1st
++					      * hash */
++	MD5Final(digest, &context);	  /* finish up 2nd pass */
++}
++
++
+ #ifndef ASM_MD5
+ 
+ /* The four core functions - F1 is optimized somewhat */
+diff --git a/src/md5.h b/src/md5.h
+index ce0e350..39bbb9b 100644
+--- a/src/md5.h
++++ b/src/md5.h
+@@ -39,6 +39,7 @@
+ #define MD5Transform  pra_MD5Transform
+ 
+ #include <inttypes.h>
++#include <stdint.h>
+ 
+ struct MD5Context {
+ 	uint32_t buf[4];
+@@ -51,6 +52,9 @@ void MD5Update(struct MD5Context *, unsigned const char *, unsigned);
+ void MD5Final(unsigned char digest[16], struct MD5Context *);
+ void MD5Transform(uint32_t buf[4], uint32_t const in[16]);
+ 
++void hmac_md5(uint8_t digest[16], uint8_t const *text, size_t text_len,
++	      uint8_t const *key, size_t key_len);
++
+ /*
+  * This is needed to make RSAREF happy on some MS-DOS compilers.
+  */
+diff --git a/src/pam_radius_auth.c b/src/pam_radius_auth.c
+index ae375f6..117ebdc 100644
+--- a/src/pam_radius_auth.c
++++ b/src/pam_radius_auth.c
+@@ -185,8 +185,8 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
+ 				if (!(conf->client_ip))
+ 					_pam_log(LOG_WARNING, "Invalid address. ignoring '%s'", *argv);
+ 			}
+-
+-
++		} else if (!strcmp(*argv, "require_message_authenticator")) {
++			conf->require_message_authenticator = TRUE;
+ 		} else if (!strncmp(*argv, "statistics=", 11)) {
+ 			/* Verify filename doesn't contain '/'.
+ 			 */
+@@ -366,11 +366,8 @@ static void get_random_vector(unsigned char *vector)
+ 	}
+ }
+ 
+-/*
+- * RFC 2139 says to do generate the accounting request vector this way.
+- * However, the Livingston 1.16 server doesn't check it.	The Cistron
+- * server (http://home.cistron.nl/~miquels/radius/) does, and this code
+- * seems to work with it.	It also works with Funk's Steel-Belted RADIUS.
++/**
++ *	Follow RFC 2866 for Accounting-Request vector.
+  */
+ static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
+ {
+@@ -389,11 +386,44 @@ static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
+ /*
+  * Verify the response from the server
+  */
+-static int verify_packet(char *secret, AUTH_HDR *response, AUTH_HDR *request)
++static int verify_packet(radius_server_t *server, AUTH_HDR *response, AUTH_HDR *request, radius_conf_t *conf)
+ {
+ 	MD5_CTX my_md5;
+-	unsigned char	calculated[AUTH_VECTOR_LEN];
+-	unsigned char	reply[AUTH_VECTOR_LEN];
++	uint8_t calculated[AUTH_VECTOR_LEN];
++	uint8_t reply[AUTH_VECTOR_LEN];
++	uint8_t *message_authenticator = NULL;
++	CONST uint8_t *attr, *end;
++	size_t secret_len = strlen(server->secret);
++
++	attr = response->data;
++	end = (uint8_t *) response + ntohs(response->length);
++
++	/*
++	 *	Check that the packet is well-formed, and find the Message-Authenticator.
++	 */
++	while (attr < end) {
++		size_t remaining = end - attr;
++
++		if (remaining < 2) return FALSE;
++
++		if (attr[1] < 2) return FALSE;
++
++		if (attr[1] > remaining) return FALSE;
++
++		if (attr[0] == PW_MESSAGE_AUTHENTICATOR) {
++			if (attr[1] != 18) return FALSE;
++
++			if (message_authenticator) return FALSE;
++
++			message_authenticator = (uint8_t *) response + (attr - (uint8_t *) response) + 2;
++		}
++
++		attr += attr[1];
++	}
++
++	if ((request->code == PW_AUTHENTICATION_REQUEST) && conf->require_message_authenticator && !message_authenticator) {
++		return FALSE;
++	}
+ 
+ 	/*
+ 	 * We could dispense with the memcpy, and do MD5's of the packet
+@@ -404,27 +434,30 @@ static int verify_packet(char *secret, AUTH_HDR *response, AUTH_HDR *request)
+ 
+ 	/* MD5(response packet header + vector + response packet data + secret) */
+ 	MD5Init(&my_md5);
+-	MD5Update(&my_md5, (unsigned char *) response, ntohs(response->length));
++	MD5Update(&my_md5, (uint8_t *) response, ntohs(response->length));
++	MD5Update(&my_md5, (CONST uint8_t *) server->secret, secret_len);
++	MD5Final(calculated, &my_md5);			/* set the final vector */
++
++	/* Did he use the same random vector + shared secret? */
++	if (memcmp(calculated, reply, AUTH_VECTOR_LEN) != 0) return FALSE;
++
++	if (!message_authenticator) return TRUE;
+ 
+ 	/*
+-	 * This next bit is necessary because of a bug in the original Livingston
+-	 * RADIUS server.	The authentication vector is *supposed* to be MD5'd
+-	 * with the old password (as the secret) for password changes.
+-	 * However, the old password isn't used.	The "authentication" vector
+-	 * for the server reply packet is simply the MD5 of the reply packet.
+-	 * Odd, the code is 99% there, but the old password is never copied
+-	 * to the secret!
++	 *	RFC2869 Section 5.14.
++	 *
++	 *	Message-Authenticator is calculated with the Request
++	 *	Authenticator (copied into the packet above), and with
++	 *	the Message-Authenticator attribute contents set to
++	 *	zero.
+ 	 */
+-	if (*secret) {
+-		MD5Update(&my_md5, (unsigned char *) secret, strlen(secret));
+-	}
++	memcpy(reply, message_authenticator, AUTH_VECTOR_LEN);
++	memset(message_authenticator, 0, AUTH_VECTOR_LEN);
+ 
+-	MD5Final(calculated, &my_md5);			/* set the final vector */
++	hmac_md5(calculated, (uint8_t *) response, ntohs(response->length), (const uint8_t *) server->secret, secret_len);
++
++	if (memcmp(calculated, reply, AUTH_VECTOR_LEN) != 0) return FALSE;
+ 
+-	/* Did he use the same random vector + shared secret? */
+-	if (memcmp(calculated, reply, AUTH_VECTOR_LEN) != 0) {
+-		return FALSE;
+-	}
+ 	return TRUE;
+ }
+ 
+@@ -940,10 +973,25 @@ static void build_radius_packet(AUTH_HDR *request, CONST char *user, CONST char
+ 	hostname[0] = '\0';
+ 	gethostname(hostname, sizeof(hostname) - 1);
+ 
+-	request->length = htons(AUTH_HDR_LEN);
++	/*
++	 *	For Access-Request, create a random authentication
++	 *	vector, and always add a Message-Authenticator
++	 *	attribute.
++	 */
++	if (request->code == PW_AUTHENTICATION_REQUEST) {
++              uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
+ 
+-	if (password) {		/* make a random authentication req vector */
+-		get_random_vector(request->vector);
++	      get_random_vector(request->vector);
++
++              attr[0] = PW_MESSAGE_AUTHENTICATOR;
++              attr[1] = 18;
++              memset(attr + 2, 0, AUTH_VECTOR_LEN);
++	      conf->message_authenticator = attr + 2;
++
++              request->length = htons(AUTH_HDR_LEN + 18);
++	} else {
++		request->length = htons(AUTH_HDR_LEN);
++		conf->message_authenticator = NULL;
+ 	}
+ 
+ 	add_attribute(request, PW_USER_NAME, (unsigned char *) user, strlen(user));
+@@ -1089,7 +1137,12 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
+ 		}
+ 
+ 
+-		if (!password) { 		/* make an RFC 2139 p6 request authenticator */
++		if (request->code == PW_AUTHENTICATION_REQUEST) {
++			hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
++				 (const uint8_t *) server->secret, strlen(server->secret));
++
++		} else {
++			/* make an RFC 2139 p6 request authenticator */
+ 			get_accounting_vector(request, server);
+ 		}
+ 
+@@ -1240,7 +1293,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
+ 						}
+ 					}
+ 
+-					if (!verify_packet(p, response, request)) {
++					if (!verify_packet(server, response, request, conf)) {
+ 						_pam_log(LOG_ERR, "packet from RADIUS server %s failed verification: "
+ 							 "The shared secret is probably incorrect.", server->hostname);
+ 						ok = FALSE;
+diff --git a/src/pam_radius_auth.h b/src/pam_radius_auth.h
+index 42d48da..46a1bf5 100644
+--- a/src/pam_radius_auth.h
++++ b/src/pam_radius_auth.h
+@@ -7,6 +7,7 @@
+ #include <errno.h>
+ #include <sys/time.h>
+ #include <sys/types.h>
++#include <stdint.h>
+ #include <sys/stat.h>
+ #include <sys/resource.h>
+ #include <sys/param.h>
+@@ -176,6 +177,8 @@ typedef struct radius_conf_t {
+ #define MAXFILENAME 128
+ 	CONST char *trace;        /* Packet Trace File */
+ 	CONST char *statistics;   /* Statistics File   */
++	int require_message_authenticator;
++	uint8_t *message_authenticator;
+ } radius_conf_t;
+ 
+ #endif /* PAM_RADIUS_H */
+diff --git a/src/radius.h b/src/radius.h
+index 287d4d8..0fd2731 100644
+--- a/src/radius.h
++++ b/src/radius.h
+@@ -120,6 +120,9 @@ typedef struct pw_auth_hdr {
+ #define PW_PORT_LIMIT                   62      /* integer */
+ #define PW_LOGIN_LAT_PORT               63      /* string */
+ #define PW_PROMPT                       76      /* integer */
++
++#define PW_MESSAGE_AUTHENTICATOR	80	/* octets */
++
+ #define PW_MANAGEMENT_PRIVILEGE_LEVEL   136     /* integer */
+ 
+ #define	PW_NAS_IPV6_ADDRESS	       	95	/* octets */
+@@ -176,58 +179,4 @@ typedef struct pw_auth_hdr {
+ #define PW_STATUS_STOP			2
+ #define PW_STATUS_ALIVE			3
+ 
+-/* Default Database File Names */
+-
+-#define RADIUS_DIR		"/etc/raddb"
+-#define RADACCT_DIR		"/usr/adm/radacct"
+-
+-#define RADIUS_DICTIONARY	"dictionary"
+-#define RADIUS_CLIENTS		"clients"
+-#define RADIUS_USERS		"users"
+-#define RADIUS_HOLD		"holdusers"
+-#define RADIUS_LOG		"logfile"
+-
+-/* Server data structures */
+-
+-typedef struct dict_attr {
+-	char			name[32];
+-	int			value;
+-	int			type;
+-	struct dict_attr	*next;
+-} DICT_ATTR;
+-
+-typedef struct dict_value {
+-	char			attrname[32];
+-	char			name[32];
+-	int			value;
+-	struct dict_value	*next;
+-} DICT_VALUE;
+-
+-typedef struct value_pair {
+-	char			name[32];
+-	int			attribute;
+-	int			type;
+-	uint32_t		lvalue;
+-	char			strvalue[AUTH_STRING_LEN];
+-	struct value_pair	*next;
+-} VALUE_PAIR;
+-
+-typedef struct auth_req {
+-	uint32_t		ipaddr;
+-	uint16_t		udp_port;
+-	uint8_t			id;
+-	uint8_t			code;
+-	uint8_t			vector[16];
+-	uint8_t			secret[16];
+-	VALUE_PAIR		*request;
+-	int			child_pid;	/* Process ID of child */
+-	uint32_t		timestamp;
+-	struct auth_req		*next;		/* Next active request */
+-} AUTH_REQ;
+-
+-#define SECONDS_PER_DAY		86400
+-#define MAX_REQUEST_TIME	30
+-#define CLEANUP_DELAY		5
+-#define MAX_REQUESTS		100
+-
+ #endif /* RADIUS_H */
