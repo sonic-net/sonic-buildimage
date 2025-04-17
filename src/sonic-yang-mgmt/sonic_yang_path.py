@@ -6,6 +6,7 @@ from json import dump, dumps, loads
 import sonic_yang_ext
 import re
 from jsonpointer import JsonPointer
+from typing import List
 
 # class sonic_yang methods related to path handling, use mixin to extend sonic_yang
 class SonicYangPathMixin:
@@ -20,11 +21,11 @@ class SonicYangPathMixin:
         return JsonPointer(configdb_path).parts
 
     @staticmethod
-    def configdb_path_join(configdb_tokens: list[str]):
+    def configdb_path_join(configdb_tokens: List[str]):
         return JsonPointer.from_parts(configdb_tokens).path
 
     @staticmethod
-    def xpath_join(xpath_tokens: list[str], schema_xpath: bool) -> str:
+    def xpath_join(xpath_tokens: List[str], schema_xpath: bool) -> str:
         if not schema_xpath:
             return "/" + "/".join(xpath_tokens)
 
@@ -35,7 +36,7 @@ class SonicYangPathMixin:
         return "/" + ("/" + module_name + ":").join(xpath_tokens)
 
     @staticmethod
-    def xpath_split(xpath: str) -> list[str]:
+    def xpath_split(xpath: str) -> List[str]:
         """
         Splits the given xpath into tokens by '/'.
 
@@ -135,7 +136,7 @@ class SonicYangPathMixin:
         return self.configdb_path_join(configdb_path_tokens)
 
 
-    def __get_xpath_tokens_from_container(self, model: dict, configdb_path_tokens: list[str], token_index: int, schema_xpath: bool, configdb: dict) -> list[str]:
+    def __get_xpath_tokens_from_container(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict) -> List[str]:
         token = configdb_path_tokens[token_index]
         xpath_tokens = [token]
 
@@ -181,7 +182,7 @@ class SonicYangPathMixin:
     # scanning the model for a list with a matching *number* of keys and returning the
     # reference to the model with the definition.  It is not valid to have 2 lists in
     # the same container with the same number of keys since we have no way to match.
-    def __get_list_model(self, model: dict, configdb_path_tokens: list[str], token_index: int) -> dict:
+    def __get_list_model(self, model: dict, configdb_path_tokens: List[str], token_index: int) -> dict:
         parent_container_name = configdb_path_tokens[token_index]
         clist = model.get('list')
         # Container contains a single list, just return it
@@ -205,7 +206,7 @@ class SonicYangPathMixin:
                              f"but none of them match the config_db value {configdb_values_str}")
 
 
-    def __get_xpath_tokens_from_list(self, model: dict, configdb_path_tokens: list[str], token_index: int, schema_xpath: bool, configdb: dict):
+    def __get_xpath_tokens_from_list(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict):
         item_token=""
 
         if schema_xpath:
@@ -264,14 +265,14 @@ class SonicYangPathMixin:
     # Type1 lists are lists contained within another list.  They always have exactly 1 key, and due to
     # this they are special cased with a static lookup table.  This is just a helper to do a quick
     # transformation from configdb to the xpath key.
-    def __type1_get_xpath_token(self, model: dict, configdb_path_tokens: list[str], token_index: int, schema_xpath: bool) -> str:
+    def __type1_get_xpath_token(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool) -> str:
         if schema_xpath:
             return model['@name']
         return f"{model['@name']}[{model['key']['@value']}='{configdb_path_tokens[token_index]}']"
 
 
     # This function outputs the xpath token for leaf, choice, and leaf-list entries.
-    def __get_xpath_token_from_leaf(self, model: dict, configdb_path_tokens: list[str], token_index: int, schema_xpath: bool, configdb: dict) -> str:
+    def __get_xpath_token_from_leaf(self, model: dict, configdb_path_tokens: List[str], token_index: int, schema_xpath: bool, configdb: dict) -> str:
         token = configdb_path_tokens[token_index]
 
         # checking all leaves
@@ -307,7 +308,7 @@ class SonicYangPathMixin:
                          f"path_tokens: {configdb_path_tokens}\n  config: {configdb}")
 
 
-    def __get_configdb_value(self, configdb_path_tokens: list[str], configdb: dict) -> str:
+    def __get_configdb_value(self, configdb_path_tokens: List[str], configdb: dict) -> str:
         if configdb is None:
             return None
 
@@ -360,7 +361,7 @@ class SonicYangPathMixin:
         return idx
 
 
-    def __get_configdb_path_tokens_from_container(self, model: dict, xpath_tokens: list[str], token_index: int, configdb: dict) -> list[str]:
+    def __get_configdb_path_tokens_from_container(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict) -> List[str]:
         token = xpath_tokens[token_index]
         configdb_path_tokens = [token]
 
@@ -413,7 +414,7 @@ class SonicYangPathMixin:
 
         return kv
 
-    def __get_configdb_path_tokens_from_list(self, model: dict, xpath_tokens: list[str], token_index: int, configdb: dict):
+    def __get_configdb_path_tokens_from_list(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict):
         token = xpath_tokens[token_index]
         key_dict = self.__xpath_keys_to_dict(token)
 
@@ -465,7 +466,7 @@ class SonicYangPathMixin:
         return configdb_path_tokens
 
 
-    def __get_configdb_path_tokens_from_leaf(self, model: dict, xpath_tokens: list[str], token_index: int, configdb: dict) -> list[str]:
+    def __get_configdb_path_tokens_from_leaf(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict) -> List[str]:
         token = xpath_tokens[token_index]
 
         # checking all leaves
@@ -521,7 +522,7 @@ class SonicYangPathMixin:
                          f"xpath_tokens: {xpath_tokens}\n  config: {configdb}")
 
 
-    def __get_configdb_path_tokens_from_type_1_list(self, model: dict, xpath_tokens: list[str], token_index: int, configdb: dict):
+    def __get_configdb_path_tokens_from_type_1_list(self, model: dict, xpath_tokens: List[str], token_index: int, configdb: dict):
         type_1_inner_list_name = model['@name']
 
         token = xpath_tokens[token_index]
