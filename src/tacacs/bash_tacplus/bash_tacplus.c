@@ -242,37 +242,25 @@ int get_environment_variable_first_part(char* dst, socklen_t size, const char* n
 
     const char* variable = getenv(name);
     if (variable == NULL) {
-        if (debug) {
-            syslog(LOG_DEBUG, "%s: can't get environment variable %s, errno=%d", nssname, name, errno);
-        }
-
+        output_debug("Can't get environment variable %s, errno=%d", name, errno);
         return GET_ENV_VARIABLE_NOT_FOUND;
     }
 
     char* context = NULL;
     char* first_part = strtok_r((char *)variable, delimiters, &context);
     if (first_part == NULL) {
-        if (debug) {
-            syslog(LOG_DEBUG, "%s: can't split %s by delimiters %s", nssname, variable, delimiters);
-        }
-
+        output_debug("Can't split %s by delimiters %s", variable, delimiters);
         return GET_ENV_VARIABLE_INCORRECT_FORMAT;
     }
 
     int first_part_len = strlen(first_part);
     if (first_part_len >= size) {
-        if (debug) {
-            syslog(LOG_DEBUG, "%s: dest buffer size %d not enough for %s", nssname, size, first_part);
-        }
-
+        output_debug("Dest buffer size %d not enough for %s", size, first_part);
         return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
     }
 
     strcpy_s(dst, size, first_part);
-    if (debug) {
-        syslog(LOG_DEBUG, "%s: remote address=%s", nssname, dst);
-    }
-
+    output_debug("Remote address=%s", dst);
     return GET_ENV_VARIABLE_OK;
 }
 
@@ -307,7 +295,7 @@ int authorization_with_host_and_tty(const char *user, const char *cmd, char **ar
     int result = get_remote_address(remote_addr, sizeof(remote_addr));
     if ((result != GET_REMOTE_ADDRESS_OK)) {
         snprintf(remote_addr, sizeof(remote_addr), "UNK");
-        output_error("Failed to determine remote address, passing %s\n", remote);
+        output_error("Failed to determine remote address, passing %s\n", remote_addr);
     }
 
     // try get tty name
@@ -413,7 +401,7 @@ void plugin_uninit()
 /*
  * Check if current user is local user.
  */
-int is_local_user(char *user)
+int is_local_user(const char *user)
 {
     if (user == unknown_username) {
         // for unknown user name, when tacacs enabled, always authorization with tacacs.
@@ -460,7 +448,7 @@ int is_local_user(char *user)
 /*
  * Get user name.
  */
-char* get_user_name(char *user)
+const char* get_user_name(char *user)
 {
     if (user != NULL && strlen(user) != 0) {
         return user;
@@ -491,7 +479,7 @@ char* get_user_name(char *user)
  */
 int on_shell_execve (char *user, int shell_level, char *cmd, char **argv)
 {
-    char* user_namd = get_user_name(user);
+    const char* user_namd = get_user_name(user);
     output_debug("Authorization parameters:\n");
     output_debug("    Shell level: %d\n", shell_level);
     output_debug("    Current user: %s\n", user_namd);
