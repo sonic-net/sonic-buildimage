@@ -43,7 +43,7 @@ class Fan(PddfFan):
             _, output = getstatusoutput_noshell_pipe(["sudo", "decode-syseeprom"], ["grep", "'Part Number'"], ["grep", "-oE", "'[^ ]+$'"])
             part_number = output.strip()
 
-        if "T8164SR" in part_number:
+        if "T8196SR" in part_number:
             return self.FAN_DIRECTION_INTAKE
         else:
             return self.FAN_DIRECTION_EXHAUST
