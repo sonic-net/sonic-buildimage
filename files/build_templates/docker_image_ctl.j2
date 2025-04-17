@@ -171,6 +171,7 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 function postStartAction()
 {
 {%- if docker_container_name == "database" %}
+    midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -221,6 +222,11 @@ function postStartAction()
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
            ip netns exec "$NET_NS" ip link set dev eth1 up
+
+           # Don't run for supervisor
+           if [[ "${slot_id}" != "${supervisor_slot_id}" ]]; then
+                   midplane_ip=$slot_ip_address
+           fi
 
            # Allow localnet routing on the new interfaces if midplane is using a
            # subnet in the 127/8 range.
@@ -324,6 +330,14 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+
+    if [[ $DEV && $midplane_ip ]]; then
+        IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
+        bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
+        redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
+        redis-cli -h $ip -p $port config rewrite
+    fi
+
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
