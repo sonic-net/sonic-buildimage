@@ -148,8 +148,15 @@ steps:
       set -ex
       # To download file from repo, see AzDevOps Rest API @https://learn.microsoft.com/zh-cn/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1&tabs=HTTP
       
-      echo "Download test_plan.py from Networking-acs-buildimage repo internal branch"
-      curl -u :$(System.AccessToken) "https://dev.azure.com/msazure/one/_apis/git/repositories/Networking-acs-buildimage/items?path=.pipelines/elastictest_template/test_plan.py&versionDescriptor.version=internal&api-version=7.1-preview.1" -o ./.pipelines/test_plan.py
+      CURRENT_BRANCH=${{ parameters.MGMT_BRANCH }}
+      echo "Current branch: $CURRENT_BRANCH"
+      if [[ "$CURRENT_BRANCH" != "internal" ]]; then
+        echo "Download test_plan.py from Networking-acs-buildimage repo internal branch"
+        curl -u :$(System.AccessToken) "https://dev.azure.com/msazure/one/_apis/git/repositories/Networking-acs-buildimage/items?path=.pipelines/elastictest_template/test_plan.py&versionDescriptor.version=internal&api-version=7.1-preview.1" -o ./.pipelines/test_plan.py
+      else
+        cp .pipelines/elastictest_template/test_plan.py ./.pipelines/test_plan.py
+        echo "Current branch is internal, no need to download test_plan.py"
+      fi
     displayName: "Download test plan script"
   - script: |
       set -ex
