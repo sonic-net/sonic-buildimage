@@ -46,6 +46,13 @@
 /* Tacacs+ config file timestamp string length */
 #define  CONFIG_FILE_TIME_STAMP_LEN  100
 
+#define GET_ENV_VARIABLE_OK                 0
+#define GET_ENV_VARIABLE_NOT_FOUND          1
+#define GET_ENV_VARIABLE_INCORRECT_FORMAT   2
+#define GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER  3
+#define GET_REMOTE_ADDRESS_OK               0
+#define GET_REMOTE_ADDRESS_FAILED           1
+
 /*
     Convert log to a string because va args resoursive issue:
     http://www.c-faq.com/varargs/handoff.html
@@ -62,7 +69,6 @@ const char *tacacs_config_file = "/etc/tacplus_nss.conf";
 
 /* Unknown user name */
 const char *unknown_username = "UNKNOWN";
-
 
 /* Config file attribute */
 struct stat config_file_attr;
@@ -228,23 +234,64 @@ int tacacs_authorization(
 }
 
 /*
+ * Get environment variable first part by name and delimiters
+ */
+int get_environment_variable_first_part(char* dst, socklen_t size, const char* name, const char* delimiters)
+{
+    memset(dst, 0, size);
+
+    const char* variable = getenv(name);
+    if (variable == NULL) {
+        if (debug) {
+            syslog(LOG_DEBUG, "%s: can't get environment variable %s, errno=%d", nssname, name, errno);
+        }
+
+        return GET_ENV_VARIABLE_NOT_FOUND;
+    }
+
+    char* context = NULL;
+    char* first_part = strtok_r((char *)variable, delimiters, &context);
+    if (first_part == NULL) {
+        if (debug) {
+            syslog(LOG_DEBUG, "%s: can't split %s by delimiters %s", nssname, variable, delimiters);
+        }
+
+        return GET_ENV_VARIABLE_INCORRECT_FORMAT;
+    }
+
+    int first_part_len = strlen(first_part);
+    if (first_part_len >= size) {
+        if (debug) {
+            syslog(LOG_DEBUG, "%s: dest buffer size %d not enough for %s", nssname, size, first_part);
+        }
+
+        return GET_ENV_VARIABLE_NOT_ENOUGH_BUFFER;
+    }
+
+    strncpy(dst, first_part, size);
+    if (debug) {
+        syslog(LOG_DEBUG, "%s: remote address=%s", nssname, dst);
+    }
+
+    return GET_ENV_VARIABLE_OK;
+}
+
+/*
  * Get current SSH session remote address from environment variable
  */
-void get_remote_address(char* dst, size_t size)
+int get_remote_address(char* dst, socklen_t size)
 {
     // SSHD will create environment variable SSH_CONNECTION after user session created.
-    char *ssh_connection = getenv("SSH_CONNECTION");
-    if (ssh_connection != NULL) {
-        snprintf(dst, size, "%s", ssh_connection);
-        return;
+    if (get_environment_variable_first_part(dst, size, "SSH_CONNECTION", " ") == GET_ENV_VARIABLE_OK) {
+        return GET_REMOTE_ADDRESS_OK;
     }
 
     // Before user session created, SSHD will create environment variable SSH_CLIENT_IPADDR_PORT.
-    char *client_ip = getenv("SSH_CLIENT_IPADDR_PORT");
-    if (client_ip != NULL) {
-        snprintf(dst, size, "%s", client_ip);
-        return;
+    if (get_environment_variable_first_part(dst, size, "SSH_CLIENT_IPADDR_PORT", " ") == GET_ENV_VARIABLE_OK) {
+        return GET_REMOTE_ADDRESS_OK;
     }
+
+    return GET_REMOTE_ADDRESS_FAILED;
 }
 
 /*
@@ -254,12 +301,12 @@ void get_remote_address(char* dst, size_t size)
 int authorization_with_host_and_tty(const char *user, const char *cmd, char **argv, int argc)
 {
     // try get host name
-    char remote[REMOTE_ADDRESS_SIZE];
-    memset(&remote, 0, sizeof(remote));
+    char remote_addr[REMOTE_ADDRESS_SIZE];
+    memset(&remote_addr, 0, sizeof(remote_addr));
 
-    (void)get_remote_address(remote, sizeof(remote));
-    if (!remote[0]) {
-        snprintf(remote, sizeof(remote), "UNK");
+    int result = get_remote_address(remote_addr, sizeof(remote_addr));
+    if ((result != GET_REMOTE_ADDRESS_OK)) {
+        snprintf(remote_addr, sizeof(remote_addr), "UNK");
         output_error("Failed to determine remote address, passing %s\n", remote);
     }
 
@@ -285,7 +332,7 @@ int authorization_with_host_and_tty(const char *user, const char *cmd, char **ar
     }
 
     // send tacacs authorization request
-    return tacacs_authorization(user, ttyname, remote, cmd, argv, argc);
+    return tacacs_authorization(user, ttyname, remote_addr, cmd, argv, argc);
 }
 
 /*
