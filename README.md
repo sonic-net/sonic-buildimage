@@ -288,6 +288,7 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
   to enable http(s) proxy in the build process.
 * Add your user account to `docker` group and use your user account to make.
   `root` or `sudo` are not supported.
+* For more details on cross-compilation errors, please refer to [README.arm64_build_on_amd64.md](https://github.com/sonic-net/sonic-buildimage/blob/master/README.arm64_build_on_amd64.md)
 
 The SONiC installer contains all docker images needed.
 SONiC uses one image for all devices of a same ASIC vendor.
