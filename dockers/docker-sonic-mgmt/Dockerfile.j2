@@ -20,12 +20,14 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          iputils-ping \
                                          isc-dhcp-client \
                                          libffi-dev \
+                                         libprotobuf-dev \
                                          libssl-dev \
                                          libxml2 \
                                          libxslt1-dev \
                                          lsb-release \
                                          jq \
                                          openssh-server \
+                                         protobuf-compiler \
                                          psmisc \
                                          python3 \
                                          python3-dev \
@@ -60,6 +62,8 @@ RUN python3 -m pip install --break-system-packages \
                  dpugen==0.1.1 \
                  future>=0.16.0 \
                  gitpython \
+                 grpcio \
+                 grpcio-tools \
                  ipaddr \
                  ipython==8.12.2 \
                  ixload \
