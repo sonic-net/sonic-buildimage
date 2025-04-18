@@ -1,6 +1,6 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
-from ipaddress import IPv6Address
+from ipaddress import IPv6Network
 from swsscommon import swsscommon
 
 supported_SRv6_behaviors = {
@@ -25,6 +25,7 @@ class SRv6Mgr(Manager):
             set(),
             db,
             table,
+            wait_for_all_deps=False
         )
 
     def set_handler(self, key, data):
@@ -60,13 +61,18 @@ class SRv6Mgr(Manager):
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_warn("Found a SRv6 SID config entry with a locator that does not exist yet: {} | {}".format(key, data))
-            self.deps.add((self.db_name, "SRV6_MY_LOCATORS", locator_name))
-            self.directory.subscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)], self.on_deps_change)
+            if (self.db_name, "SRV6_MY_LOCATORS", locator_name) not in self.deps:
+                # add the dependency to the deps set
+                # this will trigger a subscription to the locator table
+                self.deps.add((self.db_name, "SRV6_MY_LOCATORS", locator_name))
+                self.directory.subscribe([(self.db_name, "SRV6_MY_LOCATORS", locator_name)], self.on_deps_change)
             return False
 
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
-        if locator.block_len + locator.node_len > prefix_len:
-            log_err("Found a SRv6 SID config entry with an invalid prefix length {} | {}".format(key, data))
+        locator_prefix = IPv6Network(locator.prefix)
+        sid_prefix = IPv6Network(ip_prefix)
+        if not locator_prefix.supernet_of(sid_prefix):
+            log_err("Found a SRv6 SID config entry that does not match the locator prefix: {} | {}; locator {}".format(key, data, locator))
             return False
 
         if 'action' not in data:

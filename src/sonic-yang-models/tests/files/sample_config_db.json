@@ -348,7 +348,7 @@
                 "PRIORITY": "960",
                 "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
                 "INNER_SRC_IP": "1.1.1.1/32",
-                "VNI": "45"
+                "TUNNEL_VNI": "45"
             }
         },
         "SWITCH_HASH": {
@@ -1533,6 +1533,10 @@
             "ENI": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "SRV6": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
@@ -2645,7 +2649,7 @@
                 ],
                 "MATCHES": [
                     "INNER_SRC_IP",
-                    "VNI"
+                    "TUNNEL_VNI"
                 ],
                 "BIND_POINTS": [
                     "PORT",
