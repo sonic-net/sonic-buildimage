@@ -31,8 +31,8 @@ fi
 # Set zmq mode by default for smartswitch DPU
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-DEVICE_TYPE=$(echo $SWSS_VARS | jq -r '.type')
-if [ "$DEVICE_TYPE" == "SmartSwitchDPU" ]; then
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+if [ "$SWITCH_TYPE" == "dpu" ]; then
     ORCHAGENT_ARGS+="-z zmq_sync "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
