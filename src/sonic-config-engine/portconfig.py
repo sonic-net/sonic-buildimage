@@ -319,7 +319,7 @@ class BreakoutCfg(object):
             if self._breakout_mode_entry == self._str_to_entries(supported_mode):
                 self._breakout_capabilities = self._properties['breakout_modes'][supported_mode]
                 break
-            
+
         if not self._breakout_capabilities:
             raise RuntimeError("Unsupported breakout mode {}!".format(bmode))
 
