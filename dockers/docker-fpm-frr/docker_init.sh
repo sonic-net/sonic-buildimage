@@ -56,7 +56,7 @@ if [[ ! -z "$NAMESPACE_ID" ]]; then
    update_default_gw 6
 fi
 
-if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
+if  [ "$CONFIG_TYPE" == "separated" ]; then
     CFGGEN_PARAMS=" \
         -d \
         -y /etc/sonic/constants.yml \
@@ -84,7 +84,7 @@ elif [ "$CONFIG_TYPE" == "split-unified" ]; then
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf
     write_default_zebra_config /etc/frr/frr.conf
-elif [ "$CONFIG_TYPE" == "unified" ]; then
+elif [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "unified" ]; then
     CFGGEN_PARAMS=" \
         -d \
         -y /etc/sonic/constants.yml \
