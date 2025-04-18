@@ -43,7 +43,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          bats
 
 RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --no-deps --ignore-installed
-RUN python3 -m pip install aiohttp \
+RUN python3 -m pip install --break-system-packages \
+                 aiohttp \
                  allure-pytest==2.8.22 \
                  ansible==6.7.0 \
                  azure-storage-blob==12.9.0 \
