@@ -141,7 +141,7 @@ apply_tacacs()
         config save -y
 
         # Change tacacs config file name, so tacacs config will not be revert when device reboot.
-        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
+        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
     else
         echo "Missing tacacs json to restore tacacs credentials"
     fi
