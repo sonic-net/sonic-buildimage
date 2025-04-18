@@ -1,5 +1,5 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
-FROM {{ prefix }}ubuntu:20.04
+FROM {{ prefix }}ubuntu:24.04
 
 {% set legacy = LEGACY_SONIC_MGMT_DOCKER %}
 
@@ -27,8 +27,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          jq \
                                          openssh-server \
                                          psmisc \
-                                         python \
-                                         python-dev \
+                                         python3 \
+                                         python3-dev \
                                          python3-pip \
                                          python3-venv \
                                          rsyslog \
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          vim \
                                          bats
 
-RUN python3 -m pip install --upgrade pip setuptools wheel
+RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --no-deps --ignore-installed
 RUN python3 -m pip install aiohttp \
                  allure-pytest==2.8.22 \
                  ansible==6.7.0 \
@@ -57,7 +57,7 @@ RUN python3 -m pip install aiohttp \
                  ctypesgen \
                  dpkt \
                  dpugen==0.1.1 \
-                 "future>=0.16.0" \
+                 future>=0.16.0 \
                  gitpython \
                  ipaddr \
                  ipython==8.12.2 \
@@ -123,82 +123,6 @@ RUN python3 -m pip install aiohttp \
     && rm -fr nanomsg-1.2  \
     && rm -f 1.2.tar.gz  \
     && python3 -m pip install nnpy
-
-{% if legacy == 'y' or legacy == '1' %}
-RUN curl -fsSL https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py \
-    && python2 get-pip.py \
-    && rm -f get-pip.py
-
-RUN python2 -m pip install --upgrade pip setuptools wheel
-RUN python2 -m pip install allure-pytest==2.8.22 \
-                ansible==2.8.20 \
-                azure-storage-blob==12.9.0 \
-                celery[redis]==4.4.7 \
-                cffi==1.12.0 \
-                contextlib2==0.6.0.post1 \
-                cryptography==3.3.2 \
-                ctypesgen \
-                dpkt \
-                dpugen==0.1.1 \
-                "future>=0.16.0" \
-                gitpython \
-                ipaddr \
-                ipaddress \
-                ipython==5.4.1 \
-                ixload \
-                ixnetwork-restpy==1.0.64 \
-                ixnetwork-open-traffic-generator==0.0.79 \
-                snappi_ixload==0.0.5 \
-                jinja2==3.1.2 \
-                jsonpatch \
-                lazy-object-proxy==1.6.0 \
-                lxml \
-                macaddress \
-                mock \
-                msrest==0.6.21 \
-                natsort \
-                netaddr==0.10.1 \
-                netmiko==2.4.2 \
-                nnpy \
-                pandas \
-                paramiko==2.7.2 \
-                passlib \
-                pexpect \
-                prettytable \
-                protobuf==3.15.0 \
-                psutil \
-                ptf \
-                pyaml==21.10.1 \
-                pyasn1==0.1.9 \
-                pycryptodome==3.9.8 \
-                pyfiglet \
-                pylint==1.8.1 \
-                pyro4 \
-                pysnmp==4.2.5 \
-                pysubnettree \
-                pytest==4.6.11 \
-                pytest-ansible \
-                pytest-repeat \
-                pytest-html \
-                pytest-xdist==1.28.0 \
-                python-dateutil \
-                PyYAML \
-                redis \
-                requests \
-                retry \
-                rpyc \
-                scandir \
-                scapy==2.5.0 \
-                six \
-                snappi==0.9.1 \
-                snappi-convergence==0.4.1 \
-                snappi-ixnetwork==0.9.1 \
-                statistics \
-                tabulate \
-                textfsm==1.1.3 \
-                thrift==0.11.0 \
-                virtualenv
-{% endif %}
 
 # Install docker-ce-cli
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
