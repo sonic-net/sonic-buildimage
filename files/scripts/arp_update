@@ -18,49 +18,59 @@ while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
   SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
-  if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+  TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.type')
+  if [[ "$SWITCH_TYPE" == "chassis-packet" ]] || [[ "$TYPE" == "BackEndToRRouter" ]]; then
       # Get array of Nexthops and ifnames. Nexthops and ifnames are mapped one to one
       STATIC_ROUTE_NEXTHOPS=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops'))
       STATIC_ROUTE_IFNAMES=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_ifnames'))
-      # on supervisor/rp exit the script gracefully
+
       if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" ]]; then
-          logger "exiting as no static route in packet based chassis"
-          exit 0
-      fi
-      for i in ${!STATIC_ROUTE_NEXTHOPS[@]}; do
-          nexthop="${STATIC_ROUTE_NEXTHOPS[i]}"
-          if [[ $nexthop == *"."* ]]; then
-              neigh_state=$(ip -4 neigh show | grep -w $nexthop | tr -s ' ')
-              ping_prefix=ping
-          elif [[ $nexthop == *":"* ]] ; then
-              neigh_state=$(ip -6 neigh show | grep -w $nexthop | tr -s ' ')
-              ping_prefix=ping6
+          if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+              # exit gracefully if running on supervisor/rp
+              logger "exiting as no static route in packet based chassis"
+              exit 0
           fi
-          # Check if there is an INCOMPLETE, FAILED, or STALE entry and try to resolve it again.
-          # STALE entries may be present if there is no traffic on a path. A far-end down event may not
-          # clear the STALE entry. Refresh the STALE entry to clear the table.
-          if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
-              interface="${STATIC_ROUTE_IFNAMES[i]}"
-              if [[ -z "$interface" ]]; then
-                  # should never be here, handling just in case
-                  logger -p error "missing interface entry for static route $nexthop"
-                  continue
+          # continue if running on BT0
+      else
+          for i in ${!STATIC_ROUTE_NEXTHOPS[@]}; do
+              nexthop="${STATIC_ROUTE_NEXTHOPS[i]}"
+              if [[ $nexthop == *"."* ]]; then
+                  neigh_state=$(ip -4 neigh show | grep -w $nexthop | tr -s ' ')
+                  ping_prefix=ping
+              elif [[ $nexthop == *":"* ]] ; then
+                  neigh_state=$(ip -6 neigh show | grep -w $nexthop | tr -s ' ')
+                  ping_prefix=ping6
               fi
-              intf_up=$(ip link show $interface | grep "state UP")
-              if [[ -n "$intf_up" ]]; then
-                  pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
-                  eval $pingcmd
-                  # STALE entries may appear more often, not logging to prevent periodic syslogs
-                  if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
-                      logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
+              # Check if there is an INCOMPLETE, FAILED, or STALE entry and try to resolve it again.
+              # STALE entries may be present if there is no traffic on a path. A far-end down event may not
+              # clear the STALE entry. Refresh the STALE entry to clear the table.
+              if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
+                  interface="${STATIC_ROUTE_IFNAMES[i]}"
+                  if [[ -z "$interface" ]]; then
+                      # should never be here, handling just in case
+                      logger -p error "missing interface entry for static route $nexthop"
+                      continue
+                  fi
+                  intf_up=$(ip link show $interface | grep "state UP")
+                  if [[ -n "$intf_up" ]]; then
+                      pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
+                      eval $pingcmd
+                      # STALE entries may appear more often, not logging to prevent periodic syslogs
+                      if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
+                          logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
+                      fi
                   fi
               fi
-          fi
-      done
+          done
 
-      sleep 150
-      continue
+          if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+            sleep 150
+            # skip the rest of the script if running on a packet chassis
+            continue
+          fi
+      fi
   fi
+
   # find L3 interfaces which are UP, send ipv6 multicast pings
   INTERFACE=$(echo $ARP_UPDATE_VARS | jq -r '.interface')
   PC_INTERFACE=$(echo $ARP_UPDATE_VARS | jq -r '.pc_interface')
@@ -122,7 +132,7 @@ while /bin/true; do
       ndisc6cmd="sed -e 's/^/ndisc6 -q -w 0 -1 /' -e 's/$/;/'"
       ip6cmd="ip -6 neigh show | grep -v fe80 | grep $vlan | cut -d ' ' -f 1,3 | $ndisc6cmd"
       eval `eval $ip6cmd`
- 
+
       if [[ $SUBTYPE == "dualtor" ]]; then
         # capture all current failed/incomplete IPv6 neighbors in the kernel to avoid situations where new neighbors are learned
         # in the middle of the below sequence of commands
@@ -161,13 +171,13 @@ while /bin/true; do
         # ip neigh replace <neighbor IPv6> dev <VLAN name> nud incomplete
         failed_kernel_neighbors=$(ip -6 neigh show | grep -v fe80 | grep $vlan | grep -E 'FAILED')
         if [[ ! -z "$failed_kernel_neighbors" ]]; then
-            neigh_replace_template="sed -e 's/^/ip neigh replace /' -e 's/,/ dev /' -e 's/$/ nud incomplete;/'" 
+            neigh_replace_template="sed -e 's/^/ip neigh replace /' -e 's/,/ dev /' -e 's/$/ nud incomplete;/'"
             ip_neigh_replace_cmd="echo \"$failed_kernel_neighbors\" | cut -d ' ' -f 1,3 --output-delimiter=',' | $neigh_replace_template"
             eval `eval "$ip_neigh_replace_cmd"`
         fi
       fi
   done
-  
+
 
   # sleep here before handling the mismatch as it is not required during startup
   sleep 300

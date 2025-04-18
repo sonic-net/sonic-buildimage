@@ -1,5 +1,6 @@
 {
     "switch_type": "{% if DEVICE_METADATA and 'localhost' in DEVICE_METADATA and 'switch_type' in DEVICE_METADATA['localhost'] %}{{ DEVICE_METADATA['localhost']['switch_type'] }}{%endif %}",
+    "type": "{% if DEVICE_METADATA and 'localhost' in DEVICE_METADATA and 'type' in DEVICE_METADATA['localhost'] %}{{ DEVICE_METADATA['localhost']['type'] }}{%endif %}",
     "interface": "{% for (name, prefix) in INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
     "pc_interface" : "{% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
     "vlan_sub_interface": "{% for (name, prefix) in VLAN_SUB_INTERFACE|pfx_filter %}{% if prefix|ipv6 %}{{ name }} {% endif %}{% endfor %}",
