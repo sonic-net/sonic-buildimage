@@ -48,7 +48,7 @@ stages:
             set -ex
 
             OPTIONS="${{ parameters.OPTIONS }} NOBUSTER=0 ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
-            make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz 2>&1 | tee target/build.log
+            make $OPTIONS INCLUDE_SMARTSWITCH_AZS=y target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz 2>&1 | tee target/build.log
           displayName: Build SONiC image
         - script: |
             set -ex
@@ -161,6 +161,10 @@ stages:
               make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin 2>&1 | tee target/buildss.log
               mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
               make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
+              mv target/sonic-mellanox.bin target/release/sonic-mellanox.bin
+              make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_SMARTSWITCH_AZS=y target/sonic-mellanox.bin 2>&1 | tee target/build-smartswitch-azs.log
+              mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch-azs.bin
+              mv target/release/* target/
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz 2>&1 | tee target/buildrpc.log
               cp target/debs/bookworm/python-saithrift*.deb target/ || true
             displayName: Build SONiC image
@@ -231,6 +235,6 @@ stages:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000-smartswitch
-          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1'
+          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SMARTSWITCH_AZS=y'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
