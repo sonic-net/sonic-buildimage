@@ -82,7 +82,10 @@ RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-
 
 {%- if CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
 # multiarch/debian-debootstrap:arm64-bullseye is too old. It needs to install keys
-RUN apt-get update || apt-get install -y gnupg
+RUN mv /etc/apt/sources.list /etc/apt/sources.list.back
+RUN echo "deb [arch=arm64] http://packages.trafficmanager.net/snapshot/debian/20230307T000332Z/ bullseye main contrib non-free" > /etc/apt/sources.list
+RUN apt-get update && apt-get install -y gnupg
+RUN mv /etc/apt/sources.list.back /etc/apt/sources.list
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
 {%- endif %}
