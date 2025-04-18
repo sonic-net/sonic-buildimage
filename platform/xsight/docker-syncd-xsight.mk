@@ -1,9 +1,9 @@
 # docker image for XSight Labs syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = xsight
-include $(PLATFORM_PATH)/../template/docker-syncd-bullseye.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
 
-$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(LIBTHRIFT)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD)
 
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
