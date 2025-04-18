@@ -369,7 +369,7 @@ class BreakoutCfg(object):
 
         for entry in self._breakout_mode_entry:
             lanes_per_port = entry.num_assigned_lanes // entry.num_ports
-            
+
             for port in range(entry.num_ports):
                 interface_name = PORT_STR + str(self._interface_base_id + lane_id)
                 self._breakout_fec_mode = self._breakout_fec_mode or []
@@ -378,7 +378,7 @@ class BreakoutCfg(object):
                 else:
                     fec_mode = "none"
                 lanes = self._lanes[lane_id:lane_id + lanes_per_port]
-                
+
                 ports[interface_name] = {
                     'alias': self._breakout_capabilities[alias_id],
                     'lanes': ','.join(lanes),
