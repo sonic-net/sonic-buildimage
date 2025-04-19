@@ -9,16 +9,12 @@
 ################################################################################
 
 try:
-    import threading
     import sys,os.path
-    import logging
-    import time
     import json
-    import yaml
     import re
-    import subprocess
     from pathlib import Path
     from .helper import APIHelper
+    from sonic_py_common import syslogger
     from sonic_platform_base.component_base import ComponentBase
 
 except ImportError as e:
@@ -31,6 +27,11 @@ MMC_DATA_PATH = "/sys/class/mmc_host/mmc0/mmc0:0001/{}"
 MMC_DEV_PATH = "/dev/mmcblk0"
 NOT_AVAILABLE = 'None'
 IMAGES_PATH = "/host/images"
+SYSLOG_IDENTIFIER = 'dpu-db-utild'
+logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+def log_err(msg, also_print_to_console=False):
+    logger_instance.log_error(msg, also_print_to_console)
 
 def parse_re(pattern, buffer, index = 0, alt_val = "N/A"):
         res_list = re.findall(pattern, buffer)
@@ -78,8 +79,8 @@ def fetch_version_info(apiHelper):
             except:
                 fwupdate_version_list.append(NOT_AVAILABLE)
             try:
-                major_id = apiHelper.runCMD("cpldapp -r 0x0").replace('0x','')
-                minor_id = apiHelper.runCMD("cpldapp -r 0x1e").replace('0x','')
+                major_id = apiHelper.run_docker_cmd("cpldapp -r 0x0").replace('0x','')
+                minor_id = apiHelper.run_docker_cmd("cpldapp -r 0x1e").replace('0x','')
                 cpld_version = "{}.{}".format(major_id,minor_id)
                 fwupdate_version_list.append(cpld_version)
             except:
