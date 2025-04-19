@@ -13,5 +13,14 @@
     "LOOPBACK_INVALID_INTERFACE_NAME_LENGTH": {
         "desc": "Configure invalid value for loopback interface name length.",
         "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    },
+    "LOOPBACK_DEFAULT_ADMIN_STATUS_UP": {
+        "desc": "Verify admin status is default up for loopback interface",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-loopback-interface:sonic-loopback-interface/LOOPBACK_INTERFACE/LOOPBACK_INTERFACE_LIST[name='lo1']/name",
+            "key": "sonic-loopback-interface:admin_status",
+            "value": "up"
+        }
     }
 }
