@@ -100,10 +100,13 @@ class BGPPeerMgrBase(Manager):
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
             "add":         self.fabric.from_file(base_template + "instance.conf.j2"),
-            "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
+            "delete":      self.fabric.from_file(base_template + "instance_delete.conf.j2"),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
         }
+
+        if (os.path.exists("/usr/share/sonic/templates/" + base_template + "instance_delete.conf.j2")):
+            self.templates["delete"] = self.fabric.from_file(base_template + "instance_delete.conf.j2")
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
