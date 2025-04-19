@@ -3,6 +3,7 @@ from swsscommon import swsscommon
 
 import jinja2
 import netaddr
+import os
 
 from .log import log_warn, log_err, log_info, log_debug, log_crit
 from .manager import Manager
@@ -104,6 +105,8 @@ class BGPPeerMgrBase(Manager):
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
         }
+        if (os.path.exists("/usr/share/sonic/templates/" + base_template + "update.conf.j2")):
+            self.templates["update"] = self.fabric.from_file(base_template + "update.conf.j2")
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
@@ -242,6 +245,8 @@ class BGPPeerMgrBase(Manager):
         """
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
+        elif "update" in self.templates and "ip_range" in data and self.peer_type == 'dynamic':
+            self.change_ip_range(vrf, nbr, data)
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 
@@ -278,6 +283,93 @@ class BGPPeerMgrBase(Manager):
             log_info("Peer '%s|%s' admin state is set to '%s'" % print_data)
         else:
             log_err("Can't set peer '%s|%s' admin state to '%s'." % print_data)
+
+    def change_ip_range(self, vrf, nbr, data):
+        """
+        Change ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param data: associated data
+        :return: True if this adding was successful, False otherwise
+        """
+        if data['ip_range']:
+            log_info("Peer '(%s|%s)' ip range is going to be updated with range: %s" % (vrf, nbr, data['ip_range']))
+            new_ip_range = data["ip_range"].split(",")
+            ip_ranges_to_add = new_ip_range
+            ip_ranges_to_del = []
+            existing_ipv4_range, existing_ipv6_range = self.get_existing_ip_ranges(vrf, nbr)
+            if existing_ipv4_range:
+                for ipv4_range in existing_ipv4_range:
+                    if ipv4_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv4_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv4_range)
+            if existing_ipv6_range:
+                for ipv6_range in existing_ipv6_range:
+                    if ipv6_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv6_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv6_range)
+            if ip_ranges_to_del or ip_ranges_to_add:
+                log_info("Peer '(%s|%s)' ip range is going to be updated. Ranges to delete: %s Ranges to add: %s" % (vrf, nbr, ip_ranges_to_del, ip_ranges_to_add))
+                self.apply_range_changes(vrf, nbr, ip_ranges_to_add, ip_ranges_to_del, data)
+
+    def get_existing_ip_ranges(self, vrf, nbr):
+        """
+        Get existing ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :return: existing ip range of a peer
+        """
+        ipv4_ranges = []
+        ipv6_ranges = []
+        if vrf == 'default':
+            command = ["vtysh", "-c", "show bgp peer-group %s json" % (nbr)]
+        else:
+            command = ["vtysh", "-c", "show bgp vrf %s peer-group %s json" % (vrf, nbr)]
+        try:
+            ret_code, out, err = run_command(command)
+            if ret_code == 0:
+                js_bgp = json.loads(out)
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv4' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv4']:
+                    ipv4_ranges= js_bgp[nbr]['dynamicRanges']['IPv4']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV4 range: %s" % (vrf, nbr, ipv4_ranges))
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv6' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv6']:
+                    ipv6_ranges= js_bgp[nbr]['dynamicRanges']['IPv6']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV6 range: %s" % (vrf, nbr, ipv6_ranges))
+                return ipv4_ranges, ipv6_ranges
+            else:
+                log_err("Can't read ip range of peer '%s|%s': %s" % (vrf, nbr, str(err)))
+                return ipv4_ranges, ipv6_ranges
+        except Exception as e:
+            log_err("Error in parsing ip range: %s" % str(e))
+            return ipv4_ranges, ipv6_ranges
+
+    def apply_range_changes(self, vrf, nbr, new_ip_range, ip_ranges_to_del, data):
+        """
+        Apply changes of ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param new_ip_range: new ip range
+        :param ip_ranges_to_del: ip ranges to delete
+        """
+        print_data = vrf, nbr, data
+        kwargs = {
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
+            'vrf': vrf,
+            'bgp_session': data,
+            'delete_ranges': ip_ranges_to_del,
+            'add_ranges': new_ip_range
+        }
+        try:
+            cmd = self.templates["update"].render(**kwargs)
+        except jinja2.TemplateError as e:
+            msg = "Peer '(%s|%s)'. Error in rendering the template for 'SET' command '%s'" % print_data
+            log_err("%s: %s" % (msg, str(e)))
+            return True
+        if cmd is not None:
+            self.apply_op(cmd, vrf)
+            log_info("Peer '(%s|%s)' ip range has been scheduled to be updated with new range '%s'" % (vrf, nbr, new_ip_range))
 
     def del_handler(self, key):
         """
