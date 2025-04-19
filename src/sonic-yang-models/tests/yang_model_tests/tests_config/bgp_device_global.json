@@ -112,5 +112,58 @@
                 }
             }
         }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_TEST_1": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "received_bandwidth": "ignore"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_TEST_2": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "received_bandwidth": "allow"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_TEST_3": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "received_bandwidth": "skip_missing"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_TEST_4": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "received_bandwidth": "default_weight_for_missing"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_RECEIVED_BANDWIDTH_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "received_bandwidth": "invalid_value"
+                }
+            }
+        }
     }
 }
