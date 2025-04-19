@@ -261,7 +261,7 @@ static bool is_multi_instance_service_for_dpu(const std::string& service_name) {
         return false;
     }
 
-    std::unordered_set<std::string> multi_instance_services_for_dpu = {"database"};
+    std::unordered_set<std::string> multi_instance_services_for_dpu = {"database", "dash-ha"};
     return is_multi_instance_service(service_name, multi_instance_services_for_dpu);
 }
 
