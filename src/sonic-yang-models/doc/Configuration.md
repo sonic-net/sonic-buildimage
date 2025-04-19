@@ -2973,7 +2973,19 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 	"DNS_NAMESERVER": {
 		"1.1.1.1": {},
 		"fe80:1000:2000:3000::1": {}
-	},
+	}
+}
+```
+
+DNS configuration options can also be set when nameservers are defined:
+```json
+{
+    "DNS_OPTIONS": {
+        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+        "ndots": 0,
+        "timeout": 1,
+        "attempts": 2
+    }
 }
 ```
 
