@@ -45,50 +45,6 @@ index f12b324e0..9b0599899 100644
  /**
   * @parse_encap_mpls() - Parses encapsulated mpls attributes
   * @tb:         Pointer to rtattr to look for nested items in.
-@@ -742,7 +767,8 @@ static int netlink_route_read_unicast_ctx(struct nlmsghdr *h, ns_id_t ns_id,
- 	char anyaddr[16] = {};
- 	int proto = ZEBRA_ROUTE_KERNEL;
- 	int index = 0;
--	int tableid;
-+	int tableid = ZEBRA_ROUTE_TABLE_UNKNOWN;
-+	int vrf_id = VRF_UNKNOWN;
- 	int metric = 0;
- 	uint32_t mtu = 0;
- 	uint8_t distance = 0;
-@@ -815,11 +841,19 @@ static int netlink_route_read_unicast_ctx(struct nlmsghdr *h, ns_id_t ns_id,
- 
- 	selfroute = is_selfroute(rtm->rtm_protocol);
- 
--	/* Table corresponding to route. */
--	if (tb[RTA_TABLE])
--		tableid = *(int *)RTA_DATA(tb[RTA_TABLE]);
--	else
--		tableid = rtm->rtm_table;
-+	if (!ctx) {
-+		/* Table corresponding to route. */
-+		if (tb[RTA_TABLE])
-+			tableid = *(int *)RTA_DATA(tb[RTA_TABLE]);
-+		else
-+			tableid = rtm->rtm_table;
-+	} else {
-+		/* With FPM, rtm_table contains vrf id, see netlink_route_multipath_msg_encode */
-+		if (tb[RTA_TABLE])
-+			vrf_id = *(int *)RTA_DATA(tb[RTA_TABLE]);
-+		else
-+			vrf_id = rtm->rtm_table;
-+	}
- 
- 	/* Map flags values */
- 	if (rtm->rtm_flags & RTM_F_TRAP)
-@@ -974,7 +1008,7 @@ static int netlink_route_read_unicast_ctx(struct nlmsghdr *h, ns_id_t ns_id,
- 	dplane_ctx_set_afi(ctx, afi);
- 	dplane_ctx_set_safi(ctx, SAFI_UNICAST);
- 	dplane_ctx_set_table(ctx, tableid);
--	dplane_ctx_set_vrf(ctx, VRF_UNKNOWN);
-+	dplane_ctx_set_vrf(ctx, vrf_id);
- 	dplane_ctx_set_ns_id(ctx, ns_id);
- 	dplane_ctx_set_dest(ctx, &p);
- 	if (src_p.prefixlen > 0)
 @@ -2530,12 +2564,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
  
  	/* Table corresponding to this route. */
