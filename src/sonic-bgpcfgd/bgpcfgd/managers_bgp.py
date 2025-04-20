@@ -297,7 +297,7 @@ class BGPPeerMgrBase(Manager):
         # To comply with this requirement, we first run the command "no bgp listen range ..." to
         # remove the "listen range" associated with the peer group, and only then proceed
         # with deleting the peer group.
-        if self.peer_type == 'dynamic':
+        if self.peer_type == 'dynamic' or self.peer_type == 'sentinels':
             ip_ranges = self.directory.get(self.db_name, self.table_name, vrf + '|' + nbr)["ip_range"]
             ip_ranges = ip_ranges.split(',')
             for ip_range in ip_ranges:
