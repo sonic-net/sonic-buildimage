@@ -11,7 +11,7 @@ g++==4:10.2.1-1
 g++-10==10.2.1-6
 gcc==4:10.2.1-1
 gcc-10==10.2.1-6
-libarchive13==3.4.3-2+deb11u1
+libarchive13==3.4.3-2+deb11u2
 libasan6==10.2.1-6
 libbinutils==2.35.2-2
 libboost-atomic1.74.0==1.74.0-9
@@ -22,7 +22,7 @@ libdouble-conversion3==3.1.5-6.1
 libdpkg-perl==1.20.13
 libffi-dev==3.3-6
 libgcc-10-dev==10.2.1-6
-libglib2.0-0==2.66.8-1+deb11u4
+libglib2.0-0==2.66.8-1+deb11u6
 libgomp1==10.2.1-6
 libisl23==0.23-1
 libitm1==10.2.1-6
@@ -42,8 +42,8 @@ libqt5dbus5==5.15.2+dfsg-9+deb11u1
 libqt5network5==5.15.2+dfsg-9+deb11u1
 libquadmath0==10.2.1-6
 librhash0==1.4.1-2
-libssl-dev==1.1.1w-0+deb11u1
-libssl1.1==1.1.1w-0+deb11u1
+libssl-dev==1.1.1w-0+deb11u2
+libssl1.1==1.1.1w-0+deb11u2
 libstdc++-10-dev==10.2.1-6
 libthrift-0.11.0==0.11.0-4
 libtsan0==10.2.1-6

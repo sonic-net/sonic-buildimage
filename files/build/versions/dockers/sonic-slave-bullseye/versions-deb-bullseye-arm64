@@ -17,7 +17,9 @@ libgomp1-armhf-cross==10.2.1-6cross1
 libstdc++6-armhf-cross==10.2.1-6cross1
 libubsan1-armhf-cross==10.2.1-6cross1
 libunicode-linebreak-perl==0.0.20190101-1+b2
-libxslt1-dev==1.1.34-4+deb11u1
-linux-headers-5.10.0-31-arm64==5.10.221-1
-linux-headers-arm64==5.10.221-1
+libxslt1-dev==1.1.34-4+deb11u2
+linux-headers-5.10.0-34-arm64==5.10.234-1
+linux-headers-arm64==5.10.234-1
+login==1:4.8.1-1+deb11u1
 nodejs==14.21.3-deb-1nodesource1
+passwd==1:4.8.1-1+deb11u1

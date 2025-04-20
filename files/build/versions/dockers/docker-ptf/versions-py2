@@ -1,3 +1,4 @@
+backports-abc==0.5
 backports.functools-lru-cache==1.6.6
 backports.shutil-get-terminal-size==1.0.0
 bcrypt==3.1.7
@@ -60,6 +61,7 @@ six==1.12.0
 stevedore==1.32.0
 supervisor==4.2.5
 thrift==0.11.0
+tornado==5.1.1
 traitlets==4.3.3
 twisted==16.0.0
 typing==3.10.0.0
