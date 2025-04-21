@@ -1,0 +1,44 @@
+From 6534a239810a175d5829fce8ff9c5a61e7d3afaa Mon Sep 17 00:00:00 2001
+From: Zain Budhwani <zainbudhwani@microsoft.com>
+Date: Mon, 21 Apr 2025 20:55:38 +0000
+Subject: [PATCH] Fix py_gnmicli.py POLL mode
+
+---
+ gnmi_cli_py/py_gnmicli.py | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 0ea6f3d..924eb55 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -39,6 +39,7 @@ import ssl
+ import sys
+ import string
+ import six
++import time
+ import datetime
+ try:
+   import gnmi_pb2
+@@ -47,6 +48,7 @@ except ImportError:
+         'eg, pip install -r requirements.txt')
+ import gnmi_pb2_grpc
+ import grpc
++from gnmi_pb2 import Poll
+ 
+ __version__ = '0.5'
+ 
+@@ -473,6 +475,11 @@ def gen_request(paths, opt, prefix):
+     print('Sending SubscribeRequest\n'+str(mysubreq))
+     yield mysubreq
+ 
++    if opt["subscribe_mode"] == gnmi_pb2.SubscriptionList.POLL:
++      while True:
++        poll_request = gnmi_pb2.SubscribeRequest(poll = Poll())
++        yield poll_request
++        time.sleep(opt["interval"])
+ 
+ def check_event_response(response, filter_event_regex):
+     resp = str(response)
+-- 
+2.25.1
+
