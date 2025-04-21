@@ -606,6 +606,10 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
+# Install depot-tools (for git-retry)
+RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
+ENV PATH /usr/share/depot_tools:$PATH
+
 # Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
@@ -621,13 +625,6 @@ RUN eatmydata apt-get install -y \
 {%- if CONFIGURED_ARCH == "armhf" %}
     RUN update-ca-certificates --fresh
 {%- endif %}
-
-RUN wget --no-check-certificate -O /usr/local/share/ca-certificates/dellca2018-bundle.crt https://nsdn.artifactory.cec.lab.emc.com/artifactory/sonic-dell-cert/dellca2018-bundle.crt && update-ca-certificates
-
-# Install depot-tools (for git-retry)
-RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
-ENV PATH /usr/share/depot_tools:$PATH
-
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
 RUN add-apt-repository \
 {%- if CROSS_BUILD_ENVIRON == "y" %}
