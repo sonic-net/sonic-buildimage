@@ -646,6 +646,13 @@ EXPOSE 22
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 
+
+# Add Dell CA
+RUN wget --no-check-certificate -O /usr/local/share/ca-certificates/dellca2018-bundle.crt \
+       https://nsdn.artifactory.cec.lab.emc.com/artifactory/sonic-dell-cert/dellca2018-bundle.crt \
+       && update-ca-certificates
+
+
 # Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
 RUN eatmydata apt-get install -y \
