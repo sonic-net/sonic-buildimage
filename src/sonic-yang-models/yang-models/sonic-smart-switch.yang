@@ -160,6 +160,11 @@ module sonic-smart-switch {
 					description "TCP listening port for ZMQ service on DPU orchagent";
 					type inet:port-number;
 				}
+
+				leaf swbus_port {
+					description "TCP listening port for swbus service for this DPU.";
+					type inet:port-number;
+				}
 			}
 		}
 		/* end of container DPU */
@@ -213,9 +218,8 @@ module sonic-smart-switch {
 				}
 
 				leaf swbus_port {
-					description "TCP listening port for swbus service for this DPU. Must be 23606 + dpu_id. This magic port number is defined in the NGS minigraph spec for smart switch.";
+					description "TCP listening port for swbus service for this DPU.";
 					type inet:port-number;
-					must "current() = 23606 + number(current()/../dpu_id)";
 				}
 			}
 		}
