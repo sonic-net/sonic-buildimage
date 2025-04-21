@@ -1,14 +1,14 @@
-From 6534a239810a175d5829fce8ff9c5a61e7d3afaa Mon Sep 17 00:00:00 2001
+From d35bc8b5b64361d981c902b82f097de0d44cc2b1 Mon Sep 17 00:00:00 2001
 From: Zain Budhwani <zainbudhwani@microsoft.com>
 Date: Mon, 21 Apr 2025 20:55:38 +0000
 Subject: [PATCH] Fix py_gnmicli.py POLL mode
 
 ---
- gnmi_cli_py/py_gnmicli.py | 7 +++++++
- 1 file changed, 7 insertions(+)
+ gnmi_cli_py/py_gnmicli.py | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
 
 diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
-index 0ea6f3d..924eb55 100644
+index 0ea6f3d..ba3308b 100644
 --- a/gnmi_cli_py/py_gnmicli.py
 +++ b/gnmi_cli_py/py_gnmicli.py
 @@ -39,6 +39,7 @@ import ssl
@@ -27,7 +27,24 @@ index 0ea6f3d..924eb55 100644
  
  __version__ = '0.5'
  
-@@ -473,6 +475,11 @@ def gen_request(paths, opt, prefix):
+@@ -153,6 +155,8 @@ def _create_parser():
+                       required=False, action='store_true')
+   parser.add_argument('--interval', default=10000, type=int,
+                       help='sample interval in millisecond (default: 10000ms)')
++  parser.add_argument('--polling_interval', default=10, type=int,
++                      help='polling interval in second (default: 10s)')
+   parser.add_argument('--timeout', type=int, help='subscription'
+                       'duration in seconds (default: none)')
+   parser.add_argument('--heartbeat', default=0, type=int, help='heartbeat interval (default: None)')
+@@ -161,6 +165,7 @@ def _create_parser():
+   parser.add_argument('--submode', default=2, type=int,
+                       help='subscription mode [0=TARGET_DEFINED, 1=ON_CHANGE, 2=SAMPLE]')
+   parser.add_argument('--update_count', default=0, type=int, help='Max number of streaming updates to receive. 0 means no limit.')
++  parser.add_argument('--sync_count', default=0, type=int, help='Max number of sync responses to receive. 0 means no limit.')
+   parser.add_argument('--subscribe_mode', default=0, type=int, help='[0=STREAM, 1=ONCE, 2=POLL]')
+   parser.add_argument('--encoding', default=0, type=int, help='[0=JSON, 1=BYTES, 2=PROTO, 3=ASCII, 4=JSON_IETF]')
+   parser.add_argument('--qos', default=0, type=int, help='')
+@@ -473,6 +478,11 @@ def gen_request(paths, opt, prefix):
      print('Sending SubscribeRequest\n'+str(mysubreq))
      yield mysubreq
  
@@ -35,10 +52,40 @@ index 0ea6f3d..924eb55 100644
 +      while True:
 +        poll_request = gnmi_pb2.SubscribeRequest(poll = Poll())
 +        yield poll_request
-+        time.sleep(opt["interval"])
++        time.sleep(opt["polling_interval"])
  
  def check_event_response(response, filter_event_regex):
      resp = str(response)
+@@ -491,15 +501,18 @@ def subscribe_start(stub, options, req_iterator):
+   """
+   metadata = [('username', options['username']), ('password', options['password'])]
+   max_update_count = options["update_count"]
++  max_sync_count = options["sync_count"]
+   filter_event_regex = options["filter_event_regex"]
+ 
+   try:
+       responses = stub.Subscribe(req_iterator, options['timeout'], metadata=metadata)
+       update_count = 0
++      sync_count = 0
+       for response in responses:
+           print('{0} response received: '.format(datetime.datetime.now()))
+           if response.HasField('sync_response'):
+               print(str(response))
++              sync_count = sync_count + 1
+           elif response.HasField('error'):
+               print('gNMI Error '+str(response.error.code)+\
+                 ' received\n'+str(response.error.message) + str(response.error))
+@@ -521,6 +534,10 @@ def subscribe_start(stub, options, req_iterator):
+           if max_update_count != 0 and update_count == max_update_count:
+             print("Max update count reached {0}".format(update_count))
+             break
++
++          if sync_count != 0 and sync_count == max_sync_count:
++            print("Max sync responses count reached {0}".format(sync_count))
++            break
+   except KeyboardInterrupt:
+       print("Subscribe Session stopped by user.")
+   except grpc.RpcError as err:
 -- 
 2.25.1
 
