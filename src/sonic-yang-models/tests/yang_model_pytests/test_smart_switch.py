@@ -420,7 +420,7 @@ class TestSmartSwitch:
         data = {
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
-                    "DASH_HA_GLOBAL_CONFIG_LIST": [
+                    "global": [
                         {
                             "key": "global",
                             "cp_data_channel_port": 11234,
