@@ -509,12 +509,6 @@ RUN apt-get remove -y libnl-3-200
 RUN eatmydata apt-get install -y libpcre3:$arch
 {%- endif %}
 
-
-# Add Dell CA
-RUN wget --no-check-certificate -O /usr/local/share/ca-certificates/dellca2018-bundle.crt \
-       https://nsdn.artifactory.cec.lab.emc.com/artifactory/sonic-dell-cert/dellca2018-bundle.crt \
-       && update-ca-certificates
-
 RUN eatmydata apt-get -y build-dep openssh
 
 # Build fix for ARM64 and ARMHF /etc/debian_version
