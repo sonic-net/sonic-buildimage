@@ -592,7 +592,7 @@ def is_multi_npu():
 
 def is_voq_chassis():
     switch_type = get_platform_info().get('switch_type')
-    return True if switch_type and (switch_type == 'voq' or switch_type == 'fabric' or switch_type == "dummy-sup") else False
+    return True if switch_type and (switch_type == 'voq' or switch_type == 'fabric') else False
 
 
 def is_packet_chassis():
@@ -616,8 +616,13 @@ def is_disaggregated_chassis():
         return False
 
 
+def is_virtual_chassis():
+    switch_type = get_platform_info().get('switch_type')
+    return True if switch_type and (switch_type == 'voq' or switch_type == "dummy-sup") else False
+
+
 def is_chassis():
-    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis()
+    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
 def is_smartswitch():
