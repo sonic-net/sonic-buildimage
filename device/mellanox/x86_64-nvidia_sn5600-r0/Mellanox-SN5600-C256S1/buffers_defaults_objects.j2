@@ -148,7 +148,6 @@
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
     "BUFFER_QUEUE": {
-{% if dynamic_mode is not defined %}
 {% for port in port_names_active.split(',') %}
         "{{ port }}|0-3": {
             "profile" : "q_lossy_profile"
@@ -200,7 +199,6 @@
             "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
-{% endif %}
 {% endif %}
 {% endif %}
     }
