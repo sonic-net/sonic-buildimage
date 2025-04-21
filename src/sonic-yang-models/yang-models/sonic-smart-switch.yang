@@ -103,6 +103,7 @@ module sonic-smart-switch {
 					description "Name of the DPU";
 					type string {
 						pattern "[a-zA-Z0-9-]+[0-9]";
+						length 1..255;
 					}
 				}
 
@@ -144,8 +145,10 @@ module sonic-smart-switch {
 				}
 
 				leaf vdpu_id {
-					description "ID of VDPUs from minigraph";
-					type string;
+					description "guid of VDPU from minigraph";
+					type string {
+						length 1..255;
+					}
 				}
 
 				leaf gnmi_port {
@@ -171,12 +174,15 @@ module sonic-smart-switch {
 					description "Name of the dpu";
 					type string {
 						pattern "[a-zA-Z0-9-]+[0-9]+";
+						length 1..255;
 					}
 				}
 
 				leaf type {
 					description "Type of dpu";
-					type string;
+					type string {
+						length 1..255;
+					}
 				}
 
 				leaf pa_ipv4 {
@@ -207,7 +213,7 @@ module sonic-smart-switch {
 				}
 
 				leaf swbus_port {
-					description "TCP listening port for swbus service for this DPU. Must be 23606 + dpu_id";
+					description "TCP listening port for swbus service for this DPU. Must be 23606 + dpu_id. This magic port number is defined in the NGS minigraph spec for smart switch.";
 					type inet:port-number;
 					must "current() = 23606 + number(current()/../dpu_id)";
 				}
@@ -222,26 +228,31 @@ module sonic-smart-switch {
 				key vdpu_id;
 
 				leaf vdpu_id {
-					description "ID of the VDPU";
+					description "guid of the VDPU";
 					type string {
-						pattern "vdpu[0-9]+";
+						length 1..255;
 					}
 				}
 
 				leaf profile {
 					description "VDPU profile. Currently unused, reserved for future use.";
-					type string;
+					type string {
+						length 1..255;
+					}
 				}
 
 				leaf tier {
 					description "VDPU tier. Currently unused, reserved for future use.";
-					type string;
+					type string {
+						length 1..255;
+					}
 				}
 
 				leaf-list main_dpu_ids {
 					description "Main DPUs involved in this VDPU";
 					type string {
 						pattern "[a-zA-Z0-9-]+[0-9]+";
+						length 1..255;
 					}
 				}
 			}
@@ -249,17 +260,10 @@ module sonic-smart-switch {
 		/* end of container VDPU */
 
 		container DASH_HA_GLOBAL_CONFIG {
-			description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
 
-			list DASH_HA_GLOBAL_CONFIG_LIST {
-				key key;
+			container global {
 
-				leaf key {
-					description "Key, must be 'global'";
-					type string {
-						pattern "global";
-					}
-				}
+				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
 
 				leaf cp_data_channel_port {
 					description "Control plane data channel port, used for bulk sync";
