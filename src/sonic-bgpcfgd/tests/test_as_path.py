@@ -41,7 +41,7 @@ def test_metadata_without_asns():
     m = constructor()
     set_handler_test(m, "localhost", {"bgp_asn": "65100", "type": "SpineRouter",
                                       "subtype": "UpstreamLC"})
-    m.cfg_mgr.push.assert_called_with("no bgp as-path access-list T2_GROUP_ASNS")
+    assert m.cfg_mgr.push.call_count == 0, "push func is called, which is unexpected"
 
 
 # test if T2_GROUP_ASNS has been added
@@ -51,7 +51,20 @@ def test_metadata_with_asns():
                      {"bgp_asn": "65100", "type": "SpineRouter",
                       "subtype": "UpstreamLC", "t2_group_asns": "64120,64121"})
     m.cfg_mgr.push.assert_has_calls([
-        call("no bgp as-path access-list T2_GROUP_ASNS"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
+        call("bgp as-path access-list T2_GROUP_ASNS permit _64121_")
+    ])
+
+
+# test if T2_GROUP_ASNS has been updated
+def test_metadata_with_asns_update():
+    m = constructor()
+    m.cfg_mgr.get_text = MagicMock(return_value=["bgp as-path access-list T2_GROUP_ASNS seq 5 permit _64128_"])
+    set_handler_test(m, "localhost",
+                     {"bgp_asn": "65100", "type": "SpineRouter",
+                      "subtype": "UpstreamLC", "t2_group_asns": "64120,64121"})
+    m.cfg_mgr.push.assert_has_calls([
+        call("no bgp as-path access-list T2_GROUP_ASNS seq 5 permit _64128_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64121_")
     ])
@@ -65,7 +78,6 @@ def test_del_handler():
                       "subtype": "UpstreamLC", "t2_group_asns": "64120,64121"})
     del_handler_test(m, "localhost")
     m.cfg_mgr.push.assert_has_calls([
-        call("no bgp as-path access-list T2_GROUP_ASNS"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64121_"),
         call("no bgp as-path access-list T2_GROUP_ASNS")
