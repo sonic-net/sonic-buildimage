@@ -3405,3 +3405,12 @@ device:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
 ...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            SKIP_BUFFER_RESERVATION: 0
+            THRESHOLD_MODE: LOSSY
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_2
+...
