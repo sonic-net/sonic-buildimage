@@ -47,7 +47,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          vim \
                                          bats
 
-RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --no-deps --ignore-installed
+RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages
+RUN python3 -m pip install grpcio==1.58.0 grpcio-tools==1.58.0
 RUN python3 -m pip install --break-system-packages --verbose \
                  aiohttp \
                  allure-pytest==2.8.22 \
@@ -65,8 +66,6 @@ RUN python3 -m pip install --break-system-packages --verbose \
                  dpugen==0.1.1 \
                  future>=0.16.0 \
                  gitpython \
-                 grpcio==1.58.0 \
-                 grpcio-tools==1.58.0 \
                  ipaddr \
                  ipython==8.12.2 \
                  ixload \
@@ -118,8 +117,9 @@ RUN python3 -m pip install --break-system-packages --verbose \
                  tabulate \
                  textfsm==1.1.2 \
                  thrift==0.11.0 \
-                 virtualenv \
-    && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
+                 virtualenv
+
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
     && cd nanomsg-1.2      \
     && mkdir -p build      \
@@ -129,8 +129,9 @@ RUN python3 -m pip install --break-system-packages --verbose \
     && ldconfig            \
     && cd ../..            \
     && rm -fr nanomsg-1.2  \
-    && rm -f 1.2.tar.gz  \
-    && python3 -m pip install nnpy
+    && rm -f 1.2.tar.gz
+
+RUN python3 -m pip install nnpy
 
 # Install docker-ce-cli
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
