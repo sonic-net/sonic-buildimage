@@ -2841,23 +2841,23 @@
         },
         "VDPU": {
             "vdpu0": {
-                "profile": "",
-                "tier": "",
+                "profile": "none",
+                "tier": "none",
                 "main_dpu_ids": ["dpu0"]
             },
             "vdpu1": {
-                "profile": "",
-                "tier": "",
+                "profile": "none",
+                "tier": "none",
                 "main_dpu_ids": ["dpu1"]
             },
             "vdpu2": {
-                "profile": "",
-                "tier": "",
+                "profile": "none",
+                "tier": "none",
                 "main_dpu_ids": ["dpu2"]
             },
             "vdpu3": {
-                "profile": "",
-                "tier": "",
+                "profile": "none",
+                "tier": "none",
                 "main_dpu_ids": ["dpu3"]
             }
         },
