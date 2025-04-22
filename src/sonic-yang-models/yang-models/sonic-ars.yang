@@ -58,30 +58,36 @@ module sonic-ars {
 							description "Exponentially Weighted Moving Average algorithm";
 						}
 					}
+					default "ewma";
 				}
 
 				leaf max_flows {
 					type uint32;
+					default 0;
 					description  "Maximum number of flows that can be maintained per ARS profile.";
 				}
 
 				leaf sampling_interval {
 					type uint32;
+					default 16;
 					description  "Sampling interval in microseconds for quality measure computation.";
 				}
 
 				leaf past_load_min_value {
 					type uint16;
+					default 0;
 					description "Past load min value.";
 				}
 
 				leaf past_load_max_value {
 					type uint16;
+					default 0;
 					description "Past load max value.";
 				}
 
 				leaf past_load_weight {
 					type uint16;
+					default 16;
 					description "Past load weight.";
 				}
 
@@ -92,31 +98,37 @@ module sonic-ars {
 
 				leaf future_load_max_value {
 					type uint16;
+					default 0;
 					description "Future load max value.";
 				}
 
 				leaf future_load_weight {
 					type uint16;
+					default 16;
 					description "Future load weight.";
 				}
 
 				leaf current_load_min_value {
 					type uint16;
+					default 0;
 					description "Current load min value.";
 				}
 
 				leaf current_load_max_value {
 					type uint16;
+					default 0;
 					description "Current load max value.";
 				}
 
 				leaf ipv4_enable {
 					type boolean;
+					default true;
 					description "Whether ARS is enabled over IPv4 packets";
 				}
 
 				leaf ipv6_enable {
 					type boolean;
+					default true;
 					description "Whether ARS is enabled over IPv6 packets";
 				}
 			}
@@ -141,7 +153,7 @@ module sonic-ars {
 
 				leaf scaling_factor {
 					type uint32;
-					default "10000";
+					default 10000;
 					description "This factor used to normalize load measurements across ports with different speeds.";
 				}
 			}
@@ -190,17 +202,20 @@ module sonic-ars {
 							description "Per packet flow assignment based on port load";
 						}
 					}
+					default "per_flowlet_quality";
 				}
 
 				leaf flowlet_idle_time {
 					type uint16 {
 						range 2..2047;
 					}
+					default 256;
 					description  "Idle duration in microseconds. This duration is to classifying a flow-let in a macro flow.";
 				}
 
 				leaf max_flows {
 					type uint32;
+					default 512;
 					description  "Maximum number of flow states that can be maintained per ARS object.";
 				}
 			}
