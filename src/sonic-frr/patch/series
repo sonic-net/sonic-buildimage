@@ -66,3 +66,5 @@
 0083-staticd-add-cli-to-support-steering-of-ipv4-traffic-over-srv6-sid-list.patch
 0084-lib-Return-duplicate-prefix-list-entry-test.patch
 0085-This-error-happens-when-we-try-to-write-to-a-socket.patch
+0090-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
+0091-mgmtd-normalize-argument-order-to-copy-dst-src.patch
