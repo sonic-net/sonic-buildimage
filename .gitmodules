@@ -136,3 +136,6 @@
 [submodule "platform/marvell-prestera/sonic-platform-marvell"]
 	path = platform/marvell-prestera/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "platform/marvell-teralynx/mrvl-teralynx"]
+	path = platform/marvell-teralynx/mrvl-teralynx
+	url = https://github.com/Marvell-switching/mrvl-teralynx.git
