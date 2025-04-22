@@ -2802,7 +2802,8 @@
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
             },
             "str-8102-t1-dpu1": {
                 "state": "down",
@@ -2814,7 +2815,8 @@
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
             }
         },
         "REMOTE_DPU": {

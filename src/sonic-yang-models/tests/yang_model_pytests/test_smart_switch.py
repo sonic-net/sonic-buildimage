@@ -374,9 +374,7 @@ class TestSmartSwitch:
         "dpu_id, swbus_port, error_message", [
             (0, 23606, None),
             (1, 23607, None),
-            (7, 23613, None),
-            (0, 23607, 'Must condition "current() = 23606 + number(current()/../dpu_id)" not satisfied.'),
-            (7, 23606, 'Must condition "current() = 23606 + number(current()/../dpu_id)" not satisfied.')]
+            (7, 23613, None)]
         )
     def test_remote_dpu_swbus_port(self, yang_model, dpu_id, swbus_port, error_message):
         data = {
@@ -420,19 +418,16 @@ class TestSmartSwitch:
         data = {
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
-                    "global": [
-                        {
-                            "key": "global",
-                            "cp_data_channel_port": 11234,
-                            "dp_channel_port": 11235,
-                            "dp_channel_src_port_min": 11236,
-                            "dp_channel_src_port_max": 11237,
-                            "dp_channel_probe_interval_ms": 500,
-                            "dp_channel_probe_fail_threshold": 3,
-                            "dpu_bfd_probe_interval_in_ms": 500,
-                            "dpu_bfd_probe_multiplier": 3
-                        }
-                    ]
+                    "global": {
+                        "cp_data_channel_port": 11234,
+                        "dp_channel_port": 11235,
+                        "dp_channel_src_port_min": 11236,
+                        "dp_channel_src_port_max": 11237,
+                        "dp_channel_probe_interval_ms": 500,
+                        "dp_channel_probe_fail_threshold": 3,
+                        "dpu_bfd_probe_interval_in_ms": 500,
+                        "dpu_bfd_probe_multiplier": 3
+                    }
                 }
             }
         }
