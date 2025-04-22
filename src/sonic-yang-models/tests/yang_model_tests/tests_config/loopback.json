@@ -76,7 +76,7 @@
             }
         }
     },
-    "LOOPBACK_DEFAULT_ADMIN_STATUS_UP": {
+    "LOOPBACK_DEFAULT_NO_ADMIN_STATUS": {
         "sonic-loopback-interface:sonic-loopback-interface": {
             "sonic-loopback-interface:LOOPBACK_INTERFACE": {
                 "LOOPBACK_INTERFACE_IPPREFIX_LIST": [
