@@ -3,37 +3,37 @@ From: Prabhat Aravind <paravind@microsoft.com>
 Date: Fri, 7 Jun 2024 19:39:10 +0000
 Subject: [PATCH] [portsorch]: Optimize link flap handling for single member
  portchannels
-
-* When a member link in a single-member portchannel goes down, update the
-  portchannel state nexthop group members quicker to enable faster NHG update
-  and route convergence after link flap.
-
-What I did:
-
-* To improve convergence time after link flap on a single member portchannel.
-
-Why I did it:
-
-* Accelerated NHG update when the one and only member link in a single-member
-  portchannel goes down.
-
-How I verified it:
-
-* By shutting down member links from fanout switches and verifying that NHG
-  updates are sent down earlier.
-
-Signed-off-by: Prabhat Aravind <paravind@microsoft.com>
----
- orchagent/portsorch.cpp | 42 +++++++++++++++++++++++++++++++++++++----
- orchagent/portsorch.h   |  1 +
- 2 files changed, 39 insertions(+), 4 deletions(-)
+    
+    * When a member link in a single-member portchannel goes down, update the
+      portchannel state nexthop group members quicker to enable faster NHG update
+      and route convergence after link flap.
+    
+    What I did:
+    
+    * To improve convergence time after link flap on a single member portchannel.
+    
+    Why I did it:
+    
+    * Accelerated NHG update when the one and only member link in a single-member
+      portchannel goes down.
+    
+    How I verified it:
+    
+    * By shutting down member links from fanout switches and verifying that NHG
+      updates are sent down earlier.
+    
+    Signed-off-by: Prabhat Aravind <paravind@microsoft.com>
+    ---
+     orchagent/portsorch.cpp | 42 +++++++++++++++++++++++++++++++++++++----
+     orchagent/portsorch.h   |  1 +
+     2 files changed, 39 insertions(+), 4 deletions(-)
 
 diff --git a/orchagent/portsorch.cpp b/orchagent/portsorch.cpp
-index ebce7909..a0a421f4 100644
+index a4d779d2..b77644e3 100644
 --- a/orchagent/portsorch.cpp
 +++ b/orchagent/portsorch.cpp
-@@ -8065,16 +8065,36 @@ void PortsOrch::doTask(NotificationConsumer &consumer)
- 
+@@ -8559,16 +8559,36 @@ void PortsOrch::updatePortErrorStatus(Port &port, sai_port_error_status_t errsta
+     }
  }
  
 +bool PortsOrch::isSingleMemberLagPort(Port &port)
@@ -69,10 +69,10 @@ index ebce7909..a0a421f4 100644
 +            port.m_alias.c_str(), oper_status_strings.at(port.m_oper_status).c_str(),
 +            oper_status_strings.at(status).c_str());
 +
-     if (port.m_type == Port::PHY)
+     if (port.m_type == Port::PHY || port.m_type == Port::TUNNEL)
      {
          updateDbPortOperStatus(port, status);
-@@ -8093,14 +8113,16 @@ void PortsOrch::updatePortOperStatus(Port &port, sai_port_oper_status_t status)
+@@ -8591,14 +8611,16 @@ void PortsOrch::updatePortOperStatus(Port &port, sai_port_oper_status_t status)
              updatePortStatePoll(port, PORT_STATE_POLL_LT, !(status == SAI_PORT_OPER_STATUS_UP));
          }
      }
@@ -90,7 +90,7 @@ index ebce7909..a0a421f4 100644
      if (port.m_type == Port::PHY)
      {
          if (!setHostIntfsOperStatus(port, isUp))
-@@ -8108,7 +8130,19 @@ void PortsOrch::updatePortOperStatus(Port &port, sai_port_oper_status_t status)
+@@ -8606,7 +8628,19 @@ void PortsOrch::updatePortOperStatus(Port &port, sai_port_oper_status_t status)
              SWSS_LOG_ERROR("Failed to set host interface %s operational status %s", port.m_alias.c_str(),
                      isUp ? "up" : "down");
          }
@@ -108,13 +108,13 @@ index ebce7909..a0a421f4 100644
      }
 +
      SWSS_LOG_INFO("Updating the nexthop for port %s and operational status %s", port.m_alias.c_str(), isUp ? "up" : "down");
-     
+ 
      if (!gNeighOrch->ifChangeInformNextHop(port.m_alias, isUp))
 diff --git a/orchagent/portsorch.h b/orchagent/portsorch.h
-index 3ae283fb..553b040c 100644
+index b1e2ab71..a69370df 100644
 --- a/orchagent/portsorch.h
 +++ b/orchagent/portsorch.h
-@@ -467,6 +467,7 @@ private:
+@@ -492,6 +492,7 @@ private:
      ReturnCode setPortLinkEventDampingAiedConfig(Port &port,
                                                   sai_redis_link_event_damping_algo_aied_config_t &config);
  
@@ -122,6 +122,3 @@ index 3ae283fb..553b040c 100644
      void updatePortOperStatus(Port &port, sai_port_oper_status_t status);
  
      bool getPortOperSpeed(const Port& port, sai_uint32_t& speed) const;
--- 
-2.25.1
-
