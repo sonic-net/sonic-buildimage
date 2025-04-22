@@ -5,12 +5,12 @@
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
         "ingress_lossy_pool": {
-            "size": "164524944",
+            "size": "165307264",
             "type": "ingress",
             "mode": "dynamic"
         },
         "egress_lossy_pool": {
-            "size": "164524944",
+            "size": "165307264",
             "type": "egress",
             "mode": "dynamic"
         }
@@ -19,7 +19,7 @@
         "ingress_lossy_profile": {
             "pool": "ingress_lossy_pool",
             "size": "0",
-            "static_th": "163546528"
+            "static_th": "165364160"
         },
         "egress_lossy_profile": {
             "pool": "egress_lossy_pool",
