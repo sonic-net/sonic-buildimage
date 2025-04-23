@@ -101,11 +101,13 @@ class BGPPeerMgrBase(Manager):
         base_template = "bgpd/templates/" + self.constants["bgp"]["peers"][peer_type]["template_dir"] + "/"
         self.templates = {
             "add":         self.fabric.from_file(base_template + "instance.conf.j2"),
-            "update":      self.fabric.from_file(base_template + "instance_update.conf.j2"),
             "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
         }
+
+        if (os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "update.conf.j2")):
+            self.templates["update"] = self.fabric.from_file(base_template + "update.conf.j2")
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
@@ -229,9 +231,45 @@ class BGPPeerMgrBase(Manager):
             self.apply_op(cmd, vrf)
             key = (vrf, nbr)
             self.peers.add(key)
+            self.update_state_db(vrf, nbr, data, "SET")
             log_info("Peer '(%s|%s)' has been scheduled to be added with attributes '%s'" % print_data)
 
         return True
+
+    def update_state_db(self, vrf, nbr, data, op):
+        """
+        Update the database with the new data
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param data: associated data (will be empty for deletion case)
+        :param op: operation type. It can be "SET" or "DEL"
+        :return: True if this adding was successful, False otherwise
+        """
+        if (vrf == "default"):
+            key = nbr
+        else:
+            key = vrf + "|" + nbr
+        # Update the peer in the STATE_DB table
+        try:
+            state_db = swsscommon.DBConnector("STATE_DB", 0)
+            state_peer_table = swsscommon.Table(state_db, swsscommon.STATE_BGP_PEER_CONFIGURED_TABLE_NAME)
+            if (op == "SET"):
+                state_peer_table.set(key, list(sorted(data.items())))
+                log_info("Peer '(%s)' has been added to BGP_PEER_CONFIGURED_TABLE with attributes '%s'" % (key, data))
+            elif (op == "DEL"):
+                (status, fvs) = state_peer_table.get(key)
+                if status == True:
+                    state_peer_table.delete(key)
+                    log_info("Peer '(%s)' has been deleted from BGP_PEER_CONFIGURED_TABLE" % (key))
+                else:
+                    log_warn("Peer '(%s)' not found in BGP_PEER_CONFIGURED_TABLE" % (key))
+            else:
+                log_err("Update state DB called for Peer '(%s)' with unkown operation '%s'" % (key, op))
+                return False
+            return True
+        except Exception as e:
+            log_err("Update of state db failed for peer '(%s)' with error: %s" % (key, str(e)))
+            return False
 
     def update_peer(self, vrf, nbr, data):
         """
@@ -244,11 +282,8 @@ class BGPPeerMgrBase(Manager):
         """
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
-        elif "ip_range" in data and self.peer_type == 'dynamic':
-            if (os.path.exists(self.templates["update"])):
-                self.change_ip_range(vrf, nbr, data)
-            else:
-                log_err("Peer '(%s|%s)': Can't update the peer. Template 'update' doesn't exist" % (vrf, nbr))
+        elif "update" in self.templates and "ip_range" in data and self.peer_type == 'dynamic':
+            self.change_ip_range(vrf, nbr, data)
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 
@@ -263,14 +298,14 @@ class BGPPeerMgrBase(Manager):
         :return: True if this adding was successful, False otherwise
         """
         if data['admin_status'] == 'up':
-            self.apply_admin_status(vrf, nbr, "no shutdown", "up")
+            self.apply_admin_status(vrf, nbr, "no shutdown", "up", data)
         elif data['admin_status'] == 'down':
-            self.apply_admin_status(vrf, nbr, "shutdown", "down")
+            self.apply_admin_status(vrf, nbr, "shutdown", "down", data)
         else:
             print_data = vrf, nbr, data['admin_status']
             log_err("Peer '%s|%s': Can't update the peer. It has wrong attribute value attr['admin_status'] = '%s'" % print_data)
 
-    def apply_admin_status(self, vrf, nbr, template_name, admin_state):
+    def apply_admin_status(self, vrf, nbr, template_name, admin_state, data):
         """
         Render admin state template and apply the command to the FRR
         :param vrf: vrf name. Name is equal "default" for the global vrf
@@ -282,6 +317,7 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, admin_state
         ret_code = self.apply_op(self.templates[template_name].render(neighbor_addr=nbr), vrf)
         if ret_code:
+            self.update_state_db(vrf, nbr, data, "SET")
             log_info("Peer '%s|%s' admin state is set to '%s'" % print_data)
         else:
             log_err("Can't set peer '%s|%s' admin state to '%s'." % print_data)
@@ -321,7 +357,7 @@ class BGPPeerMgrBase(Manager):
         Get existing ip range of a peer
         :param vrf: vrf name. Name is equal "default" for the global vrf
         :param nbr: neighbor ip address (name for dynamic peer type)
-        :return: existing ip range of a peer
+        :return: existing ipv4 and ipv6 ranges of a peer if they exist.
         """
         ipv4_ranges = []
         ipv6_ranges = []
@@ -334,10 +370,10 @@ class BGPPeerMgrBase(Manager):
             if ret_code == 0:
                 js_bgp = json.loads(out)
                 if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv4' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv4']:
-                    ipv4_ranges= js_bgp[nbr]['dynamicRanges']['IPv4']['ranges']
+                    ipv4_ranges = js_bgp[nbr]['dynamicRanges']['IPv4']['ranges']
                     log_info("Peer '(%s|%s)' already has ipV4 range: %s" % (vrf, nbr, ipv4_ranges))
                 if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv6' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv6']:
-                    ipv6_ranges= js_bgp[nbr]['dynamicRanges']['IPv6']['ranges']
+                    ipv6_ranges = js_bgp[nbr]['dynamicRanges']['IPv6']['ranges']
                     log_info("Peer '(%s|%s)' already has ipV6 range: %s" % (vrf, nbr, ipv6_ranges))
                 return ipv4_ranges, ipv6_ranges
             else:
@@ -357,22 +393,22 @@ class BGPPeerMgrBase(Manager):
         """
         print_data = vrf, nbr, data
         kwargs = {
-            'operation': 'update',
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
             'vrf': vrf,
-            'neighbor_addr': nbr,
             'bgp_session': data,
             'delete_ranges': ip_ranges_to_del,
             'add_ranges': new_ip_range
         }
         try:
-            cmd = self.templates["add"].render(**kwargs)
+            cmd = self.templates["update"].render(**kwargs)
         except jinja2.TemplateError as e:
             msg = "Peer '(%s|%s)'. Error in rendering the template for 'SET' command '%s'" % print_data
             log_err("%s: %s" % (msg, str(e)))
             return True
         if cmd is not None:
             self.apply_op(cmd, vrf)
-            log_info("Peer '(%s|%s)' ip range has been scheduled to be updated with new range '%s'" % (vrf, nbr, new_ip_range))
+            self.update_state_db(vrf, nbr, data, "SET")
+            log_info("Peer '(%s|%s)' ip range has been scheduled to be updated with range '%s'" % (vrf, nbr, data['ip_range']))
 
     def del_handler(self, key):
         """
@@ -387,6 +423,7 @@ class BGPPeerMgrBase(Manager):
         cmd = self.templates["delete"].render(neighbor_addr=nbr)
         ret_code = self.apply_op(cmd, vrf)
         if ret_code:
+            self.update_state_db(vrf, nbr, {}, "DEL")
             log_info("Peer '(%s|%s)' has been removed" % (vrf, nbr))
             self.peers.remove(peer_key)
         else:

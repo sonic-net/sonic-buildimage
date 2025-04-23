@@ -33,7 +33,9 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
 
     return_value_map = {
         "['vtysh', '-H', '/dev/null', '-c', 'show bgp vrfs json']": (0, "{\"vrfs\": {\"default\": {}}}", ""),
-        "['vtysh', '-c', 'show bgp vrf default neighbors json']": (0, "{\"10.10.10.1\": {}, \"20.20.20.1\": {}, \"fc00:10::1\": {}}", "")
+        "['vtysh', '-c', 'show bgp vrf default neighbors json']": (0, "{\"10.10.10.1\": {}, \"20.20.20.1\": {}, \"fc00:10::1\": {}, \"DynNbr1\": {}, \"DynNbr2\": {}}", ""),
+        "['vtysh', '-c', 'show bgp peer-group DynNbr1 json']": (0, "{\"DynNbr1\":{\"dynamicRanges\":{\"IPv4\":{\"count\":1,\"ranges\":[\"10.255.0.0/24\"]}}}}", ""),
+        "['vtysh', '-c', 'show bgp peer-group DynNbr2 json']": (0, "{\"DynNbr2\":{\"dynamicRanges\":{\"IPv4\":{\"count\":1,\"ranges\":[\"192.168.0.0/24\",\"192.168.1.0/24\"]}}}}", "")
     }
 
     bgpcfgd.managers_bgp.run_command = lambda cmd: return_value_map[str(cmd)]
@@ -162,29 +164,66 @@ def test_add_peer_ipv6_in_vnet():
     for constant in load_constant_files():
         m = constructor(constant)
         res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
-def test_add_dynamic_peer():
+
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_dynamic_peer(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27"})
+        m.check_neig_meta = False
+        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27", "name": "BGPSLBPassive", "src_address": "10.250.0.1"})
+        mocked_log_info.assert_called_with("Peer '(default|BGPSLBPassive)' has been scheduled to be added with attributes '{'peer_asn': '65200', 'ip_range': '10.250.0.0/27', 'name': 'BGPSLBPassive', 'src_address': '10.250.0.1'}'")
         assert res, "Expect True return value"
 
-def test_add_dynamic_peer_ipv6():
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_add_dynamic_peer_ipv6(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "fc00:20::/64"})
+        m.check_neig_meta = False
+        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "fc00:20::/64", "name": "BGPSLBPassive", "src_address": "fc00:20::1"})
+        mocked_log_info.assert_called_with("Peer '(default|BGPSLBPassive)' has been scheduled to be added with attributes '{'peer_asn': '65200', 'ip_range': 'fc00:20::/64', 'name': 'BGPSLBPassive', 'src_address': 'fc00:20::1'}'")
         assert res, "Expect True return value"
+
+@patch('bgpcfgd.managers_bgp.log_info')
+@patch('bgpcfgd.managers_bgp.swsscommon.Table')
+@patch('bgpcfgd.managers_bgp.swsscommon.DBConnector')
+def modify_dynamic_peer_common(mock_db_conn, mock_table, mocked_log_info, peer, data, expected_cmds, expected_log):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.cfg_mgr.push = MagicMock(return_value = None)
+        m.check_neig_meta = False
+        swsscommon.STATE_BGP_PEER_CONFIGURED_TABLE_NAME = "BGP_PEER_CONFIGURED_TABLE"
+        mock_state_db_table = MagicMock()
+        mock_table.return_value = mock_state_db_table
+        res = m.set_handler(peer, data)
+        assert res, "Expect True return value"
+        mock_state_db_table.set.assert_called_once_with(peer, list(sorted(data.items())))
+        mocked_log_info.assert_called_with(expected_log)
+        m.cfg_mgr.push.assert_called_once_with(expected_cmds)
+
+def test_add_dynamic_peer_range():
+    expected_cmds = 'router bgp 65100\n bgp suppress-fib-pending\n!\n! template: bgpd/templates/dynamic/update.conf.j2\n!\n\n\n' \
+        '  bgp listen range 10.255.1.0/24 peer-group DynNbr1\n\n!\n! end of template: bgpd/templates/dynamic/update.conf.j2\n!\nexit'
+    data = {"peer_asn": "65200", "ip_range": "10.255.0.0/24,10.255.1.0/24", "name": "DynNbr1"}
+    peer = "DynNbr1"
+    expected_log = "Peer '(default|DynNbr1)' ip range has been scheduled to be updated with range '10.255.0.0/24,10.255.1.0/24'"
+    modify_dynamic_peer_common(peer=peer, data=data, expected_cmds=expected_cmds, expected_log=expected_log)
 
 def test_modify_dynamic_peer_range():
-    for constant in load_constant_files():
-        m = constructor(constant, peer_type="dynamic")
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27,10.251.0.0/27"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.250.0.0/27,10.251.0.0/26"})
-        assert res, "Expect True return value"
-        res = m.set_handler("BGPSLBPassive", {"peer_asn": "65200", "ip_range": "10.251.0.0/27"})
-        assert res, "Expect True return value"
+    expected_cmds = 'router bgp 65100\n bgp suppress-fib-pending\n!\n! template: bgpd/templates/dynamic/update.conf.j2\n!\n\n' \
+        '  no bgp listen range 10.255.0.0/24 peer-group DynNbr1\n\n\n  bgp listen range 10.255.0.0/26 peer-group DynNbr1\n\n!\n!' \
+        ' end of template: bgpd/templates/dynamic/update.conf.j2\n!\nexit'
+    data = {"peer_asn": "65200", "ip_range": "10.255.0.0/26", "name": "DynNbr1"}
+    peer = "DynNbr1"
+    expected_log = "Peer '(default|DynNbr1)' ip range has been scheduled to be updated with range '10.255.0.0/26'"
+    modify_dynamic_peer_common(peer=peer, data=data, expected_cmds=expected_cmds, expected_log=expected_log)
+
+def test_delete_dynamic_peer_range():
+    expected_cmds = 'router bgp 65100\n bgp suppress-fib-pending\n!\n! template: bgpd/templates/dynamic/update.conf.j2\n!\n\n' \
+        '  no bgp listen range 192.168.1.0/24 peer-group DynNbr2\n\n\n!\n! end of template: bgpd/templates/dynamic/update.conf.j2\n!\nexit'
+    data = {"peer_asn": "65200", "ip_range": "192.168.0.0/24", "name": "DynNbr2"}
+    peer = "DynNbr2"
+    expected_log = "Peer '(default|DynNbr2)' ip range has been scheduled to be updated with range '192.168.0.0/24'"
+    modify_dynamic_peer_common(peer=peer, data=data, expected_cmds=expected_cmds, expected_log=expected_log)
 
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_add_peer_no_local_addr(mocked_log_warn):
