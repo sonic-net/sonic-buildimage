@@ -1,0 +1,9 @@
+{
+    "SAG_GLOBAL_MAC_TEST": {
+        "desc": "Configure a entry in SAG table."
+    },
+    "SAG_GLOBAL_WITH_INVALID_MAC_TEST": {
+        "desc": "Configure a invalid MAC address format in SAG table.",
+        "eStrKey" : "Pattern"
+    }
+}
