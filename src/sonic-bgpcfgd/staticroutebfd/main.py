@@ -397,7 +397,7 @@ class StaticRouteBfd(object):
         bfd_enabled = self.isFieldTrue(bfd_field)
 
         #when bfd changed from "false" to "true", before bfd session created and state becomes up,
-        #the installed static route need to be kept in the system system, so put this route in "hold" state until at least one 
+        #the installed static route need to be kept in the system system, so put this route in "hold" state until at least one
         #bfd session becomes UP.
         data_copy = data.copy()
         data['bfd_nh_hold'] = "false"
@@ -411,29 +411,31 @@ class StaticRouteBfd(object):
         # preprocess empty nexthop-vrf list before save to LOCAL_CONFIG_TABLE, bfd session need this information
         nh_list     = arg_list(data['nexthop']) if 'nexthop' in data else None
         nh_vrf_list = arg_list(data['nexthop-vrf']) if 'nexthop-vrf' in data else None
-        if nh_vrf_list is None:
+        if nh_vrf_list is None and nh_list is not None:
             nh_vrf_list = [vrf] * len(nh_list) if len(nh_list) > 0 else None
             data['nexthop-vrf'] = ','.join(nh_vrf_list) if nh_vrf_list else ''
-        else: # preprocess empty nexthop-vrf member
+        elif nh_vrf_list is not None: # preprocess empty nexthop-vrf member
             for index in range(len(nh_vrf_list)):
                 if len(nh_vrf_list[index]) == 0:
                     nh_vrf_list[index] = vrf
             data['nexthop-vrf'] = ','.join(nh_vrf_list)
 
-        if not bfd_enabled: 
+        bkh_list    = arg_list(data['blackhole']) if 'blackhole' in data else None
+        intf_list   = arg_list(data['ifname']) if 'ifname' in data else None
+        dist_list   = arg_list(data['distance']) if 'distance' in data else None
+        if bkh_list is not None and 'true' in bkh_list:
+            log_info("Blackholing static route encountered, skipping it")
+            return True
+        if intf_list is None or nh_list is None or nh_vrf_list is None or \
+                len(intf_list) != len(nh_list) or len(intf_list) != len(nh_vrf_list):
+            log_warn("Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty.")
+            return True
+
+        if not bfd_enabled:
             #skip if bfd is not enabled, but store it to local_db to detect bfd field dynamic change
             data['bfd'] = "false"
             self.set_local_db(LOCAL_CONFIG_TABLE, route_cfg_key, data)
             return True
-
-        bkh_list    = arg_list(data['blackhole']) if 'blackhole' in data else None
-        intf_list   = arg_list(data['ifname']) if 'ifname' in data else None
-        dist_list   = arg_list(data['distance']) if 'distance' in data else None
-        if intf_list is None or nh_list is None or nh_vrf_list is None or \
-                len(intf_list) != len(nh_list) or len(intf_list) != len(nh_vrf_list):
-            log_err("Static route bfd set Failed, nexthop, interface and vrf lists do not match.")
-            return True
-
 
         if cur_data and cur_bfd_enabled:
             # route with the prefix already exist, remove the deleted nexthops
