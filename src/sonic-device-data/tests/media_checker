@@ -71,9 +71,10 @@ def check_media_dict(vendor_dict):
                     return False
 
                 lane_dict = settings_dict[si_param]
-                for lanes in lane_dict:
-                    if not check_lane_and_value(lanes, lane_dict[lanes]):
-                        return False
+                if isinstance(lane_dict, dict):
+                    for lanes in lane_dict:
+                        if not check_lane_and_value(lanes, lane_dict[lanes]):
+                            return False
     return True
 
 def check_valid_port(port_name):
