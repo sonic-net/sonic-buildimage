@@ -186,6 +186,7 @@ yang_files = [
     'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
     'sonic-ssh-server.yang',
+    'sonic-static-anycast-gateway.yang',
     'sonic-static-route.yang',
     'sonic-storm-control.yang',
     'sonic-stormond-config.yang',
