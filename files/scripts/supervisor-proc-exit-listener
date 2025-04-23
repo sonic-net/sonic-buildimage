@@ -235,7 +235,7 @@ def main(argv):
             elapsed_secs = epoch_time - process_heart_beat_info[process]["last_heart_beat"]
             threshold = get_heartbeat_alert_interval(process)
             if threshold > 0 and elapsed_secs >= threshold:
-                elapsed_mins = elapsed_secs
+                elapsed_mins = elapsed_secs // 60
                 generate_alerting_message(process, "stuck", elapsed_mins, syslog.LOG_WARNING)
 
 if __name__ == "__main__":
