@@ -71,7 +71,7 @@
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
+            "dynamic_th":"7"
         },
         "egress_lossless_profile": {
             "pool":"egress_lossless_pool",
@@ -81,22 +81,22 @@
         "egress_lossy_profile": {
             "pool":"egress_lossy_pool",
             "size":"9216",
-            "dynamic_th":"7"
+            "dynamic_th":"-6"
         },
         "q_lossy_profile": {
             "pool":"egress_lossy_pool",
             "size":"0",
             "dynamic_th":"0"
         },
-        "q_lossy_minus_7_profile": {
-            "pool": "egress_lossy_pool",
-            "size": "0",
-            "dynamic_th" : "-7"
-        },
         "q_lossy_minus_3_profile": {
             "pool": "egress_lossy_pool",
             "size": "0",
             "dynamic_th" : "-3"
+        },
+        "q_lossy_infinity_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th" : "7"
         }
     },
 {%- endmacro %}
@@ -148,20 +148,14 @@
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
     "BUFFER_QUEUE": {
-{% if dynamic_mode is not defined %}
 {% for port in port_names_active.split(',') %}
-        "{{ port }}|0": {
+        "{{ port }}|0-3": {
             "profile" : "q_lossy_profile"
-        },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
-        "{{ port }}|1-3": {
-            "profile" : "q_lossy_minus_7_profile"
         },
 {% endfor %}
 {% for port in port_names_active.split(',') %}
         "{{ port }}|4": {
-            "profile" : "q_lossy_profile"
+            "profile" : "q_lossy_infinity_profile"
         },
 {% endfor %}
 {% for port in port_names_active.split(',') %}
@@ -183,7 +177,6 @@
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
-{% endif %}
 {% endif %}
     }
 {%- endmacro %}

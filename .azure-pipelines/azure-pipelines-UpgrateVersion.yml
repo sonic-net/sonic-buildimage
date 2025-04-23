@@ -37,8 +37,8 @@ parameters:
   - centec
   - centec-arm64
   - generic
-  - marvell-armhf
-  - marvell-arm64
+  - marvell-prestera-armhf
+  - marvell-prestera-arm64
   - mellanox
   - pensando
   - nvidia-bluefield
