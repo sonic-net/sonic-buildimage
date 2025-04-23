@@ -2,7 +2,7 @@ module sonic-static-anycast-gateway {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-static-anycast-gateway";
+    namespace "http://github.com/sonic-net/sonic-static-anycast-gateway";
     prefix sag;
 
     import ietf-yang-types {
