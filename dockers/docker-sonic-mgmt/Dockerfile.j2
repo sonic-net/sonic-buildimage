@@ -48,6 +48,13 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          bats
 
 RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --ignore-installed
+
+ENV GRPC_PYTHON_BUILD_SYSTEM_OPENSSL=1 \
+    GRPC_PYTHON_BUILD_SYSTEM_ZLIB=1 \
+    GRPC_PYTHON_BUILD_SYSTEM_CARES=1 \
+    GRPC_PYTHON_BUILD_SYSTEM_RE2=1 \
+    GRPC_PYTHON_DISABLE_LIBC_COMPATIBILITY=1
+
 RUN python3 -m pip install grpcio==1.58.0 grpcio-tools==1.58.0 --break-system-packages
 RUN python3 -m pip install --break-system-packages --verbose \
                  aiohttp \
