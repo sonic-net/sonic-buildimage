@@ -1,0 +1,36 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update        && \
+    apt-get install -f -y    \
+        libdbus-1-3          \
+        libdbus-c++-1-0v5
+
+{% if docker_sysmgr_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sysmgr_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sysmgr_debs.split(' ')) }}
+{%- endif %}
+
+RUN apt-get clean -y      && \
+    apt-get autoclean -   && \
+    apt-get autoremove -y && \
+    rm -rf /debs /var/lib/apt/lists/* /tmp/* ~/.cache/
+
+# creating sonic conig_status file.
+RUN mkdir -p /var/sonic
+RUN echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
