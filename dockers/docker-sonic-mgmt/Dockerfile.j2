@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y apt-transport-https \
                                          apt-utils \
+                                         autoconf \
                                          build-essential \
                                          ca-certificates \
                                          cmake \
@@ -24,6 +25,7 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          libgrpc++-dev \
                                          libssl-dev \
                                          libxml2 \
+                                         libtool \
                                          libxslt1-dev \
                                          lsb-release \
                                          jq \
@@ -35,6 +37,11 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          python3-dev \
                                          python3-pip \
                                          python3-venv \
+                                         python3-setuptools \
+                                         python3-wheel \
+                                         python3-cffi \
+                                         python3-grpcio \
+                                         python3-grpcio-tools \
                                          pkg-config \
                                          rsyslog \
                                          shellcheck \
@@ -49,13 +56,8 @@ RUN apt-get update && apt-get install -y apt-transport-https \
 
 RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --ignore-installed
 
-ENV GRPC_PYTHON_BUILD_SYSTEM_OPENSSL=1 \
-    GRPC_PYTHON_BUILD_SYSTEM_ZLIB=1 \
-    GRPC_PYTHON_BUILD_SYSTEM_CARES=1 \
-    GRPC_PYTHON_BUILD_SYSTEM_RE2=1 \
-    GRPC_PYTHON_DISABLE_LIBC_COMPATIBILITY=1
 
-RUN python3 -m pip install grpcio==1.58.0 grpcio-tools==1.58.0 --break-system-packages
+RUN python3 -m pip install grpcio==1.56.2 grpcio-tools==1.56.2 --break-system-packages
 RUN python3 -m pip install --break-system-packages --verbose \
                  aiohttp \
                  allure-pytest==2.8.22 \
