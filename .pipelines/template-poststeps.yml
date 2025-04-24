@@ -71,6 +71,7 @@ steps:
       displayName: "Publish to Azure Storage"
     - task: SSH@0
       displayName: "Make soft links for trusty8"
+      retryCountOnTaskFailure: 5
       inputs:
         sshEndpoint: 'acs-trusty8'
         failOnStdErr: false

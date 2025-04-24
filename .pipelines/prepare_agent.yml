@@ -57,3 +57,5 @@ steps:
       docker info
       sudo cat /lib/systemd/system/docker.service
     displayName: 'prepare 1ES agent'
+    retryCountOnTaskFailure: 5
+
