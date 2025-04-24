@@ -55,59 +55,59 @@ RUN apt-get update && apt-get install -y apt-transport-https \
 RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --ignore-installed
 
 
-RUN python3 -m pip install grpcio==1.56.2 grpcio-tools==1.56.2 --break-system-packages
+RUN python3 -m pip install grpcio grpcio-tools --break-system-packages
 RUN python3 -m pip install --break-system-packages --verbose \
                  aiohttp \
-                 allure-pytest==2.8.22 \
-                 ansible==6.7.0 \
-                 azure-storage-blob==12.9.0 \
+                 allure-pytest \
+                 ansible \
+                 azure-storage-blob \
                  azure-kusto-data \
                  azure-kusto-ingest \
                  defusedxml \
-                 celery[redis]==5.2.7 \
+                 celery[redis] \
                  cffi \
-                 contextlib2==0.6.0.post1 \
-                 cryptography==41.0.2 \
+                 contextlib2 \
+                 cryptography \
                  ctypesgen \
                  dpkt \
-                 dpugen==0.1.1 \
-                 future>=0.16.0 \
+                 dpugen \
+                 future \
                  gitpython \
                  ipaddr \
-                 ipython==8.12.2 \
+                 ipython \
                  ixload \
-                 ixnetwork-restpy==1.0.64 \
-                 ixnetwork-open-traffic-generator==0.0.79 \
-                 jinja2==3.1.2 \
+                 ixnetwork-restpy \
+                 ixnetwork-open-traffic-generator \
+                 jinja2 \
                  jsonpatch \
                  lxml \
-                 markupsafe==2.0.1 \
+                 markupsafe \
                  mock \
-                 msrest==0.6.21 \
+                 msrest \
                  natsort \
                  ncclient \
                  netaddr \
-                 netmiko==2.4.2 \
+                 netmiko \
                  pandas \
-                 paramiko==2.9.5 \
+                 paramiko \
                  passlib \
                  pexpect \
                  prettytable \
                  psutil \
                  ptf \
-                 pyasn1==0.4.8 \
-                 pycryptodome==3.9.8 \
+                 pyasn1 \
+                 pycryptodome \
                  pyfiglet \
-                 pylint==1.8.1 \
+                 pylint \
                  pyro4 \
-                 pysnmp==4.4.12 \
+                 pysnmp \
                  pysubnettree \
-                 pytest-ansible==4.0.0 \
+                 pytest-ansible \
                  pytest-html \
                  pytest-repeat \
-                 pytest-xdist==1.28.0 \
+                 pytest-xdist \
                  python-dateutil \
-                 pytest==7.4.0 \
+                 pytest \
                  pytest-stress \
                  PyYAML \
                  redis \
@@ -115,15 +115,15 @@ RUN python3 -m pip install --break-system-packages --verbose \
                  retry \
                  rpyc \
                  scandir \
-                 scapy==2.5.0 \
+                 scapy \
                  setuptools-rust \
                  six \
                  snappi \
                  snappi-convergence \
                  snappi-ixnetwork \
                  tabulate \
-                 textfsm==1.1.2 \
-                 thrift==0.11.0 \
+                 textfsm \
+                 thrift \
                  virtualenv
 
 RUN wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
