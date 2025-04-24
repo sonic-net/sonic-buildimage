@@ -1,0 +1,20 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "SpineRouter",
+            "subtype": "UpstreamLC"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "RegionalHub",
+            "deployment_id": "3"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device",
+        "admin_status": "down"
+    },
+    "neighbor_addr": "11.11.11.11"
+}
