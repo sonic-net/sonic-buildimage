@@ -36,7 +36,7 @@ bcm_device:
             sai_feat_tail_timestamp : 1
             sai_port_phy_time_sync_en : 1
             sai_field_group_auto_prioritize: 1
-            sai_mmu_default_cpu_config : 1
+            sai_mmu_custom_config : 1
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 1
