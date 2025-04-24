@@ -1756,18 +1756,18 @@
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": 999960,
+                        "PRIORITY": "999960",
                         "RULE_NAME": "Rule_10",
                         "INNER_SRC_IP": "10.176.0.0/15",
-                        "VNI": 45
+                        "TUNNEL_VNI": "45"
                     },
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
-                        "PRIORITY": 999960,
+                        "PRIORITY": "999960",
                         "RULE_NAME": "Rule_9",
                         "INNER_SRC_IP": "10.166.0.0/15",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:46:BD:08:19:68",
-                        "VNI": 47
+                        "TUNNEL_VNI": "47"
                     }
                 ]
             },
@@ -1794,7 +1794,7 @@
                         ],
                         "MATCHES": [
                             "INNER_SRC_IP",
-                            "VNI"
+                            "TUNNEL_VNI"
                         ],
                         "BIND_POINTS": [
                             "PORT",
@@ -1836,10 +1836,10 @@
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-REWRITE-ACTION",
                         "INNER_SRC_MAC_REWRITE_ACTION": "",
-                        "PRIORITY": 999963,
+                        "PRIORITY": "999963",
                         "RULE_NAME": "Rule_13",
                         "INNER_SRC_IP": "10.176.0.0/15",
-                        "VNI": "45"
+                        "TUNNEL_VNI": "45"
                     }
                 ]
             },
@@ -1866,7 +1866,7 @@
                         ],
                         "MATCHES": [
                             "INNER_SRC_IP",
-                            "VNI"
+                            "TUNNEL_VNI"
                         ],
                         "BIND_POINTS": [
                             "PORT",
@@ -1908,10 +1908,10 @@
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-MAC",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60.45.BD.08:19:68",
-                        "PRIORITY": 999964,
+                        "PRIORITY": "999964",
                         "RULE_NAME": "Rule_14",
                         "INNER_SRC_IP": "10.176.0.0/15",
-                        "VNI": 45
+                        "TUNNEL_VNI": "45"
                     }
                 ]
             },
@@ -1938,7 +1938,7 @@
                         ],
                         "MATCHES": [
                             "INNER_SRC_IP",
-                            "VNI"
+                            "TUNNEL_VNI"
                         ],
                         "BIND_POINTS": [
                             "PORT",
@@ -1973,24 +1973,24 @@
             }
         }
     },
-    "ACL_INNERSRCMACREWRITE_INVALID_VNI": {
+    "ACL_INNERSRCMACREWRITE_INVALID_TUNNEL_VNI": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-VNI",
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-TUNNEL_VNI",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": 999960,
+                        "PRIORITY": "999960",
                         "RULE_NAME": "Rule_15",
                         "INNER_SRC_IP": "10.176.0.0/15",
-                        "VNI": 16777216
+                        "TUNNEL_VNI": "16777216"
                     }
                 ]
             },
             "sonic-acl:ACL_TABLE": {
                 "ACL_TABLE_LIST": [
                     {
-                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-VNI",
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-TUNNEL_VNI",
                         "policy_desc":"Replace src MAC with ENI MAC",
                         "ports": [
                             "Ethernet0",
@@ -2010,7 +2010,7 @@
                         ],
                         "MATCHES": [
                             "INNER_SRC_IP",
-                            "VNI"
+                            "TUNNEL_VNI"
                         ],
                         "BIND_POINTS": [
                             "PORT",
@@ -2045,7 +2045,7 @@
             }
         }
     },
-    "ACL_RULE_WITH_VNI": {
+    "ACL_RULE_WITH_TUNNEL_VNI": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_RULE": {
                 "ACL_RULE_LIST": [
@@ -2055,8 +2055,8 @@
                         "IP_TYPE": "IPv4ANY",
                         "RULE_NAME": "Rule_20",
                         "INNER_SRC_IP": "10.176.0.0/15",
-                        "PRIORITY": 1222,
-                        "VNI": 16777213,
+                        "PRIORITY": "1222",
+                        "TUNNEL_VNI": "16777213",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68"
                     }
                 ]
@@ -2107,9 +2107,9 @@
                     {
                         "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-NO-SRCIP",
                         "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
-                        "PRIORITY": 999960,
+                        "PRIORITY": "999960",
                         "RULE_NAME": "Rule_16",
-                        "VNI": 16777213
+                        "TUNNEL_VNI": "16777213"
                     }
                 ]
             },
@@ -2136,7 +2136,7 @@
                         ],
                         "MATCHES": [
                             "INNER_SRC_IP",
-                            "VNI"
+                            "TUNNEL_VNI"
                         ],
                         "BIND_POINTS": [
                             "PORT",

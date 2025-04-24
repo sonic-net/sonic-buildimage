@@ -62,6 +62,21 @@ function start_polaris()
     docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
 
     docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/share:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
+
+    if [ -f /boot/first_boot ]; then
+        device="/usr/share/sonic/device"
+        platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+        echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
+        python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+        rm /boot/first_boot
+    fi
+
+    sleep 5
+    INTERFACE="eth0-midplane"
+    if ip link show "$INTERFACE" &> /dev/null; then
+        echo "dhclient $INTERFACE"
+        /usr/sbin/dhclient $INTERFACE
+    fi
 }
 
 function start_dpu()
