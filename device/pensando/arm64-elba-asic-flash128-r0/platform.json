@@ -1,4 +1,12 @@
 {
-	"interfaces": {},
-	"DPU":{}
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x200G": ["etp1"]
+            }
+        }
+    },
+    "DPU":{}
 }
