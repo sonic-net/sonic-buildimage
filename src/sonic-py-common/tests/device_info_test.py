@@ -134,7 +134,7 @@ class TestDeviceInfo(object):
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
-        
+
         mock_platform_info.return_value = {"switch_type": "voq"}
         mock_is_disaggregated_chassis.return_value = True
         assert device_info.is_voq_chassis() == True
@@ -145,6 +145,14 @@ class TestDeviceInfo(object):
         mock_is_disaggregated_chassis.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == True
+        assert device_info.is_chassis() == True
+
+        mock_platform_info.return_value = {"switch_type": "dummy-sup",
+                                           "asic_type": "vs"}
+        mock_is_disaggregated_chassis.return_value = False
+        assert device_info.is_voq_chassis() == False
+        assert device_info.is_packet_chassis() == False
+        assert device_info.is_virtual_chassis() == True
         assert device_info.is_chassis() == True
 
         mock_platform_info.return_value = {}
