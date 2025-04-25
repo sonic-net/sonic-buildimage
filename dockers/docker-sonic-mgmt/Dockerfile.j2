@@ -138,7 +138,7 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && rm -fr nanomsg-1.2  \
     && rm -f 1.2.tar.gz
 
-RUN python3 -m pip install nnpy
+RUN python3 -m pip install nnpy --break-system-packages
 
 # Install docker-ce-cli
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
