@@ -20,6 +20,14 @@ pr:
     include:
     - dockers/docker-sonic-mgmt
 
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+
 parameters:
 - name: registry_url
   type: string
@@ -56,14 +64,52 @@ stages:
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: Build docker-sonic-mgmt.gz
-    - task: Docker@2
-      displayName: Upload image
-      inputs:
-        containerRegistry: ${{ parameters.registry_conn }}
-        repository: docker-sonic-mgmt
-        command: push
-        tags: py3only
+
     - publish:  $(Build.ArtifactStagingDirectory)
       artifact: 'docker-sonic-mgmt'
       displayName: "Archive docker image sonic-mgmt"
 
+  - job: validate_docker_image_and_upload
+    pool: sonicbld-1es
+    timeoutInMinutes: 360
+    dependsOn: Build
+    steps:
+      - checkout: sonic-mgmt
+        clean: true
+        fetchDepth: 0
+        displayName: 'Checkout sonic-mgmt'
+
+      - download: current
+        artifact: 'docker-sonic-mgmt'
+        displayName: "Download docker image sonic-mgmt"
+
+      - script: |
+          set -ex
+
+          docker load -i $(Pipeline.Workspace)/docker-sonic-mgmt/target/docker-sonic-mgmt.gz
+
+          cd ansible
+          sudo ./setup-management-network.sh -d
+          cd ../
+          docker rm -f sonic-mgmt
+
+          ./setup-container.sh -n sonic-mgmt -d /data -i docker-sonic-mgmt -v
+          docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
+        displayName: 'Setup sonic-mgmt docker container'
+
+      - bash: |
+          set -ex
+
+          docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:py3only
+        env:
+          REGISTRY_SERVER: ${{ parameters.registry_url }}
+        displayName: 'Tag docker-sonic-mgmt'
+
+      - task: Docker@2
+        displayName: Upload image
+        condition: succeeded()
+        inputs:
+          containerRegistry: ${{ parameters.registry_conn }}
+          repository: docker-sonic-mgmt
+          command: push
+          tags: py3only

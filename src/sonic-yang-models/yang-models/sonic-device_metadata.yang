@@ -99,8 +99,8 @@ module sonic-device_metadata {
 
                 leaf type {
                     type string {
-                        length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
+                        length 1..255;                        
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|SpineRouter|UpperSpineRouter|FabricSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
                     }
                 }
 
@@ -169,7 +169,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|LowerSpineRouter";
                     }
                 }
 
@@ -290,6 +290,15 @@ module sonic-device_metadata {
                     default "false";
                 }
 
+                leaf-list t2_group_asns {
+                    type inet:as-number;
+                    description "ASNs inner same group";
+                }
+
+                leaf-list anchor_route_source {
+                    type string;
+                    description "Set source of anchor route";
+                }
             }
             /* end of container localhost */
         }

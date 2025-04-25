@@ -42,8 +42,26 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtLeafRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
     },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
@@ -111,6 +129,9 @@
     },
     "DEVICE_METADATA_VALID_SUBTYPE3": {
         "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value LowerSpineRouter"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
@@ -197,7 +218,14 @@
     "DEVICE_METADATA_VALID_SLICE_TYPE": {
         "desc": "Verifying valid slice_type configuration."
     },
-    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
-        "desc": "Verifying nexthop_group configuration."
-     }
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "desc": "Verifying valid t2_group_asns."
+    },
+     "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+         "desc": "Verifying invalid t2_group_asns.",
+         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "desc": "Verifying valid anchor_route_source."
+    }
 }

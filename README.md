@@ -151,11 +151,11 @@ A good choice of OS for building SONiC is currently Ubuntu 20.04.
 ## Prerequisites
 
 * Install pip and jinja in host build machine, execute below commands
-   if j2/j2cli is not available:
+   if j2/jinjanator is not available:
 
 ```shell
 sudo apt install -y python3-pip
-pip3 install --user j2cli
+pip3 install --user jinjanator
 ```
 
 * Install [Docker](https://docs.docker.com/engine/install/) and configure your
@@ -288,6 +288,7 @@ make configure PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
   to enable http(s) proxy in the build process.
 * Add your user account to `docker` group and use your user account to make.
   `root` or `sudo` are not supported.
+* For more details on cross-compilation errors, please refer to [README.arm64_build_on_amd64.md](https://github.com/sonic-net/sonic-buildimage/blob/master/README.arm64_build_on_amd64.md)
 
 The SONiC installer contains all docker images needed.
 SONiC uses one image for all devices of a same ASIC vendor.

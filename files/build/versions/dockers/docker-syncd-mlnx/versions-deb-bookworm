@@ -41,7 +41,7 @@ linux-libc-dev==6.1.99-1
 mft==4.30.2-23
 mft-fwtrace-cfg==1.0.0
 mlnx-sai==1.mlnx.SAIBuild2411.2405.30.1
-openssh-client==1:9.2p1-2+deb12u4
+openssh-client==1:9.2p1-2+deb12u5
 openssl==3.0.15-1~deb12u1
 python-sdk-api==1.mlnx.4.6.4072
 python3-attr==22.2.0-1
@@ -69,8 +69,8 @@ sxd-libs==1.mlnx.4.6.4072
 sxd-libs-dev==1.mlnx.4.6.4072
 syncd==1.0.0
 syncd-dbgsym==1.0.0
-sys-sdk-dev==1.mlnx.4.7.2164
-sys-sdk-main==1.mlnx.4.7.2164
+sys-sdk-dev==1.mlnx.4.7.2202
+sys-sdk-main==1.mlnx.4.7.2202
 ucf==3.0043+nmu1+deb12u1
 vim==2:9.0.1378-2
 vim-runtime==2:9.0.1378-2

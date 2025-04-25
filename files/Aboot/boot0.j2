@@ -629,6 +629,10 @@ write_platform_specific_cmdline() {
     if in_array "$sid" "Shearwater4Mk2QuicksilverP" "Shearwater4Mk2NQuicksilverP"; then
         aboot_machine=arista_7060x6_64pe
     fi
+    if in_array "$sid" "Redstart8Mk2QuicksilverP512" "Redstart8Mk2NQuicksilverP512" \
+                "Redstart832Mk2QuicksilverP512" "Redstart832Mk2NQuicksilverP512"; then
+        aboot_machine=arista_7060x6_64pe_b
+    fi
 
     # disable cpu c-state other than C1
     local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"

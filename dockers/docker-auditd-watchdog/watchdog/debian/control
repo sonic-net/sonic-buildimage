@@ -1,0 +1,9 @@
+Source: sonic
+Maintainer: Mai Bui <maibui@microsoft.com>
+Section: net
+Priority: optional
+Standards-Version: 1.0.0
+
+Package: sonic-auditd-watchdog
+Architecture: any
+Description: auditd watchdog for KubeSONiC project
