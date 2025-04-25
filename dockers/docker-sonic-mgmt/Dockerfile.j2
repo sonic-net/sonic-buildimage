@@ -154,7 +154,7 @@ RUN mkdir -p /etc/apt/keyrings \
     && apt-get update && apt-get install -y azure-cli
 
 # Remove old python protobuf package if existing
-RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
+RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf --break-system-packages
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
