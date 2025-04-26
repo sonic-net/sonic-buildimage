@@ -67,7 +67,15 @@ static int bcmgenl_psample_qlen = BCMGENL_PSAMPLE_QLEN_DFLT;
 MODULE_PARAM(bcmgenl_psample_qlen, int, 0);
 MODULE_PARM_DESC(bcmgenl_psample_qlen, "psample queue length (default 1024 buffers)");
 
+#ifndef BCMGENL_PSAMPLE_METADATA
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0))
+#define BCMGENL_PSAMPLE_METADATA 1
+#else
+#define BCMGENL_PSAMPLE_METADATA 0
+#endif
+#endif
+
+#if BCMGENL_PSAMPLE_METADATA
 static inline void
 bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
                       u32 trunc_size, int in_ifindex, int out_ifindex,
@@ -82,7 +90,7 @@ bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
 }
 #else
 #define bcmgenl_sample_packet psample_sample_packet
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) */
+#endif /* BCMGENL_PSAMPLE_METADATA */
 
 static bcmgenl_info_t g_bcmgenl_psample_info = {{0}};
 

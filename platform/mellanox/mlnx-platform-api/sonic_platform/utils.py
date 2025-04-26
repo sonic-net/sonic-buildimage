@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -340,7 +340,7 @@ class Timer(threading.Thread):
         self.add_timer_event(timer_event, run_now)
 
     def add_timer_event(self, timer_event, run_now=True):
-        timestamp = time.time()
+        timestamp = time.monotonic()
         if not run_now:
             timestamp += timer_event.interval
 
@@ -356,7 +356,7 @@ class Timer(threading.Thread):
 
     def run(self):
         while not self._stop_event.is_set():
-            now = time.time()
+            now = time.monotonic()
             item = self._timestamp_queue.get()
             self._min_timestamp = item[0]
             if self._min_timestamp > now:

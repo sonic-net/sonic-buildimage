@@ -430,6 +430,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For audisp-tacplus
         libauparse-dev \
         auditd \
+# For sysmgr container build
+        libdbus-c++-dev \
 # For protobuf
         protobuf-compiler \
         libprotobuf-dev \
@@ -555,7 +557,7 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng
+RUN pip3 install jsonpath_ng pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in bookworm

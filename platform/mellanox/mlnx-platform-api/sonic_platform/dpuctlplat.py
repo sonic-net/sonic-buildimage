@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -206,8 +206,8 @@ class DpuCtlPlat():
                     return True
                 poll_obj = poll()
                 poll_obj.register(dir_fd, POLLIN)
-                start = time.time()
-                while (time.time() - start) < WAIT_FOR_PCI_DEV:
+                start = time.monotonic()
+                while (time.monotonic() - start) < WAIT_FOR_PCI_DEV:
                     events = poll_obj.poll(WAIT_FOR_PCI_DEV * 1000)
                     if events:
                         if os.path.exists(os.path.dirname(self.get_pci_dev_path())):
@@ -322,6 +322,9 @@ class DpuCtlPlat():
                 return_value = True
             elif forced:
                 return_value = self._power_on_force()
+            elif self.read_force_power_path() == int(OperationType.CLR.value):
+                self.log_info(f"Power on with Force=True since power off force sysfs is cleared")
+                return_value = self._power_on_force()
             else:
                 return_value = self._power_on()
             self.dpu_post_startup()
@@ -336,9 +339,6 @@ class DpuCtlPlat():
                 self.log_info(f"Skipping DPU power off as DPU is already powered off")
                 return True
             elif forced:
-                return self._power_off_force()
-            elif self.read_boot_prog() != BootProgEnum.OS_RUN.value:
-                self.log_info(f"Power off with force = True since since OS is not in running state on DPU")
                 return self._power_off_force()
             return self._power_off()
 
@@ -372,9 +372,6 @@ class DpuCtlPlat():
                 self.dpu_pre_shutdown()
             self.log_info(f"Reboot with force = {forced}")
             if forced:
-                return_value = self._reboot_force(no_wait)
-            elif self.read_boot_prog() != BootProgEnum.OS_RUN.value:
-                self.log_info(f"Reboot with force = True since OS is not in running state on DPU")
                 return_value = self._reboot_force(no_wait)
             else:
                 return_value = self._reboot(no_wait)
@@ -430,6 +427,9 @@ class DpuCtlPlat():
     def read_boot_prog(self):
         return utils.read_int_from_file(self.boot_prog_path, raise_exception=True)
 
+    def read_force_power_path(self):
+        return utils.read_int_from_file(self.pwr_f_path, raise_exception=True)
+
     def update_boot_prog_once(self, poll_var):
         """Read boot_progress and update the value once """
         poll_var.poll()
@@ -473,9 +473,9 @@ class DpuCtlPlat():
     @contextmanager
     def time_check_context(self, msg):
         if self.verbosity:
-            start_time = time.time()
+            start_time = time.monotonic()
             yield
-            end_time = time.time()
+            end_time = time.monotonic()
             self.log_info(f"Total time taken = {end_time - start_time} for {msg}")
             return
         yield

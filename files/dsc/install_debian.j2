@@ -15,7 +15,11 @@ image_dir=image-$image_version
 
 INSTALLER_PAYLOAD=fs.zip
 DOCKERFS_DIR=docker
+{% if BUILD_REDUCE_IMAGE_SIZE == "y" -%}
+FILESYSTEM_DOCKERFS=dockerfs.tar.zstd
+{%- else -%}
 FILESYSTEM_DOCKERFS=dockerfs.tar.gz
+{%- endif %}
 BL_CONF=boot.conf
 
 DATA_PARTUUID=6ED62003-DD8D-44B8-9538-0A2B7C7E628F

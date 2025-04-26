@@ -14,25 +14,25 @@
         "Ethernet224": {
             "dscp_to_tc_map": "AZURE",
             "tc_to_queue_map": "AZURE",
-            "tc_to_pg_map": "AZURE",
+            "tc_to_pg_map": "AZURE_DPC",
             "pfc_to_queue_map": "AZURE"
         },
         "Ethernet232": {
             "dscp_to_tc_map": "AZURE",
             "tc_to_queue_map": "AZURE",
-            "tc_to_pg_map": "AZURE",
+            "tc_to_pg_map": "AZURE_DPC",
             "pfc_to_queue_map": "AZURE"
         },
         "Ethernet240": {
             "dscp_to_tc_map": "AZURE",
             "tc_to_queue_map": "AZURE",
-            "tc_to_pg_map": "AZURE",
+            "tc_to_pg_map": "AZURE_DPC",
             "pfc_to_queue_map": "AZURE"
         },
         "Ethernet248": {
             "dscp_to_tc_map": "AZURE",
             "tc_to_queue_map": "AZURE",
-            "tc_to_pg_map": "AZURE",
+            "tc_to_pg_map": "AZURE_DPC",
             "pfc_to_queue_map": "AZURE"
         }
     },
@@ -391,25 +391,25 @@
             "profile": "ingress_lossy_profile"
         },
         "Ethernet224|3-4": {
-            "profile": "ingress_lossy_profile"
+            "profile": "NULL"
         },
         "Ethernet224|0": {
             "profile": "ingress_lossy_profile"
         },
         "Ethernet232|3-4": {
-            "profile": "ingress_lossy_profile"
+            "profile": "NULL"
         },
         "Ethernet232|0": {
             "profile": "ingress_lossy_profile"
         },
         "Ethernet240|3-4": {
-            "profile": "ingress_lossy_profile"
+            "profile": "NULL"
         },
         "Ethernet240|0": {
             "profile": "ingress_lossy_profile"
         },
         "Ethernet248|3-4": {
-            "profile": "ingress_lossy_profile"
+            "profile": "NULL"
         },
         "Ethernet248|0": {
             "profile": "ingress_lossy_profile"

@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -160,6 +160,42 @@ DEVICE_DATA = {
         },
         'sfp': {
             'fw_control_ports': [64]  # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5600_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn5610n-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
         }
     },
     'x86_64-nvidia_sn4280_simx-r0': {
@@ -366,16 +402,16 @@ class DeviceDataManager:
             return DEFAULT_WD_PERIOD
 
         return watchdog_data.get('max_period', None)
-    
+
     @classmethod
     @utils.read_only_cache()
     def get_always_fw_control_ports(cls):
         platform_data = DEVICE_DATA.get(cls.get_platform_name())
         if not platform_data:
             return None
-        
+
         sfp_data = platform_data.get('sfp')
         if not sfp_data:
             return None
-        
+
         return sfp_data.get('fw_control_ports')
