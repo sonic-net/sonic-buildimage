@@ -127,12 +127,12 @@
 [submodule "platform/vpp"]
 	path = platform/vpp
 	url = https://github.com/sonic-net/sonic-platform-vpp.git
-[submodule "src/sonic-framework/gnoi"]
-	path = src/sonic-framework/gnoi
-	url = https://github.com/openconfig/gnoi
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
 [submodule "platform/marvell-prestera/sonic-platform-marvell"]
 	path = platform/marvell-prestera/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "src/sonic-sysmgr/gnoi"]
+	path = src/sonic-sysmgr/gnoi
+	url = https://github.com/openconfig/gnoi
