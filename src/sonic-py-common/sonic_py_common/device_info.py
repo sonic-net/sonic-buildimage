@@ -615,9 +615,18 @@ def is_disaggregated_chassis():
                     return True
         return False
 
-    
+
+def is_virtual_chassis():
+    switch_type = get_platform_info().get('switch_type')
+    asic_type = get_platform_info().get('asic_type')
+    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+        return True
+    else:
+        return False
+
+
 def is_chassis():
-    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis()
+    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
 def is_smartswitch():
