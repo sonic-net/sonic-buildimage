@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          isc-dhcp-client \
                                          libffi-dev \
                                          libprotobuf-dev \
+                                         libprotoc-dev \
                                          libgrpc++-dev \
                                          libssl-dev \
                                          libxml2 \
@@ -40,6 +41,7 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          python3-setuptools \
                                          python3-wheel \
                                          python3-cffi \
+                                         python3-protobuf \
                                          pkg-config \
                                          rsyslog \
                                          shellcheck \
@@ -152,21 +154,6 @@ RUN mkdir -p /etc/apt/keyrings \
     && chmod go+r /etc/apt/keyrings/microsoft.gpg \
     && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update && apt-get install -y azure-cli
-
-# Remove old python protobuf package if existing
-RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf --break-system-packages
-# Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
-RUN mkdir -p /tmp/protobuf \
-    && cd /tmp/protobuf \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
-    && dpkg -i *.deb \
-    && rm -rf /tmp/protobuf
 
 ## Copy and install sonic-mgmt docker dependencies
 COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
