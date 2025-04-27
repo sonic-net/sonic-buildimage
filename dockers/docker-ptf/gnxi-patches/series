@@ -1,0 +1,7 @@
+0001-add-xpath_target-option.patch
+0002-Adding-support-for-subscribe-mode-1.patch
+0003-gNMI_client-Add-an-option-to-trigger-memory-spike-on.patch
+0004-Add-support-for-streaming-structured-events-in-night.patch
+0005-Enhance-gnmi_cli_py-4.patch
+0006-Add-support-for-extensive-configurations.patch
+0007-Fix-py_gnmicli.py-POLL-mode.patch

@@ -13,6 +13,10 @@ module sonic-acl {
 	import ietf-inet-types {
 		prefix inet;
 	}
+	
+	import ietf-yang-types {
+		prefix yang;
+	}
 
 	import sonic-types {
 		prefix stypes;
@@ -84,6 +88,11 @@ module sonic-acl {
 					}
 				}
 
+				leaf INNER_SRC_MAC_REWRITE_ACTION {
+					description "Inner Source Mac-adress rewrite action mapped to mac address";
+					type yang:mac-address;
+				}
+
 				leaf IP_TYPE {
 					type stypes:ip_type;
 				}
@@ -112,6 +121,11 @@ module sonic-acl {
 						}
 
 						leaf DST_IP {
+							type inet:ipv4-prefix;
+						}
+
+						leaf INNER_SRC_IP {
+							description "Source IP prefix for inner packet";
 							type inet:ipv4-prefix;
 						}
 					}
@@ -253,6 +267,11 @@ module sonic-acl {
 					type uint16 {
 						range 1..4094;
 					}
+				}
+
+				leaf TUNNEL_VNI {
+					description "VXLAN Network Identifier";
+					type stypes:vnid_type;
 				}
 
 				leaf PCP {

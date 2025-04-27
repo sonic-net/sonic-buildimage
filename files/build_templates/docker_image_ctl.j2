@@ -111,7 +111,12 @@ function preStartAction()
         systemctl stop watchdog-control.service
     fi
 {%- elif docker_container_name == "snmp" %}
-    $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    if decode-syseeprom -s > /dev/null 2>&1; then
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    else
+        echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -166,6 +171,7 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 function postStartAction()
 {
 {%- if docker_container_name == "database" %}
+    midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -201,11 +207,26 @@ function postStartAction()
            ip link set dev ns-eth1"$NET_NS" netns "$NET_NS"
            ip netns exec "$NET_NS" ip link set ns-eth1"$NET_NS" name eth1
 
+           if [[ -n "$lc_ip_offset" ]]; then
+	       # Use ip offset provided by platform vendor via chassisdb.conf to prevent any conflict
+	       # with any platform IP range, e.g., LC eth1-midplane IP.
+               ip_offset=$lc_ip_offset
+           else
+	       # If Vendor has not provided an ip offset, Use 10 as default offset. Platform vendor should
+	       # ensure there is no conflict with platform IP range for any slot.
+               ip_offset=10
+           fi
+
            # Configure IP address and enable eth1
-           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + 10))
+           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + $ip_offset))
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
            ip netns exec "$NET_NS" ip link set dev eth1 up
+
+           # Don't run for supervisor
+           if [[ "${slot_id}" != "${supervisor_slot_id}" ]]; then
+                   midplane_ip=$slot_ip_address
+           fi
 
            # Allow localnet routing on the new interfaces if midplane is using a
            # subnet in the 127/8 range.
@@ -283,7 +304,7 @@ function postStartAction()
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]]; then
+        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
            tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
            if [[ -n "$tsa_cfg" ]]; then
               docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
@@ -309,6 +330,14 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+
+    if [[ $DEV && $midplane_ip ]]; then
+        IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
+        bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
+        redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
+        redis-cli -h $ip -p $port config rewrite
+    fi
+
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
@@ -378,6 +407,7 @@ start() {
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
     fi
+
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
@@ -662,7 +692,7 @@ start() {
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
-        --shm-size=${SYNCD_SHM_SIZE:-64m} \
+        --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
 {%- endif %}
 {%- endif %}

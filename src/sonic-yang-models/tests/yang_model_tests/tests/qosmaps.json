@@ -111,6 +111,14 @@
         "eStrKey": "Pattern"
     },
 
+    "PORT_QOS_MAP_APPLY_EMPTY_PFC": {
+        "desc": "Configure port pfc enable with empty string to disable PFC on all queues."
+    },
+
+    "PORT_QOS_MAP_APPLY_EMPTY_PFCWD": {
+        "desc": "Configure port pfcwd_sw_enable with empty string to disable watchdog on all queues."
+    },
+
     "TC_TO_DSCP_MAP_CRETAE": {
         "desc": "Configure a Traffic class to DSCP map."
     },

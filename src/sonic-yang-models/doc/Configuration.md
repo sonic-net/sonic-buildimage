@@ -25,6 +25,7 @@
   * [Console](#console)
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
+  * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -928,6 +929,42 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 }
 ```
 
+### DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON
+
+These tables contain information on drop counters which have been added
+
+DEBUG_COUNTER:
+```
+; DEBUG_COUNTER table
+
+key             = DEBUG_COUNTER_TABLE:name
+name            = string
+type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias           = string (optional)
+description     = string (optional)
+group           = string (optional)
+
+"DEBUG_COUNTER": {
+    "DEBUG_4": {
+        "alias": "BAD_DROPS",
+        "desc": "More port ingress drops",
+        "group": "BAD",
+        "type": "SWITCH_INGRESS_DROPS"
+    }
+}
+```
+```
+; DEBUG_COUNTER_DROP_REASON table
+
+key     = DEBUG_COUNTER_DROP_REASON_TABLE:name:reason
+name    = name of a counter in the DEBUG_COUNTER_TABLE
+reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (https://github.com/sonic-net/sonic-swss/blob/7a965caf4c7211afca5303191cf731858c791bcd/orchagent/debug_counter/drop_counter.cpp#L20)
+
+"DEBUG_COUNTER_DROP_REASON": {
+    "DEBUG_4|DIP_LINK_LOCAL": {},
+    "DEBUG_4|SIP_LINK_LOCAL": {}
+}
+```
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
@@ -1271,7 +1308,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "lag_hash": [
                 "DST_MAC",
@@ -1289,7 +1327,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "ecmp_hash_algorithm": "CRC",
             "lag_hash_algorithm": "CRC"
@@ -3037,42 +3076,51 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 }
 ```
 
-### DPU PORT Configuration^M
+### DPU Configuration
 
-The **DPU_PORT** table introduces the configuration for the DPUs(Data Processing Unit) PORT information available on the platform.
+The **DPU** table introduces the configuration for the DPUs(Data Processing Unit) information available on the platform.
 
 ```json
 {
-    "DPU_PORT": {
-        "dpu0": {
+    "DPU": {
+        "str-8102-t1-dpu0": {
             "state": "up",
+            "local_port": "Ethernet228",
             "vip_ipv4": "192.168.1.1",
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "dpu_id": "0",
             "vdpu_id": "vdpu0",
-            "gnmi_port": "50052"
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
         },
-        "dpu1": {
+        "str-8102-t1-dpu1": {
             "state": "down",
+            "local_port": "Ethernet232",
             "vip_ipv4": "192.168.1.2",
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "dpu_id": "1",
             "vdpu_id": "vdpu1",
-            "gnmi_port": "50052"
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
         }
     }
 }
 ```
 
 **state**: Administrative status of the DPU (`up` or `down`).
+**local_port**: local port mapped to DPU port on the switch.
 **vip_ipv4**: VIP IPv4 address from minigraph.
 **vip_ipv6**: VIP IPv6 address from minigraph.
 **pa_ipv4**: PA IPv4 address from minigraph.
 **pa_ipv6**: PA IPv6 address from minigraph.
+**dpu_id**: Id of the DPU from minigraph.
 **vdpu_id**: ID of VDPUs from minigraph.
-**gnmi_port**: Port gNMI runs on.
+**gnmi_port**: TCP listening port for gnmi service on DPU.
+**orchagent_zmq_port**: TCP listening port for ZMQ service on DPU orchagent.
 
 # For Developers
 

@@ -82,6 +82,13 @@
 {% endif %}
 {%- endfor %}
 
+{%- set LOSSLESS_TC = [] %}
+{%- if generate_lossless_tc_list is defined %}
+    {{- generate_lossless_tc_list(LOSSLESS_TC) }}
+{%- else %}
+    {%- set LOSSLESS_TC = ['3','4'] %}
+{%- endif %}
+
 {%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
@@ -125,6 +132,9 @@
         }
     },
 {% endif %}
+{% if (generate_pfc_to_queue_map is defined) %}
+    {{- generate_pfc_to_queue_map() }}
+{% else %}
     "MAP_PFC_PRIORITY_TO_QUEUE": {
         "AZURE": {
             "0": "0",
@@ -137,6 +147,7 @@
             "7": "7"
         }
     },
+{% endif %}
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
 {% elif (generate_tc_to_queue_map_per_sku is defined) %}
@@ -252,6 +263,9 @@
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
 {% endif %}
+{% if (generate_scheduler_config is defined) %}
+    {{- generate_scheduler_config() }}
+{% else %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -304,6 +318,7 @@
         }
     },
 {% endif %}
+{% endif %}
 {% if asic_type in pfc_to_pg_map_supported_asics  %}
     "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
 {% if port_names_list_extra_queues|length > 0 %}
@@ -320,6 +335,9 @@
         }
     },
 {% endif %}
+{% if (generate_port_qos_map is defined) %}
+    {{- generate_port_qos_map(port_names_active) }}
+{% else %}
     "PORT_QOS_MAP": {
 {% if generate_global_dscp_to_tc_map is defined %}
         {{- generate_global_dscp_to_tc_map() }}
@@ -364,9 +382,9 @@
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
-            "pfc_enable"      : "3,4",
+            "pfc_enable"      : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4",
+            "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
 {% if port not in PORT_DPC %}
             "tc_to_pg_map"    : "AZURE",
@@ -378,6 +396,7 @@
 
 {% endfor %}
     },
+{% endif %}
 {% if generate_wred_profiles is defined %}
     {{- generate_wred_profiles() }}
 {% else %}
@@ -446,6 +465,8 @@
         {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }
+{% elif generate_queue_config is defined %}
+    {{- generate_queue_config(port_names_active) }}
 {% else %}
    "QUEUE": {
 {% if 'type' in DEVICE_METADATA['localhost'] and

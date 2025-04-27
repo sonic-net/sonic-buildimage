@@ -72,10 +72,14 @@ class Directory(object):
         slot = self.get_slot_name(db, table)
         self.data[slot][key] = value
         if slot in self.notify:
+            handlers_to_run = []
+
             for path in self.notify[slot].keys():
                 if self.path_exist(db, table, path):
-                    for handler in self.notify[slot][path]:
-                        handler()
+                    handlers_to_run += self.notify[slot][path]
+
+            for handler in handlers_to_run:
+                handler()
 
     def get(self, db, table, key):
         """

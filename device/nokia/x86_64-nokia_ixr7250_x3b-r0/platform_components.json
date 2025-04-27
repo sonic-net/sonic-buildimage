@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "Nokia-IXR7250-X3B": {
+            "component": {
+                "FPGA2": {},
+                "FPGA1": {},
+                "BIOS": {}
+            }
+        }
+    }
+}
