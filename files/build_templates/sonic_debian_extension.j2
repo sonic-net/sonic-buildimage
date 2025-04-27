@@ -258,14 +258,9 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark manu
 # Install systemd-python for SONiC host services
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install systemd-python
 
-if [[ $CONFIGURED_ARCH == armhf ]]; then
-    # Install pygobject from apt repos, since it has armhf prebuilt. The version in Debian is
-    # a bit older than what is in pip.
-    #
-    # When doing the next Debian upgrade (to Trixie), consider installing this package for all
-    # architectures instead of just armhf.
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
-fi
+# Install pygobject from apt repos. The version in Debian is
+# a bit older than what is in pip, but it should be fine.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
 
 # Install SONiC host services package
 install_pip_package {{sonic_host_services_py3_wheel_path}}
