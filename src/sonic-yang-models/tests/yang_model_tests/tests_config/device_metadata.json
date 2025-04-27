@@ -669,5 +669,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_ORCH_ZMQ_TABLES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_zmq_tables": ["ROUTE_TABLE"]
+                }
+            }
+        }
     }
 }
