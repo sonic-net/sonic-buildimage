@@ -26,20 +26,20 @@ setup(
       'smartswitch-azs.py'
     ],
     install_requires = [
-        'pyroute2==0.7.2',
+        'pyroute2',
         'netifaces==0.11.0',
         'sonic-py-common'
     ],
     tests_require = [
         'pytest>3',
         'xmltodict==0.12.0',
-        'ijson==2.6.1'
+        'ijson'
     ],
     extras_require = {
         'testing': [
             'pytest>3',
             'xmltodict==0.12.0',
-            'ijson==2.6.1'
+            'ijson'
         ],
     },
     setup_requires = [

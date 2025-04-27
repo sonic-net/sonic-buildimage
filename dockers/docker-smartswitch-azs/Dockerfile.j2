@@ -18,7 +18,7 @@ RUN apt-get update &&     \
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 RUN pip3 install \
-         pyroute2==0.7.2 \
+         pyroute2 \
          netifaces==0.11.0
 
 {% if docker_smartswitch_azs_debs.strip() -%}
