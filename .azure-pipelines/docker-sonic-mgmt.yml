@@ -96,6 +96,14 @@ stages:
         docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
       displayName: 'Setup sonic-mgmt docker container and verify'
 
+    - bash: |
+        set -ex
+
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:latest
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Tag docker-sonic-mgmt'
+
     - task: Docker@2
       displayName: Upload image
       condition: succeeded()
