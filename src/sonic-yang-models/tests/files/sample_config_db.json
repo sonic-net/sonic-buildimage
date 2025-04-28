@@ -1415,13 +1415,13 @@
         "GNMI_CLIENT_CERT": {
             "testcert1": {
                 "role": [
-			"RW"
-		]
+                        "RW"
+                ]
             },
             "testcert2": {
                 "role": [
-			"RO"
-		]
+                        "RO"
+                ]
             }
         },
         "TUNNEL": {
