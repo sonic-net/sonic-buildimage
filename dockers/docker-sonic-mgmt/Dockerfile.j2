@@ -196,6 +196,9 @@ RUN chmod go= /var/$user/.ssh -R
 # Add user to sudoers
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
 
+# To avoid uid conflict, we will delete user ubuntu
+RUN userdel ubuntu
+
 USER $user
 WORKDIR /var/$user
 
