@@ -10,3 +10,6 @@
 
 ## Set failure mode to syslog
 -f 1
+
+## Set auditd rate limit
+-r 1000
