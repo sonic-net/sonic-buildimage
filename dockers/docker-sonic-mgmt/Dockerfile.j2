@@ -197,7 +197,8 @@ RUN chmod go= /var/$user/.ssh -R
 # Add user to sudoers
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
 
-# To avoid uid conflict, we will delete user ubuntu
+# There is a non-root user ubuntu in ubuntu24.04, whose uid is also 1000
+# To avoid conflict, we will delete this default user
 RUN userdel ubuntu
 
 USER $user
