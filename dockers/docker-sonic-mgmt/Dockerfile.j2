@@ -126,7 +126,8 @@ RUN python3 -m pip install --break-system-packages --verbose \
                  tabulate \
                  textfsm \
                  thrift \
-                 virtualenv
+                 virtualenv \
+                 debugpy
 
 RUN wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
