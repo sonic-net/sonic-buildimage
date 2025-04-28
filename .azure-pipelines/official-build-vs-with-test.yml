@@ -30,7 +30,12 @@ resources:
       ref: master
 
 variables:
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
   - template: .azure-pipelines/template-variables.yml@buildimage
+  - name: CACHE_MODE
+    value: rcache
+  - name: ENABLE_FIPS
+    value: y
   - name: BUILD_BRANCH
     value: $(Build.SourceBranchName)
 
