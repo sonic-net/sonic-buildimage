@@ -8,10 +8,12 @@ import logging
 import math
 import os
 import re
+import shutil
 import signal
 import socket
 import sys
 import syslog
+import tempfile
 import threading
 import time
 import traceback
@@ -747,6 +749,92 @@ class MemoryStatisticsCollector:
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
+    # def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
+    #     """
+    #     Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
+        
+    #     :param total_dict: Dictionary containing total memory statistics.
+    #     :param individual_list: List containing individual memory statistics entries.
+    #     :param total_filepath: Path to the total memory statistics file.
+    #     :param individual_filepath: Path to the individual memory statistics file.
+    #     :raises TypeError: If inputs are not of expected types.
+    #     :raises OSError: If file writing fails.
+    #     """
+    #     if not isinstance(total_dict, dict):
+    #         error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
+    #         logger.log_error(error_message)
+    #         raise TypeError(error_message)
+    #     if not isinstance(individual_list, list):
+    #         error_message = f"Invalid individual_list type: {type(individual_list)}. Expected list."
+    #         logger.log_error(error_message)
+    #         raise TypeError(error_message)
+    #     if not all(isinstance(x, str) for x in [total_filepath, individual_filepath]):
+    #         error_message = "Filepaths must be strings."
+    #         logger.log_error(error_message)
+    #         raise TypeError(error_message)
+
+    #     current_time = datetime.now()
+    #     retention_threshold = timedelta(days=self.retention_period)
+
+    #     if SYSTEM_MEMORY_KEY not in total_dict:
+    #         total_dict[SYSTEM_MEMORY_KEY] = {
+    #             'count': 0,
+    #             'timestamp': Utility.fetch_current_date()
+    #         }
+
+    #     categories_to_remove = []
+    #     for category in total_dict[SYSTEM_MEMORY_KEY]:
+    #         if category not in ['count', 'timestamp']:
+    #             category_data = total_dict[SYSTEM_MEMORY_KEY][category]
+    #             if isinstance(category_data, dict) and 'timestamp' in category_data:
+    #                 try:
+    #                     entry_time = datetime.fromisoformat(category_data['timestamp'])
+    #                     if current_time - entry_time > retention_threshold:
+    #                         logger.log_info(f"Deleting outdated total entry for category: {category}")
+    #                         categories_to_remove.append(category)
+    #                 except (ValueError, TypeError) as e:
+    #                     logger.log_error(f"Error processing timestamp for total category {category}: {e}")
+
+    #     for category in categories_to_remove:
+    #         del total_dict[SYSTEM_MEMORY_KEY][category]
+
+    #     total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
+    #         k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
+    #         if k not in ['count', 'timestamp']
+    #     ])
+
+    #     retained_entries = []
+    #     for entry in individual_list:
+    #         try:
+    #             entry_time = datetime.fromisoformat(entry['current_time'])
+    #             if current_time - entry_time <= retention_threshold:
+    #                 retained_entries.append(entry)
+    #             else:
+    #                 logger.log_info(f"Deleting outdated individual entry with timestamp: {entry['current_time']}")
+    #         except (ValueError, TypeError, KeyError) as e:
+    #             logger.log_error(f"Error processing individual entry timestamp: {e}")
+    #             continue
+
+    #     try:
+    #         with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
+    #             json.dump(total_dict, jfile)
+    #         logger.log_info(f"Updated total memory statistics file: {total_filepath}")
+    #     except OSError as e:
+    #         logger.log_error(f"Failed to write updated total memory statistics to {total_filepath}: {e}")
+    #         raise
+
+    #     try:
+    #         with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
+    #             json.dump(retained_entries, jfile)
+    #         logger.log_info(f"Updated individual memory statistics file: {individual_filepath}")
+    #     except OSError as e:
+    #         logger.log_error(f"Failed to write updated individual memory statistics to {individual_filepath}: {e}")
+    #         raise
+
+
+
+
+
     def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
         """
         Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
@@ -756,7 +844,8 @@ class MemoryStatisticsCollector:
         :param total_filepath: Path to the total memory statistics file.
         :param individual_filepath: Path to the individual memory statistics file.
         :raises TypeError: If inputs are not of expected types.
-        :raises OSError: If file writing fails.
+        :raises OSError: If file reading, writing, or renaming fails.
+        :raises json.JSONDecodeError: If existing files contain invalid JSON.
         """
         if not isinstance(total_dict, dict):
             error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
@@ -771,9 +860,21 @@ class MemoryStatisticsCollector:
             logger.log_error(error_message)
             raise TypeError(error_message)
 
+        # Validate existing file integrity
+        for filepath in [total_filepath, individual_filepath]:
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+                try:
+                    with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
+                        json.load(jfile)
+                    logger.log_info(f"Validated JSON integrity of file: {filepath}")
+                except (OSError, json.JSONDecodeError) as e:
+                    logger.log_error(f"Invalid or corrupted JSON in {filepath}: {e}")
+                    raise json.JSONDecodeError(f"Corrupted JSON in {filepath}: {str(e)}", "", 0)
+
         current_time = datetime.now()
         retention_threshold = timedelta(days=self.retention_period)
 
+        # Process total_dict
         if SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {
                 'count': 0,
@@ -797,37 +898,62 @@ class MemoryStatisticsCollector:
             del total_dict[SYSTEM_MEMORY_KEY][category]
 
         total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
-            k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
+            k for k in total_dict[SYSTEM_MEMORY_KEY].keys()
             if k not in ['count', 'timestamp']
         ])
 
-        retained_entries = []
-        for entry in individual_list:
+        # Batch deletion for individual_list
+        original_len = len(individual_list)
+        indices_to_remove = []
+        for i, entry in enumerate(individual_list):
             try:
                 entry_time = datetime.fromisoformat(entry['current_time'])
-                if current_time - entry_time <= retention_threshold:
-                    retained_entries.append(entry)
-                else:
-                    logger.log_info(f"Deleting outdated individual entry with timestamp: {entry['current_time']}")
+                if current_time - entry_time > retention_threshold:
+                    logger.log_info(f"Marking outdated individual entry for deletion with timestamp: {entry['current_time']}")
+                    indices_to_remove.append(i)
             except (ValueError, TypeError, KeyError) as e:
-                logger.log_error(f"Error processing individual entry timestamp: {e}")
-                continue
+                logger.log_error(f"Error processing individual entry timestamp at index {i}: {e}")
+                indices_to_remove.append(i)  # Remove invalid entries to prevent future errors
 
-        try:
-            with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
-                json.dump(total_dict, jfile)
-            logger.log_info(f"Updated total memory statistics file: {total_filepath}")
-        except OSError as e:
-            logger.log_error(f"Failed to write updated total memory statistics to {total_filepath}: {e}")
-            raise
+        # Delete entries in reverse order to avoid index shifting
+        for i in sorted(indices_to_remove, reverse=True):
+            individual_list.pop(i)
 
+        removed_entries = original_len - len(individual_list)
+        logger.log_info(f"Retention policy enforced: Removed {removed_entries} individual entries and {len(categories_to_remove)} total categories")
+
+        # Write total_dict to a temporary file and atomically rename
+        temp_file_path = None
         try:
-            with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
-                json.dump(retained_entries, jfile)
-            logger.log_info(f"Updated individual memory statistics file: {individual_filepath}")
-        except OSError as e:
-            logger.log_error(f"Failed to write updated individual memory statistics to {individual_filepath}: {e}")
-            raise
+            with tempfile.NamedTemporaryFile(mode='wt', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wt', fileobj=temp_file, compresslevel=6) as gz_file:
+                    json.dump(total_dict, gz_file)
+            logger.log_info(f"Successfully wrote total memory statistics to temporary file: {temp_file_path}")
+            shutil.move(temp_file_path, total_filepath)
+            logger.log_info(f"Atomically renamed {temp_file_path} to {total_filepath}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write or rename total memory statistics: {e}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)  # Clean up temporary file
+            raise OSError(f"Failed to update total memory statistics file: {e}")
+
+        # Write individual_list to a temporary file and atomically rename
+        temp_file_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wt', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wt', fileobj=temp_file, compresslevel=6) as gz_file:
+                    json.dump(individual_list, gz_file)
+            logger.log_info(f"Successfully wrote individual memory statistics to temporary file: {temp_file_path}")
+            shutil.move(temp_file_path, individual_filepath)
+            logger.log_info(f"Atomically renamed {temp_file_path} to {individual_filepath}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write or rename individual memory statistics: {e}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)  # Clean up temporary file
+            raise OSError(f"Failed to update individual memory statistics file: {e}")
+
 
     def collect_and_store_memory_usage(self, collect_only: bool):
         """
