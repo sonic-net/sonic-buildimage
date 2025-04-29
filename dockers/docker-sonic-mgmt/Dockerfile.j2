@@ -62,7 +62,7 @@ RUN python3 -m pip install aiohttp \
                  ipaddr \
                  ipython==8.12.2 \
                  ixload \
-                 ixnetwork-restpy==1.0.64 \
+                 ixnetwork-restpy==1.6.1 \
                  ixnetwork-open-traffic-generator==0.0.79 \
                  jinja2==3.1.2 \
                  jsonpatch \
@@ -104,13 +104,13 @@ RUN python3 -m pip install aiohttp \
                  scapy==2.5.0 \
                  setuptools-rust \
                  six \
-                 snappi==0.9.1 \
-                 snappi-convergence==0.4.1 \
-                 snappi-ixnetwork==0.9.1 \
+                 snappi==1.27.1 \
+                 snappi-ixnetwork==1.27.2 \
                  tabulate \
                  textfsm==1.1.2 \
                  thrift==0.11.0 \
                  virtualenv \
+                 debugpy \
     && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
     && cd nanomsg-1.2      \
@@ -149,7 +149,7 @@ RUN python2 -m pip install allure-pytest==2.8.22 \
                 ixnetwork-restpy==1.0.64 \
                 ixnetwork-open-traffic-generator==0.0.79 \
                 snappi_ixload==0.0.5 \
-                jinja2==3.1.2 \
+                jinja2==2.10.1 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
                 lxml \
@@ -287,7 +287,7 @@ RUN chmod +x start.sh \
     && ln -sf `which pip3` /usr/bin/pip \
     && ln -sf `which pip3` /usr/local/sbin/pip \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
-    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
 
 USER $user
