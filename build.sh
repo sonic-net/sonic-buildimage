@@ -14,6 +14,7 @@ OPTIONS:
   -s, --submodule       ; test submodule patch function
       --rpc-dnx         ; build dnx syncd rpc image only
       --rpc-xgs         ; build xgs syncd rpc image only
+      --features        ; apply features function
 "
   exit $1
 }
@@ -27,7 +28,7 @@ OPTIONS:
 TEMP=`
 getopt \
 -o hcs \
--l help,configure,rpc-dnx,rpc-xgs,submodule \
+-l help,configure,rpc-dnx,rpc-xgs,submodule,features \
 --name="$prog" \
 -- "$@" \
 `
@@ -39,6 +40,7 @@ eval set -- "$TEMP"
 # default options
 opt_configure=0
 opt_submodule_test=0
+opt_features=0
 opt_rpc_dnx=0
 opt_rpc_xgs=0
 debug=echo
@@ -50,6 +52,7 @@ while true; do
     -s | --submodule_add)  opt_submodule_test=1; shift ;;
          --rpc-dnx )       opt_rpc_dnx=1; shift ;;
          --rpc-xgs )       opt_rpc_xgs=1; shift ;;
+         --features)       opt_features=1; shift ;;
     --        )        shift;  break ;;
     *         )        break ;;
   esac
@@ -137,6 +140,15 @@ submodule_prs () {
   apply_patch_files
 }
 
+features()
+{
+  if [ $opt_features -ne 0 ]; then
+    echo "applying features"
+    echo INCLUDE_STP=y >> rules/config
+    # patch code and/or export env variables that alter build
+  fi
+}
+
 make init
 
 configure()
@@ -159,6 +171,7 @@ build()
   case $mach in
     x86_64)
       submodule_prs
+      features
       make target/sonic-broadcom.bin || \
         ( rm -f target/*.bin && make target/sonic-broadcom.bin )
       ;;
@@ -167,6 +180,7 @@ build()
         ( rm -f target/*.bin && make target/sonic-marvell-prestera-armhf.bin )
       ;;
     aarch64)
+      features
       make target/sonic-marvell-prestera-arm64.bin || \
         ( rm -f target/*.bin && make target/sonic-marvell-prestera-arm64.bin )
       ;;

@@ -91,7 +91,7 @@ configure:sonic:aarch64:
       done
       exit 0
     fi
-    ./build.sh
+    ./build.sh ${BUILD_SH_OPTIONS}
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
     paths:
@@ -134,6 +134,30 @@ build:sonic:aarch64:
   variables:
     BUILD_ARCH: aarch64
     TARGET_BIN: sonic-marvell-arm64.bin
+
+build:sonic:features:x86_64:
+  extends: .build:sonic
+  when: manual
+  needs:
+    - configure:sonic:x86_64
+  variables:
+    BUILD_ARCH: x86_64
+    TARGET_BIN: sonic-broadcom.bin
+    BUILD_SH_OPTIONS: " --features"
+  after_script:
+    - mv target/sonic-broadcom.bin target/sonic-broadcom-features.bin
+
+build:sonic:features:aarch64:
+  extends: .build:sonic
+  when: manual
+  needs:
+    - configure:sonic:aarch64
+  variables:
+    BUILD_ARCH: aarch64
+    TARGET_BIN: sonic-marvell-arm64.bin
+    BUILD_SH_OPTIONS: " --features"
+  after_script:
+    - mv target/sonic-marvell-arm64.bin target/sonic-marvell-arm64-features.bin
 
 .build:brcm-rpc:
   stage: build
@@ -562,3 +586,13 @@ post:sonic:aarch64:
   extends: .post
   needs:
     - build:sonic:aarch64
+
+post:sonic:features:x86_64:
+  extends: .post
+  needs:
+    - build:sonic:features:x86_64
+
+post:sonic:features:aarch64:
+  extends: .post
+  needs:
+    - build:sonic:features:aarch64
