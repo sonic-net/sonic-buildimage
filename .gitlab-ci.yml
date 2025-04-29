@@ -18,17 +18,16 @@ variables:
   DOCKER_EXTRA_OPTS: '--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
   LEAN: "false" # set true to stub out most jobs, useful for debugging this file
 
-before_script: |
-  sudo rm -fr fsroot
-  rm -f .gitconfig && touch $HOME/.gitconfig
-  git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net/".insteadOf "git@gitlabsr.nuq.ion.nokia.net:"
-  # commit title with things in brackets e.g. "[skip build] some change" will create variables, e.g. skip_build=1
-  touch .ci-env
-  echo $CI_COMMIT_TITLE | sed 's,[ -/:],_,g' | awk -v FS='(\\[|\\])' '{if($2!="")print $2"=1"}' > .ci-env
-  ./.gitlab-ci-submodule-init.sh
-  # always use latest of these submodules
-  pushd altos && git fetch && git reset --hard origin/master && popd
-  echo "PLUTO_POSTED_LATEST: ${PLUTO_POSTED_LATEST}"
+.global_script:
+  git_config: |
+    sudo rm -fr fsroot
+    rm -f .gitconfig && touch $HOME/.gitconfig
+    git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net/".insteadOf "git@gitlabsr.nuq.ion.nokia.net:"
+    touch .ci-env
+    echo $CI_COMMIT_TITLE | sed 's,[ -/:],_,g' | awk -v FS='(\\[|\\])' '{if($2!="")print $2"=1"}' > .ci-env
+    ./.gitlab-ci-submodule-init.sh
+    pushd altos && git fetch && git reset --hard origin/master && popd
+    echo "PLUTO_POSTED_LATEST: ${PLUTO_POSTED_LATEST}"
 
 stages:
   - configure
@@ -45,6 +44,8 @@ stages:
     - branches
   tags:
     - ${BUILD_ARCH}
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
@@ -75,6 +76,8 @@ configure:sonic:aarch64:
     - branches
   tags:
     - ${BUILD_ARCH}
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
@@ -94,6 +97,19 @@ configure:sonic:aarch64:
     paths:
       - target/sonic-*.bin
     expire_in: 1 week
+
+build:sonic-gbsyncd:x86_64:
+  extends: .build:sonic
+  needs:
+    - configure:sonic:x86_64
+  before_script:
+    - !reference [.global_script, git_config]
+    - sed -i 's,^$(LIBSAI_MILLENIOB)_URL =,$(LIBSAI_MILLENIOB)_URL ="http://sonic-pluto.wfr.ion.nokia.net/files/sonic/build/pai/pai-3.14/1003120/libsaimilleniob_$(LIBSAI_MILLENIOB_VERSION)~13_amd64.deb",'  platform/components/docker-gbsyncd-milleniob.mk
+  variables:
+    BUILD_ARCH: x86_64
+    TARGET_BIN: sonic-broadcom.bin
+  after_script:
+    - mv target/sonic-broadcom.bin target/sonic-broadcom-gbsyncd.bin
 
 build:sonic:x86_64:
   extends: .build:sonic
@@ -125,6 +141,8 @@ build:sonic:aarch64:
     - branches
   tags:
     - ${BUILD_ARCH}
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
@@ -169,6 +187,8 @@ express:chassis7:
   needs:
     - build:sonic:x86_64
   when: manual
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
@@ -187,6 +207,8 @@ express:chassis7:
 
 .regress:
   stage: test
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     if [ -n "${DELAY_START}" ]; then sleep ${DELAY_START}; fi
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
@@ -491,8 +513,11 @@ regress:t2:chassis20:
     - branches
   tags:
     - post
+  before_script:
+    - !reference [.global_script, git_config]
   script: |
     . .ci-env
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       exit 0
     fi
@@ -517,6 +542,11 @@ post:brcm-rpc-dnx:x86_64:
   extends: .post
   needs:
     - build:brcm-rpc-dnx:x86_64
+
+post:sonic-gbsyncd:x86_64:
+  extends: .post
+  needs:
+    - build:sonic-gbsyncd:x86_64
 
 post:sonic:x86_64:
   extends: .post
