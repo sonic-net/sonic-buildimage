@@ -593,16 +593,325 @@ class MemoryReportGenerator:
         return fmt + header
 
 
-class MemoryStatisticsCollector:
-    """
-    This class handles system memory statistics collection, management, and retention. It initializes with a specified
-    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
-    it is retained. Methods include `fetch_memory_statistics()` to gather memory data using `psutil`, 
-    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
-    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
-    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
-    """
+# class MemoryStatisticsCollector:
+#     """
+#     This class handles system memory statistics collection, management, and retention. It initializes with a specified
+#     sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
+#     it is retained. Methods include `fetch_memory_statistics()` to gather memory data using `psutil`, 
+#     `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
+#     to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
+#     and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+#     """
 
+#     def __init__(self, sampling_interval: int, retention_period: int):
+#         """
+#         Initializes MemoryStatisticsCollector with data collection interval and retention period.
+
+#         :param sampling_interval: Interval between data collections in minutes (3 to 15).
+#         :param retention_period: Data retention period in days (1 to 30).
+#         :raises ValueError: If sampling_interval or retention_period is out of valid range.
+#         """
+#         if not (3 <= sampling_interval <= 15):
+#             raise ValueError("Sampling interval must be between 3 and 15 minutes.")
+#         if not (1 <= retention_period <= 30):
+#             raise ValueError("Retention period must be between 1 and 30 days.")
+
+#         self.sampling_interval = sampling_interval
+#         self.retention_period = retention_period
+
+#     def fetch_memory_statistics(self):
+#         """
+#         Collect memory statistics using psutil.
+        
+#         :return: Dictionary containing memory statistics.
+#         :raises RuntimeError: If psutil fails to collect memory data.
+#         """
+#         try:
+#             memory_data = psutil.virtual_memory()
+#             memory_stats = {
+#                 'total_memory': {"prss": memory_data.total, "count": 1},
+#                 'used_memory': {"prss": memory_data.used, "count": 1},
+#                 'free_memory': {"prss": memory_data.free, "count": 1},
+#                 'available_memory': {"prss": memory_data.available, "count": 1},
+#                 'cached_memory': {"prss": memory_data.cached, "count": 1},
+#                 'buffers_memory': {"prss": memory_data.buffers, "count": 1},
+#                 'shared_memory': {"prss": memory_data.shared, "count": 1}
+#             }
+#             del memory_data
+#             return memory_stats
+#         except RuntimeError as e:
+#             logger.log_error(f"Failed to fetch memory statistics: {e}")
+#             raise
+
+#     def fetch_memory_entries(self, filepath: str):
+#         """
+#         Fetch memory entries from a compressed JSON file.
+        
+#         :param filepath: Path to the compressed file containing memory entries.
+#         :return: Dictionary containing loaded memory entries or default structure.
+#         :raises TypeError: If filepath is not a string.
+#         :raises OSError: If file cannot be read.
+#         :raises json.JSONDecodeError: If JSON is invalid.
+#         """
+#         tentry = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+#         if not isinstance(filepath, str):
+#             error_message = f"Invalid filepath type: {type(filepath)}. Expected str."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
+#             return tentry
+
+#         try:
+#             with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
+#                 loaded_entry = json.load(jfile)
+#             return loaded_entry
+#         except OSError as e:
+#             logger.log_error(f"Failed to read memory entries from {filepath}: {e}")
+#             raise
+#         except json.JSONDecodeError as e:
+#             logger.log_error(f"Invalid JSON in memory entries from {filepath}: {e}")
+#             raise
+#         except TypeError as e:
+#             logger.log_error(f"Type error loading memory entries from {filepath}: {e}")
+#             raise
+
+#     def update_memory_statistics(self, total_dict: dict, mem_dict: dict, time_list: dict, item: str, category: str):
+#         """
+#         Update memory statistics for the specified item and category.
+        
+#         :param total_dict: The total statistics dictionary.
+#         :param mem_dict: The memory statistics dictionary to update.
+#         :param time_list: The current memory statistics collected.
+#         :param item: The item to update in total_dict.
+#         :param category: The category under which to update the statistics.
+#         :raises TypeError: If inputs are not of expected types.
+#         """
+#         if not all(isinstance(x, dict) for x in [total_dict, mem_dict, time_list]):
+#             error_message = "total_dict, mem_dict, and time_list must be dictionaries."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+#         if not all(isinstance(x, str) for x in [item, category]):
+#             error_message = "item and category must be strings."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         if category not in mem_dict:
+#             mem_dict[category] = {}
+#         if item not in total_dict:
+#             total_dict[item] = {'count': 0}
+#         if category not in total_dict[item]:
+#             total_dict[item][category] = {}
+
+#         current_time = Utility.fetch_current_date()
+#         for memory_metric in time_list.keys():
+#             try:
+#                 prss = int(time_list[memory_metric]['prss'])
+
+#                 entry_data = {
+#                     "prss": prss, 
+#                     "count": 1,
+#                     "high_value": prss, 
+#                     "low_value": prss,
+#                     "timestamp": current_time
+#                 }
+
+#                 mem_dict[category][memory_metric] = entry_data
+
+#                 mem = total_dict[item][category]
+#                 if memory_metric in mem:
+#                     tprss = int(mem[memory_metric]["prss"]) + prss
+#                     tcount = int(mem[memory_metric]["count"]) + 1
+
+#                     high_value = max(prss, int(mem[memory_metric].get("high_value", prss)))
+#                     low_value = min(prss, int(mem[memory_metric].get("low_value", prss)))
+
+#                     mem[memory_metric] = {
+#                         "prss": tprss, 
+#                         "count": tcount,
+#                         "high_value": high_value,
+#                         "low_value": low_value,
+#                         "timestamp": current_time
+#                     }
+#                 else:
+#                     mem[memory_metric] = entry_data
+
+#             except (TypeError, KeyError, ValueError) as e:
+#                 logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {e}")
+#                 continue
+
+#         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
+
+#     def enforce_retention_policy(self, total_dict: dict):
+#         """
+#         Enforce retention policy by removing entries older than the retention period.
+        
+#         :param total_dict: Dictionary containing memory statistics.
+#         :raises TypeError: If total_dict or total_dict[SYSTEM_MEMORY_KEY] is not a dictionary.
+#         """
+#         if not isinstance(total_dict, dict):
+#             error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         if SYSTEM_MEMORY_KEY not in total_dict:
+#             total_dict[SYSTEM_MEMORY_KEY] = {
+#                 'count': 0,
+#                 'timestamp': Utility.fetch_current_date()
+#             }
+#             return
+
+#         if not isinstance(total_dict[SYSTEM_MEMORY_KEY], dict):
+#             error_message = f"Invalid total_dict[{SYSTEM_MEMORY_KEY}] type: {type(total_dict[SYSTEM_MEMORY_KEY])}. Expected dict."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         current_time = Utility.fetch_current_date()
+#         retention_threshold = timedelta(days=self.retention_period)
+#         categories_to_remove = []
+
+#         for category in total_dict[SYSTEM_MEMORY_KEY]:
+#             if category not in ['count', 'timestamp']:
+#                 category_data = total_dict[SYSTEM_MEMORY_KEY][category]
+#                 if isinstance(category_data, dict) and 'timestamp' in category_data:
+#                     try:
+#                         entry_time = datetime.fromisoformat(category_data['timestamp'])
+#                         if current_time - entry_time > retention_threshold:
+#                             logger.log_info(f"Deleting outdated entry for category: {category}")
+#                             categories_to_remove.append(category)
+#                     except (ValueError, TypeError) as e:
+#                         logger.log_error(f"Error processing timestamp for {category}: {e}")
+
+#         for category in categories_to_remove:
+#             del total_dict[SYSTEM_MEMORY_KEY][category]
+
+#         total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
+#             k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
+#             if k not in ['count', 'timestamp']
+#         ])
+
+#     def collect_and_store_memory_usage(self, collect_only: bool):
+#         """
+#         Dump memory usage statistics into log files using JSON format.
+        
+#         :param collect_only: If True, return memory data without dumping.
+#         :return: Memory statistics dictionary if collect_only is True, None otherwise.
+#         :raises KeyError: If required configuration keys are missing.
+#         :raises RuntimeError: If memory statistics cannot be fetched.
+#         :raises OSError: If memory entries cannot be fetched due to file errors.
+#         :raises json.JSONDecodeError: If memory entries JSON is invalid.
+#         :raises TypeError: If collect_only is not a boolean.
+#         """
+#         if not isinstance(collect_only, bool):
+#             error_message = f"Invalid collect_only type: {type(collect_only)}. Expected bool."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         if not isinstance(memory_statistics_config, dict):
+#             error_message = f"Invalid memory_statistics_config type: {type(memory_statistics_config)}. Expected dict."
+#             logger.log_error(error_message)
+#             raise TypeError(error_message)
+
+#         required_keys = ['TOTAL_MEMORY_STATISTICS_LOG_FILENAME', 'MEMORY_STATISTICS_LOG_FILENAME']
+#         if not all(key in memory_statistics_config for key in required_keys):
+#             error_message = f"Missing required configuration keys: {required_keys}"
+#             logger.log_error(error_message)
+#             raise KeyError(error_message)
+
+#         sysmem_dict = {}
+#         try:
+#             total_dict = self.fetch_memory_entries(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'])
+#         except KeyError as e:
+#             logger.log_error(f"Configuration error: missing key {e}")
+#             total_dict = {}
+#         except (OSError, json.JSONDecodeError) as e:
+#             logger.log_error(f"Failed to fetch memory entries: {e}")
+#             total_dict = {}
+
+#         try:
+#             sm = self.fetch_memory_statistics()
+#         except RuntimeError as e:
+#             logger.log_error(f"Failed to fetch memory statistics: {e}")
+#             raise
+
+#         sysmem_dict = {"system": {}, "count": 1}
+
+#         if SYSTEM_MEMORY_KEY not in total_dict:
+#             total_dict[SYSTEM_MEMORY_KEY] = {'system': {}, "count": 0}
+#         if 'system' not in total_dict[SYSTEM_MEMORY_KEY]:
+#             total_dict[SYSTEM_MEMORY_KEY]['system'] = {}
+#             total_dict[SYSTEM_MEMORY_KEY]['count'] = 0
+
+#         try:
+#             self.update_memory_statistics(total_dict, sysmem_dict, sm, SYSTEM_MEMORY_KEY, 'system')
+#         except (TypeError, KeyError) as e:
+#             logger.log_error(f"Failed to update memory statistics: {e}")
+#             return None
+
+#         total_dict['count'] = int(total_dict.get('count', 0)) + 1
+
+#         try:
+#             self.enforce_retention_policy(total_dict)
+#         except (TypeError, KeyError) as e:
+#             logger.log_error(f"Failed to enforce retention policy: {e}")
+#             return None
+
+#         try:
+#             current_time = Utility.fetch_current_date()
+#         except RuntimeError as e:
+#             logger.log_error(f"Failed to fetch current date: {e}")
+#             current_time = ""
+
+#         total_dict['current_time'] = current_time
+#         mem_dict = {"current_time": current_time, SYSTEM_MEMORY_KEY: sysmem_dict, "count": 1}
+
+#         if collect_only:
+#             return mem_dict
+
+#         # Write total memory statistics
+#         try:
+#             total_log_file = memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME']
+#             with gzip.open(total_log_file, 'wt', encoding='utf-8') as jfile:
+#                 json.dump(total_dict, jfile)
+#             logger.log_info(f"Successfully wrote total memory statistics to {total_log_file}")
+#         except OSError as e:
+#             logger.log_error(f"Failed to write total memory statistics to file: {e}")
+#             return None
+#         except TypeError as e:
+#             logger.log_error(f"Failed to encode total memory statistics as JSON: {e}")
+#             return None
+#         except KeyError as e:
+#             logger.log_error(f"Configuration error in total memory statistics write: {e}")
+#             return None
+
+#         # Write memory statistics log
+#         try:
+#             log_file = memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME']
+#             existing_data = []
+#             try:
+#                 with gzip.open(log_file, 'rt', encoding='utf-8') as jfile:
+#                     existing_data = json.load(jfile)
+#                     if not isinstance(existing_data, list):
+#                         existing_data = [existing_data]
+#             except (FileNotFoundError, json.JSONDecodeError):
+#                 pass
+
+#             existing_data.append(mem_dict)
+            
+#             with gzip.open(log_file, 'wt', encoding='utf-8') as jfile:
+#                 json.dump(existing_data, jfile)
+#             logger.log_info(f"Successfully wrote memory statistics log to {log_file}")
+#         except OSError as e:
+#             logger.log_error(f"Failed to write memory statistics log to file: {e}")
+#             return None
+#         except TypeError as e:
+#             logger.log_error(f"Failed to encode memory statistics log as JSON: {e}")
+#             return None
+#         except KeyError as e:
+#             logger.log_error(f"Configuration error in memory statistics log write: {e}")
+#             return None
+
+class MemoryStatisticsCollector:
     def __init__(self, sampling_interval: int, retention_period: int):
         """
         Initializes MemoryStatisticsCollector with data collection interval and retention period.
@@ -648,19 +957,24 @@ class MemoryStatisticsCollector:
         Fetch memory entries from a compressed JSON file.
         
         :param filepath: Path to the compressed file containing memory entries.
-        :return: Dictionary containing loaded memory entries or default structure.
+        :return: Dictionary or list containing loaded memory entries or default structure.
         :raises TypeError: If filepath is not a string.
         :raises OSError: If file cannot be read.
         :raises json.JSONDecodeError: If JSON is invalid.
         """
-        tentry = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
         if not isinstance(filepath, str):
             error_message = f"Invalid filepath type: {type(filepath)}. Expected str."
             logger.log_error(error_message)
             raise TypeError(error_message)
 
+        default_entry = (
+            {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+            if 'total' in filepath
+            else []
+        )
+
         if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
-            return tentry
+            return default_entry
 
         try:
             with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
@@ -742,34 +1056,41 @@ class MemoryStatisticsCollector:
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
-    def enforce_retention_policy(self, total_dict: dict):
+    def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
         """
-        Enforce retention policy by removing entries older than the retention period.
+        Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
         
-        :param total_dict: Dictionary containing memory statistics.
-        :raises TypeError: If total_dict or total_dict[SYSTEM_MEMORY_KEY] is not a dictionary.
+        :param total_dict: Dictionary containing total memory statistics.
+        :param individual_list: List containing individual memory statistics entries.
+        :param total_filepath: Path to the total memory statistics file.
+        :param individual_filepath: Path to the individual memory statistics file.
+        :raises TypeError: If inputs are not of expected types.
+        :raises OSError: If file writing fails.
         """
         if not isinstance(total_dict, dict):
             error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
             logger.log_error(error_message)
             raise TypeError(error_message)
+        if not isinstance(individual_list, list):
+            error_message = f"Invalid individual_list type: {type(individual_list)}. Expected list."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+        if not all(isinstance(x, str) for x in [total_filepath, individual_filepath]):
+            error_message = "Filepaths must be strings."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
 
+        current_time = datetime.now()
+        retention_threshold = timedelta(days=self.retention_period)
+
+        # Process total memory statistics
         if SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {
                 'count': 0,
                 'timestamp': Utility.fetch_current_date()
             }
-            return
 
-        if not isinstance(total_dict[SYSTEM_MEMORY_KEY], dict):
-            error_message = f"Invalid total_dict[{SYSTEM_MEMORY_KEY}] type: {type(total_dict[SYSTEM_MEMORY_KEY])}. Expected dict."
-            logger.log_error(error_message)
-            raise TypeError(error_message)
-
-        current_time = Utility.fetch_current_date()
-        retention_threshold = timedelta(days=self.retention_period)
         categories_to_remove = []
-
         for category in total_dict[SYSTEM_MEMORY_KEY]:
             if category not in ['count', 'timestamp']:
                 category_data = total_dict[SYSTEM_MEMORY_KEY][category]
@@ -777,10 +1098,10 @@ class MemoryStatisticsCollector:
                     try:
                         entry_time = datetime.fromisoformat(category_data['timestamp'])
                         if current_time - entry_time > retention_threshold:
-                            logger.log_info(f"Deleting outdated entry for category: {category}")
+                            logger.log_info(f"Deleting outdated total entry for category: {category}")
                             categories_to_remove.append(category)
                     except (ValueError, TypeError) as e:
-                        logger.log_error(f"Error processing timestamp for {category}: {e}")
+                        logger.log_error(f"Error processing timestamp for total category {category}: {e}")
 
         for category in categories_to_remove:
             del total_dict[SYSTEM_MEMORY_KEY][category]
@@ -790,16 +1111,46 @@ class MemoryStatisticsCollector:
             if k not in ['count', 'timestamp']
         ])
 
+        # Process individual memory statistics
+        retained_entries = []
+        for entry in individual_list:
+            try:
+                entry_time = datetime.fromisoformat(entry['current_time'])
+                if current_time - entry_time <= retention_threshold:
+                    retained_entries.append(entry)
+                else:
+                    logger.log_info(f"Deleting outdated individual entry with timestamp: {entry['current_time']}")
+            except (ValueError, TypeError, KeyError) as e:
+                logger.log_error(f"Error processing individual entry timestamp: {e}")
+                continue
+
+        # Save updated data back to files
+        try:
+            with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
+                json.dump(total_dict, jfile)
+            logger.log_info(f"Updated total memory statistics file: {total_filepath}")
+        except OSError as e:
+            logger.log_error(f"Failed to write updated total memory statistics to {total_filepath}: {e}")
+            raise
+
+        try:
+            with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
+                json.dump(retained_entries, jfile)
+            logger.log_info(f"Updated individual memory statistics file: {individual_filepath}")
+        except OSError as e:
+            logger.log_error(f"Failed to write updated individual memory statistics to {individual_filepath}: {e}")
+            raise
+
     def collect_and_store_memory_usage(self, collect_only: bool):
         """
-        Dump memory usage statistics into log files using JSON format.
+        Collect and store memory usage statistics into log files using JSON format.
         
-        :param collect_only: If True, return memory data without dumping.
+        :param collect_only: If True, return memory data without storing.
         :return: Memory statistics dictionary if collect_only is True, None otherwise.
         :raises KeyError: If required configuration keys are missing.
         :raises RuntimeError: If memory statistics cannot be fetched.
-        :raises OSError: If memory entries cannot be fetched due to file errors.
-        :raises json.JSONDecodeError: If memory entries JSON is invalid.
+        :raises OSError: If file operations fail.
+        :raises json.JSONDecodeError: If JSON is invalid.
         :raises TypeError: If collect_only is not a boolean.
         """
         if not isinstance(collect_only, bool):
@@ -818,16 +1169,19 @@ class MemoryStatisticsCollector:
             logger.log_error(error_message)
             raise KeyError(error_message)
 
-        sysmem_dict = {}
+        total_filepath = memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME']
+        individual_filepath = memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME']
+
+        # Load existing data
         try:
-            total_dict = self.fetch_memory_entries(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'])
-        except KeyError as e:
-            logger.log_error(f"Configuration error: missing key {e}")
-            total_dict = {}
+            total_dict = self.fetch_memory_entries(total_filepath)
+            individual_list = self.fetch_memory_entries(individual_filepath)
         except (OSError, json.JSONDecodeError) as e:
             logger.log_error(f"Failed to fetch memory entries: {e}")
-            total_dict = {}
+            total_dict = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+            individual_list = []
 
+        # Collect new memory statistics
         try:
             sm = self.fetch_memory_statistics()
         except RuntimeError as e:
@@ -835,7 +1189,6 @@ class MemoryStatisticsCollector:
             raise
 
         sysmem_dict = {"system": {}, "count": 1}
-
         if SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {'system': {}, "count": 0}
         if 'system' not in total_dict[SYSTEM_MEMORY_KEY]:
@@ -849,66 +1202,43 @@ class MemoryStatisticsCollector:
             return None
 
         total_dict['count'] = int(total_dict.get('count', 0)) + 1
+        current_time = Utility.fetch_current_date()
+        mem_dict = {"current_time": current_time, SYSTEM_MEMORY_KEY: sysmem_dict, "count": 1}
 
+        # Enforce retention policy
         try:
-            self.enforce_retention_policy(total_dict)
-        except (TypeError, KeyError) as e:
+            self.enforce_retention_policy(total_dict, individual_list, total_filepath, individual_filepath)
+        except (TypeError, OSError) as e:
             logger.log_error(f"Failed to enforce retention policy: {e}")
             return None
-
-        try:
-            current_time = Utility.fetch_current_date()
-        except RuntimeError as e:
-            logger.log_error(f"Failed to fetch current date: {e}")
-            current_time = ""
-
-        total_dict['current_time'] = current_time
-        mem_dict = {"current_time": current_time, SYSTEM_MEMORY_KEY: sysmem_dict, "count": 1}
 
         if collect_only:
             return mem_dict
 
-        # Write total memory statistics
+        # Append new individual entry
+        individual_list.append(mem_dict)
+
+        # Write updated data to files
         try:
-            total_log_file = memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME']
-            with gzip.open(total_log_file, 'wt', encoding='utf-8') as jfile:
+            with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
                 json.dump(total_dict, jfile)
-            logger.log_info(f"Successfully wrote total memory statistics to {total_log_file}")
+            logger.log_info(f"Successfully wrote total memory statistics to {total_filepath}")
         except OSError as e:
             logger.log_error(f"Failed to write total memory statistics to file: {e}")
             return None
         except TypeError as e:
             logger.log_error(f"Failed to encode total memory statistics as JSON: {e}")
             return None
-        except KeyError as e:
-            logger.log_error(f"Configuration error in total memory statistics write: {e}")
-            return None
 
-        # Write memory statistics log
         try:
-            log_file = memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME']
-            existing_data = []
-            try:
-                with gzip.open(log_file, 'rt', encoding='utf-8') as jfile:
-                    existing_data = json.load(jfile)
-                    if not isinstance(existing_data, list):
-                        existing_data = [existing_data]
-            except (FileNotFoundError, json.JSONDecodeError):
-                pass
-
-            existing_data.append(mem_dict)
-            
-            with gzip.open(log_file, 'wt', encoding='utf-8') as jfile:
-                json.dump(existing_data, jfile)
-            logger.log_info(f"Successfully wrote memory statistics log to {log_file}")
+            with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
+                json.dump(individual_list, jfile)
+            logger.log_info(f"Successfully wrote individual memory statistics to {individual_filepath}")
         except OSError as e:
-            logger.log_error(f"Failed to write memory statistics log to file: {e}")
+            logger.log_error(f"Failed to write individual memory statistics to file: {e}")
             return None
         except TypeError as e:
-            logger.log_error(f"Failed to encode memory statistics log as JSON: {e}")
-            return None
-        except KeyError as e:
-            logger.log_error(f"Configuration error in memory statistics log write: {e}")
+            logger.log_error(f"Failed to encode individual memory statistics as JSON: {e}")
             return None
 
 
@@ -1222,28 +1552,50 @@ class MemoryStatisticsProcessor:
             time_entry = {"time_list": [memory_entry], "count": 0}
             time_entry_summary["time_group_list"].append(time_entry)
 
+    # def process_files(self, request_data, memory_data_filename, start_time_obj, end_time_obj, step, num_columns, time_entry_summary,
+    #                  first_interval_unit, first_interval_rate, second_interval_unit):
+    #     """
+    #     Processes memory data files within the specified time range.
+
+    #     Parameters:
+    #     - request_data (dict): Request data containing time range information.
+    #     - memory_data_filename (str): The filename from which to read memory statistics data.
+    #     - start_time_obj (datetime): The starting time object for filtering.
+    #     - end_time_obj (datetime): The ending time object for filtering.
+    #     - step (int): Step size for processing time slices.
+    #     - num_columns (int): Number of columns for time slices.
+    #     - time_entry_summary (dict): Summary structure to hold time group information.
+    #     - first_interval_unit (str): The first time interval unit.
+    #     """
+    #     start_day, end_day = int(request_data['time_data']['start_day']), int(request_data['time_data']['end_day'])
+    #     add = 1 if int(request_data['time_data']['num_days']) == 0 else 0
+        
+    #     for i in range(start_day, end_day + add):
+    #         file_name = f"{memory_data_filename}.{i}" if i != 0 else memory_data_filename
+    #         self.process_file(file_name, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
+    #                          first_interval_unit, first_interval_rate, second_interval_unit)
+
+
     def process_files(self, request_data, memory_data_filename, start_time_obj, end_time_obj, step, num_columns, time_entry_summary,
-                     first_interval_unit, first_interval_rate, second_interval_unit):
+                 first_interval_unit, first_interval_rate, second_interval_unit):
         """
-        Processes memory data files within the specified time range.
+        Processes memory data file within the specified time range.
 
         Parameters:
-        - request_data (dict): Request data containing time range information.
-        - memory_data_filename (str): The filename from which to read memory statistics data.
-        - start_time_obj (datetime): The starting time object for filtering.
-        - end_time_obj (datetime): The ending time object for filtering.
-        - step (int): Step size for processing time slices.
-        - num_columns (int): Number of columns for time slices.
-        - time_entry_summary (dict): Summary structure to hold time group information.
-        - first_interval_unit (str): The first time interval unit.
+        - request_data: Request data containing time range information.
+        - memory_data_filename: The filename from which to read memory statistics data.
+        - start_time_obj: The starting time object for filtering.
+        - end_time_obj: The ending time object for filtering.
+        - step: Step size for processing time slices.
+        - num_columns: Number of columns for time slices.
+        - time_entry_summary: Summary structure to hold time group information.
+        - first_interval_unit: The first time interval unit.
+        - first_interval_rate: The rate for the first interval.
+        - second_interval_unit: The second time interval unit.
         """
-        start_day, end_day = int(request_data['time_data']['start_day']), int(request_data['time_data']['end_day'])
-        add = 1 if int(request_data['time_data']['num_days']) == 0 else 0
-        
-        for i in range(start_day, end_day + add):
-            file_name = f"{memory_data_filename}.{i}" if i != 0 else memory_data_filename
-            self.process_file(file_name, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-                             first_interval_unit, first_interval_rate, second_interval_unit)
+        self.process_file(memory_data_filename, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
+                        first_interval_unit, first_interval_rate, second_interval_unit)
+    
 
     def process_file(self, file_name, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                     first_interval_unit, first_interval_rate, second_interval_unit):
