@@ -1,7 +1,7 @@
 ARG BASE=p4lang/behavioral-model@sha256:ce45720e28a96a50f275c1b511cd84c2558b62f2cf7a7e506765183bc3fb2e32
 ## ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
-FROM $BASE as base
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
