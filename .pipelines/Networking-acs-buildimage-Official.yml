@@ -24,8 +24,6 @@ variables:
     value: noninteractive
   - name: CDP_CLOUDVAULT_VERSION_SANITIZE
     value: true
-  - name: DOCKER_BUILD_TIMEOUT
-    value: 5400
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
   - name: BUILD_NUMBER

@@ -37,8 +37,6 @@ parameters:
   - cisco-8000-smartswitch
 #  - nvidia-bluefield     disable due to build error.
 variables:
-  - name: DOCKER_BUILD_TIMEOUT
-    value: 5400
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
 
