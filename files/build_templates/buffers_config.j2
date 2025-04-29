@@ -29,7 +29,8 @@ def
     {%-         set filename_postfix = 't2' %}
     {%-     endif -%}
 {%-     else %}
-{%-     set filename_postfix = set_default_topology() %}
+{%-         set filename_postfix = set_default_topology() %}
+{%-     endif -%}
 {%-     set switch_role      = '' %}
 {%-     set switch_subrole   = '' %}
 {%- endif -%}
