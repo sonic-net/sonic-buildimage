@@ -31,8 +31,10 @@ def
 {%-     else %}
 {%-         set filename_postfix = set_default_topology() %}
 {%-     endif -%}
-{%-     set switch_role      = '' %}
-{%-     set switch_subrole   = '' %}
+{%- else %}
+{%-         set filename_postfix = set_default_topology() %}
+{%-         set switch_role      = '' %}
+{%-         set switch_subrole   = '' %}
 {%- endif -%}
 
 {% set voq_chassis = false %}
