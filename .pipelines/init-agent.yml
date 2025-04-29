@@ -112,6 +112,5 @@ steps:
       sudo chown nobody /nfs
       sudo chmod u=rwx,g=rwx,o=r /nfs
       df -h
-    env:
-      sonicclient: $(sonicclient)
+    retryCountOnTaskFailure: 5
     displayName: 'Init agent'
