@@ -27,7 +27,8 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1",
-                        "nat_zone": "4"
+                        "nat_zone": "4",
+                        "admin_status": "up"
                     }
                 ]
             }
@@ -47,7 +48,8 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1",
-                        "nat_zone": "2"
+                        "nat_zone": "2",
+                        "admin_status": "up"
                     }
                 ]
             }
@@ -67,6 +69,27 @@
                 "LOOPBACK_INTERFACE_LIST": [
                     {
                         "name": "lo1lo1lo1lo1lo1lo1",
+                        "nat_zone": "2",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        }
+    },
+    "LOOPBACK_DEFAULT_ADMIN_STATUS_UP": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "10.0.0.1/30",
+                        "name": "lo1",
+                        "scope": "global"
+                    }
+                ],
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "lo1",
                         "nat_zone": "2"
                     }
                 ]
