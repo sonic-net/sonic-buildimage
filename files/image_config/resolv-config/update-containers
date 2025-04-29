@@ -1,12 +1,120 @@
 #!/bin/bash
 
+SCRIPT_NAME=$(basename "$0")
+DEBUG=${DEBUG:-false}
+WAIT_TIMEOUT=5  # 5 seconds timeout for waiting containers to start
+
+# Function to log messages to syslog
+log_message() {
+    local level=$1
+    local message=$2
+    local caller=${FUNCNAME[1]}
+    # Skip debug messages if DEBUG is not true
+    if [[ "$level" == "debug" && "$DEBUG" != "true" ]]; then
+        return
+    fi
+    logger -t "resolv-config" -p "user.${level}" "[${SCRIPT_NAME}:${caller}] ${message}"
+}
+
+# Function to wait for container to start
+# Used only when updating a specific container that is not running
+wait_for_container() {
+    local container=$1
+    local start_time=$(date +%s)
+    local container_name=$(docker inspect --format '{{.Name}}' ${container} | sed 's/^\///')
+    while [[ $(($(date +%s) - start_time)) -lt $WAIT_TIMEOUT ]]; do
+        if docker inspect --format '{{.State.Status}}' ${container} | grep -q "running"; then
+            log_message "info" "Container ${container_name} (${container}) is now running"
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+# Function to update resolv.conf for a single container
+# Parameters:
+#   $1: container ID
+#   $2: wait_for_start (optional) - if true, will attempt to start and wait for stopped containers
+update_container_resolv() {
+    local container=$1
+    local wait_for_start=${2:-false}  # Default to false for bulk updates
+    local container_name=$(docker inspect --format '{{.Name}}' ${container} | sed 's/^\///')
+    local container_state=$(docker inspect --format '{{.State.Status}}' ${container})
+    if [[ "$container_state" != "running" ]]; then
+        if [[ "$wait_for_start" == "true" ]]; then
+            log_message "debug" "Container ${container_name} (${container}) is not running, attempting to start it"
+            if ! docker start ${container}; then
+                log_message "error" "Failed to start container ${container_name} (${container})"
+                return 1
+            fi
+            if ! wait_for_container "$container"; then
+                log_message "error" "Container ${container_name} (${container}) failed to start within timeout"
+                return 1
+            fi
+        else
+            log_message "debug" "Container ${container_name} (${container}) is not running, skipping update"
+            return 0
+        fi
+    fi
+    if ! docker exec -t ${container} bash -c "echo '${RESOLV_CONTENT}' > /etc/resolv.conf"; then
+        log_message "info" "Failed to update resolv.conf for container ${container_name} (${container})"
+        return 1
+    fi
+    log_message "debug" "Successfully updated resolv.conf for container ${container_name} (${container})"
+}
+
+# Read resolv.conf content once
+RESOLV_CONTENT=$(cat /etc/resolv.conf)
+# Empty resolv.conf is valid, so we don't check for empty content
+if [[ ! -f /etc/resolv.conf ]]; then
+    log_message "error" "File /etc/resolv.conf does not exist"
+    exit 1
+fi
+
+# Check if a container name was provided as an argument
+if [[ $# -gt 0 ]]; then
+    container_name=$1
+    # Find container ID by name (including stopped containers)
+    container_id=$(docker ps -aq -f "name=^${container_name}$")
+    if [[ -z "$container_id" ]]; then
+        log_message "error" "Container with name '${container_name}' not found"
+        exit 1
+    fi
+    log_message "info" "Updating resolv.conf for container ${container_name}"
+    # For single container updates, attempt to start and wait if container is stopped
+    update_container_resolv "$container_id" "true"
+    exit $?
+fi
+
+# Check if networking service is active (only for bulk updates)
 networking_status=$(systemctl is-active networking.service 2>/dev/null)
 if [[ $networking_status != "active" ]]; then
+    log_message "info" "Networking service is not active, skipping container updates"
     exit 0
 fi
 
-for container in $(docker ps -q); do
-    docker cp -L /etc/resolv.conf ${container}:/_resolv.conf
-    docker exec -t ${container} bash -c "cat /_resolv.conf > /etc/resolv.conf"
-    docker exec -t ${container} bash -c "rm /_resolv.conf"
+# If no container name provided, update only running containers
+log_message "info" "Starting resolv.conf update for running containers"
+
+# Get list of running containers only
+containers=$(docker ps -q)
+container_count=$(echo "${containers}" | wc -l)
+log_message "info" "Found ${container_count} running containers to process"
+
+# Run updates in parallel using background processes
+# For bulk updates, skip any non-running containers without waiting
+for container in $containers; do
+    update_container_resolv "$container" "false" &
 done
+
+# Wait for all background processes to complete
+wait
+
+# Check if any updates failed
+if [[ $? -ne 0 ]]; then
+    log_message "error" "Some container updates failed"
+    exit 1
+fi
+
+log_message "info" "Completed resolv.conf updates for all running containers"

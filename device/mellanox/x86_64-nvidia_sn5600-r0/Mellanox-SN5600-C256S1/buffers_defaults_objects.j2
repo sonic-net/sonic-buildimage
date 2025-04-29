@@ -170,13 +170,36 @@
 
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
+{% if dynamic_mode is defined %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
-       {%- if loop.first -%},{%- endif -%}
-        "{{ port }}|1-6": {
+        "{{ port }}|0-3": {
+            "profile" : "q_lossy_profile"
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|4": {
+            "profile" : "q_lossy_infinity_profile"
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|5": {
+            "profile" : "q_lossy_minus_3_profile"
+        },
+{% endfor %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|6": {
+            "profile" : "q_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+{% else %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|0-6": {
             "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
-
 {% endfor %}
+{% endif %}
 {% endif %}
     }
 {%- endmacro %}
