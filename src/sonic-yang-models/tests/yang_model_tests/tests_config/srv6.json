@@ -131,32 +131,6 @@
             }
         }
     },
-    "SRV6_MY_SID_UNMATCHED_IP_PREFIX": {
-        "sonic-srv6:sonic-srv6": {
-            "sonic-srv6:SRV6_MY_LOCATORS": {
-                "SRV6_MY_LOCATORS_LIST": [
-                    {
-                        "locator_name": "MAIN",
-                        "prefix": "FCBB:BBBB:20::"
-                    }
-                ]
-            },
-            "sonic-srv6:SRV6_MY_SIDS": {
-                "SRV6_MY_SIDS_LIST": [
-                    {
-                        "ip_prefix": "FCBB:BBBB:21::/48",
-                        "locator": "MAIN",
-                        "action": "uN"
-                    },
-                    {
-                        "ip_prefix": "FCBB:BBBB:20:F1::/64",
-                        "locator": "MAIN",
-                        "action": "uDT46"
-                    }
-                ]
-            }
-        }
-    },
     "SRV6_MY_SID_INVALID_ACTION": {
         "sonic-srv6:sonic-srv6": {
             "sonic-srv6:SRV6_MY_LOCATORS": {
