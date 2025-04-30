@@ -749,92 +749,6 @@ class MemoryStatisticsCollector:
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
-    # def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
-    #     """
-    #     Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
-        
-    #     :param total_dict: Dictionary containing total memory statistics.
-    #     :param individual_list: List containing individual memory statistics entries.
-    #     :param total_filepath: Path to the total memory statistics file.
-    #     :param individual_filepath: Path to the individual memory statistics file.
-    #     :raises TypeError: If inputs are not of expected types.
-    #     :raises OSError: If file writing fails.
-    #     """
-    #     if not isinstance(total_dict, dict):
-    #         error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
-    #         logger.log_error(error_message)
-    #         raise TypeError(error_message)
-    #     if not isinstance(individual_list, list):
-    #         error_message = f"Invalid individual_list type: {type(individual_list)}. Expected list."
-    #         logger.log_error(error_message)
-    #         raise TypeError(error_message)
-    #     if not all(isinstance(x, str) for x in [total_filepath, individual_filepath]):
-    #         error_message = "Filepaths must be strings."
-    #         logger.log_error(error_message)
-    #         raise TypeError(error_message)
-
-    #     current_time = datetime.now()
-    #     retention_threshold = timedelta(days=self.retention_period)
-
-    #     if SYSTEM_MEMORY_KEY not in total_dict:
-    #         total_dict[SYSTEM_MEMORY_KEY] = {
-    #             'count': 0,
-    #             'timestamp': Utility.fetch_current_date()
-    #         }
-
-    #     categories_to_remove = []
-    #     for category in total_dict[SYSTEM_MEMORY_KEY]:
-    #         if category not in ['count', 'timestamp']:
-    #             category_data = total_dict[SYSTEM_MEMORY_KEY][category]
-    #             if isinstance(category_data, dict) and 'timestamp' in category_data:
-    #                 try:
-    #                     entry_time = datetime.fromisoformat(category_data['timestamp'])
-    #                     if current_time - entry_time > retention_threshold:
-    #                         logger.log_info(f"Deleting outdated total entry for category: {category}")
-    #                         categories_to_remove.append(category)
-    #                 except (ValueError, TypeError) as e:
-    #                     logger.log_error(f"Error processing timestamp for total category {category}: {e}")
-
-    #     for category in categories_to_remove:
-    #         del total_dict[SYSTEM_MEMORY_KEY][category]
-
-    #     total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
-    #         k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
-    #         if k not in ['count', 'timestamp']
-    #     ])
-
-    #     retained_entries = []
-    #     for entry in individual_list:
-    #         try:
-    #             entry_time = datetime.fromisoformat(entry['current_time'])
-    #             if current_time - entry_time <= retention_threshold:
-    #                 retained_entries.append(entry)
-    #             else:
-    #                 logger.log_info(f"Deleting outdated individual entry with timestamp: {entry['current_time']}")
-    #         except (ValueError, TypeError, KeyError) as e:
-    #             logger.log_error(f"Error processing individual entry timestamp: {e}")
-    #             continue
-
-    #     try:
-    #         with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
-    #             json.dump(total_dict, jfile)
-    #         logger.log_info(f"Updated total memory statistics file: {total_filepath}")
-    #     except OSError as e:
-    #         logger.log_error(f"Failed to write updated total memory statistics to {total_filepath}: {e}")
-    #         raise
-
-    #     try:
-    #         with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
-    #             json.dump(retained_entries, jfile)
-    #         logger.log_info(f"Updated individual memory statistics file: {individual_filepath}")
-    #     except OSError as e:
-    #         logger.log_error(f"Failed to write updated individual memory statistics to {individual_filepath}: {e}")
-    #         raise
-
-
-
-
-
     def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
         """
         Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
@@ -844,8 +758,7 @@ class MemoryStatisticsCollector:
         :param total_filepath: Path to the total memory statistics file.
         :param individual_filepath: Path to the individual memory statistics file.
         :raises TypeError: If inputs are not of expected types.
-        :raises OSError: If file reading, writing, or renaming fails.
-        :raises json.JSONDecodeError: If existing files contain invalid JSON.
+        :raises OSError: If file writing fails.
         """
         if not isinstance(total_dict, dict):
             error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
@@ -860,7 +773,12 @@ class MemoryStatisticsCollector:
             logger.log_error(error_message)
             raise TypeError(error_message)
 
-        # Validate existing file integrity
+        for filepath in [total_filepath, individual_filepath]:
+            dir_path = os.path.dirname(filepath)
+            if not os.access(dir_path, os.W_OK):
+                logger.log_error(f"No write permission for directory: {dir_path}")
+                raise OSError(f"No write permission for directory: {dir_path}")
+
         for filepath in [total_filepath, individual_filepath]:
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 try:
@@ -871,10 +789,10 @@ class MemoryStatisticsCollector:
                     logger.log_error(f"Invalid or corrupted JSON in {filepath}: {e}")
                     raise json.JSONDecodeError(f"Corrupted JSON in {filepath}: {str(e)}", "", 0)
 
+
         current_time = datetime.now()
         retention_threshold = timedelta(days=self.retention_period)
 
-        # Process total_dict
         if SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {
                 'count': 0,
@@ -893,16 +811,16 @@ class MemoryStatisticsCollector:
                             categories_to_remove.append(category)
                     except (ValueError, TypeError) as e:
                         logger.log_error(f"Error processing timestamp for total category {category}: {e}")
+                        categories_to_remove.append(category)
 
         for category in categories_to_remove:
             del total_dict[SYSTEM_MEMORY_KEY][category]
 
         total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
-            k for k in total_dict[SYSTEM_MEMORY_KEY].keys()
+            k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
             if k not in ['count', 'timestamp']
         ])
 
-        # Batch deletion for individual_list
         original_len = len(individual_list)
         indices_to_remove = []
         for i, entry in enumerate(individual_list):
@@ -913,45 +831,48 @@ class MemoryStatisticsCollector:
                     indices_to_remove.append(i)
             except (ValueError, TypeError, KeyError) as e:
                 logger.log_error(f"Error processing individual entry timestamp at index {i}: {e}")
-                indices_to_remove.append(i)  # Remove invalid entries to prevent future errors
+                indices_to_remove.append(i)
 
-        # Delete entries in reverse order to avoid index shifting
         for i in sorted(indices_to_remove, reverse=True):
             individual_list.pop(i)
 
         removed_entries = original_len - len(individual_list)
         logger.log_info(f"Retention policy enforced: Removed {removed_entries} individual entries and {len(categories_to_remove)} total categories")
 
-        # Write total_dict to a temporary file and atomically rename
         temp_file_path = None
         try:
-            with tempfile.NamedTemporaryFile(mode='wt', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
+            logger.log_info(f"Writing total memory statistics to temporary file in: {os.path.dirname(total_filepath)}")
+            # logger.log_info(f"total_dict sample: {json.dumps(dict(list(total_dict.items())[:5]), default=str)}")
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
                 temp_file_path = temp_file.name
-                with gzip.GzipFile(filename='', mode='wt', fileobj=temp_file, compresslevel=6) as gz_file:
-                    json.dump(total_dict, gz_file)
+                logger.log_info(f"Created temporary file: {temp_file_path}")
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(total_dict, default=str).encode('utf-8'))
             logger.log_info(f"Successfully wrote total memory statistics to temporary file: {temp_file_path}")
             shutil.move(temp_file_path, total_filepath)
             logger.log_info(f"Atomically renamed {temp_file_path} to {total_filepath}")
         except (OSError, json.JSONEncodeError) as e:
-            logger.log_error(f"Failed to write or rename total memory statistics: {e}")
+            logger.log_error(f"Failed to write or rename total memory statistics: {str(e)}\n{traceback.format_exc()}")
             if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)  # Clean up temporary file
+                os.unlink(temp_file_path)
             raise OSError(f"Failed to update total memory statistics file: {e}")
 
-        # Write individual_list to a temporary file and atomically rename
         temp_file_path = None
         try:
-            with tempfile.NamedTemporaryFile(mode='wt', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+            logger.log_info(f"Writing individual memory statistics to temporary file in: {os.path.dirname(individual_filepath)}")
+            # logger.log_info(f"individual_list length: {len(individual_list)}, sample: {json.dumps(individual_list[:5], default=str)}")
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
                 temp_file_path = temp_file.name
-                with gzip.GzipFile(filename='', mode='wt', fileobj=temp_file, compresslevel=6) as gz_file:
-                    json.dump(individual_list, gz_file)
+                logger.log_info(f"Created temporary file: {temp_file_path}")
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
             logger.log_info(f"Successfully wrote individual memory statistics to temporary file: {temp_file_path}")
             shutil.move(temp_file_path, individual_filepath)
             logger.log_info(f"Atomically renamed {temp_file_path} to {individual_filepath}")
         except (OSError, json.JSONEncodeError) as e:
-            logger.log_error(f"Failed to write or rename individual memory statistics: {e}")
+            logger.log_error(f"Failed to write or rename individual memory statistics: {str(e)}\n{traceback.format_exc()}")
             if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)  # Clean up temporary file
+                os.unlink(temp_file_path)
             raise OSError(f"Failed to update individual memory statistics file: {e}")
 
 
@@ -2036,7 +1957,6 @@ class ThreadSafeConfig:
         with self._lock:
             return self._config.copy()
 
-
 class MemoryStatisticsService:
     """
     Manages the Memory Statistics Service, responsible for collecting,
@@ -2044,7 +1964,7 @@ class MemoryStatisticsService:
     This service utilizes a socket for communication and handles
     commands for memory statistics retrieval, while also managing
     configuration reloading and graceful shutdown procedures.
-    """ 
+    """
     def __init__(self, memory_statistics_config, config_file_path='memory_statistics.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
@@ -2137,6 +2057,88 @@ class MemoryStatisticsService:
         except (OSError, RuntimeError) as e:
             logger.log_error(f"Error handling SIGHUP: {e}")
 
+    def terminate_child_processes(self, timeout: float = 5.0) -> None:
+        """
+        Gracefully terminates all child processes associated with the service.
+        Sends SIGTERM to child processes and waits for them to exit within the specified
+        timeout. If any processes remain running, sends SIGKILL to force termination.
+        Logs the progress and any errors encountered during termination.
+
+        Args:
+            timeout (float, optional): Timeout in seconds to wait for child processes to
+                terminate gracefully. Defaults to 5.0 seconds.
+
+        Raises:
+            ValueError: If the timeout is invalid (e.g., negative or non-numeric).
+            psutil.Error: If process iteration or access fails.
+            OSError: If signal sending fails.
+        """
+        if not isinstance(timeout, (int, float)):
+            logger.log_error(f"Invalid timeout type: {type(timeout)}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout < 0:
+            logger.log_error(f"Negative timeout: {timeout}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout > 60.0:
+            logger.log_warning(f"Timeout {timeout} seconds is large; capping at 60.0 seconds.")
+            timeout = 60.0
+
+        logger.log_info(f"Terminating child processes with timeout {timeout} seconds.")
+
+        current_pid = os.getpid()
+        failed_processes = []
+
+        try:
+            children = [
+                proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
+                if proc.info['ppid'] == current_pid
+            ]
+
+            if not children:
+                logger.log_info("No child processes found.")
+                return
+
+            for child in children:
+                try:
+                    pid = child.info['pid']
+                    logger.log_info(f"Sending SIGTERM to child process {pid} ({child.info['name']})")
+                    os.kill(pid, signal.SIGTERM)
+                except (ProcessLookupError, OSError) as e:
+                    logger.log_warning(f"Failed to send SIGTERM to child process {pid}: {e}")
+                    continue
+
+            start_time = time.time()
+            while children and time.time() - start_time < timeout:
+                children = [
+                    child for child in children
+                    if child.is_running() and child.info['ppid'] == current_pid
+                ]
+                if not children:
+                    break
+                time.sleep(0.1)
+
+            for child in children:
+                if child.is_running():
+                    pid = child.info['pid']
+                    logger.log_warning(f"Child process {pid} ({child.info['name']}) did not terminate within {timeout} seconds. Sending SIGKILL.")
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        failed_processes.append(f"{pid} ({child.info['name']})")
+                    except (ProcessLookupError, OSError) as e:
+                        logger.log_error(f"Failed to send SIGKILL to child process {pid}: {e}")
+
+            if failed_processes:
+                logger.log_error(f"Some child processes failed to terminate gracefully: {', '.join(failed_processes)}")
+            else:
+                logger.log_info("All child processes terminated successfully.")
+
+        except psutil.Error as e:
+            logger.log_error(f"Error iterating or accessing processes: {e}")
+            raise
+        except OSError as e:
+            logger.log_error(f"Error during child process termination: {e}")
+            raise
+
     def handle_sigterm(self, signum, frame):
         """
         Handles the SIGTERM signal for graceful shutdown of the service.
@@ -2144,50 +2146,12 @@ class MemoryStatisticsService:
         and perform necessary cleanup operations before exiting.
         """
         logger.log_info("Received SIGTERM, initiating graceful shutdown...")
-
-        def terminate_child_processes():
-            """
-            Gracefully terminates all child processes associated with the service.
-            
-            Raises:
-                psutil.Error: If process iteration or access fails.
-                OSError: If signal sending fails.
-            """
-            current_pid = os.getpid()
-            try:
-                children = [
-                    proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
-                    if proc.info['ppid'] == current_pid
-                ]
-
-                for child in children:
-                    try:
-                        logger.log_info(f"Sending SIGTERM to child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGTERM)
-                    except ProcessLookupError:
-                        continue
-
-                timeout = 5
-                start_time = time.time()
-                while any(os.kill(child.info['pid'], 0) == 0 for child in children if child.is_running()) \
-                        and time.time() - start_time < timeout:
-                    time.sleep(0.1)
-
-                for child in children:
-                    if child.is_running():
-                        logger.log_warning(f"Force killing child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGKILL)
-            except (psutil.Error, OSError) as e:
-                logger.log_error(f"Error while terminating child processes: {e}")
-                raise
-
         try:
             if hasattr(self.socket_handler, 'stop_accepting'):
                 self.socket_handler.stop_accepting()
 
-            terminate_child_processes()
-
-            self.stop_threads()
+            self.terminate_child_processes(timeout=5.0)
+            self.stop_threads(timeout=5.0)
 
             self.cleanup()
 
@@ -2386,31 +2350,56 @@ class MemoryStatisticsService:
         self.memory_collection_thread.start()
         logger.log_info("Memory collection thread started.")
 
-    def stop_threads(self):
+    def stop_threads(self, timeout: float = 5.0) -> None:
         """
         Signals threads to stop and waits for them to exit gracefully.
-        This method sets the stop event to signal all running threads to 
-        terminate. It also closes the listener socket to unblock the accept 
-        method and waits for both the socket listener and memory collection 
-        threads to finish their execution within a specified timeout.
-        Logs any issues encountered during the stopping process of the threads.
+        This method sets the stop event to signal all running threads to terminate,
+        closes the listener socket to unblock the accept method, and waits for the
+        socket listener and memory collection threads to finish within a specified
+        timeout. Logs issues encountered during the process.
+
+        Args:
+            timeout (float, optional): Timeout in seconds for thread termination.
+                Defaults to 5.0 seconds.
+
+        Raises:
+            ValueError: If the timeout is invalid (e.g., negative or non-numeric).
         """
-        logger.log_info("Signaling threads to stop.")
+        if not isinstance(timeout, (int, float)):
+            logger.log_error(f"Invalid timeout type: {type(timeout)}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout < 0:
+            logger.log_error(f"Negative timeout: {timeout}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout > 60.0:
+            logger.log_warning(f"Timeout {timeout} seconds is large; capping at 60.0 seconds.")
+            timeout = 60.0
+
+        logger.log_info(f"Signaling threads to stop with timeout {timeout} seconds.")
         self.stop_event.set()
 
-        if self.socket_listener_thread and self.socket_listener_thread.is_alive():
-            logger.log_info("Waiting for socket listener thread to stop...")
-            self.socket_listener_thread.join(timeout=5)
-            if self.socket_listener_thread.is_alive():
-                logger.log_warning("Socket listener thread did not terminate within the timeout period.")
+        failed_threads = []
 
-        if self.memory_collection_thread and self.memory_collection_thread.is_alive():
-            logger.log_info("Waiting for memory collection thread to stop...")
-            self.memory_collection_thread.join(timeout=5)
-            if self.memory_collection_thread.is_alive():
-                logger.log_warning("Memory collection thread did not terminate within the timeout period.")
+        for thread in [self.socket_listener_thread, self.memory_collection_thread]:
+            if thread and thread.is_alive():
+                logger.log_info(f"Waiting for {thread.name} to stop...")
+                thread.join(timeout=timeout)
+                if thread.is_alive():
+                    logger.log_warning(f"{thread.name} did not terminate within {timeout} seconds.")
+                    failed_threads.append(thread.name)
+                else:
+                    logger.log_info(f"{thread.name} terminated successfully.")
 
-        logger.log_info("All threads stopped.")
+        self.socket_listener_thread = None
+        self.memory_collection_thread = None
+
+        if failed_threads:
+            logger.log_error(
+                f"Threads failed to terminate: {', '.join(failed_threads)}. "
+                "Consider using multiprocessing for forceful termination or increasing the timeout."
+            )
+        else:
+            logger.log_info("All threads stopped successfully.")
 
     def cleanup(self):
         """
