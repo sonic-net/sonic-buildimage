@@ -299,6 +299,12 @@ module sonic-device_metadata {
                     type string;
                     description "Set source of anchor route";
                 }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
             }
             /* end of container localhost */
         }
