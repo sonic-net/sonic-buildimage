@@ -15,7 +15,7 @@ class TestCertConverter(TestCase):
         '''
         expect_error = Exception("Break the loop")
         mock_isfile.side_effect = [False, True]
-        mock_convert.side_effect = [False, True, expect_error]
+        mock_convert.side_effect = [False, False, True, True, expect_error]
         mock_table.return_value = {"localhost": (True, (('', ''),))}
         mock_db.return_value = None
         try:
@@ -50,7 +50,28 @@ class TestCertConverter(TestCase):
         result = sorted(cert_converter.get_list_of_certs(""))
         self.assertEqual(result, ['restapiserver.1', 'restapiserver.2'])
 
-    def test_cert_list_02(self):
+    @mock.patch("os.path.exists")
+    @mock.patch("os.path.isfile")
+    @mock.patch("os.path.islink")
+    @mock.patch("os.listdir")
+    def test_cert_list_02(self, mock_listdir, mock_islink, mock_isfile, mock_exists):
+        '''
+        Generate list of certs
+        Verify cert list
+        '''
+        mock_exists.return_value = True
+        mock_isfile.return_value = True
+        mock_islink.return_value = False
+        mock_listdir.return_value = [
+            'gnmiserver.crt.1',
+            'gnmiserver.key.1',
+            'gnmiserver.crt.2',
+            'gnmiserver.key.2'
+            ]
+        result = sorted(cert_converter.get_list_of_certs(""))
+        self.assertEqual(result, ['gnmiserver.1', 'gnmiserver.2'])
+
+    def test_cert_list_03(self):
         '''
         Generate list of certs for invalid path
         Verify cert list
@@ -69,10 +90,26 @@ class TestCertConverter(TestCase):
         '''
         mock_cmd.return_value = (True, "")
         mock_list.side_effect = [[], ['restapiserver.1', 'restapiserver.6']]
-        cert_converter.convert_certs('abc/', 'xyz/', 10)
+        cert_converter.convert_certs('abc/', 'restapiserver', 'xyz/', 10)
         self.assertEqual(len(mock_cmd.call_args_list), 6)
         self.assertEqual(mock_cmd.call_args_list[0], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/restapiserver.pfx.1", "-out", "xyz/restapiserver.crt.1", "-password", "pass:", "-passin", "pass:"]))
         self.assertEqual(mock_cmd.call_args_list[3], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/restapiserver.pfx.6", "-out", "xyz/restapiserver.crt.6", "-password", "pass:", "-passin", "pass:"]))
+
+    @mock.patch("cert_converter.get_list_of_certs")
+    @mock.patch("cert_converter.execute_cmd")
+    @mock.patch("cert_converter.link_to_latest_cert")
+    @mock.patch("os.remove")
+    def test_converter_02(self, mock_rm, mock_link, mock_cmd, mock_list):
+        '''
+        Convert cert list
+        Check command
+        '''
+        mock_cmd.return_value = (True, "")
+        mock_list.side_effect = [[], ['gnmiserver.1', 'gnmiserver.6']]
+        cert_converter.convert_certs('abc/', 'gnmiserver', 'xyz/', 10)
+        self.assertEqual(len(mock_cmd.call_args_list), 6)
+        self.assertEqual(mock_cmd.call_args_list[0], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/gnmiserver.pfx.1", "-out", "xyz/gnmiserver.crt.1", "-password", "pass:", "-passin", "pass:"]))
+        self.assertEqual(mock_cmd.call_args_list[3], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/gnmiserver.pfx.6", "-out", "xyz/gnmiserver.crt.6", "-password", "pass:", "-passin", "pass:"]))
 
     @mock.patch("swsscommon.swsscommon.DBConnector")
     @mock.patch("swsscommon.swsscommon.Table")
@@ -175,6 +212,41 @@ class TestCertConverter(TestCase):
             mock.call("/dummy/restapiserver.key.11"),
             mock.call("/dummy/restapiserver.crt.12"),
             mock.call("/dummy/restapiserver.key.12")
+            ]
+        expect_remove.sort()
+        remove_list = mock_remove.call_args_list
+        remove_list.sort()
+        self.assertEqual(remove_list, expect_remove)
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    @mock.patch("os.remove")
+    @mock.patch("os.path.exists")
+    @mock.patch("os.path.islink")
+    @mock.patch("os.path.isfile")
+    @mock.patch("os.listdir")
+    def test_clean_cert_03(self, mock_listdir, mock_isfile, mock_islink, mock_exists, mock_remove, mock_table, mock_db):
+        '''
+        clean crt file and key file in certs path
+        Compare removed file
+        '''
+        mock_exists.return_value = True
+        mock_islink.return_value = False
+        mock_listdir.return_value = [
+            "gnmiserver.crt.11",
+            "gnmiserver.crt.12",
+            "gnmiserver.key.11",
+            "gnmiserver.key.12"
+            ]
+        mock_isfile.return_value = True
+        mock_table.return_value = {"localhost": (True, (('', ''),))}
+        mock_db.return_value = None
+        cert_converter.clean_current_certs("/dummy/")
+        expect_remove = [
+            mock.call("/dummy/gnmiserver.crt.11"),
+            mock.call("/dummy/gnmiserver.key.11"),
+            mock.call("/dummy/gnmiserver.crt.12"),
+            mock.call("/dummy/gnmiserver.key.12")
             ]
         expect_remove.sort()
         remove_list = mock_remove.call_args_list

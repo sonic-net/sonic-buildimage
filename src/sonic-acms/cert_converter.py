@@ -10,8 +10,10 @@ import random, string
 from sonic_py_common import logger
 from swsscommon import swsscommon
 
-# Location where this script finally puts the certs after format conversion
-certs_path = "/etc/sonic/credentials/"
+# Location where this script finally puts the restapi certs after format conversion
+restapi_certs_path = "/etc/sonic/credentials/"
+# Location where this script finally puts the gnmi certs after format conversion
+gnmi_certs_path = "/etc/sonic/gnmi/"
 # Location where ACMS downloads certs from dSMS
 acms_certs_path = "/var/opt/msft/client/dsms/sonic-prod/certificates/chained/"
 # Location of the uber notify file
@@ -22,6 +24,11 @@ password_length = 64
 polling_frequency = 3600
 # Redis DB information
 REDIS_TIMEOUT_MS = 0
+
+certs_path_map = {
+    "restapiserver": restapi_certs_path,
+    "gnmiserver": gnmi_certs_path
+}
 
 sonic_logger = logger.Logger()
 sonic_logger.set_min_log_priority_info()
@@ -107,13 +114,16 @@ def link_to_latest_cert(acms_certs_path, certs_path):
         sonic_logger.log_info("cert_converter : link_to_latest_cert : Finished linking cert "+cert_name+".pfx")
     return True
 
-def convert_certs(acms_certs_path, certs_path, password_length):
+def convert_certs(acms_certs_path, cert_prefix, certs_path, password_length):
     existing_cert_names = get_list_of_certs(certs_path)
     downloaded_cert_names = get_list_of_certs(acms_certs_path)
     new_cert_flag = False
 
     if len(downloaded_cert_names):
         for cert_name in downloaded_cert_names:
+            # Ignore certs with other prefixes
+            if cert_prefix not in cert_name:
+                continue
             # Start converting those certs which have not been converted
             if cert_name not in existing_cert_names:
                 sonic_logger.log_info("cert_converter : convert_certs : Start converting "+cert_name)
@@ -176,10 +186,12 @@ def main():
         sonic_logger.log_info("cert_converter : main : Check if uber_notify_file is present")
         if os.path.isfile(uber_notify_file_path):
             sonic_logger.log_info("cert_converter : main : uber_notify_file found, clean old certs...")
-            clean_current_certs(certs_path)
-            sonic_logger.log_info("cert_converter : main : uber_notify_file found, converting all certs...")
-            if not convert_certs(acms_certs_path, certs_path, password_length):
-                sonic_logger.log_error("cert_converter : main : Cert conversion failed!")
+            for prefix, certs_path in certs_path_map.items():
+                # Clean old certs
+                clean_current_certs(certs_path)
+                sonic_logger.log_info("cert_converter : main : uber_notify_file found, converting all certs for %s..." % certs_path)
+                if not convert_certs(acms_certs_path, prefix, certs_path, password_length):
+                    sonic_logger.log_error("cert_converter : main : Cert conversion failed for %s!" % certs_path)
             break
         else:
             time.sleep(60)
@@ -187,8 +199,9 @@ def main():
     sonic_logger.log_info("cert_converter : main : Start polling every 1hr...")
     while True:
         sonic_logger.log_notice("cert_converter : main : Checking for cert changes...")
-        if not convert_certs(acms_certs_path, certs_path, password_length):
-            sonic_logger.log_error("cert_converter : main : Cert conversion failed!")
+        for prefix, certs_path in certs_path_map.items():
+            if not convert_certs(acms_certs_path, prefix, certs_path, password_length):
+                sonic_logger.log_error("cert_converter : main : Cert conversion failed for %s!" % certs_path)
         time.sleep(polling_frequency)
 
 if __name__ == "__main__":
