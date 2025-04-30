@@ -311,6 +311,12 @@ module sonic-device_metadata {
                     description "Enable ZMQ feature on APPL_DB ROUTE tables.";
                     default "false";
                 }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
             }
             /* end of container localhost */
         }
