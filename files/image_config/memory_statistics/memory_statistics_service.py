@@ -875,7 +875,6 @@ class MemoryStatisticsCollector:
                 os.unlink(temp_file_path)
             raise OSError(f"Failed to update individual memory statistics file: {e}")
 
-
     def collect_and_store_memory_usage(self, collect_only: bool):
         """
         Collect and store memory usage statistics into log files using JSON format.
