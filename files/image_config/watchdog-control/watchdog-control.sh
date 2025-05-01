@@ -54,12 +54,6 @@ function is_smart_switch_dpu()
 
 function disable_watchdog()
 {
-    # Check if the image is built for DPU
-    if is_smart_switch_dpu; then
-        debug "Skipping Watchdog disable as the system is a DPU"
-        return
-    fi
-
     # Obtain boot type from kernel arguments
     BOOT_TYPE=`getBootType`
     if [[ -x ${WATCHDOG_UTIL} ]]; then
@@ -68,4 +62,20 @@ function disable_watchdog()
     fi
 }
 
-disable_watchdog
+function enable_watchdog()
+{
+    if [[ -x ${WATCHDOG_UTIL} ]]; then
+        debug "Enabling Watchdog"
+        ${WATCHDOG_UTIL} arm
+    fi
+}
+
+if is_smart_switch_dpu; then
+    # Keep watchdog enabled for smart switch DPUs
+    # Smart switch DPUs uses ARM SBSA Generic Watchdog,
+    # which is capable of monitoring the system in runtime.
+    enable_watchdog
+else
+    # Disable watchdog for all other platforms
+    disable_watchdog
+fi
