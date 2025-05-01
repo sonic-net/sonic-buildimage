@@ -11,7 +11,7 @@ export APT_RETRIES_COUNT
 
 DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
 MIRROR_VERSION_FILE=
-[[ "$SONIC_VERSION_CONTROL_COMPONENTS" == *deb* || $SONIC_VERSION_CONTROL_COMPONENTS == *all* ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
+[[ "$MIRROR_SNAPSHOT" == "y" ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
 [ -f target/versions/default/versions-mirror ] && MIRROR_VERSION_FILE=target/versions/default/versions-mirror
 
 # The default mirror urls

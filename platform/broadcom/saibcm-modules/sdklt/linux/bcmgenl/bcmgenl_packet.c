@@ -225,7 +225,9 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
-    match_filt = cbd->filt;
+    if (cbd) {
+        match_filt = cbd->filt;
+    }
 
     if (!cbd || !match_filt) {
         GENL_DBG_WARN("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
@@ -235,18 +237,16 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
     /* check if this packet is from the same filter */
-    if (!match_filt ||
-        (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB) ||
-        (strncmp(match_filt->desc, BCMGENL_PACKET_NAME, NGKNET_FILTER_DESC_MAX) != 0)) {
+    if  (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB) ||
+        (strncmp(match_filt->desc, BCMGENL_PACKET_NAME, NGKNET_FILTER_DESC_MAX) != 0) {
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
     pkt = cbd->pmd + cbd->pmd_len;
-    pkt_len = cbd->pkt_len;
 
     GENL_DBG_VERB
         ("pkt size %d, match_filt->dest_id %d\n",
-         pkt_len, match_filt->dest_id);
+         cbd->pkt_len, match_filt->dest_id);
     GENL_DBG_VERB
         ("filter user data: 0x%08x\n", *(uint32_t *)match_filt->user_data);
     GENL_DBG_VERB
@@ -254,6 +254,7 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     g_bcmgenl_packet_stats.pkts_f_packet_cb++;
 
     /* Adjust original pkt_len to remove 4B FCS */
+    pkt_len = cbd->pkt_len;
     if (pkt_len < FCS_SZ) {
         g_bcmgenl_packet_stats.pkts_d_invalid_size++;
         goto FILTER_CB_PKT_HANDLED;
@@ -375,7 +376,6 @@ FILTER_CB_PKT_HANDLED:
     if (rv == 1) {
         g_bcmgenl_packet_stats.pkts_f_handled++;
         /* Not sending to network protocol stack */
-        dev_kfree_skb_any(skb);
         skb = NULL;
     } else {
         g_bcmgenl_packet_stats.pkts_f_pass_through++;
@@ -669,13 +669,13 @@ bcmgenl_packet_proc_debug_write(
     char debug_str[40];
     char *ptr;
 
-    if (count > sizeof(debug_str)) {
+    if (count >= sizeof(debug_str)) {
         count = sizeof(debug_str) - 1;
-        debug_str[count] = '\0';
     }
     if (copy_from_user(debug_str, buf, count)) {
         return -EFAULT;
     }
+    debug_str[count] = '\0';
 
     if ((ptr = strstr(debug_str, "debug=")) != NULL) {
         ptr += 6;
@@ -715,7 +715,7 @@ genl_cb_proc_init(void)
 
     /* create procfs for generic */
     snprintf(packet_procfs_path, PROCFS_MAX_PATH, "%s/%s",
-             BCMGENL_PROCFS_PATH, BCMGENL_PACKET_NAME);
+             BCMGENL_MODULE_NAME, BCMGENL_PACKET_NAME);
     bcmgenl_packet_proc_root = proc_mkdir(packet_procfs_path, NULL);
 
     /* create procfs for generic stats */

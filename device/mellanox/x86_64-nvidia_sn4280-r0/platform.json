@@ -649,16 +649,52 @@
     },
     "DPUS": {
         "dpu0": {
-            "midplane_interface":  "dpu0"
+            "midplane_interface": "dpu0",
+            "interface": {
+                "Ethernet224": "Ethernet0"
+            },
+            "serial-console": {
+                "device": "ttyUSB0",
+                "baud-rate": "115200"
+            },
+            "rshim_info": "rshim0",
+            "bus_info": "0000:08:00.0"
         },
         "dpu1": {
-            "midplane_interface":  "dpu1"
+            "midplane_interface": "dpu1",
+            "interface": {
+                "Ethernet232": "Ethernet0"
+            },
+            "serial-console": {
+                "device": "ttyUSB1",
+                "baud-rate": "115200"
+            },
+            "rshim_info": "rshim1",
+            "bus_info": "0000:07:00.0"
         },
         "dpu2": {
-            "midplane_interface":  "dpu2"
+            "midplane_interface": "dpu2",
+            "interface": {
+                "Ethernet240": "Ethernet0"
+            },
+            "serial-console": {
+                "device": "ttyUSB2",
+                "baud-rate": "115200"
+            },
+            "rshim_info": "rshim2",
+            "bus_info": "0000:01:00.0"
         },
         "dpu3": {
-            "midplane_interface":  "dpu3"
+            "midplane_interface": "dpu3",
+            "interface": {
+                "Ethernet248": "Ethernet0"
+            },
+            "serial-console": {
+                "device": "ttyUSB3",
+                "baud-rate": "115200"
+            },
+            "rshim_info": "rshim3",
+            "bus_info": "0000:02:00.0"
         }
     }
 }

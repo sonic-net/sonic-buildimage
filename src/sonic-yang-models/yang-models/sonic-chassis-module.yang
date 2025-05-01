@@ -20,9 +20,9 @@ module sonic-chassis-module {
                 key "name";
                 leaf name {
                     type string {
-                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+";
+                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+|DPU[0-9]+";
                     }
-                    description "Line-card or fabric-card module name";
+                    description "Line-card or fabric-card or dpu module name";
                 }
 
                 leaf admin_status {

@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-set -x
 set -e
 
 WDIR=
@@ -184,34 +183,14 @@ add_sonic_to_initramfs() {
 cat > scripts/initrd-install << EOF
 #!/bin/bash
 
-printf_msg()
-{
-	echo "$@" | tee /dev/kmsg
-	return 0
-}
-
 depmod -a $KERNEL_VERSION > /dev/null 2>&1
 insmod /mlx-bootctl.ko
 insmod /sdhci-of-dwcmshc.ko
 insmod /sbsa_gwdt.ko
 /usr/sbin/watchdog
 
-printf_msg "================================="
-printf_msg "Installing SONiC. Please wait..."
-printf_msg "================================="
-
 /bin/bash /debian/install.sh
-if [ \$? -eq 0 ]; then
-	printf_msg "==================================="
-	printf_msg "Installation finished. Rebooting..."
-	printf_msg "==================================="
-	printf_msg
-	reboot -f
-else
-	printf_msg "========================"
-	printf_msg "Failed to install SONiC"
-	printf_msg "========================"
-fi
+
 EOF
     chmod +x scripts/initrd-install
     sudo rm -f conf/conf.d/debian-core*
@@ -221,63 +200,37 @@ EOF
 
 copy_bin()
 {
-    from=$(realpath $1)
-
-    if [ -e $from/$2 ]; then
-        bin=$2
+    if [ -e $1 ]; then
+        bin=$1
     else
-        bin=$(sudo chroot $from bash -c "which $2 2> /dev/null")
+        bin=$(which $1 2> /dev/null)
     fi
-
-    echo "copy from" $from file: $bin
-
-    if [ -h $from/$bin ]; then
-        if [[ $from == "/" ]]; then
-            tbin=`readlink -f $bin`
-        else
-            tbin=`readlink -f $from/$bin | sed -e "s~$from~~"`
-        fi
-
-        if [ ! -e .$tbin ]; then
-            sudo mkdir -p .`dirname $tbin`
-            sudo cp $from/$tbin .$tbin
-        fi
-
-        if [ ! -e .${bin} ]; then
-            sudo mkdir -p .`dirname $bin`
-            sudo cp -a $from/$bin .${bin}
-        fi
-    elif [ -e $from/$bin ]; then
-        sudo mkdir -p .`dirname $bin`
-        sudo cp -a $from/$bin .${bin}
-    else
-        echo "ERROR: Cannot find $2"
+    if [ -z "$bin" ]; then
+        echo "ERROR: Cannot find $1"
         exit 1
+    fi
+    sudo mkdir -p .$(dirname $bin)
+    if [ ! -e .${bin} ]; then
+        sudo cp -a $bin .${bin}
     fi
 
     # Copy dependencies
-    for lib in `ldd $from/$bin 2> /dev/null | grep '=>' | awk '{print $3}'`
+    for lib in  $(ldd $bin 2> /dev/null | grep '=>' | awk '{print $3}')
     do
         if [ -e .$lib ]; then
             continue
         fi
-
-        sudo mkdir -p .`dirname $lib`
-        sudo cp -a $from/$lib .$lib
-        echo sudo cp -a $from/$lib .$lib
-        if [ -h $from/.$lib ]; then
-            if [[ $from == "/" ]]; then
-                tlib=`readlink -f $lib`
-            else
-                tlib=`readlink -f $from/$lib | sed -e "s~$from~~"`
-            fi
+        sudo mkdir -p .$(dirname $lib)
+        sudo cp -a $lib .$lib
+        if [ -h $lib ]; then
+            tlib=$(readlink -f $lib)
             if [ ! -e .$tlib ]; then
-                sudo mkdir -p .`dirname $tlib`
-                sudo cp $from/$tlib .$tlib
+                sudo mkdir -p .$(dirname $tlib)
+                sudo cp $tlib .$tlib
             fi
         fi
     done
- }
+}
 
 create_bfb_image() {
 
@@ -336,7 +289,17 @@ create_bfb_image() {
         if [ -d $tool ]; then
             continue
         fi
-        copy_bin / $tool
+        copy_bin $tool
+    done
+
+    for tool in `dpkg -L mft` \
+            `dpkg -L mft-oem` \
+            `dpkg -L xmlstarlet | grep -v share`
+    do
+        if [ -d $tool ]; then
+            continue
+        fi
+        copy_bin $tool
     done
 
     sudo depmod -a -b ./ $KERNEL_VERSION

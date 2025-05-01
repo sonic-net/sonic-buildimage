@@ -63,7 +63,7 @@ class MACsecSA(MACsecAppMeta, MACsecCounters):
         counters = copy.deepcopy(self.counters)
         if cache:
             for k, v in counters.items():
-                if k in cache.counters:
+                if k in cache.counters and k.startswith("SAI_MACSEC_SA_STAT"):
                     counters[k] = int(counters[k]) - int(cache.counters[k])
         counters = sorted(counters.items(), key=lambda x: x[0])
         buffer += tabulate(meta + counters)

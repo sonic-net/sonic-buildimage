@@ -24,7 +24,7 @@ class PortIndexMapper(object):
                    swsscommon.STATE_VLAN_TABLE_NAME]
         self.appl_db = swsscommon.DBConnector("STATE_DB",
                                               REDIS_TIMEOUT_MS,
-                                              True)
+                                              False)
 
         self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1', decode_responses=True)
         self.state_db.connect(self.state_db.STATE_DB, False)

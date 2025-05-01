@@ -1,0 +1,17 @@
+# -*- Kbuild -*-
+#
+# Linux PTP Clock module.
+#
+# $Copyright:.$
+#
+
+obj-m := linux_ngptpclock.o
+
+ccflags-y := $(LKM_CFLAGS) \
+             -I$(SDK)/shr/include \
+             -I$(SDK)/bcmdrd/include \
+             -I$(SDK)/linux/include \
+             -I$(SDK)/linux/knet/include \
+             -I$(SDK)/linux/knet
+
+linux_ngptpclock-y := ngptpclock_main.o

@@ -9,16 +9,30 @@ def
 {# Determine device topology and filename postfix #}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['type'] is defined %}
 {%-     set switch_role = DEVICE_METADATA['localhost']['type'] %}
+{%  if DEVICE_METADATA['localhost']['subtype'] is defined %}
+{%-     set switch_subrole = DEVICE_METADATA['localhost']['subtype'] %}
+{%- else %}
+{%-     set switch_subrole = '' %}
+{%- endif %}
 {%-     if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't0' %}
 {%-     elif 'leafrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't1' %}
+{%-     elif 'spinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+    {%-     if 'lowerspinerouter' == switch_subrole.lower() %}
+    {%-         set filename_postfix = 'lt2' %}
+    {%-     elif 'fabricspinerouter' == switch_role.lower() %}
+    {%-         set filename_postfix = 'ft2' %}
+    {%-     else %}
+    {%-         set filename_postfix = 't2' %}
+    {%-     endif -%}
 {%-     else %}
 {%-         set filename_postfix = set_default_topology() %}
-{%-     endif %}
+{%-     endif -%}
 {%- else %}
-{%-     set filename_postfix = set_default_topology() %}
-{%-     set switch_role      = '' %}
+{%-         set filename_postfix = set_default_topology() %}
+{%-         set switch_role      = '' %}
+{%-         set switch_subrole   = '' %}
 {%- endif -%}
 
 {% set voq_chassis = false %}
@@ -26,10 +40,12 @@ def
 {%-  set voq_chassis = true %}
 {%- endif -%}
 
-{# Import default values from device HWSKU folder #}
-{%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
-
-{%- set default_cable = defs.default_cable -%}
+{# Allow includer to pre-package defs without needing an import #}
+{%- if defs is not defined -%}
+    {# Import default values from device HWSKU folder #}
+    {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
+    {%- set default_cable = defs.default_cable -%}
+{%- endif -%}
 
 {# Port configuration to cable length look-up table #}
 {# Each record describes mapping of DUT (DUT port) role and neighbor role to cable length #}
@@ -48,6 +64,7 @@ def
     -%}
 {%- endif %}
 
+{%- if cable_length is not defined %}
 {%- macro cable_length(port_name) %}
     {%- set cable_len = [] %}
     {%- for local_port in DEVICE_NEIGHBOR %}
@@ -79,10 +96,17 @@ def
             {%- endif %}
         {%- endif %}
     {%- endfor %}
-    {%- if cable_len -%}
+    {%- if port_name in PORT_DPC -%}
+        {{ '0m' }}
+    {%- elif cable_len -%}
         {{ cable_len.0 }}
     {%- else %}
-        {%- if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+        {%- if port_name.startswith('Ethernet-BP') %}
+            {%- if 'internal' not in ports2cable %}
+                {%- set _ = ports2cable.update({'internal': '5m'}) %}
+            {%- endif -%}
+            {%- set _ = cable_len.append(ports2cable['internal']) %}
+        {%- elif 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
             {%- for local_port in VLAN_MEMBER %}
                 {%- if local_port[1] == port_name %}
                     {%- set roles3 = switch_role + '_' + 'server' %}
@@ -93,28 +117,21 @@ def
                     {%- endif %}
                 {%- endif %}
             {%- endfor %}
-            {%- if cable_len -%}
-                {{ cable_len.0 }}
-            {%- else -%}
-                {{ default_cable }}
-            {%- endif %}
+        {%- endif %}
+        {%- if cable_len -%}
+            {{ cable_len.0 }}
         {%- else -%}
-            {%- if port_name.startswith('Ethernet-BP') %}
-                {%- if 'internal' not in ports2cable %}
-                    {%- set _ = ports2cable.update({'internal': '5m'}) %}
-                {%- endif -%}
-                {{ ports2cable['internal'] }}
-            {%- else -%}
-                {{ default_cable }}
-            {%- endif %}
+            {{ default_cable }}
         {%- endif %}
     {%- endif %}
 {%- endmacro %}
+{%- endif %}
 
 {%- set PORT_ALL  = [] %}
 {%- set PORT_BP  = [] %}
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
+{%- set PORT_QOS_BYPASS = [] %}
 
 {%- if voq_chassis %}
     {%- for system_port in SYSTEM_PORT %}
@@ -144,6 +161,9 @@ def
     {%- if defs.generate_bp_port_list is defined %}
         {%- if defs.generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
     {%- endif %}
+    {%- if defs.generate_qos_bypass_port_list is defined %}
+        {%- if defs.generate_qos_bypass_port_list(PORT_QOS_BYPASS) %} {% endif %}
+    {%- endif %}
 {%- endif %}
 
 {%- set PORT_ACTIVE  = [] %}
@@ -166,6 +186,7 @@ def
         {%- endif %}
     {%- endfor %}
 {%- endif %}
+{%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_QOS_BYPASS) | list %}
 
 {%- set port_names_list_active  = [] %}
 {%- for port in PORT_ACTIVE %}
@@ -188,7 +209,16 @@ def
     {%- if port_names_list_inactive.append(port) %}{%- endif %}
 {%- endfor %}
 {%- set port_names_inactive  = port_names_list_inactive  | join(',') %}
+
 {
+{% if (defs.generate_cable_length_config is defined) %}
+    {%- set port_names_list_all  = [] %}
+    {%- for port in PORT_ALL %}
+        {%- if port_names_list_all.append(port) %}{%- endif %}
+    {%- endfor %}
+    {%- set port_names_all  = port_names_list_all  | join(',') %}
+    {{- defs.generate_cable_length_config(port_names_all) }}
+{% else %}
     "CABLE_LENGTH": {
         "AZURE": {
     {% for port in PORT_ALL %}
@@ -198,6 +228,7 @@ def
     {% endfor %}
     }
     },
+{% endif %}
 
 {% if defs.generate_buffer_pool_and_profiles is defined %}
 {{ defs.generate_buffer_pool_and_profiles() }}
@@ -302,7 +333,7 @@ def
     "LOSSLESS_TRAFFIC_PATTERN": {
         "AZURE": {
             "mtu": "1024",
-            "small_packet_percentage": "100"
+            "small_packet_percentage": "50"
         }
     }
 {% endif %}

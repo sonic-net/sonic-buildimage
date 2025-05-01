@@ -128,6 +128,10 @@ class TestConfigMACsec(object):
         assert "macsec" not in port_table or not port_table["macsec"]
         assert port_table["admin_status"] == "up"
 
+        # Test deleting on port without it enabled
+        result = runner.invoke(macsec.macsec, ["port", "del", "Ethernet0"], obj=cfgdb)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
 
     def test_macsec_invalid_operation(self, mock_cfgdb):
         cfgdb = mock_cfgdb

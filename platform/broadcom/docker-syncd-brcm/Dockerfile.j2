@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -23,8 +23,8 @@ RUN apt-get install -yf kmod
 ## BRCM uses ethtool to set host interface speed
 RUN apt-get install -y ethtool
 
-COPY ["files/dsserve", "files/bcmcmd", "start.sh", "start_led.sh", "bcmsh", "/usr/bin/"]
-RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd
+COPY ["start.sh", "start_led.sh", "bcmsh", "files/rdb-cli", "/usr/bin/"]
+RUN chmod +x /usr/bin/rdb-cli
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]

@@ -68,7 +68,6 @@ export IPROC_BUILD
 export BUILD_PLATFORM
 export ARM_LINUX_VERSION
 
-LINUX_MAKE_USER=1
 export ADD_TO_CFLAGS
 
 include ${SDK}/make/Make.linux

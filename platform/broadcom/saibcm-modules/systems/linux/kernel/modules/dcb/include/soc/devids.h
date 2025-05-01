@@ -1356,6 +1356,11 @@
 #define BCM53653_B0_REV_ID      0x11
 #define BCM53653_C0_REV_ID      0x21
 
+#define BCM53654_DEVICE_ID      0x8654
+#define BCM53654_A0_REV_ID      1
+#define BCM53654_B0_REV_ID      0x11
+#define BCM53654_C0_REV_ID      0x21
+
 #define BCM56565_DEVICE_ID      0xb565
 #define BCM56565_A0_REV_ID      1
 #define BCM56565_B0_REV_ID      0x11
@@ -1913,6 +1918,11 @@
 #define Q3_DEVICE_ID_END        0x886f
 #define J3AI_DEVICE_ID           0x8890
 #define Q3D_DEVICE_ID           0x8870
+#ifdef BCM_Q3A_SUPPORT
+#define Q3A_DEVICE_ID           0x8490
+#define Q3U_DEVICE_ID           0x8400
+#define Q3N_DEVICE_ID           0x8405
+#endif
 #endif
 #define Q2A_DEVICE_ID           0x8480
 #define Q2A_A0_REV_ID           DNXC_A0_REV_ID

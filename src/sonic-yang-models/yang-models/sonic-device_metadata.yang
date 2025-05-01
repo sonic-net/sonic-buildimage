@@ -99,8 +99,8 @@ module sonic-device_metadata {
 
                 leaf type {
                     type string {
-                        length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|not-provisioned";
+                        length 1..255;                        
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|SpineRouter|UpperSpineRouter|FabricSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
                     }
                 }
 
@@ -157,6 +157,11 @@ module sonic-device_metadata {
                     type string;
                 }
 
+                leaf mgmt_type {
+                    type string;
+                    description "Indicates the management type of this device.";
+                }
+
                 leaf cluster {
                     type string;
                     description "The switch is a member of this cluster.";
@@ -164,7 +169,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|LowerSpineRouter";
                     }
                 }
 
@@ -250,6 +255,11 @@ module sonic-device_metadata {
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
 
+                leaf-list supporting_bulk_counter_groups {
+                    type string;
+                    description "This field contains a list of counter groups that support bulk operation.";
+                }
+
                 leaf bgp_router_id {
                     type inet:ipv4-address;
                     description "BGP Router identifier";
@@ -274,6 +284,27 @@ module sonic-device_metadata {
                     default disabled;
                 }
 
+                leaf ring_thread_enabled {
+                    type boolean;
+                    description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
+                    default "false";
+                }
+
+                leaf-list t2_group_asns {
+                    type inet:as-number;
+                    description "ASNs inner same group";
+                }
+
+                leaf-list anchor_route_source {
+                    type string;
+                    description "Set source of anchor route";
+                }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
             }
             /* end of container localhost */
         }

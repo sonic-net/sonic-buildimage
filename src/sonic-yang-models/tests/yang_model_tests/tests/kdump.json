@@ -15,5 +15,8 @@
     "KDUMP_WITH_INVALID_MEMORY": {
         "desc": "Configuring kdump config with invalid memory config.",
         "eStr": ["pattern", "does not satisfy"]
+    },
+    "KDUMP_WITH_VALID_REMOTE_VALUES": {
+        "desc": "Configuring the kdump with valid remote ssh values."
     }
 }

@@ -52,7 +52,7 @@ gvprintk(const char* fmt, va_list args)
 {
     static char _buf[256];
 
-    strcpy(_buf, "");
+    _buf[0] = 0;
     sprintf(_buf, "%s (%d): ", _gmodule->name, current->pid);
     vsprintf(_buf+strlen(_buf), fmt, args);
     printk("%s",_buf);

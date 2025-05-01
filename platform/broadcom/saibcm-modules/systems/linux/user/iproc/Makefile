@@ -53,7 +53,7 @@ endif
 
 export SDK
 
-override kernel_version=5_10
+override kernel_version=6_6
 platform=iproc
 
 IPROC_BUILD=1
@@ -61,7 +61,6 @@ export IPROC_BUILD
 export BUILD_PLATFORM
 export ARM_LINUX_VERSION
 
-LINUX_MAKE_USER=1
 export ADD_TO_CFLAGS
 export BR_NO_CCACHE
 

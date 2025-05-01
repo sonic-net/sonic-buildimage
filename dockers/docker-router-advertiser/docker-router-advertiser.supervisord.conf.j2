@@ -24,8 +24,10 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
 [program:start]
@@ -34,8 +36,10 @@ priority=1
 autostart=true
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
@@ -65,8 +69,10 @@ priority=3
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=start:exited
 
@@ -75,8 +81,10 @@ command=/usr/sbin/radvd -n
 priority=4
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=wait_for_link:exited
 {% endif -%}

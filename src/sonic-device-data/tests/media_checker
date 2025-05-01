@@ -11,7 +11,7 @@ si_param_list = ["preemphasis", "idriver", "ipredriver", \
                  "main", "pre1", "pre2", "pre3", \
                  "post1", "post2", "post3", "attn", \
                  "ob_m2lp", "ob_alev_out", "obplev", "obnlev", \
-                 "regn_bfm1p", "regn_bfm1n"]
+                 "regn_bfm1p", "regn_bfm1n", "unreliable_los", "interface_type"]
 lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
@@ -71,9 +71,10 @@ def check_media_dict(vendor_dict):
                     return False
 
                 lane_dict = settings_dict[si_param]
-                for lanes in lane_dict:
-                    if not check_lane_and_value(lanes, lane_dict[lanes]):
-                        return False
+                if isinstance(lane_dict, dict):
+                    for lanes in lane_dict:
+                        if not check_lane_and_value(lanes, lane_dict[lanes]):
+                            return False
     return True
 
 def check_valid_port(port_name):

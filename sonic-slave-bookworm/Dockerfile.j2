@@ -117,6 +117,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libswitch-perl \
         libzmq5 \
         libzmq3-dev \
+        libyaml-cpp-dev \
         uuid-dev \
         jq \
         cron \
@@ -144,6 +145,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -280,6 +283,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libbsd-dev \
         pkg-config \
         check \
+# For bmp
+        librdkafka-dev \
+        libyaml-cpp-dev \
+        libsasl2-dev \
 # For mpdecimal
         docutils-common \
         libjs-sphinxdoc \
@@ -423,12 +430,14 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For audisp-tacplus
         libauparse-dev \
         auditd \
+# For sysmgr container build
+        libdbus-c++-dev \
 # For protobuf
         protobuf-compiler \
         libprotobuf-dev \
 # For sonic-dhcp6relay build
         libjsoncpp-dev \
-#for nvidia-blufield driver compilation
+#for nvidia-bluefield driver compilation
         pciutils \
         dh-dkms \
         rpm2cpio \
@@ -441,7 +450,9 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         efibootmgr \
         watchdog \
         dmidecode \
-# For nvidia-blufield sdk compilation
+        usbutils \
+        xmlstarlet \
+# For nvidia-bluefield sdk compilation
         cython3 \
         pandoc \
         valgrind \
@@ -478,6 +489,14 @@ RUN eatmydata apt-get install -y \
         python3-ply \
         python3-scapy \
         python3-thrift
+{%- endif %}
+
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
 {%- endif %}
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
@@ -539,6 +558,7 @@ RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
 RUN pip3 install jsonpath_ng
+RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in bookworm
@@ -742,7 +762,7 @@ RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/b
 
 # Install Rust
 ARG RUST_ROOT=/usr/.cargo
-RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.86.0 -y'
 {% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
 RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
 {% endif -%}

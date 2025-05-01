@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +16,13 @@
 # limitations under the License.
 #
 
+DPU_NIC_FW_BASE_URL =
+DPU_NIC_FW_VERSION =
 BF3_FW_BASE_URL =
 
-BF3_FW_VERSION = 32.41.1000
+BF3_FW_VERSION = 43.1014
 
-BF3_FW_FILE = fw-BlueField-3-rel-$(subst .,_,$(BF3_FW_VERSION)).mfa
+BF3_FW_FILE = fw-BlueField-3-rel-32_$(subst .,_,$(BF3_FW_VERSION)).mfa
 
 define make_url_fw
 	$(1)_URL="https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-fw-$(BF3_FW_VERSION)/$(1)"
@@ -35,6 +38,7 @@ endif
 
 BF_FW_FILES = $(BF3_FW_FILE)
 
+export BF3_FW_VERSION
 export BF3_FW_FILE
 export BF_FW_FILES
 

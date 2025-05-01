@@ -9,9 +9,7 @@
  * Author: rob.gardner@oracle.com
  */
 
-#include "kpcimgr_api.h"
-#include "pciesvc.h"
-#include "pciesvc_system.h"
+#include "pciesvc_impl.h"
 
 #define TICKS_PER_US 200
 #define TICKS_PER_MS  (1000*TICKS_PER_US)
@@ -174,7 +172,7 @@ void kpcimgr_report_stats(kstate_t *ks, int phase, int always, int rightnow)
 	if (!always && (now - last_call) < 5 * TICKS_PER_SEC)
 		return;
 
-	p = &pshmem->port[0];
+	p = PSHMEM_ADDR_FIELD(pshmem, port[0]);
 	s = &p->stats;
 	cfgrd = s->ind_cfgrd - ks->ind_cfgrd;
 	cfgwr = s->ind_cfgwr - ks->ind_cfgwr;

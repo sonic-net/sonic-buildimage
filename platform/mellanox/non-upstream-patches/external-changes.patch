@@ -1,10 +1,10 @@
 
 --- a/patch/kconfig-inclusions
 +++ b/patch/kconfig-inclusions
-@@ -124,6 +124,10 @@
- CONFIG_PINCTRL_AMD=y
+@@ -126,6 +126,10 @@
  CONFIG_EDAC_AMD64=m
  CONFIG_AMD_XGBE_DCB=y
+ CONFIG_SENSORS_ISL68137=m
 +CONFIG_USB_NET_DRIVERS=m
 +CONFIG_USB_USBNET=m
 +CONFIG_USB_NET_CDCETHER=m

@@ -106,6 +106,15 @@ endif
 
 endif	# !CLEANING
 
+ifeq ($(ARCH),arm64)
+# SAI: SONIC-76388 and SDK: SDK-367718
+# This macro removes the redundant macros and gcc options
+# JIRA SONIC-69062
+UNIQE = $(if $1,$(firstword $1) $(call UNIQE,$(filter-out $(firstword $1),$1)))
+CFLAGS := $(call UNIQE,$(CFLAGS))
+CFGFLAGS := $(call UNIQE,$(CFGFLAGS))
+endif
+
 clean_d::
 ifdef QUIET
 	@$(ECHO) Cleaning dependencies for ${LOCALDIR}

@@ -25,17 +25,12 @@
 
 #include <linux/init.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
 #error Kernel too old
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
 #include <linux/kconfig.h>
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include <linux/slab.h>
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39)
-#include <linux/smp_lock.h>
 #endif
 #include <linux/module.h>
 
@@ -136,6 +131,12 @@ static inline void page_ref_dec(struct page *page)
 {
     atomic_dec(&page->_count);
 }
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+#define DMA_FORCE_CONTIGUOUS NULL
+#else
+#define DMA_FORCE_CONTIGUOUS DMA_ATTR_FORCE_CONTIGUOUS
 #endif
 
 #ifndef PCI_IRQ_LEGACY
