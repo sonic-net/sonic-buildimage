@@ -122,9 +122,6 @@ module sonic-srv6 {
                         enum pipe;
                     }
                 }
-
-                must 'starts-with(substring-before(./ip_prefix, "::"),
-                                  substring-before(/srv6:sonic-srv6/SRV6_MY_LOCATORS/SRV6_MY_LOCATORS_LIST[current()/locator]/prefix, "::"))';
             }
         }
 
