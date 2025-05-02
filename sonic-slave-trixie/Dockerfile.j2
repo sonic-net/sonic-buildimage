@@ -1,19 +1,19 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
-FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm
+FROM --platform=linux/arm/v7 {{ prefix }}debian:trixie
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
-FROM --platform=linux/arm64 {{ prefix }}debian:bookworm
+FROM --platform=linux/arm64 {{ prefix }}debian:trixie
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 {%- elif CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
-FROM {{ prefix }}debian:bookworm
+FROM {{ prefix }}debian:trixie
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif CONFIGURED_ARCH == "arm64" and CROSS_BUILD_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
-FROM {{ prefix }}debian:bookworm
+FROM {{ prefix }}debian:trixie
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 {%- else -%}
 FROM {{ prefix }}debian:trixie
@@ -135,9 +135,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         imagemagick \
         ghostscript \
         groff \
-# TODO
-#        libpcre3-dev 
-        libpcre2-dev \
         gawk \
         chrpath \
 # For frr build
@@ -196,10 +193,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libservlet3.1-java \
         pkg-php-tools \
 # For mellanox sdk build
-# TODO - PCRE3 has been EOL. Trixie has started using newer PCRE2 library
-#        libpcre3 
-#        libpcre3-dev 
-        libpcre2-dev \
         byacc \
         flex \
         libglib2.0-dev \
@@ -226,14 +219,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         zip \
 # For broadcom sdk build
 {%- if CONFIGURED_ARCH == "amd64" %}
-# TODO
-#        linux-compiler-gcc-12-x86 \
 {%- endif %}
 {%- if CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON != "y" %}
-# TODO
-#        linux-compiler-gcc-12-arm \
 {%- endif %}
-        linux-kbuild-6.12.21 \
+        linux-kbuild-6.12.22 \
 # teamd build
         libdaemon-dev \
         libdbus-1-dev \
@@ -499,7 +488,6 @@ RUN eatmydata apt-get install -y \
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
-RUN eatmydata apt-get install -y libpcre3:$arch
 {%- endif %}
 
 RUN eatmydata apt-get -y build-dep openssh
@@ -537,10 +525,6 @@ RUN eatmydata apt-get install -y golang golang-go
 #RUN eatmydata apt-get install -y golang-go \
 # && ln -sf /usr/lib/go-1.19 /usr/local/go
 #{%- endif %}
-
-# Pip is already 25.0.1
-#RUN pip3 install --upgrade pip==25.0.1
-#RUN apt-get purge -y python3-pip
 
 {%- if CONFIGURED_ARCH == "armhf" %}
 # Allow only manylinux wheels on armhf, to ensure that binaries/libraries work correctly on armhf
@@ -634,21 +618,13 @@ RUN eatmydata apt-get install -y \
     RUN update-ca-certificates --fresh
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
-# TODO update from 'test' to 'stable'
-RUN <<EOF cat > /etc/apt/sources.list.d/docker.sources
-Types: deb
-Signed-By: /etc/apt/trusted.gpg.d/docker-stable.asc
-URIs: https://download.docker.com/linux/debian
-Suites: $(lsb_release -cs)
-Enabled: yes
-Components: test
-EOF
+COPY docker.sources /etc/apt/sources.list.d/docker.sources
+RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
 {%- endif %}
 RUN apt-get update
 #RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
-# TODO - Curretnly picking from https://download.docker.com/linux/debian/dists/trixie/pool/test/
 RUN eatmydata apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
@@ -657,7 +633,7 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 RUN eatmydata apt-get install python3-m2crypto
 
 # Install libthrift package needed by saithrift
-RUN eatmydata apt-get install libthrift-0.19.0t64\
+RUN eatmydata apt-get install -y libthrift-0.19.0t64\
         libthrift-dev \
         thrift-compiler\
         python3-thrift
@@ -667,8 +643,9 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN eatmydata apt-get install -y nodejs
+#TODO Nodejs is not supported yet to trixie
+#RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
+#RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
