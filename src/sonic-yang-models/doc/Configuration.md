@@ -1152,7 +1152,7 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
     "fgnhg_v6": {
         "bucket_size": "120",
         "match_mode": "nexthop-based"
-    }    
+    }
 }
 ```
 
@@ -1186,7 +1186,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	},
     "fc:05::/128": {
 	    "FG_NHG": "fgnhg_v6"
-	}    
+	}
 }
 ```
 
