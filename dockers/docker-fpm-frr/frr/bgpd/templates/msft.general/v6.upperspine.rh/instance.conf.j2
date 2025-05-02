@@ -1,0 +1,17 @@
+!
+! template: bgpd/templates/msft.general/v6.spine.rh/instance.conf.j2
+!
+  neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
+  neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+  neighbor {{ neighbor_addr }} peer-group RH_V6 
+!
+{% if need_to_set_timers %}
+{# neighbor {{ neighbor_addr }} timers {{ bgp_session['keepalive'] }} {{ bgp_session['holdtime'] }} #}
+{% endif %}
+!
+{% if need_to_shutdown %}
+  neighbor {{ neighbor_addr }} shutdown
+{% endif %}
+!
+! end of template: bgpd/templates/msft.general/v6.spine.rh/instance.conf.j2
+!

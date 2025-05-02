@@ -1,0 +1,24 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "SpineRouter",
+            "subtype": "LowerSpineRouter"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "UpperSpineRouter"
+        }
+    },
+    "constants": {
+        "bgp": {
+            "fabric_t2_community": "12345:12345"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device",
+        "admin_status": "down"
+    },
+    "neighbor_addr": "11.11.11.11"
+}

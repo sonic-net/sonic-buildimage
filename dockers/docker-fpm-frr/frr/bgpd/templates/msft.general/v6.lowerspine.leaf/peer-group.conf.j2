@@ -1,0 +1,15 @@
+!
+! template: bgpd/templates/msft.general/v6.spine.leaf/peer-group.conf.j2
+!
+  neighbor TIER1_V6 peer-group
+  address-family ipv6 unicast
+    neighbor TIER1_V6 activate
+    neighbor TIER1_V6 soft-reconfiguration inbound
+    neighbor TIER1_V6 route-map FROM_TIER1_V6 in
+    neighbor TIER1_V6 route-map TO_TIER1_V6 out
+    neighbor TIER1_V6 send-community
+    neighbor TIER1_V6 maximum-prefix 64000 90 warning-only
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v6.spine.leaf/peer-group.conf.j2
+!

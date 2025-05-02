@@ -1,0 +1,62 @@
+!
+! template: bgpd/templates/msft.general/v4.lowerspine.leaf/policy.conf.j2
+!
+bgp community-list standard LEAK_COMMUNITY permit 8075:10400
+bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
+bgp community-list standard FABRIC_T2_COMMUNITY  permit {{ constants.bgp.fabric_t2_community }}
+!
+bgp as-path access-list SLB_ASN permit _65511_
+bgp as-path access-list SLB_ASN permit _64523_
+bgp as-path access-list T2_LOOPBACK permit ^$
+!
+ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
+ip prefix-list SLASH32 permit 0.0.0.0/0 ge 32
+ip prefix-list PRIVATE_IPV4 seq 10 permit 10.0.0.0/8 le 32
+ip prefix-list PRIVATE_IPV4 seq 20 permit 21.0.0.0/8 le 32
+ip prefix-list PRIVATE_IPV4 seq 30 permit 22.0.0.0/8 le 32
+ip prefix-list PRIVATE_IPV4 seq 40 permit 25.0.0.0/8 le 32
+ip prefix-list PRIVATE_IPV4 seq 50 permit 100.64.0.0/10 le 32
+ip prefix-list PRIVATE_IPV4 seq 60 permit 172.16.0.0/12 le 32
+ip prefix-list PRIVATE_IPV4 seq 70 permit 192.168.0.0/16 le 32
+!
+route-map FROM_TIER1_V4 permit 100
+!
+
+route-map TO_TIER1_V4 permit 100
+  call CHECK_IDF_ISOLATION
+  match ip address prefix-list DEFAULT_IPV4
+!
+route-map TO_TIER1_V4 permit 200
+  call CHECK_IDF_ISOLATION
+  match community LEAK_COMMUNITY
+!
+route-map TO_TIER1_V4 permit 300
+  call CHECK_IDF_ISOLATION
+  match community INREGION_LEAK_COMMUNITY
+!
+route-map TO_TIER1_V4 deny 400
+  match as-path SLB_ASN
+!
+route-map TO_TIER1_V4 permit 500
+  call CHECK_IDF_ISOLATION
+  match as-path T2_LOOPBACK
+!
+route-map TO_TIER1_V4 deny 600
+  match ip address prefix-list SLASH32
+!
+route-map TO_TIER1_V4 permit 700
+  match community FABRIC_T2_COMMUNITY
+  set comm-list FABRIC_T2_COMMUNITY delete
+  on-match next
+!
+route-map TO_TIER1_V4 permit 800
+  call CHECK_IDF_ISOLATION
+  match ip address prefix-list PRIVATE_IPV4
+!
+
+route-map TO_TIER1_V4 deny 1000
+!
+route-map CHECK_IDF_ISOLATION permit 10
+!
+! end of template: bgpd/templates/msft.general/v4.lowerspine.leaf/policy.conf.j2
+!

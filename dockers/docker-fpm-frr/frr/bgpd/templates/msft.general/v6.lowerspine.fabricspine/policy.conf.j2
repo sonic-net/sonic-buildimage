@@ -1,0 +1,24 @@
+!
+! template: bgpd/templates/msft.general/v6.lowerspine.fabricspine/policy.conf.j2
+!
+bgp community-list standard LEAK_COMMUNITY permit 8075:10400
+bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
+bgp as-path access-list T2_LOOPBACK permit ^$
+
+route-map FROM_FABRICSPINE_V6 permit 100
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_FABRICSPINE_V6 permit 200
+!
+route-map TO_FABRICSPINE_V6 deny 100
+  match community LEAK_COMMUNITY
+!
+route-map TO_FABRICSPINE_V6 deny 200
+  match community INREGION_LEAK_COMMUNITY
+!
+route-map TO_FABRICSPINE_V6 deny 300
+  match as-path T2_LOOPBACK
+!
+route-map TO_FABRICSPINE_V6 permit 1000
+!

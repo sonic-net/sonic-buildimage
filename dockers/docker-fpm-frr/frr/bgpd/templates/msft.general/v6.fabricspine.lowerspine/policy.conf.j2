@@ -1,0 +1,19 @@
+!
+! template: bgpd/templates/msft.general/v6.fabricspine.lowerspine/policy.conf.j2
+!
+ipv6 prefix-list DEFAULT_IPV6 permit ::/0
+!
+route-map FROM_LOWERSPINE_V6 permit 100
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_LOWERSPINE_V6 permit 200
+!
+route-map TO_LOWERSPINE_V6 deny 100
+  match ip address prefix-list DEFAULT_IPV6
+!
+route-map TO_LOWERSPINE_V6 permit 200
+  set community {{ constants.bgp.fabric_t2_community  }} additive
+  on-match next
+!
+route-map TO_LOWERSPINE_V6 permit 300
