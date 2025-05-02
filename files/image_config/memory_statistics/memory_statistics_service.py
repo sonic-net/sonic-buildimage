@@ -1608,7 +1608,7 @@ class SocketHandler:
         Raises:
             socket.error: If socket creation or binding fails.
             OSError: If permission or ownership changes fail.
-        """
+        """ 
         try:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(self.timeout)
@@ -1964,7 +1964,7 @@ class MemoryStatisticsService:
     commands for memory statistics retrieval, while also managing
     configuration reloading and graceful shutdown procedures.
     """
-    def __init__(self, memory_statistics_config, config_file_path='memory_statistics.conf', name="MemoryStatisticsService"):
+    def __init__(self, memory_statistics_config, config_file_path='./etc/memory_statistics.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
