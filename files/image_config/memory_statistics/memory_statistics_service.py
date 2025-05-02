@@ -1602,7 +1602,7 @@ class SocketHandler:
             self.listener_socket = None
         self.safe_remove_file(self.address)
 
-    def create_unix_socket(self):
+    def create_unix_socket(self):      
         """Creates and configures a UNIX socket for listening for incoming connections.
         
         Raises:
