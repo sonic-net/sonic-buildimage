@@ -19,6 +19,12 @@ parameters:
 - name: 'qemuOrCrossBuild'
   type: boolean
   default: false
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
 
 jobs:
 - template: azure-pipelines-image-template.yml
@@ -26,6 +32,8 @@ jobs:
     jobFilters: ${{ parameters.jobFilters }}
     preSteps: ${{ parameters.preSteps }}
     postSteps: ${{ parameters.postSteps }}
+    SUBMODULE: ${{ parameters.SUBMODULE }}
+    COMMIT_ID: ${{ parameters.COMMIT_ID }}
     jobVariables:
       PLATFORM_AZP: $(GROUP_NAME)
       PLATFORM_ARCH: amd64
@@ -38,6 +46,7 @@ jobs:
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
+      ss_image: no
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -81,31 +90,32 @@ jobs:
           variables:
             dbg_image: yes
 
-        - name: innovium
+        - name: marvell-teralynx
           variables:
             dbg_image: yes
 
-        - name: marvell-armhf
+        - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-armhf
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
 
-        - name: marvell-arm64
+        - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-arm64
           timeoutInMinutes: 2880
           variables:
-            PLATFORM_NAME: marvell
+            PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
 
-        - name: marvell
+        - name: marvell-prestera
 
         - name: mellanox
           variables:
             dbg_image: yes
+            ss_image: yes
             docker_syncd_rpc_image: yes
             syncd_rpc_image: yes
             platform_rpc: mlnx
@@ -125,6 +135,10 @@ jobs:
           pool: sonicbld-arm64
           variables:
             PLATFORM_ARCH: arm64
+
+        - name: vpp
+          variables:
+            dbg_image: yes
 
     buildSteps:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
@@ -157,10 +171,20 @@ jobs:
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
               rm target/sonic-vs.img
             fi
+          elif [ $(GROUP_NAME) == vpp ]; then
+            if [ $(dbg_image) == yes ]; then
+              make $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-vpp.img.gz
+              mv target/sonic-vpp.img.gz target/sonic-vpp-dbg.img.gz
+            fi
+            make $BUILD_OPTIONS target/sonic-vpp.img.gz
           else
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
               mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-dbg.bin
+            fi
+            if [ $(ss_image) == yes ]; then
+              make $BUILD_OPTIONS SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-$(GROUP_NAME).bin
+              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-smartswitch.bin
             fi
             if [ $(swi_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi
@@ -182,7 +206,20 @@ jobs:
               make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
               mv target/sonic-mellanox.bin target/sonic-$(GROUP_NAME)-rpc.bin
             fi
+            if [ $(GROUP_NAME) == nvidia-bluefield ]; then
+              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
+            fi
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: ManifestGeneratorTask@0
+        condition: ne(variables.SKIP_MG, 'y')
+        timeoutInMinutes: 60
+        continueOnError: true
+        displayName: "Manifest Generator"
+        inputs:
+          BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+          ManifestDirPath: 'target/'
+          BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
+

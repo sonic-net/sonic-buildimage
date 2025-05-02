@@ -7,7 +7,8 @@
                         "name": "Fabric0",
                         "alias": "Fabric0",
                         "isolateStatus": "False",
-                        "lanes": "0"
+                        "lanes": "0",
+                        "forceUnisolateStatus": "0"
                     }
                 ]
             }

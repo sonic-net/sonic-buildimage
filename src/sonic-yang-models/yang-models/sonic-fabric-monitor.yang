@@ -5,6 +5,10 @@ module sonic-fabric-monitor{
     namespace "http://github.com/sonic-net/sonic-fabric-monitor";
     prefix fabric-monitor;
 
+    import sonic-types {
+        prefix stypes;
+    }
+
     description "FABRIC_MONITOR yang Module for SONiC OS";
 
     revision 2023-03-14 {
@@ -32,15 +36,33 @@ module sonic-fabric-monitor{
                 }
 
                 leaf monPollThreshIsolation {
-                    type uint32;
+                    type uint8 {
+                        range 1..10;
+                    }
                     default 1;
                     description "Consecutive polls with higher error rate for isolation.";
                 }
 
                 leaf monPollThreshRecovery {
-                    type uint32;
+                    type uint8 {
+                        range 1..10;
+                    }
                     default 8;
                     description "Consecutive polls with lesser error rate for inclusion.";
+                }
+
+                leaf monCapacityThreshWarn {
+                    type uint8 {
+                        range 5..100;
+                    }
+                    default 10;
+                    description "Percentage of up fabric links.";
+                }
+
+                leaf monState {
+                    description "Configuration to set fabric link monitoring state: enable/disable";
+                    type stypes:mode-status;
+                    default disable;
                 }
 
             } /* end of container FABRIC_MONITOR_DATA */

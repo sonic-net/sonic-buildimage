@@ -1603,7 +1603,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xA",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1702,7 +1702,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xB",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1801,7 +1801,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xC",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1900,7 +1900,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xD",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1999,7 +1999,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xE",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2098,7 +2098,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0xF",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2197,7 +2197,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x10",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2296,7 +2296,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x11",
-                "dev_addr": "0x54",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [

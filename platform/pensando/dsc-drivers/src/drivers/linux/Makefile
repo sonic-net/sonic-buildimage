@@ -25,12 +25,14 @@ default: all
 ifeq ($(ARCH),aarch64)
 
 # Ionic mnic and mdev for drivers ARM
+#include ${MKINFRA}/config_${ARCH}.mk
 KSRC ?= ${NICDIR}/buildroot/output/${ASIC}/linux-headers
 KMOD_OUT_DIR ?= ${BLD_OUT_DIR}/drivers_submake
 KMOD_SRC_DIR ?= ${TOPDIR}/platform/drivers/linux-ionic
 ETH_KOPT += CONFIG_IONIC_MNIC=m
 ETH_KOPT += CONFIG_MDEV=m
 ETH_KOPT += CONFIG_MNET_UIO_PDRV_GENIRQ=m
+KOPT += CROSS_COMPILE=aarch64-linux-gnu-
 KOPT += ARCH=arm64
 KCFLAGS += -DCONFIG_IONIC_MNIC
 KCFLAGS += -DCONFIG_MDEV
@@ -40,9 +42,10 @@ ALL += mnet_uio_pdrv_genirq
 ALL += mdev
 export PATH := $(PATH):$(TOOLCHAIN_DIR)/bin
 
-KSYMS_MNIC = "KBUILD_EXTRA_SYMBOLS=${KMOD_OUT_DIR}/Module.symvers.mnic"
-KSYMS = "${KSYMS_MNIC} ${KMOD_OUT_DIR}/Module.symvers.uio"
+KSYMS_MNIC = $(KMOD_OUT_DIR)/Module.symvers.mnic
+KSYMS_UIO = $(KMOD_OUT_DIR)/Module.symvers.uio
 
+DVER = $(shell cd $(KMOD_SRC_DIR) ; git describe --tags 2>/dev/null)
 
 else
 
@@ -66,20 +69,21 @@ ALL = eth
 endif
 
 ifeq ($(DVER),)
-    DVER = "22.11.1-001"
+    DVER = "23.12.2-001"
 endif
 KCFLAGS += -Ddrv_ver=\\\"$(DVER)\\\"
 
-KOPT += KCFLAGS="$(KCFLAGS)"
+KOPT += KCFLAGS="$(KCFLAGS)" KBUILD_EXTRA_SYMBOLS="$(KSYMS)"
 
 all: $(ALL)
 
-KBUILD_RULE = $(MAKE) -C $(KSRC) $(KOPT) M=$(CURDIR)
+KBUILD_RULE = $(MAKE) -C $(KSRC) $(KOPT) M=$(CURDIR) KMOD_SRC_DIR=$(CURDIR)
 
 mnic: KOPT+=$(ETH_KOPT)
 mnic:
 	@echo "===> Building MNIC driver "
-	touch $(KMOD_OUT_DIR)/Makefile || true
+	mkdir -p $(KMOD_OUT_DIR)
+	touch $(KMOD_OUT_DIR)/Makefile
 	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/eth/ionic $(KOPT)
 	mv ${KMOD_OUT_DIR}/Module.symvers ${KMOD_OUT_DIR}/Module.symvers.mnic
 
@@ -90,22 +94,35 @@ mnet_uio_pdrv_genirq:
 	mv ${KMOD_OUT_DIR}/Module.symvers ${KMOD_OUT_DIR}/Module.symvers.uio
 
 mdev: KOPT+=$(ETH_KOPT)
+mdev: KSYMS+=$(KSYMS_MNIC)
+mdev: KSYMS+=$(KSYMS_UIO)
 mdev:
 	@echo "===> Building MDEV driver "
-	$(MAKE) -C $(KSRC) $(KSYMS) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/mdev $(KOPT)
+	$(MAKE) -C $(KSRC) V=1 M=$(KMOD_OUT_DIR) src=$(KMOD_SRC_DIR)/mdev $(KOPT)
 
 eth: KOPT+=$(ETH_KOPT)
 eth:
-	$(KBUILD_RULE)
+	@echo "===> Building ETH driver "
+	+$(KBUILD_RULE)
+	mv $(CURDIR)/Module.symvers $(CURDIR)/Module.symvers.ionic
 
 clean: KOPT+=$(ETH_KOPT)
 clean:
 	$(KBUILD_RULE) clean
+	rm -f $(CURDIR)/Module.symvers*
+
+KBUILD_INSTALL_RULE = $(MAKE) -C $(KSRC) $(KOPT) \
+		      $(if ${DISABLE_MODULE_SIGNING},CONFIG_MODULE_SIG=n) \
+		      $(if ${DISABLE_MODULE_SIGNING},CONFIG_MODULE_SIG_ALL=) \
+		      INSTALL_MOD_DIR=updates \
+		      M=$(CURDIR)
 
 install: modules_install
 modules_install: KOPT+=$(ETH_KOPT)
 modules_install:
-	$(KBUILD_RULE) modules_install
+	@$(call warn_signed_modules)
+	$(KBUILD_INSTALL_RULE) modules_install
+	$(call cmd_depmod)
 
 cscope:
 	find $(IONIC_ETH_SRC) -name '*.[ch]' > cscope.files

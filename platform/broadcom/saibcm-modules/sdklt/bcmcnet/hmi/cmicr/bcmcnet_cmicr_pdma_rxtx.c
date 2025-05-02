@@ -38,7 +38,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -51,7 +51,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -519,6 +519,7 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
 
         /* Move forward */
         if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
+            /* coverity[double_lock : FALSE] */
             sal_spinlock_lock(rxq->lock);
             if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
                 /* Descriptor cherry pick */
@@ -566,7 +567,8 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
         rxq->stats.bytes += len;
 
         /* Count the errors if any */
-        if (RX_DCB_ERRORf_GET(ring[curr])) {
+        if (RX_DCB_CELL_ERRORf_GET(ring[curr]) ||
+            RX_DCB_ECC_ERRORf_GET(ring[curr])) {
             rxq->stats.errors++;
         }
 
@@ -631,6 +633,7 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
 
         /* Restart DMA if in chain mode */
         if (dev->flags & PDMA_CHAIN_MODE) {
+            /* coverity[double_lock : FALSE] */
             sal_spinlock_lock(rxq->lock);
             if (curr == 0 && !(rxq->status & PDMA_RX_QUEUE_XOFF)) {
                 hw->hdls.chan_stop(hw, rxq->chan_id);
@@ -754,6 +757,7 @@ cmicr_pdma_tx_ring_clean(struct pdma_hw *hw, struct pdma_tx_queue *txq, int budg
 
     /* One more poll for chain done in chain mode */
     if (dev->flags & PDMA_CHAIN_MODE) {
+        /* coverity[double_lock : FALSE] */
         sal_spinlock_lock(txq->lock);
         if (dirt != txq->halt) {
             done = budget;

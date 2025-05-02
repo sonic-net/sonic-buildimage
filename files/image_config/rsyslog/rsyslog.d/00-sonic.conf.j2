@@ -13,12 +13,6 @@ $ModLoad omprog
 
 if re_match($programname, "bgp[0-9]*#(frr|zebra|staticd|watchfrr)") then {
     /var/log/frr/zebra.log
-    {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
-    action(type="omprog"
-        binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/zebra_regex.json -m sonic-events-bgp"
-        output="/var/log/rsyslog_plugin.log"
-        template="prog_msg")
-    {% endif %}
     stop
 }
 
@@ -51,4 +45,12 @@ if $msg startswith " gnmi-native" then {
 if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
     /var/log/telemetry.log
     stop
+}
+
+## stpd rules
+if $programname contains "stp" then {
+    if not ($msg contains "STP_SYSLOG") then {
+        /var/log/stpd.log
+            stop
+    }
 }

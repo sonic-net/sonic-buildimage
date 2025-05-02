@@ -24,8 +24,10 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
 [program:start]
@@ -34,8 +36,10 @@ priority=2
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
@@ -59,8 +63,12 @@ dependent_startup_wait_for=rsyslogd:running
 {# Create a program entry for each DHCP relay agent instance #}
 {% set relay_for_ipv4 = { 'flag': False } %}
 {% set relay_for_ipv6 = { 'flag': False } %}
-{% for vlan_name in VLAN_INTERFACE %}
-{% include 'dhcpv4-relay.agents.j2' %}
+{% set added_vlan = []%}
+{% for (vlan_name, prefix) in VLAN_INTERFACE|pfx_filter %}
+    {%- if prefix | ipv4 and vlan_name not in added_vlan %}
+        {%- include 'dhcpv4-relay.agents.j2' %}
+        {%- set _ = added_vlan.append(vlan_name) %}
+    {%- endif %}
 {% endfor %}
 
 {% include 'dhcpv6-relay.agents.j2' %}
@@ -72,7 +80,9 @@ command=/usr/local/bin/dhcprelayd
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=start:exited

@@ -1,4 +1,5 @@
 #!/bin/bash
+resolvconf_updates=true
 
 function wait_networking_service_done() {
     local -i _WDOG_CNT="1"
@@ -22,6 +23,24 @@ function wait_networking_service_done() {
     echo "interfaces-config: networking service is still running after 30 seconds, killing it"
     systemctl kill networking 2>&1
 }
+
+function resolvconf_updates_disable() {
+    resolvconf --updates-are-enabled
+    if [[ $? -ne 0 ]]; then
+        resolvconf_updates=false
+    fi
+    resolvconf --disable-updates
+}
+
+function resolvconf_updates_restore() {
+    if [[ $resolvconf_updates == true ]]; then
+        resolvconf --enable-updates
+    fi
+}
+
+# Do not run DNS configuration update during the shutdowning of the management interface. 
+# This operation is redundant as there will be an update after the start of the interface.
+resolvconf_updates_disable
 
 if [[ $(ifquery --running eth0) ]]; then
     wait_networking_service_done
@@ -61,6 +80,8 @@ for intf_pid in $(ls -1 /var/run/dhclient*.Ethernet*.pid 2> /dev/null); do
 done
 
 /usr/bin/resolv-config.sh cleanup
+# Restore DNS configuration update to the previous state.
+resolvconf_updates_restore
 
 # Read sysctl conf files again
 sysctl -p /etc/sysctl.d/90-dhcp6-systcl.conf

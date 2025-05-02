@@ -7,12 +7,12 @@
     },
     "MID_PLANE_BRIDGE": {
         "GLOBAL": {
-            "bridge": "bridge_midplane",
+            "bridge": "bridge-midplane",
             "ip_prefix": "169.254.200.254/24"
         }
     },
     "DHCP_SERVER_IPV4": {
-        "bridge_midplane": {
+        "bridge-midplane": {
             "customized_options": [
                 "option60",
                 "option223"
@@ -25,22 +25,22 @@
         }
     },
     "DHCP_SERVER_IPV4_PORT": {
-        "bridge_midplane|dpu0": {
+        "bridge-midplane|dpu0": {
             "ips": [
                 "169.254.200.1"
             ]
         },
-        "bridge_midplane|dpu1": {
+        "bridge-midplane|dpu1": {
             "ips": [
                 "169.254.200.2"
             ]
         },
-        "bridge_midplane|dpu2": {
+        "bridge-midplane|dpu2": {
             "ips": [
                 "169.254.200.3"
             ]
         },
-        "bridge_midplane|dpu3": {
+        "bridge-midplane|dpu3": {
             "ips": [
                 "169.254.200.4"
             ]

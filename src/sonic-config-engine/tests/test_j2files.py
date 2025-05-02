@@ -11,6 +11,7 @@ from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_nos
 
 class TestJ2Files(TestCase):
     def setUp(self):
+        self.yang = utils.YangWrapper()
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
         self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
         self.simple_minigraph = os.path.join(self.test_dir, 'simple-sample-graph.xml')
@@ -20,7 +21,9 @@ class TestJ2Files(TestCase):
         self.ztp_ip = os.path.join(self.test_dir, "sample-ztp-ip.json")
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
+        self.t0_minigraph_syslog = os.path.join(self.test_dir, 't0-sample-graph-syslog.xml')
         self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
+        self.t0_minigraph_common_dhcp_relay = os.path.join(self.test_dir, 't0-sample-graph-common-dhcp-relay.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
         self.t0_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-nomgmt.xml')
         self.t0_minigraph_two_mgmt = os.path.join(self.test_dir, 't0-sample-graph-two-mgmt.xml')
@@ -47,6 +50,7 @@ class TestJ2Files(TestCase):
         self.no_ip_helper_minigraph = os.path.join(self.test_dir, 't0-sample-no-ip-helper-graph.xml')
         self.nokia_ixr7250e_36x100g_t2_minigraph = os.path.join(self.test_dir, 'sample-nokia-ixr7250e-36x100g-t2-minigraph.xml')
         self.nokia_ixr7250e_36x400g_t2_minigraph = os.path.join(self.test_dir, 'sample-nokia-ixr7250e-36x400g-t2-minigraph.xml')
+        self.t2_sample_graph_chassis_packet = os.path.join(self.test_dir, 'sample-chassis-packet-lc-graph.xml')
         self.output_file = os.path.join(self.test_dir, 'output')
         os.environ["CFGGEN_UNIT_TESTING"] = "2"
 
@@ -130,6 +134,11 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces'), self.output_file))
+        
+        # ZTP disabled, MGMT_INTERFACE defined, SYSLOG_SERVER defined
+        argument = ['-m', self.t0_minigraph_syslog, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog'), self.output_file))
 
         argument = ['-m', self.t0_mvrf_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
@@ -164,7 +173,7 @@ class TestJ2Files(TestCase):
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'wait_for_intf.sh'), self.output_file))
 
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay', 'docker-dhcp-relay.supervisord.conf.j2')
-        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-t', template_path]
+        argument = ['-m', self.t0_minigraph_common_dhcp_relay, '-p', self.t0_port_config, '-t', template_path]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'docker-dhcp-relay.supervisord.conf'), self.output_file))
 
@@ -175,7 +184,7 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-no-ip-helper.supervisord.conf'), self.output_file))
-        
+
         # Test generation of docker-dhcp-relay.supervisord.conf when a vlan has secondary subnets specified
         template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
                                      'docker-dhcp-relay.supervisord.conf.j2')
@@ -253,6 +262,7 @@ class TestJ2Files(TestCase):
 
     def test_l1_ports_template(self):
         argument = ['-k', '32x1000Gb', '--preset', 'l1', '-p', self.l1_l3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -271,6 +281,7 @@ class TestJ2Files(TestCase):
 
     def test_l3_ports_template(self):
         argument = ['-k', '32x1000Gb', '--preset', 'l3', '-p', self.l1_l3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -304,6 +315,7 @@ class TestJ2Files(TestCase):
             ]
         }
         argument = ['-a', json.dumps(extra_args), '-k', 'Arista-7050CX3-32S-D48C8', '--preset', 'l2', '-p', self.t0_7050cx3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -315,6 +327,7 @@ class TestJ2Files(TestCase):
 
     def test_t1_smartswitch_template(self):
         argument = ['-k', 'SSwitch-32x1000Gb', '--preset', 't1-smartswitch', '-p', self.t1_ss_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -326,6 +339,7 @@ class TestJ2Files(TestCase):
 
     def test_t1_smartswitch_dpu_template(self):
         argument = ['-k', 'SS-DPU-1x400Gb', '--preset', 't1-smartswitch', '-p', self.t1_ss_dpu_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -753,6 +767,36 @@ class TestJ2Files(TestCase):
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
         os.environ["NAMESPACE_ID"] = ""
 
+    def test_swss_switch_render_template_t2(self):
+        # verify the ECMP hash seed changes per namespace
+        switch_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent',
+            'switch.json.j2'
+        )
+        constants_yml = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'image_config',
+            'constants', 'constants.yml'
+        )
+        test_list = {
+            "0": {
+                "namespace_id": "1",
+                "output": "t2-switch-masic1.json"
+            },
+            "1": {
+                "namespace_id": "3",
+                "output": "t2-switch-masic3.json"
+            },
+        }
+        for _, v in test_list.items():
+            os.environ["NAMESPACE_ID"] = v["namespace_id"]
+            argument = ["-m", self.t2_sample_graph_chassis_packet, "-y", constants_yml, "-t", switch_template]
+            sample_output_file = os.path.join(
+                self.test_dir, 'sample_output', v["output"]
+            )
+            self.run_script(argument, output_file=self.output_file)
+            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+        os.environ["NAMESPACE_ID"] = ""
+
     def test_ndppd_conf(self):
         conf_template = os.path.join(self.test_dir, "ndppd.conf.j2")
         vlan_interfaces_json = os.path.join(self.test_dir, "data", "ndppd", "vlan_interfaces.json")
@@ -763,18 +807,18 @@ class TestJ2Files(TestCase):
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
     def test_ntp_conf(self):
-        conf_template = os.path.join(self.test_dir, "ntp.conf.j2")
+        conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
-        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "ntp.conf")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.conf")
 
         argument = ['-j', config_db_ntp_json, '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
     def test_ntp_keys(self):
-        conf_template = os.path.join(self.test_dir, "ntp.keys.j2")
+        conf_template = os.path.join(self.test_dir, "chrony.keys.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
-        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "ntp.keys")
+        expected = os.path.join(self.test_dir, "sample_output", utils.PYvX_DIR, "chrony.keys")
 
         argument = ['-j', config_db_ntp_json, '-t', conf_template]
         self.run_script(argument, output_file=self.output_file)

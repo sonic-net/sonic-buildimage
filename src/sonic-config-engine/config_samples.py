@@ -16,7 +16,6 @@ def generate_common_config(data):
     data['FLEX_COUNTER_TABLE'] = {
         'ACL': {
             'FLEX_COUNTER_STATUS': 'disable',
-            'FLEX_COUNTER_DELAY_STATUS': 'true',
             'POLL_INTERVAL': '10000'
         }
     }
@@ -51,7 +50,8 @@ def generate_t1_sample_config(data):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
-    data['LOOPBACK_INTERFACE'] = {"Loopback0|10.1.0.1/32": {}}
+    data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
+                                  "Loopback0|10.1.0.1/32": {}}
     data['BGP_NEIGHBOR'] = {}
     data['DEVICE_NEIGHBOR'] = {}
     data['INTERFACE'] = {}
@@ -64,6 +64,7 @@ def generate_t1_sample_config(data):
         peer_addr = '10.0.{}.{}'.format(2 * port_count // 256, 2 * port_count % 256 + 1)
         peer_name='ARISTA{0:02d}{1}'.format(1+port_count%(total_port_amount // 2), 'T2' if port_count < (total_port_amount // 2) else 'T0')
         peer_asn = 65200 if port_count < (total_port_amount // 2) else 64001 + port_count - (total_port_amount // 2)
+        data['INTERFACE']['{}'.format(port)] = {}
         data['INTERFACE']['{}|{}/31'.format(port, local_addr)] = {}
         data['BGP_NEIGHBOR'][peer_addr] = {
                 'rrclient': 0,
@@ -86,15 +87,23 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
     bridge_name = 'bridge-midplane'
 
+    data['MID_PLANE_BRIDGE'] = {
+        "GLOBAL": {
+            "bridge": bridge_name,
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
     dhcp_server_ports = {}
+    dpu_midplane_dict = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
         midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
+        dpu_midplane_dict[dpu_name] = {'midplane_interface': midplane_interface}
         dpu_id = int(midplane_interface.replace('dpu', ''))
         dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
 
     if dhcp_server_ports:
-        data['DPUS'] = ss_config['DPUS']
+        data['DPUS'] = dpu_midplane_dict
 
         data['FEATURE'] = {
             "dhcp_relay": {
@@ -123,10 +132,6 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4'] = {
             bridge_name: {
-                'customized_options': [
-                    'option60',
-                    'option223'
-                ],
                 'gateway': mpbr_address,
                 'lease_time': '3600',
                 'mode': 'PORT',
@@ -142,13 +147,41 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
-    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    data['SYSTEM_DEFAULTS'] = {
+        "software_bfd": {
+            "status": "enabled"
+        }
+    }
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
         data['PORT'][port]['mtu'] = '9100'
+
+    dash_crm_resources = ["vnet", "eni", "eni_ether_address_map", "ipv4_inbound_routing", "ipv6_inbound_routing", "ipv4_outbound_routing",
+                          "ipv6_outbound_routing", "ipv4_pa_validation", "ipv6_pa_validation", "ipv4_outbound_ca_to_pa", "ipv6_outbound_ca_to_pa",
+                          "ipv4_acl_group", "ipv6_acl_group", "ipv4_acl_rule", "ipv6_acl_rule"]
+    dash_crm_thresholds = dict([thresholds for res in dash_crm_resources for thresholds in (
+            (f"dash_{res}_threshold_type", "percentage"),
+            (f"dash_{res}_low_threshold", "70"),
+            (f"dash_{res}_high_threshold", "85")
+        )])
+
+    crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
+    crmconfig.update(dash_crm_thresholds)
+
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        if "SYSTEM_DEFAULTS" not in data:
+            data["SYSTEM_DEFAULTS"] = {}
+
+        data['SYSTEM_DEFAULTS'] = {
+            "polaris": {
+                "status": "enabled"
+            }
+        }
 
     return data
 
@@ -172,7 +205,7 @@ def generate_global_dualtor_tables():
     data = defaultdict(lambda: defaultdict(dict))
     data['LOOPBACK_INTERFACE'] = {
                                     'Loopback2': {},
-                                    'Loopback2|3.3.3.3': {}
+                                    'Loopback2|3.3.3.3/32': {}
                                     }
     data['MUX_CABLE'] = {}
     data['PEER_SWITCH'] = {
@@ -258,4 +291,3 @@ def get_available_config():
 def generate_sample_config(data, setting_name):
     data = generate_common_config(data)
     return _sample_generators[setting_name.lower()](data)
-

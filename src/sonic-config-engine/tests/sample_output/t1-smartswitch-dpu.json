@@ -4,9 +4,14 @@
             "hwsku": "SS-DPU-1x400Gb",
             "hostname": "sonic",
             "switch_type": "dpu",
-            "type": "SonicDpu",
+            "type": "SmartSwitchDPU",
             "subtype": "SmartSwitch",
             "bgp_asn": "65100"
+        }
+    },
+    "SYSTEM_DEFAULTS": {
+        "software_bfd": {
+            "status": "enabled"
         }
     },
     "PORT": {
@@ -14,14 +19,63 @@
             "lanes": "0,1,2,3,4,5,6,7",
             "alias": "etp1",
             "admin_status": "up",
-            "mtu": "9100"
+            "mtu": "9100",
+            "speed": "100000"
         }
     },
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "disable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
+        }
+    },
+    "CRM": {
+        "Config": {
+            "dash_vnet_threshold_type": "percentage",
+            "dash_vnet_low_threshold": "70",
+            "dash_vnet_high_threshold": "85",
+            "dash_eni_threshold_type": "percentage",
+            "dash_eni_low_threshold": "70",
+            "dash_eni_high_threshold": "85",
+            "dash_eni_ether_address_map_threshold_type": "percentage",
+            "dash_eni_ether_address_map_low_threshold": "70",
+            "dash_eni_ether_address_map_high_threshold": "85",
+            "dash_ipv4_inbound_routing_threshold_type": "percentage",
+            "dash_ipv4_inbound_routing_low_threshold": "70",
+            "dash_ipv4_inbound_routing_high_threshold": "85",
+            "dash_ipv6_inbound_routing_threshold_type": "percentage",
+            "dash_ipv6_inbound_routing_low_threshold": "70",
+            "dash_ipv6_inbound_routing_high_threshold": "85",
+            "dash_ipv4_outbound_routing_threshold_type": "percentage",
+            "dash_ipv4_outbound_routing_low_threshold": "70",
+            "dash_ipv4_outbound_routing_high_threshold": "85",
+            "dash_ipv6_outbound_routing_threshold_type": "percentage",
+            "dash_ipv6_outbound_routing_low_threshold": "70",
+            "dash_ipv6_outbound_routing_high_threshold": "85",
+            "dash_ipv4_pa_validation_threshold_type": "percentage",
+            "dash_ipv4_pa_validation_low_threshold": "70",
+            "dash_ipv4_pa_validation_high_threshold": "85",
+            "dash_ipv6_pa_validation_threshold_type": "percentage",
+            "dash_ipv6_pa_validation_low_threshold": "70",
+            "dash_ipv6_pa_validation_high_threshold": "85",
+            "dash_ipv4_outbound_ca_to_pa_threshold_type": "percentage",
+            "dash_ipv4_outbound_ca_to_pa_low_threshold": "70",
+            "dash_ipv4_outbound_ca_to_pa_high_threshold": "85",
+            "dash_ipv6_outbound_ca_to_pa_threshold_type": "percentage",
+            "dash_ipv6_outbound_ca_to_pa_low_threshold": "70",
+            "dash_ipv6_outbound_ca_to_pa_high_threshold": "85",
+            "dash_ipv4_acl_group_threshold_type": "percentage",
+            "dash_ipv4_acl_group_low_threshold": "70",
+            "dash_ipv4_acl_group_high_threshold": "85",
+            "dash_ipv6_acl_group_threshold_type": "percentage",
+            "dash_ipv6_acl_group_low_threshold": "70",
+            "dash_ipv6_acl_group_high_threshold": "85",
+            "dash_ipv4_acl_rule_threshold_type": "percentage",
+            "dash_ipv4_acl_rule_low_threshold": "70",
+            "dash_ipv4_acl_rule_high_threshold": "85",
+            "dash_ipv6_acl_rule_threshold_type": "percentage",
+            "dash_ipv6_acl_rule_low_threshold": "70",
+            "dash_ipv6_acl_rule_high_threshold": "85"
         }
     }
 }

@@ -6,7 +6,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_CMICR_ACC_H
@@ -728,16 +728,18 @@ typedef union TX_DCB_s {
 #define TX_DCB_RELOADf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 18)) | ((((uint32_t)f) & 0x1) << 18))
 #define TX_DCB_HGf_GET(r) ((((r).tx_dcb[2]) >> 19) & 0x1)
 #define TX_DCB_HGf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 19)) | ((((uint32_t)f) & 0x1) << 19))
+#define TX_DCB_ALIGN_BYTESf_GET(r) ((((r).tx_dcb[2]) >> 20) & 0x3)
+#define TX_DCB_ALIGN_BYTESf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x3 << 20)) | ((((uint32_t)f) & 0x3) << 20))
 #define TX_DCB_PURGEf_GET(r) ((((r).tx_dcb[2]) >> 22) & 0x1)
 #define TX_DCB_PURGEf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 22)) | ((((uint32_t)f) & 0x1) << 22))
 #define TX_DCB_DESC_DONE_INTRf_GET(r) ((((r).tx_dcb[2]) >> 23) & 0x1)
 #define TX_DCB_DESC_DONE_INTRf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 23)) | ((((uint32_t)f) & 0x1) << 23))
 #define TX_DCB_DESC_CTRL_INTRf_GET(r) ((((r).tx_dcb[2]) >> 24) & 0x1)
 #define TX_DCB_DESC_CTRL_INTRf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 24)) | ((((uint32_t)f) & 0x1) << 24))
-#define TX_DCB_DESC_REMAINf_GET(r) ((((r).tx_dcb[2]) >> 25) & 0xf)
-#define TX_DCB_DESC_REMAINf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0xf << 25)) | ((((uint32_t)f) & 0xf) << 25))
-#define TX_DCB_DESC_STAT_WR_DISABLEf_GET(r) ((((r).tx_dcb[2]) >> 29) & 0x1)
-#define TX_DCB_DESC_STAT_WR_DISABLEf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 29)) | ((((uint32_t)f) & 0x1) << 29))
+#define TX_DCB_DESC_REMAINf_GET(r) ((((r).tx_dcb[2]) >> 25) & 0x3f)
+#define TX_DCB_DESC_REMAINf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x3f << 25)) | ((((uint32_t)f) & 0x3f) << 25))
+#define TX_DCB_DESC_STAT_WR_DISABLEf_GET(r) ((((r).tx_dcb[2]) >> 31) & 0x1)
+#define TX_DCB_DESC_STAT_WR_DISABLEf_SET(r,f) (r).tx_dcb[2]=(((r).tx_dcb[2] & ~((uint32_t)0x1 << 31)) | ((((uint32_t)f) & 0x1) << 31))
 #define TX_DCB_ADDR_HIf_GET(r) ((r).tx_dcb[1])
 #define TX_DCB_ADDR_HIf_SET(r,f) (r).tx_dcb[1]=((uint32_t)f)
 #define TX_DCB_ADDR_LOf_GET(r) ((r).tx_dcb[0])
@@ -763,8 +765,10 @@ typedef union RX_DCB_s {
 #define RX_DCB_END_BITf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 16)) | ((((uint32_t)f) & 0x1) << 16))
 #define RX_DCB_START_BITf_GET(r) ((((r).rx_dcb[3]) >> 17) & 0x1)
 #define RX_DCB_START_BITf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 17)) | ((((uint32_t)f) & 0x1) << 17))
-#define RX_DCB_ERRORf_GET(r) ((((r).rx_dcb[3]) >> 18) & 0x1)
-#define RX_DCB_ERRORf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 18)) | ((((uint32_t)f) & 0x1) << 18))
+#define RX_DCB_CELL_ERRORf_GET(r) ((((r).rx_dcb[3]) >> 18) & 0x1)
+#define RX_DCB_CELL_ERRORf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 18)) | ((((uint32_t)f) & 0x1) << 18))
+#define RX_DCB_ECC_ERRORf_GET(r) ((((r).rx_dcb[3]) >> 19) & 0x1)
+#define RX_DCB_ECC_ERRORf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 19)) | ((((uint32_t)f) & 0x1) << 19))
 #define RX_DCB_DONEf_GET(r) ((((r).rx_dcb[3]) >> 31) & 0x1)
 #define RX_DCB_DONEf_SET(r,f) (r).rx_dcb[3]=(((r).rx_dcb[3] & ~((uint32_t)0x1 << 31)) | ((((uint32_t)f) & 0x1) << 31))
 #define RX_DCB_BYTE_COUNTf_GET(r) (((r).rx_dcb[2]) & 0xffff)
@@ -775,14 +779,16 @@ typedef union RX_DCB_s {
 #define RX_DCB_SGf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 17)) | ((((uint32_t)f) & 0x1) << 17))
 #define RX_DCB_RELOADf_GET(r) ((((r).rx_dcb[2]) >> 18) & 0x1)
 #define RX_DCB_RELOADf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 18)) | ((((uint32_t)f) & 0x1) << 18))
+#define RX_DCB_ALIGN_BYTESf_GET(r) ((((r).rx_dcb[2]) >> 20) & 0x3)
+#define RX_DCB_ALIGN_BYTESf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x3 << 20)) | ((((uint32_t)f) & 0x3) << 20))
 #define RX_DCB_DESC_DONE_INTRf_GET(r) ((((r).rx_dcb[2]) >> 23) & 0x1)
 #define RX_DCB_DESC_DONE_INTRf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 23)) | ((((uint32_t)f) & 0x1) << 23))
 #define RX_DCB_DESC_CTRL_INTRf_GET(r) ((((r).rx_dcb[2]) >> 24) & 0x1)
 #define RX_DCB_DESC_CTRL_INTRf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 24)) | ((((uint32_t)f) & 0x1) << 24))
-#define RX_DCB_DESC_REMAINf_GET(r) ((((r).rx_dcb[2]) >> 25) & 0xf)
-#define RX_DCB_DESC_REMAINf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0xf << 25)) | ((((uint32_t)f) & 0xf) << 25))
-#define RX_DCB_DESC_STAT_WR_DISABLEf_GET(r) ((((r).rx_dcb[2]) >> 29) & 0x1)
-#define RX_DCB_DESC_STAT_WR_DISABLEf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 29)) | ((((uint32_t)f) & 0x1) << 29))
+#define RX_DCB_DESC_REMAINf_GET(r) ((((r).rx_dcb[2]) >> 25) & 0x3f)
+#define RX_DCB_DESC_REMAINf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x3f << 25)) | ((((uint32_t)f) & 0x3f) << 25))
+#define RX_DCB_DESC_STAT_WR_DISABLEf_GET(r) ((((r).rx_dcb[2]) >> 31) & 0x1)
+#define RX_DCB_DESC_STAT_WR_DISABLEf_SET(r,f) (r).rx_dcb[2]=(((r).rx_dcb[2] & ~((uint32_t)0x1 << 31)) | ((((uint32_t)f) & 0x1) << 31))
 #define RX_DCB_ADDR_HIf_GET(r) ((r).rx_dcb[1])
 #define RX_DCB_ADDR_HIf_SET(r,f) (r).rx_dcb[1]=((uint32_t)f)
 #define RX_DCB_ADDR_LOf_GET(r) ((r).rx_dcb[0])

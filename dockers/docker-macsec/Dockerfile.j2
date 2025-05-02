@@ -21,7 +21,6 @@ RUN apt-get clean -y      && \
     apt-get autoremove -y && \
     rm -rf /debs
 
-COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]

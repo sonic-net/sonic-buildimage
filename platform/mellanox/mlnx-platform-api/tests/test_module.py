@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +18,10 @@
 
 import os
 import sys
+import pytest
+import sonic_platform.utils
+import subprocess
+from mock import patch
 if sys.version_info.major == 3:
     from unittest import mock
 else:
@@ -28,9 +33,12 @@ sys.path.insert(0, modules_path)
 
 import sonic_platform.chassis
 from sonic_platform import utils
-from sonic_platform.chassis import ModularChassis
+from sonic_platform.chassis import ModularChassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 from sonic_platform.module import Module
+from sonic_platform_base.module_base import ModuleBase
+from sonic_platform_base.chassis_base import ChassisBase
+
 
 
 class TestModule:
@@ -39,6 +47,7 @@ class TestModule:
         DeviceDataManager.get_linecard_sfp_count = mock.MagicMock(return_value=2)
         DeviceDataManager.get_linecard_count = mock.MagicMock(return_value=2)
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
 
     def test_chassis_get_num_sfp(self):
         chassis = ModularChassis()
@@ -48,6 +57,12 @@ class TestModule:
         utils.read_int_from_file = mock.MagicMock(return_value=1)
         chassis = ModularChassis()
         assert len(chassis.get_all_sfps()) == 4
+
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
+    def test_chassis_get_num_modules(self):
+        chassis = SmartSwitchChassis()
+        assert chassis.get_num_modules() == 4
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_linecard_max_port_count', mock.MagicMock(return_value=16))
     def test_chassis_get_sfp(self):
@@ -167,6 +182,8 @@ class TestModule:
         assert len(m._sfp_list) == 0
         assert len(m._thermal_list) == 0
 
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_module_vpd(self):
         m = Module(1)
         m.vpd_parser.vpd_file = os.path.join(test_path, 'mock_psu_vpd')
@@ -185,3 +202,189 @@ class TestModule:
         assert m.get_model() == 'MTEF-PSF-AC-C'
         assert m.get_serial() == 'MT1946X07684'
         assert m.get_revision() == 'A3'
+
+        from sonic_platform.module import DpuModule
+        dm = DpuModule(2)
+        dm.dpu_vpd_parser.vpd_file_last_mtime = None
+        dm.dpu_vpd_parser.vpd_file = os.path.join(test_path, 'mock_psu_vpd_dpu')
+        # dpu2 in pmon = DPU3 in eeprom (1 based indexing is used in HW)
+        dpu_data = {
+            "DPU3_SN": "MT4431X26022",
+            "DPU3_PN": "SN4280BF3DPU2",
+            "DPU3_REV": "A0",
+            "DPU3_BASE_MAC": "90:0A:84:C6:00:B1"
+        }
+        dm.dpu_vpd_parser.vpd_data = dpu_data
+        with patch.object(dm.dpu_vpd_parser, '_get_data', wraps=mock.MagicMock(return_value=True)):
+            assert dm.get_base_mac() == "90:0A:84:C6:00:B1"
+            assert dm.get_model() == "SN4280BF3DPU2"
+            assert dm.get_serial() == "MT4431X26022"
+            assert dm.get_revision() == "A0"
+
+        dm.dpu_vpd_parser = None
+        with pytest.raises(AttributeError):
+            dm.get_base_mac()
+            dm.get_model()
+            dm.get_serial()
+            dm.get_revision()
+
+        dm = DpuModule(3)
+        # DPU4 is not present in the VPD Parser output
+        dm.dpu_vpd_parser.vpd_data = dpu_data
+        assert dm.get_base_mac() == "N/A"
+        assert dm.get_model() == "N/A"
+        assert dm.get_serial() == "N/A"
+        assert dm.get_revision() == "N/A"
+
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
+    @mock.patch('swsscommon.swsscommon.ConfigDBConnector.get')
+    @mock.patch('subprocess.call')
+    def test_dpu_module(self, mock_call, mock_get):
+        from sonic_platform.module import DpuModule
+        m = DpuModule(3)
+        assert m.get_type() == ModuleBase.MODULE_TYPE_DPU
+        assert m.get_name() == "DPU3"
+        assert m.get_description() == "NVIDIA BlueField-3 DPU"
+        assert m.get_dpu_id() == 3
+        with patch.object(m.dpuctl_obj, "dpu_reboot") as mock_obj:
+            mock_obj.return_value = True
+            assert m.reboot() is True
+            mock_obj.assert_called_once_with(skip_pre_post=True)
+            mock_obj.reset_mock()
+            m.reboot(reboot_type=ModuleBase.MODULE_REBOOT_SMARTSWITCH)
+            mock_obj.assert_called_once_with(no_wait=True, skip_pre_post=True)
+            with pytest.raises(RuntimeError):
+                m.reboot("None")
+        with patch('sonic_py_common.syslogger.SysLogger.log_error') as mock_method:
+            m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=True)
+            assert m.set_admin_state(True)
+            mock_method.assert_not_called()
+            m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=False)
+            assert not m.set_admin_state(True)
+            mock_method.assert_called_once_with("Failed to set the admin state for DPU3")
+        m.dpuctl_obj.dpu_power_off = mock.MagicMock(return_value=True)
+        assert m.set_admin_state(False)
+        m1 = DpuModule(2)
+        assert m.get_midplane_ip() == "169.254.200.4"
+        assert m1.get_midplane_ip() == "169.254.200.3"
+        with patch.object(m, '_is_midplane_up', ) as mock_midplane_m, \
+             patch.object(m1, '_is_midplane_up',) as mock_midplane_m1:
+            mock_midplane_m.return_value = True
+            mock_midplane_m1.return_value = True
+            command = ['ping', '-c', '1', '-W', '1', "169.254.200.4"]
+            mock_call.return_value = 0
+            assert m.is_midplane_reachable()
+            mock_call.assert_called_with(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            mock_call.return_value = 1
+            assert not m.is_midplane_reachable()
+            mock_call.assert_called_with(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            mock_call.side_effect = subprocess.CalledProcessError(1, command)
+            assert not m.is_midplane_reachable()
+            assert not m1.is_midplane_reachable()
+            mock_call.reset_mock()
+            mock_call.side_effect = None
+            mock_midplane_m.return_value = False
+            mock_midplane_m1.return_value = False
+            assert not m.is_midplane_reachable()
+            assert not m1.is_midplane_reachable()
+            mock_call.assert_not_called()
+
+        m.fault_state = False
+        test_file_path = ""
+        pl_data = {
+            "dpu0": {
+                "interface": {"Ethernet224": "Ethernet0"},
+                "midplane_interface": "dpu0_mid",
+                "bus_info": "0000:08:0.0"
+            },
+            "dpu1": {
+                "interface": {"Ethernet232": "Ethernet1"},
+                "midplane_interface": "dpu1_mid",
+                "bus_info": "0000:08:0.0"
+            },
+            "dpu2": {
+                "interface": {"Ethernet236": "Ethernet2"},
+                "midplane_interface": "dpu2_mid",
+                "bus_info": "0000:08:0.0"
+            },
+        }
+        DeviceDataManager.get_platform_dpus_data = mock.MagicMock(return_value=pl_data)
+
+        def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
+            if file_path.endswith(test_file_path):
+                return 1
+            else:
+                return 0
+        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
+        reboot_cause_list = [
+            (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
+            (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
+            (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
+        ]
+        with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
+            for index, file_name in enumerate(file_name_list):
+                test_file_path = file_name
+                assert m.get_reboot_cause() == reboot_cause_list[index]
+        m1 = DpuModule(0)
+        m2 = DpuModule(1)
+        m3 = DpuModule(2)
+        m4 = DpuModule(3)
+        # DPU0 in PMON = dpu1 in hw-mgmt
+        m1.get_hw_mgmt_id() == 1
+        m2.get_hw_mgmt_id() == 2
+        m3.get_hw_mgmt_id() == 3
+        m4.get_hw_mgmt_id() == 4
+        assert not m1.midplane_interface
+        with patch("sonic_platform.utils.read_int_from_file", wraps=mock.MagicMock(return_value=1)):
+            assert m1._is_midplane_up()
+            assert m2._is_midplane_up()
+            assert m3._is_midplane_up()
+            assert m1.get_pci_bus_info() == pl_data["dpu0"]['bus_info']
+            assert m2.get_pci_bus_info() == pl_data["dpu1"]['bus_info']
+            assert m3.get_pci_bus_info() == pl_data["dpu2"]['bus_info']
+            with pytest.raises(RuntimeError):
+                m4._is_midplane_up()
+                m4.get_pci_bus_info()
+            assert m1.midplane_interface == "dpu0_mid"
+            assert m2.midplane_interface == "dpu1_mid"
+            assert m3.midplane_interface == "dpu2_mid"
+        with patch("sonic_platform.utils.read_str_from_file", wraps=mock.MagicMock(return_value=0)):
+            assert not m1._is_midplane_up()
+            assert not m2._is_midplane_up()
+            assert not m3._is_midplane_up()
+
+        with patch.object(m1.dpuctl_obj, "read_boot_prog") as mock_obj:
+            mock_obj.return_value = 5
+            m1.get_oper_status() == ModuleBase.MODULE_STATUS_ONLINE
+            mock_obj.return_value = 0
+            m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
+            mock_obj.return_value = 2
+            m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
+            mock_obj.return_value = 4
+            m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
+
+        temp_data = {
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR": {"temperature": "45.0", "high_threshold":"90", "critical_high_threshold": "100"},
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME": {"temperature": "100.0", "high_threshold":"85", "critical_high_threshold": "110"},
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU": {"temperature": "75.0", "high_threshold":"80", "critical_high_threshold": "95"}
+        }
+        def new_get_all(db_name, table_name):
+            return temp_data[table_name]
+        
+        with patch.object(m.chassis_state_db, 'get_all', wraps=new_get_all):
+            output_dict = m.get_temperature_dict()
+            assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
+            assert output_dict['CPU'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
+            assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
+            temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"] = {}
+            output_dict = m.get_temperature_dict()
+            assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
+            assert output_dict['CPU'] == {}
+            assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
+            del temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
+            assert m.get_temperature_dict() == {}
+

@@ -38,6 +38,11 @@ module sonic-port-qos-map {
         prefix sch;
     }
 
+    import sonic-tc-dscp-map {
+        prefix tdm;
+    }
+
+
     organization
         "SONiC";
 
@@ -86,16 +91,18 @@ module sonic-port-qos-map {
 
                 leaf pfc_enable {
                     type string {
-                        pattern "[0-7](,[0-7])*";
+                        pattern "([0-7](,[0-7])*)?";
                     }
+                    description
+                        "Specify the queue(s) on which PFC is enabled. Empty string is allowed to disable PFC on all queues.";
                 }
 
                 leaf pfcwd_sw_enable {
                     type string {
-                        pattern "[0-7](,[0-7])*";
+                        pattern "([0-7](,[0-7])*)?";
                     }
                     description
-                        "Specify the queue(s) on which software pfc watchdog are enabled.";
+                        "Specify the queue(s) on which software pfc watchdog are enabled. Empty string is allowed to disable watchdog on all queues.";
                 }
 
                 leaf pfc_to_queue_map {
@@ -115,6 +122,13 @@ module sonic-port-qos-map {
                         path "/dtm:sonic-dscp-tc-map/dtm:DSCP_TO_TC_MAP/dtm:DSCP_TO_TC_MAP_LIST/dtm:name";
                     }
                 }
+
+                leaf tc_to_dscp_map {
+                    type leafref {
+                        path "/tdm:sonic-tc-dscp-map/tdm:TC_TO_DSCP_MAP/tdm:TC_TO_DSCP_MAP_LIST/tdm:name";
+                    }
+                }
+
 
                 leaf dot1p_to_tc_map {
                     type leafref {

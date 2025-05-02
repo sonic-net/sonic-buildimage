@@ -1,13 +1,14 @@
 
 --- a/patch/kconfig-inclusions
 +++ b/patch/kconfig-inclusions
-@@ -117,6 +117,9 @@
- CONFIG_PINCTRL_AMD=y
+@@ -126,6 +126,10 @@
  CONFIG_EDAC_AMD64=m
  CONFIG_AMD_XGBE_DCB=y
+ CONFIG_SENSORS_ISL68137=m
 +CONFIG_USB_NET_DRIVERS=m
 +CONFIG_USB_USBNET=m
 +CONFIG_USB_NET_CDCETHER=m
++CONFIG_HOTPLUG_PCI_PCIE=n
  ###-> mellanox_amd64-end
  # For Cisco 8000
  CONFIG_PHYLIB=m

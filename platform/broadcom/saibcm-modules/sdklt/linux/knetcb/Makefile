@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -12,28 +12,32 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
 #
 # Linux KNET Callback module.
 #
 
-ifdef KPMD
+# Include PMD library by default
+ifneq (0,$(KPMD))
 
-BCMPKTDIR = $(SDK)/bcmpkt
-KPMDDIR = $(SDK)/linux/knetcb
-SHRDIR = $(SDK)/shr
+# Kernel module source directory
+KMODDIR = $(CURDIR)
 
-.PHONY: mklinks rmlinks
-
-knetcb: mklinks
-	$(MAKE) all
+# Avoid creating links in original kernel module source directory
+GENDIR = $(KMODDIR)/generated
+ifneq ($(OUTPUT_DIR),)
+GENDIR = $(OUTPUT_DIR)/knet/generated/knetcb
+endif
+knetcb: kpmd
+	$(MAKE) -C $(GENDIR) all
 
 # SDK make helper for stand-alone PMD kernel module
 include $(SDK)/make/kpmd.mk
 
-distclean:: rmlinks
+distclean::
+	rm -rf $(GENDIR)
 
-endif #KPMD
+endif # KPMD
 
 include Kbuild
 

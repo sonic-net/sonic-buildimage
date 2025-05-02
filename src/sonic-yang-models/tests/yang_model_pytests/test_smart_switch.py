@@ -8,7 +8,7 @@ class TestSmartSwitch:
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:MID_PLANE_BRIDGE": {
                     "GLOBAL": {
-                        "bridge": "bridge_midplane",
+                        "bridge": "bridge-midplane",
                         "ip_prefix": "169.254.200.254/24"
                     }
                 },
@@ -31,8 +31,8 @@ class TestSmartSwitch:
 
     @pytest.mark.parametrize(
         "bridge_name, error_message", [
-            ("bridge_midplane", None),
-            ("wrong_name", 'Value "wrong_name" does not satisfy the constraint "bridge_midplane"')]
+            ("bridge-midplane", None),
+            ("wrong_name", 'Value "wrong_name" does not satisfy the constraint "bridge-midplane"')]
         )
     def test_bridge_name(self, yang_model, bridge_name, error_message):
         data = {
@@ -58,7 +58,7 @@ class TestSmartSwitch:
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:MID_PLANE_BRIDGE": {
                     "GLOBAL": {
-                        "bridge": "bridge_midplane",
+                        "bridge": "bridge-midplane",
                         "ip_prefix": ip_prefix
                     }
                 }
@@ -107,4 +107,265 @@ class TestSmartSwitch:
             }
         }
 
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "dpu_name, error_message", [
+            ("str-8102-t1-dpu0", None),
+            ("str-8102-t1-dpu0a", 'Value "str-8102-t1-dpu0a" does not satisfy the constraint "[a-zA-Z0-9-]+[0-9]"')]
+        )
+    def test_dpu_name(self, yang_model, dpu_name, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": dpu_name,
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "local_port, error_message", [
+            ("Ethernet0", None),
+            ("EthernetXYZ284099", 'Invalid interface name length, it must not exceed 16 characters.')]
+        )
+    def test_dpu_local_port(self, yang_model, local_port, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": local_port,
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "vip_ipv4, error_message", [
+            ("192.168.1.1", None),
+            ("192.168.1.xyz", 'Value "192.168.1.xyz" does not satisfy the constraint')]
+        )
+    def test_dpu_vip_ipv4(self, yang_model, vip_ipv4, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": vip_ipv4,
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "vip_ipv6, error_message", [
+            ("2001:db8::1", None),
+            ("2001:db8::xyz", 'Value "2001:db8::xyz" does not satisfy the constraint')]
+        )
+    def test_dpu_vip_ipv6(self, yang_model, vip_ipv6, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": vip_ipv6,
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "pa_ipv4, error_message", [
+            ("192.168.1.2", None),
+            ("192.168.1.xyz", 'Value "192.168.1.xyz" does not satisfy the constraint')]
+        )
+    def test_dpu_pa_ipv4(self, yang_model, pa_ipv4, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": pa_ipv4,
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "pa_ipv6, error_message", [
+            ("2001:db8::2", None),
+            ("2001:db8::xyz", 'Value "2001:db8::xyz" does not satisfy the constraint')]
+        )
+    def test_dpu_pa_ipv6(self, yang_model, pa_ipv6, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": pa_ipv6,
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "dpu_id, error_message", [
+            ("0", None),
+            ("xyz", 'Value "xyz" does not satisfy the constraint')]
+        )
+    def test_dpu_id(self, yang_model, dpu_id, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": dpu_id,
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "gnmi_port, error_message", [
+            (8080, None),
+            (99999, 'Invalid value "99999" in "gnmi_port" element.')]
+        )
+    def test_dpu_gnmi_port(self, yang_model, gnmi_port, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": gnmi_port,
+                            "orchagent_zmq_port": 50
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "orchagent_zmq_port, error_message", [
+            (50, None),
+            (99999, 'Invalid value "99999" in "orchagent_zmq_port" element.')]
+        )
+    def test_dpu_orchagent_zmq_port(self, yang_model, orchagent_zmq_port, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DPU": {
+                    "DPU_LIST": [
+                        {
+                            "dpu_name": "str-8102-t1-dpu0",
+                            "state": "up",
+                            "local_port": "Ethernet0",
+                            "vip_ipv4": "192.168.1.1",
+                            "vip_ipv6": "2001:db8::1",
+                            "pa_ipv4": "192.168.1.2",
+                            "pa_ipv6": "2001:db8::2",
+                            "dpu_id": "0",
+                            "vdpu_id": "vdpu0",
+                            "gnmi_port": 8080,
+                            "orchagent_zmq_port": orchagent_zmq_port
+                        }
+                    ]
+                }
+            }
+        }
         yang_model.load_data(data, error_message)

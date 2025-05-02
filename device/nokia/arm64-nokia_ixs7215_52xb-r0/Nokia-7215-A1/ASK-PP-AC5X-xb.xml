@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="Askpp" sid="34f1c14a-b581-422d-bd10-426dfac013dd">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="Askpp" sid="85d852e5-1e5a-4b9b-a68d-7c1f65f7a541">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -378,7 +378,7 @@
       <askppplt:typedef>
         <askppplt:name>number-physical-port-type</askppplt:name>
         <askppplt:type>enumeration</askppplt:type>
-        <askppplt:description>AC3X/AC5X 128, falcon 64, 128, 256, 512, 1024</askppplt:description>
+        <askppplt:description>AC3X/AC5X/AC5P 128, falcon 64, 128, 256, 512, 1024</askppplt:description>
         <askppplt:enum>
           <askppplt:name>no-ports</askppplt:name>
           <askppplt:description>no-ports</askppplt:description>
@@ -537,6 +537,11 @@
           <askppplt:name>ASIC_Falcon</askppplt:name>
           <askppplt:description>FALCON</askppplt:description>
           <askppplt:value>2</askppplt:value>
+        </askppplt:enum>
+        <askppplt:enum>
+          <askppplt:name>ASIC_AC5P</askppplt:name>
+          <askppplt:description>AC5P</askppplt:description>
+          <askppplt:value>3</askppplt:value>
         </askppplt:enum>
       </askppplt:typedef>
     </askppplt:typedefs>

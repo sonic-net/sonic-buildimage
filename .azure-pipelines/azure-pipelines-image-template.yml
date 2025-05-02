@@ -19,6 +19,12 @@ parameters:
 - name: jobVariables
   type: object
   default: []
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
 jobs:
 - template: azure-pipelines-job-groups.yml
   parameters:
@@ -30,7 +36,7 @@ jobs:
       - script: |
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
           BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
-          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-armhf|marvell-arm64)$"; then
+          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-prestera-armhf|marvell-prestera-arm64|vpp)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
           fi
@@ -43,6 +49,21 @@ jobs:
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
       - script: |
+          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
+            if [ -n "${{ parameters.SUBMODULE }}" ]; then
+              git submodule update --init --recursive
+              cd src/${{ parameters.SUBMODULE }}
+            fi
+            git checkout ${{ parameters.COMMIT_ID }}
+          else
+            echo "No specific commit id provided, checkout to latest commit"
+          fi
+        displayName: 'Checkout commit'
+      - script: |
+          set -x
+          sudo setfacl -R -b $(Agent.BuildDirectory)
+        displayName: 'setfacl'
+      - script: |
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
           git checkout -b $BRANCH_NAME
@@ -54,9 +75,28 @@ jobs:
         displayName: 'Make configure'
     postSteps:
       - script: |
+          BUILD_REASON=$(Build.Reason)
+          echo "Build.Reason = $BUILD_REASON"
+          echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
+          if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
+          then
+            PORT=443
+            DOCKERS=$(ls target/docker-ptf.gz)
+            BRANCH=$(Build.SourceBranchName)
+            echo "Branch = $BRANCH"
+            LABELS="$BRANCH"
+            [[ "$BRANCH" == "master" ]] && LABELS="$LABELS latest"
+            for f in $DOCKERS; do
+              echo $f
+              echo "Labels = $LABELS"
+              ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
+            done
+          fi
           mkdir -p $(Build.ArtifactStagingDirectory)/target
           mv target/* $(Build.ArtifactStagingDirectory)/target/
-        displayName: Copy Artifacts
+        env:
+          REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)
         artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'

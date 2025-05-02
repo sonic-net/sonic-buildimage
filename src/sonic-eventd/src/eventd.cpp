@@ -146,7 +146,7 @@ stats_collector::start()
 
     if (!s_unit_testing) {
         try {
-            m_counters_db = make_shared<swss::DBConnector>("COUNTERS_DB", 0, true);
+            m_counters_db = make_shared<swss::DBConnector>("COUNTERS_DB", 0, false);
         }
         catch (exception &e)
         {
@@ -302,7 +302,9 @@ static bool
 validate_event(const internal_event_t &event, runtime_id_t &rid, sequence_t &seq)
 {
     bool ret = false;
-
+    if(event.empty()) {
+        return ret;
+    }
     internal_event_t::const_iterator itc_r, itc_s, itc_e;
     itc_r = event.find(EVENT_RUNTIME_ID);
     itc_s = event.find(EVENT_SEQUENCE);
@@ -357,7 +359,6 @@ capture_service::do_capture()
     int init_cnt;
     void *cap_sub_sock = NULL;
     counters_t total_overflow = 0;
-    static bool init_done = false;
 
     typedef enum {
         /*
@@ -393,25 +394,6 @@ capture_service::do_capture()
     RET_ON_ERR(rc == 0, "Failed to ZMQ_RCVTIMEO to %d", block_ms);
 
     m_cap_run = true;
-
-    if(!init_done) {
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        int rc = zmq_msg_recv(&msg, cap_sub_sock, 0);
-        RET_ON_ERR(rc == 1, "Failed to read subscription message when XSUB connects to XPUB");
-        /*
-         * When XSUB socket connects to XPUB, a subscription message is sent as a single byte 1.
-         * When capture service begins to read, the very first message that it will read is this
-         * control character.
-         *
-         * We will handle by reading this message and dropping it before we begin reading for
-         * cached events.
-         *
-         * This behavior will only happen once when XSUB connects to XPUB not everytime cache is started.
-         *
-         */
-         init_done = true;
-    }
 
     while (m_ctrl != START_CAPTURE) {
         /* Wait for capture start */

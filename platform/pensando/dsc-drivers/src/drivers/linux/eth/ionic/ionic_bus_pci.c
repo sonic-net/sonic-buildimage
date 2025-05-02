@@ -78,8 +78,8 @@ void ionic_bus_free_irq_vectors(struct ionic *ionic)
 
 struct net_device *ionic_alloc_netdev(struct ionic *ionic)
 {
-	dev_dbg(ionic->dev, "nxqs=%d nlifs=%d nintrs=%d\n",
-		ionic->ntxqs_per_lif, ionic->nlifs, ionic->nintrs);
+	dev_dbg(ionic->dev, "nxqs=%d nintrs=%d\n",
+		ionic->ntxqs_per_lif, ionic->nintrs);
 
 	return alloc_etherdev_mqs(sizeof(struct ionic_lif),
 				  ionic->ntxqs_per_lif, ionic->ntxqs_per_lif);
@@ -137,6 +137,7 @@ static void ionic_unmap_bars(struct ionic *ionic)
 			bars[i].len = 0;
 		}
 	}
+	ionic->num_bars = 0;
 }
 
 void __iomem *ionic_bus_map_dbpage(struct ionic *ionic, int page_num)
@@ -179,7 +180,7 @@ static void ionic_vf_dealloc_locked(struct ionic *ionic)
 
 		if (v->stats_pa) {
 			vfc.stats_pa = 0;
-			(void)ionic_set_vf_config(ionic, i, &vfc);
+			ionic_set_vf_config(ionic, i, &vfc);
 			dma_unmap_single(ionic->dev, v->stats_pa,
 					 sizeof(v->stats), DMA_FROM_DEVICE);
 			v->stats_pa = 0;
@@ -228,7 +229,7 @@ static int ionic_vf_alloc(struct ionic *ionic, int num_vfs)
 
 		/* ignore failures from older FW, we just won't get stats */
 		vfc.stats_pa = cpu_to_le64(v->stats_pa);
-		(void)ionic_set_vf_config(ionic, i, &vfc);
+		ionic_set_vf_config(ionic, i, &vfc);
 	}
 
 out:
@@ -272,6 +273,100 @@ out:
 	return ret;
 }
 
+static void ionic_clear_pci(struct ionic *ionic)
+{
+	if (ionic->num_bars) {
+		ionic->idev.dev_info_regs = NULL;
+		ionic->idev.dev_cmd_regs = NULL;
+		ionic->idev.intr_status = NULL;
+		ionic->idev.intr_ctrl = NULL;
+
+		ionic_unmap_bars(ionic);
+		pci_release_regions(ionic->pdev);
+	}
+
+	if (atomic_read(&ionic->pdev->enable_cnt) > 0)
+		pci_disable_device(ionic->pdev);
+}
+
+static int ionic_setup_one(struct ionic *ionic)
+{
+	struct pci_dev *pdev = ionic->pdev;
+	struct device *dev = ionic->dev;
+	int err;
+
+	ionic_debugfs_add_dev(ionic);
+
+	/* Setup PCI device */
+	err = pci_enable_device_mem(pdev);
+	if (err) {
+		dev_err(dev, "Cannot enable PCI device: %d, aborting\n", err);
+		goto err_out_debugfs_del_dev;
+	}
+
+	err = pci_request_regions(pdev, IONIC_DRV_NAME);
+	if (err) {
+		dev_err(dev, "Cannot request PCI regions: %d, aborting\n", err);
+		goto err_out_clear_pci;
+	}
+	pcie_print_link_status(pdev);
+
+	err = ionic_map_bars(ionic);
+	if (err)
+		goto err_out_clear_pci;
+
+	/* Configure the device */
+	err = ionic_setup(ionic);
+	if (err) {
+		dev_err(dev, "Cannot setup device: %d, aborting\n", err);
+		goto err_out_clear_pci;
+	}
+	pci_set_master(pdev);
+
+	err = ionic_identify(ionic);
+	if (err) {
+		dev_err(dev, "Cannot identify device: %d, aborting\n", err);
+		goto err_out_teardown;
+	}
+	ionic_debugfs_add_ident(ionic);
+
+	err = ionic_init(ionic);
+	if (err) {
+		dev_err(dev, "Cannot init device: %d, aborting\n", err);
+		goto err_out_teardown;
+	}
+
+	/* Configure the port */
+	ionic_port_reset(ionic);
+	if (err) {
+		dev_err(dev, "Cannot reset port: %d, aborting\n", err);
+		goto err_out_teardown;
+	}
+
+	err = ionic_port_identify(ionic);
+	if (err) {
+		dev_err(dev, "Cannot identify port: %d, aborting\n", err);
+		goto err_out_teardown;
+	}
+
+	err = ionic_port_init(ionic);
+	if (err) {
+		dev_err(dev, "Cannot init port: %d, aborting\n", err);
+		goto err_out_teardown;
+	}
+
+	return 0;
+
+err_out_teardown:
+	ionic_dev_teardown(ionic);
+err_out_clear_pci:
+	ionic_clear_pci(ionic);
+err_out_debugfs_del_dev:
+	ionic_debugfs_del_dev(ionic);
+
+	return err;
+}
+
 static int ionic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct device *dev = &pdev->dev;
@@ -294,69 +389,20 @@ static int ionic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	err = ionic_set_dma_mask(ionic);
 	if (err) {
-		dev_err(dev, "Cannot set DMA mask: %d, aborting\n", err);
-		goto err_out_clear_drvdata;
+		dev_err(dev, "Unable to obtain 64-bit DMA for consistent allocations, aborting.  err=%d\n",
+			err);
+		goto err_out;
 	}
 
-	ionic_debugfs_add_dev(ionic);
-
-	/* Setup PCI device */
-	err = pci_enable_device_mem(pdev);
-	if (err) {
-		dev_err(dev, "Cannot enable PCI device: %d, aborting\n", err);
-		goto err_out_debugfs_del_dev;
-	}
-
-	err = pci_request_regions(pdev, IONIC_DRV_NAME);
-	if (err) {
-		dev_err(dev, "Cannot request PCI regions: %d, aborting\n", err);
-		goto err_out_pci_disable_device;
-	}
-	pcie_print_link_status(pdev);
-
-	err = ionic_map_bars(ionic);
+	err = ionic_setup_one(ionic);
 	if (err)
-		goto err_out_pci_release_regions;
-
-	/* Configure the device */
-	err = ionic_setup(ionic);
-	if (err) {
-		dev_err(dev, "Cannot setup device: %d, aborting\n", err);
-		goto err_out_unmap_bars;
-	}
-	pci_set_master(pdev);
-
-	err = ionic_identify(ionic);
-	if (err) {
-		dev_err(dev, "Cannot identify device: %d, aborting\n", err);
-		goto err_out_teardown;
-	}
-	ionic_debugfs_add_ident(ionic);
-
-	err = ionic_init(ionic);
-	if (err) {
-		dev_err(dev, "Cannot init device: %d, aborting\n", err);
-		goto err_out_teardown;
-	}
-
-	/* Configure the ports */
-	err = ionic_port_identify(ionic);
-	if (err) {
-		dev_err(dev, "Cannot identify port: %d, aborting\n", err);
-		goto err_out_reset;
-	}
-
-	err = ionic_port_init(ionic);
-	if (err) {
-		dev_err(dev, "Cannot init port: %d, aborting\n", err);
-		goto err_out_reset;
-	}
+		goto err_out;
 
 	/* Allocate and init the LIF */
 	err = ionic_lif_size(ionic);
 	if (err) {
 		dev_err(dev, "Cannot size LIF: %d, aborting\n", err);
-		goto err_out_port_reset;
+		goto err_out_pci;
 	}
 
 	err = ionic_lif_alloc(ionic);
@@ -407,30 +453,12 @@ err_out_free_lifs:
 	ionic->lif = NULL;
 err_out_free_irqs:
 	ionic_bus_free_irq_vectors(ionic);
-err_out_port_reset:
-	ionic_port_reset(ionic);
-err_out_reset:
-	ionic_reset(ionic);
-err_out_teardown:
+err_out_pci:
 	ionic_dev_teardown(ionic);
-	pci_clear_master(pdev);
-	/* Don't fail the probe for these errors, keep
-	 * the hw interface around for inspection
-	 */
-	return 0;
-
-err_out_unmap_bars:
-	ionic_unmap_bars(ionic);
-err_out_pci_release_regions:
-	pci_release_regions(pdev);
-err_out_pci_disable_device:
-	pci_disable_device(pdev);
-err_out_debugfs_del_dev:
-	ionic_debugfs_del_dev(ionic);
-err_out_clear_drvdata:
+	ionic_clear_pci(ionic);
+err_out:
 	mutex_destroy(&ionic->dev_cmd_lock);
 	ionic_devlink_free(ionic);
-	pci_set_drvdata(pdev, NULL);
 
 	return err;
 }
@@ -439,12 +467,16 @@ static void ionic_remove(struct pci_dev *pdev)
 {
 	struct ionic *ionic = pci_get_drvdata(pdev);
 
-	if (!ionic)
-		return;
+	if (ionic->lif)
+		set_bit(IONIC_LIF_F_IN_SHUTDOWN, ionic->lif->state);
 
 	del_timer_sync(&ionic->watchdog_timer);
 
 	if (ionic->lif) {
+		/* prevent adminq cmds if already known as down */
+		if (test_and_clear_bit(IONIC_LIF_F_FW_RESET, ionic->lif->state))
+			set_bit(IONIC_LIF_F_FW_STOPPING, ionic->lif->state);
+
 		ionic_lif_unregister(ionic->lif);
 		ionic_devlink_unregister(ionic);
 		ionic_lif_deinit(ionic->lif);
@@ -456,14 +488,102 @@ static void ionic_remove(struct pci_dev *pdev)
 	ionic_port_reset(ionic);
 	ionic_reset(ionic);
 	ionic_dev_teardown(ionic);
-	pci_clear_master(pdev);
-	ionic_unmap_bars(ionic);
-	pci_release_regions(pdev);
-	pci_disable_device(pdev);
+	ionic_clear_pci(ionic);
 	ionic_debugfs_del_dev(ionic);
 	mutex_destroy(&ionic->dev_cmd_lock);
 	ionic_devlink_free(ionic);
 }
+
+void ionic_reset_prepare(struct pci_dev *pdev)
+{
+	struct ionic *ionic = pci_get_drvdata(pdev);
+	struct ionic_lif *lif = ionic->lif;
+
+	dev_dbg(ionic->dev, "%s: device stopping\n", __func__);
+
+	set_bit(IONIC_LIF_F_FW_RESET, lif->state);
+
+	/* Stop the timer first so it can't re-schedule more work, but note
+	 * that there is a small chance the device could send an
+	 * IONIC_EVENT_RESET, which could cause another work item to be
+	 * scheduled and render these del/cancel calls useless (i.e. don't mix
+	 * device triggered resets with userspace triggered resets).
+	 */
+	del_timer_sync(&ionic->watchdog_timer);
+
+	mutex_lock(&lif->queue_lock);
+	ionic_stop_queues_reconfig(lif);
+	ionic_txrx_free(lif);
+	ionic_lif_deinit(lif);
+	ionic_qcqs_free(lif);
+	ionic_debugfs_del_lif(lif);
+	mutex_unlock(&lif->queue_lock);
+
+	ionic_dev_teardown(ionic);
+	ionic_clear_pci(ionic);
+	ionic_debugfs_del_dev(ionic);
+	clear_bit(IONIC_LIF_F_FW_STOPPING, lif->state);
+}
+
+void ionic_reset_done(struct pci_dev *pdev)
+{
+	struct ionic *ionic = pci_get_drvdata(pdev);
+	struct ionic_lif *lif = ionic->lif;
+	int err;
+
+	err = ionic_setup_one(ionic);
+	if (err)
+		goto err_out;
+
+	ionic_debugfs_add_sizes(ionic);
+	ionic_debugfs_add_lif(ionic->lif);
+
+	err = ionic_restart_lif(lif);
+	if (err)
+		goto err_out;
+
+	mod_timer(&ionic->watchdog_timer, jiffies + 1);
+
+err_out:
+	dev_dbg(ionic->dev, "%s: device recovery %s\n",
+		__func__, err ? "failed" : "done");
+}
+
+#if (KERNEL_VERSION(4, 13, 0) <= LINUX_VERSION_CODE)
+static pci_ers_result_t ionic_pci_error_detected(struct pci_dev *pdev,
+						 pci_channel_state_t error)
+{
+	pci_ers_result_t result = PCI_ERS_RESULT_NONE;
+
+	if (error == pci_channel_io_frozen) {
+		ionic_reset_prepare(pdev);
+		result = PCI_ERS_RESULT_NEED_RESET;
+	}
+
+	return result;
+}
+
+static void ionic_pci_error_resume(struct pci_dev *pdev)
+{
+	struct ionic *ionic = pci_get_drvdata(pdev);
+	struct ionic_lif *lif = ionic->lif;
+
+	if (lif && test_bit(IONIC_LIF_F_FW_RESET, lif->state))
+		pci_reset_function_locked(pdev);
+}
+
+static const struct pci_error_handlers ionic_err_handler = {
+	/* FLR handling */
+	.reset_prepare      = ionic_reset_prepare,
+	.reset_done         = ionic_reset_done,
+
+	/* PCI bus error detected on this device */
+	.error_detected     = ionic_pci_error_detected,
+
+	/* Device driver may resume normal operations */
+	.resume		    = ionic_pci_error_resume,
+};
+#endif
 
 static struct pci_driver ionic_driver = {
 	.name = IONIC_DRV_NAME,
@@ -471,6 +591,9 @@ static struct pci_driver ionic_driver = {
 	.probe = ionic_probe,
 	.remove = ionic_remove,
 	.sriov_configure = ionic_sriov_configure,
+#if (KERNEL_VERSION(4, 13, 0) <= LINUX_VERSION_CODE)
+	.err_handler = &ionic_err_handler
+#endif
 };
 
 int ionic_bus_register_driver(void)

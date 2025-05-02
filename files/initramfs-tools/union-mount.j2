@@ -130,9 +130,15 @@ extract_dockerfs()
 {
     echo "Extracting {{ FILESYSTEM_DOCKERFS }}"
     if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
-        # Extract dockerfs.tar.gz into /var/lib/docker unless the system booted with secureboot
-        # In secureboot dockerfs.tar.gz cannot be trusted as it does not have a signature
-        tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
+        # Check if the file is zstd compressed
+        file_type=$(file -b --mime-type "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}")
+        if [ "$file_type" = "application/zstd" ]; then
+            echo "Detected zstd compression, extracting with pzstd..."
+            pzstd -d -q ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -c | tar x --numeric-owner -C ${rootmnt}/var/lib/docker
+        else
+            echo "Using default extraction method (gzip assumed)..."
+            tar xz --numeric-owner -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" -C "${rootmnt}/var/lib/docker"
+        fi
     elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
         # Aboot swi images also support extracting dockerfs.tar.gz directly from them
         unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
@@ -211,6 +217,9 @@ mkdir -p ${rootmnt}/boot
 # make sure that the boot folder exists before attempting a mount
 mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
+
+## Mount the /tmp directory as tmpfs
+mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
 
 ## Mount loop device or tmpfs for /var/log
 if $logs_inram; then
