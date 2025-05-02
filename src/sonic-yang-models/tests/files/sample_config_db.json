@@ -375,6 +375,13 @@
                 "lag_hash_algorithm": "XOR"
             }
         },
+        "SWITCH_TRIMMING": {
+            "GLOBAL": {
+                "size": "128",
+                "dscp_value": "48",
+                "queue_index": "6"
+            }
+        },
         "DEVICE_METADATA": {
             "localhost": {
                 "buffer_model": "dynamic",

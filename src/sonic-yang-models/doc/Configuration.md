@@ -76,6 +76,7 @@
   * [Telemetry](#telemetry)
   * [Telemetry client](#telemetry-client)
   * [Tunnel](#tunnel)
+  * [Trimming](#trimming)
   * [Versions](#versions)
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
@@ -378,6 +379,43 @@ and migration plan
     }
 }
 ```
+
+***ACL fine-grained packet trimming control with disable trimming action configuration example***
+```
+{
+    "ACL_TABLE_TYPE": {
+        "TRIMMING_L3": {
+            "MATCHES": [
+                "SRC_IP"
+            ],
+            "ACTIONS": [
+                "DISABLE_TRIM_ACTION"
+            ],
+            "BIND_POINTS": [
+                "PORT"
+            ]
+        }
+    },
+    "ACL_TABLE": {
+        "TRIM_TABLE": {
+            "POLICY_DESC": "Packet trimming",
+            "TYPE": "TRIMMING_L3",
+            "STAGE": "INGRESS",
+            "PORTS": [
+                "Ethernet0"
+            ]
+        }
+    },
+    "ACL_RULE": {
+        "TRIM_TABLE|TRIM_RULE": {
+            "PRIORITY": "999",
+            "SRC_IP": "1.1.1.1/32",
+            "PACKET_ACTION": "DISABLE_TRIM"
+        }
+    }
+}
+```
+
 ### BGP BBR
 
 The **BGP_BBR** table contains device-level BBR state.
@@ -656,6 +694,18 @@ This kind of profiles will be handled by buffer manager and won't be applied to 
         "headroom_type": "dynamic"
     }
   }
+}
+```
+
+***Packet trimming configuration example***
+```
+{
+    "q_lossy_profile": {
+        "dynamic_th": "3",
+        "pool": "egress_lossy_pool",
+        "size": "0",
+        "packet_discard_action": "drop"
+    }
 }
 ```
 
@@ -2531,6 +2581,34 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
     }
 }
 ```
+
+### Trimming
+
+When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
+
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+Retransmission triggered by timeouts typically incurs significant latency.
+
+To help the host recover data more quickly and accurately, packet trimming is introduced.  
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+and try sending it on a different queue to deliver a packet drop notification to an end host.
+
+***TRIMMING***
+
+```
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "48",
+            "queue_index": "6"
+        }
+    }
+}
+```
+
+**Note:**
+* when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions
 
