@@ -1,0 +1,30 @@
+From 492577aebd3e6b22aa4721f16878b99233abd6ba Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 8 Feb 2024 11:35:31 -0500
+Subject: [PATCH] zebra: Installation success should not set NHG as valid
+
+The nexthop group is marked as valid/invalid and then
+installed.  Not installed and then marked valid.
+This is just a bit of code removed that might be covering
+up other problems that need to be sorted.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 2006a20e6..d058b51ea 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3185,7 +3185,6 @@ void zebra_nhg_dplane_result(struct zebra_dplane_ctx *ctx)
+ 
+ 		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED);
+ 		if (status == ZEBRA_DPLANE_REQUEST_SUCCESS) {
+-			SET_FLAG(nhe->flags, NEXTHOP_GROUP_VALID);
+ 			SET_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED);
+ 			zebra_nhg_handle_install(nhe, true);
+ 
+-- 
+2.43.2
+

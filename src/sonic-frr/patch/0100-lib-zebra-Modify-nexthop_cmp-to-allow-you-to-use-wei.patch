@@ -1,0 +1,106 @@
+From 75268f0173a427708b837da2b72f56f94490a601 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 20 Aug 2024 08:28:17 -0400
+Subject: [PATCH] lib, zebra: Modify nexthop_cmp to allow you to use weight or
+ not
+
+Currently nexthop weight is a discriminator on whether or not
+a nexthop matches.  There is a need to no use the weight as
+part of this comparison function so let's add a boolean to
+allow us to say use this or not.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ lib/nexthop.c | 30 ++++++++++++++++++++++--------
+ lib/nexthop.h |  2 ++
+ 2 files changed, 24 insertions(+), 8 deletions(-)
+
+diff --git a/lib/nexthop.c b/lib/nexthop.c
+index 3dd27dcae..c385e8f5a 100644
+--- a/lib/nexthop.c
++++ b/lib/nexthop.c
+@@ -139,7 +139,7 @@ static int _nexthop_source_cmp(const struct nexthop *nh1,
+ }
+ 
+ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+-				  const struct nexthop *next2)
++				  const struct nexthop *next2, bool use_weight)
+ {
+ 	int ret = 0;
+ 
+@@ -155,11 +155,13 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+ 	if (next1->type > next2->type)
+ 		return 1;
+ 
+-	if (next1->weight < next2->weight)
+-		return -1;
++	if (use_weight) {
++		if (next1->weight < next2->weight)
++			return -1;
+ 
+-	if (next1->weight > next2->weight)
+-		return 1;
++		if (next1->weight > next2->weight)
++			return 1;
++	}
+ 
+ 	switch (next1->type) {
+ 	case NEXTHOP_TYPE_IPV4:
+@@ -227,11 +229,12 @@ done:
+ 	return ret;
+ }
+ 
+-int nexthop_cmp(const struct nexthop *next1, const struct nexthop *next2)
++static int nexthop_cmp_internal(const struct nexthop *next1,
++				const struct nexthop *next2, bool use_weight)
+ {
+ 	int ret = 0;
+ 
+-	ret = _nexthop_cmp_no_labels(next1, next2);
++	ret = _nexthop_cmp_no_labels(next1, next2, use_weight);
+ 	if (ret != 0)
+ 		return ret;
+ 
+@@ -244,6 +247,17 @@ int nexthop_cmp(const struct nexthop *next1, const struct nexthop *next2)
+ 	return ret;
+ }
+ 
++int nexthop_cmp(const struct nexthop *next1, const struct nexthop *next2)
++{
++	return nexthop_cmp_internal(next1, next2, true);
++}
++
++int nexthop_cmp_no_weight(const struct nexthop *next1,
++			  const struct nexthop *next2)
++{
++	return nexthop_cmp_internal(next1, next2, false);
++}
++
+ /*
+  * More-limited comparison function used to detect duplicate
+  * nexthops. This is used in places where we don't need the full
+@@ -441,7 +455,7 @@ bool nexthop_same_no_labels(const struct nexthop *nh1,
+ 	if (nh1 == nh2)
+ 		return true;
+ 
+-	if (_nexthop_cmp_no_labels(nh1, nh2) != 0)
++	if (_nexthop_cmp_no_labels(nh1, nh2, true) != 0)
+ 		return false;
+ 
+ 	return true;
+diff --git a/lib/nexthop.h b/lib/nexthop.h
+index 718ce2ee4..a642febad 100644
+--- a/lib/nexthop.h
++++ b/lib/nexthop.h
+@@ -239,6 +239,8 @@ extern bool nexthop_same(const struct nexthop *nh1, const struct nexthop *nh2);
+ extern bool nexthop_same_no_labels(const struct nexthop *nh1,
+ 				   const struct nexthop *nh2);
+ extern int nexthop_cmp(const struct nexthop *nh1, const struct nexthop *nh2);
++extern int nexthop_cmp_no_weight(const struct nexthop *nh1,
++				 const struct nexthop *nh2);
+ extern int nexthop_g_addr_cmp(enum nexthop_types_t type,
+ 			      const union g_addr *addr1,
+ 			      const union g_addr *addr2);
+-- 
+2.43.2
+

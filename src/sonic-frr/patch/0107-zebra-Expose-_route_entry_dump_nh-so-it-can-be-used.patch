@@ -1,0 +1,91 @@
+From 4fb44993122c5137cc3d75607e46a5fd32113743 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 11 Sep 2024 13:58:32 -0400
+Subject: [PATCH] zebra: Expose _route_entry_dump_nh so it can be used.
+
+Expose this helper function so it can be used in zebra_nhg.c
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/rib.h       |  3 +++
+ zebra/zebra_nhg.c |  5 ++---
+ zebra/zebra_rib.c | 10 +++++-----
+ 3 files changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/zebra/rib.h b/zebra/rib.h
+index 15f877b66..04298eb0f 100644
+--- a/zebra/rib.h
++++ b/zebra/rib.h
+@@ -634,6 +634,9 @@ extern pid_t pid;
+ 
+ extern uint32_t rt_table_main_id;
+ 
++void route_entry_dump_nh(const struct route_entry *re, const char *straddr,
++			 const struct nexthop *nexthop);
++
+ /* Name of hook calls */
+ #define ZEBRA_ON_RIB_PROCESS_HOOK_CALL "on_rib_process_dplane_results"
+ 
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 529732938..f540cd7ac 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3006,7 +3006,6 @@ static struct nhg_hash_entry *zebra_nhg_rib_compare_old_nhe(
+ {
+ 	struct nexthop *nhop, *old_nhop;
+ 	bool same = true;
+-	struct vrf *vrf = vrf_lookup_by_id(re->vrf_id);
+ 
+ 	if (IS_ZEBRA_DEBUG_NHG_DETAIL) {
+ 		char straddr[PREFIX_STRLEN];
+@@ -3016,11 +3015,11 @@ static struct nhg_hash_entry *zebra_nhg_rib_compare_old_nhe(
+ 			   new_nhe->id, old_nhe->id);
+ 		zlog_debug("%s: %pRN NEW", __func__, rn);
+ 		for (ALL_NEXTHOPS(new_nhe->nhg, nhop))
+-			route_entry_dump_nh(re, straddr, vrf, nhop);
++			route_entry_dump_nh(re, straddr, nhop);
+ 
+ 		zlog_debug("%s: %pRN OLD", __func__, rn);
+ 		for (ALL_NEXTHOPS(old_nhe->nhg, nhop))
+-			route_entry_dump_nh(re, straddr, vrf, nhop);
++			route_entry_dump_nh(re, straddr, nhop);
+ 	}
+ 
+ 	nhop = new_nhe->nhg.nexthop;
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index 7a531ac09..439f8919d 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -4098,9 +4098,9 @@ void rib_delnode(struct route_node *rn, struct route_entry *re)
+ /*
+  * Helper that debugs a single nexthop within a route-entry
+  */
+-static void _route_entry_dump_nh(const struct route_entry *re,
+-				 const char *straddr,
+-				 const struct nexthop *nexthop)
++void route_entry_dump_nh(const struct route_entry *re,
++			 const char *straddr,
++			 const struct nexthop *nexthop)
+ {
+ 	char nhname[PREFIX_STRLEN];
+ 	char backup_str[50];
+@@ -4226,14 +4226,14 @@ void _route_entry_dump(const char *func, union prefixconstptr pp,
+ 
+ 	/* Dump nexthops */
+ 	for (ALL_NEXTHOPS(re->nhe->nhg, nexthop))
+-		_route_entry_dump_nh(re, straddr, nexthop);
++		route_entry_dump_nh(re, straddr, nexthop);
+ 
+ 	if (zebra_nhg_get_backup_nhg(re->nhe)) {
+ 		zlog_debug("%s: backup nexthops:", straddr);
+ 
+ 		nhg = zebra_nhg_get_backup_nhg(re->nhe);
+ 		for (ALL_NEXTHOPS_PTR(nhg, nexthop))
+-			_route_entry_dump_nh(re, straddr, nexthop);
++			route_entry_dump_nh(re, straddr, nexthop);
+ 	}
+ 
+ 	zlog_debug("%s: dump complete", straddr);
+-- 
+2.43.2
+

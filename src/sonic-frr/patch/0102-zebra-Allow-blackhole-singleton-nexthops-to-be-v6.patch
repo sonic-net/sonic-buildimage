@@ -1,0 +1,54 @@
+From ae397ad932cb0aa35fecdcca48f2f3b45d39cdf0 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 29 Aug 2024 15:06:31 -0400
+Subject: [PATCH] zebra: Allow blackhole singleton nexthops to be v6
+
+A blackhole nexthop, according to the linux kernel,
+can be v4 or v6.  A v4 blackhole nexthop cannot be
+used on a v6 route, but a v6 blackhole nexthop can
+be used with a v4 route.  Convert all blackhole
+singleton nexthops to v6 and just use that.
+Possibly reducing the number of active nexthops by 1.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 17 +++++++++++------
+ 1 file changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 93767bb85..72fb6e052 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -354,18 +354,23 @@ void zebra_nhe_init(struct nhg_hash_entry *nhe, afi_t afi,
+ 	 */
+ 	if (nh && (nh->next == NULL)) {
+ 		switch (nh->type) {
+-		case NEXTHOP_TYPE_IFINDEX:
+-		case NEXTHOP_TYPE_BLACKHOLE:
+ 			/*
+ 			 * This switch case handles setting the afi different
+-			 * for ipv4/v6 routes. Ifindex/blackhole nexthop
++			 * for ipv4/v6 routes. Ifindex nexthop
+ 			 * objects cannot be ambiguous, they must be Address
+-			 * Family specific. If we get here, we will either use
+-			 * the AF of the route, or the one we got passed from
+-			 * here from the kernel.
++			 * Family specific as that the kernel relies on these
++			 * for some reason.  blackholes can be v6 because the
++			 * v4 kernel infrastructure allows the usage of v6
++			 * blackholes in this case.   if we get here, we will
++			 * either use the AF of the route, or the one we got
++			 * passed from here from the kernel.
+ 			 */
++		case NEXTHOP_TYPE_IFINDEX:
+ 			nhe->afi = afi;
+ 			break;
++		case NEXTHOP_TYPE_BLACKHOLE:
++			nhe->afi = AFI_IP6;
++			break;
+ 		case NEXTHOP_TYPE_IPV4_IFINDEX:
+ 		case NEXTHOP_TYPE_IPV4:
+ 			nhe->afi = AFI_IP;
+-- 
+2.43.2
+

@@ -1,0 +1,84 @@
+From 279f427c129526cef74ac8e115c183b170dad7e0 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 11 Sep 2024 14:19:51 -0400
+Subject: [PATCH] zebra: Reinstall nexthop when interface comes back up
+
+If a interface down event caused a nexthop group to remove
+one of the entries in the kernel, have it be reinstalled
+when the interface comes back up.  Mark the nexthop as
+usable.
+
+new behavior:
+eva# show nexthop-group rib 181818168
+ID: 181818168 (sharp)
+     RefCnt: 1
+     Uptime: 00:00:23
+     VRF: default(bad-value)
+     Valid, Installed
+     Depends: (35) (38) (44) (51)
+           via 192.168.99.33, dummy1 (vrf default), weight 1
+           via 192.168.100.33, dummy2 (vrf default), weight 1
+           via 192.168.101.33, dummy3 (vrf default), weight 1
+           via 192.168.102.33, dummy4 (vrf default), weight 1
+eva# conf
+eva(config)# int dummy3
+eva(config-if)# shut
+eva(config-if)# do show nexthop-group rib 181818168
+ID: 181818168 (sharp)
+     RefCnt: 1
+     Uptime: 00:00:44
+     VRF: default(bad-value)
+     Depends: (35) (38) (44) (51)
+           via 192.168.99.33, dummy1 (vrf default), weight 1
+           via 192.168.100.33, dummy2 (vrf default), weight 1
+           via 192.168.101.33, dummy3 (vrf default) inactive, weight 1
+           via 192.168.102.33, dummy4 (vrf default), weight 1
+eva(config-if)# no shut
+eva(config-if)# do show nexthop-group rib 181818168
+ID: 181818168 (sharp)
+     RefCnt: 1
+     Uptime: 00:00:53
+     VRF: default(bad-value)
+     Valid, Installed
+     Depends: (35) (38) (44) (51)
+           via 192.168.99.33, dummy1 (vrf default), weight 1
+           via 192.168.100.33, dummy2 (vrf default), weight 1
+           via 192.168.101.33, dummy3 (vrf default), weight 1
+           via 192.168.102.33, dummy4 (vrf default), weight 1
+eva(config-if)# exit
+eva(config)# exit
+eva# exit
+sharpd@eva ~/frr1 (master) [255]> ip nexthop show id 181818168
+id 181818168 group 35/38/44/51 proto 194
+sharpd@eva ~/frr1 (master)>
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 360e7989d..c282cf294 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3759,6 +3759,17 @@ void zebra_interface_nhg_reinstall(struct interface *ifp)
+ 			frr_each_safe (nhg_connected_tree,
+ 				       &rb_node_dep->nhe->nhg_dependents,
+ 				       rb_node_dependent) {
++				struct nexthop *nhop_dependent =
++					rb_node_dependent->nhe->nhg.nexthop;
++
++				while (nhop_dependent &&
++				       !nexthop_same(nhop_dependent, nh))
++					nhop_dependent = nhop_dependent->next;
++
++				if (nhop_dependent)
++					SET_FLAG(nhop_dependent->flags,
++						 NEXTHOP_FLAG_ACTIVE);
++
+ 				if (IS_ZEBRA_DEBUG_NHG)
+ 					zlog_debug("%s dependent nhe %pNG Setting Reinstall flag",
+ 						   __func__,
+-- 
+2.43.2
+

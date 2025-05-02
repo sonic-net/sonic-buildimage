@@ -1,0 +1,65 @@
+From d1cba73a1a4c17ae9767abfaebf2a8a922e668c8 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 9 Jan 2025 15:26:46 -0500
+Subject: [PATCH] zebra: Uninstall NHG in some situations
+
+If you have this series of events:
+
+a) Decision to install a NHG is made in zebra, enqueue to DPLANE
+b) Changes to NHG are made and we remove it in the master pthread
+   Since this NHG is not marked as installed it is not removed
+   but the NHG data structure is deleted
+c) DPLANE installs the NHG
+
+In the end the NHG stays installed but ZEBRA has lost track of it.
+
+Modify the removal code to check to see if the NHG is queued.
+There are 2 cases:
+
+a) NHG is kept around for a bit before being deleted.  In this case
+just see that the NHG is Queued and keep it around too.
+
+b) NHG is not kept around and we are just removing it.  In this case
+check to see if it is queued and send another deletion event.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 158f77cd7..d8ca61964 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1754,7 +1754,8 @@ void zebra_nhg_decrement_ref(struct nhg_hash_entry *nhe)
+ 	nhe->refcnt--;
+ 
+ 	if (!zebra_router_in_shutdown() && nhe->refcnt <= 0 &&
+-	    CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED) &&
++	    (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED) ||
++	     CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED)) &&
+ 	    !CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_KEEP_AROUND)) {
+ 		nhe->refcnt = 1;
+ 		SET_FLAG(nhe->flags, NEXTHOP_GROUP_KEEP_AROUND);
+@@ -3370,7 +3371,17 @@ void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe, uint8_t type)
+ 
+ void zebra_nhg_uninstall_kernel(struct nhg_hash_entry *nhe)
+ {
+-	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED)) {
++	/*
++	 * Clearly if the nexthop group is installed we should
++	 * remove it.  Additionally If the nexthop is already
++	 * QUEUED for installation, we should also just send
++	 * a deletion down as well.  We cannot necessarily pluck
++	 * the installation out of the queue ( since it may have
++	 * already been acted on, but not processed yet in the
++	 * main pthread ).
++	 */
++	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED) ||
++	    CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED)) {
+ 		int ret = dplane_nexthop_delete(nhe);
+ 
+ 		switch (ret) {
+-- 
+2.43.2
+

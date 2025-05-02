@@ -1,0 +1,45 @@
+From 4b2b1a9ac09999ac829c333d44da3c98d948e6ec Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 14 Jan 2025 16:23:40 -0500
+Subject: [PATCH] zebra: On Nexthop install failure don't set Installation
+ failed
+
+Currently FRR when installing a nexthop group, the installation can fail.
+The assumption with the code was that the current nexthop group was
+not already installed.  This leaves a problem state where if the
+users of the nexthop group are removed, the nexthop group will be
+removed possibly leaving a orphaned nexthop group in the data plane.
+
+FRR on a nexthop group installation does not actually know the status
+of the nexthop group in the kernel.  It's possible that a earlier
+version of the nexthop group is left in play.  It's possible that
+there is no nexthop group in the kernel at all.  Leaving the
+Installed flag alone allows upon Zebra removing the nexthop
+group when it is removed from zebra.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index ecdba6854..51ae6493a 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3451,6 +3451,13 @@ void zebra_nhg_dplane_result(struct zebra_dplane_ctx *ctx)
+ 						 nhe->zapi_session, nhe->id,
+ 						 ZAPI_NHG_INSTALLED);
+ 		} else {
++			/*
++			 * With a request failure it is unknown what we now know
++			 * this is because Zebra has lost track of whether or not
++			 * any previous versions of this NHG are in the kernel
++			 * or even what those versions were.  So at this point
++			 * we cannot unset the INSTALLED flag.
++			 */
+ 			/* If daemon nhg, send it an update */
+ 			if (PROTO_OWNED(nhe))
+ 				zsend_nhg_notify(nhe->type, nhe->zapi_instance,
+-- 
+2.43.2
+

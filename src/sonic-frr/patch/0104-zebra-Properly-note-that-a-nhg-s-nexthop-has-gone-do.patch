@@ -1,0 +1,66 @@
+From 892e81793b486734daf0bc1c49172c1f491e0adb Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 7 Feb 2024 14:56:15 -0500
+Subject: [PATCH] zebra: Properly note that a nhg's nexthop has gone down
+
+Current code when a link is set down is to just mark the
+nexthop group as not properly setup.  Leaving situations
+where when an interface goes down and show output is
+entered we see incorrect state.  This is true for anything
+that would be checking those flags at that point in time.
+
+Modify the interface down nexthop group code to notice the
+nexthops appropriately ( and I mean set the appropriate flags )
+and to allow a `show ip route` command to actually display
+what is going on with the nexthops.
+
+eva# show ip route 1.0.0.0
+Routing entry for 1.0.0.0/32
+  Known via "sharp", distance 150, metric 0, best
+  Last update 00:00:06 ago
+  * 192.168.44.33, via dummy1, weight 1
+  * 192.168.45.33, via dummy2, weight 1
+
+sharpd@eva:~/frr1$ sudo ip link set dummy2 down
+
+eva# show ip route 1.0.0.0
+Routing entry for 1.0.0.0/32
+  Known via "sharp", distance 150, metric 0, best
+  Last update 00:00:12 ago
+  * 192.168.44.33, via dummy1, weight 1
+    192.168.45.33, via dummy2 inactive, weight 1
+
+Notice now that the 1.0.0.0/32 route now correctly
+displays the route for the nexthop group entry.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 3cd6ba9cf..360e7989d 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1095,11 +1095,15 @@ void zebra_nhg_check_valid(struct nhg_hash_entry *nhe)
+ 	bool valid = false;
+ 
+ 	/*
+-	 * If I have other nhe's depending on me, then this is a
+-	 * singleton nhe so set this nexthops flag as appropriate.
++	 * If I have other nhe's depending on me, or I have nothing
++	 * I am depending on then this is a
++	 * singleton nhe so set this nexthops flag as appropriate. 
+ 	 */
+-	if (nhg_connected_tree_count(&nhe->nhg_depends))
++	if (nhg_connected_tree_count(&nhe->nhg_depends) ||
++	    nhg_connected_tree_count(&nhe->nhg_dependents) == 0) {
++		UNSET_FLAG(nhe->nhg.nexthop->flags, NEXTHOP_FLAG_FIB);
+ 		UNSET_FLAG(nhe->nhg.nexthop->flags, NEXTHOP_FLAG_ACTIVE);
++	}
+ 
+ 	/* If anthing else in the group is valid, the group is valid */
+ 	frr_each(nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
+-- 
+2.43.2
+

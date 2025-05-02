@@ -1,7 +1,7 @@
-From 50f606c158f6c89abd0d3f531905005d3a48a5b6 Mon Sep 17 00:00:00 2001
+From 1712fbd14dddd542e7aa4b468356abdfe42817d4 Mon Sep 17 00:00:00 2001
 From: Donald Sharp <sharpd@nvidia.com>
 Date: Wed, 12 Jun 2024 15:16:08 -0400
-Subject: [PATCH 4/5] zebra: Limit queue depth in dplane_fpm_nl
+Subject: [PATCH] zebra: Limit queue depth in dplane_fpm_nl
 
 The dplane providers have a concept of input queues
 and output queues.  These queues are chained together
@@ -16,12 +16,15 @@ queue when it is already full.  This will allow the backpressure
 to work appropriately in zebra proper.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/dplane_fpm_nl.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
 
 diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
-index bc9815bb10..4fd42f64a2 100644
+index a054d362f..81f1c9417 100644
 --- a/zebra/dplane_fpm_nl.c
 +++ b/zebra/dplane_fpm_nl.c
-@@ -1560,6 +1560,25 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
+@@ -1603,6 +1603,25 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
  
  	fnc = dplane_provider_get_data(prov);
  	limit = dplane_provider_get_work_limit(prov);
@@ -36,7 +39,7 @@ index bc9815bb10..4fd42f64a2 100644
 +				   ") of internal work, hold off",
 +				   __func__, cur_queue);
 +		limit = 0;
-+	} else {
++	} else if (cur_queue != 0) {
 +		if (IS_ZEBRA_DEBUG_FPM)
 +			zlog_debug("%s: current queue is %" PRIu64
 +				   ", limiting to lesser amount of %" PRIu64,

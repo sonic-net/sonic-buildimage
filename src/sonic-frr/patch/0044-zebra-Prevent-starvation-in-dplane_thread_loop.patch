@@ -1,0 +1,49 @@
+From 6faad863f30d29157e4c675ad956e3ccd38991a7 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 14 Jun 2024 13:36:51 -0400
+Subject: [PATCH] zebra: Prevent starvation in dplane_thread_loop
+
+When removing a large number of routes, the linux kernel can take the
+cpu for an extended amount of time, leaving a situation where FRR
+detects a starvation event.
+
+r1# sharp install routes 10.0.0.0 nexthop 192.168.44.33 1000000 repeat 10
+2024-06-14 12:55:49.365 [NTFY] sharpd: [M7Q4P-46WDR] vty[5]@# sharp install routes 10.0.0.0 nexthop 192.168.44.33 1000000 repeat 10
+2024-06-14 12:55:49.365 [DEBG] sharpd: [YP4TQ-01TYK] Inserting 1000000 routes
+2024-06-14 12:55:57.256 [DEBG] sharpd: [TPHKD-3NYSB] Installed All Items 7.890085
+2024-06-14 12:55:57.256 [DEBG] sharpd: [YJ486-NX5R1] Removing 1000000 routes
+2024-06-14 12:56:07.802 [WARN] zebra: [QH9AB-Y4XMZ][EC 100663314] STARVATION: task dplane_thread_loop (634377bc8f9e) ran for 7078ms (cpu time 220ms)
+2024-06-14 12:56:25.039 [DEBG] sharpd: [WTN53-GK9Y5] Removed all Items 27.783668
+2024-06-14 12:56:25.039 [DEBG] sharpd: [YP4TQ-01TYK] Inserting 1000000 routes
+2024-06-14 12:56:32.783 [DEBG] sharpd: [TPHKD-3NYSB] Installed All Items 7.743524
+2024-06-14 12:56:32.783 [DEBG] sharpd: [YJ486-NX5R1] Removing 1000000 routes
+2024-06-14 12:56:41.447 [WARN] zebra: [QH9AB-Y4XMZ][EC 100663314] STARVATION: task dplane_thread_loop (634377bc8f9e) ran for 5175ms (cpu time 179ms)
+
+Let's modify the loop in dplane_thread_loop such that after a provider
+has been run, check to see if the event should yield, if so, stop
+and reschedule this for the future.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_dplane.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 06b34da209..3944876439 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -7441,6 +7441,11 @@ static void dplane_thread_loop(struct event *event)
+ 			zlog_debug("dplane dequeues %d completed work from provider %s",
+ 				   counter, dplane_provider_get_name(prov));
+ 
++		if (event_should_yield(event)) {
++			reschedule = true;
++			break;
++		}
++
+ 		/* Locate next provider */
+ 		prov = dplane_prov_list_next(&zdplane_info.dg_providers, prov);
+ 	}
+-- 
+2.39.5
+

@@ -1,8 +1,7 @@
-From 4671ddf4920553b663fda129f7c4366839347645 Mon Sep 17 00:00:00 2001
+From e6e096f2507e76c375ba9d6b20c05af0b61ce2cd Mon Sep 17 00:00:00 2001
 From: Donald Sharp <sharpd@nvidia.com>
 Date: Wed, 12 Jun 2024 14:14:48 -0400
-Subject: [PATCH 3/5] zebra: Modify dplane loop to allow backpressure to filter
- up
+Subject: [PATCH] zebra: Modify dplane loop to allow backpressure to filter up
 
 Currently when the dplane_thread_loop is run, it moves contexts
 from the dg_update_list and puts the contexts on the input queue
@@ -30,11 +29,12 @@ context system and memory will not go out of control.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
 
+
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index c52e032660..f0e1ff6f27 100644
+index 44ee41d8c..0460463bc 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
-@@ -7155,10 +7155,10 @@ static void dplane_thread_loop(struct thread *event)
+@@ -7279,10 +7279,10 @@ static void dplane_thread_loop(struct event *event)
  {
  	struct dplane_ctx_list_head work_list;
  	struct dplane_ctx_list_head error_list;
@@ -47,7 +47,7 @@ index c52e032660..f0e1ff6f27 100644
  	bool reschedule = false;
  
  	/* Capture work limit per cycle */
-@@ -7182,18 +7182,48 @@ static void dplane_thread_loop(struct thread *event)
+@@ -7306,18 +7306,48 @@ static void dplane_thread_loop(struct event *event)
  	/* Locate initial registered provider */
  	prov = dplane_prov_list_first(&zdplane_info.dg_providers);
  
@@ -104,7 +104,7 @@ index c52e032660..f0e1ff6f27 100644
  	DPLANE_UNLOCK();
  
  	atomic_fetch_sub_explicit(&zdplane_info.dg_routes_queued, counter,
-@@ -7212,8 +7242,9 @@ static void dplane_thread_loop(struct thread *event)
+@@ -7336,8 +7366,9 @@ static void dplane_thread_loop(struct event *event)
  		 * items.
  		 */
  		if (IS_ZEBRA_DEBUG_DPLANE_DETAIL)
@@ -116,7 +116,7 @@ index c52e032660..f0e1ff6f27 100644
  
  		/* Capture current provider id in each context; check for
  		 * error status.
-@@ -7271,18 +7302,61 @@ static void dplane_thread_loop(struct thread *event)
+@@ -7395,18 +7426,61 @@ static void dplane_thread_loop(struct event *event)
  		if (!zdplane_info.dg_run)
  			break;
  
@@ -185,8 +185,8 @@ index c52e032660..f0e1ff6f27 100644
  		dplane_provider_unlock(prov);
  
  		if (counter >= limit)
-@@ -7293,7 +7367,7 @@ static void dplane_thread_loop(struct thread *event)
- 				   counter, dplane_provider_get_name(prov));
+@@ -7422,7 +7496,7 @@ static void dplane_thread_loop(struct event *event)
+ 		}
  
  		/* Locate next provider */
 -		prov = dplane_prov_list_next(&zdplane_info.dg_providers, prov);

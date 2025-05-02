@@ -1,0 +1,62 @@
+From df56b92bbd6f3d5934afa9baa660aded1f7ed54f Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 14 Jan 2025 15:12:32 -0500
+Subject: [PATCH] zebra: Nexthops need to be ACTIVE in some cases
+
+Currently if you have an interface down event, Zebra
+sets the nexthop(s) as !ACTIVE that use it.  On
+interface up events the singleton nexthops are not being
+set as ACTIVE.  Due to timing events it is sometimes
+possible to end up with a route that is using a singleton
+
+Change singleton nexthops to set the nexthop to ACTIVE.
+This will allow the nexthop to be reinstalled appropriately
+as well.
+
+I was able to easily reproduce this using sharpd since
+it does not attempt to reinstall the routes when a interface
+goes up/down.
+
+Before:
+
+D>* 10.0.0.0/32 [150/0] via 192.168.102.34, dummy2, weight 1, 00:00:01
+
+sharpd@eva ~/frr5 (master)> sudo ip link set dummy2 down ; sudo ip link set dummy2 up
+
+D>  10.0.0.0/32 [150/0] (350) via 192.168.102.34, dummy2 inactive, weight 1, 00:00:10
+
+After code change:
+
+D>* 10.0.0.0/32 [150/0] (73) via 192.168.102.34, dummy2, weight 1, 00:00:14
+
+sharpd@eva ~/frr5 (master)> sudo ip link set dummy2 down ; sudo ip link set dummy2 up
+
+D>* 10.0.0.0/32 [150/0] (73) via 192.168.102.34, dummy2, weight 1, 00:00:21
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index c8418f8e2..ecdba6854 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3908,7 +3908,14 @@ void zebra_interface_nhg_reinstall(struct interface *ifp)
+ 			__func__, ifp->name);
+ 
+ 	frr_each (nhg_connected_tree, &zif->nhg_dependents, rb_node_dep) {
++		/*
++		 * The nexthop associated with this was set as !ACTIVE
++		 * so we need to turn it back to active when we get to
++		 * this point again
++		 */
++		SET_FLAG(rb_node_dep->nhe->nhg.nexthop->flags, NEXTHOP_FLAG_ACTIVE);
+ 		nh = rb_node_dep->nhe->nhg.nexthop;
++
+ 		if (zebra_nhg_set_valid_if_active(rb_node_dep->nhe)) {
+ 			if (IS_ZEBRA_DEBUG_NHG_DETAIL)
+ 				zlog_debug(
+-- 
+2.43.2
+

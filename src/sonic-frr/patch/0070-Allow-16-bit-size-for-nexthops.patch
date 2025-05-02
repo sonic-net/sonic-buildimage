@@ -1,4 +1,4 @@
-From ab639c4563abc5754d6a185ea3a8f29778fc3fae Mon Sep 17 00:00:00 2001
+From 594280433e695816ce8b078433ffd5cf77f7fa64 Mon Sep 17 00:00:00 2001
 From: Donald Sharp <sharpd@nvidia.com>
 Date: Mon, 7 Oct 2024 12:40:46 -0400
 Subject: [PATCH] *: Allow 16 bit size for nexthops
@@ -9,22 +9,26 @@ which results in the count to overflow to 0 causing problems
 in the code.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_addpath.c   |  3 +--
+ bgpd/bgp_addpath.h   |  3 +--
+ bgpd/bgp_nexthop.h   |  2 +-
+ bgpd/bgp_nht.c       |  2 +-
+ pimd/pim_nht.c       |  4 ++--
+ pimd/pim_nht.h       |  2 +-
+ zebra/rt_netlink.c   | 25 ++++++++++---------------
+ zebra/zapi_msg.c     |  2 +-
+ zebra/zebra_dplane.c |  4 ++--
+ zebra/zebra_dplane.h |  2 +-
+ zebra/zebra_nhg.c    | 31 +++++++++++++------------------
+ zebra/zebra_nhg.h    | 11 ++++-------
+ 12 files changed, 38 insertions(+), 53 deletions(-)
 
 diff --git a/bgpd/bgp_addpath.c b/bgpd/bgp_addpath.c
-index f391c13847..aada6e555f 100644
+index de4b4a48a..030db4b28 100644
 --- a/bgpd/bgp_addpath.c
 +++ b/bgpd/bgp_addpath.c
-@@ -361,8 +361,7 @@ void bgp_addpath_type_changed(struct bgp *bgp)
- 	}
- }
- 
--int bgp_addpath_capability_action(enum bgp_addpath_strat addpath_type,
--				  uint8_t paths)
-+int bgp_addpath_capability_action(enum bgp_addpath_strat addpath_type, uint16_t paths)
- {
- 	int action = CAPABILITY_ACTION_UNSET;
- 
-@@ -392,8 +391,7 @@ int bgp_addpath_capability_action(enum bgp_addpath_strat addpath_type,
+@@ -365,8 +365,7 @@ void bgp_addpath_type_changed(struct bgp *bgp)
   * change take effect.
   */
  void bgp_addpath_set_peer_type(struct peer *peer, afi_t afi, safi_t safi,
@@ -35,10 +39,10 @@ index f391c13847..aada6e555f 100644
  	struct bgp *bgp = peer->bgp;
  	enum bgp_addpath_strat old_type;
 diff --git a/bgpd/bgp_addpath.h b/bgpd/bgp_addpath.h
-index d562000e30..0954a7ced1 100644
+index 2b91d450b..c82615bba 100644
 --- a/bgpd/bgp_addpath.h
 +++ b/bgpd/bgp_addpath.h
-@@ -56,13 +56,11 @@ bool bgp_addpath_tx_path(enum bgp_addpath_strat strat,
+@@ -50,8 +50,7 @@ bool bgp_addpath_tx_path(enum bgp_addpath_strat strat,
   * Change the type of addpath used for a peer.
   */
  void bgp_addpath_set_peer_type(struct peer *peer, afi_t afi, safi_t safi,
@@ -48,14 +52,8 @@ index d562000e30..0954a7ced1 100644
  
  void bgp_addpath_update_ids(struct bgp *bgp, struct bgp_dest *dest, afi_t afi,
  			    safi_t safi);
- 
- void bgp_addpath_type_changed(struct bgp *bgp);
--extern int bgp_addpath_capability_action(enum bgp_addpath_strat addpath_type,
--					 uint8_t paths);
-+extern int bgp_addpath_capability_action(enum bgp_addpath_strat addpath_type, uint16_t paths);
- #endif
 diff --git a/bgpd/bgp_nexthop.h b/bgpd/bgp_nexthop.h
-index 830883872e..410b3f7db9 100644
+index 830883872..410b3f7db 100644
 --- a/bgpd/bgp_nexthop.h
 +++ b/bgpd/bgp_nexthop.h
 @@ -38,7 +38,7 @@ struct bgp_nexthop_cache {
@@ -68,10 +66,10 @@ index 830883872e..410b3f7db9 100644
  	/* This flag is set to TRUE for a bnc that is gateway IP overlay index
  	 * nexthop.
 diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
-index e2c103bb52..1614779ea6 100644
+index 572c8ed32..c364a15be 100644
 --- a/bgpd/bgp_nht.c
 +++ b/bgpd/bgp_nht.c
-@@ -740,7 +740,7 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
+@@ -741,7 +741,7 @@ static void bgp_nht_ifp_table_handle(struct bgp *bgp,
  {
  	struct bgp_nexthop_cache *bnc;
  	struct nexthop *nhop;
@@ -81,10 +79,10 @@ index e2c103bb52..1614779ea6 100644
  	bool nhop_found = false;
  
 diff --git a/pimd/pim_nht.c b/pimd/pim_nht.c
-index 32cdf4bf82..b4f9aa7ca4 100644
+index 7fd1f36f4..aca30b494 100644
 --- a/pimd/pim_nht.c
 +++ b/pimd/pim_nht.c
-@@ -543,7 +543,7 @@ static int pim_ecmp_nexthop_search(struct pim_instance *pim,
+@@ -567,7 +567,7 @@ static int pim_ecmp_nexthop_search(struct pim_instance *pim,
  	ifindex_t first_ifindex;
  	struct interface *ifp = NULL;
  	uint32_t hash_val = 0, mod_val = 0;
@@ -93,7 +91,7 @@ index 32cdf4bf82..b4f9aa7ca4 100644
  	uint32_t i, num_nbrs = 0;
  	struct pim_interface *pim_ifp;
  
-@@ -914,7 +914,7 @@ int pim_ecmp_nexthop_lookup(struct pim_instance *pim,
+@@ -938,7 +938,7 @@ int pim_ecmp_nexthop_lookup(struct pim_instance *pim,
  	struct interface *ifps[router->multipath], *ifp;
  	int first_ifindex;
  	int found = 0;
@@ -103,7 +101,7 @@ index 32cdf4bf82..b4f9aa7ca4 100644
  	uint32_t num_nbrs = 0;
  	struct pim_interface *pim_ifp;
 diff --git a/pimd/pim_nht.h b/pimd/pim_nht.h
-index a1feb76e3b..27014e6898 100644
+index a1feb76e3..27014e689 100644
 --- a/pimd/pim_nht.h
 +++ b/pimd/pim_nht.h
 @@ -23,7 +23,7 @@ struct pim_nexthop_cache {
@@ -116,10 +114,10 @@ index a1feb76e3b..27014e6898 100644
  	int64_t last_update;
  	uint16_t flags;
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 988e67c963..4dd5f80836 100644
+index f092fc5c8..d507a52ac 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -616,12 +616,9 @@ parse_nexthop_unicast(ns_id_t ns_id, struct rtmsg *rtm, struct rtattr **tb,
+@@ -591,12 +591,9 @@ parse_nexthop_unicast(ns_id_t ns_id, struct rtmsg *rtm, struct rtattr **tb,
  	return nh;
  }
  
@@ -135,7 +133,7 @@ index 988e67c963..4dd5f80836 100644
  {
  	void *gate = NULL;
  	struct interface *ifp = NULL;
-@@ -746,7 +743,7 @@ static uint8_t parse_multipath_nexthops_unicast(ns_id_t ns_id,
+@@ -721,7 +718,7 @@ static uint8_t parse_multipath_nexthops_unicast(ns_id_t ns_id,
  		rtnh = RTNH_NEXT(rtnh);
  	}
  
@@ -144,7 +142,7 @@ index 988e67c963..4dd5f80836 100644
  
  	return nhop_num;
  }
-@@ -1039,7 +1036,7 @@ int netlink_route_change_read_unicast_internal(struct nlmsghdr *h,
+@@ -1002,7 +999,7 @@ int netlink_route_change_read_unicast_internal(struct nlmsghdr *h,
  				(struct rtnexthop *)RTA_DATA(tb[RTA_MULTIPATH]);
  
  			if (!nhe_id) {
@@ -153,7 +151,7 @@ index 988e67c963..4dd5f80836 100644
  
  				/* Use temporary list of nexthops; parse
  				 * message payload's nexthops.
-@@ -2672,11 +2669,9 @@ int kernel_get_ipmr_sg_stats(struct zebra_vrf *zvrf, void *in)
+@@ -2605,11 +2602,9 @@ int kernel_get_ipmr_sg_stats(struct zebra_vrf *zvrf, void *in)
  /* Char length to debug ID with */
  #define ID_LENGTH 10
  
@@ -168,7 +166,7 @@ index 988e67c963..4dd5f80836 100644
  {
  	struct nexthop_grp grp[count];
  	/* Need space for max group size, "/", and null term */
-@@ -3301,7 +3296,7 @@ static int netlink_nexthop_process_group(struct rtattr **tb,
+@@ -3234,7 +3229,7 @@ static int netlink_nexthop_process_group(struct rtattr **tb,
  					 struct nh_grp *z_grp, int z_grp_size,
  					 struct nhg_resilience *nhgr)
  {
@@ -177,7 +175,7 @@ index 988e67c963..4dd5f80836 100644
  	/* linux/nexthop.h group struct */
  	struct nexthop_grp *n_grp = NULL;
  
-@@ -3374,7 +3369,7 @@ int netlink_nexthop_change(struct nlmsghdr *h, ns_id_t ns_id, int startup)
+@@ -3307,7 +3302,7 @@ int netlink_nexthop_change(struct nlmsghdr *h, ns_id_t ns_id, int startup)
  	struct nexthop nh = {};
  	struct nh_grp grp[MULTIPATH_NUM] = {};
  	/* Count of nexthops in group array */
@@ -187,7 +185,7 @@ index 988e67c963..4dd5f80836 100644
  
  	frrtrace(3, frr_zebra, netlink_nexthop_change, h, ns_id, startup);
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
-index 9ae8333d6b..4ee3e18e5b 100644
+index 45a4af1a4..31ce26a0e 100644
 --- a/zebra/zapi_msg.c
 +++ b/zebra/zapi_msg.c
 @@ -517,7 +517,7 @@ int zsend_redistribute_route(int cmd, struct zserv *client,
@@ -200,7 +198,7 @@ index 9ae8333d6b..4ee3e18e5b 100644
  	size_t stream_size =
  		MAX(ZEBRA_MAX_PACKET_SIZ, sizeof(struct zapi_route));
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index efa795331d..5214b428b3 100644
+index 6ea1f754d..2d2ccb361 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
 @@ -79,7 +79,7 @@ struct dplane_nexthop_info {
@@ -222,7 +220,7 @@ index efa795331d..5214b428b3 100644
  	DPLANE_CTX_VALID(ctx);
  	return ctx->u.rinfo.nhe.nh_grp_count;
 diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
-index 51c1bff5d2..63130b751f 100644
+index 51c1bff5d..63130b751 100644
 --- a/zebra/zebra_dplane.h
 +++ b/zebra/zebra_dplane.h
 @@ -590,7 +590,7 @@ const struct nexthop_group *
@@ -235,10 +233,10 @@ index 51c1bff5d2..63130b751f 100644
  /* Accessors for LSP information */
  
 diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
-index ed949da917..0c882ee1d9 100644
+index ad60838bc..2006a20e6 100644
 --- a/zebra/zebra_nhg.c
 +++ b/zebra/zebra_nhg.c
-@@ -601,9 +601,8 @@ bool zebra_nhg_hash_id_equal(const void *arg1, const void *arg2)
+@@ -608,9 +608,8 @@ bool zebra_nhg_hash_id_equal(const void *arg1, const void *arg2)
  	return nhe1->id == nhe2->id;
  }
  
@@ -250,7 +248,7 @@ index ed949da917..0c882ee1d9 100644
  				 struct nhg_resilience *resilience)
  {
  	nhg_connected_tree_init(depends);
-@@ -958,7 +957,7 @@ static struct nexthop *nhg_ctx_get_nh(struct nhg_ctx *ctx)
+@@ -965,7 +964,7 @@ static struct nexthop *nhg_ctx_get_nh(struct nhg_ctx *ctx)
  	return &ctx->u.nh;
  }
  
@@ -259,7 +257,7 @@ index ed949da917..0c882ee1d9 100644
  {
  	return ctx->count;
  }
-@@ -1004,9 +1003,8 @@ done:
+@@ -1011,9 +1010,8 @@ done:
  	XFREE(MTYPE_NHG_CTX, *ctx);
  }
  
@@ -271,7 +269,7 @@ index ed949da917..0c882ee1d9 100644
  				    struct nhg_resilience *resilience)
  {
  	struct nhg_ctx *ctx = NULL;
-@@ -1155,7 +1153,7 @@ static int nhg_ctx_process_new(struct nhg_ctx *ctx)
+@@ -1162,7 +1160,7 @@ static int nhg_ctx_process_new(struct nhg_ctx *ctx)
  	struct nhg_hash_entry *nhe = NULL;
  
  	uint32_t id = nhg_ctx_get_id(ctx);
@@ -280,7 +278,7 @@ index ed949da917..0c882ee1d9 100644
  	vrf_id_t vrf_id = nhg_ctx_get_vrf_id(ctx);
  	int type = nhg_ctx_get_type(ctx);
  	afi_t afi = nhg_ctx_get_afi(ctx);
-@@ -1307,9 +1305,9 @@ int nhg_ctx_process(struct nhg_ctx *ctx)
+@@ -1314,9 +1312,9 @@ int nhg_ctx_process(struct nhg_ctx *ctx)
  }
  
  /* Kernel-side, you either get a single new nexthop or a array of ID's */
@@ -293,16 +291,16 @@ index ed949da917..0c882ee1d9 100644
  {
  	struct nhg_ctx *ctx = NULL;
  
-@@ -2973,14 +2971,14 @@ backups_done:
+@@ -2980,14 +2978,12 @@ backups_done:
   * I'm pretty sure we only allow ONE level of group within group currently.
   * But making this recursive just in case that ever changes.
   */
 -static uint8_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp,
 -					  uint8_t curr_index,
-+static uint16_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp,
-+					  uint16_t curr_index,
- 					  struct nhg_hash_entry *nhe,
- 					  int max_num)
+-					  struct nhg_hash_entry *nhe,
+-					  int max_num)
++static uint16_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp, uint16_t curr_index,
++					   struct nhg_hash_entry *nhe, int max_num)
  {
  	struct nhg_connected *rb_node_dep = NULL;
  	struct nhg_hash_entry *depend = NULL;
@@ -311,7 +309,7 @@ index ed949da917..0c882ee1d9 100644
  
  	frr_each(nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
  		bool duplicate = false;
-@@ -3069,8 +3067,7 @@ done:
+@@ -3076,8 +3072,7 @@ done:
  }
  
  /* Convert a nhe into a group array */
@@ -322,7 +320,7 @@ index ed949da917..0c882ee1d9 100644
  	/* Call into the recursive function */
  	return zebra_nhg_nhe2grp_internal(grp, 0, nhe, max_num);
 diff --git a/zebra/zebra_nhg.h b/zebra/zebra_nhg.h
-index 4eddecb73d..1f55a4bd96 100644
+index 4eddecb73..1f55a4bd9 100644
 --- a/zebra/zebra_nhg.h
 +++ b/zebra/zebra_nhg.h
 @@ -204,7 +204,7 @@ struct nhg_ctx {

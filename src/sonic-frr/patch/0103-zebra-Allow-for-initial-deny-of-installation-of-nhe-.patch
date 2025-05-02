@@ -1,0 +1,233 @@
+From 4bf2c11fca66ed2901be4e4e2e997e66dc7a6ef7 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 29 Aug 2024 11:29:55 -0400
+Subject: [PATCH] zebra: Allow for initial deny of installation of nhe's
+
+Currently the FRR code will receive both kernel and
+connected routes that do not actually have an underlying
+nexthop group at all.  Zebra turns around and creates
+a `matching` nexthop hash entry and installs it.
+For connected routes, this will create 2 singleton
+nexthops in the dplane per interface (v4 and v6).
+For kernel routes it would just create 1 singleton
+nexthop that might be used or not.
+
+This is bad because the dplane has a limited amount
+of space available for nexthop entries and if you
+happen to have a large number of interfaces then
+all of a sudden you have 2x(# of interfaces) singleton
+nexthops.
+
+Let's modify the code to delay creation of these singleton
+nexthops until they have been used by something else in the
+system.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_dplane.c | 15 ++++++++++++++-
+ zebra/zebra_nhg.c    | 28 ++++++++++++++++++++++------
+ zebra/zebra_nhg.h    | 21 ++++++++++++++++++++-
+ zebra/zebra_rib.c    | 11 ++++++++---
+ zebra/zebra_vty.c    |  7 +++++++
+ 5 files changed, 71 insertions(+), 11 deletions(-)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index d3bed8108..1c3fafcb9 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -4484,8 +4484,21 @@ dplane_nexthop_update_internal(struct nhg_hash_entry *nhe, enum dplane_op_e op)
+ 	ctx = dplane_ctx_alloc();
+ 
+ 	ret = dplane_ctx_nexthop_init(ctx, op, nhe);
+-	if (ret == AOK)
++	if (ret == AOK) {
++		if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL)) {
++			UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED);
++			UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_REINSTALL);
++			SET_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED);
++
++			dplane_ctx_free(&ctx);
++			atomic_fetch_add_explicit(&zdplane_info.dg_nexthops_in,
++						  1, memory_order_relaxed);
++
++			return ZEBRA_DPLANE_REQUEST_SUCCESS;
++		}
++
+ 		ret = dplane_update_enqueue(ctx);
++	}
+ 
+ 	/* Update counter */
+ 	atomic_fetch_add_explicit(&zdplane_info.dg_nexthops_in, 1,
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 72fb6e052..3cd6ba9cf 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -417,6 +417,14 @@ struct nhg_hash_entry *zebra_nhe_copy(const struct nhg_hash_entry *orig,
+ 	if (orig->backup_info)
+ 		nhe->backup_info = nhg_backup_copy(orig->backup_info);
+ 
++	/*
++	 * This is a special case, Zebra needs to track
++	 * whether or not this flag was set on a initial
++	 * unresolved NHG
++	 */
++	if (CHECK_FLAG(orig->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL))
++		SET_FLAG(nhe->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL);
++
+ 	return nhe;
+ }
+ 
+@@ -1150,7 +1158,7 @@ static void zebra_nhg_handle_install(struct nhg_hash_entry *nhe, bool install)
+ 					"%s nh id %u (flags 0x%x) associated dependent NHG %pNG install",
+ 					__func__, nhe->id, nhe->flags,
+ 					rb_node_dep->nhe);
+-			zebra_nhg_install_kernel(rb_node_dep->nhe);
++			zebra_nhg_install_kernel(rb_node_dep->nhe, true);
+ 		}
+ 	}
+ }
+@@ -1169,7 +1177,7 @@ static void zebra_nhg_handle_kernel_state_change(struct nhg_hash_entry *nhe,
+ 			(is_delete ? "deleted" : "updated"), nhe);
+ 
+ 		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED);
+-		zebra_nhg_install_kernel(nhe);
++		zebra_nhg_install_kernel(nhe, ZEBRA_ROUTE_MAX);
+ 	} else
+ 		zebra_nhg_handle_uninstall(nhe);
+ }
+@@ -3133,7 +3141,7 @@ uint16_t zebra_nhg_nhe2grp(struct nh_grp *grp, struct nhg_hash_entry *nhe, int m
+ 	return zebra_nhg_nhe2grp_internal(grp, 0, nhe, nhe, max_num);
+ }
+ 
+-void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe)
++void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe, uint8_t type)
+ {
+ 	struct nhg_connected *rb_node_dep = NULL;
+ 
+@@ -3146,9 +3154,16 @@ void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe)
+ 				   nhe);
+ 	}
+ 
++	if ((type != ZEBRA_ROUTE_CONNECT && type != ZEBRA_ROUTE_LOCAL &&
++	     type != ZEBRA_ROUTE_KERNEL) &&
++	    CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL)) {
++		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL);
++		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED);
++	}
++
+ 	/* Make sure all depends are installed/queued */
+ 	frr_each(nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
+-		zebra_nhg_install_kernel(rb_node_dep->nhe);
++		zebra_nhg_install_kernel(rb_node_dep->nhe, type);
+ 	}
+ 
+ 	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_VALID) &&
+@@ -3490,7 +3505,7 @@ struct nhg_hash_entry *zebra_nhg_proto_add(uint32_t id, int type,
+ 
+ 	zebra_nhg_set_valid_if_active(new);
+ 
+-	zebra_nhg_install_kernel(new);
++	zebra_nhg_install_kernel(new, ZEBRA_ROUTE_MAX);
+ 
+ 	if (old) {
+ 		/*
+@@ -3726,7 +3741,8 @@ void zebra_interface_nhg_reinstall(struct interface *ifp)
+ 					"%s install nhe %pNG nh type %u flags 0x%x",
+ 					__func__, rb_node_dep->nhe, nh->type,
+ 					rb_node_dep->nhe->flags);
+-			zebra_nhg_install_kernel(rb_node_dep->nhe);
++			zebra_nhg_install_kernel(rb_node_dep->nhe,
++						 ZEBRA_ROUTE_MAX);
+ 
+ 			/* Don't need to modify dependents if installed */
+ 			if (CHECK_FLAG(rb_node_dep->nhe->flags,
+diff --git a/zebra/zebra_nhg.h b/zebra/zebra_nhg.h
+index d4888d73d..566e1acbf 100644
+--- a/zebra/zebra_nhg.h
++++ b/zebra/zebra_nhg.h
+@@ -152,6 +152,25 @@ struct nhg_hash_entry {
+  * when installation is successful.
+  */
+ #define NEXTHOP_GROUP_REINSTALL (1 << 8)
++
++/*
++ * Connected routes and kernel routes received
++ * from the kernel or created by Zebra do no
++ * need to be installed.  For connected, this
++ * is because the routes are in the local table
++ * but not imported and we create an amalgram
++ * route for it.  For kernel routes if the route
++ * is an pre-nhg route, there is no nexthop associated
++ * with it and we should not create it until it
++ * is used by something else.
++ * The reason for this is because is that this just
++ * fills up the DPlane's nexthop slots when there
++ * are a bunch of interfaces or pre-existing routes
++ * As such let's not initially install it ( but
++ * pretend it was successful ) and if another route
++ * chooses this NHG then we can install it then.
++ */
++#define NEXTHOP_GROUP_INITIAL_DELAY_INSTALL (1 << 9)
+ };
+ 
+ /* Upper 4 bits of the NHG are reserved for indicating the NHG type */
+@@ -361,7 +380,7 @@ extern void zebra_nhg_check_valid(struct nhg_hash_entry *nhe);
+ extern uint16_t zebra_nhg_nhe2grp(struct nh_grp *grp, struct nhg_hash_entry *nhe, int size);
+ 
+ /* Dataplane install/uninstall */
+-extern void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe);
++extern void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe, uint8_t type);
+ extern void zebra_nhg_uninstall_kernel(struct nhg_hash_entry *nhe);
+ extern void zebra_interface_nhg_reinstall(struct interface *ifp);
+ 
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index 430878daf..a27c82133 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -688,7 +688,7 @@ void rib_install_kernel(struct route_node *rn, struct route_entry *re,
+ 	/*
+ 	 * Install the resolved nexthop object first.
+ 	 */
+-	zebra_nhg_install_kernel(re->nhe);
++	zebra_nhg_install_kernel(re->nhe, re->type);
+ 
+ 	/*
+ 	 * If this is a replace to a new RE let the originator of the RE
+@@ -4367,9 +4367,14 @@ int rib_add_multipath(afi_t afi, safi_t safi, struct prefix *p,
+ 	 * Use a temporary nhe to convey info to the common/main api.
+ 	 */
+ 	zebra_nhe_init(&nhe, afi, (ng ? ng->nexthop : NULL));
+-	if (ng)
++	if (ng) {
+ 		nhe.nhg.nexthop = ng->nexthop;
+-	else if (re->nhe_id > 0)
++
++		if (re->type == ZEBRA_ROUTE_CONNECT ||
++		    re->type == ZEBRA_ROUTE_LOCAL ||
++		    re->type == ZEBRA_ROUTE_KERNEL)
++			SET_FLAG(nhe.flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL);
++	} else if (re->nhe_id > 0)
+ 		nhe.id = re->nhe_id;
+ 
+ 	n = zebra_nhe_copy(&nhe, 0);
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index 4d84418c2..3e7943e48 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -1237,6 +1237,13 @@ static void show_nexthop_group_out(struct vty *vty, struct nhg_hash_entry *nhe,
+ 			else
+ 				vty_out(vty, ", Installed");
+ 		}
++		if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INITIAL_DELAY_INSTALL)) {
++			if (json)
++				json_object_boolean_true_add(json,
++							     "initialDelay");
++			else
++				vty_out(vty, ", Initial Delay");
++		}
+ 		if (!json)
+ 			vty_out(vty, "\n");
+ 	}
+-- 
+2.43.2
+

@@ -1,0 +1,27 @@
+From 5cd212f7e1316348e39f20803f47b38dfc202f9c Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 14 Feb 2024 12:17:56 -0500
+Subject: [PATCH] doc: Add `show fpm status [json]` command to documentation
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ doc/user/zebra.rst | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/doc/user/zebra.rst b/doc/user/zebra.rst
+index 30b020425..72b4f2041 100644
+--- a/doc/user/zebra.rst
++++ b/doc/user/zebra.rst
+@@ -1356,6 +1356,9 @@ FPM Commands
+            User FPM configurations: 1
+          User FPM disable requests: 0
+ 
++.. clicmd:: show fpm status [json]
++
++   Show the FPM status.
+ 
+ .. clicmd:: clear fpm counters
+ 
+-- 
+2.43.2
+

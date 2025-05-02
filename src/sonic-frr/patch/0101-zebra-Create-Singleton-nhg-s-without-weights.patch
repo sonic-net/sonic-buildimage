@@ -1,0 +1,183 @@
+From ae4a1315eb03f0a4203b9037653b04d89c9f165e Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 20 Aug 2024 10:53:34 -0400
+Subject: [PATCH] zebra: Create Singleton nhg's without weights
+
+Currently FRR when it has two nexthop groups:
+A
+  nexthop 1 weight 5
+  nexthop 2 weight 6
+  nexthop 3 weight 7
+B
+  nexthop 1 weight 3
+  nexthop 2 weight 4
+  nexthop 3 weight 5
+
+We end up with 5 singleton nexthops and two groups:
+
+ID: 181818168 (sharp)
+     RefCnt: 1
+     Uptime: 00:04:52
+     VRF: default
+     Valid, Installed
+     Depends: (69) (70) (71)
+           via 192.168.119.1, enp13s0 (vrf default), weight 182
+           via 192.168.119.2, enp13s0 (vrf default), weight 218
+           via 192.168.119.3, enp13s0 (vrf default), weight 255
+ID: 181818169 (sharp)
+     RefCnt: 1
+     Uptime: 00:02:08
+     VRF: default
+     Valid, Installed
+     Depends: (71) (127) (128)
+           via 192.168.119.1, enp13s0 (vrf default), weight 127
+           via 192.168.119.2, enp13s0 (vrf default), weight 170
+           via 192.168.119.3, enp13s0 (vrf default), weight 255
+
+id 69 via 192.168.119.1 dev enp13s0 scope link proto 194
+id 70 via 192.168.119.2 dev enp13s0 scope link proto 194
+id 71 via 192.168.119.3 dev enp13s0 scope link proto 194
+id 127 via 192.168.119.1 dev enp13s0 scope link proto 194
+id 128 via 192.168.119.2 dev enp13s0 scope link proto 194
+id 181818168 group 69,182/70,218/71,255 proto 194
+id 181818169 group 71,255/127,127/128,170 proto 194
+
+This is not a desirable state to be in.  If you have a
+link flapping in the network and weights are changing
+rapidly you end up with a large number of singleton
+nexthops that are being used by the nexthop groups.
+This fills up asic space and clutters the table.
+Additionally singleton nexthops cannot have any weight
+and the fact that you attempt to create a singleton
+nexthop with different weights means nothing to the
+linux kernel( or any asic dplane ).  Let's modify
+the code to always create the singleton nexthops
+without a weight and then just creating the
+NHG's that use the singletons with the appropriate
+weight.
+
+ID: 181818168 (sharp)
+     RefCnt: 1
+     Uptime: 00:00:32
+     VRF: default
+     Valid, Installed
+     Depends: (22) (24) (28)
+           via 192.168.119.1, enp13s0 (vrf default), weight 182
+           via 192.168.119.2, enp13s0 (vrf default), weight 218
+           via 192.168.119.3, enp13s0 (vrf default), weight 255
+ID: 181818169 (sharp)
+     RefCnt: 1
+     Uptime: 00:00:14
+     VRF: default
+     Valid, Installed
+     Depends: (22) (24) (28)
+           via 192.168.119.1, enp13s0 (vrf default), weight 153
+           via 192.168.119.2, enp13s0 (vrf default), weight 204
+           via 192.168.119.3, enp13s0 (vrf default), weight 255
+
+id 22 via 192.168.119.1 dev enp13s0 scope link proto 194
+id 24 via 192.168.119.2 dev enp13s0 scope link proto 194
+id 28 via 192.168.119.3 dev enp13s0 scope link proto 194
+id 181818168 group 22,182/24,218/28,255 proto 194
+id 181818169 group 22,153/24,204/28,255 proto 194
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 48 +++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 44 insertions(+), 4 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index d91c65534..93767bb85 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1408,6 +1408,11 @@ static struct nhg_hash_entry *depends_find_singleton(const struct nexthop *nh,
+ 	 */
+ 	nexthop_copy_no_recurse(&lookup, nh, NULL);
+ 
++	/*
++	 * So this is to intentionally cause the singleton nexthop
++	 * to be created with a weight of 1.
++	 */
++	lookup.weight = 1;
+ 	nhe = zebra_nhg_find_nexthop(0, &lookup, afi, type, from_dplane);
+ 
+ 	/* The copy may have allocated labels; free them if necessary. */
+@@ -2989,10 +2994,13 @@ backups_done:
+  * But making this recursive just in case that ever changes.
+  */
+ static uint16_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp, uint16_t curr_index,
+-					   struct nhg_hash_entry *nhe, int max_num)
++					   struct nhg_hash_entry *nhe,
++					   struct nhg_hash_entry *original,
++					   int max_num)
+ {
+ 	struct nhg_connected *rb_node_dep = NULL;
+ 	struct nhg_hash_entry *depend = NULL;
++	struct nexthop *nexthop;
+ 	uint16_t i = curr_index;
+ 
+ 	frr_each(nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
+@@ -3019,8 +3027,11 @@ static uint16_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp, uint16_t curr_ind
+ 
+ 		if (!zebra_nhg_depends_is_empty(depend)) {
+ 			/* This is a group within a group */
+-			i = zebra_nhg_nhe2grp_internal(grp, i, depend, max_num);
++			i = zebra_nhg_nhe2grp_internal(grp, i, depend, nhe,
++						       max_num);
+ 		} else {
++			bool found;
++
+ 			if (!CHECK_FLAG(depend->flags, NEXTHOP_GROUP_VALID)) {
+ 				if (IS_ZEBRA_DEBUG_RIB_DETAILED
+ 				    || IS_ZEBRA_DEBUG_NHG)
+@@ -3061,8 +3072,37 @@ static uint16_t zebra_nhg_nhe2grp_internal(struct nh_grp *grp, uint16_t curr_ind
+ 				continue;
+ 			}
+ 
++			/*
++			 * So we need to create the nexthop group with
++			 * the appropriate weights.  The nexthops weights
++			 * are stored in the fully resolved nexthops for
++			 * the nhg so we need to find the appropriate
++			 * nexthop associated with this and set the weight
++			 * appropriately
++			 */
++			found = false;
++			for (ALL_NEXTHOPS_PTR(&original->nhg, nexthop)) {
++				if (CHECK_FLAG(nexthop->flags,
++					       NEXTHOP_FLAG_RECURSIVE))
++					continue;
++
++				if (nexthop_cmp_no_weight(depend->nhg.nexthop,
++							  nexthop) != 0)
++					continue;
++
++				found = true;
++				break;
++			}
++
++			if (!found) {
++				if (IS_ZEBRA_DEBUG_RIB_DETAILED ||
++				    IS_ZEBRA_DEBUG_NHG)
++					zlog_debug("%s: Nexthop ID (%u) unable to find nexthop in Nexthop Gropu Entry, something is terribly wrong",
++						   __func__, depend->id);
++				continue;
++			}
+ 			grp[i].id = depend->id;
+-			grp[i].weight = depend->nhg.nexthop->weight;
++			grp[i].weight = nexthop->weight;
+ 			i++;
+ 		}
+ 	}
+@@ -3085,7 +3125,7 @@ done:
+ uint16_t zebra_nhg_nhe2grp(struct nh_grp *grp, struct nhg_hash_entry *nhe, int max_num)
+ {
+ 	/* Call into the recursive function */
+-	return zebra_nhg_nhe2grp_internal(grp, 0, nhe, max_num);
++	return zebra_nhg_nhe2grp_internal(grp, 0, nhe, nhe, max_num);
+ }
+ 
+ void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe)
+-- 
+2.43.2
+

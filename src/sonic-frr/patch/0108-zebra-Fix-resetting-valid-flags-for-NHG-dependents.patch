@@ -1,0 +1,73 @@
+From 6e95686b229bfed901078beb5a89776dc20759c8 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Sat, 28 Dec 2024 22:40:37 -0800
+Subject: [PATCH] zebra: Fix resetting valid flags for NHG dependents
+
+Upon if_down, we don't reset the valid flag for dependents
+and unset the INSTALLED flag.
+
+So when its time for the NHG to be deleted (routes dereferenced),
+zebra deletes it since refcnt goes to 0, but stale NHG remains in kernel.
+
+Ticket :#4200788
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+
+Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+---
+ zebra/zebra_nhg.c | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index f540cd7ac..2445427b0 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1052,6 +1052,7 @@ static struct nhg_ctx *nhg_ctx_init(uint32_t id, struct nexthop *nh, struct nh_g
+ static void zebra_nhg_set_valid(struct nhg_hash_entry *nhe, bool valid)
+ {
+ 	struct nhg_connected *rb_node_dep;
++	bool dependent_valid = valid;
+ 
+ 	if (valid)
+ 		SET_FLAG(nhe->flags, NEXTHOP_GROUP_VALID);
+@@ -1067,6 +1068,7 @@ static void zebra_nhg_set_valid(struct nhg_hash_entry *nhe, bool valid)
+ 
+ 	/* Update validity of nexthops depending on it */
+ 	frr_each (nhg_connected_tree, &nhe->nhg_dependents, rb_node_dep) {
++		dependent_valid = valid;
+ 		if (!valid) {
+ 			/*
+ 			 * Grab the first nexthop from the depending nexthop group
+@@ -1076,16 +1078,22 @@ static void zebra_nhg_set_valid(struct nhg_hash_entry *nhe, bool valid)
+ 			struct nexthop *nexthop = rb_node_dep->nhe->nhg.nexthop;
+ 
+ 			while (nexthop) {
+-				if (nexthop_same(nexthop, nhe->nhg.nexthop))
+-					break;
+-
++				if (nexthop_same(nexthop, nhe->nhg.nexthop)) {
++					/* Invalid Nexthop */
++					UNSET_FLAG(nexthop->flags, NEXTHOP_FLAG_ACTIVE);
++				} else {
++					/*
++					 * If other nexthops in the nexthop
++					 * group are valid then we can continue
++					 * to use this nexthop group as valid
++					 */
++					if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_ACTIVE))
++						dependent_valid = true;
++				}
+ 				nexthop = nexthop->next;
+ 			}
+-
+-			if (nexthop)
+-				UNSET_FLAG(nexthop->flags, NEXTHOP_FLAG_ACTIVE);
+ 		}
+-		zebra_nhg_set_valid(rb_node_dep->nhe, valid);
++		zebra_nhg_set_valid(rb_node_dep->nhe, dependent_valid);
+ 	}
+ }
+ 
+-- 
+2.43.2
+

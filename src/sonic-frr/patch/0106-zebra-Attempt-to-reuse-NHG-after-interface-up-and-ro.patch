@@ -1,0 +1,293 @@
+From 98d56711264b0e714a0e972ea2dd72ed40826754 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 11 Sep 2024 14:24:27 -0400
+Subject: [PATCH] zebra: Attempt to reuse NHG after interface up and route
+ reinstall
+
+The previous commit modified zebra to reinstall the singleton
+nexthops for a nexthop group when a interface event comes up.
+Now let's modify zebra to attempt to reuse the nexthop group
+when this happens and the upper level protocol resends the
+route down with that.  Only match if the protocol is the same
+as well as the instance and the nexthop groups would match.
+
+Here is the new behavior:
+eva(config)# do show ip route 9.9.9.9/32
+Routing entry for 9.9.9.9/32
+  Known via "static", distance 1, metric 0, best
+  Last update 00:00:08 ago
+  * 192.168.99.33, via dummy1, weight 1
+  * 192.168.100.33, via dummy2, weight 1
+  * 192.168.101.33, via dummy3, weight 1
+  * 192.168.102.33, via dummy4, weight 1
+
+eva(config)# do show ip route nexthop-group 9.9.9.9/32
+% Unknown command: do show ip route nexthop-group 9.9.9.9/32
+eva(config)# do show ip route 9.9.9.9/32 nexthop-group
+Routing entry for 9.9.9.9/32
+  Known via "static", distance 1, metric 0, best
+  Last update 00:00:54 ago
+  Nexthop Group ID: 57
+  * 192.168.99.33, via dummy1, weight 1
+  * 192.168.100.33, via dummy2, weight 1
+  * 192.168.101.33, via dummy3, weight 1
+  * 192.168.102.33, via dummy4, weight 1
+
+eva(config)# exit
+eva# conf
+eva(config)# int dummy3
+eva(config-if)# shut
+eva(config-if)# no shut
+eva(config-if)# do show ip route 9.9.9.9/32 nexthop-group
+Routing entry for 9.9.9.9/32
+  Known via "static", distance 1, metric 0, best
+  Last update 00:00:08 ago
+  Nexthop Group ID: 57
+  * 192.168.99.33, via dummy1, weight 1
+  * 192.168.100.33, via dummy2, weight 1
+  * 192.168.101.33, via dummy3, weight 1
+  * 192.168.102.33, via dummy4, weight 1
+
+eva(config-if)# exit
+eva(config)# exit
+eva# exit
+sharpd@eva ~/frr1 (master) [255]> ip nexthop show id 57
+id 57 group 37/43/50/58 proto zebra
+sharpd@eva ~/frr1 (master)> ip route show 9.9.9.9/32
+9.9.9.9 nhid 57 proto 196 metric 20
+	nexthop via 192.168.99.33 dev dummy1 weight 1
+	nexthop via 192.168.100.33 dev dummy2 weight 1
+	nexthop via 192.168.101.33 dev dummy3 weight 1
+	nexthop via 192.168.102.33 dev dummy4 weight 1
+sharpd@eva ~/frr1 (master)>
+
+Notice that we now no longer are creating a bunch of new
+nexthop groups.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 158 +++++++++++++++++++++++++++++++++++++++++++++-
+ zebra/zebra_nhg.h |   3 +-
+ zebra/zebra_rib.c |   2 +-
+ 3 files changed, 159 insertions(+), 4 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index c282cf294..529732938 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1097,7 +1097,7 @@ void zebra_nhg_check_valid(struct nhg_hash_entry *nhe)
+ 	/*
+ 	 * If I have other nhe's depending on me, or I have nothing
+ 	 * I am depending on then this is a
+-	 * singleton nhe so set this nexthops flag as appropriate. 
++	 * singleton nhe so set this nexthops flag as appropriate.
+ 	 */
+ 	if (nhg_connected_tree_count(&nhe->nhg_depends) ||
+ 	    nhg_connected_tree_count(&nhe->nhg_dependents) == 0) {
+@@ -2909,6 +2909,154 @@ static uint32_t proto_nhg_nexthop_active_update(struct nexthop_group *nhg)
+ 	return curr_active;
+ }
+ 
++/*
++ * This function takes the start of two comparable nexthops from two different
++ * nexthop groups and walks them to see if they can be considered the same
++ * or not.  This is being used to determine if zebra should reuse a nhg
++ * from the old_re to the new_re, when an interface goes down and the
++ * new nhg sent down from the upper level protocol would resolve to it
++ */
++static bool zebra_nhg_nexthop_compare(const struct nexthop *nhop,
++				      const struct nexthop *old_nhop,
++				      const struct route_node *rn)
++{
++	bool same = true;
++
++	while (nhop && old_nhop) {
++		if (IS_ZEBRA_DEBUG_NHG_DETAIL)
++			zlog_debug("%s: %pRN Comparing %pNHvv(%u) to old: %pNHvv(%u)",
++				   __func__, rn, nhop, nhop->flags, old_nhop,
++				   old_nhop->flags);
++		if (!CHECK_FLAG(old_nhop->flags, NEXTHOP_FLAG_ACTIVE)) {
++			if (IS_ZEBRA_DEBUG_NHG_DETAIL)
++				zlog_debug("%s: %pRN Old is not active going to the next one",
++					   __func__, rn);
++			old_nhop = old_nhop->next;
++			continue;
++		}
++
++		if (nexthop_same(nhop, old_nhop)) {
++			struct nexthop *new_recursive, *old_recursive;
++
++			if (IS_ZEBRA_DEBUG_NHG_DETAIL)
++				zlog_debug("%s: %pRN New and old are same, continuing search",
++					   __func__, rn);
++
++			new_recursive = nhop->resolved;
++			old_recursive = old_nhop->resolved;
++
++			while (new_recursive && old_recursive) {
++				if (!nexthop_same(new_recursive, old_recursive)) {
++					same = false;
++					break;
++				}
++
++				new_recursive = new_recursive->next;
++				old_recursive = old_recursive->next;
++			}
++
++			if (new_recursive)
++				same = false;
++			else if (old_recursive) {
++				while (old_recursive) {
++					if (CHECK_FLAG(old_recursive->flags,
++						       NEXTHOP_FLAG_ACTIVE))
++						break;
++					old_recursive = old_recursive->next;
++				}
++
++				if (old_recursive)
++					same = false;
++			}
++
++			if (!same)
++				break;
++
++			nhop = nhop->next;
++			old_nhop = old_nhop->next;
++			continue;
++		} else {
++			if (IS_ZEBRA_DEBUG_NHG_DETAIL)
++				zlog_debug("%s:%pRN They are not the same, stopping using new nexthop entry",
++					   __func__, rn);
++			same = false;
++			break;
++		}
++	}
++
++	if (nhop)
++		same = false;
++	else if (old_nhop) {
++		while (old_nhop) {
++			if (CHECK_FLAG(old_nhop->flags, NEXTHOP_FLAG_ACTIVE))
++				break;
++			old_nhop = old_nhop->next;
++		}
++
++		if (old_nhop)
++			same = false;
++	}
++
++	return same;
++}
++
++static struct nhg_hash_entry *zebra_nhg_rib_compare_old_nhe(
++	const struct route_node *rn, const struct route_entry *re,
++	struct nhg_hash_entry *new_nhe, struct nhg_hash_entry *old_nhe)
++{
++	struct nexthop *nhop, *old_nhop;
++	bool same = true;
++	struct vrf *vrf = vrf_lookup_by_id(re->vrf_id);
++
++	if (IS_ZEBRA_DEBUG_NHG_DETAIL) {
++		char straddr[PREFIX_STRLEN];
++
++		prefix2str(&rn->p, straddr, sizeof(straddr));
++		zlog_debug("%s: %pRN new id: %u old id: %u", __func__, rn,
++			   new_nhe->id, old_nhe->id);
++		zlog_debug("%s: %pRN NEW", __func__, rn);
++		for (ALL_NEXTHOPS(new_nhe->nhg, nhop))
++			route_entry_dump_nh(re, straddr, vrf, nhop);
++
++		zlog_debug("%s: %pRN OLD", __func__, rn);
++		for (ALL_NEXTHOPS(old_nhe->nhg, nhop))
++			route_entry_dump_nh(re, straddr, vrf, nhop);
++	}
++
++	nhop = new_nhe->nhg.nexthop;
++	old_nhop = old_nhe->nhg.nexthop;
++
++	same = zebra_nhg_nexthop_compare(nhop, old_nhop, rn);
++
++	if (same) {
++		struct nexthop_group *bnhg, *old_bnhg;
++
++		bnhg = zebra_nhg_get_backup_nhg(new_nhe);
++		old_bnhg = zebra_nhg_get_backup_nhg(old_nhe);
++
++		if (bnhg || old_bnhg) {
++			if (bnhg && !old_bnhg)
++				same = false;
++			else if (!bnhg && old_bnhg)
++				same = false;
++			else
++				same = zebra_nhg_nexthop_compare(bnhg->nexthop,
++								 old_bnhg->nexthop,
++								 rn);
++		}
++	}
++
++	if (IS_ZEBRA_DEBUG_NHG_DETAIL)
++		zlog_debug("%s:%pRN They are %sthe same, using the %s nhg entry",
++			   __func__, rn, same ? "" : "not ",
++			   same ? "old" : "new");
++
++	if (same)
++		return old_nhe;
++	else
++		return new_nhe;
++}
++
+ /*
+  * Iterate over all nexthops of the given RIB entry and refresh their
+  * ACTIVE flag.  If any nexthop is found to toggle the ACTIVE flag,
+@@ -2916,7 +3064,8 @@ static uint32_t proto_nhg_nexthop_active_update(struct nexthop_group *nhg)
+  *
+  * Return value is the new number of active nexthops.
+  */
+-int nexthop_active_update(struct route_node *rn, struct route_entry *re)
++int nexthop_active_update(struct route_node *rn, struct route_entry *re,
++			  struct route_entry *old_re)
+ {
+ 	struct nhg_hash_entry *curr_nhe;
+ 	uint32_t curr_active = 0, backup_active = 0;
+@@ -2972,6 +3121,11 @@ backups_done:
+ 
+ 		new_nhe = zebra_nhg_rib_find_nhe(curr_nhe, rt_afi);
+ 
++		if (old_re && old_re->type == re->type &&
++		    old_re->instance == re->instance)
++			new_nhe = zebra_nhg_rib_compare_old_nhe(rn, re, new_nhe,
++								old_re->nhe);
++
+ 		if (IS_ZEBRA_DEBUG_NHG_DETAIL)
+ 			zlog_debug(
+ 				"%s: re %p CHANGED: nhe %p (%pNG) => new_nhe %p (%pNG)",
+diff --git a/zebra/zebra_nhg.h b/zebra/zebra_nhg.h
+index 566e1acbf..3d3db23dc 100644
+--- a/zebra/zebra_nhg.h
++++ b/zebra/zebra_nhg.h
+@@ -401,7 +401,8 @@ extern void zebra_nhg_mark_keep(void);
+ 
+ /* Nexthop resolution processing */
+ struct route_entry; /* Forward ref to avoid circular includes */
+-extern int nexthop_active_update(struct route_node *rn, struct route_entry *re);
++extern int nexthop_active_update(struct route_node *rn, struct route_entry *re,
++				 struct route_entry *old_re);
+ 
+ #ifdef _FRR_ATTRIBUTE_PRINTFRR
+ #pragma FRR printfrr_ext "%pNG" (const struct nhg_hash_entry *)
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index a27c82133..7a531ac09 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -1305,7 +1305,7 @@ static void rib_process(struct route_node *rn)
+ 		 */
+ 		if (CHECK_FLAG(re->status, ROUTE_ENTRY_CHANGED)) {
+ 			proto_re_changed = re;
+-			if (!nexthop_active_update(rn, re)) {
++			if (!nexthop_active_update(rn, re, old_fib)) {
+ 				const struct prefix *p;
+ 				struct rib_table_info *info;
+ 
+-- 
+2.43.2
+

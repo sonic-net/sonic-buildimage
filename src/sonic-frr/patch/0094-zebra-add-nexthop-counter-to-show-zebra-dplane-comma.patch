@@ -1,0 +1,43 @@
+From a69005723ad87a83d93fe8a2b6787fae77cb07da Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 17 Jul 2024 11:28:10 +0200
+Subject: [PATCH] zebra: add nexthop counter to 'show zebra dplane' command
+
+The nexthop updates counter value was never displayed.
+Add it.
+
+> # show zebra dplane
+> Zebra dataplane:
+> Route updates:            7673010
+> Route update errors:      0
+> Nexthop updates:          1100
+> Nexthop update errors:    0
+> [..]
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ zebra/zebra_dplane.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 2d2ccb361..d3bed8108 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -5984,6 +5984,14 @@ int dplane_show_helper(struct vty *vty, bool detailed)
+ 	vty_out(vty, "Zebra dataplane:\nRoute updates:            %"PRIu64"\n",
+ 		incoming);
+ 	vty_out(vty, "Route update errors:      %"PRIu64"\n", errs);
++
++	incoming = atomic_load_explicit(&zdplane_info.dg_nexthops_in,
++					memory_order_relaxed);
++	errs = atomic_load_explicit(&zdplane_info.dg_nexthop_errors,
++				    memory_order_relaxed);
++	vty_out(vty, "Nexthop updates:          %" PRIu64 "\n", incoming);
++	vty_out(vty, "Nexthop update errors:    %" PRIu64 "\n", errs);
++
+ 	vty_out(vty, "Other errors       :      %"PRIu64"\n", other_errs);
+ 	vty_out(vty, "Route update queue limit: %"PRIu64"\n", limit);
+ 	vty_out(vty, "Route update queue depth: %"PRIu64"\n", queued);
+-- 
+2.43.2
+

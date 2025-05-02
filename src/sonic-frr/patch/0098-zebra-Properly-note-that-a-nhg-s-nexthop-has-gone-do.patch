@@ -1,0 +1,104 @@
+From 3b9428a7207d0533b68f5230aa943302ad08bff1 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Wed, 7 Feb 2024 14:56:15 -0500
+Subject: [PATCH] zebra: Properly note that a nhg's nexthop has gone down
+
+Current code when a link is set down is to just mark the
+nexthop group as not properly setup.  Leaving situations
+where when an interface goes down and show output is
+entered we see incorrect state.  This is true for anything
+that would be checking those flags at that point in time.
+
+Modify the interface down nexthop group code to notice the
+nexthops appropriately ( and I mean set the appropriate flags )
+and to allow a `show ip route` command to actually display
+what is going on with the nexthops.
+
+eva# show ip route 1.0.0.0
+Routing entry for 1.0.0.0/32
+  Known via "sharp", distance 150, metric 0, best
+  Last update 00:00:06 ago
+  * 192.168.44.33, via dummy1, weight 1
+  * 192.168.45.33, via dummy2, weight 1
+
+sharpd@eva:~/frr1$ sudo ip link set dummy2 down
+
+eva# show ip route 1.0.0.0
+Routing entry for 1.0.0.0/32
+  Known via "sharp", distance 150, metric 0, best
+  Last update 00:00:12 ago
+  * 192.168.44.33, via dummy1, weight 1
+    192.168.45.33, via dummy2 inactive, weight 1
+
+Notice now that the 1.0.0.0/32 route now correctly
+displays the route for the nexthop group entry.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 28 +++++++++++++++++++++++++++-
+ zebra/zebra_vty.c |  2 +-
+ 2 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index c6a882507..77af093fb 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -1053,8 +1053,27 @@ static void zebra_nhg_set_valid(struct nhg_hash_entry *nhe, bool valid)
+ 	}
+ 
+ 	/* Update validity of nexthops depending on it */
+-	frr_each(nhg_connected_tree, &nhe->nhg_dependents, rb_node_dep)
++	frr_each (nhg_connected_tree, &nhe->nhg_dependents, rb_node_dep) {
++		if (!valid) {
++			/*
++			 * Grab the first nexthop from the depending nexthop group
++			 * then let's find the nexthop in that group that matches
++			 * my individual nexthop and mark it as no longer ACTIVE
++			 */
++			struct nexthop *nexthop = rb_node_dep->nhe->nhg.nexthop;
++
++			while (nexthop) {
++				if (nexthop_same(nexthop, nhe->nhg.nexthop))
++					break;
++
++				nexthop = nexthop->next;
++			}
++
++			if (nexthop)
++				UNSET_FLAG(nexthop->flags, NEXTHOP_FLAG_ACTIVE);
++		}
+ 		zebra_nhg_set_valid(rb_node_dep->nhe, valid);
++	}
+ }
+ 
+ void zebra_nhg_check_valid(struct nhg_hash_entry *nhe)
+@@ -1062,6 +1081,13 @@ void zebra_nhg_check_valid(struct nhg_hash_entry *nhe)
+ 	struct nhg_connected *rb_node_dep = NULL;
+ 	bool valid = false;
+ 
++	/*
++	 * If I have other nhe's depending on me, then this is a
++	 * singleton nhe so set this nexthops flag as appropriate.
++	 */
++	if (nhg_connected_tree_count(&nhe->nhg_depends))
++		UNSET_FLAG(nhe->nhg.nexthop->flags, NEXTHOP_FLAG_ACTIVE);
++
+ 	/* If anthing else in the group is valid, the group is valid */
+ 	frr_each(nhg_connected_tree, &nhe->nhg_depends, rb_node_dep) {
+ 		if (CHECK_FLAG(rb_node_dep->nhe->flags, NEXTHOP_GROUP_VALID)) {
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index 36f0f9a00..4d84418c2 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -210,7 +210,7 @@ static char re_status_output_char(const struct route_entry *re,
+ 			if (is_fib) {
+ 				star_p = !!CHECK_FLAG(nhop->flags,
+ 						      NEXTHOP_FLAG_FIB);
+-			} else
++			} else if (CHECK_FLAG(nhop->flags, NEXTHOP_FLAG_ACTIVE))
+ 				star_p = true;
+ 		}
+ 
+-- 
+2.43.2
+

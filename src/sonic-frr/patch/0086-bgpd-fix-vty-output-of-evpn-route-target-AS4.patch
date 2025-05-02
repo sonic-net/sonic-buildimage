@@ -1,0 +1,39 @@
+From 20b3ab483a73647e11446365a4c658b766a0c6cf Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Tue, 11 Feb 2025 14:35:28 -0500
+Subject: [PATCH] bgpd: fix vty output of evpn route-target AS4
+
+evpn route-targets are decoded in  ... multiple places; at least
+two have a bug where the AS4 form doesn't have its AS decoded.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+(cherry picked from commit 9943a08720ccbed87cd6938791066a0de94a92c6)
+---
+ bgpd/bgp_evpn_vty.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_evpn_vty.c b/bgpd/bgp_evpn_vty.c
+index 3e6a7ac78..d9985c9d5 100644
+--- a/bgpd/bgp_evpn_vty.c
++++ b/bgpd/bgp_evpn_vty.c
+@@ -113,7 +113,7 @@ static void display_vrf_import_rt(struct vty *vty, struct vrf_irt_node *irt,
+ 		break;
+ 
+ 	case ECOMMUNITY_ENCODE_AS4:
+-		pnt = ptr_get_be32(pnt, &eas.val);
++		pnt = ptr_get_be32(pnt, &eas.as);
+ 		eas.val = (*pnt++ << 8);
+ 		eas.val |= (*pnt++);
+ 
+@@ -222,7 +222,7 @@ static void display_import_rt(struct vty *vty, struct irt_node *irt,
+ 		break;
+ 
+ 	case ECOMMUNITY_ENCODE_AS4:
+-		pnt = ptr_get_be32(pnt, &eas.val);
++		pnt = ptr_get_be32(pnt, &eas.as);
+ 		eas.val = (*pnt++ << 8);
+ 		eas.val |= (*pnt++);
+ 
+-- 
+2.43.2
+

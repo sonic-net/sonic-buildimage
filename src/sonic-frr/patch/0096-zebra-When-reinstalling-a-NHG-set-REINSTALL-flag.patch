@@ -1,0 +1,102 @@
+From 8e0c298018364c34b53ad0d30026c2c711592394 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 8 Feb 2024 12:32:26 -0500
+Subject: [PATCH] zebra: When reinstalling a NHG, set REINSTALL flag
+
+The current code is unsetting the fact that the
+NHG is installed.  It is installed but we are
+reinstalling it.  Let's note this in the code
+appropriately as REINSTALL and not remove the
+INSTALLED FLAG.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 19 ++++++++++---------
+ zebra/zebra_nhg.h |  8 ++++++++
+ zebra/zebra_vty.c |  7 ++++++-
+ 3 files changed, 24 insertions(+), 10 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index d058b51ea..ac6d9c478 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3096,9 +3096,10 @@ void zebra_nhg_install_kernel(struct nhg_hash_entry *nhe)
+ 		zebra_nhg_install_kernel(rb_node_dep->nhe);
+ 	}
+ 
+-	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_VALID)
+-	    && !CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED)
+-	    && !CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED)) {
++	if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_VALID) &&
++	    (!CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED) ||
++	     CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_REINSTALL)) &&
++	    !CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED)) {
+ 		/* Change its type to us since we are installing it */
+ 		if (!ZEBRA_NHG_CREATED(nhe))
+ 			nhe->type = ZEBRA_ROUTE_NHG;
+@@ -3184,6 +3185,7 @@ void zebra_nhg_dplane_result(struct zebra_dplane_ctx *ctx)
+ 		}
+ 
+ 		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_QUEUED);
++		UNSET_FLAG(nhe->flags, NEXTHOP_GROUP_REINSTALL);
+ 		if (status == ZEBRA_DPLANE_REQUEST_SUCCESS) {
+ 			SET_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED);
+ 			zebra_nhg_handle_install(nhe, true);
+@@ -3683,12 +3685,11 @@ void zebra_interface_nhg_reinstall(struct interface *ifp)
+ 				       &rb_node_dep->nhe->nhg_dependents,
+ 				       rb_node_dependent) {
+ 				if (IS_ZEBRA_DEBUG_NHG)
+-					zlog_debug(
+-						"%s dependent nhe %pNG unset installed flag",
+-						__func__,
+-						rb_node_dependent->nhe);
+-				UNSET_FLAG(rb_node_dependent->nhe->flags,
+-					   NEXTHOP_GROUP_INSTALLED);
++					zlog_debug("%s dependent nhe %pNG Setting Reinstall flag",
++						   __func__,
++						   rb_node_dependent->nhe);
++				SET_FLAG(rb_node_dependent->nhe->flags,
++					 NEXTHOP_GROUP_REINSTALL);
+ 			}
+ 		}
+ 	}
+diff --git a/zebra/zebra_nhg.h b/zebra/zebra_nhg.h
+index 1f55a4bd9..d4888d73d 100644
+--- a/zebra/zebra_nhg.h
++++ b/zebra/zebra_nhg.h
+@@ -144,6 +144,14 @@ struct nhg_hash_entry {
+  * Track FPM installation status..
+  */
+ #define NEXTHOP_GROUP_FPM (1 << 7)
++
++/*
++ * When an interface comes up install the
++ * singleton's and schedule the NHG's that
++ * are using this nhg to be reinstalled
++ * when installation is successful.
++ */
++#define NEXTHOP_GROUP_REINSTALL (1 << 8)
+ };
+ 
+ /* Upper 4 bits of the NHG are reserved for indicating the NHG type */
+diff --git a/zebra/zebra_vty.c b/zebra/zebra_vty.c
+index bd1faa789..36f0f9a00 100644
+--- a/zebra/zebra_vty.c
++++ b/zebra/zebra_vty.c
+@@ -1225,7 +1225,12 @@ static void show_nexthop_group_out(struct vty *vty, struct nhg_hash_entry *nhe,
+ 			json_object_boolean_true_add(json, "valid");
+ 		else
+ 			vty_out(vty, "     Valid");
+-
++		if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_REINSTALL)) {
++			if (json)
++				json_object_boolean_true_add(json, "reInstall");
++			else
++				vty_out(vty, ", Reinstall");
++		}
+ 		if (CHECK_FLAG(nhe->flags, NEXTHOP_GROUP_INSTALLED)) {
+ 			if (json)
+ 				json_object_boolean_true_add(json, "installed");
+-- 
+2.43.2
+

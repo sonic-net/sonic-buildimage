@@ -1,0 +1,55 @@
+From 098beb06004a9e6af242d388319ee29626cd6215 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 31 Jan 2025 12:38:20 -0500
+Subject: [PATCH] zebra: Ensure dplane does not send work back to master at
+ wrong time
+
+When looping through the dplane providers, the worklist was
+being populated with items from the last provider and then
+the event system was checked to see if we should stop processing.
+If the event system says `yes` then the dplane code would stop
+and send the worklist to the master zebra pthread for collection.
+This obviously skipped the next dplane provider on the list
+which is double plus not good.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_dplane.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 29c91f061..6ea1f754d 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -7434,6 +7434,16 @@ static void dplane_thread_loop(struct event *event)
+ 		if (!zdplane_info.dg_run)
+ 			break;
+ 
++		/*
++		 * The yield should only happen after a bit of work has been
++		 * done but before we pull any new work off any provider
++		 * queue to continue looping.  This is a safe spot to
++		 * do so.
++		 */
++		if (event_should_yield(event)) {
++			reschedule = true;
++			break;
++		}
+ 		/* Locate next provider */
+ 		next_prov = dplane_prov_list_next(&zdplane_info.dg_providers,
+ 						  prov);
+@@ -7498,11 +7508,6 @@ static void dplane_thread_loop(struct event *event)
+ 			zlog_debug("dplane dequeues %d completed work from provider %s",
+ 				   counter, dplane_provider_get_name(prov));
+ 
+-		if (event_should_yield(event)) {
+-			reschedule = true;
+-			break;
+-		}
+-
+ 		/* Locate next provider */
+ 		prov = next_prov;
+ 	}
+-- 
+2.43.2
+

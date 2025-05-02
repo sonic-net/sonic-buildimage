@@ -1,0 +1,68 @@
+From a84d2bc091a1547b81e9a24bb6b60cd56bee8ac6 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 9 Jan 2025 12:34:50 -0500
+Subject: [PATCH] zebra: Fix leaked nhe
+
+During route processing in zebra, Zebra will create a nexthop
+group that matches the nexthops passed down from the routing
+protocol.  Then Zebra will look to see if it can re-use a
+nhe from a previous version of the route entry( say a interface
+goes down ).  If Zebra decides to re-use an nhe it was just dropping
+the route entry created.  Which led to nexthop group's that had
+a refcount of 0 and in some cases these nexthop groups were installed
+into the kernel.
+
+Add a bit of code to see if the returned entry is not being used
+and it has no reference count and if so, properly dispose of it.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/zebra_nhg.c | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index 2445427b0..158f77cd7 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3074,7 +3074,7 @@ static struct nhg_hash_entry *zebra_nhg_rib_compare_old_nhe(
+ int nexthop_active_update(struct route_node *rn, struct route_entry *re,
+ 			  struct route_entry *old_re)
+ {
+-	struct nhg_hash_entry *curr_nhe;
++	struct nhg_hash_entry *curr_nhe, *remove;
+ 	uint32_t curr_active = 0, backup_active = 0;
+ 
+ 	if (PROTO_OWNED(re->nhe))
+@@ -3128,16 +3128,25 @@ backups_done:
+ 
+ 		new_nhe = zebra_nhg_rib_find_nhe(curr_nhe, rt_afi);
+ 
++		remove = new_nhe;
++
+ 		if (old_re && old_re->type == re->type &&
+ 		    old_re->instance == re->instance)
+ 			new_nhe = zebra_nhg_rib_compare_old_nhe(rn, re, new_nhe,
+ 								old_re->nhe);
+ 
+ 		if (IS_ZEBRA_DEBUG_NHG_DETAIL)
+-			zlog_debug(
+-				"%s: re %p CHANGED: nhe %p (%pNG) => new_nhe %p (%pNG)",
+-				__func__, re, re->nhe, re->nhe, new_nhe,
+-				new_nhe);
++			zlog_debug("%s: re %p CHANGED: nhe %p (%pNG) => new_nhe %p (%pNG) rib_find_nhe returned %p (%pNG) refcnt: %d",
++				   __func__, re, re->nhe, re->nhe, new_nhe, new_nhe, remove, remove,
++				   remove ? remove->refcnt : 0);
++
++		/*
++		 * if the results from zebra_nhg_rib_find_nhe is being
++		 * dropped and it was generated in that function
++		 * (refcnt of 0) then we know we can clean it up
++		 */
++		if (remove && remove != new_nhe && remove != re->nhe && remove->refcnt == 0)
++			zebra_nhg_handle_uninstall(remove);
+ 
+ 		route_entry_update_nhe(re, new_nhe);
+ 	}
+-- 
+2.43.2
+

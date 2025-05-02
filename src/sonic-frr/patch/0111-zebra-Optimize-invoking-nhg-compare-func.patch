@@ -1,0 +1,44 @@
+From 0faa70a5823f17965471861735b68e1d527e56ae Mon Sep 17 00:00:00 2001
+From: Rajasekar Raja <rajasekarr@nvidia.com>
+Date: Fri, 10 Jan 2025 13:39:12 -0800
+Subject: [PATCH] zebra: Optimize invoking nhg compare func
+
+In some cases, the old_re nhe and the newnhe is same and there is no
+point in comparing them both since they are the same. Skip comparing in
+such cases.
+
+Ex:
+2025/01/09 23:49:27.489020 ZEBRA: [W4Z4R-NTSMD] zebra_nhg_rib_find_nhe: => nhe 0x555f611d30c0 (44[38/39/45])
+2025/01/09 23:49:27.489021 ZEBRA: [ZH3FQ-TE9NV] zebra_nhg_rib_compare_old_nhe: 0.0.0.0/0 new id: 44 old id: 44
+2025/01/09 23:49:27.489021 ZEBRA: [YB8HE-Z86GN] zebra_nhg_rib_compare_old_nhe: 0.0.0.0/0 NEW 0x555f611d30c0 (44[38/39/45])
+2025/01/09 23:49:27.489023 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 20.1.1.9[0] vrf default(0) wgt 1, with flags
+2025/01/09 23:49:27.489024 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 30.1.2.9[0] vrf default(0) wgt 1, with flags
+2025/01/09 23:49:27.489025 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 20.1.1.2[4] vrf default(0) wgt 1, with flags ACTIVE
+2025/01/09 23:49:27.489026 ZEBRA: [ZM3BX-HPETZ] zebra_nhg_rib_compare_old_nhe: 0.0.0.0/0 OLD 0x555f611d30c0 (44[38/39/45])
+2025/01/09 23:49:27.489027 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 20.1.1.9[0] vrf default(0) wgt 1, with flags
+2025/01/09 23:49:27.489028 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 30.1.2.9[0] vrf default(0) wgt 1, with flags
+2025/01/09 23:49:27.489028 ZEBRA: [ZSB1Z-XM2V3] 0.0.0.0/0: NH 20.1.1.2[4] vrf default(0) wgt 1, with flags ACTIVE
+
+Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+---
+ zebra/zebra_nhg.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/zebra_nhg.c b/zebra/zebra_nhg.c
+index d8ca61964..c8418f8e2 100644
+--- a/zebra/zebra_nhg.c
++++ b/zebra/zebra_nhg.c
+@@ -3131,8 +3131,8 @@ backups_done:
+ 
+ 		remove = new_nhe;
+ 
+-		if (old_re && old_re->type == re->type &&
+-		    old_re->instance == re->instance)
++		if (old_re && old_re->type == re->type && old_re->instance == re->instance &&
++		    new_nhe != old_re->nhe)
+ 			new_nhe = zebra_nhg_rib_compare_old_nhe(rn, re, new_nhe,
+ 								old_re->nhe);
+ 
+-- 
+2.43.2
+

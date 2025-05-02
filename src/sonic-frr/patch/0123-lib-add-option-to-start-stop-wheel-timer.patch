@@ -1,0 +1,286 @@
+commit 0edd95b6e93528dd910e7fe4ca791bb627d29d20
+Author: vkarri <vkarri@contoso.com>
+Date:   Thu Apr 3 23:39:48 2025 +0000
+
+    lib: add option to start/stop wheel timer
+    
+    Fix:
+    This fix add option to start and stop a wheel timer.
+    To handle the case, to not to run the wheel timer unnecessarily
+    when there is no element in it, a new api wheel_stop() is added.
+    Also whenever a new element is added to wheel timer's slot, that
+    wheel timer is tried to be started again, if not running already.
+    During testing, certain behavior found, if a wheel timer is fired/an
+    event is scheduled in the middle of configuration, it brings some
+    random pattern/delay that sometimes delays
+    "Verifying BGP Convergence on router r1" for ~3 sec. So a new argument
+    added to in wheel_init, to pass wait time before the wheel timer
+    is started. For fast wheel timer, it works fine 10 ms. Just to note,
+    this is just one time/start time delay, after that wheel schedules events,
+    according existing logic as usual. If passed wait time is 0, then it will
+    schedule/start the wheel timer according to existing logic
+    
+    Signed-off-by: Soumya Roy <souroy@nvidia.com>
+
+diff --git a/lib/wheel.c b/lib/wheel.c
+index 2520e81d49..089c0d9ec0 100644
+--- a/lib/wheel.c
++++ b/lib/wheel.c
+@@ -17,12 +17,14 @@ DEFINE_MTYPE_STATIC(LIB, TIMER_WHEEL_LIST, "Timer Wheel Slot List");
+ static int debug_timer_wheel = 0;
+ 
+ static void wheel_timer_thread(struct event *t);
++static void wheel_stop(struct timer_wheel *wheel);
++static void wheel_start(struct timer_wheel *wheel);
+ 
+ static void wheel_timer_thread_helper(struct event *t)
+ {
+ 	struct listnode *node, *nextnode;
+ 	unsigned long long curr_slot;
+-	unsigned int slots_to_skip = 1;
++	int slots_to_skip = 1;
+ 	struct timer_wheel *wheel;
+ 	void *data;
+ 
+@@ -47,6 +49,21 @@ static void wheel_timer_thread_helper(struct event *t)
+ 		slots_to_skip++;
+ 
+ 	wheel->slots_to_skip = slots_to_skip;
++
++	if ((((curr_slot + slots_to_skip) % wheel->slots) == curr_slot) &&
++	    list_isempty(wheel->wheel_slot_lists[curr_slot])) {
++		/* Came to back to same slot and that is empty
++		 * so the wheel is empty, stop it
++		 */
++		if (!wheel->run_forever) {
++			wheel_stop(wheel);
++			if (debug_timer_wheel)
++				zlog_debug("Stopped an empty  wheel %p", wheel);
++
++			return;
++		}
++	}
++
+ 	event_add_timer_msec(wheel->master, wheel_timer_thread, wheel,
+ 			     wheel->nexttime * slots_to_skip, &wheel->timer);
+ }
+@@ -60,10 +77,9 @@ static void wheel_timer_thread(struct event *t)
+ 	event_execute(wheel->master, wheel_timer_thread_helper, wheel, 0, NULL);
+ }
+ 
+-struct timer_wheel *wheel_init(struct event_loop *master, int period,
+-			       size_t slots,
+-			       unsigned int (*slot_key)(const void *),
+-			       void (*slot_run)(void *), const char *run_name)
++struct timer_wheel *wheel_init(struct event_loop *master, int period, size_t slots, int start_wait,
++			       unsigned int (*slot_key)(const void *), void (*slot_run)(void *),
++			       const char *run_name, bool run_forever)
+ {
+ 	struct timer_wheel *wheel;
+ 	size_t i;
+@@ -80,14 +96,17 @@ struct timer_wheel *wheel_init(struct event_loop *master, int period,
+ 	wheel->master = master;
+ 	wheel->nexttime = period / slots;
+ 
++	wheel->start_wait = start_wait;
++	wheel->run_forever = run_forever;
++
+ 	wheel->wheel_slot_lists = XCALLOC(MTYPE_TIMER_WHEEL_LIST,
+ 					  slots * sizeof(struct list *));
+ 	for (i = 0; i < slots; i++)
+ 		wheel->wheel_slot_lists[i] = list_new();
+ 
+-	event_add_timer_msec(wheel->master, wheel_timer_thread, wheel,
+-			     wheel->nexttime, &wheel->timer);
+-
++ 	if (wheel->run_forever)
++		wheel_start(wheel);
++	
+ 	return wheel;
+ }
+ 
+@@ -114,8 +133,14 @@ int wheel_add_item(struct timer_wheel *wheel, void *item)
+ 	if (debug_timer_wheel)
+ 		zlog_debug("%s: Inserting %p: %lld %lld", __func__, item, slot,
+ 			   slot % wheel->slots);
+-	listnode_add(wheel->wheel_slot_lists[slot % wheel->slots], item);
+ 
++	/* Performance cost, but no other way to block duplicate entries,
++	 * alternate data structure/blanced tree can be explored later
++	 */
++	if (!listnode_lookup_nocheck(wheel->wheel_slot_lists[slot % wheel->slots], item))
++		listnode_add(wheel->wheel_slot_lists[slot % wheel->slots], item);
++
++	wheel_start(wheel);
+ 	return 0;
+ }
+ 
+@@ -132,3 +157,24 @@ int wheel_remove_item(struct timer_wheel *wheel, void *item)
+ 
+ 	return 0;
+ }
++
++static void wheel_stop(struct timer_wheel *wheel)
++{
++	EVENT_OFF(wheel->timer);
++}
++
++static void wheel_start(struct timer_wheel *wheel)
++{
++	int first_schedule_time = wheel->nexttime;
++
++	if (wheel->start_wait)
++		first_schedule_time = wheel->start_wait;
++
++	if (!event_is_scheduled(wheel->timer)) {
++		if (debug_timer_wheel)
++			zlog_debug("started a wheel timer %p", wheel);
++
++		event_add_timer_msec(wheel->master, wheel_timer_thread, wheel, first_schedule_time,
++				     &wheel->timer);
++	}
++}
+diff --git a/lib/wheel.c.rej b/lib/wheel.c.rej
+new file mode 100644
+index 0000000000..32fa12a9b7
+--- /dev/null
++++ b/lib/wheel.c.rej
+@@ -0,0 +1,74 @@
++diff a/lib/wheel.c b/lib/wheel.c	(rejected hunks)
++@@ -17,12 +17,14 @@ DEFINE_MTYPE_STATIC(LIB, TIMER_WHEEL_LIST, "Timer Wheel Slot List");
++ static int debug_timer_wheel = 0;
++ 
++ static void wheel_timer_thread(struct event *t);
+++static void wheel_stop(struct timer_wheel *wheel);
+++static void wheel_start(struct timer_wheel *wheel);
++ 
++ static void wheel_timer_thread(struct event *t)
++ {
++ 	struct listnode *node, *nextnode;
++ 	unsigned long long curr_slot;
++-	unsigned int slots_to_skip = 1;
+++	int slots_to_skip = 1;
++ 	struct timer_wheel *wheel;
++ 	void *data;
++ 
++@@ -47,14 +49,27 @@ static void wheel_timer_thread(struct event *t)
++ 		slots_to_skip++;
++ 
++ 	wheel->slots_to_skip = slots_to_skip;
+++	if ((((curr_slot + slots_to_skip) % wheel->slots) == curr_slot) &&
+++	    list_isempty(wheel->wheel_slot_lists[curr_slot])) {
+++		/* Came to back to same slot and that is empty
+++		 * so the wheel is empty, stop it
+++		 */
+++		if (!wheel->run_forever) {
+++			wheel_stop(wheel);
+++			if (debug_timer_wheel)
+++				zlog_debug("Stopped an empty  wheel %p", wheel);
+++
+++			return;
+++		}
+++	}
+++
++ 	event_add_timer_msec(wheel->master, wheel_timer_thread, wheel,
++ 			     wheel->nexttime * slots_to_skip, &wheel->timer);
++ }
++ 
++-struct timer_wheel *wheel_init(struct event_loop *master, int period,
++-			       size_t slots,
++-			       unsigned int (*slot_key)(const void *),
++-			       void (*slot_run)(void *), const char *run_name)
+++struct timer_wheel *wheel_init(struct event_loop *master, int period, size_t slots, int start_wait,
+++			       unsigned int (*slot_key)(const void *), void (*slot_run)(void *),
+++			       const char *run_name, bool run_forever)
++ {
++ 	struct timer_wheel *wheel;
++ 	size_t i;
++@@ -63,20 +78,21 @@ struct timer_wheel *wheel_init(struct event_loop *master, int period,
++ 
++ 	wheel->slot_key = slot_key;
++ 	wheel->slot_run = slot_run;
++-
++ 	wheel->period = period;
++ 	wheel->slots = slots;
++ 	wheel->curr_slot = 0;
++ 	wheel->master = master;
++ 	wheel->nexttime = period / slots;
+++	wheel->start_wait = start_wait;
+++	wheel->run_forever = run_forever;
++ 
++ 	wheel->wheel_slot_lists = XCALLOC(MTYPE_TIMER_WHEEL_LIST,
++ 					  slots * sizeof(struct list *));
++ 	for (i = 0; i < slots; i++)
++ 		wheel->wheel_slot_lists[i] = list_new();
++ 
++-	event_add_timer_msec(wheel->master, wheel_timer_thread, wheel,
++-			     wheel->nexttime, &wheel->timer);
+++	if (wheel->run_forever)
+++		wheel_start(wheel);
++ 
++ 	return wheel;
++ }
+diff --git a/lib/wheel.h b/lib/wheel.h
+index 0d9ac10020..d12b461d76 100644
+--- a/lib/wheel.h
++++ b/lib/wheel.h
+@@ -18,7 +18,9 @@ struct timer_wheel {
+ 	long long curr_slot;
+ 	unsigned int period;
+ 	unsigned int nexttime;
+-	unsigned int slots_to_skip;
++	int slots_to_skip;
++	int start_wait;
++	bool run_forever;
+ 
+ 	struct list **wheel_slot_lists;
+ 	struct event *timer;
+@@ -39,10 +41,18 @@ struct timer_wheel {
+  *          for items in each slot
+  * slots  - The number of slots to have in this particular
+  *          timer wheel
++ *
++ * start_wait - Initial start wait in ms, before the wheel timer
++ *              is started first time, if no wait, pass 0
++ *
+  * slot_key - A hashing function of some sort that will allow
+  *            the timer wheel to put items into individual slots
+  * slot_run - The function to run over each item in a particular slot
+  *
++ * run_forever - If this wheel timer is supposed to run forever,
++ *               otherwise this flag will be used to pause the timer
++ *               if no item left in wheel slots.
++ *
+  * Creates a timer wheel that will wake up 'slots' times over the entire
+  * wheel.  Each time the timer wheel wakes up it will iterate through
+  * and run the slot_run function for each item stored in that particular
+@@ -66,10 +76,9 @@ struct timer_wheel {
+  * and cause significant amount of time handling thread events instead
+  * of running your code.
+  */
+-struct timer_wheel *wheel_init(struct event_loop *master, int period,
+-			       size_t slots,
+-			       unsigned int (*slot_key)(const void *),
+-			       void (*slot_run)(void *), const char *run_name);
++struct timer_wheel *wheel_init(struct event_loop *master, int period, size_t slots, int start_wait,
++			       unsigned int (*slot_key)(const void *), void (*slot_run)(void *),
++			       const char *run_name, bool run_forever);
+ 
+ /*
+  * Delete the specified timer wheel created
+diff --git a/pimd/pim_upstream.c b/pimd/pim_upstream.c
+index 7417f31137..314cad6aa5 100644
+--- a/pimd/pim_upstream.c
++++ b/pimd/pim_upstream.c
+@@ -2228,9 +2228,8 @@ void pim_upstream_init(struct pim_instance *pim)
+ 	char name[64];
+ 
+ 	snprintf(name, sizeof(name), "PIM %s Timer Wheel", pim->vrf->name);
+-	pim->upstream_sg_wheel =
+-		wheel_init(router->master, 31000, 100, pim_upstream_hash_key,
+-			   pim_upstream_sg_running, name);
++	pim->upstream_sg_wheel = wheel_init(router->master, 31000, 100, 0, pim_upstream_hash_key,
++					    pim_upstream_sg_running, name, true);
+ 
+ 	rb_pim_upstream_init(&pim->upstream_head);
+ }

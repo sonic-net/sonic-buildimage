@@ -1,0 +1,41 @@
+From 1f4e6c718392e3484ad3f813959bbf45f46eb49a Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 31 Jan 2025 12:12:17 -0500
+Subject: [PATCH] zebra: Limit mutex for obuf to when we access obuf
+
+The mutex that wraps access to the output buffer
+is being held for the entire time the data is
+being generated to send down the pipe.  Since
+the generation has absolutely nothing to do
+with the obuf, let's limit the mutex holding some.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ zebra/dplane_fpm_nl.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
+index 7cf5443f1..cfc6323fb 100644
+--- a/zebra/dplane_fpm_nl.c
++++ b/zebra/dplane_fpm_nl.c
+@@ -847,8 +847,6 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
+ 
+ 	nl_buf_len = 0;
+ 
+-	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+-
+ 	/*
+ 	 * If route replace is enabled then directly encode the install which
+ 	 * is going to use `NLM_F_REPLACE` (instead of delete/add operations).
+@@ -1000,6 +998,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
+ 	/* We must know if someday a message goes beyond 65KiB. */
+ 	assert((nl_buf_len + FPM_HEADER_SIZE) <= UINT16_MAX);
+ 
++	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
++
+ 	/* Check if we have enough buffer space. */
+ 	if (STREAM_WRITEABLE(fnc->obuf) < (nl_buf_len + FPM_HEADER_SIZE)) {
+ 		atomic_fetch_add_explicit(&fnc->counters.buffer_full, 1,
+-- 
+2.43.2
+
