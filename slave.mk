@@ -1128,7 +1128,7 @@ $(addprefix $(TARGET_PATH)/,$(COPY_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .plat
 	$(HEADER)
 
 	rm -rf $@ $@.log
-	cp "$($*.gz_PATH)/$*.gz"  target/$(DOWNLOADED_DOCKER_IMAGES) $(LOG) 
+	cp "$($*.gz_PATH)/$*.gz" target/$(COPY_DOCKER_IMAGES) $(LOG)
 
 	$(FOOTER)
 
