@@ -3019,10 +3019,10 @@
              [
                 {"attr_name":"blue_blink", "descr": "" , "bits" : "5:0",  "value" : "0x27", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
                 {"attr_name":"green_blink", "descr": "" , "bits" : "5:0",  "value" : "0x17", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
-                {"attr_name":"amber_blink", "descr": "" , "bits" : "5:0",  "value" : "0xf", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
+                {"attr_name":"red_blink", "descr": "" , "bits" : "5:0",  "value" : "0xf", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
                 {"attr_name":"blue", "descr": "" , "bits" : "5:0",  "value" : "0x3", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
                 {"attr_name":"green", "descr": "" , "bits" : "5:0",  "value" : "0x5", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
-                {"attr_name":"amber", "descr": "" , "bits" : "5:0",  "value" : "0x6", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
+                {"attr_name":"red", "descr": "" , "bits" : "5:0",  "value" : "0x6", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"},
                 {"attr_name":"off", "descr": "" , "bits" : "5:0",  "value" : "0x7", "swpld_addr" : "0x60", "swpld_addr_offset" : "0x24"}
                 
              ]
