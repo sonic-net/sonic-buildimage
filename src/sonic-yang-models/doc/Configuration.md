@@ -1047,11 +1047,6 @@ instance is supported in SONiC.
 ```
 {
 "DHCP_RELAY": {
-    "dhcp_servers": [
-        "192.168.0.1",
-        "192.168.0.2"
-    ],
-    "server_vrf": "Vrf11",
     "dhcpv6_servers": [
         "fc02:2000::1",
         "fc02:2000::2",
@@ -1146,7 +1141,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ### FG_NHG
 
-The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size) and match mode for each group.
+The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
 
 ```
 "FG_NHG": {
@@ -1157,7 +1152,17 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
     "fgnhg_v6": {
         "bucket_size": "120",
         "match_mode": "nexthop-based"
-    }
+    },
+    "dynamic_fgnhg_v4": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    },
+    "dynamic_fgnhg_v6": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    }    
 }
 ```
 
@@ -1191,7 +1196,13 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	},
     "fc:05::/128": {
 	    "FG_NHG": "fgnhg_v6"
-	}
+	},
+    "200.175.150.125/32": {
+        "FG_NHG": "dynamic_fgnhg_v4"
+    },
+    "fd:06::/128": {
+        "FG_NHG": "dynamic_fgnhg_v6"
+	}    
 }
 ```
 
