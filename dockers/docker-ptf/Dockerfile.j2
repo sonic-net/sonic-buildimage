@@ -205,13 +205,13 @@ RUN python3 -m pip install --upgrade --ignore-installed pip
 # setuptools on Python 3.9. The packages downgrade setuptools 
 # to 40.x causing further installations to fail
 {% if PTF_ENV_PY_VER == "py3" %}
-{% set offending_packages = ["supervisor", "ipython==5.4.1", "exabgp", "grpcio-tools", "pybrctl", "pyrasite", "scapy==2.5.0", "thrift"] %}
+{% set offending_packages = ["supervisor", "ipython==5.4.1", "exabgp==4.2.25", "grpcio-tools", "pybrctl", "pyrasite", "scapy==2.5.0", "thrift"] %}
 {{ install_offending_packages(offending_packages) }}
 {% else %}
 RUN pip3 install setuptools \
         && pip3 install supervisor \
         && pip3 install ipython==5.4.1 \
-        && pip3 install exabgp \
+        && pip3 install exabgp==4.2.25 \
         && pip3 install grpcio-tools \
         && pip3 install pybrctl \
         && pip3 install pyrasite \

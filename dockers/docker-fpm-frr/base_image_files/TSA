@@ -58,13 +58,9 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
 fi
 
 /usr/bin/TS TSA
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
-  if [[ "$1" != "chassis" ]] ; then
-      echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
-      if [[ $disaggregated_chassis -ne 1 ]]; then
-          echo -e "\nWARNING: Please execute 'TSA' on all other linecards of the chassis to fully isolate this device"
-      fi
-  fi
-else
-  echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+
+subtype=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype'`
+if [[ $subtype == *"UpstreamLC"* || $subtype == *"DownstreamLC"* ]] ; then
+  echo -e "\nWARNING: Please execute 'TSA' on Supervisor or on all other linecards of the chassis to fully isolate the chassis"
 fi

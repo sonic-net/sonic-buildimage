@@ -37,11 +37,13 @@ check_spine_router() {
     type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
     subtype=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
 
-    # only supported on spine routers and UpstreamLC
-    if [[ "$type" != "SpineRouter" ||  "$subtype" != "UpstreamLC" ]]; then
-        echo "Operation is only supported on UpstreamLC of SpineRouter." >&2
-        exit 1
+    # only supported on UpstreamLC or UpperSpineRouter
+    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]
+        exit 0
     fi
+
+    echo "Operation is only supported on Upstream SpineRouter." >&2
+    exit 1
 }
 
 # Function to skip operation on chassis supervisor
