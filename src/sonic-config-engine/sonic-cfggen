@@ -27,6 +27,7 @@ import sys
 import yaml
 import ipaddress
 import base64
+import sonic_yang
 
 from collections import OrderedDict
 from config_samples import generate_sample_config, get_available_config
@@ -39,6 +40,7 @@ from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipe
 from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
+YANG_MODELS = "/usr/local/yang-models"
 
 # TODO: Remove STR_TYPE, FILE_TYPE once SONiC moves to Python 3.x
 # TODO: Remove the import SonicYangCfgDbGenerator once SONiC moves to python3.x
@@ -212,7 +214,13 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
         return db_data
 
     @staticmethod
-    def to_serialized(data, lookup_key = None):
+    def to_serialized(data, lookup_key = None, sy = None, path_tokens = None):
+        if path_tokens is None:
+            path_tokens = []
+        if sy is None:
+          sy = sonic_yang.SonicYang(YANG_MODELS, print_log_enabled = False)
+          sy.loadYangModel()
+
         if type(data) is dict:
             if lookup_key is not None:
                 newData = {}
@@ -227,7 +235,25 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                 new_key = ConfigDBConnector.serialize_key(key)
                 if new_key != key:
                     data[new_key] = data.pop(key)
-                data[new_key] = FormatConverter.to_serialized(data[new_key])
+                path_tokens.append(new_key)
+                data[new_key] = FormatConverter.to_serialized(data[new_key], sy = sy, path_tokens = path_tokens)
+                path_tokens.pop()
+
+        if isinstance(data, bool):
+            data = 'true' if data else 'false'
+
+        # If we have a string that we know looks like true/false, but differs by
+        # Case, look up from the yang schema to see if we should convert into
+        # a properly formatted boolean for yang.
+        if isinstance(data, str) and data.lower() in [ "true", "false" ] and data not in [ "true", "false" ]:
+            try:
+                schema_xpath = sy.configdb_path_to_xpath(sy.configdb_path_join(path_tokens), schema_xpath = True)
+                datatype = sy.get_data_type(schema_xpath)
+                if datatype == "BOOL":
+                    data = 'true' if data.lower() == "true" else 'false'
+            except:
+                pass
+
         return data
 
     @staticmethod
@@ -504,7 +530,8 @@ def main():
 
     if args.var_json is not None and args.var_json in data:
         if args.key is not None:
-            print(json.dumps(FormatConverter.to_serialized(data[args.var_json], args.key), indent=4, cls=minigraph_encoder))
+            print(json.dumps(FormatConverter.to_serialized(data[args.var_json], args.key), indent=4,
+                             cls=minigraph_encoder))
         else:
             print(json.dumps(FormatConverter.to_serialized(data[args.var_json]), indent=4, cls=minigraph_encoder))
 

@@ -335,7 +335,7 @@ class TestJ2Files(TestCase):
         with open(sample_output_file) as sample_output_fd:
             sample_output_json = json.load(sample_output_fd)
 
-        self.assertTrue(json.dumps(sample_output_json, sort_keys=True) == json.dumps(output_json, sort_keys=True))
+        self.assertEqual(json.dumps(sample_output_json, sort_keys=True), json.dumps(output_json, sort_keys=True))
 
     def test_t1_smartswitch_dpu_template(self):
         argument = ['-k', 'SS-DPU-1x400Gb', '--preset', 't1-smartswitch', '-p', self.t1_ss_dpu_port_config]
@@ -347,7 +347,7 @@ class TestJ2Files(TestCase):
         with open(sample_output_file) as sample_output_fd:
             sample_output_json = json.load(sample_output_fd)
 
-        self.assertTrue(json.dumps(sample_output_json, sort_keys=True) == json.dumps(output_json, sort_keys=True))
+        self.assertEqual(json.dumps(sample_output_json, sort_keys=True), json.dumps(output_json, sort_keys=True))
 
     def test_qos_arista7050_render_template(self):
         self._test_qos_render_template('arista', 'x86_64-arista_7050_qx32s', 'Arista-7050-QX-32S', 'sample-arista-7050-t0-minigraph.xml', 'qos-arista7050.json')

@@ -152,6 +152,26 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(utils.to_dict(output.strip()), utils.to_dict('{\n    "k11": "v11"\n}'))
 
+    def test_boolean_case_1(self):
+        # Detect boolean field and value isn't of proper YANG case
+        argument = ['-a', '{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":"TRUe"}}}', '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()), utils.to_dict('{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":"true"}}}'))
+
+    def test_boolean_case_2(self):
+        # Detect field is passed as boolean, make sure it doesn't translate into Python "True"
+        argument = ['-a', '{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":true}}}', '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()), utils.to_dict('{"MGMT_VRF_CONFIG":{"vrf_global":{"mgmtVrfEnabled":"true"}}}'))
+
+    def test_boolean_case_3(self):
+        # Field looks like a boolean, but its really a string field in YANG, nothing should actually be converted
+        # in this string, note the pythonic True and False with capital first letters.
+        data = '{"FEATURE":{"bgp":{"auto_restart":"enabled","check_up_status":"false","has_global_scope":"false","has_per_asic_scope":"true","delayed":"false","has_global_scope":"False","has_per_asic_scope":"True","delayed":"False","high_mem_alert":"disabled","set_owner":"local","state":"enabled"}}}'
+        argument = ['-a', data, '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()), utils.to_dict(data))
+
     def test_var_json_data(self, **kwargs):
         graph_file = kwargs.get('graph_file', self.sample_graph_simple)
         tag_mode = kwargs.get('tag_mode', 'untagged')

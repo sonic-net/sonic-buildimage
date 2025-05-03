@@ -53,6 +53,30 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         # element path for CONFIG DB. An example for this list could be:
         # ['PORT', 'Ethernet0', 'speed']
         self.elementPath = []
+        self.mapped_types = {
+            "DER":ly.LY_TYPE_DER,
+            "BINARY":ly.LY_TYPE_BINARY,
+            "BITS":ly.LY_TYPE_BITS,
+            "BOOL":ly.LY_TYPE_BOOL,
+            "DEC64":ly.LY_TYPE_DEC64,
+            "EMPTY":ly.LY_TYPE_EMPTY,
+            "ENUM":ly.LY_TYPE_ENUM,
+            "IDENT":ly.LY_TYPE_IDENT,
+            "INST":ly.LY_TYPE_INST,
+            "LEAFREF":ly.LY_TYPE_LEAFREF,
+            "STRING":ly.LY_TYPE_STRING,
+            "UNION":ly.LY_TYPE_UNION,
+            "INT8":ly.LY_TYPE_INT8,
+            "UINT8":ly.LY_TYPE_UINT8,
+            "INT16":ly.LY_TYPE_INT16,
+            "UINT16":ly.LY_TYPE_UINT16,
+            "INT32":ly.LY_TYPE_INT32,
+            "UINT32":ly.LY_TYPE_UINT32,
+            "INT64":ly.LY_TYPE_INT64,
+            "UINT64":ly.LY_TYPE_UINT64,
+            "UNKNOWN":ly.LY_TYPE_UNKNOWN
+        }
+
         try:
             self.ctx = ly.Context(yang_dir, sonic_yang_options)
         except Exception as e:
@@ -686,47 +710,39 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
     output:   type
     """
     def _str_to_type(self, type_str):
-           mapped_type = {
-                "LY_TYPE_DER":ly.LY_TYPE_DER,
-                "LY_TYPE_BINARY":ly.LY_TYPE_BINARY,
-                "LY_TYPE_BITS":ly.LY_TYPE_BITS,
-                "LY_TYPE_BOOL":ly.LY_TYPE_BOOL,
-                "LY_TYPE_DEC64":ly.LY_TYPE_DEC64,
-                "LY_TYPE_EMPTY":ly.LY_TYPE_EMPTY,
-                "LY_TYPE_ENUM":ly.LY_TYPE_ENUM,
-                "LY_TYPE_IDENT":ly.LY_TYPE_IDENT,
-                "LY_TYPE_INST":ly.LY_TYPE_INST,
-                "LY_TYPE_LEAFREF":ly.LY_TYPE_LEAFREF,
-                "LY_TYPE_STRING":ly.LY_TYPE_STRING,
-                "LY_TYPE_UNION":ly.LY_TYPE_UNION,
-                "LY_TYPE_INT8":ly.LY_TYPE_INT8,
-                "LY_TYPE_UINT8":ly.LY_TYPE_UINT8,
-                "LY_TYPE_INT16":ly.LY_TYPE_INT16,
-                "LY_TYPE_UINT16":ly.LY_TYPE_UINT16,
-                "LY_TYPE_INT32":ly.LY_TYPE_INT32,
-                "LY_TYPE_UINT32":ly.LY_TYPE_UINT32,
-                "LY_TYPE_INT64":ly.LY_TYPE_INT64,
-                "LY_TYPE_UINT64":ly.LY_TYPE_UINT64,
-                "LY_TYPE_UNKNOWN":ly.LY_TYPE_UNKNOWN
-           }
+       if type_str not in self.mapped_types:
+           return ly.LY_TYPE_UNKNOWN
 
-           if type_str not in mapped_type:
-               return ly.LY_TYPE_UNKNOWN
+       return self.mapped_types[type_str]
 
-           return mapped_type[type_str]
+    def _type_to_str(self, type_int):
+       name=""
+       try:
+           name = list(self.mapped_types.keys())[list(self.mapped_types.values()).index(type_int)]
+       except ValueError:
+           name = "UNKNOWN"
+
+       return name
 
     def _get_data_type(self, schema_xpath):
         try:
             schema_node = self._find_schema_node(schema_xpath)
         except Exception as e:
             self.sysLog(msg="get_data_type(): Failed to find schema node from xpath: {}".format(schema_xpath), debug=syslog.LOG_ERR, doPrint=True)
-            self.fail(e)
             return None
 
         if (schema_node is not None):
            return schema_node.subtype().type().base()
 
         return ly.LY_TYPE_UNKNOWN
+
+    """
+    get_data_type: Retrieve the data type of the node
+    input: schema_xpath
+    output: string representing type of node this points to
+    """
+    def get_data_type(self, schema_xpath):
+        return self._type_to_str(self._get_data_type(schema_xpath))
 
     """
     get_leafref_type:   find the type of node that leafref references to
@@ -745,6 +761,14 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
                     return subtype.value_type()
 
         return ly.LY_TYPE_UNKNOWN
+
+    """
+    get_leafref_type:   find the type of node that leafref references to
+    input:    data_xpath - xpath of a data node
+    output: string representing type of node this points to
+    """
+    def get_leafref_type(self, data_xpath):
+        return self._type_to_str(self._get_leafref_type(data_xpath))
 
     """
     get_leafref_path():   find the leafref path
@@ -783,3 +807,12 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
                     return target_type
 
         return None
+
+    """
+    get_leafref_type_schema:   find the type of node that leafref references to
+    input:    schema_xpath - xpath of a data node
+    output: string representing type of node this points to
+    """
+    def get_leafref_type_schema(self, schema_xpath):
+        return self._type_to_str(self._get_leafref_type_schema(schema_xpath))
+

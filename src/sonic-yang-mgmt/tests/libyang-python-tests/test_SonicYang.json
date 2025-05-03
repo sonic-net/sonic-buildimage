@@ -25,11 +25,11 @@
    ],
    "data_type" : [
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "STRING",
          "xpath" : "/test-port:test-port/test-port:PORT/test-port:PORT_LIST/test-port:port_name"
       },
       {
-         "data_type" : "LY_TYPE_LEAFREF",
+         "data_type" : "LEAFREF",
          "xpath" : "/test-vlan:test-vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:vlanid"
       }
    ],
@@ -81,37 +81,37 @@
    ],
    "leafref_type" : [
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "UINT16",
          "xpath" : "/test-vlan:test-vlan/VLAN_INTERFACE/VLAN_INTERFACE_LIST[vlanid='111'][ip-prefix='2000:f500:45:6709::/64']/vlanid"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "STRING",
          "xpath" : "/test-interface:test-interface/INTERFACE/INTERFACE_LIST[interface='Ethernet8'][ip-prefix='2000:f500:40:a749::/126']/interface"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "STRING",
          "xpath" : "/test-vlan:test-vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/port"
       },
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "UINT16",
          "xpath" : "/test-vlan:test-vlan/VLAN_MEMBER/VLAN_MEMBER_LIST[vlanid='111'][port='Ethernet0']/vlanid"
       }
    ],
    "leafref_type_schema" : [
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "UINT16",
          "xpath" : "/test-vlan:test-vlan/test-vlan:VLAN_INTERFACE/test-vlan:VLAN_INTERFACE_LIST/test-vlan:vlanid"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "STRING",
          "xpath" : "/test-interface:test-interface/test-interface:INTERFACE/test-interface:INTERFACE_LIST/test-interface:interface"
       },
       {
-         "data_type" : "LY_TYPE_STRING",
+         "data_type" : "STRING",
          "xpath" : "/test-vlan:test-vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:port"
       },
       {
-         "data_type" : "LY_TYPE_UINT16",
+         "data_type" : "UINT16",
          "xpath" : "/test-vlan:test-vlan/test-vlan:VLAN_MEMBER/test-vlan:VLAN_MEMBER_LIST/test-vlan:vlanid"
       }
    ],
