@@ -14,7 +14,16 @@ SONIC_CONFIG_BUILD_JOBS = 1
 
 # SONIC_CONFIG_MAKE_JOBS - set number of parallel make jobs per package.
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
-SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
+#
+# Some packages (swss_1.0) require 1.2GB RAM per core-cpu single build.
+# N-cores require N*1.2GB RAM. To avoid Out-Of-Memory (OOM-Killer) build failure
+# check and limit number of build-cores according to total ram-size.
+CPU_CORES := $(shell nproc)
+TOTAL_MEM_KB := $(shell free -k | awk '/^Mem:/ {print $$2}')
+MEM_PER_CPU_KB := (1229 * 1024)
+CORES_WITH_MEM := $(shell echo $$(( $(TOTAL_MEM_KB) / $(MEM_PER_CPU_KB) )))
+MIN_CORES := $(shell echo $$(( $(CPU_CORES) < $(CORES_WITH_MEM) ? $(CPU_CORES) : $(CORES_WITH_MEM) )))
+SONIC_CONFIG_MAKE_JOBS = $(MIN_CORES)
 
 # DEFAULT_BUILD_LOG_TIMESTAMP - add timestamp in build log
 # Supported format: simple, none
