@@ -8,4 +8,5 @@
 0011-agent-Makefile.in-Build-the-MIB-module-code-once.patch
 0012-agent-Makefile.in-Unbreak-the-enable-minimalist-buil.patch
 0013-enable-parallel-build-for-net-snmp.patch
+0014-Add-support-for-VRF.patch
 cross-compile-changes.patch
