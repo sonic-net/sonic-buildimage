@@ -19,7 +19,7 @@ cryptography==3.3.2
 ctypesgen==1.0.2
 dbus-python==1.2.16
 devscripts==2.21.3+deb11u1
-distro-info==1.0
+distro-info==1.0+deb11u1
 docutils==0.16
 fastentrypoints==0.12
 gbp==0.9.22
