@@ -243,22 +243,26 @@
         "Ethernet224": {
             "default_brkout_mode": "1x400G",
             "subport": "1",
-            "autoneg": "off"
+            "autoneg": "on",
+            "role"   : "Dpc"
         },
         "Ethernet232": {
             "default_brkout_mode": "1x400G",
             "subport": "1",
-            "autoneg": "off"
+            "autoneg": "on",
+            "role"   : "Dpc"
         },
         "Ethernet240": {
             "default_brkout_mode": "1x400G",
             "subport": "1",
-            "autoneg": "off"
+            "autoneg": "on",
+            "role"   : "Dpc"
         },
         "Ethernet248": {
             "default_brkout_mode": "1x400G",
             "subport": "1",
-            "autoneg": "off"
+            "autoneg": "on",
+            "role"   : "Dpc"
         }
     }
 }
