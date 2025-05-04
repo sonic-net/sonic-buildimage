@@ -48,12 +48,16 @@ WD_MAIN_IDENTITY = "iTCO_wdt"
 WDT_SYSFS_PATH = "/sys/class/watchdog/"
 
 DEFAULT_TIMEOUT=180
+watchdog=0
 
 class Watchdog(WatchdogBase):
 
     def __init__(self):
 
         self.watchdog, self.wdt_main_dev_name = self._get_wdt()
+        if self.wdt_main_dev_name is None:
+            raise Exception("Watchdog device is not instantiated")
+
         self.status_path = "/sys/class/watchdog/%s/status" % self.wdt_main_dev_name
         self.state_path = "/sys/class/watchdog/%s/state" % self.wdt_main_dev_name
         self.timeout_path = "/sys/class/watchdog/%s/timeout" % self.wdt_main_dev_name
@@ -74,14 +78,16 @@ class Watchdog(WatchdogBase):
         """
         Retrieves watchdog device
         """
+        global watchdog
         wdt_main_dev_list = [dev for dev in os.listdir(
             "/dev/") if dev.startswith("watchdog") and self._is_wd_main(dev)]
         if not wdt_main_dev_list:
-            return None
+            return (None, None)
         wdt_main_dev_name = wdt_main_dev_list[0]
         watchdog_device_path = "/dev/{}".format(wdt_main_dev_name)
-        self.watchdog = os.open(watchdog_device_path, os.O_RDWR)
-        return self.watchdog, wdt_main_dev_name
+        if not watchdog:
+           watchdog = os.open(watchdog_device_path, os.O_RDWR)
+        return watchdog, wdt_main_dev_name
 
     def _read_file(self, file_path):
         """
@@ -228,7 +234,8 @@ class Watchdog(WatchdogBase):
         Close watchdog
         """
 
-        os.close(self.watchdog)
+        if self.watchdog is not None :
+            os.close(self.watchdog)
 
 
 

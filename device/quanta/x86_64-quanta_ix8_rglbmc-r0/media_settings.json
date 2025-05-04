@@ -1,0 +1,31 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-48": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0a5503"
+                }
+            }
+        },
+        "49,51-56": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0a5703",
+                    "lane1": "0x0a5703",
+                    "lane2": "0x0a5703",
+                    "lane3": "0x0a5703"
+                }
+            }
+        },
+        "50-50": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0a5003",
+                    "lane1": "0x0a5003",
+                    "lane2": "0x0a5003",
+                    "lane3": "0x0a5003"
+                }
+            }
+        }
+    }
+}

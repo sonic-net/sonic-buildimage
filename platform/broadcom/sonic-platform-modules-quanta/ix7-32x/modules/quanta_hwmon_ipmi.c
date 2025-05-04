@@ -86,6 +86,8 @@
 #define IPMI_TIMEOUT      (4 * HZ)
 #define IPMI_MAX_WAIT_QUEUE 1
 
+typedef struct ipmi_user *ipmi_user_t;
+
 struct quanta_hwmon_ipmi_data
 {
   struct platform_device  *ipmi_platform_dev;
@@ -1829,7 +1831,7 @@ static int32_t __init quanta_hwmon_ipmi_init(void)
     goto device_reg_err;
   }
 
-  data->ipmi_hwmon_dev = hwmon_device_register_with_groups(NULL, DRVNAME, NULL,
+  data->ipmi_hwmon_dev = hwmon_device_register_with_groups(&data->ipmi_platform_dev->dev, DRVNAME, NULL,
                                                            NULL);
   err = IS_ERR(data->ipmi_hwmon_dev);
   if (err)
@@ -1856,21 +1858,15 @@ static int32_t __init quanta_hwmon_ipmi_init(void)
   return 0;
 
 init_sensor_err:
-  if (g_sensor_data)
-  {
-    kfree(g_sensor_data);
-    g_sensor_data = NULL;
-  }
+  kfree(g_sensor_data);
+  g_sensor_data = NULL;
 ipmi_create_err:
   hwmon_device_unregister(data->ipmi_hwmon_dev);
 hwmon_register_err:
   platform_device_unregister(data->ipmi_platform_dev);
 device_reg_err:
-  if (data)
-  {
-    kfree(data);
-    data = NULL;
-  }
+  kfree(data);
+  data = NULL;
 alloc_err:
   return err;
 }
@@ -1886,17 +1882,10 @@ static void __exit quanta_hwmon_ipmi_exit(void)
 
   platform_device_unregister(data->ipmi_platform_dev);
 
-  if (g_sensor_data)
-  {
-    kfree(g_sensor_data);
-    g_sensor_data = NULL;
-  }
-
-  if (data)
-  {
-    kfree(data);
-    data = NULL;
-  }
+  kfree(g_sensor_data);
+  g_sensor_data = NULL;
+  kfree(data);
+  data = NULL;
 }
 
 module_init(quanta_hwmon_ipmi_init);

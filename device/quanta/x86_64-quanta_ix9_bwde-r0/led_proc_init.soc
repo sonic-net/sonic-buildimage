@@ -1,6 +1,4 @@
-sleep 10
 m0 Load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
-led auto on
 led start
 
 rcload /usr/share/sonic/platform/preemphasis-32x400G.soc

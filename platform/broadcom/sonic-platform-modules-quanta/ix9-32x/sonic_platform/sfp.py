@@ -278,7 +278,6 @@ class Sfp(SfpBase):
         # Init index
         self.index = sfp_index
         self.port_num = self.index
-        #self.dom_supported = False
         self.sfp_type = sfp_type
         self.reset_path = "/sys/class/cpld-qsfpdd/port-"+str(self.port_num)+"/reset"
         self.lpmode_path = "/sys/class/cpld-qsfpdd/port-"+str(self.port_num)+"/lpmode"
@@ -329,7 +328,7 @@ class Sfp(SfpBase):
         self.info_dict_keys = ['type', 'vendor_rev', 'serial', 'manufacturer',
             'model', 'connector', 'encoding', 'ext_identifier',
             'ext_rateselect_compliance', 'cable_type', 'cable_length',
-            'nominal_bit_rate', 'specification_compliance', 'vendor_date', 'vendor_oui', 'application_advertisement']
+            'nominal_bit_rate', 'specification_compliance', 'vendor_date', 'vendor_oui', 'application_advertisement', 'type_abbrv_name']
 
         SfpBase.__init__(self)
 
@@ -353,15 +352,6 @@ class Sfp(SfpBase):
             return float(t_str)
         else:
             return 'N/A'
-
-    def __read_txt_file(self, file_path):
-        try:
-            with open(file_path, 'r') as fd:
-                data = fd.read()
-                return data.strip()
-        except IOError:
-            pass
-        return ""
 
     def __is_host(self):
         return os.system(self.HOST_CHK_CMD) == 0
@@ -425,7 +415,7 @@ class Sfp(SfpBase):
             elif eeprom_raw[0] in QSFP_TYPE_CODE_LIST:
                 self.sfp_type = QSFP_TYPE
             elif eeprom_raw[0] in QSFP_DD_TYPE_CODE_LIST:
-                self.sfp_type = QSFP_TYPE
+                self.sfp_type = QSFP_DD_TYPE
             else:
                 # we don't regonize this identifier value, treat the xSFP module as the default type
                 self.sfp_type = sfp_type
@@ -436,26 +426,6 @@ class Sfp(SfpBase):
             # eeprom_raw being None indicates the module is not present.
             # in this case we treat it as the default type according to the SKU
             self.sfp_type = sfp_type
-
-    def __convert_string_to_num(self, value_str):
-        if "-inf" in value_str:
-            return 'N/A'
-        elif "Unknown" in value_str:
-            return 'N/A'
-        elif 'dBm' in value_str:
-            t_str = value_str.rstrip('dBm')
-            return float(t_str)
-        elif 'mA' in value_str:
-            t_str = value_str.rstrip('mA')
-            return float(t_str)
-        elif 'C' in value_str:
-            t_str = value_str.rstrip('C')
-            return float(t_str)
-        elif 'Volts' in value_str:
-            t_str = value_str.rstrip('Volts')
-            return float(t_str)
-        else:
-            return 'N/A'
 
     def _dom_capability_detect(self):
         if not self.get_presence():
@@ -544,6 +514,7 @@ class Sfp(SfpBase):
                     self.dom_rx_tx_power_bias_supported = False
             else:
                 self.dom_supported = False
+                self.second_application_list = False
                 self.dom_temp_supported = False
                 self.dom_volt_supported = False
                 self.dom_rx_power_supported = False
@@ -620,6 +591,7 @@ class Sfp(SfpBase):
             return transceiver_info_dict
 
         self._detect_sfp_type(self.sfp_type)
+        self._dom_capability_detect()
 
         transceiver_info_dict = {}
         compliance_code_dict = {}
@@ -638,6 +610,7 @@ class Sfp(SfpBase):
             sfp_type_raw = self._read_eeprom_specific_bytes((offset + OSFP_TYPE_OFFSET), XCVR_TYPE_WIDTH)
             if sfp_type_raw is not None:
                 sfp_type_data = sfpi_obj.parse_sfp_type(sfp_type_raw, 0)
+                sfp_type_abbrv_name_data = sfpi_obj.parse_sfp_type_abbrv_name(sfp_type_raw, 0)
             else:
                 return None
 
@@ -666,6 +639,7 @@ class Sfp(SfpBase):
                 return None
 
             transceiver_info_dict['type'] = sfp_type_data['data']['type']['value']
+            transceiver_info_dict['type_abbrv_name'] = sfp_type_abbrv_name_data['data']['type_abbrv_name']['value']
             transceiver_info_dict['manufacturer'] = sfp_vendor_name_data['data']['Vendor Name']['value']
             transceiver_info_dict['model'] = sfp_vendor_pn_data['data']['Vendor PN']['value']
             transceiver_info_dict['vendor_rev'] = sfp_vendor_rev_data['data']['Vendor Rev']['value']
@@ -703,6 +677,7 @@ class Sfp(SfpBase):
             sfp_type_raw = self._read_eeprom_specific_bytes((offset + QSFP_DD_TYPE_OFFSET), XCVR_TYPE_WIDTH)
             if sfp_type_raw is not None:
                 sfp_type_data = sfpi_obj.parse_sfp_type(sfp_type_raw, 0)
+                sfp_type_abbrv_name_data = sfpi_obj.parse_sfp_type_abbrv_name(sfp_type_raw, 0)
             else:
                 return None
 
@@ -791,6 +766,7 @@ class Sfp(SfpBase):
                 return None
 
             transceiver_info_dict['type'] = str(sfp_type_data['data']['type']['value'])
+            transceiver_info_dict['type_abbrv_name'] = sfp_type_abbrv_name_data['data']['type_abbrv_name']['value']
             transceiver_info_dict['manufacturer'] = str(sfp_vendor_name_data['data']['Vendor Name']['value'])
             transceiver_info_dict['model'] = str(sfp_vendor_pn_data['data']['Vendor PN']['value'])
             transceiver_info_dict['vendor_rev'] = str(sfp_vendor_rev_data['data']['Vendor Rev']['value'])
@@ -828,9 +804,7 @@ class Sfp(SfpBase):
                 else:
                     if not self.get_presence():
                         return transceiver_info_dict
-                    elif i == max_retry-1:
-                        pass
-                    else:
+                    elif i < max_retry-1:
                         time.sleep(0.5)
 
             if sfp_interface_bulk_raw is None:
@@ -865,6 +839,7 @@ class Sfp(SfpBase):
             sfp_vendor_date_data = sfpi_obj.parse_vendor_date(sfp_interface_bulk_raw[start : end], 0)
 
             transceiver_info_dict['type'] = sfp_interface_bulk_data['data']['type']['value']
+            transceiver_info_dict['type_abbrv_name'] = sfp_interface_bulk_data['data']['type_abbrv_name']['value']
             transceiver_info_dict['manufacturer'] = sfp_vendor_name_data['data']['Vendor Name']['value']
             transceiver_info_dict['model'] = sfp_vendor_pn_data['data']['Vendor PN']['value']
             transceiver_info_dict['vendor_rev'] = sfp_vendor_rev_data['data']['Vendor Rev']['value']
@@ -959,8 +934,6 @@ class Sfp(SfpBase):
 
         if not self.get_presence():
             return {}
-
-        self._dom_capability_detect()
 
         if self.sfp_type == OSFP_TYPE:
             pass
@@ -1302,7 +1275,7 @@ class Sfp(SfpBase):
             return False
         elif self.sfp_type == QSFP_TYPE:
             return False
-        elif self.sfp_type == OSFP_TYPE or self.sfp_type == QSFP_DD_TYPE:
+        elif self.sfp_type == QSFP_DD_TYPE:
             try:
                 reg_file = open(self.reset_path)
             except IOError as e:
@@ -1509,7 +1482,7 @@ class Sfp(SfpBase):
             return False
         elif self.sfp_type == QSFP_TYPE:
             return False
-        elif self.sfp_type == OSFP_TYPE:
+        elif self.sfp_type == QSFP_DD_TYPE:
             try:
                 reg_file = open(self.lpmode_path)
             except IOError as e:
@@ -1899,7 +1872,7 @@ class Sfp(SfpBase):
             return False
         elif self.sfp_type == QSFP_TYPE:
             return False
-        elif self.sfp_type == OSFP_TYPE:
+        elif self.sfp_type == QSFP_DD_TYPE:
             try:
                 reg_file = open(self.reset_path, "r+")
             except IOError as e:
@@ -1957,7 +1930,7 @@ class Sfp(SfpBase):
                         sysfsfile_eeprom = open(
                             sysfs_sfp_i2c_client_eeprom_path, mode="r+b", buffering=0)
                         buffer = create_string_buffer(1)
-                        buffer[0] = chr(tx_disable_ctl)
+                        buffer[0] = tx_disable_ctl
                         # Write to eeprom
                         sysfsfile_eeprom.seek(offset + SFP_STATUS_CONTROL_OFFSET)
                         sysfsfile_eeprom.write(buffer[0])
@@ -2010,7 +1983,7 @@ class Sfp(SfpBase):
                     else:
                         tx_disable_ctl = channel_state & (~channel)
                     buffer = create_string_buffer(1)
-                    buffer[0] = chr(tx_disable_ctl)
+                    buffer[0] = tx_disable_ctl
                     # Write to eeprom
                     sysfsfile_eeprom = open(
                         self.port_to_eeprom_mapping[self.port_num], "r+b")
@@ -2045,7 +2018,7 @@ class Sfp(SfpBase):
             return False
         elif self.sfp_type == QSFP_TYPE:
             return False
-        elif self.sfp_type == OSFP_TYPE:
+        elif self.sfp_type == QSFP_DD_TYPE:
             try:
                 reg_file = open(self.lpmode_path, "r+")
             except IOError as e:
@@ -2099,7 +2072,7 @@ class Sfp(SfpBase):
                     power_set_bit |= 1 << 1
 
                 buffer = create_string_buffer(1)
-                buffer[0] = chr(power_override_bit | power_set_bit)
+                buffer[0] = power_override_bit | power_set_bit
                 # Write to eeprom
                 sysfsfile_eeprom = open(self.port_to_eeprom_mapping[self.port_num], "r+b")
                 sysfsfile_eeprom.seek(QSFP_POWEROVERRIDE_OFFSET)

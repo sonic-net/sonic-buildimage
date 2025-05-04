@@ -171,9 +171,9 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[0] = i2c_new_device(adapter, &ix8c_i2c_devices[0]);		// pca9546
-		g_client[1] = i2c_new_device(adapter, &ix8c_i2c_devices[1]);		// pca9548
-		g_client[2] = i2c_new_device(adapter, &ix8c_i2c_devices[16]);		// CPU Linking Board at CPU's I2C Bus
+		g_client[0] = i2c_new_client_device(adapter, &ix8c_i2c_devices[0]);		// pca9546
+		g_client[1] = i2c_new_client_device(adapter, &ix8c_i2c_devices[1]);		// pca9548
+		g_client[2] = i2c_new_client_device(adapter, &ix8c_i2c_devices[16]);		// CPU Linking Board at CPU's I2C Bus
 		i2c_put_adapter(adapter);
 	}
 
@@ -184,9 +184,9 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[3] = i2c_new_device(adapter, &ix8c_i2c_devices[10]);		// CPLD_1
-		g_client[4] = i2c_new_device(adapter, &ix8c_i2c_devices[17]);		// CPLD_4
-		g_client[5] = i2c_new_device(adapter, &ix8c_i2c_devices[18]);		// CPLD_6
+		g_client[3] = i2c_new_client_device(adapter, &ix8c_i2c_devices[10]);		// CPLD_1
+		g_client[4] = i2c_new_client_device(adapter, &ix8c_i2c_devices[17]);		// CPLD_4
+		g_client[5] = i2c_new_client_device(adapter, &ix8c_i2c_devices[18]);		// CPLD_6
 		i2c_put_adapter(adapter);
 	}
 
@@ -197,7 +197,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[6] = i2c_new_device(adapter, &ix8c_i2c_devices[11]);		// CPLD_2
+		g_client[6] = i2c_new_client_device(adapter, &ix8c_i2c_devices[11]);		// CPLD_2
 		i2c_put_adapter(adapter);
 	}
 
@@ -208,8 +208,8 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[7] = i2c_new_device(adapter, &ix8c_i2c_devices[12]);		// CPLD_3
-		g_client[8] = i2c_new_device(adapter, &ix8c_i2c_devices[2]);		// MB_BOARDINFO_EEPROM
+		g_client[7] = i2c_new_client_device(adapter, &ix8c_i2c_devices[12]);		// CPLD_3
+		g_client[8] = i2c_new_client_device(adapter, &ix8c_i2c_devices[2]);		// MB_BOARDINFO_EEPROM
 		i2c_put_adapter(adapter);
 	}
 
@@ -220,8 +220,8 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[9] = i2c_new_device(adapter, &ix8c_i2c_devices[13]);		// MB Board Data
-		g_client[10] = i2c_new_device(adapter, &ix8c_i2c_devices[14]);		// QSFP:49~52
+		g_client[9] = i2c_new_client_device(adapter, &ix8c_i2c_devices[13]);		// MB Board Data
+		g_client[10] = i2c_new_client_device(adapter, &ix8c_i2c_devices[14]);		// QSFP:49~52
 		i2c_put_adapter(adapter);
 	}
 
@@ -232,7 +232,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[11] = i2c_new_device(adapter, &ix8c_i2c_devices[3]);		// pca9548_1 SFP
+		g_client[11] = i2c_new_client_device(adapter, &ix8c_i2c_devices[3]);		// pca9548_1 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -243,7 +243,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[12] = i2c_new_device(adapter, &ix8c_i2c_devices[4]);		// pca9548_2 SFP
+		g_client[12] = i2c_new_client_device(adapter, &ix8c_i2c_devices[4]);		// pca9548_2 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -254,7 +254,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[13] = i2c_new_device(adapter, &ix8c_i2c_devices[5]);		// pca9548_3 SFP
+		g_client[13] = i2c_new_client_device(adapter, &ix8c_i2c_devices[5]);		// pca9548_3 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -265,7 +265,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[14] = i2c_new_device(adapter, &ix8c_i2c_devices[6]);		// pca9548_4 SFP
+		g_client[14] = i2c_new_client_device(adapter, &ix8c_i2c_devices[6]);		// pca9548_4 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -276,7 +276,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[15] = i2c_new_device(adapter, &ix8c_i2c_devices[7]);		// pca9548_5 SFP
+		g_client[15] = i2c_new_client_device(adapter, &ix8c_i2c_devices[7]);		// pca9548_5 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -287,7 +287,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[16] = i2c_new_device(adapter, &ix8c_i2c_devices[8]);		// pca9548_6 SFP
+		g_client[16] = i2c_new_client_device(adapter, &ix8c_i2c_devices[8]);		// pca9548_6 SFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -298,7 +298,7 @@ static int __init ix8c_platform_init(void)
 	}
 	else
 	{
-		g_client[17] = i2c_new_device(adapter, &ix8c_i2c_devices[9]);		// pca9548_7 QSFP
+		g_client[17] = i2c_new_client_device(adapter, &ix8c_i2c_devices[9]);		// pca9548_7 QSFP
 		i2c_put_adapter(adapter);
 	}
 
@@ -311,9 +311,9 @@ static int __init ix8c_platform_init(void)
 		else
 		{
 			if (i < 61)  // SFP28 1~48 EEPROM
-				g_client_port[i - 13] = i2c_new_device(adapter, &ix8c_i2c_devices[19]);
+				g_client_port[i - 13] = i2c_new_client_device(adapter, &ix8c_i2c_devices[19]);
 			else  // QSFP 49~56 EEPROM
-				g_client_port[i - 13] = i2c_new_device(adapter, &ix8c_i2c_devices[15]);
+				g_client_port[i - 13] = i2c_new_client_device(adapter, &ix8c_i2c_devices[15]);
 			i2c_put_adapter(adapter);
 		}
 	}
