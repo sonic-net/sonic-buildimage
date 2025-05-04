@@ -505,7 +505,7 @@ static struct led_classdev accton_as7712_32x_leds[] = {
 		.brightness_set	 = accton_as7712_32x_led_diag_set,
 		.brightness_get	 = accton_as7712_32x_led_diag_get,
 		.flags			 = LED_CORE_SUSPENDRESUME,
-		.max_brightness	 = LED_MODE_RED,
+		.max_brightness	 = LED_MODE_GREEN,
 	},
 	[LED_TYPE_LOC] = {
 		.name			 = "accton_as7712_32x_led::loc",
