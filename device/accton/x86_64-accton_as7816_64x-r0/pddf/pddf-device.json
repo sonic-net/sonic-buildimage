@@ -52,7 +52,8 @@
         ],
         "custom_kos":
         [
-            "pddf_custom_fan"
+            "pddf_custom_fan",
+            "pddf_custom_psu"
         ]
 
     
