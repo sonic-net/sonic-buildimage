@@ -1,0 +1,230 @@
+diff --git a/debian/control b/debian/control
+index 4784e6b23..ef8895a41 100644
+--- a/debian/control
++++ b/debian/control
+@@ -23,7 +23,7 @@ Build-Depends: bison,
+                librtr-dev (>= 0.8.0~) <!pkg.frr.nortrlib>,
+                libsnmp-dev,
+                libssh-dev <!pkg.frr.nortrlib>,
+-               libyang2-dev (>= 2.1.128),
++               libyang2-dev (>= 2.1.128) | libyang-dev ( >= 3.0.3),
+                lsb-base,
+                pkg-config,
+                protobuf-c-compiler,
+diff --git a/lib/vty.c b/lib/vty.c
+index 1c9cff478..d3e617f88 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -39,6 +39,7 @@
+ #include "libfrr.h"
+ #include "frrstr.h"
+ #include "lib_errors.h"
++#include <libyang/version.h>
+ #include "northbound_cli.h"
+ #include "printfrr.h"
+ #include "json.h"
+@@ -3668,15 +3669,24 @@ static ssize_t vty_mgmt_libyang_print(void *user_data, const void *buf,
+ }
+ 
+ static void vty_out_yang_error(struct vty *vty, LYD_FORMAT format,
+-			       struct ly_err_item *ei)
++			       const struct ly_err_item *ei)
+ {
++#if (LY_VERSION_MAJOR < 3)
++#define data_path path
++#else
++#define data_path data_path
++#endif
+ 	bool have_apptag = ei->apptag && ei->apptag[0] != 0;
+-	bool have_path = ei->path && ei->path[0] != 0;
++	bool have_path = ei->data_path && ei->data_path[0] != 0;
+ 	bool have_msg = ei->msg && ei->msg[0] != 0;
+ 	const char *severity = NULL;
+ 	const char *evalid = NULL;
+ 	const char *ecode = NULL;
++#if (LY_VERSION_MAJOR < 3)
+ 	LY_ERR err = ei->no;
++#else
++	LY_ERR err = ei->err;
++#endif
+ 
+ 	if (ei->level == LY_LLERR)
+ 		severity = "error";
+@@ -3701,7 +3711,8 @@ static void vty_out_yang_error(struct vty *vty, LYD_FORMAT format,
+ 			vty_out(vty, "<error-validation>%s</error-validation>\n",
+ 				evalid);
+ 		if (have_path)
+-			vty_out(vty, "<error-path>%s</error-path>\n", ei->path);
++			vty_out(vty, "<error-path>%s</error-path>\n",
++				ei->data_path);
+ 		if (have_apptag)
+ 			vty_out(vty, "<error-app-tag>%s</error-app-tag>\n",
+ 				ei->apptag);
+@@ -3720,7 +3731,7 @@ static void vty_out_yang_error(struct vty *vty, LYD_FORMAT format,
+ 		if (evalid)
+ 			vty_out(vty, ", \"error-validation\": \"%s\"", evalid);
+ 		if (have_path)
+-			vty_out(vty, ", \"error-path\": \"%s\"", ei->path);
++			vty_out(vty, ", \"error-path\": \"%s\"", ei->data_path);
+ 		if (have_apptag)
+ 			vty_out(vty, ", \"error-app-tag\": \"%s\"", ei->apptag);
+ 		if (have_msg)
+@@ -3737,18 +3748,19 @@ static void vty_out_yang_error(struct vty *vty, LYD_FORMAT format,
+ 		if (evalid)
+ 			vty_out(vty, " invalid: %s", evalid);
+ 		if (have_path)
+-			vty_out(vty, " path: %s", ei->path);
++			vty_out(vty, " path: %s", ei->data_path);
+ 		if (have_apptag)
+ 			vty_out(vty, " app-tag: %s", ei->apptag);
+ 		if (have_msg)
+ 			vty_out(vty, " msg: %s", ei->msg);
+ 		break;
+ 	}
++#undef data_path
+ }
+ 
+ static uint vty_out_yang_errors(struct vty *vty, LYD_FORMAT format)
+ {
+-	struct ly_err_item *ei = ly_err_first(ly_native_ctx);
++	const struct ly_err_item *ei = ly_err_first(ly_native_ctx);
+ 	uint count;
+ 
+ 	if (!ei)
+diff --git a/lib/yang.c b/lib/yang.c
+index 03044fc29..2c09d37ba 100644
+--- a/lib/yang.c
++++ b/lib/yang.c
+@@ -11,6 +11,7 @@
+ #include "lib_errors.h"
+ #include "yang.h"
+ #include "yang_translator.h"
++#include <libyang/version.h>
+ #include "northbound.h"
+ 
+ #include "lib/config_paths.h"
+@@ -18,6 +19,17 @@
+ DEFINE_MTYPE_STATIC(LIB, YANG_MODULE, "YANG module");
+ DEFINE_MTYPE_STATIC(LIB, YANG_DATA, "YANG data structure");
+ 
++/* Safe to remove after libyang 2.2.8 */
++#if (LY_VERSION_MAJOR < 3)
++#define yang_lyd_find_xpath3(ctx_node, tree, xpath, format, prefix_data, vars, \
++			     set)                                              \
++	lyd_find_xpath3(ctx_node, tree, xpath, vars, set)
++#else
++#define yang_lyd_find_xpath3(ctx_node, tree, xpath, format, prefix_data, vars, \
++			     set)                                              \
++	lyd_find_xpath3(ctx_node, tree, xpath, LY_VALUE_JSON, NULL, vars, set)
++#endif
++
+ /* libyang container. */
+ struct ly_ctx *ly_native_ctx;
+ 
+@@ -691,7 +703,12 @@ struct yang_data *yang_data_list_find(const struct list *list,
+ }
+ 
+ /* Make libyang log its errors using FRR logging infrastructure. */
+-static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path)
++static void ly_zlog_cb(LY_LOG_LEVEL level, const char *msg, const char *data_path
++#if !(LY_VERSION_MAJOR < 3)
++		       ,
++		       const char *schema_path, uint64_t line
++#endif
++)
+ {
+ 	int priority = LOG_ERR;
+ 
+@@ -708,8 +725,14 @@ static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path)
+ 		break;
+ 	}
+ 
+-	if (path)
+-		zlog(priority, "libyang: %s (%s)", msg, path);
++	if (data_path)
++		zlog(priority, "libyang: %s (%s)", msg, data_path);
++#if !(LY_VERSION_MAJOR < 3)
++	else if (schema_path)
++		zlog(priority, "libyang %s (%s)\n", msg, schema_path);
++	else if (line)
++		zlog(priority, "libyang %s (line %" PRIu64 ")\n", msg, line);
++#endif
+ 	else
+ 		zlog(priority, "libyang: %s", msg);
+ }
+@@ -736,7 +759,8 @@ LY_ERR yang_parse_notification(const char *xpath, LYD_FORMAT format,
+ 		return err;
+ 	}
+ 
+-	err = lyd_find_xpath3(NULL, tree, xpath, NULL, &set);
++	err = yang_lyd_find_xpath3(NULL, tree, xpath, LY_VALUE_JSON, NULL, NULL,
++				   &set);
+ 	if (err) {
+ 		zlog_err("Failed to parse notification: %s", ly_last_errmsg());
+ 		lyd_free_all(tree);
+@@ -795,7 +819,7 @@ char *yang_convert_lyd_format(const char *data, size_t data_len,
+ 
+ 	assert(out_format != LYD_LYB);
+ 
+-	if (in_format != LYD_LYB && !MGMT_MSG_VALIDATE_NUL_TERM(data, data_len)) {
++	if (in_format != LYD_LYB && (!data_len || data[data_len - 1] != 0)) {
+ 		zlog_err("Corrupt input data, no NUL terminating byte");
+ 		return NULL;
+ 	}
+@@ -829,23 +853,29 @@ char *yang_convert_lyd_format(const char *data, size_t data_len,
+ 
+ const char *yang_print_errors(struct ly_ctx *ly_ctx, char *buf, size_t buf_len)
+ {
+-	struct ly_err_item *ei;
++	const struct ly_err_item *ei;
+ 
+ 	ei = ly_err_first(ly_ctx);
+ 	if (!ei)
+ 		return "";
+ 
+ 	strlcpy(buf, "YANG error(s):\n", buf_len);
++#if (LY_VERSION_MAJOR < 3)
++#define data_path path
++#else
++#define data_path data_path
++#endif
+ 	for (; ei; ei = ei->next) {
+-		if (ei->path) {
++		if (ei->data_path) {
+ 			strlcat(buf, " Path: ", buf_len);
+-			strlcat(buf, ei->path, buf_len);
++			strlcat(buf, ei->data_path, buf_len);
+ 			strlcat(buf, "\n", buf_len);
+ 		}
+ 		strlcat(buf, " Error: ", buf_len);
+ 		strlcat(buf, ei->msg, buf_len);
+ 		strlcat(buf, "\n", buf_len);
+ 	}
++#undef data_path
+ 
+ 	ly_err_clean(ly_ctx, NULL);
+ 
+@@ -897,7 +927,12 @@ struct ly_ctx *yang_ctx_new_setup(bool embedded_modules, bool explicit_compile)
+ void yang_init(bool embedded_modules, bool defer_compile)
+ {
+ 	/* Initialize libyang global parameters that affect all containers. */
+-	ly_set_log_clb(ly_log_cb, 1);
++	ly_set_log_clb(ly_zlog_cb
++#if (LY_VERSION_MAJOR < 3)
++		       ,
++		       1
++#endif
++	);
+ 	ly_log_options(LY_LOLOG | LY_LOSTORE);
+ 
+ 	/* Initialize libyang container for native models. */
+@@ -1209,7 +1244,8 @@ LY_ERR yang_lyd_trim_xpath(struct lyd_node **root, const char *xpath)
+ 
+ 	*root = lyd_first_sibling(*root);
+ 
+-	err = lyd_find_xpath3(NULL, *root, xpath, NULL, &set);
++	err = yang_lyd_find_xpath3(NULL, *root, xpath, LY_VALUE_JSON, NULL,
++				   NULL, &set);
+ 	if (err) {
+ 		flog_err_sys(EC_LIB_LIBYANG,
+ 			     "cannot obtain specific result for xpath \"%s\": %s",

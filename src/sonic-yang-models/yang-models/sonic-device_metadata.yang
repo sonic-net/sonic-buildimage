@@ -34,7 +34,7 @@ module sonic-device_metadata {
 
             description "DEVICE_METADATA part of config_db.json";
 
-            container localhost{
+            container localhost {
 
                 leaf hwsku {
                     type stypes:hwsku;
@@ -45,6 +45,20 @@ module sonic-device_metadata {
                         length 1..16;
                     }
                     description "asic_id is unique identifier of the asic used by SAI for initialization.";
+                }
+
+                leaf hostname {
+                    type stypes:hostname;
+                }
+
+                leaf platform {
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf mac {
+                    type yang:mac-address;
                 }
 
                 leaf default_bgp_status {
@@ -65,20 +79,6 @@ module sonic-device_metadata {
                         pattern "separated|unified|split|split-unified";
                     }
                     default "unified";
-                }
-
-                leaf hostname {
-                    type stypes:hostname;
-                }
-
-                leaf platform {
-                    type string {
-                        length 1..255;
-                    }
-                }
-
-                leaf mac {
-                    type yang:mac-address;
                 }
 
                 leaf default_pfcwd_status {
@@ -257,6 +257,7 @@ module sonic-device_metadata {
 
                 leaf-list supporting_bulk_counter_groups {
                     type string;
+                    ordered-by user;
                     description "This field contains a list of counter groups that support bulk operation.";
                 }
 

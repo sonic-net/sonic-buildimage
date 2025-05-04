@@ -1,0 +1,45 @@
+From 18dd3a625f408e0b22258fcf30be25a94abf7d3e Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Mon, 3 Mar 2025 06:16:41 -0500
+Subject: [PATCH] union: fix assert in sort
+
+An assert was being hit in lyplg_type_sort_union() when evaluating
+leafrefs due to not using the realtype node.
+
+Signed-off-by: Michal Vasko <mvasko@cesnet.cz>
+Signed-off-by: Brad House <brad@brad-house.com>
+---
+ src/plugins_types/union.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/src/plugins_types/union.c b/src/plugins_types/union.c
+index 61dde35d9..74ac0d64f 100644
+--- a/src/plugins_types/union.c
++++ b/src/plugins_types/union.c
+@@ -515,6 +515,7 @@ lyplg_type_sort_union(const struct ly_ctx *ctx, const struct lyd_value *val1, co
+     int rc = LY_SUCCESS;
+     LY_ARRAY_COUNT_TYPE u;
+     struct lysc_type **types;
++    struct lysc_type *type;
+ 
+     if (val1->subvalue->value.realtype == val2->subvalue->value.realtype) {
+         return val1->subvalue->value.realtype->plugin->sort(ctx, &val1->subvalue->value, &val2->subvalue->value);
+@@ -523,10 +524,16 @@ lyplg_type_sort_union(const struct ly_ctx *ctx, const struct lyd_value *val1, co
+     /* compare according to the order of types */
+     types = ((struct lysc_type_union *)val1->realtype)->types;
+     LY_ARRAY_FOR(types, u) {
+-        if (types[u] == val1->subvalue->value.realtype) {
++        if (types[u]->basetype == LY_TYPE_LEAFREF) {
++            type = ((struct lysc_type_leafref *)types[u])->realtype;
++        } else {
++            type = types[u];
++        }
++
++        if (type == val1->subvalue->value.realtype) {
+             rc = 1;
+             break;
+-        } else if (types[u] == val2->subvalue->value.realtype) {
++        } else if (type == val2->subvalue->value.realtype) {
+             rc = -1;
+             break;
+         }
