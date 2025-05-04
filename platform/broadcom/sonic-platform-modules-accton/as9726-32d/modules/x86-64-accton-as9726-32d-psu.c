@@ -33,8 +33,9 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include "accton_psu_api.h"
 
-#define MAX_MODEL_NAME          20
+#define MAX_MODEL_NAME          12
 #define MAX_SERIAL_NUMBER       19
 
 static ssize_t show_status(struct device *dev, struct device_attribute *da, char *buf);
@@ -94,15 +95,15 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
     //printk("data->status=0x%x, attr->index=%d,data->index=%d \n", data->status, attr->index, data->index);
     if (attr->index == PSU_PRESENT) {
         if(data->index==0)
-            status = !( (data->status) & 0x1);
-        else
             status = !( (data->status >> 1) & 0x1);
+        else
+            status = !( (data->status) & 0x1);
     }
     else { /* PSU_POWER_GOOD */
         if(data->index==0)
-           status = ( (data->status >> 2) & 0x1);
+           status = ( (data->status >> 3) & 0x1);
         else
-           status = ( (data->status >> 3) & 0x1); 
+           status = ( (data->status >> 2) & 0x1);
     }
 
     return sprintf(buf, "%d\n", status);
@@ -266,6 +267,7 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
 
         /* Read psu status */
         status = as9726_32d_cpld_read(0x60, 0x03);
+        //printk("status=0x%x in %s\n", status, __FUNCTION__);
 
         if (status < 0) {
             dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);
@@ -277,11 +279,11 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
         /* Read model name */
         memset(data->model_name, 0, sizeof(data->model_name));
         memset(data->serial_number, 0, sizeof(data->serial_number));
-        psu_present = (data->status >> (data->index) & 0x1); //0:present, 1:not present
+        psu_present = (data->status >> (1 - data->index) & 0x1); //0:present, 1:not present
        
         if (!psu_present) {
-            status = as9726_32d_psu_read_block(client, 0x20, data->model_name,
-                                               ARRAY_SIZE(data->model_name)-1);                                               
+            status = as9726_32d_psu_read_block(client, 0x21, data->model_name,
+                                               ARRAY_SIZE(data->model_name)-1);
             if (status < 0) {
                 data->model_name[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
@@ -292,14 +294,15 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
                 
             }
              /* Read from offset 0x35 ~ 0x46 (18 bytes) */
-            status = as9726_32d_psu_read_block(client, 0x35,data->serial_number, MAX_SERIAL_NUMBER);
+            status = as9726_32d_psu_read_block(client, 0x3A,data->serial_number,
+                                               ARRAY_SIZE(data->serial_number)-1);
             if (status < 0)
             {
                 data->serial_number[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
                 printk("unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
             }
-            data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
+            data->serial_number[ARRAY_SIZE(data->serial_number)-1]='\0';
         }
 
         data->last_updated = jiffies;
@@ -311,9 +314,81 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
     return data;
 }
 
-module_i2c_driver(as9726_32d_psu_driver);
+int as9726_32d_psu_get_presence(void *client_ptr)
+{
+    int status = 0;
+    int psu_index = 0;
+    int psu_present = 0;
+    struct i2c_client *client = NULL;
+
+    if (!client_ptr)
+        return -EINVAL;
+
+    client = client_ptr;
+    status = as9726_32d_cpld_read(0x60, 0x03);
+    if (status < 0) {
+        dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);
+        return 0;
+    }
+
+    psu_index = (client->addr == 0x58) ? as9726_32d_psu1 : as9726_32d_psu2;
+    if (psu_index == as9726_32d_psu1) {
+        psu_present = !((status >> 1) & 0x1);
+    } else {
+        psu_present = !((status) & 0x1);
+    }
+
+    return psu_present;
+}
+
+int as9726_32d_psu_get_powergood(void *client_ptr)
+{
+    int status = 0;
+    int psu_index = 0;
+    int psu_powergood = 0;
+    struct i2c_client *client = NULL;
+
+    if (!client_ptr)
+        return -EINVAL;
+
+    client = client_ptr;
+    status = as9726_32d_cpld_read(0x60, 0x03);
+    if (status < 0) {
+        dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);
+        return 0;
+    }
+
+    psu_index = (client->addr == 0x58) ? as9726_32d_psu1 : as9726_32d_psu2;
+    if (psu_index == as9726_32d_psu1) {
+        psu_powergood = ((status >> 3) & 0x1);
+    } else {
+        psu_powergood = ((status >> 2) & 0x1);
+    }
+
+    return psu_powergood;
+}
+
+static int __init as9726_32d_psu_init(void)
+{
+    PSU_STATUS_ENTRY access_psu_status = {
+        as9726_32d_psu_get_presence,
+        as9726_32d_psu_get_powergood
+    };
+    register_psu_status_entry(&access_psu_status);
+
+    return i2c_add_driver(&as9726_32d_psu_driver);
+}
+
+static void __exit as9726_32d_psu_exit(void)
+{
+    register_psu_status_entry(NULL);
+    i2c_del_driver(&as9726_32d_psu_driver);
+}
+
 
 MODULE_AUTHOR("Michael Shih <michael_shih@edge-core.com>");
 MODULE_DESCRIPTION("as9726_32d_psu driver");
 MODULE_LICENSE("GPL");
 
+module_init(as9726_32d_psu_init);
+module_exit(as9726_32d_psu_exit);
