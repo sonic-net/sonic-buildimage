@@ -1,0 +1,30 @@
+From bb4e3e94ba004b49f2d984b221fcd16bb3a58d53 Mon Sep 17 00:00:00 2001
+From: TGQ <tianguangqing@ruijie.com.cn>
+Date: Tue, 25 Mar 2025 10:12:47 +0800
+Subject: [PATCH] Summary:fix flashrom build err
+
+BranchName:
+CAFID:
+BUGID:
+WorkPackageName:
+The ratio of self research code(0~1):
+---
+ src/flashrom/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/flashrom/Makefile b/src/flashrom/Makefile
+index 1ebc6363e..70365d648 100644
+--- a/src/flashrom/Makefile
++++ b/src/flashrom/Makefile
+@@ -12,7 +12,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
+ 	pushd ./flashrom-$(FLASHROM_VERSION_FULL)
+ 
+ 	# Check out tag: tags/0.9.7
+-	git checkout -b flashrom-src tags/$(FLASHROM_VERSION_FULL)
++	git checkout -b flashrom-src v$(FLASHROM_VERSION_FULL)
+ 
+ 	# Apply patch series
+ 	stg init
+-- 
+2.25.1
+

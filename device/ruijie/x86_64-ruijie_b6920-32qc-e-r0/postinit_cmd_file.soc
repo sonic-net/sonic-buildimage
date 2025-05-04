@@ -1,0 +1,4 @@
+led load /usr/share/sonic/platform/custom_led.bin
+led auto on
+led start
+linkscan SwPortBitMap=xe,ce,cd

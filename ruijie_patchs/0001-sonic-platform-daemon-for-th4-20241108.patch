@@ -1,0 +1,253 @@
+From e138543cd2b2c7d738f1a17a577e3a98849fa28e Mon Sep 17 00:00:00 2001
+From: philo <philo@micasnetworks.com>
+Date: Fri, 8 Nov 2024 02:54:06 -0600
+Subject: [PATCH] sonic-platform-daemon-for-th4-20241108
+
+Signed-off-by: philo <philo@micasnetworks.com>
+---
+ sonic-xcvrd/setup.cfg                         |   1 -
+ sonic-xcvrd/xcvrd/xcvrd.py                    | 133 +++++++++++++-----
+ .../xcvrd/xcvrd_utilities/port_mapping.py     |  10 +-
+ 3 files changed, 104 insertions(+), 40 deletions(-)
+
+diff --git a/sonic-xcvrd/setup.cfg b/sonic-xcvrd/setup.cfg
+index b7e4789..41975a7 100644
+--- a/sonic-xcvrd/setup.cfg
++++ b/sonic-xcvrd/setup.cfg
+@@ -1,2 +1 @@
+ [aliases]
+-test=pytest
+diff --git a/sonic-xcvrd/xcvrd/xcvrd.py b/sonic-xcvrd/xcvrd/xcvrd.py
+index d1334ec..6342947 100644
+--- a/sonic-xcvrd/xcvrd/xcvrd.py
++++ b/sonic-xcvrd/xcvrd/xcvrd.py
+@@ -636,6 +636,43 @@ def check_port_in_range(range_str, physical_port):
+     return False
+ 
+ 
++def media_key_fuzzy_match(key, media_key):
++    try:
++        media_key_splits = media_key.split(',')
++        media_key = media_key_splits[0]
++
++        max_value = max(len(media_key_splits), 3 - key.count(None))
++
++        result = 0
++
++        if (media_key in key[0]) or (media_key in key[1]):
++            result = result + 1
++        else:
++            return 0
++
++        if len(media_key_splits) == 1:
++            return result/max_value + 0.1
++
++        media_type = media_key_splits[1]
++
++        if (media_type == key[2]):
++            result = result + 1
++        else:
++            return result/max_value
++
++        if len(media_key_splits) == 2:
++            return result/max_value + 0.2
++
++        cable_length = media_key_splits[2]
++
++        if (float(cable_length) == key[3]):
++            result = result + 1
++
++        return result/max_value
++
++    except:
++        return 0
++
+ def get_media_settings_value(physical_port, key):
+     GLOBAL_MEDIA_SETTINGS_KEY = 'GLOBAL_MEDIA_SETTINGS'
+     PORT_MEDIA_SETTINGS_KEY = 'PORT_MEDIA_SETTINGS'
+@@ -672,8 +709,6 @@ def get_media_settings_value(physical_port, key):
+             # fetch those values
+             if key[0] in media_dict:
+                 return media_dict[key[0]]
+-            elif key[0].split('-')[0] in media_dict:
+-                return media_dict[key[0].split('-')[0]]
+             elif key[1] in media_dict:
+                 return media_dict[key[1]]
+             elif DEFAULT_KEY in media_dict:
+@@ -696,13 +731,20 @@ def get_media_settings_value(physical_port, key):
+ 
+         if key[0] in media_dict:
+             return media_dict[key[0]]
+-        elif key[0].split('-')[0] in media_dict:
+-            return media_dict[key[0].split('-')[0]]
+-        elif key[1] in media_dict:
+-            return media_dict[key[1]]
+-        elif DEFAULT_KEY in media_dict:
++
++        retval = None
++        flag = 0
++        for media_key, value in media_dict.items():
++            match_point = media_key_fuzzy_match(key, media_key)
++            if match_point > flag:
++                retval = value
++                flag = match_point
++        if flag > 0:
++            return retval
++
++        if DEFAULT_KEY in media_dict:
+             return media_dict[DEFAULT_KEY]
+-        elif len(default_dict) != 0:
++        if len(default_dict) != 0:
+             return default_dict
+     else:
+         if len(default_dict) != 0:
+@@ -754,7 +796,20 @@ def get_media_settings_key(physical_port, transceiver_dict):
+     else:
+         media_key += '-' + '*'
+ 
+-    return [vendor_key, media_key]
++    media_type_ex = "fiber"
++    try:
++        if (type(media_len) != int) and (type(media_len) != float):
++            media_len = None
++        for key, value in transceiver_dict[physical_port].items():
++            if type(value) != str:
++                continue
++            if value.lower().find("copper") >=0:
++                media_type_ex = "copper"
++                break
++    except Exception as e:
++        helper_logger.log_error("Invalid value for port {}: {}".format(physical_port, str(e)))
++
++    return [vendor_key, media_key, media_type_ex, media_len]
+ 
+ def get_media_val_str_from_dict(media_dict):
+     LANE_STR = 'lane'
+@@ -818,39 +873,40 @@ def notify_media_setting(logical_port_name, transceiver_dict,
+ 
+     for physical_port in physical_port_list:
+         logical_port_list = port_mapping.get_physical_to_logical(physical_port)
+-        num_logical_ports = len(logical_port_list)
+-        logical_idx = logical_port_list.index(logical_port_name)
+-        if not _wrapper_get_presence(physical_port):
+-            helper_logger.log_info("Media {} presence not detected during notify".format(physical_port))
+-            continue
+-        if physical_port not in transceiver_dict:
+-            helper_logger.log_error("Media {} eeprom not populated in transceiver dict".format(physical_port))
+-            continue
++        for logical_idx in range(len(logical_port_list)):
++            num_logical_ports = len(logical_port_list)
++            logical_port_name = logical_port_list[logical_idx]
++            if not _wrapper_get_presence(physical_port):
++                helper_logger.log_info("Media {} presence not detected during notify".format(physical_port))
++                continue
++            if physical_port not in transceiver_dict:
++                helper_logger.log_error("Media {} eeprom not populated in transceiver dict".format(physical_port))
++                continue
+ 
+-        port_name = get_physical_port_name(logical_port_name,
+-                                           ganged_member_num, ganged_port)
+-        ganged_member_num += 1
+-        key = get_media_settings_key(physical_port, transceiver_dict)
+-        media_dict = get_media_settings_value(physical_port, key)
++            port_name = get_physical_port_name(logical_port_name,
++                                            ganged_member_num, ganged_port)
++            ganged_member_num += 1
++            key = get_media_settings_key(physical_port, transceiver_dict)
++            media_dict = get_media_settings_value(physical_port, key)
+ 
+-        if len(media_dict) == 0:
+-            helper_logger.log_error("Error in obtaining media setting for {}".format(logical_port_name))
+-            return
++            if len(media_dict) == 0:
++                helper_logger.log_error("Error in obtaining media setting for {}".format(logical_port_name))
++                return
+ 
+-        fvs = swsscommon.FieldValuePairs(len(media_dict))
++            fvs = swsscommon.FieldValuePairs(len(media_dict))
+ 
+-        index = 0
+-        for media_key in media_dict:
+-            if type(media_dict[media_key]) is dict:
+-                media_val_str = get_media_val_str(num_logical_ports,
+-                                                  media_dict[media_key],
+-                                                  logical_idx)
+-            else:
+-                media_val_str = media_dict[media_key]
+-            fvs[index] = (str(media_key), str(media_val_str))
+-            index += 1
++            index = 0
++            for media_key in media_dict:
++                if type(media_dict[media_key]) is dict:
++                    media_val_str = get_media_val_str(num_logical_ports,
++                                                    media_dict[media_key],
++                                                    logical_idx)
++                else:
++                    media_val_str = media_dict[media_key]
++                fvs[index] = (str(media_key), str(media_val_str))
++                index += 1
+ 
+-        app_port_tbl.set(port_name, fvs)
++            app_port_tbl.set(port_name, fvs)
+ 
+ 
+ def waiting_time_compensation_with_sleep(time_start, time_to_wait):
+@@ -978,6 +1034,7 @@ class CmisManagerTask(threading.Thread):
+ 
+         lport = port_change_event.port_name
+         pport = port_change_event.port_index
++        asic_id = port_change_event.asic_id
+ 
+         if lport in ['PortInitDone']:
+             self.isPortInitDone = True
+@@ -2760,7 +2817,7 @@ class XcvrTableHelper:
+         return self.dom_threshold_tbl[asic_id]
+ 
+     def get_status_tbl(self, asic_id):
+-        return self.status_tbl[asic_id]
++        return self.status_tbl.get(asic_id, None)
+ 
+     def get_pm_tbl(self, asic_id):
+         return self.pm_tbl[asic_id]
+diff --git a/sonic-xcvrd/xcvrd/xcvrd_utilities/port_mapping.py b/sonic-xcvrd/xcvrd/xcvrd_utilities/port_mapping.py
+index 788dc81..a83ea9c 100644
+--- a/sonic-xcvrd/xcvrd/xcvrd_utilities/port_mapping.py
++++ b/sonic-xcvrd/xcvrd/xcvrd_utilities/port_mapping.py
+@@ -1,3 +1,4 @@
++import re
+ from sonic_py_common import daemon_base
+ from sonic_py_common import multi_asic
+ from sonic_py_common.interface import backplane_prefix, inband_prefix, recirc_prefix
+@@ -5,6 +6,12 @@ from swsscommon import swsscommon
+ 
+ SELECT_TIMEOUT_MSECS = 1000
+ 
++def take_port_number(item):
++    # use first number
++    if isinstance(item, str):
++        return int(re.search("\d+", item).group())
++    else:
++        return item
+ 
+ class PortChangeEvent:
+     PORT_ADD = 0
+@@ -57,6 +64,7 @@ class PortMapping:
+             self.physical_to_logical[port_change_event.port_index] = [port_name]
+         else:
+             self.physical_to_logical[port_change_event.port_index].append(port_name)
++            self.physical_to_logical[port_change_event.port_index].sort(key=take_port_number)
+         self.logical_to_asic[port_name] = port_change_event.asic_id
+ 
+     def _handle_port_remove(self, port_change_event):
+@@ -69,7 +77,7 @@ class PortMapping:
+         self.logical_to_asic.pop(port_name)
+ 
+     def get_asic_id_for_logical_port(self, port_name):
+-        return self.logical_to_asic.get(port_name)
++        return self.logical_to_asic.get(port_name, 0)
+ 
+     def is_logical_port(self, port_name):
+         return port_name in self.logical_to_physical
+-- 
+2.25.1
+
