@@ -191,8 +191,10 @@
 #define BCMPKT_LBHDR_TRUNCATE_OFFSET_MD_ETH      53
 /*!  */
 #define BCMPKT_LBHDR_SVP_MD_ETH                  54
+/*!  */
+#define BCMPKT_LBHDR_CNP_OR_CNM_MD_ETH           55
 /*! LBHDR FIELD ID NUMBER */
-#define BCMPKT_LBHDR_FID_COUNT                   55
+#define BCMPKT_LBHDR_FID_COUNT                   56
 /*! \} */
 
 /*! LBHDR field name strings for debugging. */
@@ -252,6 +254,7 @@
     {"TRUNCATE_MD_ETH", BCMPKT_LBHDR_TRUNCATE_MD_ETH},\
     {"TRUNCATE_OFFSET_MD_ETH", BCMPKT_LBHDR_TRUNCATE_OFFSET_MD_ETH},\
     {"SVP_MD_ETH", BCMPKT_LBHDR_SVP_MD_ETH},\
+    {"CNP_OR_CNM_MD_ETH", BCMPKT_LBHDR_CNP_OR_CNM_MD_ETH},\
     {"fid count", BCMPKT_LBHDR_FID_COUNT}
 
 /*!

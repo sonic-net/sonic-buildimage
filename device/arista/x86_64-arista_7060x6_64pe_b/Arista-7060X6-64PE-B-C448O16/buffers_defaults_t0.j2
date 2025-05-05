@@ -1,0 +1,40 @@
+{%- set default_cable = '0m' %}
+
+{%- include 'buffer_ports.j2' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossy_pool": {
+            "size": "164624512",
+            "type": "ingress",
+            "mode": "dynamic"
+        },
+        "egress_lossy_pool": {
+            "size": "164624512",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool": "ingress_lossy_pool",
+            "size": "0",
+            "static_th": "165364160"
+        },
+        "egress_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "1778",
+            "dynamic_th": "1"
+        }
+    },
+{%- endmacro %}
+{%- macro generate_queue_buffers(ports) %}
+    "BUFFER_QUEUE": {
+    {% for port in ports.split(',') %}
+        "{{ port }}|0-9": {
+            "profile" : "egress_lossy_profile"
+        }
+    {%- if not loop.last -%},{% endif %}
+    {% endfor %}
+    }
+{%- endmacro %}

@@ -1,7 +1,7 @@
 {   
     "thermal_control_algorithm": {
         "run_at_boot_up": "false",
-        "fan_speed_when_suspend": "65"
+        "fan_speed_when_suspend": "60"
     },
     "info_types": [
         {
@@ -29,7 +29,7 @@
                 },
                 {
                     "type": "fan.all.set_speed",
-                    "speed": "100"
+                    "speed": "90"
                 }
             ]
         },
@@ -43,10 +43,10 @@
             "actions": [
                 {
                     "type": "thermal.temp_check_and_set_all_fan_speed",
-                    "default_speed": "40",
-                    "threshold1_speed": "55",
-                    "threshold2_speed": "80",
-                    "hightemp_speed": "100"
+                    "default_speed": "45",
+                    "threshold1_speed": "60",
+                    "threshold2_speed": "70",
+                    "hightemp_speed": "90"
                 }
             ]
         },

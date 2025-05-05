@@ -61,6 +61,9 @@
 #  * SONIC_PTF_ENV_PY_VER: Python version for PTF image
 #  *                       Default: mixed
 #  *                       Values: mixed,py3
+#  * ENABLE_MULTIDB: Enable multiple redis database instances.
+#  *                 Default: unset
+#  *                 Values: y
 ###############################################################################
 
 SHELL = /bin/bash
@@ -90,10 +93,10 @@ ifeq ($(USER), root)
 $(error Add your user account to docker group and use your user account to make. root or sudo are not supported!)
 endif
 
-# Check for j2cli availability
-J2_VER := $(shell j2 --version 2>&1 | grep j2cli | awk '{printf $$2}')
+# Check for j2 availability (https://github.com/kpfleming/jinjanator)
+J2_VER := $(shell j2 --version 2>&1 | grep j2 | awk '{printf $$2}')
 ifeq ($(J2_VER),)
-$(error Please install j2cli (sudo pip install j2cli))
+$(error Please install j2 (sudo pip install jinjanator))
 endif
 
 # Check for minimum Docker version on build host
@@ -532,10 +535,12 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) \
                            SONIC_INCLUDE_SYSTEM_TELEMETRY=$(INCLUDE_SYSTEM_TELEMETRY) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
+                           SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
                            SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
+                           INCLUDE_ICCPD=$(INCLUDE_ICCPD) \
                            SONIC_INCLUDE_RESTAPI=$(INCLUDE_RESTAPI) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
@@ -570,6 +575,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
+						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
@@ -608,7 +614,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)" 
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:

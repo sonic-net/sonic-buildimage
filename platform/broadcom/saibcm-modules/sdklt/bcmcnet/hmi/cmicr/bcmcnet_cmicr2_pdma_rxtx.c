@@ -351,6 +351,8 @@ bcmcnet_cmicr2_pdma_driver_attach(struct pdma_dev *dev)
 
     hw->dops.pkt_xmit = cmicr2_pdma_pkt_xmit;
 
+    dev->flags |= PDMA_NO_FCS;
+
     return SHR_E_NONE;
 }
 

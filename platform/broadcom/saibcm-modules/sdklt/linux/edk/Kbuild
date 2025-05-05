@@ -1,0 +1,17 @@
+# -*- Kbuild -*-
+#
+# Linux KNET Callback module.
+#
+# $Copyright:.$
+#
+
+obj-m := linux_ngedk.o
+
+ccflags-y := $(LKM_CFLAGS) \
+             -I$(SDK)/shr/include \
+             -I$(SDK)/bcmdrd/include \
+             -I$(SDK)/linux/include \
+             -I$(SDK)/linux/knet/include \
+             -I$(SDK)/linux/knet
+
+linux_ngedk-y := ngedk_main.o

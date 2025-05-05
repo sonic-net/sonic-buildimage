@@ -32,7 +32,7 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     }
 
     return_value_map = {
-        "['vtysh', '-c', 'show bgp vrfs json']": (0, "{\"vrfs\": {\"default\": {}}}", ""),
+        "['vtysh', '-H', '/dev/null', '-c', 'show bgp vrfs json']": (0, "{\"vrfs\": {\"default\": {}}}", ""),
         "['vtysh', '-c', 'show bgp vrf default neighbors json']": (0, "{\"10.10.10.1\": {}, \"20.20.20.1\": {}, \"fc00:10::1\": {}}", "")
     }
 
@@ -150,6 +150,18 @@ def test_add_peer_ipv6():
     for constant in load_constant_files():
         m = constructor(constant)
         res = m.set_handler("fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
+
+def test_add_peer_in_vnet():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("Vnet-10|30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
+
+def test_add_peer_ipv6_in_vnet():
+    for constant in load_constant_files():
+        m = constructor(constant)
+        res = m.set_handler("Vnet-10|fc00:20::1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': 'fc00:20::20', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
         assert res, "Expect True return value"
 
 @patch('bgpcfgd.managers_bgp.log_warn')

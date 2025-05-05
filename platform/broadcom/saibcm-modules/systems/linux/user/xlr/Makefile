@@ -60,14 +60,12 @@ endif
 
 export SDK
 
-override kernel_version=5_10
+override kernel_version=6_6
 platform=xlr
 
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 export ADD_TO_CFLAGS
 export BR_NO_CCACHE
-
 
 include ${SDK}/make/Make.linux
 

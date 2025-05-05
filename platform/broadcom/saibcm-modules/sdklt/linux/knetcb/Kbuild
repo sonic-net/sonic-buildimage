@@ -37,6 +37,5 @@ ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
              -I$(SDK)/linux/knet/generated \
              $(INCLUDES)
 
-
 linux_ngknetcb-y := $(SDK_PMD_KOBJS) \
                     ngknetcb_main.o

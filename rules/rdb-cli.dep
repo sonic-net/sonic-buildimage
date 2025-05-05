@@ -1,0 +1,9 @@
+
+SPATH       := $($(RDB-CLI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/rdb-cli.mk rules/rdb-cli.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(RDB-CLI)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(RDB-CLI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(RDB-CLI)_DEP_FILES   := $(DEP_FILES)

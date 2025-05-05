@@ -40,9 +40,16 @@ module sonic-vlan {
 	import sonic-interface {
 		prefix intf;
 	}
+	
+	import sonic-vnet {
+		prefix svnet;
+	}
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2025-03-06 {
+		description "Add leaf vnet_name";
+	}
 
 	revision 2024-03-07 {
 		description "Add Constraints that are implemented in CLI";
@@ -86,6 +93,13 @@ module sonic-vlan {
 						path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
 					}
 				}
+				
+				leaf vnet_name {
+					description "Reference to the name of a VNET in sonic-vnet model";
+					type leafref {
+						path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+					}   
+				}
 
 				leaf nat_zone {
 					description "NAT Zone for the vlan interface";
@@ -123,6 +137,10 @@ module sonic-vlan {
 					default disable;
 				}
 
+				leaf mac_addr {
+					description "Assign administrator-provided MAC address to Interface";
+					type yang:mac-address;
+				}
 
 				leaf loopback_action {
 					description "Packet action when a packet ingress and gets routed on the same IP interface";
@@ -266,7 +284,7 @@ module sonic-vlan {
 							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
 						}
 					}
-					must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:dst_port=current()])" 
+					must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:dst_port=current()])"
 					{
 						error-message "Port is used as a destination port in a mirror session.";
 					}

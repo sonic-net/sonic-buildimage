@@ -8,6 +8,7 @@ StartLimitIntervalSec=1200
 StartLimitBurst=3
 
 [Service]
+TimeoutStartSec=180
 User={{ sonicadmin_user }}
 ExecStartPre=/usr/local/bin/write_standby.py
 ExecStartPre=/usr/local/bin/mark_dhcp_packet.py

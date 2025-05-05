@@ -19,6 +19,16 @@
         }
     },
 
+    "VRF_TEST_INVALID_LONG__NAME": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "VrfNameTooLong!!!"
+                }]
+            }
+        }
+    },
+
     "VRF_TEST_WITH_FALLBACK": {
         "sonic-vrf:sonic-vrf": {
             "sonic-vrf:VRF": {

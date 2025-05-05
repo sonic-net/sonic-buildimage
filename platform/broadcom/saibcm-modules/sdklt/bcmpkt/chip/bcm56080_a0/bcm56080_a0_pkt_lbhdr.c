@@ -250,6 +250,7 @@ const bcmpkt_lbhdr_fget_t bcm56080_a0_lbhdr_fget = {
         NULL,
         NULL,
         NULL,
+        NULL,
         NULL
     }
 };
@@ -311,6 +312,7 @@ const bcmpkt_lbhdr_fset_t bcm56080_a0_lbhdr_fset = {
         NULL,
         NULL,
         NULL,
+        NULL,
         NULL
     }
 };
@@ -331,7 +333,7 @@ static int bcm56080_a0_lbhdr_view_infos[BCMPKT_LBHDR_FID_COUNT] = {
      -1, -1, -1, -1, -1, -1, -1, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-     -2, -2, -2, -2, -2, -2, -2,
+     -2, -2, -2, -2, -2, -2, -2, -2,
 };
 
 

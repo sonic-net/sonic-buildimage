@@ -34,6 +34,14 @@
 
 #define MODULE_PARAM(n, t, p)   module_param(n, t, p)
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add(_dev, _napi, _poll, _weight)
+#else
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add_weight(_dev, _napi, _poll, _weight)
+#endif
+
 /*
  * The eth_hw_addr_set was added in Linux 5.15, but later backported
  * to various longterm releases, so we need a more advanced check with

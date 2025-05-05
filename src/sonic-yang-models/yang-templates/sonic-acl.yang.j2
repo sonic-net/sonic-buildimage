@@ -13,6 +13,10 @@ module sonic-acl {
 	import ietf-inet-types {
 		prefix inet;
 	}
+	
+	import ietf-yang-types {
+		prefix yang;
+	}
 
 	import sonic-types {
 		prefix stypes;
@@ -84,6 +88,11 @@ module sonic-acl {
 					}
 				}
 
+				leaf INNER_SRC_MAC_REWRITE_ACTION {
+					description "Inner Source Mac-adress rewrite action mapped to mac address";
+					type yang:mac-address;
+				}
+
 				leaf IP_TYPE {
 					type stypes:ip_type;
 				}
@@ -112,6 +121,11 @@ module sonic-acl {
 						}
 
 						leaf DST_IP {
+							type inet:ipv4-prefix;
+						}
+
+						leaf INNER_SRC_IP {
+							description "Source IP prefix for inner packet";
 							type inet:ipv4-prefix;
 						}
 					}
@@ -255,6 +269,11 @@ module sonic-acl {
 					}
 				}
 
+				leaf TUNNEL_VNI {
+					description "VXLAN Network Identifier";
+					type stypes:vnid_type;
+				}
+
 				leaf PCP {
 					when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/../acl:ACL_TABLE_NAME]/acl:type = 'L2')";
 					type string {
@@ -281,6 +300,11 @@ module sonic-acl {
 					type string {
 						pattern '0[xX][0-9a-fA-F]{1,2}/0[xX][0-9a-fA-F]{1,2}';
 					}
+				}
+
+				leaf TUNNEL_TERM {
+					description "Tunnel Termination Flag";
+					type boolean;
 				}
 			}
 			/* end of ACL_RULE_LIST */
