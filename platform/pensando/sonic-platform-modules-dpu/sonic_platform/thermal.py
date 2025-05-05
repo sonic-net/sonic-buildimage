@@ -28,12 +28,13 @@ class Thermal(ThermalBase):
         'Die Temperature'
     ]
 
+    # [ Sensor-Name, sysfs, low_threshold, high_threshold, critical_low, critical_high]
     SENSOR_MAPPING_MTFUJI = [
-        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input"],
-        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input"],
-        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input"],
-        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input"],
-        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input"]
+        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
+        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input", 1, 110, -10, 130]
     ]
 
     @classmethod
@@ -123,6 +124,30 @@ class Thermal(ThermalBase):
                 pass
         return float(temperature)
 
+    def get_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of thermal
+
+        Returns:
+            A float number, the high threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        if self.board_id == 130:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][3])
+        raise NotImplementedError
+
+    def get_low_threshold(self):
+        """
+        Retrieves the low threshold temperature of thermal
+
+        Returns:
+            A float number, the low threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        if self.board_id == 130:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][2])
+        raise NotImplementedError
+
     def get_high_critical_threshold(self):
         """
         Retrieves the high critical threshold temperature of thermal
@@ -132,25 +157,26 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         temperature = 0.0
-        if(self.get_presence()):
+        if self.board_id != 130:
             try :
                 temp_file = self.temp_dir +'/temp{0}_crit'.format(str(self.index))
                 temperature = float(open(temp_file).read()) / 1000.0
             except Exception:
                 pass
+        else:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][5])
         return float(temperature)
 
-    def set_high_critical_threshold(self, temperature):
+    def get_low_critical_threshold(self):
         """
-        Sets the critical high threshold temperature of thermal
-
-        Args :
-            temperature: A float number up to nearest thousandth of one degree Celsius,
-            e.g. 30.125
+        Retrieves the low critical threshold temperature of thermal
 
         Returns:
-            A boolean, True if threshold is set successfully, False if not
+            A float number, the low critical threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return True
+        if self.board_id == 130:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][4])
+        raise NotImplementedError
 
 

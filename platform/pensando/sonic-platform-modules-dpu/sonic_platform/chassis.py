@@ -22,7 +22,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 NUM_THERMAL = 2
-NUM_VOLTAGE_SENSORS = 3
+NUM_VOLTAGE_SENSORS = 6
 NUM_CURRENT_SENSORS = 3
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
