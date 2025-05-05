@@ -298,16 +298,17 @@ class BGPPeerMgrBase(Manager):
         # remove the "listen range" associated with the peer group, and only then proceed
         # with deleting the peer group.
         if self.peer_type == 'dynamic' or self.peer_type == 'sentinels':
-            ip_ranges = self.directory.get(self.db_name, self.table_name, vrf + '|' + nbr)["ip_range"]
-            ip_ranges = ip_ranges.split(',')
-            for ip_range in ip_ranges:
-                log_debug("Deleting listen range for peer-group {}, ip_range {}".format(ip_range, nbr))
-                cmd = self.templates["no listen range"].render(ip_range=ip_range, peer_group=nbr)
-                ret_code = self.apply_op(cmd, vrf)
-                if ret_code:
-                    log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
-                else:
-                    log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
+            ip_ranges = self.directory.get(self.db_name, self.table_name, vrf + '|' + nbr).get("ip_range")
+            if ip_ranges is not None:
+                ip_ranges = ip_ranges.split(',')
+                for ip_range in ip_ranges:
+                    log_debug("Deleting listen range for peer-group {}, ip_range {}".format(ip_range, nbr))
+                    cmd = self.templates["no listen range"].render(ip_range=ip_range, peer_group=nbr)
+                    ret_code = self.apply_op(cmd, vrf)
+                    if ret_code:
+                        log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
+                    else:
+                        log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
         cmd = self.templates["delete"].render(neighbor_addr=nbr)
         ret_code = self.apply_op(cmd, vrf)
         if ret_code:
