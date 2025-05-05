@@ -61,6 +61,7 @@ yang_files = [
     'sonic-feature.yang',
     'sonic-fips.yang',
     'sonic-hash.yang',
+    'sonic-trimming.yang',
     'sonic-system-defaults.yang',
     'sonic-interface.yang',
     'sonic-kdump.yang',
