@@ -1,0 +1,1 @@
+../../common/sonic_platform/hwaccess.py
