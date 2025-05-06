@@ -110,7 +110,7 @@ pyasn1-modules==0.2.8
 pyelftools==0.29
 pyfakefs==5.7.4
 pygments==2.14.0
-pygobject==3.42.2
+pygobject==3.50.0
 pyhamcrest==2.0.3
 pyjwt==2.6.0
 pylint==2.16.2
