@@ -10,6 +10,7 @@ else:
     import mock
 
 import pytest
+import json
 
 from sonic_py_common import device_info
 
@@ -120,23 +121,42 @@ class TestDeviceInfo(object):
             open_mocked.assert_called_once_with(device_info.SONIC_VERSION_YAML_PATH)
 
     @mock.patch("sonic_py_common.device_info.get_platform_info")
-    def test_is_chassis(self, mock_platform_info):
+    @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis")
+    def test_is_chassis(self, mock_is_disaggregated_chassis, mock_platform_info):
         mock_platform_info.return_value = {"switch_type": "npu"}
+        mock_is_disaggregated_chassis.return_value = False
         assert device_info.is_chassis() == False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
 
         mock_platform_info.return_value = {"switch_type": "voq"}
+        mock_is_disaggregated_chassis.return_value = False
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
 
+        mock_platform_info.return_value = {"switch_type": "voq"}
+        mock_is_disaggregated_chassis.return_value = True
+        assert device_info.is_voq_chassis() == True
+        assert device_info.is_packet_chassis() == False
+        assert device_info.is_chassis() == False
+
         mock_platform_info.return_value = {"switch_type": "chassis-packet"}
+        mock_is_disaggregated_chassis.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == True
         assert device_info.is_chassis() == True
 
+        mock_platform_info.return_value = {"switch_type": "dummy-sup",
+                                           "asic_type": "vs"}
+        mock_is_disaggregated_chassis.return_value = False
+        assert device_info.is_voq_chassis() == False
+        assert device_info.is_packet_chassis() == False
+        assert device_info.is_virtual_chassis() == True
+        assert device_info.is_chassis() == True
+
         mock_platform_info.return_value = {}
+        mock_is_disaggregated_chassis.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False
@@ -161,6 +181,176 @@ class TestDeviceInfo(object):
         assert mock_machine_info.called_once()
         assert mock_hwsku.called_once()
         mock_cfg_inst.get_table.assert_called_once_with("DEVICE_METADATA")
+
+    @mock.patch("os.path.isfile")
+    @mock.patch("{}.open".format(BUILTINS))
+    @mock.patch("sonic_py_common.device_info.get_path_to_platform_dir")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_platform_json_data(self, mock_get_platform, mock_get_path_to_platform_dir, mock_open, mock_isfile):
+        mock_get_platform.return_value = "x86_64-mlnx_msn2700-r0"
+        mock_get_path_to_platform_dir.return_value = "/usr/share/sonic/device"
+        mock_isfile.return_value = True
+        platform_json_data = {
+            "chassis": {
+                "name": "MSN2700"
+            }
+        }
+        open_mocked = mock.mock_open(read_data=json.dumps(platform_json_data))
+        mock_open.side_effect = open_mocked
+
+        result = device_info.get_platform_json_data()
+        assert result == platform_json_data
+        assert mock_open.call_count == 1
+
+        # Test case where platform is None
+        mock_get_platform.return_value = None
+        result = device_info.get_platform_json_data()
+        assert result is None
+
+        # Test case where platform path is None
+        mock_get_platform.return_value = "x86_64-mlnx_msn2700-r0"
+        mock_get_path_to_platform_dir.return_value = None
+        result = device_info.get_platform_json_data()
+        assert result is None
+
+        # Test case where platform.json file does not exist
+        mock_get_path_to_platform_dir.return_value = "/usr/share/sonic/device"
+        mock_isfile.return_value = False
+        result = device_info.get_platform_json_data()
+        assert result is None
+
+        # Test case where JSON decoding fails
+        mock_isfile.return_value = True
+        open_mocked = mock.mock_open(read_data="invalid json")
+        mock_open.side_effect = open_mocked
+        result = device_info.get_platform_json_data()
+        assert result is None
+
+    @mock.patch("sonic_py_common.device_info.get_platform_json_data")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_is_smartswitch(self, mock_get_platform, mock_get_platform_json_data):
+        # Test case where platform is None
+        mock_get_platform.return_value = None
+        assert device_info.is_smartswitch() == False
+
+        # Test case where platform.json data is None
+        mock_get_platform.return_value="x86_64-mlnx_msn2700-r0"
+        mock_get_platform_json_data.return_value=None
+        assert device_info.is_smartswitch() == False
+
+        # Test case where platform.json data does not contain "DPUS"
+        mock_get_platform_json_data.return_value={}
+        assert device_info.is_smartswitch() == False
+
+        # Test case where platform.json data contains "DPUS"
+        mock_get_platform_json_data.return_value={"DPUS": {}}
+        assert device_info.is_smartswitch() == True
+
+    @mock.patch("sonic_py_common.device_info.get_platform_json_data")
+    @mock.patch("sonic_py_common.device_info.is_smartswitch")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_is_dpu(self, mock_get_platform, mock_is_smartswitch, mock_get_platform_json_data):
+        # Test case where platform is None
+        mock_get_platform.return_value=None
+        assert device_info.is_dpu() == False
+
+        # Test case where platform is not a smart switch
+        mock_get_platform.return_value="x86_64-mlnx_msn2700-r0"
+        mock_is_smartswitch.return_value=False
+        assert device_info.is_dpu() == False
+
+        # Test case where platform is a smart switch but no DPU data in platform.json
+        mock_is_smartswitch.return_value=True
+        mock_get_platform_json_data.return_value={}
+        assert device_info.is_dpu() == False
+
+        # Test case where platform is a smart switch and DPU data is present in platform.json
+        mock_get_platform_json_data.return_value={"DPU": {}}
+        assert device_info.is_dpu() == True
+
+        # Test case where platform is a smart switch and DPU data is present in platform.json
+        mock_get_platform_json_data.return_value={"DPUS": {}}
+        assert device_info.is_dpu() == False
+
+    @mock.patch("sonic_py_common.device_info.get_platform_json_data")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_dpu_info(self, mock_get_platform, mock_get_platform_json_data):
+        # Test case where platform is None
+        mock_get_platform.return_value = None
+        assert device_info.get_dpu_info() == {}
+
+        # Test case where platform.json data is None
+        mock_get_platform.return_value = "x86_64-mlnx_msn2700-r0"
+        mock_get_platform_json_data.return_value = None
+        assert device_info.get_dpu_info() == {}
+
+        # Test case where platform.json data does not contain "DPUS" or "DPU"
+        mock_get_platform_json_data.return_value = {}
+        assert device_info.get_dpu_info() == {}
+
+        # Test case where platform.json data contains "DPUS"
+        mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
+        assert device_info.get_dpu_info() == {"dpu0": {}, "dpu1": {}}
+
+        # Test case where platform.json data contains "DPU"
+        mock_get_platform_json_data.return_value = {"DPU": {"dpu0": {}}}
+        assert device_info.get_dpu_info() == {"dpu0": {}}
+
+        # Test case where platform.json data does not contain "DPU" or "DPUS"
+        mock_get_platform_json_data.return_value = {"chassis": {}}
+        assert device_info.get_dpu_info() == {}
+
+    @mock.patch("sonic_py_common.device_info.get_platform_json_data")
+    @mock.patch("sonic_py_common.device_info.is_dpu")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_num_dpus(self, mock_get_platform, mock_is_dpu, mock_get_platform_json_data):
+        # Test case where platform is None
+        mock_get_platform.return_value = None
+        assert device_info.get_num_dpus() == 0
+
+        # Test case where platform is a DPU
+        mock_get_platform.return_value = "x86_64-mlnx_msn2700-r0"
+        mock_is_dpu.return_value = True
+        assert device_info.get_num_dpus() == 0
+
+        # Test case where platform.json data is None
+        mock_is_dpu.return_value = False
+        mock_get_platform_json_data.return_value = None
+        assert device_info.get_num_dpus() == 0
+
+        # Test case where platform.json data does not contain DPUs
+        mock_get_platform_json_data.return_value = {}
+        assert device_info.get_num_dpus() == 0
+
+        # Test case where platform.json data contains DPUs
+        mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
+        assert device_info.get_num_dpus() == 2
+
+    @mock.patch("sonic_py_common.device_info.get_platform_json_data")
+    @mock.patch("sonic_py_common.device_info.is_dpu")
+    @mock.patch("sonic_py_common.device_info.get_platform")
+    def test_get_dpu_list(self, mock_get_platform, mock_is_dpu, mock_get_platform_json_data):
+        # Test case where platform is None
+        mock_get_platform.return_value = None
+        assert device_info.get_dpu_list() == []
+
+        # Test case where platform is a DPU
+        mock_get_platform.return_value = "x86_64-mlnx_msn2700-r0"
+        mock_is_dpu.return_value = True
+        assert device_info.get_dpu_list() == []
+
+        # Test case where platform.json data is None
+        mock_is_dpu.return_value = False
+        mock_get_platform_json_data.return_value = None
+        assert device_info.get_dpu_list() == []
+
+        # Test case where platform.json data does not contain DPUs
+        mock_get_platform_json_data.return_value = {}
+        assert device_info.get_dpu_list() == []
+
+        # Test case where platform.json data contains DPUs
+        mock_get_platform_json_data.return_value = {"DPUS": {"dpu0": {}, "dpu1": {}}}
+        assert device_info.get_dpu_list() == ["dpu0", "dpu1"]
 
     @classmethod
     def teardown_class(cls):

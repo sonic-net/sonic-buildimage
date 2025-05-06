@@ -6,7 +6,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_KAPI_H
@@ -49,10 +49,24 @@ struct ngknet_callback_desc {
 
     /*! Packet data length */
     int pkt_len;
+
+    /*! Network device */
+    struct net_device *net_dev;
 };
 
 /*! SKB callback data */
 #define NGKNET_SKB_CB(_skb) ((struct ngknet_callback_desc *)_skb->cb)
+
+/*!
+ * PHC specific private data
+ */
+struct ngknet_ptp_data {
+    /*! Physical port */
+    int phy_port;
+
+    /*! HW timestamp Tx type */
+    int hwts_tx_type;
+};
 
 /*! TX/RX callback init */
 typedef void
@@ -60,17 +74,16 @@ typedef void
 
 /*! Handle Rx packet */
 typedef struct sk_buff *
-(*ngknet_rx_cb_f)(struct net_device *dev, struct sk_buff *skb);
+(*ngknet_rx_cb_f)(struct sk_buff *skb);
 
 /*! Handle Tx packet */
 typedef struct sk_buff *
 (*ngknet_tx_cb_f)(struct sk_buff *skb);
 
-#if 0
 /*! Handle Netif callback */
 typedef int
 (*ngknet_netif_cb_f)(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif);
-#endif
+
 /*! Handle Filter callback */
 typedef struct sk_buff *
 (*ngknet_filter_cb_f)(struct sk_buff *skb, ngknet_filter_t **filt);
@@ -95,9 +108,9 @@ typedef int
 typedef int
 (*ngknet_ptp_dev_ctrl_cb_f)(ngknet_dev_info_t *dinfo, int cmd, char *data, int len);
 
-/*! Netif callback  */
+/*! PTP RX Preprocessing */
 typedef int
-(*ngknet_netif_cb_f)(struct net_device *dev);
+(*ngknet_ptp_rx_pre_process_cb_f)(struct sk_buff *skb, uint32_t *cust_hdr_len);
 
 /*!
  * \brief Register TX/RX callback device initialization callback function.
@@ -224,6 +237,17 @@ ngknet_netif_destroy_cb_unregister(ngknet_netif_cb_f netif_cb);
  */
 extern int
 ngknet_filter_cb_register(ngknet_filter_cb_f filter_cb);
+
+/*!
+ * \brief Register filter callback by name.
+ *
+ * \param [in] filter_cb Filter callback function.
+ * \param [in] desc Filter description.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+extern int
+ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc);
 
 /*!
  * \brief Unregister filter callback.
@@ -374,6 +398,26 @@ ngknet_ptp_dev_ctrl_cb_register(ngknet_ptp_dev_ctrl_cb_f ptp_dev_ctrl_cb);
  */
 extern int
 ngknet_ptp_dev_ctrl_cb_unregister(ngknet_ptp_dev_ctrl_cb_f ptp_dev_ctrl_cb);
+
+/*!
+ * \brief Register PTP RX pre processing callback.
+ *
+ * \param [in] ptp_rx_pre_process_cb RX pre processing callback function.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+extern int
+ngknet_ptp_rx_pre_process_cb_register(ngknet_ptp_rx_pre_process_cb_f ptp_rx_pre_process_cb);
+
+/*!
+ * \brief Unregister PTP RX pre processing callback.
+ *
+ * \param [in] ptp_rx_pre_process_cb RX pre processing callback function.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+extern int
+ngknet_ptp_rx_pre_process_cb_unregister(ngknet_ptp_rx_pre_process_cb_f ptp_rx_pre_process_cb);
 
 #endif /* NGKNET_KAPI_H */
 

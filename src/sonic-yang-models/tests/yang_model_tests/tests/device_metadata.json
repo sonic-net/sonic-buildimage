@@ -42,8 +42,29 @@
     "DEVICE_METADATA_TYPE_CORRECT_PATTERN": {
         "desc": "DEVICE_METADATA correct value for Type field"
     },
+    "DEVICE_METADATA_TYPE_UPPER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_TOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtToRRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_LEAF_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtLeafRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_SPINE_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtSpineRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
+    },
+    "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
+        "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
     "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
         "desc": "DEVICE_METADATA value as SonicHost for Type field"
@@ -91,11 +112,26 @@
     "DEVICE_METADATA_RESOURCE_TYPE_CONFIG": {
         "desc": "Verifying resource type configuration."
     },
+    "DEVICE_METADATA_MGMT_TYPE_CONFIG": {
+        "desc": "Verifying mgmt type configuration."
+    },
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."
     },
-    "DEVICE_METADATA_VALID_SUBTYPE": {
-        "desc": "Verifying valid subtype value"
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "desc": "Verifying valid subtype value dualtor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "desc": "Verifying valid subtype value supervisor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "desc": "Verifying valid subtype value upstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "desc": "Verifying valid subtype value downstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE4": {
+        "desc": "Verifying valid subtype value LowerSpineRouter"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
@@ -135,6 +171,16 @@
     "DEVICE_METADATA_ADVERTISE_LO_PREFIX_AS_128": {
         "desc": "Verifying advertising lo prefix as /128."
     },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED": {
+        "desc": "Enable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_DISABLED": {
+        "desc": "Disable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
+        "desc": "Enable bgp-suppress-fib-pending when synchronous mode is disabled",
+        "eStr": ["ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature"]
+    },
     "DEVICE_METADATA_VALID_RACK_MGMT_MAP": {
         "desc": "Verifying rack_mgmt_map configuration."
     },
@@ -156,6 +202,9 @@
         "desc": "Verifying invalid create_only_config_db_buffers value",
         "eStrKey": "InvalidValue"
     },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "desc": "Verifying the supporting_bulk_counter_groups value"
+    },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "desc": "Verifying bgp_router_id configuration."
     },
@@ -168,5 +217,15 @@
     },
     "DEVICE_METADATA_VALID_SLICE_TYPE": {
         "desc": "Verifying valid slice_type configuration."
+    },
+    "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
+        "desc": "Verifying valid t2_group_asns."
+    },
+     "DEVICE_METADATA_VALID_T2_GROUP_ASNS_INVALID": {
+         "desc": "Verifying invalid t2_group_asns.",
+         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_ANCHOR_ROUTE_SOURCE": {
+        "desc": "Verifying valid anchor_route_source."
     }
 }

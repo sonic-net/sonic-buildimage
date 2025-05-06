@@ -5,7 +5,7 @@ SHELL = /bin/bash
 LIBYANG_URL = https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang
 
 DSC_FILE = libyang2_$(LIBYANG2_FULLVERSION).dsc
-ORIG_FILE = libyang2_$(LIBYANG2_VERSION).orig.tar.gz
+ORIG_FILE = libyang2_$(LIBYANG2_VERSION).orig.tar.xz
 DEBIAN_FILE = libyang2_$(LIBYANG2_FULLVERSION).debian.tar.xz
 
 DSC_FILE_URL = $(LIBYANG_URL)/$(DSC_FILE)
@@ -26,6 +26,10 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	dpkg-source -x libyang2_$(LIBYANG2_FULLVERSION).dsc
 
 	pushd libyang2-$(LIBYANG2_VERSION)
+	#The package libyang2.1.148 is taken from debian trixie, which only has dpkg-dev version 1.21.22
+	#The bullseye package has dpkg-dev version 1.20.13
+	#The VS package has dpkg-dev version 1.19.8
+	sed -i 's/dpkg-dev (>= 1.22.5)/dpkg-dev (>= 1.19.8)/' debian/control
 	#sed -i 's/set(LIBYANG_MAJOR_SOVERSION 1)/set(LIBYANG_MAJOR_SOVERSION 2)/' CMakeLists.txt
 	#sed -i 's/libyang2/libyang2/' debian/libyang2.install
 	# Enable large file support for 32-bit arch

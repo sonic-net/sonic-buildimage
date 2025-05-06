@@ -2,7 +2,7 @@
     "GLOBAL_MEDIA_SETTINGS": {
         "1-64": {
             "OSFP-8X-sm_media_interface": {
-                "speed:400GAUI-4-L": {
+                "speed:100GAUI-1-L": {
                     "pre3": {
                         "lane0": "0x00000000",
                         "lane1": "0x00000000",
@@ -14,34 +14,34 @@
                         "lane7": "0x00000000"
                     },
                     "pre2": {
-                        "lane0": "0x00000005",
-                        "lane1": "0x00000005",
-                        "lane2": "0x00000005",
-                        "lane3": "0x00000005",
-                        "lane4": "0x00000005",
-                        "lane5": "0x00000005",
-                        "lane6": "0x00000005",
-                        "lane7": "0x00000005"
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
                     },
                     "pre1": {
-                        "lane0": "0xfffffff1",
-                        "lane1": "0xfffffff1",
-                        "lane2": "0xfffffff1",
-                        "lane3": "0xfffffff1",
-                        "lane4": "0xfffffff1",
-                        "lane5": "0xfffffff1",
-                        "lane6": "0xfffffff1",
-                        "lane7": "0xfffffff1"
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
                     },
                     "main": {
-                        "lane0": "0x0000002b",
-                        "lane1": "0x0000002b",
-                        "lane2": "0x0000002b",
-                        "lane3": "0x0000002b",
-                        "lane4": "0x0000002b",
-                        "lane5": "0x0000002b",
-                        "lane6": "0x0000002b",
-                        "lane7": "0x0000002b"
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
                     },
                     "post1": {
                         "lane0": "0x00000000",
@@ -54,15 +54,325 @@
                         "lane7": "0x00000000"
                     },
                     "idriver": {
-                        "lane0": "0x00000032",
-                        "lane1": "0x00000032",
-                        "lane2": "0x00000032",
-                        "lane3": "0x00000032",
-                        "lane4": "0x00000032",
-                        "lane5": "0x00000032",
-                        "lane6": "0x00000032",
-                        "lane7": "0x00000032"
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
                     }
+                },
+                "speed:100GAUI-1-S": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:200GAUI-2-S": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:200GAUI-2-L": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:200GAUI-4": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "main": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:400GAUI-4-L": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+		    }
                 },
                 "speed:400GAUI-4-S": {
                     "pre3": {
@@ -76,34 +386,34 @@
                         "lane7": "0x00000000"
                     },
                     "pre2": {
-                        "lane0": "0x00000005",
-                        "lane1": "0x00000005",
-                        "lane2": "0x00000005",
-                        "lane3": "0x00000005",
-                        "lane4": "0x00000005",
-                        "lane5": "0x00000005",
-                        "lane6": "0x00000005",
-                        "lane7": "0x00000005"
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
                     },
                     "pre1": {
-                        "lane0": "0xfffffff1",
-                        "lane1": "0xfffffff1",
-                        "lane2": "0xfffffff1",
-                        "lane3": "0xfffffff1",
-                        "lane4": "0xfffffff1",
-                        "lane5": "0xfffffff1",
-                        "lane6": "0xfffffff1",
-                        "lane7": "0xfffffff1"
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
                     },
                     "main": {
-                        "lane0": "0x0000002b",
-                        "lane1": "0x0000002b",
-                        "lane2": "0x0000002b",
-                        "lane3": "0x0000002b",
-                        "lane4": "0x0000002b",
-                        "lane5": "0x0000002b",
-                        "lane6": "0x0000002b",
-                        "lane7": "0x0000002b"
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
                     },
                     "post1": {
                         "lane0": "0x00000000",
@@ -116,14 +426,14 @@
                         "lane7": "0x00000000"
                     },
                     "idriver": {
-                        "lane0": "0x00000032",
-                        "lane1": "0x00000032",
-                        "lane2": "0x00000032",
-                        "lane3": "0x00000032",
-                        "lane4": "0x00000032",
-                        "lane5": "0x00000032",
-                        "lane6": "0x00000032",
-                        "lane7": "0x00000032"
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
                     }
                 },
                 "speed:800G": {
@@ -138,34 +448,34 @@
                         "lane7": "0x00000000"
                     },
                     "pre2": {
-                        "lane0": "0x00000005",
-                        "lane1": "0x00000005",
-                        "lane2": "0x00000005",
-                        "lane3": "0x00000005",
-                        "lane4": "0x00000005",
-                        "lane5": "0x00000005",
-                        "lane6": "0x00000005",
-                        "lane7": "0x00000005"
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
                     },
                     "pre1": {
-                        "lane0": "0xfffffff1",
-                        "lane1": "0xfffffff1",
-                        "lane2": "0xfffffff1",
-                        "lane3": "0xfffffff1",
-                        "lane4": "0xfffffff1",
-                        "lane5": "0xfffffff1",
-                        "lane6": "0xfffffff1",
-                        "lane7": "0xfffffff1"
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
                     },
                     "main": {
-                        "lane0": "0x0000002b",
-                        "lane1": "0x0000002b",
-                        "lane2": "0x0000002b",
-                        "lane3": "0x0000002b",
-                        "lane4": "0x0000002b",
-                        "lane5": "0x0000002b",
-                        "lane6": "0x0000002b",
-                        "lane7": "0x0000002b"
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
                     },
                     "post1": {
                         "lane0": "0x00000000",
@@ -178,18 +488,328 @@
                         "lane7": "0x00000000"
                     },
                     "idriver": {
-                        "lane0": "0x00000032",
-                        "lane1": "0x00000032",
-                        "lane2": "0x00000032",
-                        "lane3": "0x00000032",
-                        "lane4": "0x00000032",
-                        "lane5": "0x00000032",
-                        "lane6": "0x00000032",
-                        "lane7": "0x00000032"
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
                     }
                 }
             },
             "OSFP-8X-nm_850_media_interface": {
+                "speed:800G": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:400GAUI-4-S": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:400GAUI-8": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "main": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:400GAUI-4-L": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
+                "speed:200GAUI-2-L": {
+                    "pre3": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "pre2": {
+                        "lane0": "0x00000003",
+                        "lane1": "0x00000003",
+                        "lane2": "0x00000003",
+                        "lane3": "0x00000003",
+                        "lane4": "0x00000003",
+                        "lane5": "0x00000003",
+                        "lane6": "0x00000003",
+                        "lane7": "0x00000003"
+                    },
+                    "pre1": {
+                        "lane0": "0xffffffec",
+                        "lane1": "0xffffffec",
+                        "lane2": "0xffffffec",
+                        "lane3": "0xffffffec",
+                        "lane4": "0xffffffec",
+                        "lane5": "0xffffffec",
+                        "lane6": "0xffffffec",
+                        "lane7": "0xffffffec"
+                    },
+                    "main": {
+                        "lane0": "0x00000028",
+                        "lane1": "0x00000028",
+                        "lane2": "0x00000028",
+                        "lane3": "0x00000028",
+                        "lane4": "0x00000028",
+                        "lane5": "0x00000028",
+                        "lane6": "0x00000028",
+                        "lane7": "0x00000028"
+                    },
+                    "post1": {
+                        "lane0": "0x00000000",
+                        "lane1": "0x00000000",
+                        "lane2": "0x00000000",
+                        "lane3": "0x00000000",
+                        "lane4": "0x00000000",
+                        "lane5": "0x00000000",
+                        "lane6": "0x00000000",
+                        "lane7": "0x00000000"
+                    },
+                    "idriver": {
+                        "lane0": "0x0000003f",
+                        "lane1": "0x0000003f",
+                        "lane2": "0x0000003f",
+                        "lane3": "0x0000003f",
+                        "lane4": "0x0000003f",
+                        "lane5": "0x0000003f",
+                        "lane6": "0x0000003f",
+                        "lane7": "0x0000003f"
+                    }
+                },
                 "speed:200GAUI-4": {
                     "post1": {
                         "lane0": "0x00000000",

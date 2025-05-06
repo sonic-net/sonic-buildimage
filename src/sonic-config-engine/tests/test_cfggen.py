@@ -35,6 +35,7 @@ class TestCfgGen(TestCase):
         self.sample_resource_graph = os.path.join(self.test_dir, 'sample-graph-resource-type.xml')
         self.sample_subintf_graph = os.path.join(self.test_dir, 'sample-graph-subintf.xml')
         self.voq_port_config = os.path.join(self.test_dir, 'voq-sample-port-config.ini')
+        self.packet_chassis_graph0 = os.path.join(self.test_dir, 'minigraph-str2-temp-2-lc04.xml')
         self.packet_chassis_graph = os.path.join(self.test_dir, 'sample-chassis-packet-lc-graph.xml')
         self.packet_chassis_port_ini = os.path.join(self.test_dir, 'sample-chassis-packet-lc-port-config.ini')
         self.macsec_profile = os.path.join(self.test_dir, 'macsec_profile.json')
@@ -1020,14 +1021,25 @@ class TestCfgGen(TestCase):
                 "'Vlan2000': {'dhcpv6_servers': ['fc02:2000::3', 'fc02:2000::4']}}"
             )
         )
-        
-    def test_minigraph_packet_chassis_acl(self):
-        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "ACL_TABLE"]
+
+    def test_minigraph_packet_chassis_acl_local_host(self):
+        # CFGGEN_UNIT_TESTING is set to '2' in the set_up function
+        # this causes the port_table to have ports from the previous test
+        # causing yang validation to fail
+
+        os.environ["CFGGEN_UNIT_TESTING"] = ""
+        argument = ['-m', self.packet_chassis_graph, '-v', "ACL_TABLE"]
         output = self.run_script(argument)
+        print(output)
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'SNMP_ACL': {'policy_desc': 'SNMP_ACL', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SNMP']}, 'SSH_ONLY': {'policy_desc': 'SSH_ONLY', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SSH']}}")
         )
+
+        # set it back to the original value
+        os.environ["CFGGEN_UNIT_TESTING"] = "2"
+
+    def test_minigraph_packet_chassis_acl_namespace(self):
 
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "ACL_TABLE"]
         output = self.run_script(argument)
@@ -1045,20 +1057,18 @@ class TestCfgGen(TestCase):
         )
 
     def test_minigraph_bgp_packet_chassis_static_route(self):
-        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "STATIC_ROUTE"]
+        argument = ['-m', self.packet_chassis_graph0, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "STATIC_ROUTE"]
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
-            utils.to_dict("{'8.0.0.1/32': {'nexthop': '192.168.1.2,192.168.2.2', 'ifname': 'PortChannel40,PortChannel50', 'advertise':'false', 'bfd':'true'}}")
-        )
-
+            utils.to_dict("{'192.0.0.1/32': {'nexthop': '10.235.96.11,10.235.96.136,10.235.97.11,10.235.97.136,10.235.98.11,10.235.98.136,10.235.99.11,10.235.99.136,10.235.100.11,10.235.100.136', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::1/128': {'nexthop': 'fc00:34::a:eb60:b01,fc00:34::a:eb60:8801,fc00:34::a:eb61:b01,fc00:34::a:eb61:8801,fc00:34::a:eb62:b01,fc00:34::a:eb62:8801,fc00:34::a:eb63:b01,fc00:34::a:eb63:8801,fc00:34::a:eb64:b01,fc00:34::a:eb64:8801', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.2/32': {'nexthop': '10.235.96.12,10.235.96.137,10.235.97.12,10.235.97.137,10.235.98.12,10.235.98.137,10.235.99.12,10.235.99.137,10.235.100.12,10.235.100.137', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::2/128': {'nexthop': 'fc00:34::a:eb60:c01,fc00:34::a:eb60:8901,fc00:34::a:eb61:c01,fc00:34::a:eb61:8901,fc00:34::a:eb62:c01,fc00:34::a:eb62:8901,fc00:34::a:eb63:c01,fc00:34::a:eb63:8901,fc00:34::a:eb64:c01,fc00:34::a:eb64:8901', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.3/32': {'nexthop': '10.235.96.13,10.235.96.134,10.235.97.13,10.235.97.134,10.235.98.13,10.235.98.134,10.235.99.13,10.235.99.134,10.235.100.13,10.235.100.134', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::3/128': {'nexthop': 'fc00:34::a:eb60:d01,fc00:34::a:eb60:8601,fc00:34::a:eb61:d01,fc00:34::a:eb61:8601,fc00:34::a:eb62:d01,fc00:34::a:eb62:8601,fc00:34::a:eb63:d01,fc00:34::a:eb63:8601,fc00:34::a:eb64:d01,fc00:34::a:eb64:8601', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.4/32': {'nexthop': '10.235.96.9,10.235.96.140,10.235.97.9,10.235.97.140,10.235.98.9,10.235.98.140,10.235.99.9,10.235.99.140,10.235.100.9,10.235.100.140', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::4/128': {'nexthop': 'fc00:34::a:eb60:901,fc00:34::a:eb60:8c01,fc00:34::a:eb61:901,fc00:34::a:eb61:8c01,fc00:34::a:eb62:901,fc00:34::a:eb62:8c01,fc00:34::a:eb63:901,fc00:34::a:eb63:8c01,fc00:34::a:eb64:901,fc00:34::a:eb64:8c01', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.5/32': {'nexthop': '10.235.96.10,10.235.96.141,10.235.97.10,10.235.97.141,10.235.98.10,10.235.98.141,10.235.99.10,10.235.99.141,10.235.100.10,10.235.100.141', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::5/128': {'nexthop': 'fc00:34::a:eb60:a01,fc00:34::a:eb60:8d01,fc00:34::a:eb61:a01,fc00:34::a:eb61:8d01,fc00:34::a:eb62:a01,fc00:34::a:eb62:8d01,fc00:34::a:eb63:a01,fc00:34::a:eb63:8d01,fc00:34::a:eb64:a01,fc00:34::a:eb64:8d01', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.6/32': {'nexthop': '10.235.96.7,10.235.96.138,10.235.97.7,10.235.97.138,10.235.98.7,10.235.98.138,10.235.99.7,10.235.99.138,10.235.100.7,10.235.100.138', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::6/128': {'nexthop': 'fc00:34::a:eb60:701,fc00:34::a:eb60:8a01,fc00:34::a:eb61:701,fc00:34::a:eb61:8a01,fc00:34::a:eb62:701,fc00:34::a:eb62:8a01,fc00:34::a:eb63:701,fc00:34::a:eb63:8a01,fc00:34::a:eb64:701,fc00:34::a:eb64:8a01', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.7/32': {'nexthop': '10.235.96.6,10.235.96.139,10.235.97.6,10.235.97.139,10.235.98.6,10.235.98.139,10.235.99.6,10.235.99.139,10.235.100.6,10.235.100.139', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::7/128': {'nexthop': 'fc00:34::a:eb60:601,fc00:34::a:eb60:8b01,fc00:34::a:eb61:601,fc00:34::a:eb61:8b01,fc00:34::a:eb62:601,fc00:34::a:eb62:8b01,fc00:34::a:eb63:601,fc00:34::a:eb63:8b01,fc00:34::a:eb64:601,fc00:34::a:eb64:8b01', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.8/32': {'nexthop': '10.235.96.4,10.235.96.132,10.235.97.4,10.235.97.132,10.235.98.4,10.235.98.132,10.235.99.4,10.235.99.132,10.235.100.4,10.235.100.132', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::8/128': {'nexthop': 'fc00:34::a:eb60:401,fc00:34::a:eb60:8401,fc00:34::a:eb61:401,fc00:34::a:eb61:8401,fc00:34::a:eb62:401,fc00:34::a:eb62:8401,fc00:34::a:eb63:401,fc00:34::a:eb63:8401,fc00:34::a:eb64:401,fc00:34::a:eb64:8401', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.9/32': {'nexthop': '10.235.96.5,10.235.96.133,10.235.97.5,10.235.97.133,10.235.98.5,10.235.98.133,10.235.99.5,10.235.99.133,10.235.100.5,10.235.100.133', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::9/128': {'nexthop': 'fc00:34::a:eb60:501,fc00:34::a:eb60:8501,fc00:34::a:eb61:501,fc00:34::a:eb61:8501,fc00:34::a:eb62:501,fc00:34::a:eb62:8501,fc00:34::a:eb63:501,fc00:34::a:eb63:8501,fc00:34::a:eb64:501,fc00:34::a:eb64:8501', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.10/32': {'nexthop': '10.235.96.8,10.235.96.135,10.235.97.8,10.235.97.135,10.235.98.8,10.235.98.135,10.235.99.8,10.235.99.135,10.235.100.8,10.235.100.135', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::a/128': {'nexthop': 'fc00:34::a:eb60:801,fc00:34::a:eb60:8701,fc00:34::a:eb61:801,fc00:34::a:eb61:8701,fc00:34::a:eb62:801,fc00:34::a:eb62:8701,fc00:34::a:eb63:801,fc00:34::a:eb63:8701,fc00:34::a:eb64:801,fc00:34::a:eb64:8701', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.12/32': {'nexthop': '10.235.96.2,10.235.96.130,10.235.97.2,10.235.97.130,10.235.98.2,10.235.98.130,10.235.99.2,10.235.99.130,10.235.100.2,10.235.100.130', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::c/128': {'nexthop': 'fc00:34::a:eb60:201,fc00:34::a:eb60:8201,fc00:34::a:eb61:201,fc00:34::a:eb61:8201,fc00:34::a:eb62:201,fc00:34::a:eb62:8201,fc00:34::a:eb63:201,fc00:34::a:eb63:8201,fc00:34::a:eb64:201,fc00:34::a:eb64:8201', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '192.0.0.13/32': {'nexthop': '10.235.96.3,10.235.96.131,10.235.97.3,10.235.97.131,10.235.98.3,10.235.98.131,10.235.99.3,10.235.99.131,10.235.100.3,10.235.100.131', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}, '2603:10e2:400::d/128': {'nexthop': 'fc00:34::a:eb60:301,fc00:34::a:eb60:8301,fc00:34::a:eb61:301,fc00:34::a:eb61:8301,fc00:34::a:eb62:301,fc00:34::a:eb62:8301,fc00:34::a:eb63:301,fc00:34::a:eb63:8301,fc00:34::a:eb64:301,fc00:34::a:eb64:8301', 'ifname': 'PortChannel4001,PortChannel4014,PortChannel4027,PortChannel4040,PortChannel4053,PortChannel4066,PortChannel4079,PortChannel4092,PortChannel4105,PortChannel4118', 'advertise': 'false', 'bfd': 'true'}}"))
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "STATIC_ROUTE"]
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'8.0.0.1/32': {'nexthop': '192.168.1.2,192.168.2.2', 'ifname': 'PortChannel40,PortChannel50', 'advertise':'false', 'bfd':'true'}}")
         )
-
+        os.environ["CFGGEN_UNIT_TESTING_TOPOLOGY"] = ""
     def test_minigraph_bgp_packet_chassis_vlan_subintf(self):
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "VLAN_SUB_INTERFACE"]
         output = self.run_script(argument)
@@ -1151,3 +1161,13 @@ class TestCfgGen(TestCase):
         self.assertEqual(
             utils.liststr_to_dict(output.strip()),
             utils.liststr_to_dict("['192.168.200.15|161|', '100.0.0.6|161|', '100.0.0.7|161|', 'fe80::1%Management0|161|']"))
+   
+    def test_platform_asic_sensors_config(self):
+        os.environ["PLATFORM"] = "x86_64-kvm_x86_64-r0"
+        argument = ["-H","--print-data"]
+        output = self.run_script(argument, check_stderr=False)
+        config_json = utils.to_dict(output.strip())
+        os.environ["PLATFORM"] = ""
+        self.assertEqual(config_json['ASIC_SENSORS'], utils.to_dict("{'ASIC_SENSORS_POLLER_INTERVAL': {'interval': '10'}, 'ASIC_SENSORS_POLLER_STATUS': {'admin_status': 'enable'}}"))
+
+

@@ -22,6 +22,7 @@ from sonic_py_common import device_info
 from .mock_connector import MockConnector
 
 swsscommon.SonicV2Connector = MockConnector
+swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 telemetry_path = os.path.join(test_path, 'telemetry')
@@ -48,7 +49,7 @@ snmpd                       RUNNING   pid 67, uptime 1:03:56
 snmp-subagent               EXITED    Oct 19 01:53 AM
 """
 device_info.get_platform = MagicMock(return_value='unittest')
- 
+
 device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":True}}
 
 def no_op(*args, **kwargs):
@@ -843,7 +844,7 @@ def test_publish_system_status_allowed_status():
     sysmon = Sysmonitor()
     sysmon.publish_system_status('UP')
     sysmon.publish_system_status('DOWN')
-    
+
     expected_calls = [
         (("UP",), {}),
         (("DOWN",), {})
@@ -856,7 +857,7 @@ def test_publish_system_status():
     sysmon = Sysmonitor()
     sysmon.publish_system_status('UP')
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
-    assert result == "UP" 
+    assert result == "UP"
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_system_status', test_get_all_system_status_ok())
 @patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', test_publish_system_status())

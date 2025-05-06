@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,7 @@
 #
 # Mellanox HW Management
 
-MLNX_HW_MANAGEMENT_VERSION = 7.0030.4003
+MLNX_HW_MANAGEMENT_VERSION = 7.0040.2104
 
 export MLNX_HW_MANAGEMENT_VERSION
 

@@ -1,37 +1,40 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # $Id: Makefile.linux-slk-3_14,v 1.2 Broadcom SDK $
-# $Copyright: (c) 2013 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 # Makefile for SLK(BCM957812)
 
 # User must select one platform from below.By default ARM_LINUX is selected. .
 ifeq (,$(BUILD_PLATFORM))
 BUILD_PLATFORM=ARM_LINUX
+endif
+
+# Upgrade TCL version from default 8.3 to 8.4
+ifneq ($(ESW_CHIPS)$(LTSW_CHIPS),)
+export TCL840 := 1
 endif
 
 # Toolchain base directory for NS2 XMC card
@@ -85,20 +88,26 @@ CFGFLAGS += -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS
 endif
 CFGFLAGS += -DPHYS_ADDRS_ARE_64BITS
 
-CFLAGS += -Wno-unused-value -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations
+ifeq (1,$(USE_CLANG))
+CLANG_ADD_CFLAGS += --target=$(TARGET_ARCHITECTURE) --gcc-toolchain=$(TOOLCHAIN_BASE_DIR) --sysroot=$(TOOLCHAIN_BASE_DIR)/$(TARGET_ARCHITECTURE)/libc
+export KERNEL_LLVM = 0
+OPT_KERNEL_TOOLCHAIN = CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld AR=$(CROSS_COMPILE)ar
+else
+OPT_CFLAGS += -Wno-unused-value -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations
+endif
 
 ifdef DPP_CHIPS
-CFLAGS += -DDUNE_BCM -D__DUNE_LINUX_BCM_CPU_PCP_DMA__
+CFGFLAGS += -DDUNE_BCM -D__DUNE_LINUX_BCM_CPU_PCP_DMA__
 CFGFLAGS += -DSOC_CM_FUNCTION
 endif
 
 ifdef DFE_CHIPS
-CFLAGS += -DDUNE_BCM
+CFGFLAGS += -DDUNE_BCM
 CFGFLAGS += -DSOC_CM_FUNCTION
 endif
 
 ifdef SAND_CHIPS
-CFLAGS += -D__DUNE_SLK_BCM_CPU__ -D__DUNE_LINUX_BCM_CPU_PCIE__
+CFGFLAGS += -D__DUNE_SLK_BCM_CPU__ -D__DUNE_LINUX_BCM_CPU_PCIE__
 endif
 
 # Enable cached DMA memory by default
@@ -136,7 +145,7 @@ CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_BIN_DIR)/$(CROSS_COMPILE)gcc -dumpversion)
 KFLAG_INCLD = $(TOOLCHAIN_BASE_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
 ifeq (,$(KFLAGS))
-KFLAGS := -D__LINUX_ARM_ARCH__=8 -D__KERNEL__ -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS -nostdinc -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm64/include -I$(KERNDIR)/arch/arm64/include/generated -I$(KERNDIR)/arch/arm64/include/generated/asm -I$(KERNDIR)/include/uapi -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/uapi -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fno-pic -pipe -ffreestanding -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign 
+KFLAGS := -D__LINUX_ARM_ARCH__=8 -D__KERNEL__ -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS -nostdinc -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm64/include -I$(KERNDIR)/arch/arm64/include/generated -I$(KERNDIR)/arch/arm64/include/generated/asm -I$(KERNDIR)/include/uapi -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/uapi -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fno-pic -pipe -ffreestanding -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -Wno-unused-but-set-variable
 endif
 
 ifdef LTSW_CHIPS

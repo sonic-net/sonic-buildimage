@@ -58,6 +58,16 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
 def _subscribe_keyspace_notification(self, db_name, client):
     pass
 
+def keys(self, db_name, pattern='*'):
+    """
+    Retrieve all the keys of DB %db_name
+    """
+    client = self.redis_clients[db_name]
+    keys = client.keys(pattern=pattern)
+    if not keys:
+        return []
+    else:
+        return keys
 
 def config_set(self, *args):
     pass
@@ -146,6 +156,7 @@ class SwssSyncClient(mockredis.MockRedis):
 
 
 swsssdk.interface.DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
+swsssdk.interface.DBInterface.keys = keys
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector

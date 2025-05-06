@@ -1,0 +1,19 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-12": {
+            ".*": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            }
+
+        },
+        "21-64": {
+            ".*": {
+                   "interface_type": "sr4",
+                   "unreliable_los": "on"
+
+            }
+        }
+    }
+}

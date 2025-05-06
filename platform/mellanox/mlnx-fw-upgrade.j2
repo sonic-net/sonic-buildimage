@@ -36,6 +36,7 @@ declare -r VERBOSE_MIN="${VERBOSE_ERROR}"
 declare -r EXIT_SUCCESS="0"
 declare -r EXIT_FAILURE="1"
 declare -r FW_ALREADY_UPDATED_FAILURE="2"
+declare -r FW_UPGRADE_IS_REQUIRED="10"
 
 declare -r QUERY_XML="mlxfwmanager --query-format XML"
 declare -r QUERY_CMD="mlxfwmanager --query"
@@ -49,6 +50,7 @@ declare -r SPC1_ASIC="spc1"
 declare -r SPC2_ASIC="spc2"
 declare -r SPC3_ASIC="spc3"
 declare -r SPC4_ASIC="spc4"
+declare -r BF3_NIC="bf3"
 declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
 
@@ -57,8 +59,10 @@ declare -rA FW_FILE_MAP=( \
     [$SPC2_ASIC]="fw-SPC2.mfa" \
     [$SPC3_ASIC]="fw-SPC3.mfa" \
     [$SPC4_ASIC]="fw-SPC4.mfa" \
+    [$BF3_NIC]="fw-BF3.mfa" \
 )
 
+DRY_RUN="${NO_PARAM}"
 IMAGE_UPGRADE="${NO_PARAM}"
 SYSLOG_LOGGER="${NO_PARAM}"
 VERBOSE_LEVEL="${VERBOSE_MIN}"
@@ -72,6 +76,8 @@ function PrintHelp() {
     echo "  -u, --upgrade  Upgrade ASIC firmware using next boot image (useful after SONiC-To-SONiC update)"
     echo "  -s, --syslog   Use syslog logger (enabled when -u|--upgrade)"
     echo "  -v, --verbose  Verbose mode (enabled when -u|--upgrade)"
+    echo "  -d, --dry-run  Compare the FW versions without installation. Return code "0" means the FW is up-to-date, return code "10" means an upgrade is required, otherwise an error is detected."
+    echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
     echo "  -h, --help     Print help"
     echo
     echo "Examples:"
@@ -94,6 +100,12 @@ function ParseArguments() {
             ;;
             -s|--syslog)
                 SYSLOG_LOGGER="${YES_PARAM}"
+            ;;
+            -d|--dry-run)
+                DRY_RUN="${YES_PARAM}"
+            ;;
+            -c|--clear-semaphore)
+                CLEAR_SEMAPHORE="${YES_PARAM}"
             ;;
             -h|--help)
                 PrintHelp
@@ -179,26 +191,50 @@ function UnlockStateChange() {
     /usr/bin/flock -u ${LOCKFD}
 }
 
+function GetMstDeviceType() {
+    local -r asic_type=$(GetAsicType)
+
+    case $asic_type in
+    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC})
+        echo "Spectrum"
+        return ${EXIT_SUCCESS}
+        ;;
+    ${BF3_NIC})
+        echo "BlueField3"
+        return ${EXIT_SUCCESS}
+        ;;
+    *)
+        echo "Unknown"
+        return ${EXIT_FAILURE}
+        ;;
+    esac
+}
+
 function WaitForDevice() {
     local -i QUERY_RETRY_COUNT_MAX="10"
     local -i QUERY_RETRY_COUNT="0"
+    local -r DEVICE_TYPE=$(GetMstDeviceType)
+    local SPC_MST_DEV
+    local QUERY_RC=""
 
-    local SPC_MST_DEV=$(GetSPCMstDevice)
-
-    while [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("${SPC_MST_DEV}" == "${UNKN_MST}") ]]; do
+    while : ; do
+        SPC_MST_DEV=$(GetSPCMstDevice)
+        ${QUERY_XML} -d ${SPC_MST_DEV} -o ${QUERY_FILE}
+        QUERY_RC="$?"
+        [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("${QUERY_RC}" != "${EXIT_SUCCESS}") ]] || break
         sleep 1s
         ((QUERY_RETRY_COUNT++))
-        SPC_MST_DEV=$(GetSPCMstDevice)
+        LogInfo "Retrying MST device query ${QUERY_RETRY_COUNT}"
     done
 
-    if [[ "${SPC_MST_DEV}" == "${UNKN_MST}" ]]; then
+    if [[ "${QUERY_RC}" != "${EXIT_SUCCESS}" ]]; then
         # Couldn't Detect the Spectrum ASIC. Exit failure and print the detailed information
         output=$(${QUERY_CMD})
         failure_msg="${output#*Fail : }"
         ExitFailure "FW Query command: ${QUERY_CMD} failed to detect spectrum device with error: ${failure_msg}"
     fi
 
-    LogInfo "Spectrum ASIC successfully detected at ${SPC_MST_DEV}"
+    LogInfo "${DEVICE_TYPE} ASIC successfully detected at ${SPC_MST_DEV}"
 }
 
 function GetAsicType() {
@@ -208,18 +244,34 @@ function GetAsicType() {
     local -r SPC2_PRODUCT_ID="cf6c"
     local -r SPC3_PRODUCT_ID="cf70"
     local -r SPC4_PRODUCT_ID="cf80"
+    local -r BF3_PRODUCT_ID="a2dc"
 
-    if lspci -n | grep "${VENDOR_ID}:${SPC1_PRODUCT_ID}" &>/dev/null; then
+    local -i QUERY_RETRY_COUNT="0"
+    local -i QUERY_RETRY_COUNT_MAX="10"
+    local pcitree=$(lspci -n 2>/dev/null)
+    ERROR_CODE="$?"
+
+    while [[ ("${QUERY_RETRY_COUNT}" -lt "QUERY_RETRY_COUNT_MAX") && ("${ERROR_CODE}" != "${EXIT_SUCCESS}") ]]; do
+        sleep 1s
+        ((QUERY_RETRY_COUNT++))
+        pcitree=$(lspci -n 2>/dev/null)
+        ERROR_CODE="$?"
+    done
+
+    if echo $pcitree | grep "${VENDOR_ID}:${SPC1_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC1_ASIC}"
         exit "${EXIT_SUCCESS}"
-    elif lspci -n | grep "${VENDOR_ID}:${SPC2_PRODUCT_ID}" &>/dev/null; then
+    elif echo $pcitree | grep "${VENDOR_ID}:${SPC2_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC2_ASIC}"
         exit "${EXIT_SUCCESS}"
-    elif lspci -n | grep "${VENDOR_ID}:${SPC3_PRODUCT_ID}" &>/dev/null; then
+    elif echo $pcitree | grep "${VENDOR_ID}:${SPC3_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC3_ASIC}"
         exit "${EXIT_SUCCESS}"
-    elif lspci -n | grep "${VENDOR_ID}:${SPC4_PRODUCT_ID}" &>/dev/null; then
+    elif echo $pcitree | grep "${VENDOR_ID}:${SPC4_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC4_ASIC}"
+        exit "${EXIT_SUCCESS}"
+    elif echo $pcitree | grep "${VENDOR_ID}:${BF3_PRODUCT_ID}" &>/dev/null; then
+        echo "${BF3_NIC}"
         exit "${EXIT_SUCCESS}"
     fi
 
@@ -228,11 +280,12 @@ function GetAsicType() {
 }
 
 function GetSPCMstDevice() {
-    local _MST_DEVICE=$(${QUERY_XML} | xmlstarlet sel -t -m "//Device[contains(@type,'Spectrum')]" -v @pciName | head -n 1)
+    local _DEVICE_TYPE=$(GetMstDeviceType)
+    local _MST_DEVICE=$(${QUERY_XML} | xmlstarlet sel -t -m "//Device[contains(@type,'${_DEVICE_TYPE}')]" -v @pciName | head -n 1)
 
     if [[ ! -c "${_MST_DEVICE}" ]]; then
         echo "${UNKN_MST}"
-    else 
+    else
         echo "${_MST_DEVICE}"
     fi
 
@@ -266,6 +319,8 @@ function RunCmd() {
         ExitFailure "command failed: $@"
     fi
 }
+
+{% if sonic_asic_platform == "mellanox" %}
 
 function RunFwUpdateCmd() {
     local ERROR_CODE="${EXIT_SUCCESS}"
@@ -301,6 +356,47 @@ function RunFwUpdateCmd() {
     fi
 }
 
+function GetAvailableFwVersion() {
+    local -r _FW_FILE="$1"
+    local -r _MST_DEVICE="$2"
+    local -r _PSID="$3"
+
+    RunCmd "${LIST_CONTENT_CMD} -i ${_FW_FILE} -d ${_MST_DEVICE} -o ${LIST_CONTENT_FILE}"
+
+    local -r _FW_AVAILABLE_INFO="$(grep ${_PSID} ${LIST_CONTENT_FILE})"
+    local -r _FW_AVAILABLE="$(echo ${_FW_AVAILABLE_INFO} | awk '{print $4}')"
+
+    echo ${_FW_AVAILABLE}
+}
+
+{% elif sonic_asic_platform == "nvidia-bluefield" %}
+
+function RunFwUpdateCmd() {
+    local ERROR_CODE="${EXIT_SUCCESS}"
+    local -r _MST_DEVICE="$(GetSPCMstDevice)"
+
+    # Reactivate FW prior to burning...
+    eval "flint -d ${_MST_DEVICE} ir" 2>&1 >/dev/null
+
+    RunCmd "${MFT_DIAGNOSIS_FLAGS} flint $@ burn"
+    RunCmd "mlxconfig -d ${_MST_DEVICE} -y r"
+}
+
+function GetAvailableFwVersion() {
+    local -r _FW_FILE="$1"
+    local -r _MST_DEVICE="$2"
+    local -r _PSID="$3"
+
+    RunCmd "flint -i ${_FW_FILE} --psid ${_PSID} query 2>&1 > ${LIST_CONTENT_FILE}"
+
+    local -r _FW_AVAILABLE_INFO="$(grep 'FW Version:' ${LIST_CONTENT_FILE})"
+    local -r _FW_AVAILABLE="$(echo ${_FW_AVAILABLE_INFO} | awk '{print $3}')"
+
+    echo ${_FW_AVAILABLE}
+}
+
+{% endif %}
+
 function UpgradeFW() {
     local -r _FW_BIN_PATH="$1"
 
@@ -323,10 +419,7 @@ function UpgradeFW() {
     RunCmd "${QUERY_XML} -d ${_MST_DEVICE} -o ${QUERY_FILE}"
     local -r _FW_CURRENT=$(GetXPathXML "//Device/Versions/FW/@current" ${QUERY_FILE})
     local -r _PSID=$(GetXPathXML "//Device/@psid" ${QUERY_FILE})
-
-    RunCmd "${LIST_CONTENT_CMD} -i ${_FW_FILE} -d ${_MST_DEVICE} -o ${LIST_CONTENT_FILE}"
-    local -r _FW_AVAILABLE_INFO="$(grep ${_PSID} ${LIST_CONTENT_FILE})"
-    local -r _FW_AVAILABLE="$(echo ${_FW_AVAILABLE_INFO} | awk '{print $4}')"
+    local -r _FW_AVAILABLE="$(GetAvailableFwVersion ${_FW_FILE} ${_MST_DEVICE} ${_PSID})"
 
     if [[ -z "${_FW_CURRENT}" ]]; then
         ExitFailure "could not retreive current FW version"
@@ -339,7 +432,13 @@ function UpgradeFW() {
     if [[ "${_FW_CURRENT}" == "${_FW_AVAILABLE}" ]]; then
         ExitSuccess "firmware is up to date"
     else
+        if [[ "${DRY_RUN}" == "${YES_PARAM}" ]]; then
+            LogNotice "firmware upgrade is required"
+            exit ${FW_UPGRADE_IS_REQUIRED}
+        fi
+
         LogNotice "firmware upgrade is required. Installing compatible version..."
+
         if [[ "${_MST_DEVICE}" = "${UNKN_MST}" ]]; then
             LogWarning "could not find fastest mst device, using default device"
             RunFwUpdateCmd "-i ${_FW_FILE}"
@@ -394,6 +493,15 @@ function Cleanup() {
     fi
 }
 
+function ClearSemaphore() {
+    if [[ "${CLEAR_SEMAPHORE}" == "${YES_PARAM}" ]]; then
+        local -r _MST_DEVICE="$(GetSPCMstDevice)"
+        if [[ "${_MST_DEVICE}" != "${UNKN_MST}" ]]; then
+            /usr/bin/flint -d $_MST_DEVICE --clear_semaphore
+        fi
+    fi
+}
+
 trap Cleanup EXIT
 
 ParseArguments "$@"
@@ -403,6 +511,8 @@ ExitIfQEMU
 LockStateChange
 
 WaitForDevice
+
+ClearSemaphore
 
 if [ "${IMAGE_UPGRADE}" != "${YES_PARAM}" ]; then
     UpgradeFW

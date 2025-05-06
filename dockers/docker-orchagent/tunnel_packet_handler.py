@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 from ipaddress import ip_interface
 from queue import Queue
+from threading import Lock, Event, Thread
 
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector, \
                                   DBConnector, Select, SubscriberStateTable
@@ -29,6 +30,9 @@ logger = log.Logger()
 
 STATE_DB = 'STATE_DB'
 APPL_DB = 'APPL_DB'
+COUNTERS_DB = 'COUNTERS_DB'
+TUNNEL_PKT_COUNTER_TEMPLATE = 'COUNTERS{}IPINIP_TUNNEL_CPU_PKTS'
+COUNTER_KEY = 'RX_COUNT'
 PORTCHANNEL_INTERFACE_TABLE = 'PORTCHANNEL_INTERFACE'
 TUNNEL_TABLE = 'TUNNEL'
 PEER_SWITCH_TABLE = 'PEER_SWITCH'
@@ -69,6 +73,10 @@ class TunnelPacketHandler(object):
         self.config_db.connect()
         self.state_db = SonicV2Connector()
         self.state_db.connect(STATE_DB)
+        self.counters_db = SonicV2Connector()
+        self.counters_db.connect(COUNTERS_DB)
+        counters_db_separator = self.counters_db.get_db_separator(COUNTERS_DB)
+        self.tunnel_counter_table = TUNNEL_PKT_COUNTER_TEMPLATE.format(counters_db_separator)
         self._portchannel_intfs = None
         self.up_portchannels = None
         self.netlink_api = IPRoute()
@@ -76,6 +84,7 @@ class TunnelPacketHandler(object):
         self.self_ip = ''
         self.packet_filter = ''
         self.sniff_intfs = set()
+        self.pending_cmds = Queue()
 
         global portchannel_intfs
         portchannel_intfs = [name for name, _ in self.portchannel_intfs]
@@ -304,6 +313,27 @@ class TunnelPacketHandler(object):
         while not hasattr(self.sniffer, 'stop_cb'):
             time.sleep(0.1)
 
+    def write_count_to_db(self):
+        while True:
+            # use a set to automatically deduplicate destination IPs
+            to_run = set()
+
+            to_run.add(tuple(self.pending_cmds.get()))
+            pkt_count = 1
+            while not self.pending_cmds.empty() and len(to_run) < 100:
+                to_run.add(tuple(self.pending_cmds.get()))
+                # we should always count each packet, but only ping for each unique IP
+                pkt_count += 1
+
+            for cmds in to_run:
+                logger.log_info("Running command '{}'".format(' '.join(cmds)))
+                subprocess.run(cmds, stdout=subprocess.DEVNULL)
+            try:
+                curr_count = int(self.counters_db.get(COUNTERS_DB, self.tunnel_counter_table, COUNTER_KEY))
+            except TypeError:
+                curr_count = 0
+            self.counters_db.set(COUNTERS_DB, self.tunnel_counter_table, COUNTER_KEY, str(curr_count + pkt_count))
+
     def ping_inner_dst(self, packet):
         """
         Pings the inner destination IP for an encapsulated packet
@@ -319,8 +349,7 @@ class TunnelPacketHandler(object):
                 cmds.append('-6')
             dst_ip = packet[IP].payload[inner_packet_type].dst
             cmds.append(dst_ip)
-            logger.log_info("Running command '{}'".format(' '.join(cmds)))
-            subprocess.run(cmds, stdout=subprocess.DEVNULL)
+            self.pending_cmds.put(cmds)
 
     def listen_for_tunnel_pkts(self):
         """
@@ -339,7 +368,6 @@ class TunnelPacketHandler(object):
         logger.log_notice('Starting tunnel packet handler for {}'
                           .format(self.packet_filter))
 
-
         app_db = DBConnector(APPL_DB, 0)
         lag_table = SubscriberStateTable(app_db, LAG_TABLE)
         sel = Select()
@@ -355,7 +383,7 @@ class TunnelPacketHandler(object):
             elif rc == Select.ERROR:
                 raise Exception("Select() error")
             else:
-                lag, op, fvs = lag_table.pop()
+                lag, _, fvs = lag_table.pop()
                 if self.sniffer_restart_required(lag, fvs):
                     self.sniffer.stop()
                     start = datetime.now()
@@ -374,6 +402,8 @@ class TunnelPacketHandler(object):
         Entry point for the TunnelPacketHandler class
         """
         self.wait_for_portchannels()
+        db_thread = Thread(target=self.write_count_to_db, daemon=True)
+        db_thread.start()
         self.listen_for_tunnel_pkts()
 
 

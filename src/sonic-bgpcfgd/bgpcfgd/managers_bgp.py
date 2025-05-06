@@ -65,9 +65,9 @@ class BGPPeerGroupMgr(object):
             return False
 
         if kwargs['vrf'] == 'default':
-            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm
+            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm + "\nexit"
         else:
-            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm
+            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm + "\nexit"
         self.update_entity(cmd, "Peer-group for peer '%s'" % name)
         return True
 
@@ -107,6 +107,7 @@ class BGPPeerMgrBase(Manager):
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
+            ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),
             ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"),
@@ -186,19 +187,12 @@ class BGPPeerMgrBase(Manager):
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
-            # The bgp session that belongs to a vnet cannot be advertised as the default BGP session.
-            # So we need to check whether this bgp session belongs to a vnet.
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
             interface = self.get_local_interface(data["local_addr"])
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
                 return False
-            vnet = self.get_vnet(interface)
-            if vnet:
-                # Ignore the bgp session that is in a vnet
-                log_info("Ignore the BGP peer '%s' as the interface '%s' is in vnet '%s'" % (nbr, interface, vnet))
-                return True
 
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
@@ -311,10 +305,11 @@ class BGPPeerMgrBase(Manager):
         :return: True if no errors, False if there are errors
         """
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        enable_bgp_suppress_fib_pending_cmd = 'bgp suppress-fib-pending'
         if vrf == 'default':
-            cmd = ('router bgp %s\n' % bgp_asn) + cmd
+            cmd = ('router bgp %s\n %s\n' % (bgp_asn, enable_bgp_suppress_fib_pending_cmd)) + cmd + "\nexit"
         else:
-            cmd = ('router bgp %s vrf %s\n' % (bgp_asn, vrf)) + cmd
+            cmd = ('router bgp %s vrf %s\n %s\n' % (bgp_asn, vrf, enable_bgp_suppress_fib_pending_cmd)) + cmd + "\nexit"
         self.cfg_mgr.push(cmd)
         return True
 
@@ -385,7 +380,7 @@ class BGPPeerMgrBase(Manager):
         Load peers from FRR.
         :return: set of peers, which are already installed in FRR
         """
-        command = ["vtysh", "-c", "show bgp vrfs json"]
+        command = ["vtysh", "-H", "/dev/null", "-c", "show bgp vrfs json"]
         ret_code, out, err = run_command(command)
         if ret_code == 0:
             js_vrf = json.loads(out)

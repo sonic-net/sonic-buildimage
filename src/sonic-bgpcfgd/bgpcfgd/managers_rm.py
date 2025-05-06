@@ -2,7 +2,7 @@ from .manager import Manager
 from swsscommon import swsscommon
 from .log import log_err, log_debug
 
-ROUTE_MAPS = ["FROM_SDN_SLB_ROUTES"]
+ROUTE_MAPS = ["FROM_SDN_SLB_ROUTES", "FROM_SDN_APPLIANCE_ROUTES"]
 FROM_SDN_SLB_DEPLOYMENT_ID = '2'
 
 class RouteMapMgr(Manager):
@@ -83,7 +83,7 @@ class RouteMapMgr(Manager):
 
     def __update_rm(self, rm, data):
         cmds = []
-        if rm == "FROM_SDN_SLB_ROUTES":
+        if rm in ROUTE_MAPS :
             cmds.append("route-map %s permit 100" % ("%s_RM" % rm))
             bgp_asn = self.__read_asn()
             if bgp_asn is None or bgp_asn is '':

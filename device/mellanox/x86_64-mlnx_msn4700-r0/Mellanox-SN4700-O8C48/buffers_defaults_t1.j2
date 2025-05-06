@@ -1,5 +1,5 @@
 {#
-    Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES.
+    Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
     Apache-2.0
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -12,10 +12,17 @@
     limitations under the License.
 #}
 {% set default_cable = '300m' %}
-{% set ingress_lossless_pool_size =  '44089344' %}
-{% set ingress_lossless_pool_xoff  =  '9920512' %}
+{%- if ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) -%}
+{% set ingress_lossless_pool_size =  '43859968' %}
+{% set ingress_lossless_pool_xoff  =  '8282112' %}
 {% set egress_lossless_pool_size =  '60817392' %}
-{% set egress_lossy_pool_size =  '44089344' %}
+{% set egress_lossy_pool_size =  '43859968' %}
+{%- else -%}
+{% set ingress_lossless_pool_size =  '47792128' %}
+{% set ingress_lossless_pool_xoff  =  '6217728 ' %}
+{% set egress_lossless_pool_size =  '60817392' %}
+{% set egress_lossy_pool_size =  '47792128 ' %}
+{%- endif -%}
 
 {% import 'buffers_defaults_objects.j2' as defs with context %}
 
@@ -27,8 +34,16 @@
 {{ defs.generate_profile_lists(port_names_active, port_names_inactive) }}
 {%- endmacro %}
 
+{%- macro generate_queue_buffers_with_extra_lossless_queues_with_inactive_ports(port_names_active, port_names_extra_queues, port_names_inactive) %}
+{{ defs.generate_queue_buffers_with_extra_lossless_queues(port_names_active, port_names_extra_queues, port_names_inactive) }}
+{%- endmacro %}
+
 {%- macro generate_queue_buffers_with_inactive_ports(port_names_active, port_names_inactive) %}
 {{ defs.generate_queue_buffers(port_names_active, port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_pg_profiles_with_extra_lossless_pgs_with_inactive_ports(port_names_active, port_names_extra_pgs, port_names_inactive) %}
+{{ defs.generate_pg_profiles_with_extra_lossless_pgs(port_names_active, port_names_extra_pgs, port_names_inactive) }}
 {%- endmacro %}
 
 {%- macro generate_pg_profiles_with_inactive_ports(port_names_active, port_names_inactive) %}

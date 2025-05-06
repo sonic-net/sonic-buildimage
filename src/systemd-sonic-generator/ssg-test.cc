@@ -53,7 +53,8 @@ const std::string TEST_ASIC_CONF = TEST_PLATFORM_DIR + "asic.conf";
 const std::string TEST_PLATFORM_CONF = TEST_PLATFORM_DIR + "platform.json";
 
 const std::string TEST_OUTPUT_DIR = TEST_ROOT_DIR + "generator/";
-const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/"; 
+const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/";
+const std::string TEST_ETC_SYSTEM = TEST_OUTPUT_DIR + "system/";
 
 const std::string TEST_CONFIG_FILE = TEST_ROOT_DIR + "generated_services.conf";
 
@@ -167,6 +168,8 @@ class SsgFunctionTest : public SystemdSonicGeneratorFixture {
         fs::create_directories(path);
         path = fs::path(TEST_ETC_NETWORK.c_str());
         fs::create_directories(path);
+        path = fs::path(TEST_ETC_SYSTEM.c_str());
+        fs::create_directories(path);
         fp = fopen(TEST_MACHINE_CONF.c_str(), "w");
         ASSERT_NE(fp, nullptr);
         fputs("onie_platform=test_platform", fp);
@@ -228,6 +231,7 @@ class SsgMainTest : public SsgFunctionTest {
             while (getline(file, line) && !found) {
                 if (str == line) {
                     found = true;
+                    break;
                 }
             }
         return found;
@@ -266,7 +270,8 @@ class SsgMainTest : public SsgFunctionTest {
     void validate_output_unit_files(std::vector<std::string> strs,
                               std::string target,
                               bool expected_result,
-                              int num_instances) {
+                              int num_instances,
+                              bool dev_null_as_inexistent = true) {
         for (std::string str : strs) {
             bool finished = false;
             for (int i = 0 ; i < num_instances && !finished; ++i) {
@@ -279,9 +284,14 @@ class SsgMainTest : public SsgFunctionTest {
                     finished = true;
                 }
                 fs::path path{TEST_OUTPUT_DIR + target + "/" + str_t};
-                char resolved_path[PATH_MAX];
-                realpath(path.c_str(), resolved_path);
-                bool exist = fs::exists(path) && strcmp(resolved_path, "/dev/null") != 0;
+                bool exist = fs::exists(path);
+                if (exist) {
+                    char resolved_path[PATH_MAX] = { 0 };
+                    realpath(path.c_str(), resolved_path);
+                    if (strcmp(resolved_path, "/dev/null") == 0) {
+                        exist = !dev_null_as_inexistent;
+                    }
+                }
                 EXPECT_EQ(exist, expected_result)
                     << "Failed validation: " << path;
             }
@@ -351,6 +361,34 @@ class SsgMainTest : public SsgFunctionTest {
             test_target, cfg.is_smart_switch_dpu, cfg.num_dpus);
         validate_output_unit_files(dpu_network_service_list,
             "network", cfg.is_smart_switch_dpu, cfg.num_dpus);
+        validate_output_unit_files(non_smart_switch_service_list,
+            "system", !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu, cfg.num_dpus, false);
+    }
+
+    void validate_environment_variable(const SsgMainConfig &cfg) {
+        std::unordered_map<std::string, std::string> env_vars;
+        env_vars["IS_DPU_DEVICE"] = (cfg.is_smart_switch_dpu ? "true" : "false");
+        env_vars["NUM_DPU"] = std::to_string(cfg.num_dpus);
+
+        std::vector<std::string> checked_service_list;
+
+        checked_service_list.insert(checked_service_list.end(), common_service_list.begin(), common_service_list.end());
+        if (cfg.num_dpus > 0) {
+            checked_service_list.insert(checked_service_list.end(), npu_service_list.begin(), npu_service_list.end());
+        }
+        if (cfg.num_asics > 1) {
+            checked_service_list.insert(checked_service_list.end(), multi_asic_service_list.begin(), multi_asic_service_list.end());
+        }
+
+        for (const auto &target: checked_service_list) {
+            if (find_string_in_file("[Service]", target)) {
+                for (const auto& item : env_vars) {
+                    std::string str = "Environment=\"" + item.first + "=" + item.second + "\"";
+                    EXPECT_EQ(find_string_in_file(str, target), true)
+                        << "Error validating " + str + " in " + target;
+                }
+            }
+        }
     }
 
     /* ssg_main test routine.
@@ -420,6 +458,9 @@ class SsgMainTest : public SsgFunctionTest {
 
         /* Validate Test Unit file for dependency creation. */
         validate_depedency_in_unit_file(cfg);
+
+        /* Validate environment variables */
+        validate_environment_variable(cfg);
     }
 
     /* Save global variables before running tests */
@@ -432,6 +473,7 @@ class SsgMainTest : public SsgFunctionTest {
         for (const auto &service : disabled_service) {
             fs::create_symlink("/dev/null", TEST_ETC_NETWORK + service);
         }
+        fs::create_symlink("/dev/null", TEST_ETC_SYSTEM + "systemd-networkd.service");
     }
 
     /* Restore global vars */
@@ -444,6 +486,7 @@ class SsgMainTest : public SsgFunctionTest {
     static const std::vector<std::string> single_asic_service_list;
     static const std::vector<std::string> multi_asic_service_list;
     static const std::vector<std::string> common_service_list;
+    static const std::vector<std::string> non_smart_switch_service_list;
     static const std::vector<std::string> npu_service_list;
     static const std::vector<std::string> npu_network_service_list;
     static const std::vector<std::string> dpu_service_list;
@@ -486,6 +529,13 @@ SsgMainTest::common_service_list = {
     "test.service",
     "database.service",
 };
+
+/* Systemd service list for non Smart Switch */
+const std::vector<std::string>
+SsgMainTest::non_smart_switch_service_list = {
+    "systemd-networkd.service"
+};
+
 
 /* Systemd service Unit file list for Smart Switch NPU. */
 const std::vector<std::string>
@@ -699,7 +749,6 @@ TEST_F(SsgMainTest, ssg_main_argv) {
         std::vector<std::string> arguments = {
                     "ssg_main",
                 };
-
         /* Create argv list for ssg_main. */
         for (const auto& arg : arguments) {
             argv_.push_back((char*)arg.data());

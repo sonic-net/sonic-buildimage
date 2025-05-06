@@ -2,7 +2,7 @@
 #
 # Linux KNET module.
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -15,7 +15,7 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
 #
 
 obj-m := linux_ngknet.o
@@ -24,7 +24,7 @@ ifneq ($(OUTPUT_DIR),)
 INCLUDES := -I$(OUTPUT_DIR)/knet/generated/include -I$(OUTPUT_DIR)/knet/generated
 endif
 
-ccflags-y := $(KNET_CPPFLAGS) $(LKM_CFLAGS) \
+ccflags-y := $(KNET_CPPFLAGS) $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
              -I$(SDK)/shr/include \
              -I$(SDK)/bcmdrd/include \
              -I$(SDK)/linux/include \
@@ -39,6 +39,7 @@ linux_ngknet-y := $(CHIP_OBJS) \
                   bcmcnet_cmicx_pdma_rxtx.o \
                   bcmcnet_cmicr_pdma_hw.o \
                   bcmcnet_cmicr_pdma_rxtx.o \
+                  bcmcnet_cmicr2_pdma_rxtx.o \
                   bcmcnet_core.o \
                   bcmcnet_dev.o \
                   bcmcnet_rxtx.o \

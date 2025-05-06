@@ -63,10 +63,12 @@
                         "always-send": {{ config["always_send"] }}
                     },
     {%- endfor %}
+    {%- if "gateway" in subnet_info -%}
                     {
                         "name": "routers",
-                        "data": "{{ subnet_info["gateway"] if "gateway" in subnet_info else subnet_info["server_id"] }}"
+                        "data": "{{ subnet_info["gateway"] }}"
                     },
+    {%- endif -%}
                     {
                         "name": "dhcp-server-identifier",
                         "data": "{{ subnet_info["server_id"] }}"

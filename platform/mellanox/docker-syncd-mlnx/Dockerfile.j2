@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
+
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
@@ -26,15 +28,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y \
-        libxml2     \
-        python3-pip  \
-        python3-dev \
-        python-is-python3 \
-        python3-jsonschema \
 {%- if ENABLE_ASAN == "y" %}
-        libasan6 \
+        libasan8 \
 {%- endif %}
-        python3-setuptools
+        libxml2 \
+        python3-pip \
+        python3-dev \
+        python3-jsonschema \
+        python-is-python3
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python-pip
@@ -56,8 +57,11 @@ RUN apt-get purge -y python-pip
 {% endif %}
 
 ## Clean up
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
+RUN apt-get purge -y         \
+        python3-dev          \
+        python3-pip       && \
+    apt-get clean -y      && \
+    apt-get autoclean -y  && \
     apt-get autoremove -y && \
     rm -rf /debs
 

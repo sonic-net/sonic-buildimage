@@ -24,18 +24,32 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
-{% if not skip_chassisd and IS_MODULAR_CHASSIS == 1 %}
+
+{% if delay_non_critical_daemon %}
+[program:delay]
+command=python3 /usr/bin/delay.py
+autostart=false
+autorestart=false
+startsecs=0
+dependent_startup=true
+{% endif %}
+
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -47,8 +61,10 @@ command=/usr/local/bin/chassis_db_init
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=0
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -60,11 +76,13 @@ command=/usr/bin/lm-sensors.sh
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=0
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_fancontrol and HAVE_FANCONTROL_CONF == 1 %}
@@ -73,8 +91,10 @@ command=/usr/sbin/fancontrol
 priority=4
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -86,8 +106,10 @@ command={% if API_VERSION == 3 and 'ledd' not in python2_daemons %}python3 {% el
 priority=5
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -115,8 +137,10 @@ command={{ command }}
 priority=6
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -133,8 +157,10 @@ command=nice -n -20 python3 /usr/local/bin/ycabled
 priority=7
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
@@ -147,11 +173,13 @@ command={% if API_VERSION == 3 and 'psud' not in python2_daemons %}python3 {% el
 priority=8
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_syseepromd %}
@@ -160,11 +188,13 @@ command={% if API_VERSION == 3 and 'syseepromd' not in python2_daemons %}python3
 priority=9
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_thermalctld %}
@@ -173,12 +203,14 @@ command={% if API_VERSION == 3 and 'thermalctld' not in python2_daemons %}python
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 startretries=50
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_pcied %}
@@ -187,11 +219,13 @@ command=/usr/local/bin/pcied
 priority=11
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if include_sensormond %}
@@ -200,11 +234,13 @@ command=/usr/local/bin/sensormond
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_stormond %}
@@ -213,8 +249,10 @@ command=/usr/local/bin/stormond
 priority=10
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running

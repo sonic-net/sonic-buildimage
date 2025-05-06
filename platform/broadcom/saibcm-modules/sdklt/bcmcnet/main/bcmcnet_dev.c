@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -67,11 +67,11 @@ bcn_rx_queues_alloc(struct pdma_dev *dev)
             if (!rxq) {
                 goto error;
             }
+            ctrl->grp[gi].rx_queue[qi] = rxq;
             sal_memset(rxq, 0, sizeof(*rxq));
             rxq->group_id = gi;
             rxq->chan_id = qi + gi * dev->grp_queues;
             rxq->ctrl = ctrl;
-            ctrl->grp[gi].rx_queue[qi] = rxq;
             if (dev->mode == DEV_MODE_HNET) {
                 vrxq = sal_alloc(sizeof(*vrxq), "bcmcnetVnetRxQueue");
                 if (!vrxq) {
@@ -139,6 +139,7 @@ bcn_tx_queues_alloc(struct pdma_dev *dev)
             if (!txq) {
                 goto error;
             }
+            ctrl->grp[gi].tx_queue[qi] = txq;
             sal_memset(txq, 0, sizeof(*txq));
             txq->group_id = gi;
             txq->chan_id = qi + gi * dev->grp_queues;
@@ -147,7 +148,6 @@ bcn_tx_queues_alloc(struct pdma_dev *dev)
             if (!txq->sem) {
                 goto error;
             }
-            ctrl->grp[gi].tx_queue[qi] = txq;
             if (dev->mode == DEV_MODE_HNET) {
                 vtxq = sal_alloc(sizeof(*vtxq), "bcmcnetVnetTxQueue");
                 if (!vtxq) {

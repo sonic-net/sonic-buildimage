@@ -4,7 +4,7 @@ DOCKER_ORCHAGENT_STEM = docker-orchagent
 DOCKER_ORCHAGENT = $(DOCKER_ORCHAGENT_STEM).gz
 DOCKER_ORCHAGENT_DBG = $(DOCKER_ORCHAGENT_STEM)-$(DBG_IMAGE_MARK).gz
 
-$(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS) $(SONIC_RSYSLOG_PLUGIN)
+$(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS) $(LIB_SONIC_DASH_API)
 
 ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS_DBG)
@@ -13,8 +13,7 @@ endif
 $(DOCKER_ORCHAGENT)_DBG_DEPENDS = $($(DOCKER_SWSS_LAYER_BOOKWORM)_DBG_DEPENDS)
 $(DOCKER_ORCHAGENT)_DBG_DEPENDS +=   $(SWSS_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
-                                $(LIBSAIREDIS_DBG) \
-				$(SONIC_RSYSLOG_PLUGIN)
+                                $(LIBSAIREDIS_DBG)
 $(DOCKER_ORCHAGENT)_PYTHON_WHEELS += $(SCAPY)
 
 $(DOCKER_ORCHAGENT)_DBG_IMAGE_PACKAGES = $($(DOCKER_SWSS_LAYER_BOOKWORM)_DBG_IMAGE_PACKAGES)
@@ -37,9 +36,9 @@ SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_ORCHAGENT_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_ORCHAGENT_DBG)
 
 $(DOCKER_ORCHAGENT)_CONTAINER_NAME = swss
-$(DOCKER_ORCHAGENT)_RUN_OPT += --privileged -t
+$(DOCKER_ORCHAGENT)_RUN_OPT += -t --cap-add=NET_ADMIN --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
-$(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
+$(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /host/machine.conf:/host/machine.conf:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro

@@ -45,6 +45,23 @@
             }
         }
     },
+    "INVALID_LONG_VLAN_NAME": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "admin_status": "up",
+                        "description": "server_vlan",
+                        "dhcp_servers": [
+                            "10.186.72.56"
+                        ],
+                        "mtu": "9100",
+                        "name": "Vlan123456789012"
+                    }
+                ]
+            }
+        }
+    },
     "DHCP_SERVER_INCORRECT_FORMAT": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
@@ -720,7 +737,141 @@
             }
         }
     },
-
+    "VLAN_INTERFACE_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode":"trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "description": "vlan_nat",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac_addr": "02:26:9b:73:c1:1a"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_UPPER_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode":"trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "description": "vlan_nat",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac_addr": "02:AB:CD:EF:12:34"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_INVALID_MAC_ADDR": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000,
+                        "mode":"trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "description": "vlan_nat",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "mac_addr": "badaddr"
+                    }
+                ]
+            }
+        }
+    },
     "VLAN_MEMBERS_WITHOUT_CREATING_VLAN": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
@@ -827,7 +978,7 @@
                     "type": "SPAN",
                     "src_port": "Ethernet1",
                     "dst_port": "Ethernet2"
-                }]   
+                }]
             }
         }
     },
@@ -958,6 +1109,121 @@
                         "port": "Ethernet1",
                         "tagging_mode": "untagged",
                         "name": "Vlan10"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_INTERFACE_WITH_VNET_AND_IP_PREFIXES": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "Vnet1"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "192.168.1.1/24",
+                        "family": "IPv4",
+                        "scope": "global"
+                    },
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "2001:db8::1/64",
+                        "family": "IPv6",
+                        "scope": "global"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VLAN_INTERFACE_WITH_INVALID_VNET_NAME_REFERENCE": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "NonExistentVnet"
+                    }
+                ]
+            }
+        }
+    },
+    
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "Vnet1"
                     }
                 ]
             }

@@ -138,7 +138,8 @@ class TestVoqChassisSingleAsic(TestChassis):
             'switch_type': 'voq',
             'switch_id': 20,
             'max_cores': 64,
-            'slice_type': 'AZNG_Production'})
+            'slice_type': 'AZNG_Production',
+            'subtype': 'UpstreamLC'})
 
     def test_port(self):
         argument = ['-m', self.sample_graph, '-p',
@@ -182,7 +183,7 @@ class TestVoqChassisSingleAsic(TestChassis):
         expected_output_file = os.path.join(
             self.test_data_dir, 'system_ports.json')
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(self.run_diff(expected_output_file, self.output_file))
+        self.assertFalse(self.run_diff(expected_output_file, self.output_file))
         if os.path.exists(self.output_file):
             os.remove(self.output_file)
 
@@ -444,8 +445,10 @@ class TestVoqChassisMultiAsic(TestChassis):
             'chassis_hostname': 'str-sonic',
             'deployment_id': '3',
             'cluster': 'TestbedForstr-sonic',
+            'subtype': 'DownstreamLC',
             'switch_type': 'voq',
-            'max_cores': 64})
+            'max_cores': 64,
+            })
 
     def test_device_metadata_for_namespace(self):
         argument = [
@@ -473,17 +476,18 @@ class TestVoqChassisMultiAsic(TestChassis):
             'asic_name': 'asic0',
             'switch_type': 'voq',
             'switch_id': 8,
-            'max_cores': 64})
+            'max_cores': 64,
+            'subtype': 'DownstreamLC'})
 
     def test_system_port(self):
         argument = ['-m', self.sample_graph,
                     '-p', self.sample_port_config,
                     '-n', 'asic0',
-                    '--var-json', 'DEVICE_METADATA']
+                    '--var-json', 'SYSTEM_PORT']
         expected_output_file = os.path.join(
             self.test_data_dir, 'system_ports.json')
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(self.run_diff(expected_output_file, self.output_file))
+        self.assertFalse(self.run_diff(expected_output_file, self.output_file))
         if os.path.exists(self.output_file):
             os.remove(self.output_file)
 
@@ -920,6 +924,7 @@ class TestVoqChassisSup(TestChassis):
                 "chassis_hostname": "str-sonic",
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
+                "subtype": "Supervisor",
                 "switch_type": "fabric",
                 "sub_role": "fabric",
                 "max_cores": 64
@@ -950,7 +955,8 @@ class TestVoqChassisSup(TestChassis):
                 "sub_role": "Fabric",
                 "asic_name": "asic0",
                 "switch_type": "fabric",
-                "max_cores": 64
+                "max_cores": 64,
+                "subtype": "Supervisor",
             }
         )
 
@@ -1054,6 +1060,7 @@ class TestPacketChassisSup(TestChassis):
                 "chassis_hostname": "str-sonic",
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
+                "subtype": "Supervisor",
                 "switch_type": "chassis-packet",
                 "sub_role": "BackEnd",
                 "max_cores": 64
@@ -1082,6 +1089,7 @@ class TestPacketChassisSup(TestChassis):
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
                 "sub_role": "BackEnd",
+                "subtype": "Supervisor",
                 "asic_name": "asic0",
                 "switch_type": "chassis-packet",
                 "max_cores": 64

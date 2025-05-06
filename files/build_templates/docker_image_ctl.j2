@@ -73,6 +73,9 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         TYPE='fast'
         ;;
@@ -87,13 +90,14 @@ function preStartAction()
 {%- if docker_container_name == "database" %}
     WARM_DIR=/host/warmboot
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
             # Load redis content from /host/warmboot/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -107,7 +111,12 @@ function preStartAction()
         systemctl stop watchdog-control.service
     fi
 {%- elif docker_container_name == "snmp" %}
-    $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    if decode-syseeprom -s > /dev/null 2>&1; then
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+    else
+        echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
+        $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
@@ -120,6 +129,12 @@ function setPlatformLagIdBoundaries()
 {
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local start_id = tonumber(ARGV[1])
+    local end_id = tonumber(ARGV[2])
+    for id = start_id,end_id do
+        redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
+    end" 0 $lag_id_start $lag_id_end
 }
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
@@ -156,6 +171,7 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 function postStartAction()
 {
 {%- if docker_container_name == "database" %}
+    midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
@@ -191,11 +207,26 @@ function postStartAction()
            ip link set dev ns-eth1"$NET_NS" netns "$NET_NS"
            ip netns exec "$NET_NS" ip link set ns-eth1"$NET_NS" name eth1
 
+           if [[ -n "$lc_ip_offset" ]]; then
+	       # Use ip offset provided by platform vendor via chassisdb.conf to prevent any conflict
+	       # with any platform IP range, e.g., LC eth1-midplane IP.
+               ip_offset=$lc_ip_offset
+           else
+	       # If Vendor has not provided an ip offset, Use 10 as default offset. Platform vendor should
+	       # ensure there is no conflict with platform IP range for any slot.
+               ip_offset=10
+           fi
+
            # Configure IP address and enable eth1
-           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + 10))
+           slot_ip_address=`echo $midplane_subnet | awk -F. '{print $1 "." $2}'`.$slot_id.$(($DEV + $ip_offset))
            slot_subnet_mask=${midplane_subnet#*/}
            ip netns exec "$NET_NS" ip addr add $slot_ip_address/$slot_subnet_mask dev eth1
            ip netns exec "$NET_NS" ip link set dev eth1 up
+
+           # Don't run for supervisor
+           if [[ "${slot_id}" != "${supervisor_slot_id}" ]]; then
+                   midplane_ip=$slot_ip_address
+           fi
 
            # Allow localnet routing on the new interfaces if midplane is using a
            # subnet in the 127/8 range.
@@ -228,7 +259,7 @@ function postStartAction()
           sleep 1;
         done
 
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
             # retain the dump file from last boot for debugging purposes
             mv $WARM_DIR/dump.rdb $WARM_DIR/dump.rdb.old
         else
@@ -273,7 +304,7 @@ function postStartAction()
         fi
 
         # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]]; then
+        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
            tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
            if [[ -n "$tsa_cfg" ]]; then
               docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
@@ -285,6 +316,8 @@ function postStartAction()
         fi
 
         # Add redis UDS to the redis group and give read/write access to the group
+        REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
+        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -297,6 +330,14 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+
+    if [[ $DEV && $midplane_ip ]]; then
+        IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
+        bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
+        redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
+        redis-cli -h $ip -p $port config rewrite
+    fi
+
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
@@ -327,9 +368,17 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
+    fi
 {%- else %}
     : # nothing
 {%- endif %}
+    /etc/resolvconf/update-libc.d/update-containers ${DOCKERNAME} &
 }
 
 start() {
@@ -360,17 +409,6 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
-    # Parse the platform.json file to get the platform specific information
-    PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
-    if [ -f "$PLATFORM_JSON" ]; then
-        NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
-        jq -e '.DPU' $PLATFORM_JSON >/dev/null
-        if [[ $? -eq 0 ]]; then
-            IS_DPU_DEVICE="true"
-        else
-            IS_DPU_DEVICE="false"
-        fi
-    fi
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
@@ -428,40 +466,39 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_CFGGEN -j $CREATE_ONLY_CONFIG_DB_BUFFERS_JSON --write-to-db
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+        fi
+        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
+        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
     fi
     {%- endif %}
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
-        echo "Removing existing ${DOCKERNAME} container"
-        docker rm -f ${DOCKERNAME}
+        {%- if docker_container_name == "database" %}
+        DOCKERMOUNT=""
         {%- else %}
-            {%- if docker_container_name == "database" %}
-            DOCKERMOUNT=""
-            {%- else %}
-            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-            {%- endif %}
-            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-                CONTAINER_EXISTS="yes"
-                preStartAction
-                {%- if docker_container_name == "database" %}
-                echo "Starting existing ${DOCKERNAME} container"
-                docker start ${DOCKERNAME}
-                {%- else %}
-                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-                /usr/local/bin/container start ${DOCKERNAME}
-                {%- endif %}
-                postStartAction
-                exit $?
-            fi
-
-            # docker created with a different HWSKU, remove and recreate
-            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
-            docker rm -f ${DOCKERNAME}
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            CONTAINER_EXISTS="yes"
+            preStartAction
+            {%- if docker_container_name == "database" %}
+            echo "Starting existing ${DOCKERNAME} container"
+            docker start ${DOCKERNAME}
+            {%- else %}
+            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+            /usr/local/bin/container start ${DOCKERNAME}
+            {%- endif %}
+            postStartAction
+            exit $?
+        fi
+
+        # docker created with a different HWSKU, remove and recreate
+        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        docker rm -f ${DOCKERNAME}
     fi
 
     {%- if docker_container_name == "database" %}
@@ -540,6 +577,11 @@ start() {
     else
         DB_OPT=$DB_OPT" --add-host=redis_chassis.server:$chassis_db_address "
     fi
+    {%- elif docker_container_name == "dash-ha" %}
+    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
+    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+    {%- else %}
+    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
@@ -554,6 +596,7 @@ start() {
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
         {%- if docker_container_name != "database" %}
+
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
             do
@@ -583,7 +626,7 @@ start() {
         if [ -n "$redis_dir_list" ]; then
             id=`expr $DEV + 1`
             redis_dir=`echo $redis_dir_list | cut -d " " -f $id`
-            REDIS_MNT=" -v $redis_dir:$redis_dir:rw "
+            REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
         fi
 
         {%- if docker_container_name == "database" %}
@@ -610,6 +653,13 @@ start() {
 
 {%- if sonic_asic_platform == "mellanox" %}
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
+{%- if docker_container_name == "pmon" %}
+    if [[ $NUM_DPU -gt 0 ]]; then
+        SMARTSWITCH_MNT=" -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+    else
+        SMARTSWITCH_MNT=""
+    fi
+{%- endif %}
 {%- endif %}
     docker create {{docker_image_run_opt}} \
 {%- if docker_container_name != "dhcp_server" %}
@@ -617,6 +667,7 @@ start() {
 {%- endif %}
         -e RUNTIME_OWNER=local \
         --uts=host \{# W/A: this should be set per-docker, for those dockers which really need host's UTS namespace #}
+	--tmpfs /var/log/supervisor:rw \
 {%- if install_debug_image == "y" %}
         -v /src:/src:ro -v /debug:/debug:rw \
 {%- endif %}
@@ -636,6 +687,7 @@ start() {
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
+        $SMARTSWITCH_MNT \
         -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /dev/shm:/dev/shm:rw \
@@ -647,7 +699,7 @@ start() {
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
-        --shm-size=${SYNCD_SHM_SIZE:-64m} \
+        --shm-size=${SYNCD_SHM_SIZE:-512m} \
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
 {%- endif %}
 {%- endif %}
@@ -666,7 +718,6 @@ start() {
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
-        -v /var/run/redis$DEV:/var/run/redis:rw \
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
         -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
 {%- endif %}
@@ -726,13 +777,20 @@ stop() {
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
     fi
-    {%- elif docker_container_name == "teamd" %}
-    # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
-    /usr/local/bin/container stop -t 60 $DOCKERNAME
-    {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
-    /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- else %}
-    /usr/local/bin/container stop $DOCKERNAME
+    container_id=$(docker ps --filter "name=$DOCKERNAME" --quiet)
+    if [ -z "$container_id" ]; then
+        echo "container stop $DOCKERNAME - No such container: $DOCKERNAME"
+    else
+    {%- if docker_container_name == "teamd" %}
+        # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- else %}
+        /usr/local/bin/container stop $DOCKERNAME
+    {%- endif %}
+    fi
     {%- endif %}
 }
 

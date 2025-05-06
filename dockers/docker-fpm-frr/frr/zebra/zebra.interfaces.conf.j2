@@ -4,6 +4,7 @@
 {%   for vnet_name, vnet_metadata in VNET.items() %}
 vrf {{ vnet_name }}
 vni {{ vnet_metadata['vni'] }}
+exit
 !
 {%   endfor %}
 {%  endif %}

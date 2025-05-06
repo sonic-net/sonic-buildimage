@@ -11,7 +11,7 @@
 {% endif %}
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
-  neighbor {{ neighbor_addr }} timers 3 10
+  neighbor {{ neighbor_addr }} timers 2 7
   neighbor {{ neighbor_addr }} timers connect 10
 !
 {% if 'admin_status' in bgp_session and bgp_session['admin_status'] == 'down' or 'admin_status' not in bgp_session and 'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' %}

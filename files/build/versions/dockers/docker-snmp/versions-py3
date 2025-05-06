@@ -1,4 +1,4 @@
-hiredis==2.3.2
-psutil==5.9.8
+hiredis==3.1.0
+psutil==7.0.0
 python-arptable==0.0.2
 smbus==1.1.post2

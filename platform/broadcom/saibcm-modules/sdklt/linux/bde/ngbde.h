@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGBDE_H
@@ -48,7 +48,7 @@
 #define NGBDE_NUM_IRQ_REGS_MAX  16
 
 /*! Maximum number of IRQ lines (MSI vectors) per device. */
-#define NGBDE_NUM_IRQS_MAX      1
+#define NGBDE_NUM_IRQS_MAX      16
 
 /*!
  * Maximum number of interrupt controller registers which may be
@@ -135,17 +135,26 @@ typedef struct ngbde_irq_reg_s {
     /*! Mask identifying the register bits owned by the kernel mode driver. */
     uint32_t kmask;
 
+    /*! Mask identifying the register bits owned by the user mode driver. */
+    uint32_t umask;
+
 } ngbde_irq_reg_t;
 
 /*!
- * \name Interrupt ACK register access flags.
- * \anchor NGBDE_INTR_ACK_F_xxx
+ * \name Interrupt ACK register domains.
+ * \anchor NGBDE_INTR_ACK_IO_xxx
  */
 
 /*! \{ */
 
-/*! ACK registers resides in PCI bridge I/O window. */
-#define NGBDE_INTR_ACK_F_PAXB        (1 << 0)
+/*! ACK registers reside in the default device I/O window. */
+#define NGBDE_INTR_ACK_IO_DEV           0
+
+/*! ACK registers reside in the interrupt controller I/O window. */
+#define NGBDE_INTR_ACK_IO_INTR          1
+
+/*! ACK registers reside in the PCI bridge I/O window. */
+#define NGBDE_INTR_ACK_IO_PAXB          2
 
 /*! \} */
 
@@ -161,14 +170,17 @@ typedef struct ngbde_irq_reg_s {
  */
 typedef struct ngbde_intr_ack_reg_s {
 
-    /*! Ack register offset. */
+    /*! ACK register information is valid. */
+    bool ack_valid;
+
+    /*! ACK register domain (\ref NGBDE_INTR_ACK_IO_xxx). */
+    uint32_t ack_domain;
+
+    /*! ACK register offset. */
     uint32_t ack_reg;
 
-    /*! Ack value. */
+    /*! ACK value. */
     uint32_t ack_val;
-
-    /*! Flags to indicate ack_reg resides in PCI bridge window. */
-    uint32_t flags;
 
 } ngbde_intr_ack_reg_t;
 
@@ -220,17 +232,17 @@ typedef struct ngbde_intr_ctrl_s {
     /*! Flag to wake up user mode interrupt thread. */
     atomic_t run_user_thread;
 
-    /*! Primary interrupt handler. */
+    /*! Optional interrupt handler. */
     ngbde_isr_f isr_func;
 
-    /*! Context for primary interrupt handler. */
+    /*! Context for optional kernel interrupt handler. */
     void *isr_data;
 
-    /*! Secondary interrupt handler. */
-    ngbde_isr_f isr2_func;
+    /*! Run kernel mode interrupt handler for this interrupt line. */
+    bool run_kernel_isr;
 
-    /*! Context for secondary interrupt handler. */
-    void *isr2_data;
+    /*! Run user mode interrupt handler for this interrupt line. */
+    bool run_user_isr;
 
 } ngbde_intr_ctrl_t;
 
@@ -317,6 +329,24 @@ typedef struct ngbde_dmapool_s {
 
 } ngbde_dmapool_t;
 
+/*!
+ * \name MSI interrupt support.
+ * \anchor NGBDE_MSI_T_xxx
+ */
+
+/*! \{ */
+
+/*! Use legacy interrupts. */
+#define NGBDE_MSI_T_NONE        0
+
+/*! Use MSI interrupts. */
+#define NGBDE_MSI_T_MSI         1
+
+/*! Use MSI-X interrupts. */
+#define NGBDE_MSI_T_MSIX        2
+
+/*! \} */
+
 /*! Switch device descriptor. */
 struct ngbde_dev_s {
 
@@ -341,7 +371,13 @@ struct ngbde_dev_s {
     /*! Interrupt line associated with this device. */
     int irq_line;
 
-    /*! Use MSI interrupts with this device. */
+    /*! Number of available interrupt lines (typically MSI vectors). */
+    int irq_max;
+
+    /*! Number of active interrupt lines (typically MSI vectors). */
+    int active_irqs;
+
+    /*! Use MSI interrupts with this device (\ref NGBDE_MSI_T_xxx). */
     int use_msi;
 
     /*! Non-zero if device was removed. */
@@ -444,6 +480,39 @@ ngbde_dma_init(void);
  */
 extern void
 ngbde_dma_cleanup(void);
+
+/*!
+ * \brief Allocate interrupt lines.
+ *
+ * This function will update irq_max member in the device descriptor
+ * with the number of interrupt lines actually allocated.
+ *
+ * No action is taken if a kernel ISR is already active (e.g. after a
+ * warm-boot).
+ *
+ * \param [in] kdev Device number.
+ * \param [in] num_irq Number of interrupt lines wanted.
+ *
+ * \return Number of allocated interrupt lines or -1 if error.
+ */
+extern int
+ngbde_intr_alloc(int kdev, unsigned int num_irq);
+
+/*!
+ * \brief Free interrupt lines.
+ *
+ * Free interrupt lines previously allocated via \ref
+ * ngbde_intr_alloc.
+ *
+ * No action is taken if a kernel ISR is still active.
+ *
+ * \param [in] kdev Device number.
+ *
+ * \retval 0 No errors
+ * \retval -1 Something went wrong.
+ */
+extern int
+ngbde_intr_free(int kdev);
 
 /*!
  * \brief Connect to hardware interrupt handler.

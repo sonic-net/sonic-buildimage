@@ -417,7 +417,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
 
     for intf in port_dict[INTF_KEY]:
         if intf not in hwsku_dict[INTF_KEY]:
-            raise Exception("{} is not available in hwsku_dict".format(intf))
+            continue
 
         # take default_brkout_mode from hwsku.json
         brkout_mode = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
@@ -430,7 +430,8 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
             if child_port in hwsku_entry:
                 for key, item in hwsku_entry[child_port].items():
                     if key in OPTIONAL_HWSKU_ATTRIBUTES:
-                        child_ports.get(child_port)[key] = item
+                        for child in child_ports:
+                            child_ports.get(child)[key] = item
 
         ports.update(child_ports)
 

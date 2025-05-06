@@ -1,0 +1,69 @@
+# $Id: Make.clang
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+#
+# Build flags for CLANG.
+#
+
+SHELL := $(shell which bash)
+CHK_CC := $(shell PATH="$(PATH)" which $(CC))
+CLANG_MAJOR := $(shell $(CHK_CC) --version | sed -n 's/.* \([0-9]*\)\..*/\1/p')
+#
+# This is not suitable for CLANG compilation of DNX family so do not inclue.
+#
+ifneq (1,$(SAND_CHIPS))
+ifeq (true,$(shell [ $(CLANG_MAJOR) -ge 10 ] && echo true))
+# Support kernel module build
+export KERNEL_LLVM ?= 1
+
+# Suppress various Clang warnings
+CLANG_ADD_CFLAGS += \
+    -Wno-gnu-designator \
+    -Wno-gnu-variable-sized-type-not-at-end \
+    -Wno-address-of-packed-member \
+    -Wno-unused-command-line-argument \
+    -Wno-misleading-indentation
+
+# Suppress Clang build issues on TCL Bindings
+ifeq (TCL,$(findstring TCL,$(FEATURE_LIST)))
+CLANG_ADD_CFLAGS += \
+    -Wno-deprecated-non-prototype \
+    -Wno-incompatible-function-pointer-types \
+    -Wno-incompatible-pointer-types-discards-qualifiers \
+    -Wno-void-pointer-to-int-cast \
+    -Wno-int-to-void-pointer-cast \
+    -Wno-pointer-to-int-cast
+endif
+
+# Use LLD by default
+LDFLAGS += -fuse-ld=lld
+CLANG_ADD_CFLAGS += -fuse-ld=lld
+
+# Use DWARF V4 for compatibility
+CLANG_ADD_CFLAGS += -gdwarf-4
+endif
+endif

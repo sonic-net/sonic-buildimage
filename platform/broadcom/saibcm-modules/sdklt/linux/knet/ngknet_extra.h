@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,11 +17,13 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_EXTRA_H
 #define NGKNET_EXTRA_H
+
+#include <lkm/ngknet_kapi.h>
 
 /*!
  * \brief Filter control.
@@ -38,6 +40,9 @@ struct filt_ctrl {
 
     /*! Filter description */
     ngknet_filter_t filt;
+
+    /*! Filter callback */
+    ngknet_filter_cb_f filter_cb;
 };
 
 /*!
@@ -104,16 +109,18 @@ ngknet_filter_get_next(struct ngknet_dev *dev, ngknet_filter_t *filter);
  * \brief Filter packet.
  *
  * \param [in] dev Device structure point.
- * \param [in] skb Rx packet SKB.
- * \param [out] mndev Mirror network interface.
- * \param [out] mskb Mirror Rx packet SKB.
+ * \param [in] oskb Rx packet SKB.
+ * \param [out] ndev Network interface.
+ * \param [out] mskb Mirrored Rx packet SKB.
+ * \param [out] mndev Mirrored network interface.
  *
  * \retval Matched network interface.
  * \retval NULL No matched network interface.
  */
 extern int
-ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb, struct net_device **ndev,
-                     struct net_device **mndev, struct sk_buff **mskb);
+ngknet_rx_pkt_filter(struct ngknet_dev *dev,
+                     struct sk_buff **oskb, struct net_device **ndev,
+                     struct sk_buff **mskb, struct net_device **mndev);
 
 /*!
  * \brief Rx rate limit control.

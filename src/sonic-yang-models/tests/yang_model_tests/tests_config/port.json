@@ -88,6 +88,52 @@
             }
         }
     },
+
+    "PORT_VALID_DHCP_RATE_LIMIT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "lanes": "60, 61",
+                        "speed": 100000,
+                        "subport": 1,
+                        "mode":"trunk",
+                        "dhcp_rate_limit": "301"
+                    },
+                    {
+                       "name": "Ethernet2",
+                        "alias": "etp1b",
+                        "lanes": "62, 63",
+                        "speed": 100000,
+                        "subport": 2,
+                        "mode":"trunk",
+                        "dhcp_rate_limit": "500"
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "alias": "etp1c",
+                        "lanes": "64, 65",
+                        "speed": 100000,
+                        "subport": 3,
+                        "mode":"trunk",
+                        "dhcp_rate_limit": "100000"
+                    },
+                    {
+                        "name": "Ethernet6",
+                        "alias": "etp1d",
+                        "lanes": "66, 67",
+                        "speed": 100000,
+                        "subport": 4,
+                        "mode":"trunk",
+                        "dhcp_rate_limit": "400000"
+                    }
+                ]
+            }
+        }
+    },
+
     "PORT_VALID_AUTONEG_TEST_1": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
@@ -804,5 +850,174 @@
                 ]
             }
         }
+    },
+    "PORT_NO_LANES_NEGATIVE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Ext"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_VOQ_CHASSIS_WITH_NO_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Ext"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_VOQ_CHASSIS_WITH_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "voq",
+                    "asic_name": "asic0"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Ext",
+                        "lanes": "60, 61"
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_PACKET_CHASSIS_WITH_NO_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "chassis-packet"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Ext"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_FABRIC_WITH_NO_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "fabric"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_FABRIC_WITH_NO_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "fabric"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hwsku": "msft_multi_asic_vs"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hwsku": "msft_four_asic_vs"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
     }
+
 }

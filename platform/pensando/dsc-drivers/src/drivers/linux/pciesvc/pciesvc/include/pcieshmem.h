@@ -94,6 +94,7 @@ typedef union pciehwdev_u {
         u_int16_t pf:1;                 /* is pf */
         u_int16_t vf:1;                 /* is vf */
         u_int16_t flexvf:1;             /* is flexvf */
+        u_int16_t msix_en:1;            /* msix enabled for this dev */
         u_int16_t totalvfs;             /* totalvfs provisioned */
         u_int16_t numvfs;               /* current numvfs */
         u_int16_t vfidx;                /* if is vf, vf position */
@@ -171,7 +172,7 @@ typedef struct pciehw_sromsk_s {
 #define PCIEHW_VPDSZ    1024
 #define PCIEHW_SERIALSZ 1024
 
-typedef struct pciehw_shmem_s {
+typedef struct pciehw_shmem_lo_s {
     u_int32_t magic;                    /* PCIEHW_MAGIC when initialized */
     u_int32_t version;                  /* PCIEHW_VERSION when initialized */
     u_int32_t hwinit:1;                 /* hw is initialized */
@@ -179,6 +180,8 @@ typedef struct pciehw_shmem_s {
     u_int32_t skip_notify:1;            /* notify skips if ring full */
     u_int32_t pmtpri:1;                 /* support pmt pri */
     u_int32_t evregistered:1;           /* event handler registered flag */
+    u_int32_t hi_ndev:1;                /* 2048 ndev */
+    /* Hi-Lo should be in sync till here */
     u_int32_t allocdev;
     u_int32_t allocpmt_high;            /* high priority pmt free sequential */
     u_int32_t allocprt;                 /* prt free sequential */
@@ -198,7 +201,59 @@ typedef struct pciehw_shmem_s {
     u_int32_t freepmt_low;              /* low priority pmt free list */
     u_int32_t allocpmt_vf0adj;          /* low pri vf0 adjust (never freed) */
     u_int32_t freeprt_slab;             /* prt free slab adjacent */
+} pciehw_shmem_lo_t;
+
+typedef struct pciehw_shmem_hi_s {
+    u_int32_t magic;                    /* PCIEHW_MAGIC when initialized */
+    u_int32_t version;                  /* PCIEHW_VERSION when initialized */
+    u_int32_t hwinit:1;                 /* hw is initialized */
+    u_int32_t notify_verbose:1;         /* notify logs all */
+    u_int32_t skip_notify:1;            /* notify skips if ring full */
+    u_int32_t pmtpri:1;                 /* support pmt pri */
+    u_int32_t evregistered:1;           /* event handler registered flag */
+    u_int32_t hi_ndev:1;                /* 2048 ndev */
+    /* Hi-Lo should be in sync till here */
+    u_int32_t allocdev;
+    u_int32_t allocpmt_high;            /* high priority pmt free sequential */
+    u_int32_t allocpmt_low;             /* low priority pmt free sequential */
+    u_int32_t allocpmt_vf0adj;          /* low pri vf0 adjust (never freed) */
+    u_int32_t allocprt;                 /* prt free sequential */
+    u_int32_t freepmt_high;             /* high priority pmt free list */
+    u_int32_t freepmt_low;              /* low priority pmt free list */
+    u_int32_t freeprt_slab;             /* prt free slab adjacent */
+    u_int32_t notify_ring_mask;
+    pciehwdevh_t rooth[PCIEHW_NPORTS];
+    pciehwdev_t dev[PCIEHW_NDEVS_HI];
+    pciehw_port_t port[PCIEHW_NPORTS];
+    pciehw_sromsk_t sromsk[PCIEHW_NROMSK];
+    pciehw_spmt_t spmt[PCIEHW_NPMT];
+    pciehw_sprt_t sprt[PCIEHW_NPRT];
+    u_int8_t cfgrst[PCIEHW_NDEVS_HI][PCIEHW_CFGSZ];
+    u_int8_t cfgmsk[PCIEHW_NDEVS_HI][PCIEHW_CFGSZ];
+    u_int8_t vpddata[PCIEHW_NDEVS_HI][PCIEHW_VPDSZ];
+    u_int8_t serial[PCIEHW_NPORTS][PCIEHW_SERIALSZ];
+} pciehw_shmem_hi_t;
+
+typedef struct pciehw_shmem_s {
+    union {
+        pciehw_shmem_lo_t lo;
+        pciehw_shmem_hi_t hi;
+    };
 } pciehw_shmem_t;
+
+#define PSHMEM_IS_HI_NDEV(S) (S->lo.hi_ndev)
+#define PSHMEM_NDEVS(S) (S->lo.hi_ndev ? PCIEHW_NDEVS_HI : PCIEHW_NDEVS)
+#define PSHMEM_DATA_FIELD(S, V) (S->lo.hi_ndev ? S->hi.V : S->lo.V)
+#define PSHMEM_ADDR_FIELD(S, V) (S->lo.hi_ndev ? &S->hi.V : &S->lo.V)
+#define PSHMEM_ASGN_FIELD(S, V, A) \
+            (S->lo.hi_ndev ? (S->hi.V = A) : (S->lo.V = A))
+#define PSHMEM_OFFSETOF(S, V) (S->lo.hi_ndev ? \
+            offsetof(pciehw_shmem_hi_t, V) : offsetof(pciehw_shmem_lo_t, V))
+#define PSHMEM_SIZEOF(S, V) (S->lo.hi_ndev ? \
+            sizeof(((pciehw_shmem_hi_t *)0L)->V) : \
+            sizeof(((pciehw_shmem_lo_t *)0L)->V))
+#define PSHMEM_SIZEOF_T(S) (S->lo.hi_ndev ? sizeof(pciehw_shmem_hi_t) : \
+            sizeof(pciehw_shmem_lo_t))
 
 #ifdef __cplusplus
 }

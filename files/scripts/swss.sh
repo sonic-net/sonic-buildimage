@@ -8,7 +8,7 @@ DEBUGLOG="/tmp/swss-syncd-debug$DEV.log"
 LOCKFILE="/tmp/swss-syncd-lock$DEV"
 NAMESPACE_PREFIX="asic"
 ETC_SONIC_PATH="/etc/sonic/"
-
+TSA_TSB_SERVICE="startup_tsa_tsb.service"
 
 . /usr/local/bin/asic_status.sh
 
@@ -109,9 +109,9 @@ function clean_up_tables()
 
 # This function cleans up the chassis db table entries created ONLY by this asic
 # This is used to do the clean up operation when the line card / asic reboots
-# When the asic/lc is RE-booting, the chassis db server is supposed to be running 
-# in the supervisor.  So the clean up is done when only the chassis db connectable. 
-# Otherwise no need to do the clean up since both the supervisor and line card may be 
+# When the asic/lc is RE-booting, the chassis db server is supposed to be running
+# in the supervisor.  So the clean up is done when only the chassis db connectable.
+# Otherwise no need to do the clean up since both the supervisor and line card may be
 # rebooting (the whole chassis scenario)
 # The clean up operation is required to delete only those entries created by
 # the asic that is rebooted. Entries from the following tables are deleted in the order
@@ -212,7 +212,7 @@ function clean_up_chassis_db_tables()
     debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_MEMBER_TABLE entries deleted: $num_lag_mem"
 
     # Wait for some time before deleting system lag so that the all the memebers of the
-    # system lag will be cleared. 
+    # system lag will be cleared.
     # This delay is needed only if some system lag members were deleted
 
     if [[ $num_lag_mem > 0 ]]; then
@@ -233,6 +233,7 @@ function clean_up_chassis_db_tables()
             local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
             redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
             redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('rpush', 'SYSTEM_LAG_IDS_FREE_LIST', lagid)
             nsl = nsl + 1
         end
     end
@@ -242,10 +243,27 @@ function clean_up_chassis_db_tables()
 
 }
 
+is_feature_enabled()
+{
+    s=$1
+    service=${s%@*}
+    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    if [[ $state == "enabled" ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
 start_peer_and_dependent_services() {
     check_warm_boot
 
     if [[ x"$WARM_BOOT" != x"true" ]]; then
+        SERVICES_CONF="/usr/share/sonic/device/$PLATFORM/services.conf"
+        if [[ -f $SERVICES_CONF ]] && grep -q "^startup_tsa_tsb.service$" $SERVICES_CONF; then
+            echo "${SERVICE}$DEV: starting TSA-TSB service"
+            /bin/systemctl restart $TSA_TSB_SERVICE
+        fi
+
         for peer in ${PEER}; do
             if [[ ! -z $DEV ]]; then
                 /bin/systemctl start ${peer}@$DEV
@@ -254,7 +272,14 @@ start_peer_and_dependent_services() {
             fi
         done
         for dep in ${DEPENDENT}; do
-            /bin/systemctl start ${dep}
+            if [[ $dep == "dhcp_relay" ]]; then
+                state=$(is_feature_enabled $dep)
+                if [[ $state == "true" ]]; then
+                    /bin/systemctl start ${dep}
+                fi
+            else
+                /bin/systemctl start ${dep}
+            fi
         done
         for dep in ${MULTI_INST_DEPENDENT}; do
             if [[ ! -z $DEV ]]; then
@@ -310,7 +335,7 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache

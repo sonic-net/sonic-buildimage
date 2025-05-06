@@ -11,6 +11,3 @@ sonic-cfggen -d -t /usr/share/sonic/templates/iccpd.j2 > $ICCPD_CONF_PATH/iccpd.
 mkdir -p /var/sonic
 echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
 
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime

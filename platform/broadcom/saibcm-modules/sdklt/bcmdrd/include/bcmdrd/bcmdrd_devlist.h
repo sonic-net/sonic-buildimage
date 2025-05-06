@@ -4,7 +4,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/drd/instpkgs.pl
  *
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 /*
@@ -41,26 +41,53 @@
 #define BCM56080_VENDOR_ID                0x14e4
 #define BCM56080_DEVICE_ID                0xb080
 #define BCM56080_REV_A0                     0x01
+#define BCM56080_REV_A1                     0x02
 
 /* BCM56081 */
 #define BCM56081_VENDOR_ID                0x14e4
 #define BCM56081_DEVICE_ID                0xb081
 #define BCM56081_REV_A0                     0x01
+#define BCM56081_REV_A1                     0x02
 
 /* BCM56082 */
 #define BCM56082_VENDOR_ID                0x14e4
 #define BCM56082_DEVICE_ID                0xb082
 #define BCM56082_REV_A0                     0x01
+#define BCM56082_REV_A1                     0x02
 
 /* BCM56083 */
 #define BCM56083_VENDOR_ID                0x14e4
 #define BCM56083_DEVICE_ID                0xb083
 #define BCM56083_REV_A0                     0x01
+#define BCM56083_REV_A1                     0x02
 
 /* BCM56084 */
 #define BCM56084_VENDOR_ID                0x14e4
 #define BCM56084_DEVICE_ID                0xb084
 #define BCM56084_REV_A0                     0x01
+#define BCM56084_REV_A1                     0x02
+
+/* BCM56085 */
+#define BCM56085_VENDOR_ID                0x14e4
+#define BCM56085_DEVICE_ID                0xb085
+#define BCM56085_REV_A0                     0x01
+#define BCM56085_REV_A1                     0x02
+
+/* BCM56690 */
+#define BCM56690_VENDOR_ID                0x14e4
+#define BCM56690_DEVICE_ID                0xb690
+#define BCM56690_REV_A0                     0x01
+
+/* BCM56692 */
+#define BCM56692_VENDOR_ID                0x14e4
+#define BCM56692_DEVICE_ID                0xb692
+#define BCM56692_REV_A0                     0x01
+
+/* BCM56089 */
+#define BCM56089_VENDOR_ID                0x14e4
+#define BCM56089_DEVICE_ID                0xb089
+#define BCM56089_REV_A0                     0x01
+#define BCM56089_REV_A1                     0x02
 
 /* BCM56780 */
 #define BCM56780_VENDOR_ID                0x14e4
@@ -71,6 +98,7 @@
 #define BCM56782_VENDOR_ID                0x14e4
 #define BCM56782_DEVICE_ID                0xb782
 #define BCM56782_REV_A0                     0x01
+#define BCM56782_REV_A1                     0x02
 
 /* BCM56784 */
 #define BCM56784_VENDOR_ID                0x14e4
@@ -86,16 +114,19 @@
 #define BCM56786_VENDOR_ID                0x14e4
 #define BCM56786_DEVICE_ID                0xb786
 #define BCM56786_REV_A0                     0x01
+#define BCM56786_REV_A1                     0x02
 
 /* BCM56787 */
 #define BCM56787_VENDOR_ID                0x14e4
 #define BCM56787_DEVICE_ID                0xb787
 #define BCM56787_REV_A0                     0x01
+#define BCM56787_REV_A1                     0x02
 
 /* BCM56788 */
 #define BCM56788_VENDOR_ID                0x14e4
 #define BCM56788_DEVICE_ID                0xb788
 #define BCM56788_REV_A0                     0x01
+#define BCM56788_REV_A1                     0x02
 
 /* BCM56789 */
 #define BCM56789_VENDOR_ID                0x14e4
@@ -195,15 +226,35 @@
 #define BCM56999_REV_A0                     0x01
 #define BCM56999_REV_B0                     0x11
 
+/* BCM78800 */
+#define BCM78800_VENDOR_ID                0x14e4
+#define BCM78800_DEVICE_ID                0xf800
+#define BCM78800_REV_A0                     0x01
+
+/* BCM78808 */
+#define BCM78808_VENDOR_ID                0x14e4
+#define BCM78808_DEVICE_ID                0xf808
+#define BCM78808_REV_A0                     0x01
+
 /* BCM78900 */
 #define BCM78900_VENDOR_ID                0x14e4
 #define BCM78900_DEVICE_ID                0xf900
 #define BCM78900_REV_B0                     0x11
 
+/* BCM78902 */
+#define BCM78902_VENDOR_ID                0x14e4
+#define BCM78902_DEVICE_ID                0xf902
+#define BCM78902_REV_B0                     0x11
+
+/* BCM78903 */
+#define BCM78903_VENDOR_ID                0x14e4
+#define BCM78903_DEVICE_ID                0xf903
+#define BCM78903_REV_B0                     0x11
+
 /* BCM78905 */
 #define BCM78905_VENDOR_ID                0x14e4
 #define BCM78905_DEVICE_ID                0xf905
-#define BCM78905_REV_B0                     0x11
+#define BCM78905_REV_A0                     0x01
 
 /*
  * End of Supported Devices and Revisions
@@ -242,8 +293,18 @@
 BCMDRD_DEVLIST_ENTRY(BCM56080, BCM56080_VENDOR_ID, BCM56080_DEVICE_ID, BCM56080_REV_A0, \
                      0, 0, \
                      bcm56080_a0, bcm56080_a0, bcm56080_a0, \
-                     "Pex1", "BCM56080", \
-                     "1.6 Tbps Multilayer Switch", 0, 0)
+                     "Firelight2", "BCM56080", \
+                     "1.6 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56080_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56080, BCM56080_VENDOR_ID, BCM56080_DEVICE_ID, BCM56080_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56080_a0, bcm56080_a1, \
+                     "Firelight2", "BCM56080", \
+                     "1.6 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
 #endif
 
 #if BCMDRD_CONFIG_INCLUDE_BCM56081_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
@@ -251,8 +312,18 @@ BCMDRD_DEVLIST_ENTRY(BCM56080, BCM56080_VENDOR_ID, BCM56080_DEVICE_ID, BCM56080_
 BCMDRD_DEVLIST_ENTRY(BCM56081, BCM56081_VENDOR_ID, BCM56081_DEVICE_ID, BCM56081_REV_A0, \
                      0, 0, \
                      bcm56080_a0, bcm56081_a0, bcm56081_a0, \
-                     "Pex1", "BCM56080", \
-                     "1.2 Tbps Line Card w/MACsec", 0, 0)
+                     "Firelight2", "BCM56080", \
+                     "1.2 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56081_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56081, BCM56081_VENDOR_ID, BCM56081_DEVICE_ID, BCM56081_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56081_a0, bcm56081_a1, \
+                     "Firelight2", "BCM56080", \
+                     "1.2 Tbps Multilayer Switch w/ MACSec", 0, 0)
 #endif
 #endif
 
@@ -261,8 +332,18 @@ BCMDRD_DEVLIST_ENTRY(BCM56081, BCM56081_VENDOR_ID, BCM56081_DEVICE_ID, BCM56081_
 BCMDRD_DEVLIST_ENTRY(BCM56082, BCM56082_VENDOR_ID, BCM56082_DEVICE_ID, BCM56082_REV_A0, \
                      0, 0, \
                      bcm56080_a0, bcm56082_a0, bcm56082_a0, \
-                     "Pex1", "BCM56080", \
-                     "1.08 Tbps Line Card w/MACsec", 0, 0)
+                     "Firelight2", "BCM56080", \
+                     "0.96 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56082_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56082, BCM56082_VENDOR_ID, BCM56082_DEVICE_ID, BCM56082_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56082_a0, bcm56082_a1, \
+                     "Firelight2", "BCM56080", \
+                     "0.96 Tbps Multilayer Switch w/ MACSec", 0, 0)
 #endif
 #endif
 
@@ -271,8 +352,18 @@ BCMDRD_DEVLIST_ENTRY(BCM56082, BCM56082_VENDOR_ID, BCM56082_DEVICE_ID, BCM56082_
 BCMDRD_DEVLIST_ENTRY(BCM56083, BCM56083_VENDOR_ID, BCM56083_DEVICE_ID, BCM56083_REV_A0, \
                      0, 0, \
                      bcm56080_a0, bcm56083_a0, bcm56083_a0, \
-                     "Pex1", "BCM56080", \
-                     "1.2 Tbps Line Card", 0, 0)
+                     "Firelight2", "BCM56080", \
+                     "1.2 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56083_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56083, BCM56083_VENDOR_ID, BCM56083_DEVICE_ID, BCM56083_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56083_a0, bcm56083_a1, \
+                     "Firelight2", "BCM56080", \
+                     "1.2 Tbps Multilayer Switch", 0, 0)
 #endif
 #endif
 
@@ -281,8 +372,76 @@ BCMDRD_DEVLIST_ENTRY(BCM56083, BCM56083_VENDOR_ID, BCM56083_DEVICE_ID, BCM56083_
 BCMDRD_DEVLIST_ENTRY(BCM56084, BCM56084_VENDOR_ID, BCM56084_DEVICE_ID, BCM56084_REV_A0, \
                      0, 0, \
                      bcm56080_a0, bcm56084_a0, bcm56084_a0, \
-                     "Pex1", "BCM56080", \
-                     "1.08 Tbps Line Card", 0, 0)
+                     "Firelight2", "BCM56080", \
+                     "0.96 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56084_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56084, BCM56084_VENDOR_ID, BCM56084_DEVICE_ID, BCM56084_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56084_a0, bcm56084_a1, \
+                     "Firelight2", "BCM56080", \
+                     "0.96 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56085_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56085, BCM56085_VENDOR_ID, BCM56085_DEVICE_ID, BCM56085_REV_A0, \
+                     0, 0, \
+                     bcm56080_a0, bcm56085_a0, bcm56085_a0, \
+                     "Firelight2", "BCM56080", \
+                     "0.8 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56085_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56085, BCM56085_VENDOR_ID, BCM56085_DEVICE_ID, BCM56085_REV_A1, \
+                     0, 0, \
+                     bcm56080_a0, bcm56085_a0, bcm56085_a1, \
+                     "Firelight2", "BCM56080", \
+                     "0.8 Tbps Multilayer Switch w/ MACSec", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56690_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM56690, BCM56690_VENDOR_ID, BCM56690_DEVICE_ID, BCM56690_REV_A0, \
+                     0, 0, \
+                     bcm56690_a0, bcm56690_a0, bcm56690_a0, \
+                     "Trident4-X7", "BCM56690", \
+                     "4T cost-optimized 50G-DL ToR", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56692_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56692, BCM56692_VENDOR_ID, BCM56692_DEVICE_ID, BCM56692_REV_A0, \
+                     0, 0, \
+                     bcm56690_a0, bcm56692_a0, bcm56692_a0, \
+                     "Trident4-X7", "BCM56690", \
+                     "2T cost-optimized 50G-DL ToR", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56089_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56089, BCM56089_VENDOR_ID, BCM56089_DEVICE_ID, BCM56089_REV_A0, \
+                     0, 0, \
+                     bcm56780_a0, bcm56089_a0, bcm56089_a0, \
+                     "Trident4-X9", "BCM56780", \
+                     "6.4 Tb/s Firelight3 linecard switch.", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56089_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56089, BCM56089_VENDOR_ID, BCM56089_DEVICE_ID, BCM56089_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56089_a0, bcm56089_a1, \
+                     "Trident4-X9", "BCM56780", \
+                     "6.4 Tb/s Firelight3 linecard switch.", 0, 0)
 #endif
 #endif
 
@@ -299,6 +458,16 @@ BCMDRD_DEVLIST_ENTRY(BCM56780, BCM56780_VENDOR_ID, BCM56780_DEVICE_ID, BCM56780_
 BCMDRD_DEVLIST_ENTRY(BCM56782, BCM56782_VENDOR_ID, BCM56782_DEVICE_ID, BCM56782_REV_A0, \
                      0, 0, \
                      bcm56780_a0, bcm56782_a0, bcm56782_a0, \
+                     "Trident4-X9", "BCM56780", \
+                     "8 Tb/s 160x50G-PAM4 Programmable Switch w/MACsec", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56782_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56782, BCM56782_VENDOR_ID, BCM56782_DEVICE_ID, BCM56782_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56782_a0, bcm56782_a1, \
                      "Trident4-X9", "BCM56780", \
                      "8 Tb/s 160x50G-PAM4 Programmable Switch w/MACsec", 0, 0)
 #endif
@@ -334,6 +503,16 @@ BCMDRD_DEVLIST_ENTRY(BCM56786, BCM56786_VENDOR_ID, BCM56786_DEVICE_ID, BCM56786_
 #endif
 #endif
 
+#if BCMDRD_CONFIG_INCLUDE_BCM56786_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56786, BCM56786_VENDOR_ID, BCM56786_DEVICE_ID, BCM56786_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56786_a0, bcm56786_a1, \
+                     "Trident4-X9", "BCM56780", \
+                     "5.6 Tb/s 96x50G-PAM4/32x35G-NRZ Programmable Switch w/MACsec", 0, 0)
+#endif
+#endif
+
 #if BCMDRD_CONFIG_INCLUDE_BCM56787_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
 #ifdef BCMDRD_DEVLIST_INCLUDE_ALL
 BCMDRD_DEVLIST_ENTRY(BCM56787, BCM56787_VENDOR_ID, BCM56787_DEVICE_ID, BCM56787_REV_A0, \
@@ -344,11 +523,31 @@ BCMDRD_DEVLIST_ENTRY(BCM56787, BCM56787_VENDOR_ID, BCM56787_DEVICE_ID, BCM56787_
 #endif
 #endif
 
+#if BCMDRD_CONFIG_INCLUDE_BCM56787_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56787, BCM56787_VENDOR_ID, BCM56787_DEVICE_ID, BCM56787_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56787_a0, bcm56787_a1, \
+                     "Trident4-X9", "BCM56780", \
+                     "5.6 Tb/s 96x50G-PAM4/32x35G-NRZ Programmable Switch w/MACsec w/SmartToR", 0, 0)
+#endif
+#endif
+
 #if BCMDRD_CONFIG_INCLUDE_BCM56788_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
 #ifdef BCMDRD_DEVLIST_INCLUDE_ALL
 BCMDRD_DEVLIST_ENTRY(BCM56788, BCM56788_VENDOR_ID, BCM56788_DEVICE_ID, BCM56788_REV_A0, \
                      0, 0, \
                      bcm56780_a0, bcm56788_a0, bcm56788_a0, \
+                     "Trident4-X9", "BCM56780", \
+                     "8 Tb/s 160x50G-PAM4 Programmable Switch w/MACsec w/SmartToR", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56788_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56788, BCM56788_VENDOR_ID, BCM56788_DEVICE_ID, BCM56788_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56788_a0, bcm56788_a1, \
                      "Trident4-X9", "BCM56780", \
                      "8 Tb/s 160x50G-PAM4 Programmable Switch w/MACsec w/SmartToR", 0, 0)
 #endif
@@ -598,6 +797,24 @@ BCMDRD_DEVLIST_ENTRY(BCM56999, BCM56999_VENDOR_ID, BCM56999_DEVICE_ID, BCM56999_
 #endif
 #endif
 
+#if BCMDRD_CONFIG_INCLUDE_BCM78800_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78800, BCM78800_VENDOR_ID, BCM78800_DEVICE_ID, BCM78800_REV_A0, \
+                     0, 0, \
+                     bcm78800_a0, bcm78800_a0, bcm78800_a0, \
+                     "Trident5", "BCM78800", \
+                     "16 Tbps Programmable Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78808_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78808, BCM78808_VENDOR_ID, BCM78808_DEVICE_ID, BCM78808_REV_A0, \
+                     0, 0, \
+                     bcm78800_a0, bcm78808_a0, bcm78808_a0, \
+                     "Trident5", "BCM78800", \
+                     "8 Tbps Programmable Switch", 0, 0)
+#endif
+#endif
+
 #if BCMDRD_CONFIG_INCLUDE_BCM78900_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
 BCMDRD_DEVLIST_ENTRY(BCM78900, BCM78900_VENDOR_ID, BCM78900_DEVICE_ID, BCM78900_REV_B0, \
                      0, 0, \
@@ -606,14 +823,32 @@ BCMDRD_DEVLIST_ENTRY(BCM78900, BCM78900_VENDOR_ID, BCM78900_DEVICE_ID, BCM78900_
                      "51.2 Tbps Multilayer Switch", 0, 0)
 #endif
 
-#if BCMDRD_CONFIG_INCLUDE_BCM78905_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#if BCMDRD_CONFIG_INCLUDE_BCM78902_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
 #ifdef BCMDRD_DEVLIST_INCLUDE_ALL
-BCMDRD_DEVLIST_ENTRY(BCM78905, BCM78905_VENDOR_ID, BCM78905_DEVICE_ID, BCM78905_REV_B0, \
+BCMDRD_DEVLIST_ENTRY(BCM78902, BCM78902_VENDOR_ID, BCM78902_DEVICE_ID, BCM78902_REV_B0, \
                      0, 0, \
-                     bcm78900_b0, bcm78905_b0, bcm78905_b0, \
+                     bcm78900_b0, bcm78902_b0, bcm78902_b0, \
                      "Tomahawk5", "BCM78900", \
                      "25.6 Tbps Multilayer Switch", 0, 0)
 #endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78903_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78903, BCM78903_VENDOR_ID, BCM78903_DEVICE_ID, BCM78903_REV_B0, \
+                     0, 0, \
+                     bcm78900_b0, bcm78903_b0, bcm78903_b0, \
+                     "Tomahawk5", "BCM78900", \
+                     "25.6 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78905_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78905, BCM78905_VENDOR_ID, BCM78905_DEVICE_ID, BCM78905_REV_A0, \
+                     0, 0, \
+                     bcm78905_a0, bcm78905_a0, bcm78905_a0, \
+                     "Tomahawk5+", "BCM78905", \
+                     "51.2 Tbps Multilayer Switch", 0, 0)
 #endif
 
 /* End BCMDRD_DEVLIST_ENTRY Macros */

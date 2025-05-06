@@ -1,10 +1,10 @@
 /*! \file lkm.h
  *
- * <description>
+ * Linux compatibility macros.
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef LKM_H
@@ -25,17 +25,12 @@
 
 #include <linux/init.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
 #error Kernel too old
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
 #include <linux/kconfig.h>
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include <linux/slab.h>
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39)
-#include <linux/smp_lock.h>
 #endif
 #include <linux/module.h>
 
@@ -135,6 +130,44 @@ static inline void page_ref_inc(struct page *page)
 static inline void page_ref_dec(struct page *page)
 {
     atomic_dec(&page->_count);
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+#define DMA_FORCE_CONTIGUOUS NULL
+#else
+#define DMA_FORCE_CONTIGUOUS DMA_ATTR_FORCE_CONTIGUOUS
+#endif
+
+#ifndef PCI_IRQ_LEGACY
+/* Emulate new IRQ API if not available */
+#define PCI_IRQ_LEGACY          (1 << 0)
+#define PCI_IRQ_MSI             (1 << 1)
+#define PCI_IRQ_MSIX            (1 << 2)
+static inline int
+pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
+                      unsigned int max_vecs, unsigned int flags)
+{
+    /* We do not attempt to support MSI-X via old API */
+    if (flags & PCI_IRQ_MSI) {
+        if (pci_enable_msi(dev) == 0) {
+            return 1;
+        }
+    }
+    if (flags & PCI_IRQ_LEGACY) {
+        return 1;
+    }
+    return 0;
+}
+static inline void
+pci_free_irq_vectors(struct pci_dev *dev)
+{
+    pci_disable_msi(dev);
+}
+static inline int
+pci_irq_vector(struct pci_dev *dev, unsigned int nr)
+{
+    return dev->irq;
 }
 #endif
 
