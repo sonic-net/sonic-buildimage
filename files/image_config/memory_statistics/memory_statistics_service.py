@@ -67,7 +67,7 @@ class Dict2Obj(object):
                 result[key] = value
         return result
 
-
+ 
 class SyslogLogger:
     """
     A general-purpose logger class for logging messages using syslog.
