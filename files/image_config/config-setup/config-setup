@@ -139,6 +139,9 @@ apply_tacacs()
         sonic-cfggen -j /etc/sonic/old_config/${TACACS_JSON_BACKUP} --write-to-db
         echo "Applied tacacs json to restore tacacs credentials"
         config save -y
+
+        # Change tacacs config file name, so tacacs config will not be revert when device reboot.
+        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
     else
         echo "Missing tacacs json to restore tacacs credentials"
     fi
