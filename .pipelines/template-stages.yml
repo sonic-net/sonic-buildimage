@@ -110,7 +110,7 @@ stages:
               echo "==== Building swi images"
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
               make $OPTIONS target/sonic-aboot-broadcom.swi 2>&1 | tee target/buildswi.log
-              mv target/sonic-aboot-broadcom.swi target/release/
+              mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-dnx.swi target/release/
               rm -rf target/*.squashfs
               rm rules/config.user
               echo "==== Finished building swi images"
