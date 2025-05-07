@@ -1061,6 +1061,9 @@ class SFP(NvidiaSFPCommon):
             bool: True if the api object supports software control
         """
         if xcvr_api.is_flat_memory():
+            # For Copper active modules, Nvidia doesn't support SW control
+            if xcvr_api.get_media_interface_technology() == 'Copper cable, linear active equalizers':
+                return False
             return self.is_cmis_api(xcvr_api) or self.is_sff_api(xcvr_api)
         else:
             return self.is_cmis_api(xcvr_api)
