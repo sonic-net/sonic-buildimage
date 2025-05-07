@@ -139,7 +139,7 @@ class Chassis(ChassisBase):
         from sonic_platform.thermal import Thermal
         global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
-        if board_id == 130:
+        if board_id == self._api_helper.mtfuji_board_id:
             NUM_THERMAL = 5
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):
