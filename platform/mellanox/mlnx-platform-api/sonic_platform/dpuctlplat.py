@@ -111,10 +111,14 @@ class DpuCtlPlat():
         self.verbosity = False
 
     def setup_logger(self, use_print=False):
+        def print_with_time(msg):
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] {msg}")
+
         if use_print:
-            self.logger_info = print
-            self.logger_error = print
-            self.logger_debug = print
+            self.logger_info = print_with_time
+            self.logger_error = print_with_time 
+            self.logger_debug = print_with_time
             return
         self.logger_debug = logger.log_debug
         self.logger_info = logger.log_info
@@ -219,6 +223,8 @@ class DpuCtlPlat():
     def write_file(self, file_name, content_towrite):
         """Write given value to file only if file exists"""
         try:
+            if self.verbosity:
+                self.log_debug(f'Writing {content_towrite} to file {file_name}')
             utils.write_file(file_name, content_towrite, raise_exception=True)
         except Exception as e:
             self.log_error(f'Failed to write {content_towrite} to file {file_name}')
