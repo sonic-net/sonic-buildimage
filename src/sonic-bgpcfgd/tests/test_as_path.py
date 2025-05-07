@@ -53,7 +53,7 @@ def test_metadata_with_asns():
     m.cfg_mgr.push.assert_has_calls([
         call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64121_")
-    ])
+    ], any_order=True)
 
 
 # test if T2_GROUP_ASNS has been updated
@@ -67,7 +67,11 @@ def test_metadata_with_asns_update():
         call("no bgp as-path access-list T2_GROUP_ASNS seq 5 permit _64128_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64121_")
-    ])
+    ], any_order=True)
+    
+    actual_calls = m.cfg_mgr.push.mock_calls
+    assert (actual_calls[0] == call("no bgp as-path access-list T2_GROUP_ASNS seq 5 permit _64128_"),
+            "Didn't find call to clear previous ASN")
 
 
 # test if T2_GROUP_ASNS has been cleared
@@ -81,4 +85,7 @@ def test_del_handler():
         call("bgp as-path access-list T2_GROUP_ASNS permit _64120_"),
         call("bgp as-path access-list T2_GROUP_ASNS permit _64121_"),
         call("no bgp as-path access-list T2_GROUP_ASNS")
-    ])
+    ], any_order=True)
+    actual_calls = m.cfg_mgr.push.mock_calls
+    assert (actual_calls[-1] == call("no bgp as-path access-list T2_GROUP_ASNS"),
+            "Didn't find call to delete access-list")
