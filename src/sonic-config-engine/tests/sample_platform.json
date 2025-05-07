@@ -20,7 +20,7 @@
                 "2x50G": ["none", "none"],
                 "4x25G[10G]": ["none", "none", "none", "none"],
                 "2x25G(2)+1x50G(2)": ["none", "none", "none"],
-                "1x50G(2)+2x25G(2)": ["Enone", "none", "none"]
+                "1x50G(2)+2x25G(2)": ["none", "none", "none"]
             },
             "breakout_modes": {
                 "1x100G[40G]": ["Eth1"],
@@ -36,7 +36,7 @@
             "fec_modes": {
                 "1x100G[40G]": ["rs"],
                 "2x50G": ["none", "none"],
-                "4x25G[10G]": ["none", "Enone", "none", "none"]
+                "4x25G[10G]": ["none", "none", "none", "none"]
             },
             "breakout_modes": {
                 "1x100G[40G]": ["Eth2"],
