@@ -222,7 +222,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 {%- endif %}
 {%- if CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON != "y" %}
 {%- endif %}
-        linux-kbuild-6.12.22 \
+        linux-kbuild-6.12.27 \
 # teamd build
         libdaemon-dev \
         libdbus-1-dev \
@@ -633,9 +633,7 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
-#TODO Nodejs is not supported yet to trixie
-#RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
-#RUN eatmydata apt-get install -y nodejs
+RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
