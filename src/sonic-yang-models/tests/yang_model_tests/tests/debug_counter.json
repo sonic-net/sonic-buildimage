@@ -11,7 +11,7 @@
     },
     "DEBUG_COUNTER_MISSING_COUNTER_TYPE": {
         "desc": "One debug counter with missing type",
-        "eStrKey": "Missing"
+        "eStrKey": "Mandatory"
     },
     "NONEXIST_DEBUG_COUNTER_FOR_DROP_REASON": {
         "desc": "Add a drop reason for a non-existent counter",

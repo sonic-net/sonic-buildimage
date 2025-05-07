@@ -1,0 +1,40 @@
+From 6550259f36da08b9b4bc7e9c941b2e13e10661a1 Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Wed, 5 Feb 2025 19:38:43 -0500
+Subject: [PATCH] correct memory leak of `struct ly_in *` objects
+
+`data_load()` returns a reference to `struct ly_in *` which
+must be free'd by `lys_in_free()`.  This is done in one of three
+locations.  This corrects this oversight.
+
+This was found during unit tests of SONiC during porting to
+libyang3 from libyang 1.0.73.
+
+Signed-off-by: Brad House (@bradh352)
+---
+ libyang/context.py | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/libyang/context.py b/libyang/context.py
+index 1b1d4cd..8be232c 100644
+--- a/libyang/context.py
++++ b/libyang/context.py
+@@ -325,7 +325,9 @@ def parse_module(
+ 
+         mod = ffi.new("struct lys_module **")
+         fmt = schema_in_format(fmt)
+-        if lib.lys_parse(self.cdata, data[0], fmt, feat, mod) != lib.LY_SUCCESS:
++        rv  = lib.lys_parse(self.cdata, data[0], fmt, feat, mod)
++        lib.ly_in_free(data[0], 0)
++        if rv != lib.LY_SUCCESS:
+             raise self.error("failed to parse module")
+ 
+         return Module(self, mod[0])
+@@ -489,6 +491,7 @@ def parse_op(
+             par[0] = parent.cdata
+ 
+         ret = lib.lyd_parse_op(self.cdata, par[0], data[0], fmt, dtype, tree, op)
++        lib.ly_in_free(data[0], 0)
+         if ret != lib.LY_SUCCESS:
+             raise self.error("failed to parse input data")
+ 
