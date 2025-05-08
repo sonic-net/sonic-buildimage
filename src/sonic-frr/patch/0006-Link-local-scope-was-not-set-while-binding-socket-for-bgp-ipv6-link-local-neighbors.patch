@@ -8,10 +8,10 @@ Subject: [PATCH] From 92ab2d74fca06f86c00d886ac249f7f2d89e93fe Mon Sep 17
 
 
 diff --git a/bgpd/bgp_network.c b/bgpd/bgp_network.c
-index 76bb9949d..5acdde08d 100644
+index 3df4aa286..8b0901fa6 100644
 --- a/bgpd/bgp_network.c
 +++ b/bgpd/bgp_network.c
-@@ -678,6 +678,11 @@ int bgp_update_address(struct interface *ifp, const union sockunion *dst,
+@@ -742,6 +742,11 @@ int bgp_update_address(struct interface *ifp, const union sockunion *dst,
  		return 1;
  
  	prefix2sockunion(sel, addr);

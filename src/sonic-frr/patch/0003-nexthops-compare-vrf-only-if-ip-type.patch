@@ -6,10 +6,10 @@ Subject: [PATCH] From 786087468520db44c55e3566f77438b41f52763f Mon Sep 17
 
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index 248acd270..7ebc4fefb 100644
+index c377b9cb0..6fe45b2c5 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
-@@ -140,12 +140,6 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+@@ -143,12 +143,6 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
  {
  	int ret = 0;
  
@@ -22,7 +22,7 @@ index 248acd270..7ebc4fefb 100644
  	if (next1->type < next2->type)
  		return -1;
  
-@@ -161,6 +155,12 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
+@@ -166,6 +160,12 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
  	switch (next1->type) {
  	case NEXTHOP_TYPE_IPV4:
  	case NEXTHOP_TYPE_IPV6:
@@ -36,10 +36,10 @@ index 248acd270..7ebc4fefb 100644
  		if (ret != 0)
  			return ret;
 diff --git a/lib/zclient.c b/lib/zclient.c
-index 07c7e5aea..0082b2148 100644
+index 5deea8f0c..28e9da721 100644
 --- a/lib/zclient.c
 +++ b/lib/zclient.c
-@@ -869,12 +869,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -976,12 +976,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  {
  	int ret = 0;
  
@@ -52,7 +52,7 @@ index 07c7e5aea..0082b2148 100644
  	if (next1->type < next2->type)
  		return -1;
  
-@@ -890,6 +884,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -997,6 +991,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  	switch (next1->type) {
  	case NEXTHOP_TYPE_IPV4:
  	case NEXTHOP_TYPE_IPV6:
