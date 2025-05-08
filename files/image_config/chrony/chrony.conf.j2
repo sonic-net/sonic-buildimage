@@ -56,11 +56,11 @@ confdir /etc/chrony/conf.d
 
 {# Enable the NTP server configuration only if the switch type is smartswitch -#}
 {% if device_metadata.subtype == 'SmartSwitch' -%}
-    {# Enable NTP server functionality if server_role is enabled or DHCP configuration is enabled -#}
-    {% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
-        allow
-        binddevice bridge-midplane
-    {% endif -%}
+{# Enable NTP server functionality if server_role is enabled or DHCP configuration is enabled -#}
+{% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
+allow
+binddevice bridge-midplane
+{% endif -%}
 {% endif -%}
 
 {# use source interface if configured to send NTP requests, else use eth0 if running in mgmt
