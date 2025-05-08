@@ -6,7 +6,7 @@ import re
 import sys
 
 # Global variable
-PORT_ATTRIBUTES = ["index", "lanes", "breakout_modes"]
+PORT_ATTRIBUTES = ["index", "lanes", "fec_modes", "breakout_modes"]
 ATTR_LEN = len(PORT_ATTRIBUTES)
 PORT_REG = "Ethernet(\d+)"
 PLATFORM_JSON = '*platform.json'
@@ -129,10 +129,12 @@ def check_file(platform_json_file):
 
             total_attr = len(list(port_dict[each_port].keys()))
             port_attr = port_dict[each_port]
-
-            if total_attr != ATTR_LEN:
-                missing_attr = ', '.join(set(PORT_ATTRIBUTES).difference(list(port_attr)))
-                print("Error: " + missing_attr + " of " + each_port + " is/are missing")
+            
+            keys_set = set(port_dict[each_port].keys())
+            attributes_set = set(PORT_ATTRIBUTES)
+            if not keys_set.issubset(attributes_set):
+                extra_keys = keys_set - attributes_set
+                print(f"Error: {each_port} unknown keys: {extra_keys}")
                 return False
 
             #Validate port attributes for each port
