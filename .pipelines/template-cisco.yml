@@ -90,6 +90,7 @@ jobs:
       displayName: "Override cisco sai packages"
     - script: |
         set -ex
+        set -o pipefail
         OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
         make $OPTIONS target/sonic-cisco-8000.bin 2>&1 | tee target/build.log
         make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz 2>&1 | tee target/buildrpc.log
