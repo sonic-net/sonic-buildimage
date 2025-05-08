@@ -1,0 +1,15 @@
+!
+! template: bgpd/templates/msft.general/v6.mgmtleaf.mgmttor.all/peer-group.conf.j2
+!
+  neighbor {{ peer_group_type }} peer-group
+  address-family ipv6 unicast
+    neighbor {{ peer_group_type }} activate
+    neighbor {{ peer_group_type }} soft-reconfiguration inbound
+    neighbor {{ peer_group_type }} route-map FROM_{{ peer_group_type }} in
+    neighbor {{ peer_group_type }} route-map TO_{{ peer_group_type }} out
+    neighbor {{ peer_group_type }} send-community
+    neighbor {{ peer_group_type }} maximum-prefix 1000 90 warning-only
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v6.mgmtleaf.mgmttor.all/peer-group.conf.j2
+!

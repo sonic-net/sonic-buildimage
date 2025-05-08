@@ -1,0 +1,37 @@
+!
+! template: bgpd/templates/msft.general/v4.mgmtleaf.ma/policy.conf.j2
+!
+ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
+!
+ip prefix-list LOOPBACK0_V4 seq 1 permit 127.0.0.1/32
+ip prefix-list LOOPBACK0_V4 seq 5 permit $Loopback0PrefixV4$
+ip prefix-list LOOPBACK0_V4 seq 15 permit $SecondaryLoopback0PrefixV4$
+!
+ip prefix-list AGGREGATE_ROUTES_V4 seq 5 permit 127.0.0.1/32
+!
+ip prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4 seq 5 permit 127.0.0.1/32
+!
+route-map TO_MA_V4 deny 100
+  match ip address prefix-list DEFAULT_IPV4
+!
+route-map TO_MA_V4 permit 110
+  match ip address prefix-list LOOPBACK0_V4
+  set community 8075:316 additive
+!
+route-map TO_MA_V4 permit 120
+  match ip address prefix-list AGGREGATE_ROUTES_V4
+  set community 8075:8801 additive
+!
+route-map TO_MA_V4 permit 130
+  match ip address prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4
+  set community 8075:420 8075:8800 additive
+!
+route-map TO_MA_V4 permit 1000
+!
+route-map FROM_MA_V4 permit 100
+  match ip address prefix-list DEFAULT_IPV4
+!
+route-map FROM_MA_V4 deny 1000
+!
+! end of template: bgpd/templates/msft.general/v4.mgmtleaf.ma/policy.conf.j2
+!

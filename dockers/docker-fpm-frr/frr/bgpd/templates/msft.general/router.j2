@@ -40,6 +40,32 @@
 {%             endif %}
 {%             include path_template % "v4.mgmttor" %}
 {%         endif %}
+{%     elif device_type in ['MgmtLeafRouter'] %}
+{%         if neighbor_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
+{%             include path_template % "v4.mgmtleaf.mgmtspine" %}
+{%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
+{%             include path_template % "v4.mgmtleaf.oob" %}
+{%         else %}
+{%             if neighbor_type in ['MgmtToRRouter', 'EPMS'] %}
+{%                  set peer_group_type = 'DOWNSTREAM_V4' %}
+{%             else %}
+{%                  set peer_group_type = 'TIER0_V4' %}
+{%             endif %}
+{%             include path_template % "v4.mgmtleaf.mgmttor.all" %}
+{%         endif %}
+{%     elif device_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
+{%         if neighbor_type == 'MgmtAggregator' %}
+{%             include path_template % "v4.mgmtspine.ma" %}
+{%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
+{%             include path_template % "v4.mgmtspine.oob" %}
+{%         else %}
+{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'] %}
+{%                  set peer_group_type = 'DOWNSTREAM_V4' %}
+{%             else %}
+{%                  set peer_group_type = 'TIER1_V4' %}
+{%             endif %}
+{%             include path_template % "v4.mgmtspine" %}
+{%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
 {%             include path_template % "v4.tor.rotterdam" %}
@@ -103,6 +129,32 @@
 {%                 set peer_group_type = 'TIER1_V6' %}
 {%             endif %}
 {%             include path_template % "v6.mgmttor" %}
+{%         endif %}
+{%     elif device_type in ['MgmtLeafRouter'] %}
+{%         if neighbor_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
+{%             include path_template % "v6.mgmtleaf.mgmtspine" %}
+{%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
+{%             include path_template % "v6.mgmtleaf.oob" %}
+{%         else %}
+{%             if neighbor_type in ['MgmtToRRouter', 'EPMS'] %}
+{%                  set peer_group_type = 'DOWNSTREAM_V6' %}
+{%             else %}
+{%                  set peer_group_type = 'TIER0_V6' %}
+{%             endif %}
+{%             include path_template % "v6.mgmtleaf.mgmttor.all" %}
+{%         endif %}
+{%     elif device_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
+{%         if neighbor_type == 'MgmtAggregator' %}
+{%             include path_template % "v6.mgmtspine.ma" %}
+{%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
+{%             include path_template % "v6.mgmtspine.oob" %}
+{%         else %}
+{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'] %}
+{%                  set peer_group_type = 'DOWNSTREAM_V6' %}
+{%             else %}
+{%                  set peer_group_type = 'TIER1_V6' %}
+{%             endif %}
+{%             include path_template % "v6.mgmtspine" %}
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}

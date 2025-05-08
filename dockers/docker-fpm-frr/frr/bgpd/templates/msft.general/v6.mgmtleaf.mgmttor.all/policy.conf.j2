@@ -1,0 +1,31 @@
+!
+! template: bgpd/templates/msft.general/v6.mgmtleaf.mgmttor.all/policy.conf.j2
+!
+ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
+!
+ip as-path access-list LOCALROUTES permit ^$
+!
+ip community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+!
+route-map TO_{{ peer_group_type }} permit 100
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+{% if neighbor_type in ['MgmtToRRouter', 'EPMS'] %}
+route-map TO_{{ peer_group_type }} permit 200
+  match as-path LOCALROUTES
+  set community 8075:316 additive
+!
+route-map TO_{{ peer_group_type }} permit 300
+  match community FABRIC_INFRA_COMMUNITY
+!
+{% endif %}
+route-map TO_{{ peer_group_type }} deny 1000
+!
+route-map FROM_{{ peer_group_type }} permit 100
+  set ipv6 next-hop prefer-global
+  on-match next
+!
+route-map FROM_{{ peer_group_type }} permit 1000
+!
+! end of template: bgpd/templates/msft.general/v6.mgmtleaf.mgmttor.all/policy.conf.j2
+!

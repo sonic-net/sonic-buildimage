@@ -1,0 +1,20 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "MgmtLeafRouter"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "CoreTs"
+        }
+    },
+    "constants": {
+        "bgp": {}
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device"
+    },
+    "neighbor_addr": "fc00::15"
+}

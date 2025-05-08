@@ -1,0 +1,44 @@
+!
+! template: bgpd/templates/msft.general/v4.mgmtleaf.mgmttor.all/policy.conf.j2
+!
+ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
+!
+ip prefix-list LOOPBACK0_V4 seq 1 permit 127.0.0.1/32
+ip prefix-list LOOPBACK0_V4 seq 5 permit $Loopback0PrefixV4$
+ip prefix-list LOOPBACK0_V4 seq 15 permit $SecondaryLoopback0PrefixV4$
+!
+ip prefix-list AGGREGATE_ROUTES_V4 seq 5 permit 127.0.0.1/32
+!
+ip prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4 seq 5 permit 127.0.0.1/32
+!
+ip as-path access-list LOCALROUTES permit ^$
+!
+ip community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+!
+route-map TO_{{ peer_group_type }} permit 100
+  match ip address prefix-list DEFAULT_IPV4
+!
+{% if neighbor_type in ['MgmtLeafRouter', 'MgmtToRRouter'] %}
+route-map TO_{{ peer_group_type }} permit 110
+  match as-path LOCALROUTES
+  set community 8075:316 additive
+{% elif neighbor_type in ['SpineTs'] %}
+route-map TO_{{ peer_group_type }} permit 120
+  match ip address prefix-list LOOPBACK0_V4
+  set community 8075:316 additive
+!
+route-map TO_{{ peer_group_type }} permit 130
+  match ip address prefix-list AGGREGATE_ROUTES_V4
+  set community 8075:8801 additive
+!
+route-map TO_{{ peer_group_type }} permit 140
+  match ip address prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4
+  set community 8075:8800 additive
+{% endif %}
+!
+route-map TO_{{ peer_group_type }} deny 1000
+!
+route-map FROM_{{ peer_group_type }} permit 1000
+!
+! end of template: bgpd/templates/msft.general/v4.mgmtleaf.mgmttor.all/policy.conf.j2
+!
