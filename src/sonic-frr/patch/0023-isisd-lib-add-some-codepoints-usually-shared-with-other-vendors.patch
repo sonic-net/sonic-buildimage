@@ -1,0 +1,305 @@
+From 53263b4b620095c0c52b13883f49521ae54dfe6f Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Thu, 30 Jan 2025 09:14:00 +0100
+Subject: [PATCH] isisd, lib: add some codepoints usually shared with other
+ vendors
+
+Some codepoints can not be read by interoperating with CISCO.
+This is because PSP/USP flavor are used by default, and the display of
+the isis output has to be adapted.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ isisd/isis_zebra.c     | 32 ++++++++++++++++++++++++++++++++
+ lib/srv6.h             | 26 +++++++++++++++++++++++++-
+ staticd/static_vty.c   | 24 ++++++++++++++++++++++++
+ staticd/static_zebra.c | 41 +++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 122 insertions(+), 1 deletion(-)
+
+diff --git a/isisd/isis_zebra.c b/isisd/isis_zebra.c
+index caf7d3ddfbfc..eb5a567886ef 100644
+--- a/isisd/isis_zebra.c
++++ b/isisd/isis_zebra.c
+@@ -998,6 +998,14 @@ void isis_zebra_srv6_sid_install(struct isis_area *area,
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	default:
+ 		zlog_err(
+ 			"ISIS-SRv6 (%s): unsupported SRv6 endpoint behavior %u",
+@@ -1055,6 +1063,14 @@ void isis_zebra_srv6_sid_uninstall(struct isis_area *area,
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	default:
+ 		zlog_err(
+ 			"ISIS-SRv6 (%s): unsupported SRv6 endpoint behavior %u",
+@@ -1120,6 +1136,14 @@ void isis_zebra_srv6_adj_sid_install(struct srv6_adjacency *sra)
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	default:
+ 		zlog_err(
+ 			"ISIS-SRv6 (%s): unsupported SRv6 endpoint behavior %u",
+@@ -1166,6 +1190,14 @@ void isis_zebra_srv6_adj_sid_uninstall(struct srv6_adjacency *sra)
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	default:
+ 		zlog_err(
+ 			"ISIS-SRv6 (%s): unsupported SRv6 endpoint behavior %u",
+diff --git a/lib/srv6.h b/lib/srv6.h
+index 011705504e74..3200aee70a8b 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -176,12 +176,20 @@ struct srv6_locator_chunk {
+ enum srv6_endpoint_behavior_codepoint {
+ 	SRV6_ENDPOINT_BEHAVIOR_RESERVED         = 0x0000,
+ 	SRV6_ENDPOINT_BEHAVIOR_END              = 0x0001,
++	SRV6_ENDPOINT_BEHAVIOR_END_PSP          = 0x0002,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_X            = 0x0005,
++	SRV6_ENDPOINT_BEHAVIOR_END_X_PSP        = 0x0006,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT6          = 0x0012,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT4          = 0x0013,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT46         = 0x0014,
++	SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD      = 0x001D,
++	SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD    = 0x0021,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID    = 0x002B,
+-	SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID  = 0x002C,
++	SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID  = 0x0034,
++	SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP   = 0x002C,
++	SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD   = 0x0030,
++	SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP = 0x0035,
++	SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD = 0x0039,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID     = 0x003E,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID     = 0x003F,
+ 	SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID    = 0x0040,
+@@ -199,8 +207,16 @@ srv6_endpoint_behavior_codepoint2str(enum srv6_endpoint_behavior_codepoint behav
+ 		return "Reserved";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
+ 		return "End";
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++		return "End PSP";
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++		return "End PSP/USD";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 		return "End.X";
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++		return "End.X PSP";
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++		return "End.X PSP/USD";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
+ 		return "End.DT6";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4:
+@@ -209,8 +225,16 @@ srv6_endpoint_behavior_codepoint2str(enum srv6_endpoint_behavior_codepoint behav
+ 		return "End.DT46";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
+ 		return "uN";
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++		return "uN PSP";
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++		return "uN PSP/USD";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 		return "uA";
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++		return "uA PSP";
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
++		return "uA PSP/USD";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID:
+ 		return "uDT6";
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index 895846a1c73c..5c19d238835a 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1696,9 +1696,21 @@ static void srv6_sid_cli_show(struct vty *vty, const struct lyd_node *sid, bool
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
+ 		vty_out(vty, " behavior End");
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++		vty_out(vty, " behavior End PSP");
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++		vty_out(vty, " behavior End PSP/USD");
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 		vty_out(vty, " behavior End.X");
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++		vty_out(vty, " behavior End.X PSP");
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
++		vty_out(vty, " behavior End.X PSP/USD");
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
+ 		vty_out(vty, " behavior End.DT6");
+ 		break;
+@@ -1711,9 +1723,21 @@ static void srv6_sid_cli_show(struct vty *vty, const struct lyd_node *sid, bool
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
+ 		vty_out(vty, " behavior uN");
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++		vty_out(vty, " behavior uN PSP");
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
++		vty_out(vty, " behavior uN PSP/USD");
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 		vty_out(vty, " behavior uA");
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++		vty_out(vty, " behavior uA PSP");
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
++		vty_out(vty, " behavior uA PSP/USD");
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID:
+ 		vty_out(vty, " behavior uDT6");
+ 		break;
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 9a794d4d02cc..552dd3ee1f74 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -631,9 +631,20 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 	}
+ 
+ 	switch (sid->behavior) {
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END;
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_PSP);
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END;
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END;
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_PSP);
++		ctx.flv.lcblock_len = sid->locator->block_bits_length;
++		ctx.flv.lcnode_func_len = sid->locator->node_bits_length;
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END;
+ 		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+@@ -691,8 +702,14 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 			return;
+ 		}
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+ 	case SRV6_ENDPOINT_BEHAVIOR_RESERVED:
+ 		zlog_warn("unsupported behavior: %u", sid->behavior);
+@@ -764,7 +781,9 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 
+ 	switch (sid->behavior) {
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID:
+@@ -811,8 +830,14 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 			return;
+ 		}
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+ 	case SRV6_ENDPOINT_BEHAVIOR_RESERVED:
+ 		zlog_warn("unsupported behavior: %u", sid->behavior);
+@@ -872,7 +897,9 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 	/* convert `srv6_endpoint_behavior_codepoint` to `seg6local_action_t` */
+ 	switch (sid->behavior) {
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
+ 		ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
+@@ -914,8 +941,14 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 		}
+ 
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+ 	case SRV6_ENDPOINT_BEHAVIOR_RESERVED:
+ 		zlog_warn("unsupported behavior: %u", sid->behavior);
+@@ -940,7 +973,9 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid)
+ 	/* convert `srv6_endpoint_behavior_codepoint` to `seg6local_action_t` */
+ 	switch (sid->behavior) {
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP:
+ 		ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
+@@ -982,8 +1017,14 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid)
+ 		}
+ 
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
++	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+ 	case SRV6_ENDPOINT_BEHAVIOR_RESERVED:
+ 		zlog_warn("unsupported behavior: %u", sid->behavior);

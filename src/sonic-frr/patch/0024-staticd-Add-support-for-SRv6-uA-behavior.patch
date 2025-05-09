@@ -1,0 +1,1043 @@
+From feff426771999343008afe05efe680aa7cf63985 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Mon, 24 Jun 2024 20:28:50 +0200
+Subject: [PATCH 01/13] lib: Add ifindex to SRv6 SID context
+
+The uA behavior is associated with an interface and the IP address of
+the nexthop. However, the current SID context data structure only
+includes the IP address. It lacks the interface.
+
+This commit extends the SID context data structure by adding the
+ifindex. This extension allows daemons to allocate uA SIDs with
+the required interface and IP address.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ lib/srv6.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/lib/srv6.h b/lib/srv6.h
+index 3200aee70a8b..467f02a3c9e9 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -321,6 +321,7 @@ struct srv6_sid_ctx {
+ 	struct in_addr nh4;
+ 	struct in6_addr nh6;
+ 	vrf_id_t vrf_id;
++	ifindex_t ifindex;
+ };
+ 
+ static inline const char *seg6_mode2str(enum seg6_mode_t mode)
+
+From 99742410bf0a57e933ea3a7ecaca4004b08e5f30 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 10:51:28 +0100
+Subject: [PATCH 02/13] yang: Extend staticd YANG model to support the SRv6 uA
+ behavior
+
+The SRv6 uA behavior is associated with a L3 adjacency.
+
+This commit extends the staticd YANG model by adding two leafs
+`interface` and `next-hop` under the `static-sids` container. This
+extension allows us to associate an interface and a nexthop when
+configuring an SRv6 uA SID.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ yang/frr-staticd.yang | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/yang/frr-staticd.yang b/yang/frr-staticd.yang
+index 8d0e58c0a5c3..3bf3a5e81764 100644
+--- a/yang/frr-staticd.yang
++++ b/yang/frr-staticd.yang
+@@ -12,6 +12,10 @@ module frr-staticd {
+     prefix frr-nexthop;
+   }
+ 
++  import frr-interface {
++    prefix frr-interface;
++  }
++
+   import ietf-inet-types {
+     prefix inet;
+   }
+@@ -240,6 +244,24 @@ module frr-staticd {
+                 description
+                   "The VRF name.";
+               }
++              list paths {
++                key "path-index";
++                leaf path-index {
++                  type uint8;
++                  description
++                    "Path index";
++                }
++                leaf interface {
++                  type frr-interface:interface-ref;
++                  description
++                    "Interface name.";
++                }
++                leaf next-hop {
++                  type inet:ip-address;
++                  description
++                    "Nexthop IP address.";
++                }
++              }
+             }
+           }
+         }
+
+From 7438a94eeb3d054cc9e375c4a5dd73708dcee37f Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 10:59:13 +0100
+Subject: [PATCH 03/13] staticd: Add nb callbacks to configure an interface for
+ SRv6 uA behavior
+
+An SRv6 uA SID is associated with the interface and (optionally) the
+IPv6 address of the nexthop.
+
+This commit adds the modify and destroy nortbound callbacks required to
+set the interface.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_nb.c        | 14 ++++++++++
+ staticd/static_nb.h        | 12 +++++++++
+ staticd/static_nb_config.c | 55 ++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 81 insertions(+)
+
+diff --git a/staticd/static_nb.c b/staticd/static_nb.c
+index ef363bfe7e62..bec151e6635c 100644
+--- a/staticd/static_nb.c
++++ b/staticd/static_nb.c
+@@ -156,6 +156,20 @@ const struct frr_yang_module_info frr_staticd_info = {
+ 				.destroy = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_vrf_name_destroy,
+ 			}
+ 		},
++		{
++			.xpath = "/frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/static-sids/sid/paths",
++			.cbs = {
++				.create = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_create,
++				.destroy = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_destroy,
++			}
++		},
++		{
++			.xpath = "/frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/static-sids/sid/paths/interface",
++			.cbs = {
++				.modify = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_modify,
++				.destroy = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_destroy,
++			}
++		},
+ 		{
+ 			.xpath = "/frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/static-sids/sid/locator-name",
+ 			.cbs = {
+diff --git a/staticd/static_nb.h b/staticd/static_nb.h
+index aa11f340212b..878a78772b7a 100644
+--- a/staticd/static_nb.h
++++ b/staticd/static_nb.h
+@@ -96,6 +96,14 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 	struct nb_cb_modify_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_vrf_name_destroy(
+ 	struct nb_cb_destroy_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_create(
++	struct nb_cb_create_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_destroy(
++	struct nb_cb_destroy_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_modify(
++	struct nb_cb_modify_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_destroy(
++	struct nb_cb_destroy_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_locator_name_modify(
+ 	struct nb_cb_modify_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_locator_name_destroy(
+@@ -183,6 +191,10 @@ int routing_control_plane_protocols_name_validate(
+ 
+ #define FRR_STATIC_SRV6_SID_LOCATOR_NAME_XPATH "/locator-name"
+ 
++#define FRR_STATIC_SRV6_SID_INTERFACE_XPATH "/paths[path-index=%u]/interface"
++
++#define FRR_STATIC_SRV6_SID_NEXTHOP_XPATH "/next-hop"
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/staticd/static_nb_config.c b/staticd/static_nb_config.c
+index e2ab1f2ffefe..fb3e2d0f837d 100644
+--- a/staticd/static_nb_config.c
++++ b/staticd/static_nb_config.c
+@@ -1229,6 +1229,61 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 	return NB_OK;
+ }
+ 
++/*
++ * XPath:
++ * /frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/locators/locator/static-sids/sid/paths
++ */
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_create(
++	struct nb_cb_create_args *args)
++{
++	/* Actual setting is done in apply_finish */
++	return NB_OK;
++}
++
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_destroy(
++	struct nb_cb_destroy_args *args)
++{
++	return NB_OK;
++}
++
++/*
++ * XPath:
++ * /frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/locators/locator/static-sids/sid/paths/interface
++ */
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_modify(
++	struct nb_cb_modify_args *args)
++{
++	struct static_srv6_sid *sid;
++	const char *ifname;
++
++	if (args->event != NB_EV_APPLY)
++		return NB_OK;
++
++	sid = nb_running_get_entry(args->dnode, NULL, true);
++
++	/* Release and uninstall existing SID, if any, before requesting the new one */
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
++		static_zebra_release_srv6_sid(sid);
++		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
++	}
++
++	if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++		static_zebra_srv6_sid_uninstall(sid);
++		UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++	}
++
++	ifname = yang_dnode_get_string(args->dnode, "../interface");
++	snprintf(sid->attributes.ifname, sizeof(sid->attributes.ifname), "%s", ifname);
++
++	return NB_OK;
++}
++
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_destroy(
++	struct nb_cb_destroy_args *args)
++{
++	return NB_OK;
++}
++
+ /*
+  * XPath:
+  * /frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/locators/locator/static-sids/sid/vrf-name
+
+From 646c4f95d9aa978558757df58d013e78f0c50363 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 10:59:40 +0100
+Subject: [PATCH 04/13] staticd: Add nb callbacks to configure a nexthop for
+ SRv6 uA behavior
+
+An SRv6 uA SID is associated with the interface and (optionally) the
+IPv6 address of the nexthop.
+
+This commit adds the modify and destroy nortbound callbacks required to
+set the nexthop.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_nb.c        |  7 +++++
+ staticd/static_nb.h        |  6 ++++-
+ staticd/static_nb_config.c | 52 ++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 64 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_nb.c b/staticd/static_nb.c
+index bec151e6635c..60dc3dc788c7 100644
+--- a/staticd/static_nb.c
++++ b/staticd/static_nb.c
+@@ -170,6 +170,13 @@ const struct frr_yang_module_info frr_staticd_info = {
+ 				.destroy = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_destroy,
+ 			}
+ 		},
++		{
++			.xpath = "/frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/static-sids/sid/paths/next-hop",
++			.cbs = {
++				.modify = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_modify,
++				.destroy = routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_destroy,
++			}
++		},
+ 		{
+ 			.xpath = "/frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/static-sids/sid/locator-name",
+ 			.cbs = {
+diff --git a/staticd/static_nb.h b/staticd/static_nb.h
+index 878a78772b7a..282c9dcf11c5 100644
+--- a/staticd/static_nb.h
++++ b/staticd/static_nb.h
+@@ -104,6 +104,10 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 	struct nb_cb_modify_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_interface_destroy(
+ 	struct nb_cb_destroy_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_modify(
++	struct nb_cb_modify_args *args);
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_destroy(
++	struct nb_cb_destroy_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_locator_name_modify(
+ 	struct nb_cb_modify_args *args);
+ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_locator_name_destroy(
+@@ -193,7 +197,7 @@ int routing_control_plane_protocols_name_validate(
+ 
+ #define FRR_STATIC_SRV6_SID_INTERFACE_XPATH "/paths[path-index=%u]/interface"
+ 
+-#define FRR_STATIC_SRV6_SID_NEXTHOP_XPATH "/next-hop"
++#define FRR_STATIC_SRV6_SID_NEXTHOP_XPATH "/paths[path-index=%u]/next-hop"
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/staticd/static_nb_config.c b/staticd/static_nb_config.c
+index fb3e2d0f837d..71df15fa6123 100644
+--- a/staticd/static_nb_config.c
++++ b/staticd/static_nb_config.c
+@@ -1284,6 +1284,58 @@ int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routi
+ 	return NB_OK;
+ }
+ 
++/*
++ * XPath:
++ * /frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/locators/locator/static-sids/sid/paths/next-hop
++ */
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_modify(
++	struct nb_cb_modify_args *args)
++{
++	struct static_srv6_sid *sid;
++	struct ipaddr nexthop;
++
++	switch (args->event) {
++	case NB_EV_VALIDATE:
++		zlog_info("validating nexthop %pI6", &nexthop.ipaddr_v6);
++		yang_dnode_get_ip(&nexthop, args->dnode, "../next-hop");
++		if (!IS_IPADDR_V6(&nexthop)) {
++			snprintf(args->errmsg, args->errmsg_len,
++				 "%% Nexthop must be an IPv6 address");
++			return NB_ERR_VALIDATION;
++		}
++		break;
++	case NB_EV_ABORT:
++	case NB_EV_PREPARE:
++		break;
++	case NB_EV_APPLY:
++		sid = nb_running_get_entry(args->dnode, NULL, true);
++
++		/* Release and uninstall existing SID, if any, before requesting the new one */
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID)) {
++			static_zebra_release_srv6_sid(sid);
++			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
++		}
++
++		if (CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA)) {
++			static_zebra_srv6_sid_uninstall(sid);
++			UNSET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_SENT_TO_ZEBRA);
++		}
++
++		yang_dnode_get_ip(&nexthop, args->dnode, "../next-hop");
++		sid->attributes.nh6 = nexthop.ipaddr_v6;
++
++		break;
++	}
++
++	return NB_OK;
++}
++
++int routing_control_plane_protocols_control_plane_protocol_staticd_segment_routing_srv6_local_sids_sid_paths_next_hop_destroy(
++	struct nb_cb_destroy_args *args)
++{
++	return NB_OK;
++}
++
+ /*
+  * XPath:
+  * /frr-routing:routing/control-plane-protocols/control-plane-protocol/frr-staticd:staticd/segment-routing/srv6/locators/locator/static-sids/sid/vrf-name
+
+From ec5ff367b120e67c9e7bd87ffa8baa2334e75628 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:01:11 +0100
+Subject: [PATCH 05/13] staticd: Extend `static_zebra_request_srv6_sid` to
+ request SRv6 uA SIDs
+
+In order to configure an SRv6 uA SID in staticd, staticd should request
+SRv6 SID Manager to allocate a SID bound to the uA behavior.
+Currently, `static_zebra_request_srv6_sid` does not support requesting
+SIDs bound to the uA behavior.
+
+This commit extends the `static_zebra_request_srv6_sid` function to
+enable staticd to request SIDs bound to the uA behavior.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_zebra.c | 16 ++++++++++++++-
+ zebra/zebra_srv6.c     | 46 ++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 61 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 552dd3ee1f74..d3ff5ee45f70 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -890,6 +890,7 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 	struct srv6_sid_ctx ctx = {};
+ 	int ret = 0;
+ 	struct vrf *vrf;
++	struct interface *ifp;
+ 
+ 	if (!sid)
+ 		return;
+@@ -940,13 +941,23 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 			ctx.vrf_id = vrf->vrf_id;
+ 		}
+ 
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++		ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_X;
++		ctx.nh6 = sid->attributes.nh6;
++		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++		if (!ifp) {
++			zlog_warn("Failed to request SRv6 SID %pFX: interface %s does not exist",
++				  &sid->addr, sid->attributes.ifname);
++			return;
++		}
++		ctx.ifindex = ifp->ifindex;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+-	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+@@ -1240,6 +1251,9 @@ static int static_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 			return 0;
+ 		}
+ 
++		if (!IPV6_ADDR_SAME(&ctx.nh6, &in6addr_any))
++			sid->attributes.nh6 = ctx.nh6;
++
+ 		SET_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID);
+ 
+ 		/*
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index 6d228c5e24f3..51efcceb75a0 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -18,6 +18,7 @@
+ #include "zebra/zebra_srv6.h"
+ #include "zebra/zebra_errors.h"
+ #include "zebra/ge_netlink.h"
++#include "zebra/interface.h"
+ 
+ #include <stdio.h>
+ #include <string.h>
+@@ -1745,6 +1746,13 @@ int get_srv6_sid(struct zebra_srv6_sid **sid, struct srv6_sid_ctx *ctx,
+ 	int ret = -1;
+ 	struct srv6_locator *locator;
+ 	char buf[256];
++	struct nhg_connected *rb_node_dep = NULL;
++	struct listnode *node;
++	struct nexthop *nexthop;
++	struct nbr_connected *nc;
++	bool found = false;
++	struct interface *ifp;
++	struct zebra_if *zebra_if;
+ 
+ 	enum srv6_sid_alloc_mode alloc_mode =
+ 		(sid_value) ? SRV6_SID_ALLOC_MODE_EXPLICIT
+@@ -1755,6 +1763,44 @@ int get_srv6_sid(struct zebra_srv6_sid **sid, struct srv6_sid_ctx *ctx,
+ 			   __func__, srv6_sid_ctx2str(buf, sizeof(buf), ctx),
+ 			   sid_value, srv6_sid_alloc_mode2str(alloc_mode));
+ 
++	if (ctx->ifindex != 0 && IPV6_ADDR_SAME(&ctx->nh6, &in6addr_any)) {
++		ifp = if_lookup_by_index(ctx->ifindex, VRF_DEFAULT);
++		if (!ifp) {
++			zlog_err("%s: interface %u does not exist", __func__, ctx->ifindex);
++			return -1;
++		}
++
++		for (ALL_LIST_ELEMENTS_RO(ifp->nbr_connected, node, nc))
++			if (nc->address && nc->address->family == AF_INET6 &&
++			    IN6_IS_ADDR_LINKLOCAL(&nc->address->u.prefix6)) {
++				ctx->nh6 = nc->address->u.prefix6;
++				found = true;
++				break;
++			}
++
++		if (!found) {
++			zebra_if = ifp->info;
++
++			frr_each (nhg_connected_tree, &zebra_if->nhg_dependents, rb_node_dep) {
++				for (ALL_NEXTHOPS(rb_node_dep->nhe->nhg, nexthop)) {
++					/* skip non link-local addresses */
++					if (!IPV6_ADDR_SAME(&nexthop->gate.ipv6, &in6addr_any)) {
++						ctx->nh6 = nexthop->gate.ipv6;
++						found = true;
++						break;
++					}
++				}
++				if (found)
++					break;
++			}
++			if (!found) {
++				zlog_err("%s: cannot get SID, interface (ifindex %u) not found",
++					 __func__, ctx->ifindex);
++				return -1;
++			}
++		}
++	}
++
+ 	if (alloc_mode == SRV6_SID_ALLOC_MODE_EXPLICIT) {
+ 		/*
+ 		 * Explicit SID allocation: allocate a specific SID value
+
+From cc84e522810542105d9b358b3cbefe4fdf694c5c Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:02:23 +0100
+Subject: [PATCH 06/13] staticd: Extend `static_zebra_release_srv6_sid` to
+ release SRv6 uA SIDs
+
+When removing an SRv6 uA SID, staticd should ask SRv6 SID Manager to
+release the SID.
+Currently, `static_zebra_release_srv6_sid` does not allow to release uA
+SIDs.
+
+This commit extends `static_zebra_release_srv6_sid` to allow staticd to
+release SRv6 uA SIDs.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_zebra.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index d3ff5ee45f70..ec425a4afcd4 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -977,6 +977,7 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid)
+ 	struct srv6_sid_ctx ctx = {};
+ 	struct vrf *vrf;
+ 	int ret = 0;
++	struct interface *ifp;
+ 
+ 	if (!sid || !CHECK_FLAG(sid->flags, STATIC_FLAG_SRV6_SID_VALID))
+ 		return;
+@@ -1027,13 +1028,23 @@ extern void static_zebra_release_srv6_sid(struct static_srv6_sid *sid)
+ 			ctx.vrf_id = vrf->vrf_id;
+ 		}
+ 
++		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++		ctx.behavior = ZEBRA_SEG6_LOCAL_ACTION_END_X;
++		ctx.nh6 = sid->attributes.nh6;
++		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++		if (!ifp) {
++			zlog_warn("Failed to request SRv6 SID %pFX: interface %s does not exist",
++				  &sid->addr, sid->attributes.ifname);
++			return;
++		}
++		ctx.ifindex = ifp->ifindex;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+-	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+
+From ae6fb9196a92820bfcf1bfcacfd3c272d778cf70 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:02:59 +0100
+Subject: [PATCH 07/13] staticd: Extend `static_zebra_srv6_sid_install` to
+ install SRv6 uA SIDs
+
+This commit extends the `static_zebra_srv6_sid_install` function to
+allow staticd to install SRv6 uA SIDs into the zebra RIB.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_zebra.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index ec425a4afcd4..83d123e6555c 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -702,12 +702,24 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 			return;
+ 		}
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END_X;
++		ctx.nh6 = sid->attributes.nh6;
++		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++		if (!ifp) {
++			zlog_warn("Failed to install SID %pFX: failed to get interface %s",
++				  &sid->addr, sid->attributes.ifname);
++			return;
++		}
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
++		ctx.flv.lcblock_len = sid->locator->block_bits_length;
++		ctx.flv.lcnode_func_len = sid->locator->node_bits_length;
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+-	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+
+From 95abf9d678806ff7bd9eeee8da6302ddb55f1773 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:03:18 +0100
+Subject: [PATCH 08/13] staticd: Extend `static_zebra_srv6_sid_uninstall` to
+ uninstall SRv6 uA SIDs
+
+This commit extends the `static_zebra_srv6_sid_uninstall` function to
+allow staticd to remove SRv6 uA SIDs from the zebra RIB.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_zebra.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 83d123e6555c..9a5e0efc4dc2 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -842,12 +842,20 @@ void static_zebra_srv6_sid_uninstall(struct static_srv6_sid *sid)
+ 			return;
+ 		}
+ 		break;
++	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
++		ctx.nh6 = sid->attributes.nh6;
++		ifp = if_lookup_by_name(sid->attributes.ifname, VRF_DEFAULT);
++		if (!ifp) {
++			zlog_warn("Failed to install SID %pFX: failed to get interface %s",
++				  &sid->addr, sid->attributes.ifname);
++			return;
++		}
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_PSP_USD:
+-	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP:
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID_PSP_USD:
+ 	case SRV6_ENDPOINT_BEHAVIOR_OPAQUE:
+
+From 70c039baa8b722f7bbee12c38d95181dac2696c6 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:04:03 +0100
+Subject: [PATCH 09/13] staticd: Extend CLI to configure an SRv6 uA SID
+
+This commit extends the STATIC CLI to support the configuration of uA
+SIDs.
+
+```
+router(config)# sid fcbb:bbbb:1:fe00::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_vty.c | 28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index 5c19d238835a..ad4ef87319ca 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1199,13 +1199,18 @@ DEFUN_NOSH (static_srv6_sids, static_srv6_sids_cmd,
+ }
+ 
+ DEFPY_YANG(srv6_sid, srv6_sid_cmd,
+-      "sid X:X::X:X/M locator NAME$locator_name behavior <uN | uDT6 vrf VIEWVRFNAME | uDT4 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>",
++      "sid X:X::X:X/M locator NAME$locator_name behavior <uN | uA interface INTERFACE$interface [nexthop X:X::X:X$nh6] | uDT6 vrf VIEWVRFNAME | uDT4 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>",
+ 	  "Configure SRv6 SID\n"
+       "Specify SRv6 SID\n"
+ 	  "Locator name\n"
+       "Specify Locator name\n"
+       "Specify SRv6 SID behavior\n"
+       "Apply the code to a uN SID\n"
++      "Behavior uA\n"
++      "Configure the interface\n"
++      "Interface name\n"
++      "Configure the nexthop\n"
++      "IPv6 address of the nexthop\n"
+       "Apply the code to an uDT6 SID\n"
+       "Configure VRF name\n"
+       "Specify VRF name\n"
+@@ -1223,7 +1228,10 @@ DEFPY_YANG(srv6_sid, srv6_sid_cmd,
+ 	char xpath_sid[XPATH_MAXLEN];
+ 	char xpath_behavior[XPATH_MAXLEN];
+ 	char xpath_vrf_name[XPATH_MAXLEN];
++	char xpath_ifname[XPATH_MAXLEN];
++	char xpath_nexthop[XPATH_MAXLEN];
+ 	char xpath_locator_name[XPATH_MAXLEN];
++	char ab_xpath[XPATH_MAXLEN];
+ 
+ 	if (argv_find(argv, argc, "uN", &idx)) {
+ 		behavior = SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID;
+@@ -1236,6 +1244,8 @@ DEFPY_YANG(srv6_sid, srv6_sid_cmd,
+ 	} else if (argv_find(argv, argc, "uDT46", &idx)) {
+ 		behavior = SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID;
+ 		vrf_name = argv[idx + 2]->arg;
++	} else if (argv_find(argv, argc, "uA", &idx)) {
++		behavior = SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID;
+ 	}
+ 
+ 	snprintf(xpath_srv6, sizeof(xpath_srv6), FRR_STATIC_SRV6_INFO_KEY_XPATH,
+@@ -1259,6 +1269,22 @@ DEFPY_YANG(srv6_sid, srv6_sid_cmd,
+ 		nb_cli_enqueue_change(vty, xpath_vrf_name, NB_OP_MODIFY, vrf_name);
+ 	}
+ 
++	if (interface) {
++		snprintf(ab_xpath, sizeof(ab_xpath), FRR_STATIC_SRV6_SID_INTERFACE_XPATH, 0);
++		strlcpy(xpath_ifname, xpath_sid, sizeof(xpath_ifname));
++		strlcat(xpath_ifname, ab_xpath, sizeof(xpath_ifname));
++
++		nb_cli_enqueue_change(vty, xpath_ifname, NB_OP_MODIFY, interface);
++	}
++
++	if (nh6_str) {
++		snprintf(ab_xpath, sizeof(ab_xpath), FRR_STATIC_SRV6_SID_NEXTHOP_XPATH, 0);
++		strlcpy(xpath_nexthop, xpath_sid, sizeof(xpath_nexthop));
++		strlcat(xpath_nexthop, ab_xpath, sizeof(xpath_nexthop));
++
++		nb_cli_enqueue_change(vty, xpath_nexthop, NB_OP_MODIFY, nh6_str);
++	}
++
+ 	strlcpy(xpath_locator_name, xpath_sid, sizeof(xpath_locator_name));
+ 	strlcat(xpath_locator_name, FRR_STATIC_SRV6_SID_LOCATOR_NAME_XPATH,
+ 		sizeof(xpath_locator_name));
+
+From f2fcdaad3a18c096c5356ff745ab39c70d67adc5 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:04:14 +0100
+Subject: [PATCH 10/13] staticd: Extend CLI to unconfigure an SRv6 uA SID
+
+This commit extends the STATIC CLI to support the deletion of uA SIDs.
+
+```
+router(config)# no sid fcbb:bbbb:1:fe00::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_vty.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index ad4ef87319ca..39776a414301 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1295,7 +1295,7 @@ DEFPY_YANG(srv6_sid, srv6_sid_cmd,
+ }
+ 
+ DEFPY_YANG(no_srv6_sid, no_srv6_sid_cmd,
+-      "no sid X:X::X:X/M [locator NAME$locator_name] [behavior <uN | uDT6 vrf VIEWVRFNAME | uDT4 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>]",
++      "no sid X:X::X:X/M [locator NAME$locator_name] [behavior <uN | uA interface INTERFACE$interface [nexthop X:X::X:X$nh6] | uDT6 vrf VIEWVRFNAME | uDT4 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>]",
+       NO_STR
+ 	  "Configure SRv6 SID\n"
+       "Specify SRv6 SID\n"
+@@ -1303,6 +1303,11 @@ DEFPY_YANG(no_srv6_sid, no_srv6_sid_cmd,
+       "Specify Locator name\n"
+       "Specify SRv6 SID behavior\n"
+       "Apply the code to a uN SID\n"
++      "Behavior uA\n"
++      "Configure the interface\n"
++      "Interface name\n"
++      "Configure the nexthop\n"
++      "IPv6 address of the nexthop\n"
+       "Apply the code to an uDT6 SID\n"
+       "Configure VRF name\n"
+       "Specify VRF name\n"
+
+From 062fd00ad6ca94f1088a75ef2c425d2263baa9cd Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Fri, 14 Feb 2025 17:22:00 +0100
+Subject: [PATCH 11/13] staticd: Extend SRv6 SIDs show CLI to display uA SIDs
+
+This commit extends the SRv6 SIDs show CLI to display the configured
+SRv6 uA SIDs.
+
+```
+segment-routing
+ srv6
+  static-sids
+   sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
+  !
+ !
+!
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ staticd/static_vty.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/staticd/static_vty.c b/staticd/static_vty.c
+index 39776a414301..6e9087363d1f 100644
+--- a/staticd/static_vty.c
++++ b/staticd/static_vty.c
+@@ -1716,6 +1716,7 @@ static void srv6_sid_cli_show(struct vty *vty, const struct lyd_node *sid, bool
+ {
+ 	enum srv6_endpoint_behavior_codepoint srv6_behavior;
+ 	struct prefix_ipv6 sid_value;
++	struct ipaddr nexthop;
+ 
+ 	yang_dnode_get_ipv6p(&sid_value, sid, "sid");
+ 
+@@ -1787,6 +1788,16 @@ static void srv6_sid_cli_show(struct vty *vty, const struct lyd_node *sid, bool
+ 	if (yang_dnode_exists(sid, "vrf-name"))
+ 		vty_out(vty, " vrf %s", yang_dnode_get_string(sid, "vrf-name"));
+ 
++	if (yang_dnode_exists(sid, "paths[path-index=0]/interface")) {
++		vty_out(vty, " interface %s",
++			yang_dnode_get_string(sid, "paths[path-index=0]/interface"));
++
++		if (yang_dnode_exists(sid, "paths[path-index=0]/next-hop")) {
++			yang_dnode_get_ip(&nexthop, sid, "paths[path-index=0]/next-hop");
++			vty_out(vty, " nexthop %pI6", &nexthop.ipaddr_v6);
++		}
++	}
++
+ 	vty_out(vty, "\n");
+ }
+ 
+
+From 43c13777b2bc7790853ae0ff61acd31246b2cf48 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 12:15:12 +0100
+Subject: [PATCH 12/13] tests: Add test case to verify the programming of SRv6
+ uA SIDs
+
+This commit adds a test case to ensure staticd correctly programs SRv6
+uA SIDs in the RIB.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ .../static_srv6_sids/expected_srv6_sids.json  | 35 +++++++++++++++++++
+ .../expected_srv6_sids_sid_delete_1.json      | 35 +++++++++++++++++++
+ .../expected_srv6_sids_sid_delete_2.json      | 35 +++++++++++++++++++
+ tests/topotests/static_srv6_sids/r1/frr.conf  |  1 +
+ 4 files changed, 106 insertions(+)
+
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids.json b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+index de788784457b..1796c870a689 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+@@ -162,5 +162,40 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe40::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe40::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "End.X"
++					},
++					"seg6localContext": {
++						"nh6": "2001::2"
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+index dd0850fb3c89..bd1f4bf87a74 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+@@ -121,5 +121,40 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe40::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe40::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "End.X"
++					},
++					"seg6localContext": {
++						"nh6": "2001::2"
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+index 4051c01425e6..2bd40cdb5c2c 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+@@ -80,5 +80,40 @@
+ 				}
+ 			]
+ 		}
++	],
++	"fcbb:bbbb:1:fe40::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe40::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"vrfId": 0,
++			"vrfName": "default",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"table": 254,
++			"internalStatus": 16,
++			"internalFlags": 9,
++			"internalNextHopNum": 1,
++			"internalNextHopActiveNum": 1,
++			"nexthops": [
++				{
++					"flags": 3,
++					"fib": true,
++					"directlyConnected": true,
++					"interfaceName": "sr0",
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "End.X"
++					},
++					"seg6localContext": {
++						"nh6": "2001::2"
++					}
++				}
++			]
++		}
+ 	]
+ }
+\ No newline at end of file
+diff --git a/tests/topotests/static_srv6_sids/r1/frr.conf b/tests/topotests/static_srv6_sids/r1/frr.conf
+index b4904d9ac286..ce8fb8816519 100644
+--- a/tests/topotests/static_srv6_sids/r1/frr.conf
++++ b/tests/topotests/static_srv6_sids/r1/frr.conf
+@@ -12,6 +12,7 @@ segment-routing
+    sid fcbb:bbbb:1:fe10::/64 locator MAIN behavior uDT4 vrf Vrf10
+    sid fcbb:bbbb:1:fe20::/64 locator MAIN behavior uDT6 vrf Vrf20
+    sid fcbb:bbbb:1:fe30::/64 locator MAIN behavior uDT46 vrf Vrf30
++   sid fcbb:bbbb:1:fe40::/64 locator MAIN behavior uA interface sr0 nexthop 2001::2
+   !
+  !
+ !
+\ No newline at end of file
+
+From 35b40cc996e9c5359e7ea724ed907986e5a05694 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 13 Feb 2025 11:04:38 +0100
+Subject: [PATCH 13/13] doc: Add SRv6 uA SID configuration to staticd
+ documentation
+
+This commit adds detailed explanation on configuring SRv6 uA SIDs.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ doc/user/static.rst | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/doc/user/static.rst b/doc/user/static.rst
+index 0ce6e2107e7c..c1d11cf0b0e8 100644
+--- a/doc/user/static.rst
++++ b/doc/user/static.rst
+@@ -207,17 +207,18 @@ SRv6 Static SIDs Commands
+    Move from srv6 node to static-sids node. In this static-sids node, user can
+    configure static SRv6 SIDs.
+ 
+-.. clicmd:: sid X:X::X:X/M locator NAME behavior <uN|uDT4|uDT6|uDT46> [vrf VRF]
++.. clicmd:: sid X:X::X:X/M locator NAME behavior <uN|uA|uDT4|uDT6|uDT46> [vrf VRF] [interface IFNAME [nexthop X:X::X:X]]
+ 
+    Specify the locator sid manually. Configuring a local sid in a purely static mode
+    by specifying the sid value would generate a unique SID.
+    This feature will support the configuration of static SRv6 decapsulation on the system.
+ 
+-   It supports four parameter options, corresponding to the following functions:
+-   uN, uDT4, uDT6, uDT46
++   It supports the following behaviors: uN, uA, uDT4, uDT6, uDT46.
+ 
+    When configuring the local sid, if the action is set to 'uN', no vrf should be set.
+-   While for any other action, it is necessary to specify a specific vrf.
++   For uDT4, uDT6 and uDT46, it is necessary to specify a specific vrf.
++   The uA behavior requires the outgoing interface and optionally the IPv6 address of the Layer 3 adjacency
++   to which the packet should be forwarded.
+ 
+ ::
+ 
+@@ -228,6 +229,7 @@ SRv6 Static SIDs Commands
+    router(config-srv6-sids)# sid fcbb:bbbb:1:fe01::/64 locator LOC1 behavior uDT6 vrf Vrf1
+    router(config-srv6-sids)# sid fcbb:bbbb:1:fe02::/64 locator LOC1 behavior uDT4 vrf Vrf1
+    router(config-srv6-sids)# sid fcbb:bbbb:1:fe03::/64 locator LOC1 behavior uDT46 vrf Vrf2
++   router(config-srv6-sids)# sid fcbb:bbbb:1:fe04::/64 locator LOC1 behavior uA interface eth0 nexthop 2001::2
+ 
+    router(config-srv6-locator)# show run
+    ...
+@@ -237,5 +239,6 @@ SRv6 Static SIDs Commands
+       sid    fcbb:bbbb:1:fe01::/64 locator LOC1 behavior uDT6 vrf Vrf1
+       sid    fcbb:bbbb:1:fe02::/64 locator LOC1 behavior uDT4 vrf Vrf1
+       sid    fcbb:bbbb:1:fe03::/64 locator LOC1 behavior uDT46 vrf Vrf2
++      sid    fcbb:bbbb:1:fe04::/64 locator LOC1 behavior uA interface eth0 nexthop 2001::2
+        !
+    ...
+\ No newline at end of file
