@@ -329,5 +329,51 @@
                 ]
             }
         }
+    },
+    "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "action": "drop",
+                        "detection_time": 400,
+                        "restoration_time": 800,
+                        "pfc_stat_history": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY": {
+        "sonic-pfcwd:sonic-pfcwd": {
+            "sonic-pfcwd:PFC_WD": {
+                "PFC_WD_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "action": "drop",
+                        "detection_time": 400,
+                        "restoration_time": 800,
+                        "pfc_stat_history": "down"
+                    }
+                ]
+            }
+        }
     }
 }
