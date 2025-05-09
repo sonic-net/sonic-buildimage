@@ -21,7 +21,7 @@ MLNX_FW_BASE_PATH = $(MLNX_SDK_BASE_PATH)
 # Place an URL here to FW if you want to download FW instead
 MLNX_FW_BASE_URL =
 
-SIMX_VERSION = 25.1-1070
+SIMX_VERSION = 25.1-1095
 
 FW_FROM_URL = y
 
