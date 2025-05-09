@@ -56,6 +56,7 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     m.directory.put("LOCAL", "local_addresses", "fc00:20::20", {"interface": "Ethernet8|fc00:20::20/96"})
     m.directory.put("LOCAL", "interfaces", "Ethernet4|30.30.30.30/24", {"anything": "anything"})
     m.directory.put("LOCAL", "interfaces", "Ethernet8|fc00:20::20/96", {"anything": "anything"})
+    m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
 
     if m.check_neig_meta:
         m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "TOR", {})
