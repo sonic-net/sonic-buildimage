@@ -21,6 +21,11 @@
 {% else %}
 {% set is_fairwater = "false" %}
 {% endif %}
+{% if mgmt_type is defined and resource_type in ['ND-GB200F'] %}
+{% set is_gb200f = "true" %}
+{% else %}
+{% set is_gb200f = "false" %}
+{% endif %}
 {% if neighbor_deployment_id is not defined or neighbor_deployment_id | length == 0 %}
 {% set neighbor_deployment_id = 0 %}
 {% endif %}
@@ -73,6 +78,8 @@
 {%             include path_template % "v4.tor.rotterdam" %}
 {%         elif neighbor_type == 'BackEndToRRouter' %}
 {%             include path_template % "v4.tor.frontend" %}
+{%         elif neighbor_type == 'BackEndToRRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
+{%             include path_template % "v4.tor.leaf.fairwater.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_storage_device == 'true' and device_type == 'BackEndToRRouter' %}
 {%             include path_template % "v4.tor.storage.backend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_compute_ai == 'true' and device_type == 'BackEndToRRouter' %}
@@ -167,6 +174,8 @@
 {%             include path_template % "v6.tor.fairwater.backend" %}
 {%         elif neighbor_type == 'ToRRouter' and is_fairwater == 'true' and device_type == 'BackEndToRRouter' %}
 {%             include path_template % "v6.tor.fairwater.backend.frontend" %}
+{%         elif neighbor_type == 'BackEndToRRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
+{%             include path_template % "v4.tor.leaf.fairwater.frontend" %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' %}
 {%             include path_template % "v6.tor.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_compute_ai == 'true' and device_type == 'BackEndToRRouter' %}

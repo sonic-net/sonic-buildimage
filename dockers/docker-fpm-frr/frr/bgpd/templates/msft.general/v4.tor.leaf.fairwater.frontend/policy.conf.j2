@@ -1,0 +1,16 @@
+!
+! template: bgpd/templates/msft.general/v4.tor.leaf.fairwater.frontend/policy.conf.j2
+!
+bgp community-list standard AI_FRONTEND_VLAN_PREFIXES permit 13399:9327 
+!
+route-map FROM_TIER1_V4 permit 100
+!
+route-map TO_TIER1_V4 permit 100 
+ match ip address prefix-list LOCAL_VLAN_IPV4_PREFIX  
+ set community 13399:9327 additive 
+!
+route-map TO_TIER1_V4 permit 110
+!
+!
+! end of template: bgpd/templates/msft.general/v4.tor.leaf.fairwater.frontend/policy.conf.j2
+!
