@@ -2192,12 +2192,16 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
     elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':
-        if macsec_enabled == 'True':
-            results['DEVICE_METADATA']['localhost']['subtype'] = 'UpstreamLC'
-        elif macsec_enabled == 'False':
-            results['DEVICE_METADATA']['localhost']['subtype'] = 'DownstreamLC'
+        # If a devive is SpineRouter but not a chassis, then it's a lower spine router
+        if not is_minigraph_for_chassis(chassis_type):
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'LowerSpineRouter'
         else:
-            results['DEVICE_METADATA']['localhost']['subtype'] = 'Supervisor'
+            if macsec_enabled == 'True':
+                results['DEVICE_METADATA']['localhost']['subtype'] = 'UpstreamLC'
+            elif macsec_enabled == 'False':
+                results['DEVICE_METADATA']['localhost']['subtype'] = 'DownstreamLC'
+            else:
+                results['DEVICE_METADATA']['localhost']['subtype'] = 'Supervisor'
 
     # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
     enable_tunnel_qos_map = False
