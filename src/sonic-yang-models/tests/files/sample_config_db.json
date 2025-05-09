@@ -2225,6 +2225,28 @@
             }
         },
 
+        "DEBUG_DROP_MONITOR": {
+            "CONFIG": {
+                "status": "disabled"
+            }
+        },
+
+        "DEBUG_DROP_MONITOR_STATS": {
+            "DEBUG_4|Ethernet0": {
+                "prev_drop_count": "20",
+                "incidents": ["1746495767", "1746556475"]
+            }
+        },
+
+        "PERSISTENT_DROP_ALERTS": {
+            "DEBUG_4|1746556475": {
+                "message": "Persistent packet drops detected on Ethernet1"
+            },
+            "DEBUG_4|1746495543": {
+                "message": "Persistent packet drops detected on Ethernet0"
+            }
+        },
+
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",
@@ -2936,7 +2958,11 @@
                 "alias": "BAD_DROPS",
                 "desc": "More port ingress drops",
                 "group": "BAD",
-                "type": "SWITCH_INGRESS_DROPS"
+                "type": "SWITCH_INGRESS_DROPS",
+                "drop_monitor_status": "disabled",
+                "drop_count_threshold": "10",
+                "incident_count_threshold": "2",
+                "window": "300"
             }
         },
         "DEBUG_COUNTER_DROP_REASON": {
