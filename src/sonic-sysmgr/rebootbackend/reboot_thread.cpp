@@ -103,6 +103,24 @@ Progress RebootThread::wait_for_platform_reboot(swss::Select &s) {
   return progress;
 }
 
+Progress RebootThread::wait_for_platform_halt(swss::Select &s) {
+  SWSS_LOG_ENTER();
+
+  // Sleep for a long time: 120 seconds.
+  // During this time platform should halt the system.
+  swss::SelectableTimer l_timer(
+      timespec{.tv_sec = m_halt_timeout, .tv_nsec = 0});
+  s.addSelectable(&l_timer);
+
+  l_timer.start();
+
+  Progress progress = platform_reboot_select(s, l_timer);
+
+  l_timer.stop();
+  s.removeSelectable(&l_timer);
+  return progress;
+}
+
 void RebootThread::do_reboot(void) {
   SWSS_LOG_ENTER();
 
@@ -179,9 +197,9 @@ void RebootThread::do_halt_reboot(swss::Select &s) {
     return;
   }
 
-  // Wait for platform to reboot. If we return, reboot failed.
+  // Wait for platform to halt. If we return, reboot failed.
   // Logging, error status and monitoring for critical state are handled within.
-  if (wait_for_platform_reboot(s) == Progress::EXIT_EARLY) {
+  if (wait_for_platform_halt(s) == Progress::EXIT_EARLY) {
     return;
   }
 

@@ -178,6 +178,7 @@ class RebootThread {
   //   EXIT_EARLY: an issue occurred that stops WARM
   //   PROCEED: if reboot timeout expired
   Progress wait_for_platform_reboot(swss::Select &s);
+  Progress wait_for_platform_halt(swss::Select &s);
 
   // Log error string, set status to RebootStatus_Status_STATUS_FAILURE
   // Set status message to error_string.
@@ -211,6 +212,10 @@ class RebootThread {
   //       available in CONFIG_DB
   static constexpr uint32_t kRebootTime = 260;
   long m_reboot_timeout = kRebootTime;
+
+  // Wait for system to halt: allow unit test to shorten.
+  static constexpr uint32_t kRebootHaltTime = 120;
+  long m_halt_timeout = kRebootHaltTime;
 
   friend class RebootBETestWithoutStop;
   friend class RebootThreadTest;
