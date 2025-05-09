@@ -421,27 +421,6 @@
 <LinkMetadataDeclaration>
   <Link xmlns:d3p1="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
     <d3p1:LinkMetadata>
-      <d3p1:Name i:nil="true" />
-      <d3p1:Properties>
-        <d3p1:DeviceProperty>
-          <d3p1:Name>GeminiPeeringLink</d3p1:Name>
-          <d3p1:Reference i:nil="true" />
-          <d3p1:Value>True</d3p1:Value>
-        </d3p1:DeviceProperty>
-        <d3p1:DeviceProperty>
-          <d3p1:Name>UpperTOR</d3p1:Name>
-          <d3p1:Reference i:nil="true" />
-          <d3p1:Value>switch-t0</d3p1:Value>
-        </d3p1:DeviceProperty>
-        <d3p1:DeviceProperty>
-          <d3p1:Name>LowerTOR</d3p1:Name>
-          <d3p1:Reference i:nil="true" />
-          <d3p1:Value>switch2-t0</d3p1:Value>
-        </d3p1:DeviceProperty>
-      </d3p1:Properties>
-      <d3p1:Key>switch2-t0:MuxTunnel0;switch-t0:MuxTunnel0</d3p1:Key>
-    </d3p1:LinkMetadata>
-    <d3p1:LinkMetadata>
       <d3p1:Name i:nil="true"/>
       <d3p1:Properties>
         <d3p1:DeviceProperty>
