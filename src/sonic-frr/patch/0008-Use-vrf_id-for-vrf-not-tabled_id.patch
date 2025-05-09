@@ -5,14 +5,18 @@ Subject: [PATCH] From 349e3f758860be0077b69919c39764d3486ec44a Mon Sep 17
  00:00:00 2001 Subject: [PATCH] use vrf id instead of table id
 
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ zebra/rt_netlink.c |   72 +++++++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 59 insertions(+), 13 deletions(-)
+
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index b8d097e58..b81a9db6d 100644
+index f12b324e0..9b0599899 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
 @@ -385,6 +385,31 @@ static inline int proto2zebra(int proto, int family, bool is_nexthop)
  	return proto;
  }
-
+ 
 +static uint32_t table_lookup_by_vrf(vrf_id_t vrf_id, ns_id_t ns_id)
 +{
 +	struct vrf *vrf;
@@ -41,42 +45,8 @@ index b8d097e58..b81a9db6d 100644
  /**
   * @parse_encap_mpls() - Parses encapsulated mpls attributes
   * @tb:         Pointer to rtattr to look for nested items in.
-@@ -817,14 +842,26 @@ int netlink_route_change_read_unicast_internal(struct nlmsghdr *h,
- 	if (rtm->rtm_family == AF_MPLS)
- 		return 0;
-
--	/* Table corresponding to route. */
--	if (tb[RTA_TABLE])
--		table = *(int *)RTA_DATA(tb[RTA_TABLE]);
--	else
--		table = rtm->rtm_table;
-+	if (!ctx) {
-+		/* Table corresponding to route. */
-+		if (tb[RTA_TABLE])
-+			table = *(int *)RTA_DATA(tb[RTA_TABLE]);
-+		else
-+			table = rtm->rtm_table;
-+
-+		/* Map to VRF */
-+		vrf_id = zebra_vrf_lookup_by_table(table, ns_id);
-+	} else {
-+		/* With FPM, rtm_table contains vrf id, see netlink_route_multipath_msg_encode */
-+		if (tb[RTA_TABLE])
-+			vrf_id = *(int *)RTA_DATA(tb[RTA_TABLE]);
-+		else
-+			vrf_id = rtm->rtm_table;
-+
-+		/* Map to table */
-+		table = table_lookup_by_vrf(vrf_id, ns_id);
-+	}
-
--	/* Map to VRF */
--	vrf_id = zebra_vrf_lookup_by_table(table, ns_id);
- 	if (vrf_id == VRF_DEFAULT) {
- 		if (!is_zebra_valid_kernel_table(table)
- 		    && !is_zebra_main_routing_table(table))
-@@ -2283,13 +2320,25 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
-
+@@ -2530,12 +2564,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
+ 
  	/* Table corresponding to this route. */
  	table_id = dplane_ctx_get_table(ctx);
 -	if (table_id < 256)
@@ -85,7 +55,6 @@ index b8d097e58..b81a9db6d 100644
 -		req->r.rtm_table = RT_TABLE_UNSPEC;
 -		if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, table_id))
 -			return 0;
--	}
 +	if (!fpm) {
 +		if (table_id < 256)
 +			req->r.rtm_table = table_id;
@@ -104,7 +73,7 @@ index b8d097e58..b81a9db6d 100644
 +			if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, vrf))
 +				return 0;
 +		}
-+	}
+ 	}
 
  	if (IS_ZEBRA_DEBUG_KERNEL)
  		zlog_debug(
