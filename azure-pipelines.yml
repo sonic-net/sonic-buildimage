@@ -161,6 +161,7 @@ stages:
         MIN_WORKER: $(T0_INSTANCE_NUM)
         MAX_WORKER: $(T0_INSTANCE_NUM)
         MGMT_BRANCH: "202305"
+        PTF_IMAGE_TAG: "202305"
 
   - job: t0_2vlans_elastictest
     pool: sonic-ubuntu-1c
@@ -176,6 +177,7 @@ stages:
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         MGMT_BRANCH: "202305"
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
+        PTF_IMAGE_TAG: "202305"
 
   - job: t1_lag_elastictest
     pool: sonic-ubuntu-1c
@@ -189,6 +191,7 @@ stages:
         MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
         MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
         MGMT_BRANCH: "202305"
+        PTF_IMAGE_TAG: "202305"
 
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
@@ -204,6 +207,7 @@ stages:
           MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           NUM_ASIC: 4
           MGMT_BRANCH: "202305"
+          PTF_IMAGE_TAG: "202305"
 
   - job: dualtor_elastictest
     pool: sonic-ubuntu-1c
@@ -218,6 +222,7 @@ stages:
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MGMT_BRANCH: "202305"
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+          PTF_IMAGE_TAG: "202305"
 
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
@@ -234,6 +239,7 @@ stages:
           MGMT_BRANCH: "202305"
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
+          PTF_IMAGE_TAG: "202305"
 
 #  - job: wan_elastictest
 #    displayName: "kvmtest-wan by Elastictest"
