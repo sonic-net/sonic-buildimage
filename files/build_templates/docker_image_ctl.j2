@@ -378,6 +378,7 @@ function postStartAction()
 {%- else %}
     : # nothing
 {%- endif %}
+    /etc/resolvconf/update-libc.d/update-containers ${DOCKERNAME} &
 }
 
 start() {
@@ -576,6 +577,11 @@ start() {
     else
         DB_OPT=$DB_OPT" --add-host=redis_chassis.server:$chassis_db_address "
     fi
+    {%- elif docker_container_name == "dash-ha" %}
+    REDIS_MNT="-v /var/run/redis:/var/run/redis:rw"
+    REDIS_MNT=$REDIS_MNT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+    {%- else %}
+    REDIS_MNT="-v /var/run/redis$DEV:/var/run/redis:rw"
     {%- endif %}
 
     if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
@@ -590,6 +596,7 @@ start() {
         # redis_dir_list is a string of form "/var/run/redis0/ /var/run/redis1/ /var/run/redis2/"
 
         {%- if docker_container_name != "database" %}
+
         if [ -n "$redis_dir_list" ]; then
             for redis_dir in $redis_dir_list
             do
@@ -619,7 +626,7 @@ start() {
         if [ -n "$redis_dir_list" ]; then
             id=`expr $DEV + 1`
             redis_dir=`echo $redis_dir_list | cut -d " " -f $id`
-            REDIS_MNT=" -v $redis_dir:$redis_dir:rw "
+            REDIS_MNT=$REDIS_MNT" -v $redis_dir:$redis_dir:rw "
         fi
 
         {%- if docker_container_name == "database" %}
@@ -711,7 +718,6 @@ start() {
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
-        -v /var/run/redis$DEV:/var/run/redis:rw \
         -v /var/run/redis-chassis:/var/run/redis-chassis:ro \
         -v /usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV:/usr/share/sonic/hwsku:ro \
 {%- endif %}

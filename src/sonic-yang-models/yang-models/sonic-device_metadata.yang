@@ -299,6 +299,24 @@ module sonic-device_metadata {
                     type string;
                     description "Set source of anchor route";
                 }
+
+                leaf orch_dash_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature on APPL_DB DASH tables.";
+                    default "true";
+                }
+
+                leaf orch_route_zmq_enabled {
+                    type boolean;
+                    description "Enable ZMQ feature on APPL_DB ROUTE tables.";
+                    default "false";
+                }
+
+                leaf syslog_with_osversion {
+                    type boolean;
+                    description "Enable syslog with OS version feature.";
+                    default "false";
+                }
             }
             /* end of container localhost */
         }
