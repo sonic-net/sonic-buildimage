@@ -71,9 +71,10 @@ class Fan(FanBase):
             drv_dir = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050".format(15 + self.fantray_index - 1)
             try:
                 if not os.path.exists(drv_dir):
-                    ins_cmd = "echo '24c02 0x50' > /sys/bus/i2c/devices/i2c-{}/new_device" \
+                    file = "/sys/bus/i2c/devices/i2c-{}/new_device" \
                               .format(15 + self.fantray_index - 1)
-                    os.system(ins_cmd)
+                    with open(file, 'w') as file_des:
+                        file_des.write('24c02 0x50\n')
                     self.set_speed_rpm(MAX_FANTRAY_FAN_SPEED)
             except (IOError, OSError):
                 pass
@@ -86,9 +87,10 @@ class Fan(FanBase):
             drv_dir = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050".format(15 + self.fantray_index - 1)
             try:
                 if os.path.exists(drv_dir):
-                    del_cmd = "echo  0x50 > /sys/bus/i2c/devices/i2c-{}/delete_device" \
+                    file = "/sys/bus/i2c/devices/i2c-{}/delete_device" \
                               .format(15 + self.fantray_index - 1)
-                    os.system(del_cmd)
+                    with open(file, 'w') as file_des:
+                        file_des.write('0x50\n')
             except (IOError, OSError):
                 pass
 
