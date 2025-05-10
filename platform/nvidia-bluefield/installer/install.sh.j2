@@ -41,16 +41,6 @@ declare -r device_emmc=/dev/mmcblk0
 pn=$(dmidecode -t 4 | grep "Part Number" | awk '{split($NF,a,"-"); print tolower(a[1])}')
 declare -r platform=arm64-nvda_bf-$pn
 
-# The reboot of the DPU from the installer is required only for standalon platform.
-# In Smart Switch the reboot is triggered by the host when the DPU notifies it that the installation is finished.
-if [[ $(echo $platform | grep 9009d3b600) != "" ]]; then
-	declare -r reboot_is_needed=true
-	declare -r fw_upgrade_is_needed=false
-else
-	declare -r reboot_is_needed=false
-	declare -r fw_upgrade_is_needed=true
-fi
-
 declare -r capsule=/lib/firmware/mellanox/boot/capsule/boot_update2.cap
 
 run_bash_session()
@@ -107,6 +97,10 @@ fi
 if [ -e /etc/bf.cfg ]; then
 	. /etc/bf.cfg
 fi
+
+# Flags that can be overwritten by the bf.cfg
+declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
+declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"
 
 ex() {
     echo "Executing command: $@" > /dev/ttyAMA0
@@ -228,7 +222,7 @@ chmod a+r /mnt/machine.conf
 
 sync
 
-if [[ $fw_upgrade_is_needed == "true" ]]; then
+if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 	sonic_fs_path="/mnt/$image_dir/fs.squashfs"
 	sonic_fs_mountpoint="/tmp/$image_dir-fs"
 
@@ -260,6 +254,10 @@ if [[ $fw_upgrade_is_needed == "true" ]]; then
 	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
+	fi
+
+	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
+		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r
 	fi
 
 	ex umount $sonic_fs_mountpoint
@@ -442,12 +440,7 @@ fi
 
 rshim_log "Installation finished"
 
-if [[ $reboot_is_needed == "true" ]]; then
-	rshim_log "Rebooting..."
-	reboot -f
-else
-	rshim_log "Waiting for reset from the host..."
-	while true; do
-		sleep 1
-	done
-fi
+rshim_log "Waiting for reset from the host..."
+while true; do
+	sleep 1
+done
