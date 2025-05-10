@@ -44,6 +44,16 @@ COMMANDS_FOR_ACTUAL = {
     "KERNEL": [["uname", "-r"], "([0-9][0-9.-]*)-.*"]
 }
 
+UNAVAILABLE_COMPILED_VERSIONS = {
+    "SDK": "N/A",
+    "FW": "N/A",
+    "SAI": "N/A",
+    "HW_MANAGEMENT": "N/A",
+    "MFT": "N/A",
+    "KERNEL": "N/A",
+    "SIMX": "N/A"
+}
+
 {% elif sonic_asic_platform == "nvidia-bluefield" %}
 
 COMMANDS_FOR_ACTUAL = {
@@ -55,6 +65,16 @@ COMMANDS_FOR_ACTUAL = {
     "BFSOC": [["dpkg", "-l"], ["grep", "mlxbf-bootimages"], "mlxbf-bootimages *([0-9.-]*)"]
 }
 
+UNAVAILABLE_COMPILED_VERSIONS = {
+    "SDK": "N/A",
+    "FW": "N/A",
+    "SAI": "N/A",
+    "MFT": "N/A",
+    "KERNEL": "N/A",
+    "BFSOC": "N/A",
+    "SIMX": "N/A"
+}
+
 {% endif %}
 
 UNAVAILABLE_PLATFORM_VERSIONS = {
@@ -64,16 +84,6 @@ UNAVAILABLE_PLATFORM_VERSIONS = {
     "CPLD": "N/A"
 }
 
-UNAVAILABLE_COMPILED_VERSIONS = {
-    "SDK": "N/A",
-    "FW": "N/A",
-    "SAI": "N/A",
-    "HW_MANAGEMENT": "N/A",
-    "MFT": "N/A",
-    "KERNEL": "N/A",
-    "BFSOC": "N/A",
-    "SIMX": "N/A"
-}
 
 
 def parse_compiled_components_file():

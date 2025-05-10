@@ -37,7 +37,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd rdma-core-*/
 	find . -type f -exec touch {} +
 
-	patch -p1 < ../../../disable-ibverb-dependencies.patch
+	# Comment out the Breaks dependency on ibverbs-providers to avoid circular dependency issues
+	# during package installation, since ibverbs-providers and libibverbs1 depend on each other
+	sed -i 's/^Breaks: ibverbs-providers/#Breaks: ibverbs-providers/' ./debian/control
 
 	find . -type f -exec touch {} +
 

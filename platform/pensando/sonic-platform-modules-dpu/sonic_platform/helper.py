@@ -24,6 +24,8 @@ DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
 
 class APIHelper():
 
+    mtfuji_board_id = 130
+
     def __init__(self):
         pass
 

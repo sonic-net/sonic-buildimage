@@ -32,6 +32,7 @@ class DpuInterfaceEnum(Enum):
     MIDPLANE_INT = "midplane_interface"
     RSHIM_INT = "rshim_info"
     PCIE_INT = "bus_info"
+    RSHIM_PCIE_INT = "rshim_bus_info"
 
 
 dpu_interface_values = [item.value for item in DpuInterfaceEnum]

@@ -120,7 +120,8 @@ class TestDeviceData:
                     "Ethernet224": "Ethernet0"
                 },
                 "rshim_info": "rshim0",
-                "bus_info": "0000:08:00.0"
+                "bus_info": "0000:08:00.0",
+                "rshim_bus_info": "0000:08:00.1"
             },
             "dpu1": {
                 "midplane_interface": "dpu1",
@@ -128,7 +129,8 @@ class TestDeviceData:
                     "Ethernet232": "Ethernet0"
                 },
                 "rshim_info": "rshim1",
-                "bus_info": "0000:07:00.0"
+                "bus_info": "0000:07:00.0",
+                "rshim_bus_info": "0000:07:00.1"
             },
             "dpu2": {
                 "midplane_interface": "dpu2",
@@ -136,7 +138,8 @@ class TestDeviceData:
                     "Ethernet240": "Ethernet0"
                 },
                 "rshim_info": "rshim2",
-                "bus_info": "0000:01:00.0"
+                "bus_info": "0000:01:00.0",
+                "rshim_bus_info": "0000:01:00.1"
             },
             "dpu3": {
                 "midplane_interface": "dpu3",
@@ -144,7 +147,8 @@ class TestDeviceData:
                     "Ethernet248": "Ethernet0"
                 },
                 "rshim_info": "rshim3",
-                "bus_info": "0000:02:00.0"
+                "bus_info": "0000:02:00.0",
+                "rshim_bus_info": "0000:02:00.1"
             }
         }
         mock_load_json.return_value = mock_value
