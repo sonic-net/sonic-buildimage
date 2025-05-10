@@ -26,6 +26,8 @@
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
   * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
+  * [DEBUG_DROP_MONITOR](#debug_drop_monitor)
+  * [DEBUG_DROP_MONITOR_STATS](#debug_drop_monitor_stats)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -58,6 +60,7 @@
   * [NTP Global Configuration](#ntp-global-configuration)
   * [NTP Servers](#ntp-servers)
   * [Peer Switch](#peer-switch)
+  * [PERSISTENT_DROP_ALERTS](#persistent_drop_alerts)
   * [Policer](#policer)
   * [Port](#port)
   * [Port Channel](#port-channel)
@@ -987,19 +990,27 @@ DEBUG_COUNTER:
 ```
 ; DEBUG_COUNTER table
 
-key             = DEBUG_COUNTER_TABLE:name
-name            = string
-type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
-alias           = string (optional)
-description     = string (optional)
-group           = string (optional)
+key                      = DEBUG_COUNTER_TABLE:name
+name                     = string
+type                     = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias                    = string (optional)
+description              = string (optional)
+group                    = string (optional)
+drop_monitor_status      = admin_mode (enabled/disabled, default disabled)
+drop_count_threshold     = uint64 (optional)
+incident_count_threshold = uint64 (optional)
+window                   = uint64 (optional)
 
 "DEBUG_COUNTER": {
     "DEBUG_4": {
         "alias": "BAD_DROPS",
         "desc": "More port ingress drops",
         "group": "BAD",
-        "type": "SWITCH_INGRESS_DROPS"
+        "type": "SWITCH_INGRESS_DROPS",
+        "drop_monitor_status": "disabled",
+        "drop_count_threshold": "10",
+        "incident_count_threshold": "2",
+        "window": "300"
     }
 }
 ```
@@ -1015,6 +1026,45 @@ reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (http
     "DEBUG_4|SIP_LINK_LOCAL": {}
 }
 ```
+
+### DEBUG_DROP_MONITOR
+Ingress and eggress port debug counter flows can be monitored for persistent drops using
+debug drop monitor feature. This table shows the status and configurations of the feature which can
+be modified via the CLI.
+
+```
+{
+    "DEBUG_DROP_MONITOR": {
+        "CONFIG": {
+            "status": "disabled",
+        }
+    }
+}
+```
+
+### DEBUG_DROP_MONITOR_STATS
+This table stores metadata related to packet drops for the configured drop counters. This metadata is used by the configurable drop count monitoring feature to detect persistent
+drops.
+
+key             = DEBUG_DROP_MONITOR_STATS:name|port
+name            = name of a counter in DEBUG_COUNTER_TABLE
+port            = Any of the ingress/egress ports supported by the counter
+prev_drop_count = The last recorded drop count on this port by the configured drop counter
+incidents       = A vector of incidents recorded on this drop counter which are within the configured time window
+
+For more details on incidents refer to drop_counters_HLD.md
+
+```
+{
+    "DEBUG_DROP_MONITOR_STATS": {
+        "DEBUG_0|Ethernet0": {
+            "prev_drop_count": "10",
+            "incidents": ['1746495767', '1746556475']
+        }
+    }
+}
+```
+
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
@@ -1973,6 +2023,27 @@ Below is an exmaple of the peer switch table configuration.
     }
 }
 ```
+
+### PERSISTENT_DROP_ALERTS
+This table records the persistent drops detected on the configured drop counters
+
+key        = PERSISTENT_DROP_ALERTS:name|timestamp
+name       = Name of the counter in DEBUG_COUNTER table
+timestamp  = Unix timestamp when the alert was triggered
+message    = Message describing the persistent drop and the interface affected by it
+
+For more details on the how persistent drops are detected refer to drop_counters_HLD.md
+```
+{
+    "PERSISTENT_DROP_ALERTS": {
+        "DEBUG_1|1746556475": {
+            "message": "Persistent packet drops detected on Ethernet1"
+        },
+        "DEBUG_1|1746495543": {
+            "message": "Persistent packet drops detected on Ethernet0"
+        }
+    }
+}
 
 ### Policer
 
