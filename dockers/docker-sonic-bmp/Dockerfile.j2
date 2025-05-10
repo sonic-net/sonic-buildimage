@@ -40,7 +40,6 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 RUN chmod +x /usr/bin/bmp.sh
-RUN touch /var/log/openbmpd.log
 
 RUN apt-get clean -y      && \
     apt-get autoclean -y  && \
