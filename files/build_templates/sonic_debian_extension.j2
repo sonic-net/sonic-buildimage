@@ -1107,15 +1107,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
 sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
-# Install rshim script
-sudo install -m 755 platform/mellanox/rshim/files/rshim.sh $FILESYSTEM_ROOT/usr/bin/rshim.sh
-
-# Install rshim services
-sudo cp platform/mellanox/rshim/files/rshim@.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-
-# Install dpumap script
-sudo install -m 755 platform/mellanox/smartswitch/dpumap.sh $FILESYSTEM_ROOT/usr/bin/dpumap.sh
-
 # Install dpu-udev-manager script
 sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.sh $FILESYSTEM_ROOT/usr/bin/dpu-udev-manager.sh
 
