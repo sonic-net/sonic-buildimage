@@ -8,7 +8,5 @@ libxslt1-dev==1.1.34-4+deb11u2
 linux-compiler-gcc-10-arm==5.10.234-1
 linux-headers-5.10.0-34-armmp==5.10.234-1
 linux-headers-armmp==5.10.234-1
-login==1:4.8.1-1+deb11u1
 nasm==2.15.05-1
 nodejs==14.21.3-deb-1nodesource1
-passwd==1:4.8.1-1+deb11u1

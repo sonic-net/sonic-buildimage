@@ -7,8 +7,8 @@ iproute2-dev==1.mlnx.4.5.4206
 iproute2-mlnx==5.10.0-4~bpo10+1
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
-libc-dev-bin==2.31-13+deb11u11
-libc6-dev==2.31-13+deb11u11
+libc-dev-bin==2.31-13+deb11u12
+libc6-dev==2.31-13+deb11u12
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
 libcurl3-gnutls==7.74.0-1.3+deb11u14
@@ -16,7 +16,7 @@ libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
 libelf1==0.183-1
-libexpat1-dev==2.2.10-2+deb11u6
+libexpat1-dev==2.2.10-2+deb11u7
 libfido2-1==1.6.0-2
 libglib2.0-0==2.66.8-1+deb11u6
 libgpm2==1.20.7-8
@@ -41,12 +41,12 @@ libswsscommon-dbg==1.0.0
 libswsscommon-dbgsym==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
-libxml2==2.9.10+dfsg-6.7+deb11u6
+libxml2==2.9.10+dfsg-6.7+deb11u7
 linux-libc-dev==5.10.234-1
 mft==4.28.0-96
 mft-fwtrace-cfg==1.0.0
 mlnx-sai==1.mlnx.SAIBuild2311.28.0.13
-openssh-client==1:8.4p1-5+deb11u4
+openssh-client==1:8.4p1-5+deb11u5
 python-pip-whl==20.3.4-4+deb11u1
 python-sdk-api==1.mlnx.4.6.4122
 python3-attr==20.3.0-1

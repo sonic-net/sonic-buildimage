@@ -37,8 +37,8 @@ libassuan0==2.5.3-7.1
 libblkid-dev==2.36.1-8+deb11u2
 libbsd-dev==0.11.3-1+deb11u1
 libc-ares2==1.17.1-1+deb11u3
-libc-dev-bin==2.31-13+deb11u11
-libc6-dev==2.31-13+deb11u11
+libc-dev-bin==2.31-13+deb11u12
+libc6-dev==2.31-13+deb11u12
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
 libdevmapper1.02.1==2:1.02.175-2.1
@@ -97,8 +97,8 @@ libsystemd0==247.3-7+deb11u5
 libteam-utils==1.30-1
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
-libxml2==2.9.10+dfsg-6.7+deb11u6
-libxml2-dev==2.9.10+dfsg-6.7+deb11u6
+libxml2==2.9.10+dfsg-6.7+deb11u7
+libxml2-dev==2.9.10+dfsg-6.7+deb11u7
 libyang2==2.0.112-6
 libzmq3-dev==4.3.4-1+deb11u1
 linux-libc-dev==5.10.234-1
@@ -108,9 +108,9 @@ mailcap==3.69
 mime-support==3.66
 ndisc6==1.0.4-2
 netbase==6.3
-openssh-client==1:8.4p1-5+deb11u4
-openssh-server==1:8.4p1-5+deb11u4
-openssh-sftp-server==1:8.4p1-5+deb11u4
+openssh-client==1:8.4p1-5+deb11u5
+openssh-server==1:8.4p1-5+deb11u5
+openssh-sftp-server==1:8.4p1-5+deb11u5
 openssl==1.1.1w-0+deb11u2
 pinentry-curses==1.1.0-4
 psmisc==23.4-2
