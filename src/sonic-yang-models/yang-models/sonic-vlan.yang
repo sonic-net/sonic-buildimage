@@ -131,6 +131,10 @@ module sonic-vlan {
 					}
 				}
 
+				leaf arp_reply {
+					type stypes:arp_reply;
+				}
+
 				leaf ipv6_use_link_local_only {
 					description "Enable/Disable IPv6 link local address on vlan interface";
 					type stypes:mode-status;
