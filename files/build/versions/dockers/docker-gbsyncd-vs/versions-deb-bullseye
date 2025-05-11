@@ -28,7 +28,7 @@ libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbg==1.0.0
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.3.2-2
-openssh-client==1:8.4p1-5+deb11u4
+openssh-client==1:8.4p1-5+deb11u5
 sshpass==1.09-1+b1
 strace==5.10-1
 syncd-vs==1.0.0

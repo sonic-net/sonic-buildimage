@@ -34,7 +34,7 @@ libyang2==2.0.112-6
 libyang2-dbgsym==2.0.112-6
 logrotate==3.18.0-2+deb11u2
 lsof==4.93.2+dfsg-1.1
-openssh-client==1:8.4p1-5+deb11u4
+openssh-client==1:8.4p1-5+deb11u5
 pci.ids==0.0~2021.02.08-1
 sensible-utils==0.0.14
 sonic-rsyslog-plugin==1.0.0-0
