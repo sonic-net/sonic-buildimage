@@ -458,6 +458,7 @@ $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
 $(info "INCLUDE_MACSEC"                  : "$(INCLUDE_MACSEC)")
 $(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
 $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
+$(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
@@ -1122,6 +1123,16 @@ $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz :
 
 	$(FOOTER)
 
+# Targets for copy docker images
+$(addprefix $(TARGET_PATH)/,$(COPY_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
+		$$(%.gz_DEP_FILES)
+	$(HEADER)
+
+	rm -rf $@ $@.log
+	cp "$($*.gz_PATH)/$*.gz" target/$(COPY_DOCKER_IMAGES) $(LOG)
+
+	$(FOOTER)
+
 # Targets for building docker images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform docker-start \
 		$$(addprefix $$($$*.gz_DEBS_PATH)/,$$($$*.gz_DEPENDS)) \
@@ -1285,6 +1296,7 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES))
 DOCKER_LOAD_TARGETS = $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 		      $(SONIC_SIMPLE_DOCKER_IMAGES) \
 		      $(DOWNLOADED_DOCKER_IMAGES) \
+		      $(COPY_DOCKER_IMAGES) \
 		      $(DOCKER_IMAGES) \
 		      $(DOCKER_DBG_IMAGES)))
 
@@ -1452,6 +1464,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
+	export include_dash_ha="$(INCLUDE_DASH_HA)"
 	export include_stpd="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"
