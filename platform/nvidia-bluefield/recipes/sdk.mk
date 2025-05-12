@@ -19,7 +19,7 @@ SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sonic-bluefield-packages/bin
 
 # Place here URL where SDK sources exist
 SDK_SOURCE_BASE_URL =
-SDK_VERSION = 25.1-RC5
+SDK_VERSION = 25.4-RC3
 
 SDK_COLLECTX_URL = https://linux.mellanox.com/public/repo/doca/1.5.2/debian12/aarch64/
 
@@ -118,7 +118,7 @@ $(RDMA_CORE)_RDEPENDS = $(LIBNL3)
 $(RDMA_CORE)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 
 IB_VERBS_PROV = ibverbs-providers_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
-$(IB_VERBS_PROV)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
+$(IB_VERBS_PROV)_DEPENDS = $(IB_VERBS) $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 
 IB_VERBS = libibverbs1_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(IB_VERBS)_DEPENDS = $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
