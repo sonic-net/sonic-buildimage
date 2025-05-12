@@ -35,7 +35,7 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-  - nvidia-bluefield
+#  - nvidia-bluefield
 variables:
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1

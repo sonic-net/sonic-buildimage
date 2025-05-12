@@ -50,7 +50,7 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-  - nvidia-bluefield
+#  - nvidia-bluefield
 extends:
   template: v2/OneBranch.Official.CBWorkflow.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
