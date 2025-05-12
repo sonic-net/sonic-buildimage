@@ -8,10 +8,12 @@ import logging
 import math
 import os
 import re
+import shutil
 import signal
 import socket
 import sys
 import syslog
+import tempfile
 import threading
 import time
 import traceback
@@ -67,7 +69,7 @@ class Dict2Obj(object):
                 result[key] = value
         return result
 
- 
+
 class SyslogLogger:
     """
     A general-purpose logger class for logging messages using syslog.
@@ -197,8 +199,10 @@ class Utility:
                 if parsed_date is None:
                     raise ValueError(f"Could not parse date: {request[time_key]}")
                 formatted_date = parsed_date.strftime(date_format)
-            except Exception as e:
-                raise ValueError(f"Date format error, input: {request[time_key]}, error: {str(e)}")
+            except (ValueError, TypeError) as e:
+                error_message = f"Date format error, input: {request[time_key]}, error: {str(e)}"
+                logger.log_error(error_message)
+                raise ValueError(error_message)
         else:
             formatted_date = datetime.now().strftime(date_format)
         
@@ -284,7 +288,7 @@ class Utility:
         except (TypeError, ValueError) as e:
             logger.log_error(f"Error occurred: {e}")
             raise
-        except Exception as e:
+        except RuntimeError as e:
             logger.log_error(f"Unexpected error formatting memory size: {e}")
             raise
 
@@ -346,6 +350,11 @@ class TimeProcessor:
 
         :param request_data: Dictionary containing request parameters with potential date values.
         """
+        if not isinstance(request_data, dict):
+            error_message = f"Invalid request_data type: {type(request_data)}. Expected dict."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+
         if not request_data.get('to'):
             request_data['to'] = "now"
         if not request_data.get('from'):
@@ -375,14 +384,24 @@ class TimeProcessor:
         :param current_time: The current time for comparison.
         :param time_difference: The difference between end_time and start_time.
         """
-        time_diff_obj = Utility.convert_timedelta_to_obj(time_diff)
+        try:
+            time_diff_dict = Utility.format_timedelta_as_dict(time_diff)
         
-        if end_time > current_time:
-            raise Exception("Datetime format error, 'to' time should not be greater than current time.")
-        elif time_diff_obj.days > self.retention_period:
-            raise Exception(f"Datetime format error, time range should not exceed {self.retention_period} days.")
-        elif time_diff_obj.days == 0 and time_diff_obj.hours == 0 and time_diff_obj.minutes < self.sampling_interval:
-            raise Exception(f"Datetime format error, time difference should be at least {self.sampling_interval} minutes.")
+            if end_time > current_time:
+                error_message = "End time cannot be in the future."
+                logger.log_error(error_message)
+                raise ValueError(error_message)
+            elif time_diff_dict['days'] > self.retention_period:
+                error_message = f"Time range cannot exceed retention period of {self.retention_period} days."
+                logger.log_error(error_message)
+                raise ValueError(error_message)
+            elif time_diff_dict['days'] == 0 and time_diff_dict['hours'] == 0 and time_diff_dict['minutes'] < self.sampling_interval:
+                error_message = f"Time difference must be at least {self.sampling_interval} minutes."
+                logger.log_error(error_message)
+                raise ValueError(error_message)
+        except ValueError as error:
+            logger.log_error(f"Error validating time ranges: {error}")
+            raise
 
     def _calculate_day_and_hour_differences(self, start_time: datetime, end_time: datetime, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -400,15 +419,15 @@ class TimeProcessor:
         end_date = datetime.fromisoformat(end_date_str)
         
         day_diff = end_date - start_date
-        day_diff_obj = Utility.convert_timedelta_to_obj(day_diff)
+        day_diff_dict = Utility.format_timedelta_as_dict(day_diff)
         
-        start_hour_diff = Utility.convert_timedelta_to_obj(start_time - start_date)
-        end_hour_diff = Utility.convert_timedelta_to_obj(end_time - end_date)
+        start_hour_diff = Utility.format_timedelta_as_dict(start_time - start_date)
+        end_hour_diff = Utility.format_timedelta_as_dict(end_time - end_date)
         
         return {
-            'num_days': day_diff_obj.days,
-            'start_hour': start_hour_diff.hours,
-            'end_hour': end_hour_diff.hours
+            'num_days': day_diff_dict['days'],
+            'start_hour': start_hour_diff['hours'],
+            'end_hour': end_hour_diff['hours']
         }
 
     def _calculate_total_hours_and_minutes(self, time_diff: timedelta) -> Dict[str, int]:
@@ -418,9 +437,9 @@ class TimeProcessor:
         :param time_diff: The time difference as a timedelta object.
         :return: Dictionary containing total hours and total minutes.
         """
-        time_diff_obj = Utility.convert_timedelta_to_obj(time_diff)
-        total_hours = (time_diff_obj.days * 24) + time_diff_obj.hours
-        total_minutes = (time_diff_obj.days * 24 * 60) + (time_diff_obj.hours * 60) + time_diff_obj.minutes
+        time_diff_dict = Utility.format_timedelta_as_dict(time_diff)
+        total_hours = (time_diff_dict['days'] * 24) + time_diff_dict['hours']
+        total_minutes = (time_diff_dict['days'] * 24 * 60) + (time_diff_dict['hours'] * 60) + time_diff_dict['minutes']
         return {
             'total_hours': total_hours,
             'total_minutes': total_minutes
@@ -435,11 +454,11 @@ class TimeProcessor:
         :return: Dictionary containing remaining days since end and the next day.
         """
         time_since_end = current_time - end_time
-        time_since_end_obj = Utility.convert_timedelta_to_obj(time_since_end)
+        time_since_end_dict = Utility.format_timedelta_as_dict(time_since_end)
         
         return {
-            'start_day': time_since_end_obj.days,
-            'end_day': time_since_end_obj.days + 1
+            'start_day': time_since_end_dict['days'],
+            'end_day': time_since_end_dict['days'] + 1
         }
 
     def process_time_information(self, request_data: Dict[str, Any]) -> None:
@@ -578,12 +597,9 @@ class MemoryReportGenerator:
 
 class MemoryStatisticsCollector:
     """
-    This class handles system memory statistics collection, management, and retention. It initializes with a specified
-    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
-    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
-    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
-    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
-    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+    Handles system memory statistics collection, management, and retention. Initializes with a specified
+    sampling interval (in minutes) and retention period (in days) to determine how frequently data is
+    collected and how long it is retained.
     """
 
     def __init__(self, sampling_interval: int, retention_period: int):
@@ -592,63 +608,99 @@ class MemoryStatisticsCollector:
 
         :param sampling_interval: Interval between data collections in minutes (3 to 15).
         :param retention_period: Data retention period in days (1 to 30).
+        :raises ValueError: If sampling_interval or retention_period is out of valid range.
         """
+        if not (3 <= sampling_interval <= 15):
+            raise ValueError("Sampling interval must be between 3 and 15 minutes.")
+        if not (1 <= retention_period <= 30):
+            raise ValueError("Retention period must be between 1 and 30 days.")
+
         self.sampling_interval = sampling_interval
         self.retention_period = retention_period
+        self.last_prune_time = None
 
     def fetch_memory_statistics(self):
         """
         Collect memory statistics using psutil.
         
-        Returns:
-            dict: A dictionary containing memory statistics.
+        :return: Dictionary containing memory statistics.
+        :raises RuntimeError: If psutil fails to collect memory data.
         """
-        memory_data = psutil.virtual_memory()
-        memory_stats = {
-            'total_memory': {"prss": memory_data.total, "count": 1},
-            'used_memory': {"prss": memory_data.used, "count": 1},
-            'free_memory': {"prss": memory_data.free, "count": 1},
-            'available_memory': {"prss": memory_data.available, "count": 1},
-            'cached_memory': {"prss": memory_data.cached, "count": 1},
-            'buffers_memory': {"prss": memory_data.buffers, "count": 1},
-            'shared_memory': {"prss": memory_data.shared, "count": 1}
-        }
-        del memory_data
-        return memory_stats
+        try:
+            memory_data = psutil.virtual_memory()
+            memory_stats = {
+                'total_memory': {"prss": memory_data.total, "count": 1},
+                'used_memory': {"prss": memory_data.used, "count": 1},
+                'free_memory': {"prss": memory_data.free, "count": 1},
+                'available_memory': {"prss": memory_data.available, "count": 1},
+                'cached_memory': {"prss": memory_data.cached, "count": 1},
+                'buffers_memory': {"prss": memory_data.buffers, "count": 1},
+                'shared_memory': {"prss": memory_data.shared, "count": 1}
+            }
+            del memory_data
+            return memory_stats
+        except RuntimeError as e:
+            logger.log_error(f"Failed to fetch memory statistics: {e}")
+            raise
 
-    def fetch_memory_entries(self, filepath):
+    def fetch_memory_entries(self, filepath: str):
         """
         Fetch memory entries from a compressed JSON file.
         
-        Args:
-            filepath (str): The path to the compressed file containing memory entries.
-
-        Returns:
-            dict: A dictionary containing loaded memory entries or default structure.
+        :param filepath: Path to the compressed file containing memory entries.
+        :return: Dictionary or list containing loaded memory entries or default structure.
+        :raises TypeError: If filepath is not a string.
+        :raises OSError: If file cannot be read.
+        :raises json.JSONDecodeError: If JSON is invalid.
         """
-        tentry = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+        if not isinstance(filepath, str):
+            error_message = f"Invalid filepath type: {type(filepath)}. Expected str."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+
+        default_entry = (
+            {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+            if 'total' in filepath
+            else []
+        )
+
         if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
-            return tentry
+            return default_entry
 
         try:
             with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
                 loaded_entry = json.load(jfile)
             return loaded_entry
-        except Exception as e:
-            logger.log_error(f"Failed to load memory entries from {filepath}: {e}")
-            return tentry
+        except OSError as e:
+            logger.log_error(f"Failed to read memory entries from {filepath}: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.log_error(f"Invalid JSON in memory entries from {filepath}: {e}")
+            raise
+        except TypeError as e:
+            logger.log_error(f"Type error loading memory entries from {filepath}: {e}")
+            raise
 
-    def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
+    def update_memory_statistics(self, total_dict: dict, mem_dict: dict, time_list: dict, item: str, category: str):
         """
         Update memory statistics for the specified item and category.
         
-        Args:
-            total_dict (dict): The total statistics dictionary.
-            mem_dict (dict): The memory statistics dictionary to update.
-            time_list (dict): The current memory statistics collected.
-            item (str): The item to update in total_dict.
-            category (str): The category under which to update the statistics.
+        :param total_dict: The total statistics dictionary.
+        :param mem_dict: The memory statistics dictionary to update.
+        :param time_list: The current memory statistics collected.
+        :param item: The item to update in total_dict.
+        :param category: The category under which to update the statistics.
+        :raises TypeError: If inputs are not of expected types.
         """
+        if not all(isinstance(x, dict) for x in [total_dict, mem_dict, time_list]):
+            error_message = "total_dict, mem_dict, and time_list must be dictionaries."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+        if not all(isinstance(x, str) for x in [item, category]):
+            error_message = "item and category must be strings."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+
         if category not in mem_dict:
             mem_dict[category] = {}
         if item not in total_dict:
@@ -656,137 +708,220 @@ class MemoryStatisticsCollector:
         if category not in total_dict[item]:
             total_dict[item][category] = {}
 
-        current_time = Utility.fetch_current_date()
         for memory_metric in time_list.keys():
             try:
                 prss = int(time_list[memory_metric]['prss'])
-
                 entry_data = {
                     "prss": prss, 
                     "count": 1,
                     "high_value": prss, 
-                    "low_value": prss,
-                    "timestamp": current_time
+                    "low_value": prss
                 }
-
                 mem_dict[category][memory_metric] = entry_data
-
                 mem = total_dict[item][category]
                 if memory_metric in mem:
                     tprss = int(mem[memory_metric]["prss"]) + prss
                     tcount = int(mem[memory_metric]["count"]) + 1
-
                     high_value = max(prss, int(mem[memory_metric].get("high_value", prss)))
                     low_value = min(prss, int(mem[memory_metric].get("low_value", prss)))
-
                     mem[memory_metric] = {
                         "prss": tprss, 
                         "count": tcount,
                         "high_value": high_value,
-                        "low_value": low_value,
-                        "timestamp": current_time
+                        "low_value": low_value
                     }
                 else:
                     mem[memory_metric] = entry_data
+            except (TypeError, KeyError, ValueError) as e:
+                logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {e}")
+                continue
+        total_dict[item]['count'] = int(total_dict[item].get('count', 0)) + 1
 
-            except Exception as e:
-                logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {str(e)}")
-
-        total_dict[item]['count'] = int(total_dict[item]['count']) + 1
-
-    def enforce_retention_policy(self, total_dict):
+    def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
         """
-        This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
-        that are older than the configured retention period. 
-        total_dict (dict): A dictionary containing memory statistics.
-        """
-        if not total_dict or SYSTEM_MEMORY_KEY not in total_dict:
-            total_dict[SYSTEM_MEMORY_KEY] = {
-                'count': 0,
-                'timestamp': Utility.fetch_current_date()
-            }
-            return
-
-        current_time = Utility.fetch_current_date()
-        retention_threshold = timedelta(days=self.retention_period)
-        categories_to_remove = []
-
-        for category in total_dict[SYSTEM_MEMORY_KEY]:
-            if category not in ['count', 'timestamp']:
-                category_data = total_dict[SYSTEM_MEMORY_KEY][category]
-                if isinstance(category_data, dict) and 'timestamp' in category_data:
-                    try:
-                        entry_time = datetime.fromisoformat(category_data['timestamp'])
-                        if current_time - entry_time > retention_threshold:
-                            logger.log_info(f"Deleting outdated entry for category: {category}")
-                            categories_to_remove.append(category)
-                    except (ValueError, TypeError) as e:
-                        logger.log_error(f"Error processing timestamp for {category}: {e}")
-
-        for category in categories_to_remove:
-            del total_dict[SYSTEM_MEMORY_KEY][category]
-
-        total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
-            k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
-            if k not in ['count', 'timestamp']
-        ])
-
-    def collect_and_store_memory_usage(self, collect_only):
-        """
-        Dump memory usage statistics into log files using JSON format
+        Enforce retention policy by removing entries older than the retention period for individual statistics only.
         
-        Args:
-            collect_only (bool): If True, return memory data without dumping
+        :param total_dict: Dictionary containing total memory statistics (not pruned).
+        :param individual_list: List containing individual memory statistics entries (pruned by retention period).
+        :param total_filepath: Path to the total memory statistics file.
+        :param individual_filepath: Path to the individual memory statistics file.
+        :return: Number of entries removed.
+        :raises TypeError: If inputs are not of expected types.
+        :raises OSError: If file writing fails.
         """
-        sysmem_dict = {}
-        total_dict = self.fetch_memory_entries(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'])
+        if not isinstance(total_dict, dict):
+            error_message = f"Invalid total_dict type: {type(total_dict)}. Expected dict."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+        if not isinstance(individual_list, list):
+            error_message = f"Invalid individual_list type: {type(individual_list)}. Expected list."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+        if not all(isinstance(x, str) for x in [total_filepath, individual_filepath]):
+            error_message = "Filepaths must be strings."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
 
-        sm = self.fetch_memory_statistics()
+        for filepath in [total_filepath, individual_filepath]:
+            dir_path = os.path.dirname(filepath)
+            if not os.access(dir_path, os.W_OK):
+                logger.log_error(f"No write permission for directory: {dir_path}")
+                raise OSError(f"No write permission for directory: {dir_path}")
+
+        for filepath in [total_filepath, individual_filepath]:
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+                try:
+                    with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
+                        json.load(jfile)
+                    logger.log_info(f"Validated JSON integrity of file: {filepath}")
+                except (OSError, json.JSONDecodeError) as e:
+                    logger.log_error(f"Invalid or corrupted JSON in {filepath}: {e}")
+                    raise json.JSONDecodeError(f"Corrupted JSON in {filepath}: {str(e)}", "", 0)
+
+        current_time = datetime.now()
+        retention_threshold = timedelta(days=self.retention_period)
+
+        original_len = len(individual_list)
+        indices_to_remove = []
+        for i, entry in enumerate(individual_list):
+            try:
+                entry_time = datetime.fromisoformat(entry['current_time'])
+                if current_time - entry_time > retention_threshold:
+                    logger.log_info(f"Marking outdated individual entry for deletion with timestamp: {entry['current_time']}")
+                    indices_to_remove.append(i)
+            except (ValueError, TypeError, KeyError) as e:
+                logger.log_error(f"Error processing individual entry timestamp at index {i}: {e}")
+                indices_to_remove.append(i)
+
+        for i in sorted(indices_to_remove, reverse=True):
+            individual_list.pop(i)
+
+        removed_entries = original_len - len(individual_list)
+        logger.log_info(f"Retention policy enforced: Removed {removed_entries} individual entries")
+
+        if removed_entries > 0:
+            temp_file_path = None
+            try:
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+                    temp_file_path = temp_file.name
+                    with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                        gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
+                shutil.move(temp_file_path, individual_filepath)
+                logger.log_info(f"Successfully wrote individual memory statistics to {individual_filepath} after removing {removed_entries} entries")
+            except (OSError, json.JSONEncodeError) as e:
+                logger.log_error(f"Failed to write individual memory statistics: {str(e)}")
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                raise OSError(f"Failed to update individual memory statistics file: {e}")
+
+        return removed_entries
+
+    def collect_and_store_memory_usage(self, collect_only: bool):
+        """
+        Collect and store memory usage statistics into log files using JSON format.
+        
+        :param collect_only: If True, return memory data without storing.
+        :return: Memory statistics dictionary if collect_only is True, None otherwise.
+        :raises KeyError: If required configuration keys are missing.
+        :raises RuntimeError: If memory statistics cannot be fetched.
+        :raises OSError: If file operations fail.
+        :raises json.JSONDecodeError: If JSON is invalid.
+        :raises TypeError: If collect_only is not a boolean.
+        """
+        if not isinstance(collect_only, bool):
+            error_message = f"Invalid collect_only type: {type(collect_only)}. Expected bool."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+
+        if not isinstance(memory_statistics_config, dict):
+            error_message = f"Invalid memory_statistics_config type: {type(memory_statistics_config)}. Expected dict."
+            logger.log_error(error_message)
+            raise TypeError(error_message)
+
+        required_keys = ['TOTAL_MEMORY_STATISTICS_LOG_FILENAME', 'MEMORY_STATISTICS_LOG_FILENAME']
+        if not all(key in memory_statistics_config for key in required_keys):
+            error_message = f"Missing required configuration keys: {required_keys}"
+            logger.log_error(error_message)
+            raise KeyError(error_message)
+
+        total_filepath = memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME']
+        individual_filepath = memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME']
+
+        try:
+            total_dict = self.fetch_memory_entries(total_filepath)
+            individual_list = self.fetch_memory_entries(individual_filepath)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.log_error(f"Failed to fetch memory entries: {e}")
+            total_dict = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
+            individual_list = []
+
+        try:
+            sm = self.fetch_memory_statistics()
+        except RuntimeError as e:
+            logger.log_error(f"Failed to fetch memory statistics: {e}")
+            raise
+
         sysmem_dict = {"system": {}, "count": 1}
-
         if SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {'system': {}, "count": 0}
         if 'system' not in total_dict[SYSTEM_MEMORY_KEY]:
             total_dict[SYSTEM_MEMORY_KEY]['system'] = {}
             total_dict[SYSTEM_MEMORY_KEY]['count'] = 0
 
-        self.update_memory_statistics(total_dict, sysmem_dict, sm, SYSTEM_MEMORY_KEY, 'system')
+        try:
+            self.update_memory_statistics(total_dict, sysmem_dict, sm, SYSTEM_MEMORY_KEY, 'system')
+        except (TypeError, KeyError) as e:
+            logger.log_error(f"Failed to update memory statistics: {e}")
+            return None
 
-        total_dict['count'] = int(total_dict['count']) + 1
-
-        self.enforce_retention_policy(total_dict)
-
+        total_dict['count'] = int(total_dict.get('count', 0)) + 1
         current_time = Utility.fetch_current_date()
-
-        total_dict['current_time'] = current_time
         mem_dict = {"current_time": current_time, SYSTEM_MEMORY_KEY: sysmem_dict, "count": 1}
 
-        if collect_only is True:
+        individual_list.append(mem_dict)
+
+        current_time = datetime.now()
+        if self.last_prune_time is None or (current_time - self.last_prune_time) >= timedelta(days=1):
+            try:
+                removed_entries = self.enforce_retention_policy(total_dict, individual_list, total_filepath, individual_filepath)
+                self.last_prune_time = current_time
+                logger.log_info(f"Enforced retention policy, removed {removed_entries} entries")
+            except (TypeError, OSError) as e:
+                logger.log_error(f"Failed to enforce retention policy: {e}")
+                return None
+
+        if collect_only:
             return mem_dict
 
+        temp_file_path = None
         try:
-            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
-                json.dump(total_dict, jfile)
-        except Exception as e:
-            logger.log_error(f"Failed to dump total memory statistics: {e}")
-            return
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
+            shutil.move(temp_file_path, individual_filepath)
+            logger.log_info(f"Successfully wrote individual memory statistics to {individual_filepath}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write individual memory statistics: {str(e)}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            return None
 
+        temp_file_path = None
         try:
-            existing_data = []
-            try:
-                with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'rt', encoding='utf-8') as jfile:
-                    existing_data = json.load(jfile)
-                    if not isinstance(existing_data, list):
-                        existing_data = [existing_data]
-            except (FileNotFoundError, json.JSONDecodeError):
-                pass
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(total_dict, default=str).encode('utf-8'))
+            shutil.move(temp_file_path, total_filepath)
+            logger.log_info(f"Successfully wrote total memory statistics to {total_filepath}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write total memory statistics: {str(e)}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            return None
 
-            existing_data.append(mem_dict)
-            
-            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
-                json.dump(existing_data, jfile)
-        except Exception as e:
-            logger.log_error(f"Failed to dump memory statistics log: {e}")
+        return None
 
 
 class MemoryEntryManager:
@@ -1100,27 +1235,25 @@ class MemoryStatisticsProcessor:
             time_entry_summary["time_group_list"].append(time_entry)
 
     def process_files(self, request_data, memory_data_filename, start_time_obj, end_time_obj, step, num_columns, time_entry_summary,
-                     first_interval_unit, first_interval_rate, second_interval_unit):
+                 first_interval_unit, first_interval_rate, second_interval_unit):
         """
-        Processes memory data files within the specified time range.
+        Processes memory data file within the specified time range.
 
         Parameters:
-        - request_data (dict): Request data containing time range information.
-        - memory_data_filename (str): The filename from which to read memory statistics data.
-        - start_time_obj (datetime): The starting time object for filtering.
-        - end_time_obj (datetime): The ending time object for filtering.
-        - step (int): Step size for processing time slices.
-        - num_columns (int): Number of columns for time slices.
-        - time_entry_summary (dict): Summary structure to hold time group information.
-        - first_interval_unit (str): The first time interval unit.
+        - request_data: Request data containing time range information.
+        - memory_data_filename: The filename from which to read memory statistics data.
+        - start_time_obj: The starting time object for filtering.
+        - end_time_obj: The ending time object for filtering.
+        - step: Step size for processing time slices.
+        - num_columns: Number of columns for time slices.
+        - time_entry_summary: Summary structure to hold time group information.
+        - first_interval_unit: The first time interval unit.
+        - first_interval_rate: The rate for the first interval.
+        - second_interval_unit: The second time interval unit.
         """
-        start_day, end_day = int(request_data['time_data']['start_day']), int(request_data['time_data']['end_day'])
-        add = 1 if int(request_data['time_data']['num_days']) == 0 else 0
-        
-        for i in range(start_day, end_day + add):
-            file_name = f"{memory_data_filename}.{i}" if i != 0 else memory_data_filename
-            self.process_file(file_name, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-                             first_interval_unit, first_interval_rate, second_interval_unit)
+        self.process_file(memory_data_filename, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
+                        first_interval_unit, first_interval_rate, second_interval_unit)
+    
 
     def process_file(self, file_name, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                     first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1378,24 +1511,29 @@ class SocketHandler:
     for managing socket file cleanup and error handling during communication.
     """
 
-    def __init__(self, address, command_handler, stop_event):
+    def __init__(self, address, command_handler, stop_event, timeout=1.0, backlog=5, buffer_size=4096, max_retries=10):
         """
         Initializes the SocketHandler with the specified parameters.
         
         :param address: The file system path where the UNIX socket will be created.
         :param command_handler: A callable that processes commands received from clients.
         :param stop_event: An event flag used to signal when to stop the socket listener.
+        :param timeout: Socket timeout for accept operations (seconds). Default: 1.0.
+        :param backlog: Maximum number of queued connections. Default: 5.
+        :param buffer_size: Buffer size for receiving requests. Default: 4096.
+        :param max_retries: Maximum retries for persistent errors in accept loop. Default: 10.
         """
         self.address = address
         self.command_handler = command_handler
         self.listener_socket = None
-        self.stop_event = stop_event 
+        self.stop_event = stop_event
+        self.timeout = timeout
+        self.backlog = backlog
+        self.buffer_size = buffer_size
+        self.max_retries = max_retries
 
     def safe_remove_file(self, filepath):
         """Removes a file if it exists to prevent socket binding errors.
-        
-        This method checks for the existence of the specified file and removes
-        it if found. It logs the action taken or any errors encountered.
         
         :param filepath: The path of the socket file to be removed.
         """
@@ -1403,32 +1541,41 @@ class SocketHandler:
             if os.path.exists(filepath):
                 os.remove(filepath)
                 logger.log_info(f"Removed existing socket file: {filepath}")
-        except Exception as e:
-            logger.log_error(f"Failed to remove file {filepath}: {e}")
+        except OSError as e:
+            logger.log_error(f"Failed to remove file {filepath}: {type(e).__name__}: {e}")
+
+    def cleanup(self):
+        """Cleans up socket resources, including the socket file and listener socket."""
+        if self.listener_socket:
+            try:
+                self.listener_socket.close()
+                logger.log_info("Listener socket closed.")
+            except socket.error as e:
+                logger.log_error(f"Error closing listener socket: {type(e).__name__}: {e}")
+            self.listener_socket = None
+        self.safe_remove_file(self.address)
 
     def create_unix_socket(self):
         """Creates and configures a UNIX socket for listening for incoming connections.
         
-        This method sets up the socket with appropriate permissions and starts
-        listening for client connections. It raises an exception if socket creation fails.
-        """
+        Raises:
+            socket.error: If socket creation or binding fails.
+            OSError: If permission or ownership changes fail.
+        """ 
         try:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.listener_socket.settimeout(1.0) 
+            self.listener_socket.settimeout(self.timeout)
             self.listener_socket.bind(self.address)
             os.chmod(self.address, 0o600)
             os.chown(self.address, os.getuid(), -1)
-            self.listener_socket.listen(5)  
+            self.listener_socket.listen(self.backlog)
             logger.log_info(f"UNIX socket created and listening at {self.address}")
-        except Exception as e:
-            logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
+        except (socket.error, OSError) as e:
+            logger.log_error(f"Failed to create UNIX socket at {self.address}: {type(e).__name__}: {e}")
             raise
 
     def send_response(self, connection, response_data):
         """Sends a JSON response back to the client.
-        
-        This method encodes the response data as JSON and sends it through
-        the established socket connection. It logs any errors encountered during the process.
         
         :param connection: The socket connection to the client.
         :param response_data: The data to be sent as a JSON response.
@@ -1437,21 +1584,17 @@ class SocketHandler:
             response_json = json.dumps(response_data)
             connection.sendall(response_json.encode('utf-8'))
             logger.log_debug(f"Sent response: {response_json}")
-        except Exception as e:
-            logger.log_error(f"Failed to send response: {e}")
+        except (json.JSONEncodeError, socket.error) as e:
+            logger.log_error(f"Failed to send response: {type(e).__name__}: {e}")
 
     def handle_connection(self, connection):
         """Processes a single incoming socket connection.
-        
-        This method reads the request data from the client, decodes it from JSON,
-        and processes it using the command handler. It handles any exceptions,
-        sending an error response if needed, and closes the connection afterward.
         
         :param connection: The socket connection established with the client.
         """
         error_response = {"status": False, "msg": None}
         try:
-            request_data = connection.recv(4096)
+            request_data = connection.recv(self.buffer_size)
             if not request_data:
                 logger.log_warning("Received empty request")
                 return
@@ -1464,60 +1607,76 @@ class SocketHandler:
             response = self.command_handler(command_name, command_data)
 
             self.send_response(connection, response)
-        except Exception as error:
-            logger.log_error(f"Error handling request: {traceback.format_exc()}")
+        except (json.JSONDecodeError, KeyError, ValueError) as error:
+            logger.log_error(f"Error handling request: {type(error).__name__}: {error}")
+            logger.log_debug(f"Request error traceback: {traceback.format_exc()}")
             error_response['msg'] = str(error)
             self.send_response(connection, error_response)
         finally:
             try:
                 connection.close()
                 logger.log_debug("Connection closed")
-            except Exception as e:
-                logger.log_error(f"Error closing connection: {e}")
+            except socket.error as e:
+                logger.log_error(f"Error closing connection: {type(e).__name__}: {e}")
 
-    def stop_listening(self):
-        """Stops the socket listener loop by setting stop_event."""
-        logger.log_info("Stopping listener loop.")
-        self.stop_event.set() 
-        if self.listener_socket:
-            try:
-                self.listener_socket.close() 
-            except Exception as e:
-                logger.log_error(f"Error while closing listener socket: {e}")
-                           
+    def stop(self):
+        """Stops the socket listener loop and closes the socket.
+        
+        This method sets the stop event and closes the listener socket, ensuring
+        a graceful shutdown.
+        """
+        logger.log_info("Stopping socket handler.")
+        self.stop_event.set()
+        self.cleanup()
+
+    def stop_accepting(self):
+        """Alias for stop to maintain compatibility with external calls."""
+        self.stop()
 
     def start_listening(self):
         """Starts listening for incoming socket connections.
         
-        This method initializes the socket, removes any existing socket files,
-        and enters a loop to accept and handle incoming connections. The loop
-        continues until the stop_event is set. Upon shutdown, it cleans up the
-        socket file and closes the listener socket.
+        This method initializes the socket and enters a loop to accept and handle
+        incoming connections until the stop_event is set. It ensures cleanup on exit.
         """
-        self.safe_remove_file(self.address)
-        self.create_unix_socket()
+        try:
+            self.create_unix_socket()
+            retry_count = 0
+            backoff = 0.1
 
-        while not self.stop_event.is_set():
-            try:
-                connection, client_address = self.listener_socket.accept()
-                logger.log_info("Accepted new connection")
-                self.handle_connection(connection)
-            except socket.timeout:
-                logger.log_debug("Socket timeout occurred while waiting for a connection.")
-                continue  
-            except OSError as e:
-                if self.stop_event.is_set():
-                    logger.log_info("Socket listener stopped as requested.")
-                    break
-                else:
-                    logger.log_error(f"Socket error: {e}")
-                    time.sleep(1) 
-            except Exception as error:
-                logger.log_error(f"Unexpected error: {error}")
-                time.sleep(1)
-
-        self.safe_remove_file(self.address)
-        logger.log_info("Socket listener stopped.")
+            while not self.stop_event.is_set():
+                try:
+                    connection, client_address = self.listener_socket.accept()
+                    logger.log_info("Accepted new connection")
+                    self.handle_connection(connection)
+                    retry_count = 0
+                    backoff = 0.1
+                except socket.timeout:
+                    logger.log_debug("Socket timeout occurred while waiting for a connection.")
+                    continue
+                except OSError as e:
+                    if self.stop_event.is_set():
+                        logger.log_info("Socket listener stopped as requested.")
+                        break
+                    else:
+                        logger.log_error(f"Socket error: {type(e).__name__}: {e}")
+                        retry_count += 1
+                        if retry_count >= self.max_retries:
+                            logger.log_error("Max retries reached for socket errors.")
+                            raise RuntimeError("Persistent socket errors exceeded max retries")
+                        time.sleep(backoff)
+                        backoff = min(backoff * 2, 1.0)
+                except (socket.error, RuntimeError) as error:
+                    logger.log_error(f"Unexpected error: {type(error).__name__}: {error}")
+                    retry_count += 1
+                    if retry_count >= self.max_retries:
+                        logger.log_error("Max retries reached for unexpected errors.")
+                        raise RuntimeError("Persistent errors exceeded max retries")
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 1.0)
+        finally:
+            self.cleanup()
+            logger.log_info("Socket listener stopped.")
 
 
 class Daemonizer:
@@ -1528,49 +1687,76 @@ class Daemonizer:
     to /dev/null, ensuring that the daemon operates independently from
     the terminal.
     """
-    def __init__(self, pid_file):
+
+    def __init__(self, pid_file: str) -> None:
         """
         Initializes the Daemonizer with the specified PID file location.
         
-        :param pid_file: The file path where the daemon's PID will be stored.
-        """
-        self.pid_file = pid_file
+        Args:
+            pid_file (str): The file path where the daemon's PID will be stored.
 
-    def daemonize(self):
+        Raises:
+            TypeError: If pid_file is not a string. Logged with input type.
+        """
+        logger.log_debug(f"Entering Daemonizer.__init__: pid_file={pid_file}")
+        if not isinstance(pid_file, str):
+            logger.log_error(f"Daemonizer.__init__: Invalid pid_file type: {type(pid_file)}")
+            raise TypeError("pid_file must be a string")
+
+        self.pid_file = pid_file
+        logger.log_debug("Daemonizer initialized successfully")
+
+    def daemonize(self) -> None:
         """Forks the process to run as a background daemon.
         
         This method performs the necessary steps to create a daemon process,
         including forking twice and creating a new session. It logs the
         success of the daemonization and writes the PID to a file.
         
-        :raises RuntimeError: If the daemonization process fails at any stage.
+        Raises:
+            OSError: If forking or session creation fails. Logged with error details.
+            RuntimeError: If daemonization validation, PID writing, or descriptor redirection fails. Logged with context.
         """
+        logger.log_debug("Entering daemonize")
         try:
             pid = os.fork()
             if pid > 0:
+                logger.log_debug(f"daemonize: First fork successful, parent exiting with pid={pid}")
                 sys.exit(0)
         except OSError as e:
-            logger.log_error(f"First fork failed: {e}")
+            logger.log_error(f"daemonize: First fork failed: {e}")
             raise RuntimeError(f"First fork failed: {e}")
 
+        logger.log_debug("daemonize: First fork child, changing directory and session")
         os.chdir("/")  
         os.umask(0)   
-        os.setsid()   
+        try:
+            os.setsid()   
+            logger.log_debug(f"daemonize: New session created, sid={os.getsid(0)}")
+        except OSError as e:
+            logger.log_error(f"daemonize: Session creation failed: {e}")
+            raise RuntimeError(f"Session creation failed: {e}")
 
         try:
             pid = os.fork()
             if pid > 0:
+                logger.log_debug(f"daemonize: Second fork successful, parent exiting with pid={pid}")
                 sys.exit(0)
         except OSError as e:
-            logger.log_error(f"Second fork failed: {e}")
+            logger.log_error(f"daemonize: Second fork failed: {e}")
             raise RuntimeError(f"Second fork failed: {e}")
 
+        logger.log_debug("daemonize: Second fork child, validating daemonization")
         self._validate_daemonization()
 
+        logger.log_debug("daemonize: Writing PID to file")
         self.write_pid_to_file()
-        self.redirect_standard_file_descriptors()
 
-    def _validate_daemonization(self):
+        logger.log_debug("daemonize: Redirecting standard file descriptors")
+        self.redirect_standard_file_descriptors()
+        logger.log_info(f"daemonize: Daemonization completed successfully, pid={os.getpid()}")
+
+    def _validate_daemonization(self) -> None:
         """
         Performs additional validation to confirm successful daemonization.
         
@@ -1579,54 +1765,76 @@ class Daemonizer:
         - Working directory has been changed
         - Session ID is different from parent
         
-        :raises RuntimeError: If validation checks fail
+        Raises:
+            RuntimeError: If validation checks fail. Logged with specific failure details.
+            OSError: If system calls (getpid, getsid, getcwd) fail. Logged with error details.
         """
+        logger.log_debug(f"Entering _validate_daemonization: pid={os.getpid()}")
         try:
             if os.getpid() == os.getpgrp():
+                logger.log_error("_validate_daemonization: Process is still a process group leader")
                 raise RuntimeError("Failed to become session leader")
 
             if os.getcwd() != '/':
+                logger.log_error(f"_validate_daemonization: Working directory is {os.getcwd()}, expected /")
                 raise RuntimeError("Working directory not changed to root")
 
             current_sid = os.getsid(0)
             if current_sid == -1:
+                logger.log_error("_validate_daemonization: Failed to retrieve session ID")
                 raise RuntimeError("Could not get session ID")
 
-            logger.log_info(f"Daemonization validation successful. New PID: {os.getpid()}, Session ID: {current_sid}")
-        except Exception as e:
-            logger.log_error(f"Daemonization validation failed: {e}")
+            logger.log_info(f"_validate_daemonization: Daemonization validation successful. PID: {os.getpid()}, Session ID: {current_sid}")
+        except OSError as e:
+            logger.log_error(f"_validate_daemonization: System call error during validation: {e}")
             raise RuntimeError(f"Daemonization validation failed: {e}")
 
-    def write_pid_to_file(self):
+    def write_pid_to_file(self) -> None:
         """Writes the daemon's PID to the specified file for management purposes.
         
         This method ensures that the PID of the running daemon is stored in a
         file, which can be used later to manage the daemon process (e.g., for
         stopping it). It logs the action taken and handles any errors.
+        
+        Raises:
+            OSError: If directory creation or file operations fail. Logged with pid_file and error details.
+            ValueError: If PID read from file is invalid. Logged with pid_file and PID value.
+            RuntimeError: If PID mismatch occurs. Logged with pid_file and PID details.
         """
+        logger.log_debug(f"Entering write_pid_to_file: pid_file={self.pid_file}")
         try:
             pid_dir = os.path.dirname(self.pid_file)
             os.makedirs(pid_dir, exist_ok=True)
+            logger.log_debug(f"write_pid_to_file: Ensured directory exists: {pid_dir}")
 
             with open(self.pid_file, 'w') as f:
                 f.write(f"{os.getpid()}\n")
-            logger.log_debug(f"Daemon PID written to {self.pid_file}")
+            logger.log_debug(f"write_pid_to_file: Wrote PID {os.getpid()} to {self.pid_file}")
 
             with open(self.pid_file, 'r') as f:
                 pid_from_file = int(f.read().strip())
                 if pid_from_file != os.getpid():
+                    logger.log_error(f"write_pid_to_file: PID mismatch in {self.pid_file}: expected {os.getpid()}, got {pid_from_file}")
                     raise RuntimeError("PID mismatch in PID file")
-        except Exception as e:
-            logger.log_error(f"Failed to write PID file {self.pid_file}: {e}")
+        except OSError as e:
+            logger.log_error(f"write_pid_to_file: Failed to write PID file {self.pid_file}: {e}")
             raise RuntimeError(f"Failed to write PID file: {e}")
+        except ValueError as e:
+            logger.log_error(f"write_pid_to_file: Invalid PID read from {self.pid_file}: {e}")
+            raise RuntimeError(f"Invalid PID in file: {e}")
 
-    def redirect_standard_file_descriptors(self):
+    def redirect_standard_file_descriptors(self) -> None:
         """Redirects standard file descriptors to /dev/null.
         
         This method ensures that the daemon does not receive any terminal input/output
         by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
         taken and any errors encountered during the process.
+        
+        Raises:
+            OSError: If file operations or descriptor redirection fail. Logged with error details.
+            RuntimeError: If descriptor validation fails. Logged with validation details.
         """
+        logger.log_debug("Entering redirect_standard_file_descriptors")
         try:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -1636,20 +1844,24 @@ class Daemonizer:
                 os.dup2(stdin_null.fileno(), sys.stdin.fileno())
                 os.dup2(stdout_stderr_null.fileno(), sys.stdout.fileno())
                 os.dup2(stdout_stderr_null.fileno(), sys.stderr.fileno())
+                logger.log_debug("redirect_standard_file_descriptors: Descriptors redirected to /dev/null")
 
             self._validate_file_descriptors()
-
-            logger.log_debug("Standard file descriptors redirected to /dev/null")
-        except Exception as e:
-            logger.log_error(f"Failed to redirect standard file descriptors: {e}")
+            logger.log_debug("redirect_standard_file_descriptors: Standard file descriptors redirected and validated")
+        except OSError as e:
+            logger.log_error(f"redirect_standard_file_descriptors: Failed to redirect standard file descriptors: {e}")
             raise RuntimeError(f"Failed to redirect file descriptors: {e}")
 
-    def _validate_file_descriptors(self):
+    def _validate_file_descriptors(self) -> None:
         """
         Validates that file descriptors have been correctly redirected.
         
-        :raises RuntimeError: If file descriptors are not correctly redirected
+        Raises:
+            OSError: If stat or file descriptor operations fail. Logged with error details.
+            RuntimeError: If descriptors are not correctly redirected. Logged with stat details.
         """
+        logger.log_debug(f"Entering _validate_file_descriptors: stdin_fd={sys.stdin.fileno()}, "
+                         f"stdout_fd={sys.stdout.fileno()}, stderr_fd={sys.stderr.fileno()}")
         try:
             stdin_stat = os.fstat(sys.stdin.fileno())
             stdout_stat = os.fstat(sys.stdout.fileno())
@@ -1659,9 +1871,13 @@ class Daemonizer:
 
             if not (stdin_stat.st_ino == stdout_stat.st_ino == stderr_stat.st_ino == devnull_stat.st_ino and
                     stdin_stat.st_dev == stdout_stat.st_dev == stderr_stat.st_dev == devnull_stat.st_dev):
+                logger.log_error(f"_validate_file_descriptors: Descriptors not redirected to /dev/null: "
+                                 f"stdin_ino={stdin_stat.st_ino}, stdout_ino={stdout_stat.st_ino}, "
+                                 f"stderr_ino={stderr_stat.st_ino}, devnull_ino={devnull_stat.st_ino}")
                 raise RuntimeError("File descriptors not correctly redirected")
-        except Exception as e:
-            logger.log_error(f"File descriptor validation failed: {e}")
+            logger.log_debug("_validate_file_descriptors: File descriptor validation successful")
+        except OSError as e:
+            logger.log_error(f"_validate_file_descriptors: System call error during validation: {e}")
             raise RuntimeError(f"File descriptor validation failed: {e}")
 
 
@@ -1703,17 +1919,15 @@ class MemoryStatisticsService:
     This service utilizes a socket for communication and handles
     commands for memory statistics retrieval, while also managing
     configuration reloading and graceful shutdown procedures.
-    """ 
-    def __init__(self, memory_statistics_config, config_file_path='memory_statistics.conf', name="MemoryStatisticsService"):
+    """
+    def __init__(self, memory_statistics_config, config_file_path='./etc/memory_statistics.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
         - memory_statistics_config (dict): Initial configuration settings for the service.
         - config_file_path (str): Path to the configuration file to load overrides.
         """
-
         self.config = ThreadSafeConfig(memory_statistics_config)
-
         self.name = name
         logger.log_info(f"Service initialized with name: {self.name}")
 
@@ -1743,6 +1957,10 @@ class MemoryStatisticsService:
     def load_config_from_file(self):
         """
         Loads and applies configuration values from the configuration file.
+        
+        Raises:
+            configparser.Error: If parsing the configuration file fails.
+            OSError: If reading the file fails.
         """
         parser = configparser.ConfigParser()
         try:
@@ -1761,7 +1979,7 @@ class MemoryStatisticsService:
                                 f"retention_period={updates['retention_period']}")
             else:
                 logger.log_warning(f"Configuration file not found at {self.config_file_path}. Proceeding with default settings.")
-        except Exception as e:
+        except (configparser.Error, OSError) as e:
             logger.log_error(f"Configuration loading error: {e}")
             raise
 
@@ -1791,8 +2009,90 @@ class MemoryStatisticsService:
         try:
             self.cleanup_old_files()
             self.load_config_from_db()
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             logger.log_error(f"Error handling SIGHUP: {e}")
+
+    def terminate_child_processes(self, timeout: float = 5.0) -> None:
+        """
+        Gracefully terminates all child processes associated with the service.
+        Sends SIGTERM to child processes and waits for them to exit within the specified
+        timeout. If any processes remain running, sends SIGKILL to force termination.
+        Logs the progress and any errors encountered during termination.
+
+        Args:
+            timeout (float, optional): Timeout in seconds to wait for child processes to
+                terminate gracefully. Defaults to 5.0 seconds.
+
+        Raises:
+            ValueError: If the timeout is invalid (e.g., negative or non-numeric).
+            psutil.Error: If process iteration or access fails.
+            OSError: If signal sending fails.
+        """
+        if not isinstance(timeout, (int, float)):
+            logger.log_error(f"Invalid timeout type: {type(timeout)}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout < 0:
+            logger.log_error(f"Negative timeout: {timeout}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout > 60.0:
+            logger.log_warning(f"Timeout {timeout} seconds is large; capping at 60.0 seconds.")
+            timeout = 60.0
+
+        logger.log_info(f"Terminating child processes with timeout {timeout} seconds.")
+
+        current_pid = os.getpid()
+        failed_processes = []
+
+        try:
+            children = [
+                proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
+                if proc.info['ppid'] == current_pid
+            ]
+
+            if not children:
+                logger.log_info("No child processes found.")
+                return
+
+            for child in children:
+                try:
+                    pid = child.info['pid']
+                    logger.log_info(f"Sending SIGTERM to child process {pid} ({child.info['name']})")
+                    os.kill(pid, signal.SIGTERM)
+                except (ProcessLookupError, OSError) as e:
+                    logger.log_warning(f"Failed to send SIGTERM to child process {pid}: {e}")
+                    continue
+
+            start_time = time.time()
+            while children and time.time() - start_time < timeout:
+                children = [
+                    child for child in children
+                    if child.is_running() and child.info['ppid'] == current_pid
+                ]
+                if not children:
+                    break
+                time.sleep(0.1)
+
+            for child in children:
+                if child.is_running():
+                    pid = child.info['pid']
+                    logger.log_warning(f"Child process {pid} ({child.info['name']}) did not terminate within {timeout} seconds. Sending SIGKILL.")
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                        failed_processes.append(f"{pid} ({child.info['name']})")
+                    except (ProcessLookupError, OSError) as e:
+                        logger.log_error(f"Failed to send SIGKILL to child process {pid}: {e}")
+
+            if failed_processes:
+                logger.log_error(f"Some child processes failed to terminate gracefully: {', '.join(failed_processes)}")
+            else:
+                logger.log_info("All child processes terminated successfully.")
+
+        except psutil.Error as e:
+            logger.log_error(f"Error iterating or accessing processes: {e}")
+            raise
+        except OSError as e:
+            logger.log_error(f"Error during child process termination: {e}")
+            raise
 
     def handle_sigterm(self, signum, frame):
         """
@@ -1801,65 +2101,31 @@ class MemoryStatisticsService:
         and perform necessary cleanup operations before exiting.
         """
         logger.log_info("Received SIGTERM, initiating graceful shutdown...")
-
-        def terminate_child_processes():
-            """
-            Gracefully terminates all child processes associated with the service.
-            """
-            current_pid = os.getpid()
-            try:
-                children = [
-                    proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
-                    if proc.info['ppid'] == current_pid
-                ]
-
-                for child in children:
-                    try:
-                        logger.log_info(f"Sending SIGTERM to child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGTERM)
-                    except ProcessLookupError:
-                        continue
-
-                timeout = 5
-                start_time = time.time()
-                while any(os.kill(child.info['pid'], 0) == 0 for child in children if child.is_running()) \
-                        and time.time() - start_time < timeout:
-                    time.sleep(0.1)
-
-                for child in children:
-                    if child.is_running():
-                        logger.log_warning(f"Force killing child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGKILL)
-
-            except Exception as e:
-                logger.log_error(f"Error while terminating child processes: {e}")
-                raise
-
         try:
             if hasattr(self.socket_handler, 'stop_accepting'):
                 self.socket_handler.stop_accepting()
 
-            terminate_child_processes()
-
-            self.stop_threads()
+            self.terminate_child_processes(timeout=5.0)
+            self.stop_threads(timeout=5.0)
 
             self.cleanup()
 
             logger.log_info("Shutdown complete. Exiting...")
             sys.exit(0)
-
-        except Exception as e:
+        except (OSError, psutil.Error, RuntimeError) as e:
             logger.log_error(f"Error during graceful shutdown: {e}")
-
             try:
                 os.killpg(os.getpgid(0), signal.SIGKILL)
-            except Exception as kill_error:
+            except OSError as kill_error:
                 logger.log_error(f"Error during force kill: {kill_error}")
             sys.exit(1)
 
     def load_config_from_db(self):
         """
         Retrieves runtime configuration values from ConfigDB with enhanced safety.
+        
+        Raises:
+            RuntimeError: If ConfigDB connection or query fails.
         """
         logger.log_info("Starting configuration retrieval from ConfigDB")
         config_db = ConfigDBConnector()
@@ -1902,23 +2168,22 @@ class MemoryStatisticsService:
             logger.log_info(f"Configuration updated: "
                             f"sampling_interval={self.sampling_interval // 60} minutes, "
                             f"retention_period={self.retention_period} days")
-
-        except Exception as error:
+        except RuntimeError as error:
             logger.log_error(f"Configuration retrieval failed: {error}")
             self.sampling_interval = 5 * 60
             self.retention_period = 15
-
         finally:
             try:
                 config_db.disconnect()
-            except Exception as disconnect_error:
+            except OSError as disconnect_error:
                 logger.log_error(f"Error closing ConfigDB connection: {disconnect_error}")
 
     def cleanup_old_files(self):
         """
         Deletes old log files from the log directory.
-        This method removes any log files with a .gz extension from the specified
-        log directory to manage disk space and maintain organization.
+        
+        Raises:
+            OSError: If listing or deleting files fails.
         """
         try:
             log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
@@ -1927,12 +2192,17 @@ class MemoryStatisticsService:
                     file_path = os.path.join(log_directory, file)
                     os.remove(file_path)
                     logger.log_info(f"Deleted old log file: {file_path}")
-        except Exception as e:
+        except OSError as e:
             logger.log_error(f"Error during log file cleanup: {e}")
 
     def memory_statistics_command_request_handler(self, request):
         """
         Thread-safe handler for memory statistics requests.
+        
+        Raises:
+            json.JSONDecodeError: If JSON parsing fails.
+            ValueError: If configuration or request data is invalid.
+            RuntimeError: If collector or processor fails.
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
@@ -1965,11 +2235,10 @@ class MemoryStatisticsService:
                 logger.log_info(f"Memory statistics processed: {report}")
 
             return {"status": True, "data": report}
-
         except json.JSONDecodeError as je:
             logger.log_error(f"JSON decoding error in memory statistics request: {je}")
             return {"status": False, "error": f"Invalid JSON format: {str(je)}"}
-        except Exception as error:
+        except (ValueError, RuntimeError) as error:
             logger.log_error(f"Error handling memory statistics request: {error}")
             return {"status": False, "error": str(error)}
 
@@ -2009,7 +2278,7 @@ class MemoryStatisticsService:
                     memory_collector.collect_and_store_memory_usage(collect_only=False)
             except json.JSONDecodeError as je:
                 logger.log_error(f"JSON encoding/decoding error during collection: {je}")
-            except Exception as error:
+            except RuntimeError as error:
                 logger.log_error(f"Error during memory statistics collection: {error}")
 
             elapsed_time = (datetime.now() - start_time).total_seconds()
@@ -2036,31 +2305,56 @@ class MemoryStatisticsService:
         self.memory_collection_thread.start()
         logger.log_info("Memory collection thread started.")
 
-    def stop_threads(self):
+    def stop_threads(self, timeout: float = 5.0) -> None:
         """
         Signals threads to stop and waits for them to exit gracefully.
-        This method sets the stop event to signal all running threads to 
-        terminate. It also closes the listener socket to unblock the accept 
-        method and waits for both the socket listener and memory collection 
-        threads to finish their execution within a specified timeout.
-        Logs any issues encountered during the stopping process of the threads.
+        This method sets the stop event to signal all running threads to terminate,
+        closes the listener socket to unblock the accept method, and waits for the
+        socket listener and memory collection threads to finish within a specified
+        timeout. Logs issues encountered during the process.
+
+        Args:
+            timeout (float, optional): Timeout in seconds for thread termination.
+                Defaults to 5.0 seconds.
+
+        Raises:
+            ValueError: If the timeout is invalid (e.g., negative or non-numeric).
         """
-        logger.log_info("Signaling threads to stop.")
+        if not isinstance(timeout, (int, float)):
+            logger.log_error(f"Invalid timeout type: {type(timeout)}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout < 0:
+            logger.log_error(f"Negative timeout: {timeout}. Using default of 5.0 seconds.")
+            timeout = 5.0
+        if timeout > 60.0:
+            logger.log_warning(f"Timeout {timeout} seconds is large; capping at 60.0 seconds.")
+            timeout = 60.0
+
+        logger.log_info(f"Signaling threads to stop with timeout {timeout} seconds.")
         self.stop_event.set()
 
-        if self.socket_listener_thread and self.socket_listener_thread.is_alive():
-            logger.log_info("Waiting for socket listener thread to stop...")
-            self.socket_listener_thread.join(timeout=5)
-            if self.socket_listener_thread.is_alive():
-                logger.log_warning("Socket listener thread did not terminate within the timeout period.")
+        failed_threads = []
 
-        if self.memory_collection_thread and self.memory_collection_thread.is_alive():
-            logger.log_info("Waiting for memory collection thread to stop...")
-            self.memory_collection_thread.join(timeout=5)
-            if self.memory_collection_thread.is_alive():
-                logger.log_warning("Memory collection thread did not terminate within the timeout period.")
+        for thread in [self.socket_listener_thread, self.memory_collection_thread]:
+            if thread and thread.is_alive():
+                logger.log_info(f"Waiting for {thread.name} to stop...")
+                thread.join(timeout=timeout)
+                if thread.is_alive():
+                    logger.log_warning(f"{thread.name} did not terminate within {timeout} seconds.")
+                    failed_threads.append(thread.name)
+                else:
+                    logger.log_info(f"{thread.name} terminated successfully.")
 
-        logger.log_info("All threads stopped.")   
+        self.socket_listener_thread = None
+        self.memory_collection_thread = None
+
+        if failed_threads:
+            logger.log_error(
+                f"Threads failed to terminate: {', '.join(failed_threads)}. "
+                "Consider using multiprocessing for forceful termination or increasing the timeout."
+            )
+        else:
+            logger.log_info("All threads stopped successfully.")
 
     def cleanup(self):
         """
@@ -2071,6 +2365,10 @@ class MemoryStatisticsService:
         termination to free up resources and maintain a clean state.
         Logs the completion of the cleanup tasks and any errors encountered 
         during the process.
+        
+        Raises:
+            OSError: If file operations fail.
+            AttributeError: If log handler access fails.
         """
         self.cleanup_old_files()
 
@@ -2079,7 +2377,7 @@ class MemoryStatisticsService:
             if socket_address and os.path.exists(socket_address):
                 os.unlink(socket_address)
                 logger.log_info(f"Removed socket file: {socket_address}")
-        except Exception as e:
+        except (FileNotFoundError, OSError) as e:
             logger.log_error(f"Error removing socket file: {e}")
 
         pid_file = '/var/run/memory_statistics_daemon.pid'
@@ -2087,13 +2385,13 @@ class MemoryStatisticsService:
             if os.path.exists(pid_file):
                 os.unlink(pid_file)
                 logger.log_info(f"Removed PID file: {pid_file}")
-        except Exception as e:
+        except (FileNotFoundError, OSError) as e:
             logger.log_error(f"Error removing PID file: {e}")
 
         try:
             for handler in logging.getLogger().handlers:
                 handler.flush()
-        except Exception as e:
+        except (AttributeError, OSError) as e:
             logger.log_error(f"Error flushing log handlers: {e}")
 
         logger.log_info("Cleanup complete.")
@@ -2106,18 +2404,23 @@ class MemoryStatisticsService:
         statistics collection. The service will continue to run until 
         signaled to stop, during which it sleeps to reduce CPU usage.
         Logs the initialization and starting of the service.
+        
+        Raises:
+            OSError: If daemonization or socket initialization fails.
+            RuntimeError: If daemonization or service components fail to start.
         """
-        logger.log_info(f"{self.name} is starting...") 
-        self.daemonizer.daemonize()
-
-        self.start_socket_listener()
-        self.start_memory_collection()
-
-        while not self.stop_event.is_set():
-            time.sleep(1) 
+        logger.log_info(f"{self.name} is starting...")
+        try:
+            self.daemonizer.daemonize()
+            self.start_socket_listener()
+            self.start_memory_collection()
+            while not self.stop_event.is_set():
+                time.sleep(1)
+        except (OSError, RuntimeError) as e:
+            logger.log_error(f"Service failed to start: {e}")
+            raise
 
 if __name__ == '__main__':
-
     memory_statistics_config = {
         'sampling_interval': 5, 
         'retention_period': 15,
