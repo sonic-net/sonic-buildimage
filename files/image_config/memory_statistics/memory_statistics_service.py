@@ -597,12 +597,9 @@ class MemoryReportGenerator:
 
 class MemoryStatisticsCollector:
     """
-    This class handles system memory statistics collection, management, and retention. It initializes with a specified
-    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
-    it is retained. Methods include `fetch_memory_statistics()` to gather memory data using `psutil`, 
-    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
-    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
-    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+    Handles system memory statistics collection, management, and retention. Initializes with a specified
+    sampling interval (in minutes) and retention period (in days) to determine how frequently data is
+    collected and how long it is retained.
     """
 
     def __init__(self, sampling_interval: int, retention_period: int):
@@ -620,6 +617,7 @@ class MemoryStatisticsCollector:
 
         self.sampling_interval = sampling_interval
         self.retention_period = retention_period
+        self.last_prune_time = None
 
     def fetch_memory_statistics(self):
         """
@@ -710,53 +708,44 @@ class MemoryStatisticsCollector:
         if category not in total_dict[item]:
             total_dict[item][category] = {}
 
-        current_time = Utility.fetch_current_date()
         for memory_metric in time_list.keys():
             try:
                 prss = int(time_list[memory_metric]['prss'])
-
                 entry_data = {
                     "prss": prss, 
                     "count": 1,
                     "high_value": prss, 
-                    "low_value": prss,
-                    "timestamp": current_time
+                    "low_value": prss
                 }
-
                 mem_dict[category][memory_metric] = entry_data
-
                 mem = total_dict[item][category]
                 if memory_metric in mem:
                     tprss = int(mem[memory_metric]["prss"]) + prss
                     tcount = int(mem[memory_metric]["count"]) + 1
-
                     high_value = max(prss, int(mem[memory_metric].get("high_value", prss)))
                     low_value = min(prss, int(mem[memory_metric].get("low_value", prss)))
-
                     mem[memory_metric] = {
                         "prss": tprss, 
                         "count": tcount,
                         "high_value": high_value,
-                        "low_value": low_value,
-                        "timestamp": current_time
+                        "low_value": low_value
                     }
                 else:
                     mem[memory_metric] = entry_data
-
             except (TypeError, KeyError, ValueError) as e:
                 logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {e}")
                 continue
-
-        total_dict[item]['count'] = int(total_dict[item]['count']) + 1
+        total_dict[item]['count'] = int(total_dict[item].get('count', 0)) + 1
 
     def enforce_retention_policy(self, total_dict: dict, individual_list: list, total_filepath: str, individual_filepath: str):
         """
-        Enforce retention policy by removing entries older than the retention period for both total and individual statistics.
+        Enforce retention policy by removing entries older than the retention period for individual statistics only.
         
-        :param total_dict: Dictionary containing total memory statistics.
-        :param individual_list: List containing individual memory statistics entries.
+        :param total_dict: Dictionary containing total memory statistics (not pruned).
+        :param individual_list: List containing individual memory statistics entries (pruned by retention period).
         :param total_filepath: Path to the total memory statistics file.
         :param individual_filepath: Path to the individual memory statistics file.
+        :return: Number of entries removed.
         :raises TypeError: If inputs are not of expected types.
         :raises OSError: If file writing fails.
         """
@@ -789,37 +778,8 @@ class MemoryStatisticsCollector:
                     logger.log_error(f"Invalid or corrupted JSON in {filepath}: {e}")
                     raise json.JSONDecodeError(f"Corrupted JSON in {filepath}: {str(e)}", "", 0)
 
-
         current_time = datetime.now()
         retention_threshold = timedelta(days=self.retention_period)
-
-        if SYSTEM_MEMORY_KEY not in total_dict:
-            total_dict[SYSTEM_MEMORY_KEY] = {
-                'count': 0,
-                'timestamp': Utility.fetch_current_date()
-            }
-
-        categories_to_remove = []
-        for category in total_dict[SYSTEM_MEMORY_KEY]:
-            if category not in ['count', 'timestamp']:
-                category_data = total_dict[SYSTEM_MEMORY_KEY][category]
-                if isinstance(category_data, dict) and 'timestamp' in category_data:
-                    try:
-                        entry_time = datetime.fromisoformat(category_data['timestamp'])
-                        if current_time - entry_time > retention_threshold:
-                            logger.log_info(f"Deleting outdated total entry for category: {category}")
-                            categories_to_remove.append(category)
-                    except (ValueError, TypeError) as e:
-                        logger.log_error(f"Error processing timestamp for total category {category}: {e}")
-                        categories_to_remove.append(category)
-
-        for category in categories_to_remove:
-            del total_dict[SYSTEM_MEMORY_KEY][category]
-
-        total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
-            k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
-            if k not in ['count', 'timestamp']
-        ])
 
         original_len = len(individual_list)
         indices_to_remove = []
@@ -837,43 +797,24 @@ class MemoryStatisticsCollector:
             individual_list.pop(i)
 
         removed_entries = original_len - len(individual_list)
-        logger.log_info(f"Retention policy enforced: Removed {removed_entries} individual entries and {len(categories_to_remove)} total categories")
+        logger.log_info(f"Retention policy enforced: Removed {removed_entries} individual entries")
 
-        temp_file_path = None
-        try:
-            logger.log_info(f"Writing total memory statistics to temporary file in: {os.path.dirname(total_filepath)}")
-            # logger.log_info(f"total_dict sample: {json.dumps(dict(list(total_dict.items())[:5]), default=str)}")
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
-                temp_file_path = temp_file.name
-                logger.log_info(f"Created temporary file: {temp_file_path}")
-                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
-                    gz_file.write(json.dumps(total_dict, default=str).encode('utf-8'))
-            logger.log_info(f"Successfully wrote total memory statistics to temporary file: {temp_file_path}")
-            shutil.move(temp_file_path, total_filepath)
-            logger.log_info(f"Atomically renamed {temp_file_path} to {total_filepath}")
-        except (OSError, json.JSONEncodeError) as e:
-            logger.log_error(f"Failed to write or rename total memory statistics: {str(e)}\n{traceback.format_exc()}")
-            if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-            raise OSError(f"Failed to update total memory statistics file: {e}")
+        if removed_entries > 0:
+            temp_file_path = None
+            try:
+                with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+                    temp_file_path = temp_file.name
+                    with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                        gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
+                shutil.move(temp_file_path, individual_filepath)
+                logger.log_info(f"Successfully wrote individual memory statistics to {individual_filepath} after removing {removed_entries} entries")
+            except (OSError, json.JSONEncodeError) as e:
+                logger.log_error(f"Failed to write individual memory statistics: {str(e)}")
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                raise OSError(f"Failed to update individual memory statistics file: {e}")
 
-        temp_file_path = None
-        try:
-            logger.log_info(f"Writing individual memory statistics to temporary file in: {os.path.dirname(individual_filepath)}")
-            # logger.log_info(f"individual_list length: {len(individual_list)}, sample: {json.dumps(individual_list[:5], default=str)}")
-            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
-                temp_file_path = temp_file.name
-                logger.log_info(f"Created temporary file: {temp_file_path}")
-                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
-                    gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
-            logger.log_info(f"Successfully wrote individual memory statistics to temporary file: {temp_file_path}")
-            shutil.move(temp_file_path, individual_filepath)
-            logger.log_info(f"Atomically renamed {temp_file_path} to {individual_filepath}")
-        except (OSError, json.JSONEncodeError) as e:
-            logger.log_error(f"Failed to write or rename individual memory statistics: {str(e)}\n{traceback.format_exc()}")
-            if temp_file_path and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-            raise OSError(f"Failed to update individual memory statistics file: {e}")
+        return removed_entries
 
     def collect_and_store_memory_usage(self, collect_only: bool):
         """
@@ -937,38 +878,51 @@ class MemoryStatisticsCollector:
         current_time = Utility.fetch_current_date()
         mem_dict = {"current_time": current_time, SYSTEM_MEMORY_KEY: sysmem_dict, "count": 1}
 
-        try:
-            self.enforce_retention_policy(total_dict, individual_list, total_filepath, individual_filepath)
-        except (TypeError, OSError) as e:
-            logger.log_error(f"Failed to enforce retention policy: {e}")
-            return None
+        individual_list.append(mem_dict)
+
+        current_time = datetime.now()
+        if self.last_prune_time is None or (current_time - self.last_prune_time) >= timedelta(days=1):
+            try:
+                removed_entries = self.enforce_retention_policy(total_dict, individual_list, total_filepath, individual_filepath)
+                self.last_prune_time = current_time
+                logger.log_info(f"Enforced retention policy, removed {removed_entries} entries")
+            except (TypeError, OSError) as e:
+                logger.log_error(f"Failed to enforce retention policy: {e}")
+                return None
 
         if collect_only:
             return mem_dict
 
-        individual_list.append(mem_dict)
-
+        temp_file_path = None
         try:
-            with gzip.open(total_filepath, 'wt', encoding='utf-8') as jfile:
-                json.dump(total_dict, jfile)
-            logger.log_info(f"Successfully wrote total memory statistics to {total_filepath}")
-        except OSError as e:
-            logger.log_error(f"Failed to write total memory statistics to file: {e}")
-            return None
-        except TypeError as e:
-            logger.log_error(f"Failed to encode total memory statistics as JSON: {e}")
-            return None
-
-        try:
-            with gzip.open(individual_filepath, 'wt', encoding='utf-8') as jfile:
-                json.dump(individual_list, jfile)
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(individual_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(individual_list, default=str).encode('utf-8'))
+            shutil.move(temp_file_path, individual_filepath)
             logger.log_info(f"Successfully wrote individual memory statistics to {individual_filepath}")
-        except OSError as e:
-            logger.log_error(f"Failed to write individual memory statistics to file: {e}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write individual memory statistics: {str(e)}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
             return None
-        except TypeError as e:
-            logger.log_error(f"Failed to encode individual memory statistics as JSON: {e}")
+
+        temp_file_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.gz', dir=os.path.dirname(total_filepath), delete=False) as temp_file:
+                temp_file_path = temp_file.name
+                with gzip.GzipFile(filename='', mode='wb', fileobj=temp_file, compresslevel=6) as gz_file:
+                    gz_file.write(json.dumps(total_dict, default=str).encode('utf-8'))
+            shutil.move(temp_file_path, total_filepath)
+            logger.log_info(f"Successfully wrote total memory statistics to {total_filepath}")
+        except (OSError, json.JSONEncodeError) as e:
+            logger.log_error(f"Failed to write total memory statistics: {str(e)}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
             return None
+
+        return None
+
 
 
 class MemoryEntryManager:
