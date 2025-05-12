@@ -658,6 +658,7 @@
                 "baud-rate": "115200"
             },
             "rshim_info": "rshim0",
+            "rshim_bus_info": "0000:08:00.1",
             "bus_info": "0000:08:00.0"
         },
         "dpu1": {
@@ -670,6 +671,7 @@
                 "baud-rate": "115200"
             },
             "rshim_info": "rshim1",
+            "rshim_bus_info": "0000:07:00.1",
             "bus_info": "0000:07:00.0"
         },
         "dpu2": {
@@ -682,6 +684,7 @@
                 "baud-rate": "115200"
             },
             "rshim_info": "rshim2",
+            "rshim_bus_info": "0000:01:00.1",
             "bus_info": "0000:01:00.0"
         },
         "dpu3": {
@@ -694,6 +697,7 @@
                 "baud-rate": "115200"
             },
             "rshim_info": "rshim3",
+            "rshim_bus_info": "0000:02:00.1",
             "bus_info": "0000:02:00.0"
         }
     }

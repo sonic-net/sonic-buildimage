@@ -120,18 +120,11 @@ class ThermalUpdater:
             presence = sfp.get_presence()
             pre_presence = self._sfp_status.get(sfp.sdk_index)
             if presence:
-                temperature = sfp.get_temperature()
-                if temperature == 0:
-                    warning_thresh = 0
-                    critical_thresh = 0
-                    fault = 0
-                else:
-                    warning_thresh = sfp.get_temperature_warning_threshold()
-                    critical_thresh = sfp.get_temperature_critical_threshold()
-                    fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
-                    temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
-                    warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
-                    critical_thresh = 0 if critical_thresh is None else critical_thresh * SFP_TEMPERATURE_SCALE
+                temperature, warning_thresh, critical_thresh = sfp.get_temperature_info()
+                fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
+                temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
+                warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
+                critical_thresh = 0 if critical_thresh is None else critical_thresh * SFP_TEMPERATURE_SCALE
 
                 hw_management_independent_mode_update.thermal_data_set_module(
                     0, # ASIC index always 0 for now

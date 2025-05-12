@@ -23,7 +23,7 @@ PLATFORM=${PLATFORM:-`sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' pl
 PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
 
 usage(){
-    echo "Usage: $0 {dpu2pcie|dpu2rshim|rshim2dpu|pcie2dpu|rshim2pcie|pcie2rshim} name"
+    echo "Usage: $0 {dpu2pcie|dpu2rshim|rshim2dpu|pcie2dpu|rshim2pcie|pcie2rshim|listdpus|listrshims} [name]"
 }
 
 validate_platform(){
@@ -57,18 +57,35 @@ case $1 in
 	var="rshim"
 	;;
     "rshim2pcie")
-	jq_query='.DPUS | to_entries[] | select(.value.rshim_info == $rshim) | .value.bus_info'
+	jq_query='.DPUS | to_entries[] | select(.value.rshim_info == $rshim) | .value.rshim_bus_info'
 	var="rshim"
 	;;
+    "listdpus")
+        jq_query='.DPUS | keys[]'
+        var=""
+        ;;
+    "listrshims")
+        jq_query='.DPUS | to_entries[] | .value.rshim_info'
+        var=""
+        ;;
     *)
         echo "Invalid usage of script!"
         usage
         exit 1
 esac
 
-IFS=',' read -r -a identifier_array <<< "$2"
+if [[ -n "$2" ]]; then
+    IFS=',' read -r -a identifier_array <<< "$2"
+else
+    identifier_array=("")
+fi
+
 for identifier in "${identifier_array[@]}"; do
-	op=$(jq -r --arg "$var" "$identifier" "$jq_query" "$PLATFORM_JSON")
+	if [[ -z "$var" ]]; then
+		op=$(jq -r "$jq_query" "$PLATFORM_JSON")
+	else
+		op=$(jq -r --arg "$var" "$identifier" "$jq_query" "$PLATFORM_JSON")
+	fi
 	if [[ "$op" != "null" ]]; then
 		echo "$op"
 	else

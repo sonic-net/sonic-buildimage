@@ -142,6 +142,12 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
+    data['NTP'] = {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
@@ -182,6 +188,12 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
                 "status": "enabled"
             }
         }
+
+    data['NTP_SERVER'] = {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    }
 
     return data
 
