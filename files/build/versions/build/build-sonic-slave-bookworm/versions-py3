@@ -19,7 +19,7 @@ jsonpatch==1.33
 jsonpointer==3.0.0
 jsonschema==2.6.0
 lxml==4.9.1
-natsort==6.2.1
+natsort==8.4.0
 netaddr==0.8.0
 netifaces==0.11.0
 ordered-set==4.1.0
