@@ -28,23 +28,5 @@
     "INVALID_DEBUG_DROP_MONITOR_STATUS": {
         "desc": "Configure invalid value for status.",
         "eStrKey": "InvalidValue"
-    },
-    "VALID_DEBUG_DROP_MONITOR_STATS": {
-        "desc": "Configure DEBUG_DROP_MONITOR_STATS with valid config."
-    },
-    "INVALID_PREV_DROP_COUNT_FOR_DROP_MONITOR_STATS": {
-        "desc": "Configure negative prev_drop_count in DEBUG_DROP_MONITOR_STATS.",
-        "eStrKey": "InvalidValue"
-    },
-    "NONEXIST_DEBUG_COUNTER_FOR_DROP_MONITOR_STATS":{
-        "desc": "Add a drop monitor stats for a non-existent counter",
-        "eStr": "The counter does not exist in the DEBUG_COUNTER table"
-    },
-    "VALID_PERSISTENT_DROP_ALERTS": {
-        "desc": "Configure valid persistent drop alerts"
-    },
-    "INVALID_PERSISTENT_DROP_ALERTS": {
-        "desc": "Add a persistent alert for a non-existent counter",
-        "eStr": "The counter does not exist in the DEBUG_COUNTER table"
     }
 }

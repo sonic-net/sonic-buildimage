@@ -2231,22 +2231,6 @@
             }
         },
 
-        "DEBUG_DROP_MONITOR_STATS": {
-            "DEBUG_4|Ethernet0": {
-                "prev_drop_count": "20",
-                "incidents": ["1746495767", "1746556475"]
-            }
-        },
-
-        "PERSISTENT_DROP_ALERTS": {
-            "DEBUG_4|1746556475": {
-                "message": "Persistent packet drops detected on Ethernet1"
-            },
-            "DEBUG_4|1746495543": {
-                "message": "Persistent packet drops detected on Ethernet0"
-            }
-        },
-
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",

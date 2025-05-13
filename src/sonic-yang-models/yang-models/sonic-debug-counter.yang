@@ -97,38 +97,6 @@ module sonic-debug-counter {
             }
         }
 
-        container DEBUG_DROP_MONITOR_STATS {
-            description "Stores stats relevant to packet drops, this metadata is used to detect persistent drops.";
-
-            list DEBUG_DROP_MONITOR_STATS_LIST {
-                key "name port";
-
-                leaf name {
-                    /* Counter must first be created in DEBUG_COUNTER_TABLE before we can add reasons to it */
-                    must "(current() = ../../../DEBUG_COUNTER/DEBUG_COUNTER_LIST[name=current()]/name)" {
-                        error-message "The counter does not exist in the DEBUG_COUNTER table";
-                    }
-                    type string;
-                    description "Name of the debug counter";
-                }
-
-                leaf port {
-                    type string;
-                    description "Name of the port or interface";
-                }
-
-                leaf prev_drop_count {
-                    type uint64;
-                    description "Stores the last known drop count value";
-                }
-
-                leaf-list incidents {
-                    type uint64;
-                    description "Stores incidents that occured in the current time window";
-                }
-            }
-        }
-
         container DEBUG_DROP_MONITOR {
             container CONFIG {
                 description "Stores configuration for debug drop monitor in CONFIG_DB";
@@ -137,34 +105,6 @@ module sonic-debug-counter {
                     type stypes:admin_mode;
                     default "disabled";
                     description "Indicates whether the feature is enabled or disabled.";
-                }
-            }
-        }
-
-        container PERSISTENT_DROP_ALERTS {
-            description
-              "Top-level container for persistent packet drop alerts.";
-
-            list PERSISTENT_DROP_ALERTS_LIST {
-                key "name timestamp";
-
-                leaf name {
-                    /* Counter must first be created in DEBUG_COUNTER_TABLE before we can add reasons to it */
-                    must "(current() = ../../../DEBUG_COUNTER/DEBUG_COUNTER_LIST[name=current()]/name)" {
-                        error-message "The counter does not exist in the DEBUG_COUNTER table";
-                    }
-                    type string;
-                    description "Name of the debug counter";
-                }
-
-                leaf timestamp {
-                    type uint64;
-                    description "Unix timestamp of when the persistent drop alert was recorded.";
-                }
-
-                leaf message {
-                    type string;
-                    description "Descriptive message about the packet drop incident.";
                 }
             }
         }
