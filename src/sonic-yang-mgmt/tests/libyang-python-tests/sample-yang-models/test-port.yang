@@ -20,7 +20,7 @@ module test-port{
 		description "First Revision";
 	}
 
-	container port{
+	container test-port {
 		container PORT {
 
 			description "PORT part of config_db.json";
