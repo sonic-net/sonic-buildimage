@@ -119,6 +119,7 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
+            'SRV6_MY_SOURCE': ['zebra'],
             'SRV6_MY_SIDS': ['mgmtd']
 
     }
@@ -2318,6 +2319,7 @@ class BGPConfigDaemon:
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
+            ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
@@ -2727,6 +2729,13 @@ class BGPConfigDaemon:
                     if not self.__run_command(table, cmd):
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
                         continue
+            elif table == 'SRV6_MY_SOURCE':
+                source = data['source-address']
+                cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'encapsulation' "
+                cmd += " -c 'source-address {}' ".format(source.data)
+                if not self.__run_command(table, cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
+                    continue
             elif table == 'SRV6_MY_SIDS':
                 if key is None:
                     syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')

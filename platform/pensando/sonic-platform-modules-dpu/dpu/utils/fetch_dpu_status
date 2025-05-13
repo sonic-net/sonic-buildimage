@@ -291,13 +291,11 @@ class DPUHealthUpdater():
             ]
             fvs_data.extend(fvs_control_plane_data)
 
-            self.delete_dpu_health_table_entries()
             for name, value in fvs_data:
                 self.db.hset(self.table, name, value)
 
         except Exception as e:
             log_err(f'Failed to refresh platform health status due to {e}, deleting db table')
-            self.delete_dpu_health_table_entries()
 
     def run(self):
         self.platform_health_stats = self._fetch_monitor_list()

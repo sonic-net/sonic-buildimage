@@ -28,9 +28,9 @@ $(BCMCMD): bcmcmd.cpp dsserve.h
 	$(CC) -o $@ $< $(CFLAGS) $(CFLAGS_COMMON) $(CPPFLAGS) $(LDFLAGS) $(LIBS)
 
 install:
-	install -d $(DESTDIR)/usr/sbin
-	install -D $(DSSERVE) $(DESTDIR)/usr/sbin/$(DSSERVE)
-	install -D $(BCMCMD) $(DESTDIR)/usr/sbin/$(BCMCMD)
+	install -d $(DESTDIR)/usr/bin
+	install -D $(DSSERVE) $(DESTDIR)/usr/bin/$(DSSERVE)
+	install -D $(BCMCMD) $(DESTDIR)/usr/bin/$(BCMCMD)
 
 clean:
 	rm -f $(DSSERVE) $(BCMCMD)

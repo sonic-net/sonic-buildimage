@@ -1,4 +1,8 @@
+{% if module.path is defined %}
+{% set path = module.path %}
+{% else %}
 {% set path = env('PLATFORM_PATH') %}
+{% endif %}
 if [ ! -d {{ path }} ]; then git clone {{ module.repo }} {{ path }}; fi;
 if [ -d {{ path }}/.git ]; then cd {{ path }} &&
 

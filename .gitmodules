@@ -46,7 +46,7 @@
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
 	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr-10.0.1
+	branch = frr-10.3
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -118,6 +118,9 @@
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
 	url = https://github.com/sonic-net/sonic-dash-api.git
+[submodule "src/sonic-dash-ha"]
+	path = src/sonic-dash-ha
+	url = https://github.com/sonic-net/sonic-dash-ha
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
 	url = https://github.com/sonic-net/sonic-stp
@@ -127,12 +130,12 @@
 [submodule "platform/vpp"]
 	path = platform/vpp
 	url = https://github.com/sonic-net/sonic-platform-vpp.git
-[submodule "src/sonic-framework/gnoi"]
-	path = src/sonic-framework/gnoi
-	url = https://github.com/openconfig/gnoi
 [submodule "platform/marvell-prestera/mrvl-prestera"]
 	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
 [submodule "platform/marvell-prestera/sonic-platform-marvell"]
 	path = platform/marvell-prestera/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "src/sonic-sysmgr/gnoi"]
+	path = src/sonic-sysmgr/gnoi
+	url = https://github.com/openconfig/gnoi
