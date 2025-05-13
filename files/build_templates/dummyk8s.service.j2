@@ -5,7 +5,6 @@ After=updategraph.service
 BindsTo=sonic.target
 After=sonic.target
 
-{% if include_dummyk8s == "y" %}
 [Service]
 ExecStartPre=/usr/bin/{{ docker_container_name }}.sh start
 ExecStart=/usr/bin/{{ docker_container_name }}.sh wait
@@ -14,7 +13,6 @@ RestartSec=30
 {% else %}
 # This service is disabled
 # No [Service] section is generated.
-{% endif %}
 
 [Install]
 WantedBy=sonic.target
