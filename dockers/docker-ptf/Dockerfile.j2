@@ -6,7 +6,7 @@ FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
 {% elif PTF_ENV_PY_VER == "mixed" %}
 FROM {{ prefix}}debian:buster
 {% else %}
-FROM {{ prefix }}debian:bullseye
+FROM {{ prefix }}debian:bookworm
 {% endif %}
 
 {% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
@@ -57,6 +57,8 @@ RUN apt-get update          \
         tcpd                  \
         libwrap0              \
         libwrap0-dev          \
+        libthrift-dev         \
+        python3-thrift        \
 {% endif %}
         less                \
         git                 \
@@ -103,6 +105,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
 {% endif %}
 
+COPY openbfdd-patches/ /root/openbfdd-patches/
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step
 RUN rm -rf /debs \
@@ -121,10 +124,6 @@ RUN rm -rf /debs \
     && python setup.py install \
     && cd .. \
     && rm -fr scapy-vxlan \
-{% else %}
-    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
-    && python3 get-pip.py \
-    && rm -f get-pip.py \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
@@ -137,6 +136,7 @@ RUN rm -rf /debs \
     && rm -fr sflowtool \
     && git clone https://github.com/dyninc/OpenBFDD.git \
     && cd OpenBFDD \
+    && git apply /root/openbfdd-patches/broken-build-bookworm.patch \
     && ./autogen.sh \
     && ./configure \
     && make \
@@ -188,14 +188,12 @@ COPY ["tacacs_plus", "/etc/init.d"]
 COPY ["tacacs+", "/etc/default"]
 {% endif %}
 
-{% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m venv --system-site-packages env-python3
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
 ENV VIRTUAL_ENV=/root/env-python3
 ARG BACKUP_OF_PATH="$PATH"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
-{% endif %}
 
 {% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m pip install --upgrade --ignore-installed pip
@@ -260,11 +258,6 @@ RUN pip3 install Flask \
 {{ install_python_wheels(docker_ptf_whls.split(' ')) }}
 {% endif %}
 
-{% if PTF_ENV_PY_VER == "mixed" %}
-# Deactivating a virtualenv.
-ENV PATH="$BACKUP_OF_PATH"
-{% endif %}
-
 ## Adjust sshd settings
 RUN mkdir /var/run/sshd \
     && echo 'root:root' | chpasswd \
@@ -291,16 +284,19 @@ RUN git clone https://github.com/google/gnxi.git \
 
 COPY gnxi-patches/ gnxi/patches/
 
+
+{% if PTF_ENV_PY_VER == "mixed" %}
 RUN cd gnxi \
     && quilt push -a \
     && cd gnmi_cli_py \
-{% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt
 {% else %}
-    && pip3 install setuptools==51.0.0 \
-    && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
-    && pip3 install -r /tmp/requirements.txt
+RUN cd gnxi \
+    && quilt push -a
 {% endif %}
+
+# Deactivating a virtualenv.
+ENV PATH="$BACKUP_OF_PATH"
 
 # Install gnoic tool
 RUN git clone https://github.com/karimra/gnoic.git \
@@ -317,22 +313,26 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
+{% if PTF_ENV_PY_VER == "mixed" %}
 RUN dpkg -i \
 {% for deb in docker_ptf_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
-
-{% if PTF_ENV_PY_VER == "py3" %}
-# Create symlink so that test scripts and ptf_runner invocation path
-# is same across python 2 and python 3 envs. Note that for virtual-env
-# ptf is under /root/env-python3/bin.
-# TODO - cleanup when the supported PTF image is py3only across all branches
-RUN mkdir -p /root/env-python3/bin \
-    && ln -s /usr/local/bin/ptf /usr/bin/ptf \
-    && ln -s /usr/bin/python /root/env-python3/bin/python3 \
-    && ln -s /usr/bin/python /root/env-python3/bin/python \
-    && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
+{% else %}
+RUN dpkg -i debs/python-saithrift_0.9.4_amd64.deb
 {% endif %}
+
+# {% if PTF_ENV_PY_VER == "py3" %}
+# # Create symlink so that test scripts and ptf_runner invocation path
+# # is same across python 2 and python 3 envs. Note that for virtual-env
+# # ptf is under /root/env-python3/bin.
+# # TODO - cleanup when the supported PTF image is py3only across all branches
+# RUN mkdir -p /root/env-python3/bin \
+#     && ln -s /usr/local/bin/ptf /usr/bin/ptf \
+#     && ln -s /usr/bin/python /root/env-python3/bin/python3 \
+#     && ln -s /usr/bin/python /root/env-python3/bin/python \
+#     && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
+# {% endif %}
 
 COPY ["*.ini", "/etc/ptf/"]
 EXPOSE 22 8009
