@@ -17,6 +17,9 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["readiness_probe_hook", "/usr/bin"]
 COPY ["start.sh", "/usr/bin"]
 
+COPY ["readiness-probe.sh", "/usr/bin"]
+RUN chmod +x /usr/bin/readiness-probe.sh
+
 RUN chmod +x /usr/bin/readiness_probe_hook
 RUN chmod +x /usr/bin/start.sh
 
