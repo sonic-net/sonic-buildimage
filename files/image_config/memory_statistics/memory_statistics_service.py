@@ -1678,7 +1678,7 @@ class SocketHandler:
             self.cleanup()
             logger.log_info("Socket listener stopped.")
 
-
+ 
 class Daemonizer:
     """Facilitates the daemonization of the current process.
     
