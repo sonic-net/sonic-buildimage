@@ -11,7 +11,7 @@ EVENTD_MONIT_CONF := tools/monit_events
 CP := cp
 MKDIR := mkdir
 CC := g++
-LIBS := -levent -lhiredis -lswsscommon -lpthread -lboost_thread -lboost_system -lzmq -lboost_serialization -luuid -llua5.1
+LIBS := -levent -lhiredis -lswsscommon -lpthread -lboost_thread -lboost_system -lzmq -lboost_serialization -luuid -llua5.1 -ljemalloc
 TEST_LIBS := -L/usr/src/gtest -lgtest -lgtest_main -lgmock -lgmock_main
 
 CFLAGS += -Wall -std=c++17 -fPIE -I$(PWD)/../sonic-swss-common/common

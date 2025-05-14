@@ -28,9 +28,11 @@ using namespace std;
 using namespace swss;
 
 #define MB(N) ((N) * 1024 * 1024)
-#define EVT_SIZE_AVG 150
+#define EVT_SIZE_AVG 250
 
-#define MAX_CACHE_SIZE (MB(100) / (EVT_SIZE_AVG))
+#define MAX_CACHE_SIZE (MB(50) / (EVT_SIZE_AVG))
+
+#define MAX_OVERFLOW_CACHE_SIZE 1000
 
 /* Count of elements returned in each read */
 #define READ_SET_SIZE 100
@@ -40,7 +42,7 @@ using namespace swss;
 /* Sock read timeout in milliseconds, to enable look for control signals */
 #define CAPTURE_SOCK_TIMEOUT 800
 
-#define HEARTBEAT_INTERVAL_SECS 2  /* Default: 2 seconds */
+#define HEARTBEAT_INTERVAL_SECS 60  /* Default: 60 seconds */
 
 /* Source & tag for heartbeat events */
 #define EVENTD_PUBLISHER_SOURCE "sonic-events-eventd"
@@ -343,8 +345,10 @@ capture_service::init_capture_cache(const event_serialized_lst_t &lst)
             sequence_t seq;
 
             if (validate_event(event, rid, seq)) {
-                m_pre_exist_id[rid] = seq;
-                m_events.push_back(*itc);
+                if (itc->find("heartbeat") == string::npos && VEC_SIZE(m_events) < m_cache_max) { // filter out heartbeat events and bound m_events
+                    m_pre_exist_id[rid] = seq;
+                    m_events.push_back(*itc);
+                }
             }
         }
     }
@@ -498,7 +502,9 @@ capture_service::do_capture()
 
         case CAP_STATE_LAST:
             total_overflow++;
-            m_last_events[rid] = evt_str;
+            if (m_last_events.find(rid) != m_last_events.end() || m_last_events.size() <= MAX_OVERFLOW_CACHE_SIZE) {
+                m_last_events[rid] = evt_str;
+            }
             if (total_overflow > m_last_events.size()) {
                 m_total_missed_cache++;
                 m_stats_instance->increment_missed_cache(1);
