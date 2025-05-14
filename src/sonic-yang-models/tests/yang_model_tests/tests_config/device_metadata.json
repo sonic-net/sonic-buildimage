@@ -670,6 +670,24 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_ORCH_DASH_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_dash_zmq_enabled": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ORCH_ROUTE_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_route_zmq_enabled": true
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_SYSLOG_WITH_OS_VERSION_ENABLED": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
