@@ -14,6 +14,9 @@ bgp as-path access-list SLB_ASN permit _64523$
 !
 ipv6 prefix-list DEFAULT_IPV6 permit ::/0
 ipv6 prefix-list IPV6_64_ONLY permit ::/0 ge 64 le 64
+{% if is_afd_safenets == 'true' %}
+ipv6 prefix-list IPV6_56_OR_LONGER permit ::/0 ge 56 le 64
+{% endif %}
 !
 {% if constants.bgp.allow_list is defined and constants.bgp.allow_list.enabled is defined and constants.bgp.allow_list.enabled and constants.bgp.allow_list.drop_community is defined %}
 route-map ALLOW_LIST_DEPLOYMENT_ID_{{ neighbor_deployment_id }}_V6 permit 65532
@@ -75,6 +78,11 @@ route-map FROM_TIER0_V6_DEPLOYMENT_ID_{{ neighbor_deployment_id }} permit 600
 !
 route-map FROM_TIER0_V6_DEPLOYMENT_ID_{{ neighbor_deployment_id }} permit 700
  match ipv6 address prefix-list IPV6_64_ONLY
+!
+{% if is_afd_safenets == 'true' %}
+route-map FROM_TIER0_V6_DEPLOYMENT_ID_{{ neighbor_deployment_id }} permit 750
+ match ipv6 address prefix-list IPV6_56_OR_LONGER
+{% endif %}
 !
 route-map FROM_TIER0_V6_DEPLOYMENT_ID_{{ neighbor_deployment_id }} deny 10000
 !

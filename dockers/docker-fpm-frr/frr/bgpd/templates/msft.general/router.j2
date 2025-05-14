@@ -15,6 +15,12 @@
 {% else %}
 {% set is_compute_ai = "false" %}
 {% endif %}
+{% set neighbor_resource_type = CONFIG_DB__DEVICE_NEIGHBOR_METADATA[bgp_session['name']]['resource_type'] %}
+{% if neighbor_resource_type is defined and neighbor_resource_type in ['NaaSDC', 'DCFrontdoor'] %}
+{% set is_afd_safenets = "true" %}
+{% else %}
+{% set is_afd_safenets = "false" %}
+{% endif %}
 {% set mgmt_type = CONFIG_DB__DEVICE_METADATA['localhost']['MgmtType'] %}
 {% if mgmt_type is defined and mgmt_type == 'FairWater' %}
 {% set is_fairwater = "true" %}
