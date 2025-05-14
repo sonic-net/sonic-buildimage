@@ -222,7 +222,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 {%- endif %}
 {%- if CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON != "y" %}
 {%- endif %}
-        linux-kbuild-6.12.27 \
 # teamd build
         libdaemon-dev \
         libdbus-1-dev \
@@ -609,6 +608,7 @@ RUN eatmydata apt-get install -y \
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
+# TODO - Migrate to trixie docker packages
 #RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 # Install docker packages from bookworm
 RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources
