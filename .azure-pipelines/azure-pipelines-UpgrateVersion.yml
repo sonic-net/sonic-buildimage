@@ -40,7 +40,7 @@ parameters:
   - marvell-prestera-armhf
   - marvell-prestera-arm64
   - mellanox
-#  - pensando
+  - pensando
   - nvidia-bluefield
 
 stages:
