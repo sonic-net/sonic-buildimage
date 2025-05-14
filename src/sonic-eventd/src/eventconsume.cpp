@@ -105,7 +105,7 @@ void EventConsume::read_eventd_config(bool read_all) {
     // read from default map
     static_event_table.clear();
     if (!parse(m_evProfile.c_str(), static_event_table)) {
-        SWSS_LOG_ERROR("Can not initialize event map");
+        SWSS_LOG_NOTICE("Can not initialize event map");
         closeSyslog();
         exit(0);
     }
