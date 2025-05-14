@@ -22,7 +22,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 NUM_THERMAL = 2
-NUM_VOLTAGE_SENSORS = 3
+NUM_VOLTAGE_SENSORS = 6
 NUM_CURRENT_SENSORS = 3
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
@@ -139,7 +139,7 @@ class Chassis(ChassisBase):
         from sonic_platform.thermal import Thermal
         global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
-        if board_id == 130:
+        if board_id == self._api_helper.mtfuji_board_id:
             NUM_THERMAL = 5
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):

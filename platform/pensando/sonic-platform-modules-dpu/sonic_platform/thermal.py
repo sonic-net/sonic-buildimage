@@ -12,7 +12,6 @@
 try:
     from sonic_platform_base.thermal_base import ThermalBase
     import os
-    import syslog
     from .helper import APIHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -28,12 +27,13 @@ class Thermal(ThermalBase):
         'Die Temperature'
     ]
 
+    # [ Sensor-Name, sysfs, low_threshold, high_threshold, critical_low, critical_high]
     SENSOR_MAPPING_MTFUJI = [
-        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input"],
-        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input"],
-        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input"],
-        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input"],
-        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input"]
+        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
+        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input", 1, 110, -10, 130],
+        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input", 1, 110, -10, 130]
     ]
 
     @classmethod
@@ -43,7 +43,7 @@ class Thermal(ThermalBase):
         apiHelper = APIHelper()
         g_board_id = apiHelper.get_board_id()
         temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
-        if g_board_id == 130:
+        if g_board_id == self._api_helper.mtfuji_board_id:
             temp_hwmon = '/sys/class/hwmon/hwmon0/temp1_input'
         if os.path.exists(temp_hwmon):
             return True
@@ -52,9 +52,10 @@ class Thermal(ThermalBase):
     def __init__(self, thermal_index, sfp = None):
         global g_board_id
         ThermalBase.__init__(self)
+        self._api_helper = APIHelper()
         self.index = thermal_index + 1
         self.board_id = g_board_id
-        if self.board_id != 130:
+        if self.board_id != self._api_helper.mtfuji_board_id:
             temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
             self.temp_dir = None
             if os.path.exists(temp_hwmon):
@@ -66,7 +67,7 @@ class Thermal(ThermalBase):
         Returns:
             string: The name of the thermal
         """
-        if self.board_id == 130:
+        if self.board_id == self._api_helper.mtfuji_board_id:
             return self.SENSOR_MAPPING_MTFUJI[self.index - 1][0]
         return self.SENSOR_MAPPING[self.index - 1]
 
@@ -114,7 +115,7 @@ class Thermal(ThermalBase):
         if(self.get_presence()):
             try :
                 temp_file = None
-                if self.board_id == 130:
+                if self.board_id == self._api_helper.mtfuji_board_id:
                     temp_file = self.SENSOR_MAPPING_MTFUJI[self.index - 1][1]
                 else:
                     temp_file = self.temp_dir +'/temp{0}_input'.format(str(self.index))
@@ -122,6 +123,30 @@ class Thermal(ThermalBase):
             except Exception:
                 pass
         return float(temperature)
+
+    def get_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of thermal
+
+        Returns:
+            A float number, the high threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        if self.board_id == self._api_helper.mtfuji_board_id:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][3])
+        raise NotImplementedError
+
+    def get_low_threshold(self):
+        """
+        Retrieves the low threshold temperature of thermal
+
+        Returns:
+            A float number, the low threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        if self.board_id == self._api_helper.mtfuji_board_id:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][2])
+        raise NotImplementedError
 
     def get_high_critical_threshold(self):
         """
@@ -132,25 +157,26 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         temperature = 0.0
-        if(self.get_presence()):
+        if self.board_id != self._api_helper.mtfuji_board_id:
             try :
                 temp_file = self.temp_dir +'/temp{0}_crit'.format(str(self.index))
                 temperature = float(open(temp_file).read()) / 1000.0
             except Exception:
                 pass
+        else:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][5])
         return float(temperature)
 
-    def set_high_critical_threshold(self, temperature):
+    def get_low_critical_threshold(self):
         """
-        Sets the critical high threshold temperature of thermal
-
-        Args :
-            temperature: A float number up to nearest thousandth of one degree Celsius,
-            e.g. 30.125
+        Retrieves the low critical threshold temperature of thermal
 
         Returns:
-            A boolean, True if threshold is set successfully, False if not
+            A float number, the low critical threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return True
+        if self.board_id == self._api_helper.mtfuji_board_id:
+            return float(self.SENSOR_MAPPING_MTFUJI[self.index - 1][4])
+        raise NotImplementedError
 
 
