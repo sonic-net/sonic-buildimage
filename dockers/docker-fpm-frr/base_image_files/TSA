@@ -3,8 +3,6 @@
 # Source the platform_utils script
 source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
 
-${SMARTSWITCH:=false}
-
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
   echo "Root priveleges are needed for this operation"
