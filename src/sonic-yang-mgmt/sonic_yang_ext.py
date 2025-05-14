@@ -7,6 +7,8 @@ import syslog
 from json import dump, dumps, loads
 from xmltodict import parse
 from glob import glob
+import copy
+from sonic_yang_path import SonicYangPathMixin
 
 Type_1_list_maps_model = [
     'DSCP_TO_TC_MAP_LIST',
@@ -42,7 +44,7 @@ class SonicYangException(Exception):
     pass
 
 # class sonic_yang methods, use mixin to extend sonic_yang
-class SonicYangExtMixin:
+class SonicYangExtMixin(SonicYangPathMixin):
 
     """
     load all YANG models, create JSON of yang models. (Public function)
@@ -221,15 +223,21 @@ class SonicYangExtMixin:
     """
     Crop config as per yang models,
     This Function crops from config only those TABLEs, for which yang models is
-    provided. The Tables without YANG models are stored in
-    self.tablesWithOutYangModels.
+    provided. If there are tables to modify it will perform a deepcopy of the
+    original structure in case anyone is holding a reference.
+    The Tables without YANG models are stored in self.tablesWithOutYangModels.
     """
     def _cropConfigDB(self, croppedFile=None):
-
+        isCopy = False
         tables = list(self.jIn.keys())
         for table in tables:
             if table not in self.confDbYangMap:
-                # store in tablesWithOutYang
+                # Make sure we duplicate if we're modifying so if a caller
+                # has a reference we don't clobber it.
+                if not isCopy:
+                    isCopy = True
+                    self.jIn = copy.deepcopy(self.jIn)
+                # store in tablesWithOutYang and purge
                 self.tablesWithOutYang[table] = self.jIn[table]
                 del self.jIn[table]
 
@@ -1153,7 +1161,7 @@ class SonicYangExtMixin:
 
     """
     load_data: load Config DB, crop, xlate and create data tree from it. (Public)
-    input:    data
+    input:    configdbJson - will NOT be modified
               debug Flag
     returns:  True - success   False - failed
     """
@@ -1168,7 +1176,8 @@ class SonicYangExtMixin:
           # reset xlate and tablesWithOutYang
           self.xlateJson = dict()
           self.tablesWithOutYang = dict()
-          # self.jIn will be cropped
+          # self.jIn will be cropped if needed, however it will duplicate the object
+          # so the original is not modified
           self._cropConfigDB()
           # xlated result will be in self.xlateJson
           self._xlateConfigDB(xlateFile=xlateFile)
