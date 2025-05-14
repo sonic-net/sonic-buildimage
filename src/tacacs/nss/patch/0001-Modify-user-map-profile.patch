@@ -1,6 +1,6 @@
-From 93f39fa62f3f9dc54012ab8668fe48a4b313c7a0 Mon Sep 17 00:00:00 2001
+From e2bdc635ce632013b211af0a0fb591d060da903e Mon Sep 17 00:00:00 2001
 From: "david.zagury" <davidza@nvidia.com>
-Date: Tue, 13 May 2025 19:25:09 +0300
+Date: Wed, 14 May 2025 12:41:58 +0300
 Subject: [PATCH] [PATCH] Modify user map profile
 
 * Removed dependence from libtacplus_map and libaudit
@@ -10,7 +10,7 @@ Subject: [PATCH] [PATCH] Modify user map profile
 * Added "many_to_one" mode, create one local user for many TACACS+ users which
   has the same privilege.
 * Modified configuration parse and file to adapt to the new user map profile.
-* Stop authorization after user being rejected by server.
+* Stop authorization after user being rejected by server
 ---
  Makefile.am                   |    4 +-
  Makefile.in                   |    2 +-
@@ -18,9 +18,9 @@ Subject: [PATCH] [PATCH] Modify user map profile
  debian/changelog              |   11 +
  debian/control                |   11 +-
  debian/libnss-tacplus.symbols |    1 -
- nss_tacplus.c                 | 1022 +++++++++++++++------------------
+ nss_tacplus.c                 | 1043 ++++++++++++++++-----------------
  tacplus_nss.conf              |   91 ++-
- 8 files changed, 532 insertions(+), 612 deletions(-)
+ 8 files changed, 553 insertions(+), 612 deletions(-)
 
 diff --git a/Makefile.am b/Makefile.am
 index 293951e..b33c455 100644
@@ -124,7 +124,7 @@ index 2bf9b88..f476e7d 100644
   _nss_tacplus_getpwnam_r@Base 1.0.1
 - _nss_tacplus_getpwuid_r@Base 1.0.1
 diff --git a/nss_tacplus.c b/nss_tacplus.c
-index 79e62b9..ff4f492 100644
+index 79e62b9..40f7a66 100644
 --- a/nss_tacplus.c
 +++ b/nss_tacplus.c
 @@ -1,7 +1,9 @@
@@ -180,7 +180,7 @@ index 79e62b9..ff4f492 100644
  
  /*
   * pwbuf is used to reduce number of arguments passed around; the strings in
-@@ -63,255 +59,244 @@ struct pwbuf {
+@@ -63,255 +59,265 @@ struct pwbuf {
  typedef struct {
      struct addrinfo *addr;
      char *key;
@@ -583,6 +583,27 @@ index 79e62b9..ff4f492 100644
 +    user->shell = strdup("/bin/bash");
 +}
 +
++static void free_useradd_info()
++{
++    useradd_info_t *user;
++
++    user = &useradd_grp_list[MIN_TACACS_USER_PRIV];
++    if(user->info)
++        free(user->info);
++    if(user->secondary_grp)
++        free(user->secondary_grp);
++    if(user->shell)
++        free(user->shell);
++
++    user = &useradd_grp_list[MAX_TACACS_USER_PRIV];
++    if(user->info)
++        free(user->info);
++    if(user->secondary_grp)
++        free(user->secondary_grp);
++    if(user->shell)
++        free(user->shell);
++}
++
 +static int parse_config(const char *file)
 +{
 +    FILE *fp;
@@ -646,7 +667,7 @@ index 79e62b9..ff4f492 100644
  }
  
  /*
-@@ -324,15 +309,13 @@ static void print_servers(void)
+@@ -324,15 +330,13 @@ static void print_servers(void)
   */
  static int
  pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
@@ -666,7 +687,7 @@ index 79e62b9..ff4f492 100644
  
      needlen = usename ? strlen(usename) + 1 : 1 +
          srcpw->pw_dir ? strlen(srcpw->pw_dir) + 1 : 1 +
-@@ -341,8 +324,8 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+@@ -341,8 +345,8 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
          srcpw->pw_passwd ? strlen(srcpw->pw_passwd) + 1 : 1;
      if(needlen > len) {
          if(debug)
@@ -677,7 +698,7 @@ index 79e62b9..ff4f492 100644
          return 1;
      }
  
-@@ -354,21 +337,14 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+@@ -354,21 +358,14 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
      cnt++; /* allow for null byte also */
      buf += cnt;
      len -= cnt;
@@ -701,7 +722,7 @@ index 79e62b9..ff4f492 100644
      cnt++;
      buf += cnt;
      len -= cnt;
-@@ -377,148 +353,227 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
+@@ -377,148 +374,227 @@ pwcopy(char *buf, size_t len, struct passwd *srcpw, struct passwd *destpw,
      cnt++;
      buf += cnt;
      len -= cnt;
@@ -874,7 +895,8 @@ index 79e62b9..ff4f492 100644
 +        syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf);
 +        return -1;
 +    }
-+
+ 
+-    if(!tacuser) {
 +    while(fgets(buf, sizeof buf, fp)) {
 +        if('#' == *buf || isspace(*buf))
 +            continue;
@@ -886,8 +908,7 @@ index 79e62b9..ff4f492 100644
 +            break;
 +        }
 +    }
- 
--    if(!tacuser) {
++
 +    /*
 +     * If user is found in user_conf, it means that getpwnam is called by
 +     * useradd in this NSS module.
@@ -910,7 +931,7 @@ index 79e62b9..ff4f492 100644
 +        syslog(LOG_ERR, "%s: %s write local user failed", nssname, name);
 +        fclose(fp);
 +        return -1;
-     }
++    }
 +    fclose(fp);
 +
 +    lvl = level;
@@ -932,10 +953,7 @@ index 79e62b9..ff4f492 100644
 +            return 0;
 +        }
 +        lvl--;
-+    }
-+
-+    return -1;
-+}
+     }
  
 -    pb->pw->pw_name = NULL; /* be paranoid */
 -    for(ret = 1; ret && (ent = fgetpwent(pwfile)); ) {
@@ -943,6 +961,9 @@ index 79e62b9..ff4f492 100644
 -            continue; /* shouldn't happen */
 -        if(!strcmp(ent->pw_name, tacuser)) {
 -            ret = pwcopy(pb->buf, pb->buflen, ent, pb->pw, logname, usetachome);
++    return -1;
++}
++
 +/*
 + * Lookup user in /etc/passwd, and fill up passwd info if found.
 + */
@@ -1040,7 +1061,7 @@ index 79e62b9..ff4f492 100644
  
      return ret;
  }
-@@ -532,6 +587,7 @@ static int
+@@ -532,6 +608,7 @@ static int
  got_tacacs_user(struct tac_attrib *attr, struct pwbuf *pb)
  {
      unsigned long priv_level = 0;
@@ -1048,7 +1069,7 @@ index 79e62b9..ff4f492 100644
  
      while(attr != NULL)  {
          /* we are looking for the privilege attribute, can be in several forms,
-@@ -550,14 +606,20 @@ got_tacacs_user(struct tac_attrib *attr, struct pwbuf *pb)
+@@ -550,14 +627,20 @@ got_tacacs_user(struct tac_attrib *attr, struct pwbuf *pb)
              /* if this fails, we leave priv_level at 0, which is
               * least privileged, so that's OK, but at least report it
               */
@@ -1073,7 +1094,7 @@ index 79e62b9..ff4f492 100644
  }
  
  /*
-@@ -570,9 +632,13 @@ connect_tacacs(struct tac_attrib **attr, int srvr)
+@@ -570,9 +653,13 @@ connect_tacacs(struct tac_attrib **attr, int srvr)
  {
      int fd;
  
@@ -1088,7 +1109,7 @@ index 79e62b9..ff4f492 100644
          tac_add_attrib(attr, "service", tac_service);
          if(tac_protocol[0])
              tac_add_attrib(attr, "protocol", tac_protocol);
-@@ -598,52 +664,25 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -598,52 +685,25 @@ lookup_tacacs_user(struct pwbuf *pb)
  {
      struct areply arep;
      int ret = 1, done = 0;
@@ -1148,7 +1169,7 @@ index 79e62b9..ff4f492 100644
                      tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", ret,
                      pb->name);
          }
-@@ -668,14 +707,11 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -668,14 +728,11 @@ lookup_tacacs_user(struct pwbuf *pb)
          if(arep.status == AUTHOR_STATUS_PASS_ADD ||
             arep.status == AUTHOR_STATUS_PASS_REPL) {
              ret = got_tacacs_user(arep.attr, pb);
@@ -1165,7 +1186,7 @@ index 79e62b9..ff4f492 100644
              done = 1; /* break out of loop after arep cleanup */
          }
          else {
-@@ -685,6 +721,10 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -685,6 +742,10 @@ lookup_tacacs_user(struct pwbuf *pb)
                      " invalid (%d)", nssname,
                      tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name,
                      arep.status);
@@ -1176,7 +1197,7 @@ index 79e62b9..ff4f492 100644
          }
          if(arep.msg)
              free(arep.msg);
-@@ -692,30 +732,12 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -692,30 +753,12 @@ lookup_tacacs_user(struct pwbuf *pb)
              tac_free_attrib(&arep.attr);
      }
  
@@ -1209,7 +1230,7 @@ index 79e62b9..ff4f492 100644
   *
   * We try the lookup to the tacacs server first.  If we can't make a
   * connection to the server for some reason, we also try looking up
-@@ -730,20 +752,26 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -730,20 +773,26 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
      int result;
      struct pwbuf pbuf;
  
@@ -1245,7 +1266,7 @@ index 79e62b9..ff4f492 100644
          /* marshal the args for the lower level functions */
          pbuf.name = (char *)name;
          pbuf.pw = pw;
-@@ -751,126 +779,14 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -751,126 +800,14 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
          pbuf.buflen = buflen;
          pbuf.errnop = errnop;
  
@@ -1276,7 +1297,7 @@ index 79e62b9..ff4f492 100644
      }
 -   return status;
 -}
- 
+-
 -/*
 - * This is an NSS entry point.
 - * We implement getpwuid(), for anything that wants to get the original
@@ -1335,7 +1356,7 @@ index 79e62b9..ff4f492 100644
 -    pb.buflen = buflen;
 -    pb.errnop = errnop;
 -    pb.name = NULL;
--
+ 
 -    /*
 -     * the else case will only be called if we don't have an auid or valid
 -     * sessionid, since otherwise the first call will be using wildcards,
