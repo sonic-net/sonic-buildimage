@@ -1,0 +1,12 @@
+[Unit]
+Description=Manage the DPU udev rules
+After=systemd-udevd.service
+Requires=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/dpu-udev-manager.sh start
+
+[Install]
+WantedBy=multi-user.target

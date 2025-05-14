@@ -67,6 +67,7 @@ IMAGE_UPGRADE="${NO_PARAM}"
 SYSLOG_LOGGER="${NO_PARAM}"
 VERBOSE_LEVEL="${VERBOSE_MIN}"
 MFT_DIAGNOSIS_FLAGS=""
+RESET_CONFIG="${NO_PARAM}"
 
 function PrintHelp() {
     echo
@@ -78,11 +79,17 @@ function PrintHelp() {
     echo "  -v, --verbose  Verbose mode (enabled when -u|--upgrade)"
     echo "  -d, --dry-run  Compare the FW versions without installation. Return code "0" means the FW is up-to-date, return code "10" means an upgrade is required, otherwise an error is detected."
     echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
+{% if sonic_asic_platform == "nvidia-bluefield" %}
+    echo "  -r, --reset    Reset firmware configuration (NVIDIA BlueField platform only)"
+{% endif %}
     echo "  -h, --help     Print help"
     echo
     echo "Examples:"
     echo "  ./${SCRIPT_NAME} --verbose"
     echo "  ./${SCRIPT_NAME} --upgrade"
+{% if sonic_asic_platform == "nvidia-bluefield" %}
+    echo "  ./${SCRIPT_NAME} --reset"
+{% endif %}
     echo "  ./${SCRIPT_NAME} --help"
     echo
 }
@@ -107,6 +114,11 @@ function ParseArguments() {
             -c|--clear-semaphore)
                 CLEAR_SEMAPHORE="${YES_PARAM}"
             ;;
+{% if sonic_asic_platform == "nvidia-bluefield" %}
+            -r|--reset)
+                RESET_CONFIG="${YES_PARAM}"
+            ;;
+{% endif %}
             -h|--help)
                 PrintHelp
                 exit "${EXIT_SUCCESS}"
@@ -378,29 +390,8 @@ function RunFwUpdateCmd() {
     # Reactivate FW prior to burning...
     eval "flint -d ${_MST_DEVICE} ir" 2>&1 >/dev/null
 
-    local COMMAND="${MFT_DIAGNOSIS_FLAGS} flint $@ burn"
-
-    output=$(eval "${COMMAND}")
-
-    ERROR_CODE="$?"
-
-    if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
-        echo "${output}"
-        failure_msg="${output#*Fail : }"
-        ExitFailure "FW Update command: ${COMMAND} failed with error: ${failure_msg}"
-    fi
-
-    local COMMAND="mlxconfig -d ${_MST_DEVICE} -y s INTERNAL_CPU_MODEL=1 LAG_RESOURCE_ALLOCATION=1 NUM_OF_PF=0 CQE_COMPRESSION=1 NUM_OF_VFS=0 HAIRPIN_DATA_BUFFER_LOCK=1 MEMIC_SIZE_LIMIT=0 PCI_WR_ORDERING=1"
-
-    output=$(eval "${COMMAND}")
-
-    ERROR_CODE="$?"
-
-    if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
-        echo "${output}"
-        failure_msg="${output#*Fail : }"
-        ExitFailure "FW Update command: ${COMMAND} failed with error: ${failure_msg}"
-    fi
+    RunCmd "${MFT_DIAGNOSIS_FLAGS} flint $@ burn"
+    RunCmd "mlxconfig -d ${_MST_DEVICE} -y r"
 }
 
 function GetAvailableFwVersion() {
@@ -523,6 +514,18 @@ function ClearSemaphore() {
     fi
 }
 
+function ResetFirmwareConfig() {
+    local -r _MST_DEVICE="$(GetSPCMstDevice)"
+
+    if [[ "${_MST_DEVICE}" = "${UNKN_MST}" ]]; then
+        ExitFailure "Could not find MST device for firmware reset"
+    fi
+
+    LogInfo "Resetting firmware configuration for device ${_MST_DEVICE}"
+    RunCmd "mlxconfig -d ${_MST_DEVICE} -y r"
+    LogInfo "Firmware configuration reset completed successfully"
+}
+
 trap Cleanup EXIT
 
 ParseArguments "$@"
@@ -534,6 +537,11 @@ LockStateChange
 WaitForDevice
 
 ClearSemaphore
+
+if [[ "${RESET_CONFIG}" = "${YES_PARAM}" ]]; then
+    ResetFirmwareConfig
+    ExitSuccess "firmware configuration reset completed"
+fi
 
 if [ "${IMAGE_UPGRADE}" != "${YES_PARAM}" ]; then
     UpgradeFW
