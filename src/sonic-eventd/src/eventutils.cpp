@@ -1,6 +1,4 @@
 #include "eventutils.h"
-#include <swss/logger.h>
-#include <swss/table.h>
 #include <string.h>
 #include <cstdlib>
 #include <iostream>
@@ -9,7 +7,8 @@
 #include <vector>
 #include <unistd.h>
 #include <nlohmann/json.hpp>
-
+#include "logger.h"
+#include "table.h"
 
 using namespace swss;
 using json = nlohmann::json;
@@ -57,7 +56,7 @@ bool parse(const char *filename, EventMap& tmp_event_table) {
     file >> j;
 
     if (j["events"].size() == 0) {
-        SWSS_LOG_ERROR("No entries in 'events' field in %s", filename);
+        SWSS_LOG_NOTICE("No entries in 'events' field in %s", filename);
         return false;
     }
 
