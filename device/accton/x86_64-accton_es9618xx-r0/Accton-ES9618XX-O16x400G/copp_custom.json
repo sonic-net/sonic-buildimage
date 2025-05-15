@@ -1,0 +1,8 @@
+{
+    "COPP_TRAP": {
+      "snmp": {
+        "trap_ids": "snmp",
+        "trap_group": "queue4_group1"
+      }
+    }
+}

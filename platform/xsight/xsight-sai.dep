@@ -1,0 +1,26 @@
+#DPKG FRK
+SPATH       := $($(XSIGHT_LIBSAI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/xsight-sai.mk $(PLATFORM_PATH)/xsight-sai.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# Get the Latest HTTP Header and calculate the SHA value as it is a softlink that always points to LATEST_INT_OCP_SAI_X.X.X
+SAI_FLAGS   := $(shell wget --spider --server-response $($(XSIGHT_LIBSAI)_URL) $($(XSIGHT_LIBSAI_DEV)_URL) $($(XSIGHT_XBM)_URL) 2>&1 \
+			   | grep -Ev -- '--|Date:|x-ms-request-id'|sha256sum|awk '{print $$1}' )
+ifeq ($(XBM_EXISTS),y)
+SAI_FLAGS   += $(shell SKIP_BUILD_HOOK=y wget --spider --server-response $($(XSIGHT_XBM)_URL) 2>&1 \
+         | grep -Ev -- '--|Date:|x-ms-request-id'|sha256sum|awk '{print $$1}' )
+endif
+
+$(XSIGHT_LIBSAI)_CACHE_MODE  := GIT_CONTENT_SHA
+$(XSIGHT_LIBSAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
+$(XSIGHT_LIBSAI)_DEP_FILES   := $(DEP_FILES)
+
+$(XSIGHT_LIBSAI_DEV)_CACHE_MODE  := GIT_CONTENT_SHA
+$(XSIGHT_LIBSAI_DEV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
+$(XSIGHT_LIBSAI_DEV)_DEP_FILES   := $(DEP_FILES)
+
+ifeq ($(XBM_EXISTS),y)
+$(XSIGHT_XBM)_CACHE_MODE  := GIT_CONTENT_SHA
+$(XSIGHT_XBM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
+$(XSIGHT_XBM)_DEP_FILES   := $(DEP_FILES)
+endif
+

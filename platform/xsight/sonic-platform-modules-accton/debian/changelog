@@ -1,0 +1,6 @@
+sonic-accton-platform-modules (1.1) unstable; urgency=low
+
+  * Add support for Accton ES9632XX
+  * Initial release
+
+ -- Xsight Labs <support@xsightlabs.com>  Wed, 14 Apr 2021 12:52:27 +0000
