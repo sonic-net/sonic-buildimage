@@ -1485,6 +1485,7 @@ def parse_meta(meta, hname):
     downstream_subrole = None
     switch_id = None
     switch_type = None
+    switch_subtype = None
     max_cores = None
     kube_data = {}
     macsec_profile = {}
@@ -1527,6 +1528,8 @@ def parse_meta(meta, hname):
                     switch_id = value
                 elif name == "SwitchType":
                     switch_type = value
+                elif name == "SubType":
+                    switch_subtype = value
                 elif name == "MaxCores":
                     max_cores = value
                 elif name == "KubernetesEnabled":
@@ -1543,7 +1546,7 @@ def parse_meta(meta, hname):
                     qos_profile = value
                 elif name == "RackMgmtMap":
                     rack_mgmt_map = value
-    return syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map
+    return syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, switch_subtype, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map
 
 
 def parse_linkmeta(meta, hname):
@@ -2025,6 +2028,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     cloudtype = None
     switch_id = None
     switch_type = None
+    switch_subtype = None
     max_cores = None
     hostname = None
     linkmetas = {}
@@ -2091,7 +2095,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             elif child.tag == str(QName(ns, "UngDec")):
                 (u_neighbors, u_devices, _, _, _, _, _, _) = parse_png(child, hostname, None)
             elif child.tag == str(QName(ns, "MetadataDeclaration")):
-                (syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map) = parse_meta(child, hostname)
+                (syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, switch_subtype, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map) = parse_meta(child, hostname)
             elif child.tag == str(QName(ns, "LinkMetadataDeclaration")):
                 linkmetas = parse_linkmeta(child, hostname)
             elif child.tag == str(QName(ns, "DeviceInfos")):
@@ -2192,9 +2196,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
     elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':
-        # If a devive is SpineRouter but not a chassis, then it's a lower spine router
-        if not is_minigraph_for_chassis(chassis_type):
-            results['DEVICE_METADATA']['localhost']['subtype'] = 'LowerSpineRouter'
+        # If switch_subtype is set, then use the value from the minigraph
+        # Only limit this change to SpineRouter
+        if switch_subtype is not None:
+            results['DEVICE_METADATA']['localhost']['subtype'] = switch_subtype
         else:
             if macsec_enabled == 'True':
                 results['DEVICE_METADATA']['localhost']['subtype'] = 'UpstreamLC'
