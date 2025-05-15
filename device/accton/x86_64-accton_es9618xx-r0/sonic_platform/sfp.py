@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import struct
+import subprocess
 from ctypes import create_string_buffer
 
 try:
@@ -30,8 +31,6 @@ SFP_STATUS_REMOVED = '0'
 
 class Sfp(SfpOptoeBase):
     """Platform-specific Sfp class"""
-
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
 
     EEPROM_PATH = '/sys/bus/i2c/devices/{0}-0050/eeprom'
     CPLD_I2C_PATH = "/sys/bus/i2c/devices/"
@@ -95,9 +94,17 @@ class Sfp(SfpOptoeBase):
 
         return True
 
-    def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
-
+    def __is_host():
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return result.returncode == 0
+        except FileNotFoundError:
+            # 'docker' command is not found, assume not host (or minimal container)
+            return False
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self._api_helper.platform])
