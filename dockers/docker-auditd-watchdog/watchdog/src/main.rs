@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::process::Command;
+use regex::Regex;
 
 static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
@@ -115,6 +116,23 @@ fn check_auditd_reload_status() -> String {
     }
 }
 
+// Check auditd rate limit
+fn check_auditd_rate_limit_status() -> String {
+    let cmd = format!(r#"{NSENTER_CMD} auditctl -s"#);
+    match run_command(&cmd) {
+        Ok(s) => {
+            let re = Regex::new(r"rate_limit (?<rate>\d+)").unwrap();
+            let caps = re.captures(s).unwrap();
+            if caps["rate"] != "0" {
+                "OK".to_string()
+            } else {
+                format!("FAIL (rate_limit not set = {})", s)
+            }
+        }
+        Err(e) => format!("FAIL (error message = {})", e),
+    }
+}
+
 fn main() {
     // Start a HTTP server listening on port 50058
     let listener = TcpListener::bind("127.0.0.1:50058")
@@ -137,6 +155,7 @@ fn main() {
                 let srvc_result      = check_auditd_service();
                 let srvc_active      = check_auditd_active();
                 let reload_result    = check_auditd_reload_status();
+                let rate_limit_result = check_auditd_rate_limit_status();
 
                 // Build a JSON object
                 let json_body = format!(
@@ -146,14 +165,16 @@ fn main() {
   "auditd_rules":"{}",
   "auditd_service":"{}",
   "auditd_active":"{}",
-  "auditd_reload":"{}"
+  "auditd_reload":"{}",
+  "rate_limit":"{}"
 }}"#,
                     conf_result,
                     syslog_result,
                     rules_result,
                     srvc_result,
                     srvc_active,
-                    reload_result
+                    reload_result,
+                    rate_limit_result
                 );
 
                 // Determine overall status
@@ -163,7 +184,8 @@ fn main() {
                     &rules_result,
                     &srvc_result,
                     &srvc_active,
-                    &reload_result
+                    &reload_result,
+                    &rate_limit_result
                 ];
                 let all_passed = all_results.iter().all(|r| r.starts_with("OK"));
 
