@@ -1,0 +1,10 @@
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        },
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "30"
+        }
+    }
+}

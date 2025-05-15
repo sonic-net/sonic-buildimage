@@ -1,0 +1,5 @@
+# 05:00.0 Ethernet controller: Intel Corporation Ethernet Connection X552 10 GbE Backplane
+ACTION=="add", SUBSYSTEM=="net", KERNELS=="0000:05:00.0", NAME:="eth10g0"
+
+# 05:00.1 Ethernet controller: Intel Corporation Ethernet Connection X552 10 GbE Backplane
+ACTION=="add", SUBSYSTEM=="net", KERNELS=="0000:05:00.1", NAME:="eth10g1"

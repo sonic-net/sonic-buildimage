@@ -1,0 +1,9 @@
+# Xsight xplt tools package for es9618xx
+
+# Add platform specific tools
+
+ACCTON_ES9618XX_XPLT_PLATFORM_MODULE = xplt-es9618xx-sonicnos_3.3.3-51-g1a65a01_amd64.deb
+ES9618XX_XPLT_SRV = "https://raw.githubusercontent.com/Xsight-Labs/SONiC/main/amd64/utils/"
+$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_URL = $(ES9618XX_XPLT_SRV)$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)
+$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_PLATFORM = x86_64-accton_es9618xx-r0
+SONIC_ONLINE_DEBS += $(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)
