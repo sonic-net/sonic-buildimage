@@ -1680,7 +1680,7 @@ class SocketHandler:
 
  
 class Daemonizer:
-    """Facilitates the daemonization of the current process.
+    """Facilitates the daemonization of the current process. 
     
     This class provides methods to fork the process into the background,
     manage the process ID (PID), and redirect standard file descriptors
