@@ -44,7 +44,8 @@ class APIHelper():
 
     def run_interactive_command(self, cmd):
         try:
-            os.system(cmd)
+            args = shlex.split(cmd)
+            subprocess.run(args, check=True)
         except Exception:
             return False
         return True
