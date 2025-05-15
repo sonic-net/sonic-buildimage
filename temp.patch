@@ -1,0 +1,50 @@
+commit 2f0a37545d7f4ae99975f1cdc476792fdb734bd1
+Author: “harjosin” <“harjosin@cisco.com”>
+Date:   Thu May 15 14:44:54 2025 -0700
+
+    Addition of prober_type field for MUX_CABLE
+
+diff --git a/src/sonic-yang-models/tests/files/sample_config_db.json b/src/sonic-yang-models/tests/files/sample_config_db.json
+index d59a083c8..e83e4d144 100644
+--- a/src/sonic-yang-models/tests/files/sample_config_db.json
++++ b/src/sonic-yang-models/tests/files/sample_config_db.json
+@@ -2460,6 +2460,7 @@
+         "MUX_CABLE": {
+             "Ethernet4": {
+                 "cable_type": "active-active",
++                "prober_type": "software",
+                 "server_ipv4": "192.168.0.2/32",
+                 "server_ipv6": "fc02:1000::30/128",
+                 "soc_ipv4": "192.168.0.3/32",
+diff --git a/src/sonic-yang-models/tests/yang_model_tests/tests_config/mux_cable.json b/src/sonic-yang-models/tests/yang_model_tests/tests_config/mux_cable.json
+index 1a7030a77..4a6512d17 100644
+--- a/src/sonic-yang-models/tests/yang_model_tests/tests_config/mux_cable.json
++++ b/src/sonic-yang-models/tests/yang_model_tests/tests_config/mux_cable.json
+@@ -54,6 +54,7 @@
+                     {
+                         "ifname": "Ethernet4",
+                         "cable_type": "active-active",
++                        "prober_type": "software",
+                         "server_ipv4": "192.168.0.2/32",
+                         "server_ipv6": "fc02:1000::30/128",
+                         "soc_ipv4": "192.168.0.3/32",
+diff --git a/src/sonic-yang-models/yang-models/sonic-mux-cable.yang b/src/sonic-yang-models/yang-models/sonic-mux-cable.yang
+index c1f51e67e..7aa533faa 100644
+--- a/src/sonic-yang-models/yang-models/sonic-mux-cable.yang
++++ b/src/sonic-yang-models/yang-models/sonic-mux-cable.yang
+@@ -50,6 +50,15 @@ module sonic-mux-cable {
+                     description "SONiC DualToR interface cable type.";
+                 }
+ 
++                leaf prober_type {
++                    type enumeration {
++                        enum hardware;
++                        enum software;
++                    }
++                    default software;
++                    description "DualToR LinkMrgrd Icmp Prober mode.";
++                }
++
+                 leaf server_ipv4 {
+                     type inet:ipv4-prefix;
+ 
