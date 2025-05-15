@@ -1,0 +1,11 @@
+#DPKG FRK
+SPATH       := $($(XPCI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/xpci.mk $(PLATFORM_PATH)/xpci/Makefile $(PLATFORM_PATH)/xpci.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# Get the Latest HTTP Header and calculate the SHA value as it is a softlink that always points to LATEST_INT_OCP_SAI_X.X.X
+XPCI_FLAGS   := $(shell wget --spider --server-response $($(XPCI)_URL) 2>&1 \
+			   | grep -Ev -- '--|Date:|x-ms-request-id'|sha256sum|awk '{print $$1}' )
+
+$(XPCI)_CACHE_MODE  := GIT_CONTENT_SHA
+$(XPCI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(XPCI_FLAGS)
+$(XPCI)_DEP_FILES   := $(DEP_FILES)
