@@ -1,5 +1,6 @@
 #include <thread>
 #include <memory>
+#include <malloc.h>
 #include "eventd.h"
 #include "dbconnector.h"
 #include "zmq.h"
@@ -681,7 +682,7 @@ run_eventd_service()
     RET_ON_ERR(stats_instance.is_running(), "Failed to start stats instance");
 
     while(code != EVENT_EXIT) {
-        int resp = -1;
+        int resp = -1, rv = -1;
         event_serialized_lst_t req_data, resp_data;
 
         RET_ON_ERR(service.channel_read(code, req_data) == 0,
@@ -730,6 +731,12 @@ run_eventd_service()
                 }
                 capture.reset();
 
+                rv = malloc_trim(0);
+                if (rv == 1) {
+                    SWSS_LOG_INFO("Memory released successfully");
+                } else {
+                    SWSS_LOG_INFO("No memory released by malloc_trim");
+                }
                 /* Unpause heartbeat upon stop caching */
                 stats_instance.heartbeat_ctrl();
                 break;
