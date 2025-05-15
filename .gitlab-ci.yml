@@ -107,9 +107,10 @@ build:sonic-gbsyncd:x86_64:
     - sed -i 's,^$(LIBSAI_MILLENIOB)_URL =,$(LIBSAI_MILLENIOB)_URL ="http://sonic-pluto.wfr.ion.nokia.net/files/sonic/build/pai/pai-3.14/1003120/libsaimilleniob_$(LIBSAI_MILLENIOB_VERSION)~13_amd64.deb",'  platform/components/docker-gbsyncd-milleniob.mk
   variables:
     BUILD_ARCH: x86_64
-    TARGET_BIN: sonic-broadcom.bin
+    TARGET_BIN: sonic-broadcom.bin sonic-broadcom-dnx.bin
   after_script:
     - mv target/sonic-broadcom.bin target/sonic-broadcom-gbsyncd.bin
+    - mv target/sonic-broadcom-dnx.bin target/sonic-broadcom-dnx-gbsyncd.bin
 
 build:sonic:x86_64:
   extends: .build:sonic
