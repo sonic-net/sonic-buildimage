@@ -42,6 +42,14 @@ COMMON_TEST_DATA = [
                             "192.0.0.2"
                         ]
                     }
+                },
+                "DHCPV4_RELAY": {
+                    "Vlan1000": {
+                        "dhcpv4_servers": [
+                            "192.0.0.1",
+                            "192.0.0.2"
+                        ]
+                    }
                 }
             }
         }
