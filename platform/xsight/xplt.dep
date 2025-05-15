@@ -1,0 +1,11 @@
+#DPKG FRK
+SPATH       := $($(XPCI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/xplt.mk $(PLATFORM_PATH)/xplt.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+# Get the Latest HTTP Header and calculate the SHA value as it is a softlink that always points to LATEST_INT_OCP_SAI_X.X.X
+XPLT_FLAGS   := $(shell wget --spider --server-response $( $(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_URL) 2>&1 \
+			   | grep -Ev -- '--|Date:|x-ms-request-id'|sha256sum|awk '{print $$1}' )
+
+$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA
+$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(XPLT_FLAGS)
+$(ACCTON_ES9618XX_XPLT_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
