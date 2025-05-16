@@ -375,7 +375,10 @@
 {% if port in port_names_list_extra_queues %}
             "pfc_to_pg_map"   : "AZURE_DUALTOR",
 {% else %}
+{% if LOSSLESS_TC|length > 0 %}
             "pfc_to_pg_map"   : "AZURE",
+{% else %}
+            "pfc_to_pg_map"   : "",
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
@@ -387,11 +390,19 @@
             "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
 {% if port not in PORT_DPC %}
+{% if LOSSLESS_TC|length > 0 %}
             "tc_to_pg_map"    : "AZURE",
+{% else %}
+            "tc_to_pg_map"   : "",
+{% endif %}
 {% else %}
             "tc_to_pg_map"    : "AZURE_DPC",
 {% endif %}
+{% if LOSSLESS_TC|length > 0 %}
             "pfc_to_queue_map": "AZURE"
+{% else %}
+            "pfc_to_queue_map"   : ""
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
