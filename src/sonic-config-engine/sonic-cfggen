@@ -228,6 +228,13 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                 if new_key != key:
                     data[new_key] = data.pop(key)
                 data[new_key] = FormatConverter.to_serialized(data[new_key])
+
+        # Ensure boolean values are returned as lowercase 'true' and 'false'
+        # to prevent yang validation failures.
+        if type(data) is bool:
+            return 'true' if data else 'false'
+        if type(data) is str and data.lower() in [ "true", "false" ]:
+            return data.lower()
         return data
 
     @staticmethod
