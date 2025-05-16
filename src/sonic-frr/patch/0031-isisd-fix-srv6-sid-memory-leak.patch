@@ -1,0 +1,38 @@
+From 25c813ac382ba79270f40b85e168cdbcad499e2d Mon Sep 17 00:00:00 2001
+From: Louis Scalbert <louis.scalbert@6wind.com>
+Date: Wed, 16 Apr 2025 11:23:54 +0200
+Subject: [PATCH] isisd: fix srv6_sid memory leak
+
+Seen with isis_srv6_topo1 topotest.
+
+> ==178793==ERROR: LeakSanitizer: detected memory leaks
+>
+> Direct leak of 56 byte(s) in 1 object(s) allocated from:
+>     #0 0x7f3f63cb4a57 in __interceptor_calloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:154
+>     #1 0x7f3f6366f8dd in qcalloc lib/memory.c:105
+>     #2 0x561b810c62b7 in isis_srv6_sid_alloc isisd/isis_srv6.c:243
+>     #3 0x561b8111f944 in isis_zebra_srv6_sid_notify isisd/isis_zebra.c:1534
+>     #4 0x7f3f637df9d7 in zclient_read lib/zclient.c:4845
+>     #5 0x7f3f637779b2 in event_call lib/event.c:2011
+>     #6 0x7f3f63642ff1 in frr_run lib/libfrr.c:1216
+>     #7 0x561b81018bf2 in main isisd/isis_main.c:360
+>     #8 0x7f3f63029d8f in __libc_start_call_main ../sysdeps/nptl/libc_start_call_main.h:58
+
+Fixes: 0af0f4616d ("isisd: Receive SRv6 SIDs notifications from zebra")
+Signed-off-by: Louis Scalbert <louis.scalbert@6wind.com>
+---
+ isisd/isis_zebra.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/isisd/isis_zebra.c b/isisd/isis_zebra.c
+index 9d483c9368ac..15af9636ca92 100644
+--- a/isisd/isis_zebra.c
++++ b/isisd/isis_zebra.c
+@@ -1549,6 +1549,7 @@ static int isis_zebra_srv6_sid_notify(ZAPI_CALLBACK_ARGS)
+ 					isis_zebra_srv6_sid_uninstall(area, sid);
+ 					listnode_delete(area->srv6db.srv6_sids,
+ 							sid);
++					isis_srv6_sid_free(sid);
+ 				}
+ 
+ 				/* Allocate new SRv6 End SID */
