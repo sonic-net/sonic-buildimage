@@ -4,9 +4,14 @@
             "hwsku": "SS-DPU-1x400Gb",
             "hostname": "sonic",
             "switch_type": "dpu",
-            "type": "SonicDpu",
+            "type": "SmartSwitchDPU",
             "subtype": "SmartSwitch",
             "bgp_asn": "65100"
+        }
+    },
+    "SYSTEM_DEFAULTS": {
+        "software_bfd": {
+            "status": "enabled"
         }
     },
     "PORT": {
@@ -71,6 +76,11 @@
             "dash_ipv6_acl_rule_threshold_type": "percentage",
             "dash_ipv6_acl_rule_low_threshold": "70",
             "dash_ipv6_acl_rule_high_threshold": "85"
+        }
+    },
+    "NTP_SERVER": {
+        "169.254.200.254": {
+            "iburst": "on"
         }
     }
 }

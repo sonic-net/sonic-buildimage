@@ -35,18 +35,20 @@ check_root_privileges() {
 # Function to check if the device is supported device with type spine routers and subtype UpstreamLC
 check_spine_router() {
     type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
-    sub_type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.sub_type)
-    
-    # only supported on spine routers and UpstreamLC
-    if [[ "$type" != "SpineRouter" ||  "$sub_type" != "UpstreamLC" ]]; then
-        echo "Operation is only supported on UpstreamLC of SpineRouter." >&2
-        exit 1
+    subtype=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
+
+    # only supported on UpstreamLC or UpperSpineRouter
+    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]
+        exit 0
     fi
+
+    echo "Operation is only supported on Upstream SpineRouter." >&2
+    exit 1
 }
 
 # Function to skip operation on chassis supervisor
 skip_chassis_supervisor() {
-    if [ -f /etc/sonic/chassisdb.conf ]; then  
+    if [ -f /etc/sonic/chassisdb.conf ]; then
         echo "Skipping Operation on chassis supervisor"
         exit 0
     fi
@@ -72,12 +74,19 @@ validate_operation() {
     fi
 
     # Check if the prefix type is supported or not if the operation is not status
-    if [ $1 != "status" ]; then
-        for prefix_type in "${supported_prefix_types[@]}"; do
-        if [[ "$2" == "$prefix_type" ]]; then
-            valid_prefix_type=true
-            break
+    if [ "$1" == "status" ]; then
+        if [ -n "$2" ]; then
+            echo "No additional parameters required for status operation." >&2
+            echo ""
+            display_help
+            exit 1
         fi
+    else
+        for prefix_type in "${supported_prefix_types[@]}"; do
+            if [[ "$2" == "$prefix_type" ]]; then
+                valid_prefix_type=true
+                break
+            fi
         done
 
         if [ $valid_prefix_type == false ]; then
@@ -144,7 +153,9 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     display_help
 fi
 
-check_root_privileges
+if [ "$1" != "status" ]; then
+    check_root_privileges
+fi
 check_spine_router
 skip_chassis_supervisor
 
@@ -162,7 +173,7 @@ ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
 if [[ ($NUM_ASIC -gt 1) ]]; then
     asic=0
     while [ $asic -lt $NUM_ASIC ]
-    do        
+    do
         sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n asic$asic`
         if [ $sub_role == 'FrontEnd' ]; then
             handle_prefix_list_asic $asic $1 $2 $3

@@ -71,7 +71,7 @@
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
+            "dynamic_th":"7"
         },
         "egress_lossless_profile": {
             "pool":"egress_lossless_pool",
@@ -81,22 +81,42 @@
         "egress_lossy_profile": {
             "pool":"egress_lossy_pool",
             "size":"9216",
-            "dynamic_th":"7"
+            "dynamic_th":"-6"
         },
-        "q_lossy_profile": {
+        "queue0_lossy_profile": {
             "pool":"egress_lossy_pool",
             "size":"0",
             "dynamic_th":"0"
         },
-        "q_lossy_minus_7_profile": {
+        "queue1_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"0"
+        },
+        "queue2_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"0"
+        },
+        "queue3_lossy_profile": {
+            "pool":"egress_lossy_pool",
+            "size":"0",
+            "dynamic_th":"0"
+        },
+        "queue4_lossy_profile": {
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th" : "-7"
+            "dynamic_th" : "7"
         },
-        "q_lossy_minus_3_profile": {
+        "queue5_lossy_profile": {
             "pool": "egress_lossy_pool",
             "size": "0",
             "dynamic_th" : "-3"
+        },
+        "queue6_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th" : "0"
         }
     },
 {%- endmacro %}
@@ -148,40 +168,62 @@
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
     "BUFFER_QUEUE": {
-{% if dynamic_mode is not defined %}
 {% for port in port_names_active.split(',') %}
         "{{ port }}|0": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue0_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
-        "{{ port }}|1-3": {
-            "profile" : "q_lossy_minus_7_profile"
+        "{{ port }}|1": {
+            "profile" : "queue1_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
+        "{{ port }}|2": {
+            "profile" : "queue2_lossy_profile"
+        },
+        "{{ port }}|3": {
+            "profile" : "queue3_lossy_profile"
+        },
         "{{ port }}|4": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue4_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
         "{{ port }}|5": {
-            "profile" : "q_lossy_minus_3_profile"
+            "profile" : "queue5_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
         "{{ port }}|6": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue6_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
+{% if dynamic_mode is defined %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
-       {%- if loop.first -%},{%- endif -%}
-        "{{ port }}|1-6": {
+        "{{ port }}|0": {
+            "profile" : "queue0_lossy_profile"
+        },
+        "{{ port }}|1": {
+            "profile" : "queue1_lossy_profile"
+        },
+        "{{ port }}|2": {
+            "profile" : "queue2_lossy_profile"
+        },
+        "{{ port }}|3": {
+            "profile" : "queue3_lossy_profile"
+        },
+        "{{ port }}|4": {
+            "profile" : "queue4_lossy_profile"
+        },
+        "{{ port }}|5": {
+            "profile" : "queue5_lossy_profile"
+        },
+        "{{ port }}|6": {
+            "profile" : "queue6_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+{% else %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|0-6": {
             "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
-
 {% endfor %}
 {% endif %}
 {% endif %}
