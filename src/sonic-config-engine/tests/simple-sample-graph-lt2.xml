@@ -530,7 +530,7 @@
       <a:Value>dummy_value</a:Value>
     </a:DeviceProperty>
     <a:DeviceProperty>
-      <a:Name>SubType</a:Name>
+      <a:Name>SubRole</a:Name>
       <a:Reference i:nil="true"/>
       <a:Value>LowerSpineRouter</a:Value>
     </a:DeviceProperty>

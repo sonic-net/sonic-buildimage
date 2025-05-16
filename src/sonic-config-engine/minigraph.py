@@ -1528,7 +1528,7 @@ def parse_meta(meta, hname):
                     switch_id = value
                 elif name == "SwitchType":
                     switch_type = value
-                elif name == "SubType":
+                elif name == "SubRole":
                     switch_subtype = value
                 elif name == "MaxCores":
                     max_cores = value
