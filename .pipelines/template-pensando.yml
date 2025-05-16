@@ -1,0 +1,56 @@
+parameters:
+- name: NAME
+  values:
+  - pensando
+- name: OPTIONS
+  type: string
+- name: CACHE
+  type: string
+- name: BRANCH_FOLDER
+  type: string
+
+jobs:
+  - job: ${{ replace(parameters.NAME, '-', '_') }}
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      timeoutInMinutes: 840
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-arm64
+    variables:
+      TERM: ''
+      ob_artifactBaseName: sonic-buildimage.${{ parameters.NAME }}
+    steps:
+    - template: /.pipelines/template-presteps.yml@self
+      parameters:
+        PLATFORM_NAME: pensando
+        PLATFORM_ARCH: arm64
+        OPTIONS: ${{ parameters.OPTIONS }}
+    - script: |
+        pensando_ref=$(cat platform/checkout/${{ parameters.NAME }}.ini | grep '^ref=' | cut -d= -f2)
+        echo "The pensando release version is $pensando_ref"
+        echo "##vso[task.setvariable variable=pensando.ref]$pensando_ref"
+      displayName: 'Export pensando release version'
+    - task: DownloadGitHubRelease@0
+      inputs:
+        connection: pensando-connection
+        userRepository: pensando/pensando-sonic-artifacts
+        defaultVersionType: specificTag
+        version: $(pensando.ref)
+        itemPattern: |
+          **/*.gz
+          **/*.deb
+        downloadPath: '$(System.ArtifactsDirectory)'
+    - script: |
+        cp $(System.ArtifactsDirectory)/*.gz platform/pensando/pensando-sonic-artifacts
+        cp $(System.ArtifactsDirectory)/*.deb platform/pensando/pensando-sonic-artifacts
+      displayName: 'Setup pensando artifacts'
+    - script: |
+        set -ex
+        OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }}"
+        make $OPTIONS target/sonic-pensando.tar
+      displayName: Build SONiC image
+    - template: /.pipelines/template-poststeps.yml@self
+      parameters:
+        PLATFORM_NAME: ${{ parameters.NAME }}
+        BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}

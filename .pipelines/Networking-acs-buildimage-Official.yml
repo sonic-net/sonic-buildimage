@@ -38,6 +38,10 @@ resources:
       type: github
       name: Cisco-8000-sonic/platform-cisco-8000
       endpoint: cisco-connection
+    - repository: pensando
+      type: github
+      name: pensando/pensando-sonic-artifacts
+      endpoint: pensando-connection
 parameters:
 - name: BRANCH_FOLDER
   default: 'default'
@@ -50,7 +54,8 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-#  - nvidia-bluefield
+  - nvidia-bluefield
+  - pensando
 extends:
   template: v2/OneBranch.Official.CBWorkflow.yml@templates # https://aka.ms/obpipelines/templates
   parameters:

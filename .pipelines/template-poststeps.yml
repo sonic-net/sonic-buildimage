@@ -11,6 +11,7 @@ parameters:
       - cisco-8000
       - cisco-8000-smartswitch
       - nvidia-bluefield
+      - pensando
   - name: BRANCH_FOLDER
     default: 'default'
 

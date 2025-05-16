@@ -16,6 +16,7 @@ parameters:
       - marvell-prestera
       - cisco-8000
       - nvidia-bluefield
+      - pensando
   - name: OPTIONS
     type: string
 
@@ -33,6 +34,12 @@ steps:
       submodules: recursive
       path: s/platform/cisco-8000
       displayName: 'Checkout cisco-8000'
+  - ${{ if eq(parameters.PLATFORM_NAME, 'pensando') }}:
+    - checkout: pensando
+      clean: true
+      submodules: recursive
+      path: s/platform/pensando/pensando-sonic-artifacts
+      displayName: 'Checkout pensando-sonic-artifacts'
   - script: |
       unset REGISTRY_SERVER
       mkdir -p target/release

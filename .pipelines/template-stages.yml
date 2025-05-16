@@ -244,3 +244,10 @@ stages:
           OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SMARTSWITCH_AZS=y'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+    - ${{ if containsValue(parameters.JOBS, 'pensando') }}:
+      - template: template-pensando.yml
+        parameters:
+          NAME: pensando
+          OPTIONS: ${{ parameters.OPTIONS }} NOBULLSEYE=0
+          CACHE: ${{ parameters.CACHE }}
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}

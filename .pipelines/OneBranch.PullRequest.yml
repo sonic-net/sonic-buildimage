@@ -22,6 +22,10 @@ resources:
     type: git
     name: One/Networking-acs-buildimage
     ref: internal
+  - repository: pensando
+    type: github
+    name: pensando/pensando-sonic-artifacts
+    endpoint: pensando-connection
 
 parameters:
 - name: BRANCH_FOLDER
@@ -35,7 +39,8 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-#  - nvidia-bluefield
+  - nvidia-bluefield
+  - pensando
 variables:
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
