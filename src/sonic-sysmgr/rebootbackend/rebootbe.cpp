@@ -121,6 +121,29 @@ void RebootBE::SendNotificationResponse(const std::string key,
   m_RebootResponse.send(key, swss::statusCodeToStr(code), ret_values);
 }
 
+NotificationResponse RebootBE::send_dbus_reboot_status_request(
+    const std::string &jsonStatusRequest) {
+  SWSS_LOG_ENTER();
+  SWSS_LOG_NOTICE("Sending reboot status request to platform");
+
+  NotificationResponse response = {.status = swss::StatusCode::SWSS_RC_SUCCESS,
+                                      .json_string = ""};
+
+  // Send a request to the reboot host service via dbus.
+  DbusInterface::DbusResponse dbus_response =
+      m_dbus.RebootStatus(jsonStatusRequest);
+
+  if (dbus_response.status == DbusInterface::DbusStatus::DBUS_FAIL) {
+    SWSS_LOG_ERROR("Failed to send reboot status request to platform: %s",
+                    dbus_response.json_string.c_str());
+    response.status = swss::StatusCode::SWSS_RC_INTERNAL;
+    return response;
+  }
+
+  response.json_string = dbus_response.json_string;
+  return response;
+}
+
 NotificationResponse RebootBE::HandleRebootRequest(
     const std::string &jsonRebootRequest) {
   using namespace gpu;
@@ -193,6 +216,11 @@ bool RebootBE::RebootAllowed(const gnoi::system::RebootMethod rebMethod) {
 NotificationResponse RebootBE::HandleStatusRequest(
     const std::string &jsonStatusRequest) {
   SWSS_LOG_ENTER();
+
+  //For Halt reboot, we need to send the status request to the platform
+  if (m_CurrentStatus == RebManagerStatus::HALT_REBOOT_IN_PROGRESS) {
+    return send_dbus_reboot_status_request(jsonStatusRequest);
+  }
 
   gnoi::system::RebootStatusResponse reboot_response =
       m_RebootThread.GetResponse();
