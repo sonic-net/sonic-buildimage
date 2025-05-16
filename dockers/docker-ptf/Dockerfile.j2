@@ -6,7 +6,7 @@ FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
 {% elif PTF_ENV_PY_VER == "mixed" %}
 FROM {{ prefix}}debian:buster
 {% else %}
-FROM {{ prefix }}debian:bullseye
+FROM {{ prefix }}debian:bookworm
 {% endif %}
 
 {% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
