@@ -3,6 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = rasdaemon_$(RASDAEMON_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = rasdaemon-dbgsym_$(RASDAEMON_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf rasdaemon/
@@ -20,4 +21,6 @@ else
 endif
 	popd
 
-	mv $* $(DEST)/
+	mv $(DERIVED_TARGETS) $* $(DEST)/
+
+$(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
