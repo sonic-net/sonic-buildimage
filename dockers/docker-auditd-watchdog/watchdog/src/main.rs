@@ -122,8 +122,8 @@ fn check_auditd_rate_limit_status() -> String {
     match run_command(&cmd) {
         Ok(s) => {
             let re = Regex::new(r"rate_limit (?<rate>\d+)").unwrap();
-            let caps = re.captures(s).unwrap();
-            if caps["rate"] != "0" {
+            let caps = re.captures(&s).unwrap();
+            if &caps["rate"] != "0" {
                 "OK".to_string()
             } else {
                 format!("FAIL (rate_limit not set = {})", s)
