@@ -222,6 +222,17 @@ install_pip_package {{pddf_platform_api_base_py3_wheel_path}}
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift==0.13.0
 {% endif %}
 
+{# Xsight platform files and packages #}
+{% if sonic_asic_platform == "xsight" %}
+
+## X2 scripts
+sudo cp -a platform/xsight/files/xlx $FILESYSTEM_ROOT/opt/
+sudo chmod +x $FILESYSTEM_ROOT/opt/xlx/*.sh
+sudo LANG=C chroot $FILESYSTEM_ROOT chown -R $USERNAME /opt/xlx
+sudo cp -a platform/xsight/files/link/* $FILESYSTEM_ROOT/lib/systemd/network/
+
+{% endif %}
+
 # Install system-health Python 3 package
 install_pip_package {{system_health_py3_wheel_path}}
 
