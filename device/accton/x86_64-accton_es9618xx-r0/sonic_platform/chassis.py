@@ -172,23 +172,24 @@ class Chassis(ChassisBase):
         try:
             cmd = "i2cget -f -y 0 0x21 0x30"
             sts, res = self._api_helper.run_command(cmd)
-            if sts == True and res == b'0x01':
-                retval = (self.REBOOT_CAUSE_POWER_LOSS, "Power On Reset")
-            if sts == True and res == b'0x02':
-                retval = (self.REBOOT_CAUSE_WATCHDOG, "EC Watchdog Reset")
-            if sts == True and res == b'0x04':
-                retval = (self.REBOOT_CAUSE_HARDWARE_BUTTON, "Power Button Reset")
-            if sts == True and res == b'0x08':
-                retval = (self.REBOOT_CAUSE_HARDWARE_BUTTON, "Reset Button Reset")
-            if sts == True and res == b'0x10':
-                retval = (self.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Warm Reset")
-            if sts == True and res == b'0x20':
-                retval = (self.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Cold Reset")
-            if sts == True and res == b'0x40':
-                retval = (self.REBOOT_CAUSE_WATCHDOG, "CPU Watchdog Reset")
-            if sts == True and res == b'0x80':
-                retval = (self.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, "EC DIMM Critical Threshold Reset")
-        except:
+            if sts:
+                if res == '0x01':
+                    retval = (self.REBOOT_CAUSE_POWER_LOSS, "Power On Reset")
+                elif res == '0x02':
+                    retval = (self.REBOOT_CAUSE_WATCHDOG, "EC Watchdog Reset")
+                elif res == '0x04':
+                    retval = (self.REBOOT_CAUSE_HARDWARE_BUTTON, "Power Button Reset")
+                elif res == '0x08':
+                    retval = (self.REBOOT_CAUSE_HARDWARE_BUTTON, "Reset Button Reset")
+                elif res == '0x10':
+                    retval = (self.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Warm Reset")
+                elif res == '0x20':
+                    retval = (self.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Cold Reset")
+                elif res == '0x40':
+                    retval = (self.REBOOT_CAUSE_WATCHDOG, "CPU Watchdog Reset")
+                elif res == '0x80':
+                    retval = (self.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, "EC DIMM Critical Threshold Reset")
+        except Exception:
             pass
 
         return retval
