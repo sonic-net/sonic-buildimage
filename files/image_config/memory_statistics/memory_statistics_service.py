@@ -497,7 +497,7 @@ class TimeProcessor:
             "start_day": remaining_days['start_day'],
             "end_day": remaining_days['end_day']
         }
-
+ 
 
 class MemoryReportGenerator:
     """
