@@ -16,11 +16,104 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-declare -A rshim2dpu
 
-command_name="sonic-bfb-installer.sh"
+
+# Lock file to prevent multiple instances
+LOCK_FILE="/var/lock/sonic-bfb-installer.lock"
+LOCK_FD=200
+
+# Function to log messages with priority
+log() {
+    local priority=$1
+    local message=$2
+
+    # Always log to syslog
+    logger -p "$priority" -t "$(basename "$0")" "$message"
+
+    echo "$message"
+}
+
+# Helper functions for different log levels
+log_error() {
+    log "error" "$1"
+}
+
+log_warning() {
+    log "warning" "$1" 
+}
+
+log_info() {
+    log "info" "$1"
+}
+
+log_debug() {
+    log "debug" "$1"
+}
+
+# Function to acquire lock
+acquire_lock() {
+    eval "exec $LOCK_FD>'$LOCK_FILE'"
+    if ! flock -n $LOCK_FD; then
+        log_error "Another instance of $(basename "$0") is already running"
+        exit 1
+    fi
+    echo $$ > "$LOCK_FILE"
+}
+
+# Function to release lock
+release_lock() {
+    flock -u $LOCK_FD
+    eval "exec $LOCK_FD>&-"
+    rm -f "$LOCK_FILE"
+}
+
+# Acquire lock at script start
+acquire_lock
+trap 'release_lock' EXIT
+
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+PLATFORM=${PLATFORM:-`sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform`}
+PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+
+declare -A rshim2dpu
+declare -r bfsoc_dev_id="15b3:c2d5"
+declare -r cx7_dev_id="15b3:a2dc"
+
+# Local functions to replace dpumap.sh
+rshim2dpu_map() {
+    local rshim=$1
+    # Extract DPU name from platform.json for the given rshim
+    local dpu=$(jq -r --arg rshim "$rshim" '.DPUS | to_entries[] | select(.value.rshim_info == $rshim) | .key' "$PLATFORM_JSON")
+    if [ -z "$dpu" ]; then
+        return 1
+    fi
+    echo "$dpu"
+    return 0
+}
+
+dpu2rshim_map() {
+    local dpu=$1
+    # Extract rshim bus info from platform.json for the given DPU
+    local rshim=$(jq -r --arg dpu "$dpu" '.DPUS[$dpu].rshim_info // empty' "$PLATFORM_JSON")
+    if [ -z "$rshim" ]; then
+        return 1
+    fi
+    echo "$rshim"
+    return 0
+}
+
+list_dpus_map() {
+    # Extract DPU names from platform.json
+    local dpus=$(jq -r '.DPUS | keys[]' "$PLATFORM_JSON")
+    if [ -z "$dpus" ]; then
+        return 1
+    fi
+    echo "$dpus"
+    return 0
+}
+
 usage(){
-    echo "Syntax: $command_name -b|--bfb <BFB_Image_Path> --rshim|-r <rshim1,..rshimN> --dpu|-d <dpu1,..dpuN> --verbose|-v --config|-c <Options> --help|-h"
+    echo "Syntax: $(basename "$0") -b|--bfb <BFB_Image_Path> --rshim|-r <rshim1,..rshimN> --dpu|-d <dpu1,..dpuN> --verbose|-v --config|-c <Options> --help|-h"
     echo "Arguments:"
     echo "-b|--bfb		Provide custom path for bfb image"
     echo "-r|--rshim		Install only on DPUs connected to rshim interfaces provided, mention all if installation is required on all connected DPUs"
@@ -30,6 +123,49 @@ usage(){
     echo "-h|--help		Help"
 }
 WORK_DIR=`mktemp -d -p "$DIR"`
+
+validate_platform(){
+    if [[ ! -f $PLATFORM_JSON ]]; then
+        log_error "platform.json file not found. Exiting script"
+        exit 1
+    fi
+}
+
+# Function to detect PCI device for a DPU and device ID
+detect_pcie() {
+    local dpu=$1
+    local device_id=$2
+    local bus_info rshim_bus_info
+
+    # Get bus_info and rshim_bus_info for this DPU from platform.json
+    bus_info=$(jq -r --arg dpu "$dpu" '.DPUS[$dpu].bus_info // empty' "$PLATFORM_JSON")
+    rshim_bus_info=$(jq -r --arg dpu "$dpu" '.DPUS[$dpu].rshim_bus_info // empty' "$PLATFORM_JSON")
+
+    # Check if bus_info exists and device matches device ID
+    if [ -n "$bus_info" ] && lspci -D -n | grep "${bus_info}" | grep -q "${device_id}"; then
+        echo "$bus_info"
+        return 0
+    fi
+
+    # Check if rshim_bus_info exists and device matches device ID
+    if [ -n "$rshim_bus_info" ] && lspci -D -n | grep "${rshim_bus_info}" | grep -q "${device_id}"; then
+        echo "$rshim_bus_info"
+        return 0
+    fi
+
+    return 1
+}
+
+# Function to detect the BlueField SoC PCI device for a DPU
+detect_bfsoc_pcie() {
+    local dpu=$1
+    detect_pcie "$dpu" "${bfsoc_dev_id}"
+}
+
+detect_cx_pcie() {
+    local dpu=$1
+    detect_pcie "$dpu" "${cx7_dev_id}"
+}
 
 wait_for_rshim_boot() {
     local -r rshim=$1
@@ -41,24 +177,23 @@ wait_for_rshim_boot() {
     done
 
     if [ ! -e "/dev/${rshim}/boot" ]; then
-        echo "$rshim: Error: Boot file did not appear after 10 seconds"
+        log_error "$rshim: Error: Boot file did not appear after 10 seconds"
         return 1
     fi
     return 0
 }
 
-remove_pci_device() {
+remove_cx_pci_device() {
     local -r rshim=$1
     local -r dpu=$2
     
     # Get bus_id and rshim_bus_id for this DPU
-    local bus_id=$(dpumap.sh dpu2pcie $dpu)
-    local rshim_bus_id=$(dpumap.sh rshim2pcie $rshim)
+    local bus_id=$(detect_cx_pcie $dpu)
 
-    # Check if both bus_id and rshim_bus_id devices exist
-    if [ -n "$bus_id" ] && [ -n "$rshim_bus_id" ]; then
-        if lspci -D | grep -q "$bus_id" && lspci -D | grep -q "$rshim_bus_id"; then
-            echo "$rshim: Removing PCI device $bus_id"
+    # Check if bus_id device exists
+    if [ -n "$bus_id" ]; then
+        if lspci -D | grep -q "$bus_id"; then
+            log_info "$rshim: Removing PCI device $bus_id"
             echo 1 > /sys/bus/pci/devices/$bus_id/remove
         fi
     fi
@@ -76,12 +211,41 @@ monitor_installation() {
     while kill -0 $pid 2>/dev/null; do
         sleep $interval
         elapsed=$((elapsed + interval))
-        echo -ne "\r$rid: Installing... $elapsed/$total_time seconds elapsed"
+        # Use printf with \r for proper line handling
+        printf "\r%s: Installing... %d/%d seconds elapsed" "$rid" "$elapsed" "$total_time"
         if [ $elapsed -ge $total_time ]; then
             break
         fi
     done
-    echo
+    # Add newline after progress
+    printf "\n"
+}
+
+# Function to start rshim daemon
+start_rshim_daemon() {
+    local -r rid=$1
+    local -r pci_bus=$2
+    
+    if ! start-stop-daemon --start --quiet --background \
+        --make-pidfile --pidfile "/var/run/rshim_${rid}.pid" \
+        --exec /usr/sbin/rshim -- -f -i "$rid" -d "pcie-$pci_bus"; then
+        log_error "Failed to start rshim for rshim$rid"
+        return 1
+    fi
+    return 0
+}
+
+# Function to stop rshim daemon
+stop_rshim_daemon() {
+    local -r rid=$1
+    local -r pid_file="/var/run/rshim_${rid}.pid"
+    
+    # Only try to stop if pidfile exists
+    if [ -f "$pid_file" ]; then
+        start-stop-daemon --stop --quiet --pidfile "$pid_file" --remove-pidfile --retry TERM/15/KILL/5 2>/dev/null
+    fi
+    
+    return 0
 }
 
 bfb_install_call() {
@@ -93,26 +257,38 @@ bfb_install_call() {
     local -r result_file=$(mktemp "${WORK_DIR}/result_file.XXXXX")
     local -r timeout_secs=1200
     
-    # Start rshim service and ensure it's stopped on exit
-    systemctl start rshim@${rid}.service
-    trap "systemctl stop rshim@${rid}.service" EXIT
+    # Get PCI bus info for the DPU
+    local pci_bus=$(detect_bfsoc_pcie "$dpu")
+    if [ -z "$pci_bus" ]; then
+        log_error "Error: Could not find PCI bus for DPU $dpu"
+        exit 1
+    fi
+
+    # Start rshim application
+    if ! start_rshim_daemon "$rid" "$pci_bus"; then
+        exit 1
+    fi
+    
+    # Ensure rshim is stopped on exit
+    trap "stop_rshim_daemon $rid" EXIT
 
     # Wait for boot file and remove PCI device
     if ! wait_for_rshim_boot "$rshim"; then
+        stop_rshim_daemon "$rid"
         exit 1
     fi
-    remove_pci_device "$rshim" "$dpu"
+    remove_cx_pci_device "$rshim" "$dpu"
 
     # Construct bfb-install command
     local cmd="timeout ${timeout_secs}s bfb-install -b $bfb -r $rshim"
     if [ -n "$appendix" ]; then
         cmd="$cmd -c $appendix"
     fi
-    echo "Installing bfb image on DPU connected to $rshim using $cmd"
+    log_info "Installing bfb image on DPU connected to $rshim using $cmd"
 
     # Run installation with progress monitoring
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
-    eval "$cmd" > >(while IFS= read -r line; do echo "$rid: $line"; done >> "$result_file") 2>&1 &
+    eval "$cmd" > >(while IFS= read -r line; do printf "%s: %s\n" "$rid" "$line"; done >> "$result_file") 2>&1 &
     local cmd_pid=$!
 
     monitor_installation "$rid" $cmd_pid $timeout_secs
@@ -121,9 +297,9 @@ bfb_install_call() {
     wait $cmd_pid
     local exit_status=$?
     if [ $exit_status -ne 0 ]; then
-        echo "$rid: Error: Installation failed on connected DPU!"
+        log_error "$rid: Error: Installation failed on connected DPU!"
     else
-        echo "$rid: Installation Successful"
+        log_info "$rid: Installation Successful"
     fi
 
     # Show detailed output if verbose or error
@@ -131,9 +307,9 @@ bfb_install_call() {
         cat "$result_file"
     fi
 
-    # Stop rshim service and reset DPU
-    systemctl stop rshim@${rid}.service
-    echo "$rid: Resetting DPU $dpu"
+    # Stop rshim application and reset DPU
+    stop_rshim_daemon "$rid"
+    log_info "$rid: Resetting DPU $dpu"
 
     local reset_cmd="dpuctl dpu-reset --force $dpu"
     if [[ $verbose == true ]]; then
@@ -149,16 +325,16 @@ file_cleanup(){
 is_url() {
     local link=$1
     if [[ $link =~ https?:// ]]; then 
-        echo "Detected URL. Downloading file"
+        log_debug "Detected URL. Downloading file"
         filename="${WORK_DIR}/sonic-nvidia-bluefield.bfb"
         curl -L -o "$filename" "$link"
         res=$?
         if test "$res" != "0"; then
-            echo "the curl command failed with: $res"
+            log_error "the curl command failed with: $res"
             exit 1
         fi
         bfb="$filename"
-        echo "bfb path changed to $bfb"
+        log_debug "bfb path changed to $bfb"
     fi
 }
 
@@ -173,7 +349,7 @@ validate_rshim(){
             fi
         done
         if [[ $found -eq 0 ]]; then
-            echo "$item1 is not detected! Please provide proper rshim interface list!"
+            log_debug "$item1 is not detected! Please provide proper rshim interface list!"
             exit 1
         fi
     done
@@ -183,9 +359,9 @@ get_mapping(){
     local provided_list=("$@")
 
     for item1 in "${provided_list[@]}"; do
-        var=$(dpumap.sh rshim2dpu $item1)
+        var=$(rshim2dpu_map "$item1")
         if [ $? -ne 0 ]; then
-            echo "$item1 does not have a valid dpu mapping!"
+            log_debug "$item1 does not have a valid dpu mapping!"
             exit 1
         fi
         rshim2dpu["$item1"]="$var"
@@ -195,44 +371,42 @@ get_mapping(){
 validate_dpus(){
     local provided_list=("$@")
     for item1 in "${provided_list[@]}"; do
-        var=$(dpumap.sh dpu2rshim $item1)
+        var=$(dpu2rshim_map "$item1")
         if [ $? -ne 0 ]; then
-            echo "$item1 does not have a valid rshim mapping!"
+            log_debug "$item1 does not have a valid rshim mapping!"
             exit 1
         fi
         rshim2dpu["$var"]="$item1"
         dev_names+=("$var")
     done
 }
+
 check_for_root(){
     if [ "$EUID" -ne 0 ]
-        then echo "Please run the script in sudo mode"
+        then log_debug "Please run the script in sudo mode" 
         exit
     fi
 }
 
 detect_rshims_from_pci(){
-    # Get list of supported DPUs from dpumap.sh
-    local dpu_list=$(dpumap.sh listdpus 2>/dev/null)
+    # Get list of supported DPUs from platform.json
+    local dpu_list=$(list_dpus_map)
     if [ $? -ne 0 ] || [ -z "$dpu_list" ]; then
-        echo "No supported DPUs found"
+        log_debug "No supported DPUs found"
         return 1
     fi
 
     # For each DPU, check if its PCI exists and get corresponding rshim
     local detected_rshims=()
     while read -r dpu; do
-        local bus_info=$(dpumap.sh dpu2pcie "$dpu" 2>/dev/null)
-        if [ $? -eq 0 ] && [ ! -z "$bus_info" ] && [ -e "/sys/bus/pci/devices/$bus_info" ]; then
-            local rshim=$(dpumap.sh dpu2rshim "$dpu" 2>/dev/null)
-            if [ $? -eq 0 ] && [ ! -z "$rshim" ]; then
-                detected_rshims+=("$rshim")
-            fi
+        local pci=$(detect_bfsoc_pcie "$dpu")
+        if [ $? -eq 0 ] && [ -n "$pci" ]; then
+            detected_rshims+=($(dpu2rshim_map "$dpu"))
         fi
     done <<< "$dpu_list"
 
     if [ ${#detected_rshims[@]} -eq 0 ]; then
-        echo "No rshim devices detected"
+        log_debug "No rshim devices detected"
         return 1
     fi
 
@@ -243,6 +417,7 @@ detect_rshims_from_pci(){
 
 main() {
     check_for_root
+    validate_platform
 
     # Parse command line arguments
     local config= bfb= rshim_dev= dpus= verbose=false
@@ -250,7 +425,7 @@ main() {
 
     # Validate BFB image
     if [ -z "$bfb" ]; then
-        echo "Error: bfb image is not provided."
+        log_debug "Error: bfb image is not provided."
         usage
         exit 1
     fi
@@ -261,7 +436,7 @@ main() {
     # Detect available rshim interfaces
     local dev_names_det=($(detect_rshims_from_pci))
     if [ "${#dev_names_det[@]}" -eq 0 ]; then
-        echo "No rshim interfaces detected! Make sure to run the $command_name script from the host device/switch!"
+        log_debug "No rshim interfaces detected! Make sure to run the $command_name script from the host device/switch!"
         exit 1
     fi
 
@@ -269,7 +444,7 @@ main() {
     local dev_names=()
     if [ -z "$rshim_dev" ]; then
         if [ -z "$dpus" ]; then
-            echo "No rshim interfaces provided!"
+            log_debug "No rshim interfaces provided!"
             usage
             exit 1
         fi
@@ -283,8 +458,7 @@ main() {
 
     if [ "$rshim_dev" = "all" ]; then
         dev_names=("${dev_names_det[@]}")
-        echo "${#dev_names_det[@]} rshim interfaces detected:"
-        echo "${dev_names_det[@]}"
+        log_info "${#dev_names_det[@]} rshim interfaces detected: ${dev_names_det[*]}"
     else
         if [ ${#dev_names[@]} -eq 0 ]; then
             IFS=',' read -ra dev_names <<< "$rshim_dev"
@@ -301,7 +475,7 @@ main() {
     local arr=()
     
     if [ -n "$config" ]; then
-        echo "Using ${config} file/s"
+        log_info "Using ${config} file/s"
         if [[ "$config" == *","* ]]; then
             IFS=',' read -r -a arr <<< "$config"
         else
@@ -363,13 +537,13 @@ validate_config_files() {
     local -a arr=("${@:$((${#sorted_devs[@]}+1))}")
 
     if [ ${#arr[@]} -ne ${#sorted_devs[@]} ]; then
-        echo "Length of config file list does not match the devices selected: ${sorted_devs[*]} and ${arr[*]}"
+        log_debug "Length of config file list does not match the devices selected: ${sorted_devs[*]} and ${arr[*]}"
         exit 1
     fi
 
     for config_file in "${arr[@]}"; do
         if [ ! -f "$config_file" ]; then
-            echo "Config provided $config_file is not a file! Please check"
+            log_debug "Config provided $config_file is not a file! Please check the config file path"
             exit 1
         fi
     done
@@ -389,10 +563,10 @@ kill_all_descendant_procs() {
 }
 
 kill_ch_procs(){
-    echo ""
-    echo "Installation Interrupted.. killing All child procs"
+    log_debug "Installation Interrupted.. killing All child procs"
     kill_all_descendant_procs $$
 }
+
 appendix=
 verbose=false
 main "$@"
