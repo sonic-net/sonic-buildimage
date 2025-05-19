@@ -11,6 +11,7 @@ import subprocess
 import threading
 import syslog
 import os
+import base64
 from swsscommon.swsscommon import ConfigDBConnector
 
 class master_key_mgr:
@@ -54,7 +55,7 @@ class master_key_mgr:
                     # Update the password for given feature
                     lines[self._feature_list.index(feature_type)] = feature_type + ' : ' + passwd + '\n'
 
-                    os.chmod(self._file_path, 0o777)
+                    os.chmod(self._file_path, 0o640)
                     with open(self._file_path, 'w') as file:
                         file.writelines(lines)
                     os.chmod(self._file_path, 0o640)
@@ -62,6 +63,7 @@ class master_key_mgr:
                 syslog.syslog(syslog.LOG_ERR, "__write_passwd_file: File {} no found".format(self._file_path))
             except PermissionError:
                 syslog.syslog(syslog.LOG_ERR, "__write_passwd_file: Read permission denied: {}".format(self._file_path))
+
 
     # Read cipher pass file and return the feature specifc
     # password
@@ -87,29 +89,63 @@ class master_key_mgr:
 
         return passwd
     
-    # Encrypt the passkey
-    def encrypt_passkey(self, feature_type, secret, passwd):
-        cmd = [ 'openssl', 'enc', '-aes-128-cbc', '-A',  '-a', '-salt', '-pbkdf2', '-pass', 'pass:' + passwd ]
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        outsecret, errs = p.communicate(input=secret)
-        if not errs:
+
+    def encrypt_passkey(self, feature_type, secret: str, passwd: str) -> str:
+        """
+        Encrypts the plaintext using OpenSSL (AES-128-CBC, with salt and pbkdf2, no base64)
+        and returns the result as a hex string.
+        """
+        cmd = [
+            "openssl", "enc", "-aes-128-cbc", "-salt", "-pbkdf2",
+            "-pass", f"pass:{passwd}"
+        ]
+        try:
+            result = subprocess.run(
+                cmd,
+                input=secret.encode(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True
+            )
+            encrypted_bytes = result.stdout
+            b64_encoded = base64.b64encode(encrypted_bytes).decode()
             self.__write_passwd_file(feature_type, passwd)
+            return b64_encoded 
+        except subprocess.CalledProcessError as e:
+            syslog.syslog(syslog.LOG_ERR, "encrypt_passkey: {} Encryption failed with ERR: {}".format((e)))
+            return ""
 
-        return outsecret,errs
 
-    # Decrypt the passkey
-    def decrypt_passkey(self, feature_type, secret):
-        errs = "Passkey Decryption failed"
-        passwd = self.__read_passwd_file(feature_type)
-        if passwd is not None:
-            cmd = "echo " + format(secret) + " | openssl enc -aes-128-cbc -a -d -salt -pbkdf2 -pass pass:" + passwd
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            output, errs = proc.communicate()
+    def decrypt_passkey(self, feature_type,  b64_encoded: str) -> str:
+        """
+        Decrypts a hex-encoded encrypted string using OpenSSL (AES-128-CBC, with salt and pbkdf2, no base64).
+        Returns the decrypted plaintext.
+        """
 
-            if not errs:
-                output = output.decode('utf-8')
+        passwd = self.__read_passwd_file(feature_type).strip()
+        if passwd is None:
+            syslog.syslog(syslog.LOG_ERR, "decrypt_passkey: Enpty password for {} feature type".format(feature_type))
+            return ""
 
-        return output, errs
+        try:
+            encrypted_bytes = base64.b64decode(b64_encoded)
+
+            cmd = [
+                "openssl", "enc", "-aes-128-cbc", "-d", "-salt", "-pbkdf2",
+                "-pass", f"pass:{passwd}"
+            ]
+            result = subprocess.run(
+                cmd,
+                input=encrypted_bytes,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True
+            )
+            return result.stdout.decode().strip()
+        except subprocess.CalledProcessError as e:
+            syslog.syslog(syslog.LOG_ERR, "decrypt_passkey: Decryption failed with an ERR: {}".format(e.stderr.decode()))
+            return ""
+
 
     # Check if the encryption is enabled 
     def is_key_encrypt_enabled(self, table, entry):
@@ -126,7 +162,7 @@ class master_key_mgr:
         Removes only the password for the given feature_type while keeping the file structure intact.
         """
         try:
-            os.chmod(self._file_path, 0o777)
+            os.chmod(self._file_path, 0o640)
             with open(self._file_path, "r") as file:
                 lines = file.readlines()
 
@@ -145,3 +181,4 @@ class master_key_mgr:
 
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "del_cipher_pass: {} Exception occurred: {}".format((e)))
+
