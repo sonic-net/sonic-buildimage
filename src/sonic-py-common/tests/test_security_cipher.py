@@ -43,7 +43,7 @@ class TestSecurityCipher(object):
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd 
-                encrypt, err = temp.encrypt_passkey("TACPLUS", "passkey1", "TEST1")
+                encrypt = temp.encrypt_passkey("TACPLUS", "passkey1", "TEST1")
                 assert encrypt !=  "passkey1"
 
     def test_passkey_decryption(self):
@@ -58,7 +58,7 @@ class TestSecurityCipher(object):
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd
-                encrypt, err = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
+                encrypt = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
 
             # Use patch to replace the built-in 'open' function with a mock
             #with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file:
@@ -67,7 +67,7 @@ class TestSecurityCipher(object):
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=UPDATED_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd 
-                decrypt, err = temp.decrypt_passkey("RADIUS", encrypt)
+                decrypt = temp.decrypt_passkey("RADIUS", encrypt)
                 assert decrypt == "passkey2"
 
 
