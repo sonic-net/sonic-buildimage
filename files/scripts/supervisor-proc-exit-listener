@@ -126,7 +126,9 @@ def load_heartbeat_alert_interval(use_unix_socket_path):
     if heartbeat_table:
         heartbeat_table_keys = heartbeat_table.keys()
         for process in heartbeat_table_keys:
-            heartbeat_alert_interval_mapping[process] = int(heartbeat_table[process].get('alert_interval')) / 1000
+            alert_interval = heartbeat_table[process].get('alert_interval')
+            if alert_interval:
+                heartbeat_alert_interval_mapping[process] = int(alert_interval) / 1000
 
 def get_heartbeat_alert_interval(process):
     if process in heartbeat_alert_interval_mapping:
