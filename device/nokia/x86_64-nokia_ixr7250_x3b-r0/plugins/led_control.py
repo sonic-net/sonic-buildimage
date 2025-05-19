@@ -23,6 +23,12 @@ FAN_DRAWERS = 3
 QSFP_NUMS = 36
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 PORT_DIR = "/sys/bus/pci/devices/0000:05:00.0/"
+FILE_OPERSTATE = "/sys/class/net/eth0/operstate"
+FILE_DUPLEX = "/sys/class/net/eth0/duplex"
+FILE_RX_PACKETS = "/sys/class/net/eth0/statistics/rx_packets"
+FILE_TX_PACKETS = "/sys/class/net/eth0/statistics/tx_packets"
+FILE_RX_ERRORS = "/sys/class/net/eth0/statistics/rx_errors"
+FILE_TX_ERRORS = "/sys/class/net/eth0/statistics/tx_errors"
 
 SYSLOG_IDENTIFIER = "nokia-ledd"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
@@ -34,7 +40,7 @@ class LedControl(LedControlBase):
     # Constructor
     def __init__(self):
         self.chassis = sonic_platform.platform.Platform().get_chassis()
-        self._initDefaultConfig()        
+        self._initDefaultConfig()
 
     def _initDefaultConfig(self):
         # The fan tray leds and system led managed by new chassis class API
@@ -43,7 +49,8 @@ class LedControl(LedControlBase):
 
         if multi_asic.is_multi_asic():
             # Load the namespace details first from the database_global.json file.
-            swsscommon.SonicDBConfig.initializeGlobalConfig()
+            if not swsscommon.SonicDBConfig.isGlobalInit():
+                swsscommon.SonicDBConfig.initializeGlobalConfig()
 
         # Get the namespaces in the platform. For multi-asic devices we get the namespaces
         # of front-end ascis which have front-panel interfaces.
@@ -64,6 +71,24 @@ class LedControl(LedControlBase):
         
         self._initSystemLed()
 
+    def _read_sysfs_file(self, sysfs_file):
+        # On successful read, returns the value read from given
+        # reg_name and on failure returns 'ERR'
+        rv = 'ERR'
+
+        if (not os.path.isfile(sysfs_file)):
+            return rv
+        try:
+            with open(sysfs_file, 'r') as fd:
+                rv = fd.read()
+                fd.close()
+        except Exception as e:
+            rv = 'ERR'
+
+        rv = rv.rstrip('\r\n')
+        rv = rv.lstrip(" ")
+        return rv
+    
     def _write_sysfs_file(self, sysfs_file, value):
         # On successful write, the value read will be written on
         # reg_name and on failure returns 'ERR'
@@ -84,15 +109,18 @@ class LedControl(LedControlBase):
         self.oldfan = 'off'
         self.oldpsu = 'off'
         count = 0
+        self.mgmt_link = 'off'
+        self.mgmt_actv = 'off'
+        self.mgmt_rx_packets = int(self._read_sysfs_file(FILE_RX_PACKETS))
+        self.mgmt_tx_packets = int(self._read_sysfs_file(FILE_TX_PACKETS))
 
         # Timer loop to monitor and set Port Leds and 
         # front panel Status, Fan, and PSU LEDs
         while True:
             self.port_state_check()
-            
-            time.sleep(0.1)
+            self.mgmt_check()
             count = count + 1
-            if count == 60:
+            if count == 30:
                 self.fp_check()
                 count = 0
                 
@@ -186,3 +214,48 @@ class LedControl(LedControlBase):
             if self.oldpsu != 'amber':
                 self._write_sysfs_file(REG_DIR + 'led_psu', '0xa4c700')
                 self.oldpsu = 'amber'
+    
+    def mgmt_check(self):
+        link_stat = self._read_sysfs_file(FILE_OPERSTATE)
+        if link_stat == 'up':
+            duplex = self._read_sysfs_file(FILE_DUPLEX)
+            if duplex == 'full':
+                if self.mgmt_link != 'green':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_link', '0x1')
+                    self.mgmt_link = 'green'
+            elif duplex == 'half':
+                if self.mgmt_link != 'blink_green':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_link', '0x0')
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_link', '0xf5')
+                    self.mgmt_link = 'blink_green'
+            else:
+                if self.mgmt_link != 'off':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_link', '0x0')
+                    self.mgmt_link = 'off'
+            
+            mgmt_rx_packets = int(self._read_sysfs_file(FILE_RX_PACKETS))
+            mgmt_tx_packets = int(self._read_sysfs_file(FILE_TX_PACKETS))
+            mgmt_rx_errors = int(self._read_sysfs_file(FILE_RX_ERRORS))
+            mgmt_tx_errors = int(self._read_sysfs_file(FILE_TX_ERRORS))
+            if mgmt_rx_errors > 0 or mgmt_tx_errors > 0:
+                if self.mgmt_actv != 'amber':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_actv', '0x2')
+                    self.mgmt_actv = 'amber'
+            elif mgmt_rx_packets > self.mgmt_rx_packets or mgmt_tx_packets > self.mgmt_tx_packets:
+                self.mgmt_rx_packets = mgmt_rx_packets
+                self.mgmt_tx_packets = mgmt_tx_packets
+                if self.mgmt_actv != 'fast_blink_green':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_actv', '0x0')
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_actv', '0x75')
+                    self.mgmt_actv = 'fast_blink_green'
+            else:
+                if self.mgmt_actv != 'off':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_actv', '0x0')
+                    self.mgmt_actv = 'off'
+        else:
+            if self.mgmt_link != 'off':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_link', '0x0')
+                    self.mgmt_link = 'off'
+            if self.mgmt_actv != 'off':
+                    self._write_sysfs_file(REG_DIR + 'led_mgmt_actv', '0x0')
+                    self.mgmt_actv = 'off'
