@@ -50,11 +50,15 @@ PDDF_DATA_ATTR(psu_fans, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.aname, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devtype, NULL);
 PDDF_DATA_ATTR(attr_devname, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devname, NULL);
+PDDF_DATA_ATTR(attr_data_format, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.data_format, NULL);
 PDDF_DATA_ATTR(attr_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.devaddr, NULL);
 PDDF_DATA_ATTR(attr_offset, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.offset, NULL);
 PDDF_DATA_ATTR(attr_mask, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.mask, NULL);
 PDDF_DATA_ATTR(attr_cmpval, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.cmpval, NULL);
 PDDF_DATA_ATTR(attr_len, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.len, NULL);
+PDDF_DATA_ATTR(attr_m, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.m, NULL);
+PDDF_DATA_ATTR(attr_b, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.b, NULL);
+PDDF_DATA_ATTR(attr_r, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.r, NULL);
 PDDF_DATA_ATTR(attr_ops, S_IWUSR, NULL, do_attr_operation, PDDF_CHAR, 8, (void*)&psu_data, NULL);
 PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*)&psu_data, (void*)&pddf_data);
 
@@ -67,11 +71,15 @@ static struct attribute *psu_attributes[] = {
     &attr_attr_name.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
     &attr_attr_devname.dev_attr.attr,
+    &attr_attr_data_format.dev_attr.attr,
     &attr_attr_devaddr.dev_attr.attr,
     &attr_attr_offset.dev_attr.attr,
     &attr_attr_mask.dev_attr.attr,
     &attr_attr_cmpval.dev_attr.attr,
     &attr_attr_len.dev_attr.attr,
+    &attr_attr_m.dev_attr.attr,
+    &attr_attr_b.dev_attr.attr,
+    &attr_attr_r.dev_attr.attr,
     &attr_attr_ops.dev_attr.attr,
     &attr_dev_ops.dev_attr.attr,
     NULL
