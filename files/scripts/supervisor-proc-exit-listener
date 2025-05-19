@@ -9,6 +9,7 @@ import sys
 import syslog
 import time
 from collections import defaultdict
+import traceback
 
 from swsscommon import swsscommon
 
@@ -241,4 +242,7 @@ def main(argv):
                 generate_alerting_message(process, "stuck", elapsed_mins, syslog.LOG_WARNING)
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, "Exception: {}, trace: {}".format(e, traceback.format_exc()))
