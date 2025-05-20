@@ -118,18 +118,45 @@ fn check_auditd_reload_status() -> String {
 
 // Check auditd rate limit
 fn check_auditd_rate_limit_status() -> String {
-    let cmd = format!(r#"{NSENTER_CMD} auditctl -s"#);
+    // read auditd rules config file
+    let cmd = format!(r#"{NSENTER_CMD} cat /etc/audit/rules.d/audit.rules"#);
     match run_command(&cmd) {
-        Ok(s) => {
-            let re = Regex::new(r"rate_limit (?<rate>\d+)").unwrap();
-            let caps = re.captures(&s).unwrap();
-            if &caps["rate"] != "0" {
-                "OK".to_string()
-            } else {
-                format!("FAIL (rate_limit not set = {})", s)
+        Ok(file_config) => {
+            let confix_file_regex = Regex::new(r"-r (?<rate>\d+)").unwrap();
+            match confix_file_regex.captures(&file_config) {
+                Some(config_file_caps) => {
+                    let config_file_rate_limit = &config_file_caps["rate"];
+
+                    let cmd = format!(r#"{NSENTER_CMD} auditctl -s"#);
+                    match run_command(&cmd) {
+                        Ok(running_config) => {
+                            let running_config_regex = Regex::new(r"rate_limit (?<rate>\d+)").unwrap();
+                            match running_config_regex.captures(&running_config) {
+                                Some(running_config_caps) => {
+                                    if &running_config_caps["rate"] == config_file_rate_limit {
+                                        "OK".to_string()
+                                    } else {
+                                        format!("FAIL (rate_limit: {} mismatch with config file setting: {})", running_config, config_file_rate_limit)
+                                    }
+                                }
+                                None => {
+                                    format!("FAIL (rate_limit not set = {}, config file setting: {})", running_config, config_file_rate_limit)
+                                }
+                            }
+                        }
+                        Err(e) => format!("FAIL (error message = {})", e),
+                    }
+                }
+                None => {
+                    // rate limit disabled when config file missing
+                    "OK".to_string()
+                }
             }
         }
-        Err(e) => format!("FAIL (error message = {})", e),
+        Err(_e) => {
+            // config file not exist, ignore rate check
+            "OK".to_string()
+        }
     }
 }
 
