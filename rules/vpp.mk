@@ -22,7 +22,6 @@ LIBNUMA := $(shell apt-get download --print-uris libnuma1 | cut -d " " -f2)
 $(LIBNUMA)_URL := $(shell apt-get download --print-uris libnuma1 | cut -d " " -f1)
 SONIC_ONLINE_DEBS += $(LIBNUMA)
 
-
 LIBMBEDCRYPTO3 := $(shell apt-get download --print-uris libmbedcrypto3 | cut -d " " -f2)
 $(LIBMBEDCRYPTO3)_URL := $(shell apt-get download --print-uris libmbedcrypto3 | cut -d " " -f1)
 SONIC_ONLINE_DEBS += $(LIBMBEDCRYPTO3)
