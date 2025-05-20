@@ -40,4 +40,4 @@ ifeq ($(SMARTSWITCH), 1)
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi_smartswitch:/etc/monit/conf.d
 else
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
-fi
+endif
