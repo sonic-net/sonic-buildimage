@@ -142,6 +142,12 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
+    data['NTP'] = {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
@@ -172,6 +178,22 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
 
     crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
     crmconfig.update(dash_crm_thresholds)
+
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        if "SYSTEM_DEFAULTS" not in data:
+            data["SYSTEM_DEFAULTS"] = {}
+
+        data['SYSTEM_DEFAULTS'] = {
+            "polaris": {
+                "status": "enabled"
+            }
+        }
+
+    data['NTP_SERVER'] = {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    }
 
     return data
 

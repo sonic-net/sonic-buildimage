@@ -258,14 +258,9 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark manu
 # Install systemd-python for SONiC host services
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install systemd-python
 
-if [[ $CONFIGURED_ARCH == armhf ]]; then
-    # Install pygobject from apt repos, since it has armhf prebuilt. The version in Debian is
-    # a bit older than what is in pip.
-    #
-    # When doing the next Debian upgrade (to Trixie), consider installing this package for all
-    # architectures instead of just armhf.
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
-fi
+# Install pygobject from apt repos. The version in Debian is
+# a bit older than what is in pip, but it should be fine.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-gi
 
 # Install SONiC host services package
 install_pip_package {{sonic_host_services_py3_wheel_path}}
@@ -687,7 +682,15 @@ echo "midplane-network-npu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-npu.service
 echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.service
-
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu0.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu1.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu2.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu3.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu4.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu5.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu6.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu7.service
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
 
@@ -1023,7 +1026,7 @@ sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_s
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
 sudo LANG=C cp $SCRIPTS_DIR/startup_tsa_tsb.py $FILESYSTEM_ROOT/usr/local/bin/startup_tsa_tsb.py
 sudo LANG=C cp $SCRIPTS_DIR/sonic-dpu-mgmt-traffic.sh $FILESYSTEM_ROOT/usr/local/bin/sonic-dpu-mgmt-traffic.sh
-
+sudo LANG=C cp $SCRIPTS_DIR/dash-ha.sh $FILESYSTEM_ROOT/usr/local/bin/dash-ha.sh
 # Copy sonic-netns-exec script
 sudo LANG=C cp $SCRIPTS_DIR/sonic-netns-exec $FILESYSTEM_ROOT/usr/bin/sonic-netns-exec
 
@@ -1104,14 +1107,13 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
 sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
-# Install rshim script
-sudo install -m 755 platform/mellanox/rshim/files/rshim.sh $FILESYSTEM_ROOT/usr/bin/rshim.sh
+# Install dpu-udev-manager script
+sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.sh $FILESYSTEM_ROOT/usr/bin/dpu-udev-manager.sh
 
-# Install rshim services
-sudo cp platform/mellanox/rshim/files/rshim@.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+# Install dpu-udev-manager service
+sudo install -m 644 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu-udev-manager
 
-# Install dpumap script
-sudo install -m 755 platform/mellanox/smartswitch/dpumap.sh $FILESYSTEM_ROOT/usr/bin/dpumap.sh
 {% endif %}
 
 {% if sonic_asic_platform == "nvidia-bluefield" %}

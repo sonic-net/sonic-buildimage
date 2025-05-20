@@ -25,6 +25,7 @@
   * [Console](#console)
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
+  * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -75,6 +76,7 @@
   * [Telemetry](#telemetry)
   * [Telemetry client](#telemetry-client)
   * [Tunnel](#tunnel)
+  * [Trimming](#trimming)
   * [Versions](#versions)
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
@@ -377,6 +379,43 @@ and migration plan
     }
 }
 ```
+
+***ACL fine-grained packet trimming control with disable trimming action configuration example***
+```
+{
+    "ACL_TABLE_TYPE": {
+        "TRIMMING_L3": {
+            "MATCHES": [
+                "SRC_IP"
+            ],
+            "ACTIONS": [
+                "DISABLE_TRIM_ACTION"
+            ],
+            "BIND_POINTS": [
+                "PORT"
+            ]
+        }
+    },
+    "ACL_TABLE": {
+        "TRIM_TABLE": {
+            "POLICY_DESC": "Packet trimming",
+            "TYPE": "TRIMMING_L3",
+            "STAGE": "INGRESS",
+            "PORTS": [
+                "Ethernet0"
+            ]
+        }
+    },
+    "ACL_RULE": {
+        "TRIM_TABLE|TRIM_RULE": {
+            "PRIORITY": "999",
+            "SRC_IP": "1.1.1.1/32",
+            "PACKET_ACTION": "DISABLE_TRIM"
+        }
+    }
+}
+```
+
 ### BGP BBR
 
 The **BGP_BBR** table contains device-level BBR state.
@@ -658,6 +697,18 @@ This kind of profiles will be handled by buffer manager and won't be applied to 
 }
 ```
 
+***Packet trimming configuration example***
+```
+{
+    "q_lossy_profile": {
+        "dynamic_th": "3",
+        "pool": "egress_lossy_pool",
+        "size": "0",
+        "packet_discard_action": "drop"
+    }
+}
+```
+
 ### Buffer queue
 
 ```
@@ -928,6 +979,42 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 }
 ```
 
+### DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON
+
+These tables contain information on drop counters which have been added
+
+DEBUG_COUNTER:
+```
+; DEBUG_COUNTER table
+
+key             = DEBUG_COUNTER_TABLE:name
+name            = string
+type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias           = string (optional)
+description     = string (optional)
+group           = string (optional)
+
+"DEBUG_COUNTER": {
+    "DEBUG_4": {
+        "alias": "BAD_DROPS",
+        "desc": "More port ingress drops",
+        "group": "BAD",
+        "type": "SWITCH_INGRESS_DROPS"
+    }
+}
+```
+```
+; DEBUG_COUNTER_DROP_REASON table
+
+key     = DEBUG_COUNTER_DROP_REASON_TABLE:name:reason
+name    = name of a counter in the DEBUG_COUNTER_TABLE
+reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (https://github.com/sonic-net/sonic-swss/blob/7a965caf4c7211afca5303191cf731858c791bcd/orchagent/debug_counter/drop_counter.cpp#L20)
+
+"DEBUG_COUNTER_DROP_REASON": {
+    "DEBUG_4|DIP_LINK_LOCAL": {},
+    "DEBUG_4|SIP_LINK_LOCAL": {}
+}
+```
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
@@ -1104,7 +1191,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ### FG_NHG
 
-The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size) and match mode for each group.
+The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
 
 ```
 "FG_NHG": {
@@ -1115,7 +1202,17 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
     "fgnhg_v6": {
         "bucket_size": "120",
         "match_mode": "nexthop-based"
-    }
+    },
+    "dynamic_fgnhg_v4": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    },
+    "dynamic_fgnhg_v6": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    }    
 }
 ```
 
@@ -1149,7 +1246,13 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	},
     "fc:05::/128": {
 	    "FG_NHG": "fgnhg_v6"
-	}
+	},
+    "200.175.150.125/32": {
+        "FG_NHG": "dynamic_fgnhg_v4"
+    },
+    "fd:06::/128": {
+        "FG_NHG": "dynamic_fgnhg_v6"
+	}    
 }
 ```
 
@@ -2478,6 +2581,34 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
     }
 }
 ```
+
+### Trimming
+
+When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
+
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+Retransmission triggered by timeouts typically incurs significant latency.
+
+To help the host recover data more quickly and accurately, packet trimming is introduced.  
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+and try sending it on a different queue to deliver a packet drop notification to an end host.
+
+***TRIMMING***
+
+```
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "48",
+            "queue_index": "6"
+        }
+    }
+}
+```
+
+**Note:**
+* when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions
 

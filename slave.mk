@@ -458,6 +458,7 @@ $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
 $(info "INCLUDE_MACSEC"                  : "$(INCLUDE_MACSEC)")
 $(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
 $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
+$(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
@@ -517,13 +518,6 @@ ifeq ($(filter clean,$(MAKECMDGOALS)),)
 $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
 endif
 include Makefile.cache
-
-ifeq ($(SONIC_USE_DOCKER_BUILDKIT),y)
-$(warning "Using SONIC_USE_DOCKER_BUILDKIT will produce larger installable SONiC image because of a docker bug (more details: https://github.com/moby/moby/issues/38903)")
-export DOCKER_BUILDKIT=1
-else
-export DOCKER_BUILDKIT=0
-endif
 
 
 ###############################################################################
@@ -1032,7 +1026,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build --squash --no-cache \
+	docker build --no-cache \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1122,6 +1116,16 @@ $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz :
 
 	$(FOOTER)
 
+# Targets for copy docker images
+$(addprefix $(TARGET_PATH)/,$(COPY_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
+		$$(%.gz_DEP_FILES)
+	$(HEADER)
+
+	rm -rf $@ $@.log
+	cp "$($*.gz_PATH)/$*.gz" target/$(COPY_DOCKER_IMAGES) $(LOG)
+
+	$(FOOTER)
+
 # Targets for building docker images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform docker-start \
 		$$(addprefix $$($$*.gz_DEBS_PATH)/,$$($$*.gz_DEPENDS)) \
@@ -1180,7 +1184,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build --no-cache $$( [[ "$($*.gz_SQUASH)" != n ]] && echo --squash)\
+		docker build --no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1250,7 +1254,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build \
-			$(if $($*.gz_DBG_DEPENDS), --squash --no-cache, --no-cache) \
+			--no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1285,6 +1289,7 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES))
 DOCKER_LOAD_TARGETS = $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 		      $(SONIC_SIMPLE_DOCKER_IMAGES) \
 		      $(DOWNLOADED_DOCKER_IMAGES) \
+		      $(COPY_DOCKER_IMAGES) \
 		      $(DOCKER_IMAGES) \
 		      $(DOCKER_DBG_IMAGES)))
 
@@ -1452,6 +1457,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
+	export include_dash_ha="$(INCLUDE_DASH_HA)"
 	export include_stpd="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"

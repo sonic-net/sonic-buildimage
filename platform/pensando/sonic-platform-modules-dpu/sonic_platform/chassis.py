@@ -22,7 +22,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 NUM_THERMAL = 2
-NUM_VOLTAGE_SENSORS = 3
+NUM_VOLTAGE_SENSORS = 6
 NUM_CURRENT_SENSORS = 3
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
@@ -30,6 +30,7 @@ HOST_CHK_CMD = "docker > /dev/null 2>&1"
 REBOOT_CAUSE_SOFTWARE = "Software causes"
 REBOOT_CAUSE_EXTERNAL = "External causes"
 RESET_CAUSE_PATH = "/sys/firmware/pensando/rstcause/this_cause"
+DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
 
 #cpld masks for system led
 SYSTEM_LED_GREEN   = 0x7
@@ -72,9 +73,6 @@ class Chassis(ChassisBase):
         self._api_helper = APIHelper()
         ChassisBase.__init__(self)
 
-        if not self._api_helper.is_host():
-            self._api_helper.setup_cpldapp()
-
         log_info("System chassis is ready")
 
     ##############################################
@@ -88,7 +86,7 @@ class Chassis(ChassisBase):
     def get_status_led(self):
         cmd = "cpldapp -r {}".format(str(SYSTEM_LED_REG))
         try:
-            output = self._api_helper.runCMD(cmd)
+            output = self._api_helper.run_docker_cmd(cmd)
             reg_val = int(output, 16)
             if (reg_val & SYSTEM_LED_GREEN):
                 return self.STATUS_LED_COLOR_GREEN
@@ -141,7 +139,7 @@ class Chassis(ChassisBase):
         from sonic_platform.thermal import Thermal
         global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
-        if board_id == 130:
+        if board_id == self._api_helper.mtfuji_board_id:
             NUM_THERMAL = 5
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):
@@ -361,8 +359,16 @@ class Chassis(ChassisBase):
     def get_my_slot(self):
         cmd = "cpldapp -r 0xA"
         try:
-            slot_id = self._api_helper.runCMD(cmd)
-            return int(slot_id,16)
+            if self._api_helper.is_host():
+                slot_id = self._api_helper.run_docker_cmd(cmd)
+                return int(slot_id,16)
+            else:
+                slot_id_file = DOCKER_HWSKU_PATH + "/dpu_slot_id"
+                slot_id_hex = open(slot_id_file, "r").read()
+                if slot_id_hex:
+                    slot_id = int(slot_id_hex, 16)
+                    return slot_id
+            return -1
         except:
             return -1
 
