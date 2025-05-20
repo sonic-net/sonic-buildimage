@@ -33,7 +33,8 @@ using namespace swss;
 
 #define MAX_CACHE_SIZE (MB(50) / (EVT_SIZE_AVG))
 
-#define MAX_OVERFLOW_CACHE_SIZE 1000
+/* Max size of runtime id buffers like m_pre_exist_id and m_last_events */
+#define MAX_RID_BUFFER_SIZE 1000
 
 /* Count of elements returned in each read */
 #define READ_SET_SIZE 100
@@ -346,9 +347,13 @@ capture_service::init_capture_cache(const event_serialized_lst_t &lst)
             sequence_t seq;
 
             if (validate_event(event, rid, seq)) {
-                if (itc->find("heartbeat") == string::npos && VEC_SIZE(m_events) < m_cache_max) { // filter out heartbeat events and bound m_events
-                    m_pre_exist_id[rid] = seq;
-                    m_events.push_back(*itc);
+                if (itc->find("heartbeat") == string::npos) {
+                    if (VEC_SIZE(m_events) < m_cache_max) { // filter out heartbeat events and bound m_events
+                        m_events.push_back(*itc);
+                    }
+                    if (m_pre_exist_id.find(rid) != m_pre_exist_id.end() || m_pre_exist_id.size() <= MAX_RID_BUFFER_SIZE) {
+                        m_pre_exist_id[rid] = seq;
+                    }
                 }
             }
         }
@@ -467,7 +472,7 @@ capture_service::do_capture()
                         m_pre_exist_id.erase(it);
                     }
                 }
-                if (add) {
+                if (add && VEC_SIZE(m_events) < m_cache_max)  {
                     m_events.push_back(evt_str);
                 }
             }
@@ -503,7 +508,7 @@ capture_service::do_capture()
 
         case CAP_STATE_LAST:
             total_overflow++;
-            if (m_last_events.find(rid) != m_last_events.end() || m_last_events.size() <= MAX_OVERFLOW_CACHE_SIZE) {
+            if (m_last_events.find(rid) != m_last_events.end() || m_last_events.size() <= MAX_RID_BUFFER_SIZE) {
                 m_last_events[rid] = evt_str;
             }
             if (total_overflow > m_last_events.size()) {
