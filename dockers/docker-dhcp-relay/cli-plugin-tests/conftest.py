@@ -9,16 +9,34 @@ def mock_cfgdb():
         'VLAN': {
             'Vlan1000': {
                 'dhcp_servers': ['192.0.0.1']
-            }
+            },
+            'Vlan200': {},
         },
         'DHCPV4_RELAY': {
             'Vlan1000': {
                 'dhcpv4_servers': ['192.0.0.1']
-            }
+            },
+            'Vlan200': {},
         },
         'DHCP_RELAY': {
             'Vlan1000': {
                 'dhcpv6_servers': ['fc02:2000::1']
+            }
+        },
+        'FEATURE': {
+            'dhcp_relay': {
+                'has_sonic_dhcpv4_relay' : "False"
+            }
+        },
+        'VRF': {
+            "default": {
+                'VRF': 'default'
+            },
+            "VrfRED": {
+                'VRF': 'VrfRED'
+            },
+            "VrfBLUE": {
+                'VRF': 'VrfBLUE'
             }
         }
     }

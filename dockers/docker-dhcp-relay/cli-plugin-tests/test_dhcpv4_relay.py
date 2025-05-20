@@ -8,8 +8,7 @@ from click.testing import CliRunner
 from utilities_common.db import Db
 
 import pytest
-#sys.path.append('../cli/config/plugins/')
-sys.path.append('/usr/local/lib/python3.11/dist-packages/config/plugins')
+sys.path.append('../cli/config/plugins/')
 import dhcp_relay
 
 config_dhcpv4_relay_add_output = """\
@@ -67,13 +66,6 @@ Updated Max Hop Count to Vlan200
 config_dhcpv4_relay_add_all_option_output = """\
 Added Source Interface, Server VRF VrfRED, agent_relay_mode and max_hop_count to Vlan200
 """
-
-@pytest.fixture
-def mock_cfgdb():
-    """Mock the Config DB for testing."""
-    mock_db = mock.MagicMock()
-    return mock_db
-
 
 class TestConfigDhcpv4Relay(object):
     def test_plugin_registration(self):

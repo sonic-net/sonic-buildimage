@@ -181,13 +181,17 @@ def dhcpv4_relay():
 
 def validate_vrf_exists(db, vrf_name):
     """Check if the given VRF exists in the ConfigDB"""
-    vrf_entry = db.cfgdb.get_entry("VRF", vrf_name)
-    return bool(vrf_entry)  # Returns True if VRF exists, False otherwise
+    keys = db.cfgdb.get_keys("VRF")
+    if vrf_name in keys:
+        return True
+    return False
 
 def validate_vlan_exists(db, vlan_name):
     """Check if the given Vlan exists in the ConfigDB"""
-    vlan_entry = db.cfgdb.get_entry("VLAN", vlan_name)
-    return bool(vlan_entry)
+    keys = db.cfgdb.get_keys("VLAN")
+    if vlan_name in keys:
+        return True
+    return False
 
 def add_dhcpv4_source_interface(vlan_name, source_interface, db):
     config_db = db.cfgdb
@@ -258,10 +262,6 @@ def update_dhcpv4_relay(db, vlan_name, dhcpv4_servers, source_interface, link_se
         if not validate_vrf_exists(db, server_vrf):
             ctx.fail(f"VRF {server_vrf} does not exist in the VRF table.")
 
-        interfaces = [("VrfRED", "VRF", "VrfBLUE")]
-        for vrf, table, updated_vrf in interfaces:
-            db.cfgdb.set_entry('VRF', 'VrfRED', {'VRF': 'VrfRED'})
-            db.cfgdb.set_entry('VRF', 'VrfBLUE', {'VRF': 'VrfBLUE'})
         updated_entry["server_vrf"] = server_vrf
 
         config_db.set_entry('VRF', server_vrf, {'VRF': server_vrf})
@@ -325,11 +325,6 @@ def add_dhcpv4_relay(db, dhcpv4_servers, vlan_name, source_interface, link_selec
         if not validate_vrf_exists(db, server_vrf):
             ctx.fail(f"VRF {server_vrf} does not exist in the VRF table.")
 
-        interfaces = [("VrfRED", "VRF", "VrfBLUE")]
-        for vrf, table, updated_vrf in interfaces:
-            db.cfgdb.set_entry('VRF', 'VrfRED', {'VRF': 'VrfRED'})
-            db.cfgdb.set_entry('VRF', 'VrfBLUE', {'VRF': 'VrfBLUE'})
-
     if agent_relay_mode:
         relay_entry["agent_relay_mode"] = agent_relay_mode
 
@@ -338,11 +333,11 @@ def add_dhcpv4_relay(db, dhcpv4_servers, vlan_name, source_interface, link_selec
 
     config_db.set_entry(DHCPV4_RELAY_TABLE, vlan_name, relay_entry)
     if source_interface and server_vrf and agent_relay_mode and max_hop_count:
-        click.echo(f"Added Source Interface, Server VRF {vrf}, agent_relay_mode and max_hop_count to {vlan_name}")
+        click.echo(f"Added Source Interface, Server VRF {server_vrf}, agent_relay_mode and max_hop_count to {vlan_name}")
     elif source_interface:
         click.echo(f"Added Source Interface to {vlan_name}")
     elif server_vrf:
-        click.echo(f"Added Server VRF {vrf} to {vlan_name}")
+        click.echo(f"Added Server VRF {server_vrf} to {vlan_name}")
     elif agent_relay_mode:
         click.echo(f"Added Agent Relay Mode to {vlan_name}")
     elif max_hop_count:
@@ -414,12 +409,51 @@ def dhcp_relay_ipv4_helper():
 @dhcp_relay_ipv4_helper.command("add")
 @click.argument("vid", metavar="<vid>", required=True, type=int)
 @click.argument("dhcp_relay_helpers", nargs=-1, required=True)
+@click.option("--source-interface", required=False, help="Source interface for DHCPv4 relay")
+@click.option("--link-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable link selection for DHCPv4 relay")
+@click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable VRF selection for DHCPv4 relay")
+@click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
+@click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+              help="Set agent relay mode for DHCPv4 relay")
+@click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
 @clicommon.pass_db
-def add_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers):
+def add_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers, source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count):
     if is_dhcp_server_enabled(db):
         click.echo("Cannot change ipv4 dhcp_relay configuration when dhcp_server feature is enabled")
         return
+
+    if check_sonic_dhcpv4_relay_flag(db):
+        add_dhcpv4_relay.callback(dhcp_relay_helpers, "Vlan"+str(vid), source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
+        return
+    else:
+        if source_interface or link_selection or vrf_selection or server_id_override or server_vrf or agent_relay_mode or max_hop_count :
+            click.echo(f"These parameters are applicable for new DHCPv4 Relay feature")
+            return
+
     add_dhcp_relay(vid, dhcp_relay_helpers, db, IPV4)
+
+@dhcp_relay_ipv4_helper.command("update")
+@click.argument("vid", metavar="<vid>", required=True, type=int)
+@click.argument("dhcp_relay_helpers", nargs=-1, required=True)
+@click.option("--source-interface", required=False, help="Source interface for DHCPv4 relay")
+@click.option("--link-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable link selection for DHCPv4 relay")
+@click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable VRF selection for DHCPv4 relay")
+@click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
+@click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+              help="Set agent relay mode for DHCPv4 relay")
+@click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
+@clicommon.pass_db
+def update_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers, source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count):
+    if is_dhcp_server_enabled(db):
+        click.echo("Cannot change ipv4 dhcp_relay configuration when dhcp_server feature is enabled")
+        return
+
+    if check_sonic_dhcpv4_relay_flag(db):
+        update_dhcpv4_relay.callback("Vlan"+str(vid), dhcp_relay_helpers, source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
+    else:
+        click.echo(f"This command is applicable for new DHCPv4 Relay feature")
 
 
 @dhcp_relay_ipv4_helper.command("del")

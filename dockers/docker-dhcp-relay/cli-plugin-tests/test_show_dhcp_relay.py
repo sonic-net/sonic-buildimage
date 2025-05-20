@@ -75,6 +75,18 @@ expected_ipv4_table_multi_with_header = """\
 +-------------+----------------------+
 """
 
+expected_dhcpv4_table_multi_with_header = """\
++-------------+----------------------+--------------+--------------------+------------------+-----------------+-----------------------+--------------------+-----------------+
+|   Interface |   DHCP Relay Address |   Server Vrf |   Source Interface |   Link Selection |   VRF Selection |   Server ID Overrride |   Agent Relay Mode |   Max Hop Count |
++=============+======================+==============+====================+==================+=================+=======================+====================+=================+
+|    Vlan1000 |            192.0.0.1 |      default |        Ethernet112 |           enable |          enable |                   N/A |                N/A |             N/A |
+|             |            192.0.0.2 |              |                    |                  |                 |                       |                    |                 |
++-------------+----------------------+--------------+--------------------+------------------+-----------------+-----------------------+--------------------+-----------------+
+|    Vlan1001 |            192.0.0.3 |          N/A |                N/A |              N/A |             N/A |                   N/A |            discard |               5 |
+|             |            192.0.0.4 |              |                    |                  |                 |                       |                    |                 |
++-------------+----------------------+--------------+--------------------+------------------+-----------------+-----------------------+--------------------+-----------------+
+"""
+
 DBCONFIG_PATH = '/var/run/redis/sonic-db/database_config.json'
 
 IP_VER_TEST_PARAM_MAP = {
@@ -83,7 +95,8 @@ IP_VER_TEST_PARAM_MAP = {
         "table": "VLAN"
     },
     "ipv4_dhcp": {
-        "entry": "dhcpv4_servers",
+        "entry":  ["dhcpv4_servers", "server_vrf", "source_interface", "link_selection",
+                   "vrf_selection", "server_id_override", "agent_relay_mode", "max_hop_count"],
         "table": "DHCPV4_RELAY"
     },
     "ipv6": {
@@ -169,9 +182,16 @@ def test_show_multi_dhcp_relay(test_name, test_data, fs):
     config_db = MockConfigDb()
     ip_version = test_name
     table = config_db.get_table(IP_VER_TEST_PARAM_MAP[ip_version]["table"])
-    result = show.get_dhcp_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])
+
+    if ip_version == "ipv4_dhcp":
+        config_db.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
+        result = show.get_dhcpv4_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])
+    else:
+        result = show.get_dhcp_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])
     if ip_version == "ipv4":
         expected_output = expected_ipv4_table_multi_with_header
+    elif ip_version == "ipv4_dhcp":
+        expected_output = expected_dhcpv4_table_multi_with_header
     else:
         expected_output = expected_ipv6_table_multi_with_header
     assert result == expected_output

@@ -13,8 +13,9 @@ from swsscommon.swsscommon import ConfigDBConnector
 from swsscommon.swsscommon import SonicV2Connector
 
 
+# COUNTERS_DB Table
+DHCPv4_COUNTER_TABLE = 'COUNTERS_DHCPV4'
 # STATE_DB Table
-DHCPv4_COUNTER_TABLE = 'DHCPV4_COUNTER_TABLE'
 DHCPv6_COUNTER_TABLE = 'DHCPv6_COUNTER_TABLE'
 
 # DHCPv4 Counter Messages
@@ -32,6 +33,7 @@ dhcpv6_messages = [
 # DHCP_RELAY Config Table
 DHCP_RELAY = 'DHCP_RELAY'
 VLAN = "VLAN"
+DHCPV4_RELAY_TABLE = 'DHCPV4_RELAY'
 DHCPV6_SERVERS = "dhcpv6_servers"
 DHCPV4_SERVERS = "dhcp_servers"
 SUPPORTED_DHCPV4_TYPE = [
@@ -43,8 +45,20 @@ VLAN_MEMBER_TABLE_PREFIX = "VLAN_MEMBER"
 COUNTERS_DB_SEPRATOR = ":"
 CONFIG_DB_SEPRATOR = "|"
 MGMT_PORT_TABLE = "MGMT_PORT"
+DHCPV4_TABLE_PARAMS = ["dhcpv4_servers", "server_vrf", "source_interface", "link_selection",
+                       "vrf_selection", "server_id_override", "agent_relay_mode", "max_hop_count"]
 config_db = ConfigDBConnector()
 
+
+def check_sonic_dhcpv4_relay_flag():
+    if config_db is None:
+        return
+
+    config_db.connect()
+    table = config_db.get_entry("FEATURE", "dhcp_relay")
+    if('has_sonic_dhcpv4_relay' in table and table['has_sonic_dhcpv4_relay'] == 'True'):
+        return True
+    return False
 
 def get_dhcp_helper_address(ctx, vlan):
     cfg, db = ctx
@@ -65,21 +79,21 @@ show_vlan.VlanBrief.register_column('DHCP Helper Address', get_dhcp_helper_addre
 class DHCPv4_Counter(object):
     def __init__(self):
         self.db = SonicV2Connector(use_unix_socket_path=False)
-        self.db.connect(self.db.STATE_DB)
-        self.table_name = DHCPv4_COUNTER_TABLE+ self.db.get_db_separator(self.db.STATE_DB)
+        self.db.connect(self.db.COUNTERS_DB)
+        self.table_name = DHCPv4_COUNTER_TABLE+ self.db.get_db_separator(self.db.COUNTERS_DB)
         self.packet_abbr = ['Un', 'Dis', 'Off', 'Req', 'Ack', 'Nack', 'Rel', 'Inf', 'Dec', 'Mal', 'Drp']
 
     def _fetch_db_data(self, vlan: str) -> Dict:
-        """Fetch DHCP counter data from Redis STATE_DB."""
+        """Fetch DHCP counter data from Redis COUNTERS_DB."""
         dhcp_data = {}
 
-        for key in self.db.keys(self.db.STATE_DB):
+        for key in self.db.keys(self.db.COUNTERS_DB):
             if DHCPv4_COUNTER_TABLE in key:
-               table_data = self.db.get_all(self.db.STATE_DB, key)
+               table_data = self.db.get_all(self.db.COUNTERS_DB, key)
 
-               intf_parts = key.split("|")
+               intf_parts = key.split(self.db.get_db_separator(self.db.COUNTERS_DB))
                if len(intf_parts) > 1:
-                   _intf = intf_parts[1]  # Gets VLAN name
+                   _intf = (intf_parts[1].split("|"))[0]  # Gets VLAN name
 
                    if _intf not in dhcp_data:
                        dhcp_data[_intf] = {}
@@ -168,12 +182,12 @@ class DHCPv4_Counter(object):
         for msg in dhcpv4_messages:
             v4_cnts[msg] = '0'
 
-        for key in self.db.keys(self.db.STATE_DB):
+        for key in self.db.keys(self.db.COUNTERS_DB):
             if DHCPv4_COUNTER_TABLE in key:
                 if vlan_intf and vlan_intf not in key:
                     continue
 
-                self.db.hmset(self.db.STATE_DB, key, (v4_cnts))
+                self.db.hmset(self.db.COUNTERS_DB, key, (v4_cnts))
 
 
 def ipv4_counters(dir, pkt_type, vlan):
@@ -241,7 +255,7 @@ def print_dhcpv6_count(counter, intf):
 
 @click.group(cls=clicommon.AliasedGroup, name="dhcp4relay_counters")
 def dhcp4relay_counters():
-    """Show DHCPv6 counter"""
+    """Show DHCPv4 counter"""
     pass
 
 #
@@ -280,6 +294,31 @@ def counts(interface, verbose):
 def dhcp_relay_helper():
     """Show DHCP_Relay helper information"""
     pass
+
+def get_dhcpv4_relay_data_with_header(table_data, entry_names, dhcp_server_enabled=False):
+    vlan_relay = []
+    vlans = table_data.keys()
+    for vlan in vlans:
+        vlan_data = table_data.get(vlan)
+        row = [vlan]
+
+        if dhcp_server_enabled:
+            continue;
+
+        for entry in entry_names:
+            entry_data = vlan_data.get(entry)
+            if entry_data is None or len(entry_data) == 0:
+                row.append("N/A")
+            else:
+                if isinstance(entry_data, list):
+                    row.append("\n".join(entry_data))
+                else:
+                    row.append(entry_data)
+        vlan_relay.append(row)
+
+    headers = ["Interface", "DHCP Relay Address", "Server Vrf", "Source Interface", "Link Selection", "VRF Selection", "Server ID Overrride", "Agent Relay Mode", "Max Hop Count"]
+
+    return tabulate(vlan_relay, tablefmt='grid', stralign='right', headers=headers) + '\n'
 
 
 def get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled=False):
@@ -321,12 +360,15 @@ def get_dhcp_relay(table_name, entry_name, with_header):
         return
 
     dhcp_server_enabled = False
-    if table_name == VLAN:
+    if table_name in {VLAN, DHCPV4_RELAY_TABLE}:
         feature_tbl = config_db.get_table("FEATURE")
         dhcp_server_enabled = is_dhcp_server_enabled(feature_tbl)
 
     if with_header:
-        output = get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
+        if table_name == DHCPV4_RELAY_TABLE:
+            output = get_dhcpv4_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
+        else:
+            output = get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
         print(output)
     else:
         vlans = config_db.get_keys(table_name)
@@ -542,10 +584,20 @@ def dhcp_relay_ipv6():
 def dhcp_relay_ipv4():
     pass
 
+@dhcp_relay_ipv4.command("counters")
+@click.option('-d', '--direction', required=False, type=click.Choice(['TX', 'RX']), help="Specify TX(egress) or RX(ingress)")
+@click.option('-t', '--type', required=False, type=click.Choice(dhcpv4_messages), help="Specify DHCP packet counter type")
+@click.argument("vlan_interface", required=True)
+def dhcp_relay_ip4counters(direction, type, vlan_interface):
+    ipv4_counters(direction, type, vlan_interface)
+
 
 @dhcp_relay_ipv4.command("helper")
 def dhcp_relay_ipv4_destination():
-    get_dhcp_relay(VLAN, DHCPV4_SERVERS, with_header=True)
+    if check_sonic_dhcpv4_relay_flag():
+        get_dhcp_relay(DHCPV4_RELAY_TABLE, DHCPV4_TABLE_PARAMS, with_header=True)
+    else:
+        get_dhcp_relay(VLAN, DHCPV4_SERVERS, with_header=True)
 
 
 @dhcp_relay_ipv6.command("destination")

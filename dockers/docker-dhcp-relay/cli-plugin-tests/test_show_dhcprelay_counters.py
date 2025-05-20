@@ -37,9 +37,27 @@ Packet type Abbr: Un - Unknown, Dis - Discover, Off - Offer, Req - Request,
 +-------------+------+-------+-------+-------+-------+--------+-------+-------+-------+-------+-------+
 """
 
+expected_counts_v4_rx = """\
+Packet type Abbr: Un - Unknown, Dis - Discover, Off - Offer, Req - Request,
+                  Ack - Acknowledge, Nack - NegativeAcknowledge, Rel - Release,
+                  Inf - Inform, Dec - Decline, Mal - Malformed, Drp - Dropped
+
++-------------+------+-------+-------+-------+-------+--------+-------+-------+-------+-------+-------+
+| Vlan (RX)   | Un   | Dis   | Off   | Req   | Ack   | Nack   | Rel   | Inf   | Dec   | Mal   | Drp   |
++=============+======+=======+=======+=======+=======+========+=======+=======+=======+=======+=======+
++-------------+------+-------+-------+-------+-------+--------+-------+-------+-------+-------+-------+
+"""
+
+expected_counts_v4_type = """\
++-------------------+------+------+
+| Vlan (Discover)   | TX   | RX   |
++===================+======+======+
++-------------------+------+------+
+"""
+
 class TestDhcp6RelayCounters(object):
 
-    def test_show_counts(self):           
+    def test_show_counts(self):
         runner = CliRunner()
         result = runner.invoke(show.dhcp6relay_counters.commands["counts"], ["-i Vlan1000"])
         print(result.output)
@@ -47,8 +65,38 @@ class TestDhcp6RelayCounters(object):
 
 class TestDhcpRelayCounters(object):
 
-    def test_show_counts(self):           
+    def test_show_counts(self):
         runner = CliRunner()
         result = runner.invoke(show.dhcp4relay_counters.commands["counts"], ["Vlan1000"])
         print(result.output)
         assert result.output == expected_counts_v4
+
+    def test_show_counts_dir(self):
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp4relay_counters.commands["counts"], ["Vlan1000", "-d", "RX"])
+        print(result.output)
+        assert result.output == expected_counts_v4_rx
+
+    def test_show_counts_type(self):
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp4relay_counters.commands["counts"], ["Vlan1000", "-t", "Discover"])
+        print(result.output)
+        assert result.output == expected_counts_v4_type
+
+    def test_show_ipv4_counters(self):
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp_relay_ipv4.commands["counters"], ["Vlan1000"])
+        print(result.output)
+        assert result.output == expected_counts_v4
+
+    def test_show_ipv4_counters_dir(self):
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp_relay_ipv4.commands["counters"], ["Vlan1000", "-d", "RX"])
+        print(result.output)
+        assert result.output == expected_counts_v4_rx
+
+    def test_show_counts_type(self):
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp_relay_ipv4.commands["counters"], ["Vlan1000", "-t", "Discover"])
+        print(result.output)
+        assert result.output == expected_counts_v4_type
