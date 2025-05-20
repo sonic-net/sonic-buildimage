@@ -158,7 +158,7 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
 
     if "SYSTEM_DEFAULTS" not in data:
-            data["SYSTEM_DEFAULTS"] = {}
+        data["SYSTEM_DEFAULTS"] = {}
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
@@ -184,7 +184,7 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
         }
 
     data["SYSTEM_DEFAULTS"]["software_bfd"] = {
-            "status": "enabled"
+        "status": "enabled"
     }
 
     data['NTP_SERVER'] = {
