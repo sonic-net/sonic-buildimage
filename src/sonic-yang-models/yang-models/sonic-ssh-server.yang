@@ -61,7 +61,12 @@ module sonic-ssh-server {
                 }
                 leaf permit_root_login {
                     description "Specifies whether root can log in using ssh.";
-                    type boolean;
+                    type enumeration {
+                        enum "yes";
+                        enum "prohibit-password";
+                        enum "forced-commands-only";
+                        enum "no";
+                    }
                 }
                 leaf password_authentication {
                     description "Specifies whether password authentication is enabled.";

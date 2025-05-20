@@ -8,7 +8,7 @@
                     "ports": "22",
                     "inactivity_timeout": "15",
                     "max_sessions": "0",
-                    "permit_root_login": "false",
+                    "permit_root_login": "no",
                     "password_authentication": "true",
                     "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
                     "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
@@ -24,6 +24,42 @@
                     "authentication_retries": "16",
                     "login_timeout": "140",
                     "ports": "22,222"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_PERMIT_ROOT_YES": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "permit_root_login": "yes"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_PERMIT_ROOT_NO": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "permit_root_login": "no"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_PERMIT_ROOT_PROHIBIT_PASSWORD": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "permit_root_login": "prohibit-password"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_PERMIT_ROOT_FORCED_COMMANDS_ONLY": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "permit_root_login": "forced-commands-only"
                 }
             }
         }
