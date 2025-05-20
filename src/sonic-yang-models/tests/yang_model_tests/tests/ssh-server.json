@@ -5,6 +5,18 @@
     "SSH_SERVER_VALID_MODIFIED": {
         "desc": "Configure modified SSH_SERVER."
     },
+    "SSH_SERVER_PERMIT_ROOT_YES": {
+        "desc": "permit_root_login: yes"
+    },
+    "SSH_SERVER_PERMIT_ROOT_NO": {
+        "desc": "permit_root_login: no"
+    },
+    "SSH_SERVER_PERMIT_ROOT_PROHIBIT_PASSWORD": {
+        "desc": "permit_root_login: prohibit-password"
+    },
+    "SSH_SERVER_PERMIT_ROOT_FORCED_COMMANDS_ONLY": {
+        "desc": "permit_root_login: forced-commands-only"
+    },
     "SSH_SERVER_INVALID_AUTH_RETRIES": {
         "desc": "Configure invalid number of authentication retries in SSH_SERVER.",
         "eStrKey" : "Range"

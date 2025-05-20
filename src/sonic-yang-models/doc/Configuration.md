@@ -3055,7 +3055,11 @@ In this table, we allow configuring ssh server global settings. This will featur
 -   ports - Ssh port numbers - string of port numbers seperated by ','
 -   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
 -   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
--   permit_root_login - Whether or not to allow root login.  Boolean.
+-   permit_root_login - Whether or not to allow root login. Default value: "prohibit-password"
+    - "yes"
+    - "prohibit-password"
+    - "forced-commands-only"
+    - "no"
 -   password_authentication - Whether or not to allow password authentication. Boolean.
 -   ciphers - Ciphers to allow.  See `ssh -Q ciphers`
 -   kex_algorithms - Key Exchange algorithms to allow.  See `ssh -Q kex_algorithms`
