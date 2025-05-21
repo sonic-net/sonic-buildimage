@@ -2,7 +2,7 @@
 ! template: bgpd/templates/msft.general/v6.lowerspine.upperspine/peer-group.conf.j2
 !
   neighbor UPPERSPINE_V6 peer-group
-  address-family ipv4 unicast
+  address-family ipv6 unicast
     neighbor UPPERSPINE_V6 activate
     neighbor UPPERSPINE_V6 soft-reconfiguration inbound
     neighbor UPPERSPINE_V6 route-map FROM_UPPERSPINE_V6 in
