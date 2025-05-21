@@ -56,6 +56,7 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     m.directory.put("LOCAL", "local_addresses", "fc00:20::20", {"interface": "Ethernet8|fc00:20::20/96"})
     m.directory.put("LOCAL", "interfaces", "Ethernet4|30.30.30.30/24", {"anything": "anything"})
     m.directory.put("LOCAL", "interfaces", "Ethernet8|fc00:20::20/96", {"anything": "anything"})
+    m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
 
     if m.check_neig_meta:
         m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "TOR", {})
@@ -244,10 +245,31 @@ def test_del_handler(mocked_log_info):
         m = constructor(constant)
         m.del_handler("10.10.10.1")
         mocked_log_info.assert_called_with("Peer '(default|10.10.10.1)' has been removed")
+    
+@patch('bgpcfgd.managers_bgp.log_info')
+def test_del_handler_dynamic_template_exists(mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        base_template = "bgpd/templates/" + m.constants["bgp"]["peers"]["dynamic"]["template_dir"] + "/delete.conf.j2"
+        if os.path.exists(TEMPLATE_PATH + "/" + base_template):
+            mocked_log_info.assert_called_with("Using delete template found at %s" % base_template)
+        m.del_handler("10.10.10.1")
+        mocked_log_info.assert_called_with("Peer '(default|10.10.10.1)' has been removed")
 
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_del_handler_nonexist_peer(mocked_log_warn):
     for constant in load_constant_files():
         m = constructor(constant)
+        m.del_handler("40.40.40.1")
+        mocked_log_warn.assert_called_with("Peer '(default|40.40.40.1)' has not been found")
+
+@patch('bgpcfgd.managers_bgp.log_info')
+@patch('bgpcfgd.managers_bgp.log_warn')
+def test_del_handler_dynamic_nonexist_peer_template_exists(mocked_log_warn, mocked_log_info):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        base_template = "bgpd/templates/" + m.constants["bgp"]["peers"]["dynamic"]["template_dir"] + "/delete.conf.j2"
+        if os.path.exists(TEMPLATE_PATH + "/" + base_template):
+            mocked_log_info.assert_called_with("Using delete template found at %s" % base_template)
         m.del_handler("40.40.40.1")
         mocked_log_warn.assert_called_with("Peer '(default|40.40.40.1)' has not been found")
