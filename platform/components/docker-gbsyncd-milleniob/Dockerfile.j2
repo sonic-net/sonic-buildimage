@@ -1,0 +1,42 @@
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -f -y iproute2 libcap2-bin libprotobuf-dev
+
+COPY \
+{% for deb in docker_gbsyncd_milleniob_debs.split(' ') -%}
+{% if 'libsaibcm' not in deb -%}
+debs/{{ deb }}{{' '}}
+{%- endif %}
+{%- endfor -%}
+debs/
+
+RUN dpkg -i \
+{% for deb in docker_gbsyncd_milleniob_debs.split(' ') -%}
+{% if 'libsaibcm' not in deb -%}
+debs/{{ deb }}{{' '}}
+{%- endif %}
+{%- endfor %}
+
+COPY ["docker-init.sh", "/usr/bin/"]
+COPY ["start.sh", "/usr/bin/"]
+COPY ["bcmsh", "/usr/bin/"]
+
+COPY ["critical_processes.j2", "/usr/share/sonic/templates"]
+COPY ["supervisord.conf.j2", "/usr/share/sonic/templates"]
+
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["files/dsserve", "/usr/bin/"]
+RUN chmod +x /usr/bin/dsserve
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/bin/docker-init.sh"]
