@@ -61,7 +61,7 @@ fn check_auditd_rules() -> String {
     let expected = if hwsku.contains("Nokia-7215") || hwsku.contains("Nokia-M0-7215") {
         "bd574779fb4e1116838d18346187bb7f7bd089c9"
     } else {
-        "f88174f901ec8709bacaf325158f10ec62909d13"
+        "c3441d4f777257d8d2c6ac90fd50d49b9a1d616b"
     };
 
     let cmd = format!(
