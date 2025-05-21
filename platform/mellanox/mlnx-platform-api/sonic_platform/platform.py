@@ -23,6 +23,7 @@
 
 try:
     from sonic_platform_base.platform_base import PlatformBase
+    from sonic_platform_base.sonic_xcvr.api.public.cmis import CmisApi
     from .chassis import Chassis, ModularChassis
     from .device_data import DeviceDataManager
 except ImportError as e:
@@ -31,6 +32,7 @@ except ImportError as e:
 class Platform(PlatformBase):
     def __init__(self):
         PlatformBase.__init__(self)
+        CmisApi.set_cache_enabled(True)
         if DeviceDataManager.get_linecard_count() == 0:
             self._chassis = Chassis()
         else:
