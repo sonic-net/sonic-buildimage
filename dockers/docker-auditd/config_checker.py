@@ -64,7 +64,7 @@ def get_hwsku():
 
 def is_auditd_rules_configured():
     hwsku = get_hwsku()
-    if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
+    if hwsku and ("Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku):
         EXPECTED_HASH = CONFIG_HASHES["rules"]["nokia"]
     else:
         EXPECTED_HASH = CONFIG_HASHES["rules"]["default"]
