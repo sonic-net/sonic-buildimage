@@ -339,23 +339,13 @@ start() {
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
-        if [[ x"$sonic_asic_platform" == x"broadcom" ]]; then
-            . /host/machine.conf
-            if [ -n "$aboot_platform" ]; then
-                platform=$aboot_platform
-            elif [ -n "$onie_platform" ]; then
-                platform=$onie_platform
-            else
-                platform="unknown"
-            fi
+        MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
+        if [ -f $MEDIA_SETTINGS ]; then
             # Need to restart PMON on media_settings.json skus due to
             # https://github.com/sonic-net/sonic-buildimage/issues/21902
-            if [[ x"$platform" == x"x86_64-arista_7800r3a"* ]]; then
-                debug "Restarting pmon service..."
-                /bin/systemctl restart pmon
-            fi
+            debug "Restarting pmon service..."
+            /bin/systemctl restart pmon
         fi
-
     fi
 
     # On supervisor card, skip starting asic related services here. In wait(),
