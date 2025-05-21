@@ -16,6 +16,7 @@
  *  Description of various APIs related to PSU component
  */
 
+#include "pddf_multifpgapci_defs.h"
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
@@ -310,8 +311,24 @@ int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *dat
         val = board_i2c_cpld_read(adata->devaddr , adata->offset);
         if (val < 0)
             return val;
-        padata->val.intval =  ((val & adata->mask) == adata->cmpval);
-        psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+    }
+    else if (strncmp(adata->devtype, "multifpgapci", strlen("multifpgapci")) == 0)
+    {
+        status = ptr_multifpgapci_readpci(adata->fpga_pci_dev, adata->offset, &val);
+        if (status)
+          goto ret;
+    }
+    else
+    {
+        printk(KERN_ERR "%s: Unexpected devtype = ", __FUNCTION__, adata->devtype);
+    }
+
+    padata->val.intval =  ((val & adata->mask) == adata->cmpval);
+    psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+
+ret:
+    if (status) {
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
     }
 
     return status;

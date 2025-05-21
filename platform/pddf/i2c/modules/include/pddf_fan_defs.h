@@ -26,15 +26,17 @@
 #define ATTR_NAME_LEN 32
 #define STR_ATTR_SIZE 32
 #define DEV_TYPE_LEN 32
+#define BDF_NAME_SIZE 32
 
 /* Each client has this additional data 
  */
 
-typedef struct FAN_DATA_ATTR
+typedef struct FAN_SYSFS_DATA
 {
     char aname[ATTR_NAME_LEN];                    // attr name, taken from enum fan_sysfs_attributes
     char devtype[DEV_TYPE_LEN];       // Type of FAN controller, i.e EMC2305, EMC2302, or FAN-CPLD etc
     char devname[DEV_TYPE_LEN];       // Name of the device from where this informatin is to be read
+    char bdf[BDF_NAME_SIZE]; // Set iff devtype == multifpgapci
     uint32_t devaddr;
     uint32_t offset;
     uint32_t mask;
@@ -43,9 +45,23 @@ typedef struct FAN_DATA_ATTR
     int mult;                       // Multiplication factor to get the actual data
     uint8_t is_divisor;                     // Check if the value is a divisor and mult is dividend
     void *access_data;
+}FAN_SYSFS_DATA;
 
+typedef struct FAN_DATA_ATTR
+{
+    char aname[ATTR_NAME_LEN];
+    char devtype[DEV_TYPE_LEN];
+    char devname[DEV_TYPE_LEN];
+    struct pci_dev *fpga_pci_dev; // Set iff devtype == multifpgapci
+    uint32_t devaddr;
+    uint32_t offset;
+    uint32_t mask;
+    uint32_t cmpval;
+    uint32_t len;
+    int mult;
+    uint8_t is_divisor;
+    void *access_data;
 }FAN_DATA_ATTR;
-
 
 typedef struct FAN_SYSFS_ATTR_DATA
 {
@@ -73,9 +89,9 @@ typedef struct FAN_SYSFS_ATTR_DATA_ENTRY
 typedef struct FAN_DATA
 {
     int num_fantrays;                    // num of fans controlled by this fan client
-    FAN_DATA_ATTR fan_attr;
+    FAN_SYSFS_DATA fan_attr;
     int len;             // no of valid attributes for this fan client
-    FAN_DATA_ATTR fan_attrs[MAX_FAN_ATTRS]; 
+    FAN_SYSFS_DATA fan_attrs[MAX_FAN_ATTRS];
 }FAN_DATA;
 
 typedef struct FAN_PDATA
