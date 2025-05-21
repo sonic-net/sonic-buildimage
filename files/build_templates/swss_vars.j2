@@ -11,5 +11,6 @@
     "supporting_bulk_counter_groups": "{{ DEVICE_METADATA.localhost.supporting_bulk_counter_groups|join(',') }}",
     {% endif -%}
     "dual_tor": {% if DEVICE_METADATA.localhost.type == "ToRRouter" and DEVICE_METADATA.localhost.subtype == "DualToR" %}"enable"{% else %}"disable"{% endif %},
-    "dscp_remapping": {% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.tunnel_qos_remap is defined and SYSTEM_DEFAULTS.tunnel_qos_remap.status == "enabled" %}"enable"{% else %}"disable"{% endif %}
+    "dscp_remapping": {% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.tunnel_qos_remap is defined and SYSTEM_DEFAULTS.tunnel_qos_remap.status == "enabled" %}"enable"{% else %}"disable"{% endif %},
+    "switch_type": "{{ DEVICE_METADATA.localhost.switch_type }}"
 }

@@ -12,6 +12,9 @@ confdir /etc/chrony/conf.d
 {# Getting NTP global configuration -#}
 {% set global = (NTP | d({})).get('global', {}) -%}
 
+{# Getting DEVICE_METADATA localhost configuration -#}
+{% set device_metadata = (DEVICE_METADATA | d({})).get('localhost', {}) -%}
+
 {# Adding NTP servers. We need to know if we have some pools, to set proper config -#}
 {% set ns = namespace(is_pools=false) %}
 {% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' -%}
@@ -51,10 +54,14 @@ confdir /etc/chrony/conf.d
 
 {% endfor -%}
 
+{# Enable the NTP server configuration only if the switch type is smartswitch -#}
+{% if device_metadata.subtype == 'SmartSwitch' -%}
 {# Enable NTP server functionality if server_role is enabled or DHCP configuration is enabled -#}
-{# {% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
+{% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
 allow
-{% endif -%} #}
+binddevice bridge-midplane
+{% endif -%}
+{% endif -%}
 
 {# use source interface if configured to send NTP requests, else use eth0 if running in mgmt
 vrf (default is not to listen on anything) -#}

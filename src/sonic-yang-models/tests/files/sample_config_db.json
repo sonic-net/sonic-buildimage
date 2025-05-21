@@ -375,6 +375,13 @@
                 "lag_hash_algorithm": "XOR"
             }
         },
+        "SWITCH_TRIMMING": {
+            "GLOBAL": {
+                "size": "128",
+                "dscp_value": "48",
+                "queue_index": "6"
+            }
+        },
         "DEVICE_METADATA": {
             "localhost": {
                 "buffer_model": "dynamic",
@@ -1332,7 +1339,8 @@
         },
         "LOOPBACK_INTERFACE": {
             "Loopback0": {
-               "nat_zone": "2"
+               "nat_zone": "2",
+               "admin_status": "up"
             },
             "Loopback0|2a04:5555:40:4::4e9/128": {
                 "scope": "global",
@@ -1414,10 +1422,14 @@
         },
         "GNMI_CLIENT_CERT": {
             "testcert1": {
-                "role": "RW"
+                "role": [
+                        "RW"
+                ]
             },
             "testcert2": {
-                "role": "RO"
+                "role": [
+                        "RO"
+                ]
             }
         },
         "TUNNEL": {
@@ -2777,6 +2789,11 @@
             "nhg2": {
                 "bucket_size": "32",
                 "match_mode": "route-based"
+            },
+            "nhg3": {
+                "bucket_size": "24",
+                "match_mode": "prefix-based",
+                "max_next_hops": "6"
             }
         },
         "FG_NHG_PREFIX": {
@@ -2785,6 +2802,9 @@
             },
             "192.168.0.0/16": {
                 "FG_NHG": "nhg2"
+            },
+            "172.17.0.1/32": {
+                "FG_NHG": "nhg3"
             }
         },
         "FIPS":{
