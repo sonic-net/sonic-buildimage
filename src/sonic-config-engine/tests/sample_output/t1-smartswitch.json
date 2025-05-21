@@ -675,5 +675,10 @@
 			"mtu": "9100",
 			"speed": "100000"
 		}
+	},
+	"NTP": {
+		"global": {
+			"server_role": "enabled"
+		}
 	}
 }

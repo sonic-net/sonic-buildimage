@@ -9,18 +9,30 @@ def
 {# Determine device topology and filename postfix #}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['type'] is defined %}
 {%-     set switch_role = DEVICE_METADATA['localhost']['type'] %}
+{%  if DEVICE_METADATA['localhost']['subtype'] is defined %}
+{%-     set switch_subrole = DEVICE_METADATA['localhost']['subtype'] %}
+{%- else %}
+{%-     set switch_subrole = '' %}
+{%- endif %}
 {%-     if 'torrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't0' %}
 {%-     elif 'leafrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't1' %}
 {%-     elif 'spinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
-{%-         set filename_postfix = 't2' %}
+    {%-     if 'lowerspinerouter' == switch_subrole.lower() %}
+    {%-         set filename_postfix = 'lt2' %}
+    {%-     elif 'fabricspinerouter' == switch_role.lower() %}
+    {%-         set filename_postfix = 'ft2' %}
+    {%-     else %}
+    {%-         set filename_postfix = 't2' %}
+    {%-     endif -%}
 {%-     else %}
 {%-         set filename_postfix = set_default_topology() %}
-{%-     endif %}
+{%-     endif -%}
 {%- else %}
-{%-     set filename_postfix = set_default_topology() %}
-{%-     set switch_role      = '' %}
+{%-         set filename_postfix = set_default_topology() %}
+{%-         set switch_role      = '' %}
+{%-         set switch_subrole   = '' %}
 {%- endif -%}
 
 {% set voq_chassis = false %}
@@ -45,8 +57,11 @@ def
             'internal'               : '5m',
             'torrouter_server'       : '5m',
             'leafrouter_torrouter'   : '40m',
+            'upperspinerouter_spinerouter' : '50m',
             'spinerouter_leafrouter' : '300m',
+            'regionalhub_upperspinerouter': '80000m',
             'regionalhub_spinerouter': '80000m',
+            'aznghub_upperspinerouter'    : '80000m',
             'aznghub_spinerouter'    : '80000m'
             }
     -%}

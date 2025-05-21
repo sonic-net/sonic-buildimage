@@ -124,13 +124,16 @@
             "scheduler": "scheduler.4"
         },
         "{{ port }}|1": {
-            "scheduler": "scheduler.8"
+            "scheduler": "scheduler.8",
+            "wred_profile": "AZURE_LOSSY_Q1"
         },
         "{{ port }}|2": {
-            "scheduler": "scheduler.18"
+            "scheduler": "scheduler.18",
+            "wred_profile": "AZURE_LOSSY_Q2"
         },
         "{{ port }}|3": {
-            "scheduler": "scheduler.22"
+            "scheduler": "scheduler.22",
+            "wred_profile": "AZURE_LOSSY_Q3"
         },
         "{{ port }}|4": {
             "scheduler": "scheduler.22"
@@ -148,23 +151,73 @@
 {%- endmacro %}
 
 {%- macro generate_wred_profiles() %}
+    {%- set max_threshold = "282624" %}
+    {%- set min_threshold = "166912" %}
+
+    {%- if 'type' in DEVICE_METADATA['localhost'] %}
+        {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+            {%- set max_threshold = "282624" %}
+        {%- elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+            {%- set max_threshold = "239616" %}
+        {%- endif %}
+    {%- endif %}
+
     "WRED_PROFILE": {
-        "AZURE_LOSSLESS" : {
+        "AZURE_LOSSY_Q1" : {
             "wred_green_enable"      : "true",
             "wred_yellow_enable"     : "true",
             "wred_red_enable"        : "true",
             "ecn"                    : "ecn_all",
-            "green_max_threshold"    : "10000000",
-            "green_min_threshold"    : "2000000",
-            "yellow_max_threshold"   : "10000000",
-            "yellow_min_threshold"   : "2000000",
-            "red_max_threshold"      : "10000000",
-            "red_min_threshold"      : "2000000",
+            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_Q2" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_Q3" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
             "green_drop_probability" : "5",
             "yellow_drop_probability": "5",
             "red_drop_probability"   : "5"
         }
     },
+{%- endmacro %}
+
+{%- macro generate_lossless_tc_list(lossless_tc_list) %}
+{#
+    This macro intentionally does nothing, leaving LOSSLESS_TC as an empty list
+    Use the following to generate other lists like 3, 4
+    {%- if lossless_tc_list.append('3') -%}{%- endif -%}
+    {%- if lossless_tc_list.append('4') -%}{%- endif -%}
+#}
 {%- endmacro %}
 
 {%- include 'qos_config.j2' %}

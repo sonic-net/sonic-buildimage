@@ -77,5 +77,10 @@
             "dash_ipv6_acl_rule_low_threshold": "70",
             "dash_ipv6_acl_rule_high_threshold": "85"
         }
+    },
+    "NTP_SERVER": {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
     }
 }

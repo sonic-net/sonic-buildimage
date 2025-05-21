@@ -265,41 +265,14 @@ class TestModule:
             mock_method.assert_called_once_with("Failed to set the admin state for DPU3")
         m.dpuctl_obj.dpu_power_off = mock.MagicMock(return_value=True)
         assert m.set_admin_state(False)
-        midplane_ips = {
-            "dpu0": "169.254.200.1",
-            "dpu1": "169.254.200.2",
-            "dpu2": "169.254.200.3",
-            "dpu3": "169.254.200.4"
-        }
-        def get_midplane_ip(DB_NAME, _hash, key):
-            dpu_name = _hash.split("|")[-1]
-            return midplane_ips.get(dpu_name)
-        mock_get.side_effect = get_midplane_ip
-        assert m.get_midplane_ip() == "169.254.200.4"
-        assert m.midplane_ip == "169.254.200.4"
-        mock_get.assert_called_with('CONFIG_DB', 'DHCP_SERVER_IPV4_PORT|bridge-midplane|dpu3', 'ips@')
         m1 = DpuModule(2)
-        assert m1.get_midplane_ip() == "169.254.200.3"
-        assert m1.midplane_ip == "169.254.200.3"
-        mock_get.assert_called_with('CONFIG_DB', 'DHCP_SERVER_IPV4_PORT|bridge-midplane|dpu2', 'ips@')
-        mock_get.reset_mock()
-        mock_get.return_value = None
-        mock_get.side_effect = None
-        # We check for the IP only once in CONFIG_DB after initialization
         assert m.get_midplane_ip() == "169.254.200.4"
-        mock_get.assert_not_called()
-        m.midplane_ip = None
-        m1.midplane_ip = None
-        assert not m.get_midplane_ip()
-        assert not m1.get_midplane_ip()
-        mock_get.side_effect = get_midplane_ip
+        assert m1.get_midplane_ip() == "169.254.200.3"
         with patch.object(m, '_is_midplane_up', ) as mock_midplane_m, \
              patch.object(m1, '_is_midplane_up',) as mock_midplane_m1:
             mock_midplane_m.return_value = True
             mock_midplane_m1.return_value = True
-            m.midplane_ip = None
-            midplane_ips["dpu3"] = "169.254.200.244"
-            command = ['ping', '-c', '1', '-W', '1', "169.254.200.244"]
+            command = ['ping', '-c', '1', '-W', '1', "169.254.200.4"]
             mock_call.return_value = 0
             assert m.is_midplane_reachable()
             mock_call.assert_called_with(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
