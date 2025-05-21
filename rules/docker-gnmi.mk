@@ -37,7 +37,7 @@ $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 
 $(DOCKER_GNMI)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 ifeq ($(SMARTSWITCH), 1)
-$(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi_smartswitch:/etc/monit/conf.d
+$(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi_smartswitch:/etc/monit/conf.d/monit_gnmi
 else
-$(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
+$(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d/monit_gnmi
 endif
