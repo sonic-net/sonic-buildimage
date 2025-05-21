@@ -1,13 +1,15 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-
-FROM $BASE AS base
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
 
 # Update apt's cache of available packages
 RUN apt-get update
@@ -19,6 +21,12 @@ RUN apt-get update
 # Install built Debian packages and implicitly install their dependencies
 {{ install_debian_packages(docker_eventd_debs.split(' ')) }}
 {%- endif %}
+
+# Clean up
+RUN apt-get clean -y         && \
+    apt-get autoclean -y     && \
+    apt-get autoremove -y    && \
+    rm -rf /debs
 
 RUN mkdir -p /etc/rsyslog.d/rsyslog_plugin_conf
 
@@ -43,12 +51,4 @@ RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/dhcp_relay_events_info.json
 RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/swss_events_info.json
 RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events_info.json
 
-FROM $BASE
-
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
-
-# Pass the image_version to container
-ENV IMAGE_VERSION=$image_version
-
-ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]
