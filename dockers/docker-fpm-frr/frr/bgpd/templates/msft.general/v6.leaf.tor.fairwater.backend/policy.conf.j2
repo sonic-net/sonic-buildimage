@@ -1,21 +1,35 @@
 !
 ! template: bgpd/templates/msft.general/v6.leaf.tor.fairwater.backend/policy.conf.j2
 !
-bgp community-list standard LargeComputeAI_BackEnd_BT0 permit 8075:9325
+bgp community-list standard LargeComputeAI_BE_Loopback permit 65219:999
+bgp community-list standard LargeComputeAI_BE_Vlan permit 65219:998
+! community 65219:65219 is used for prefixes coming from other fairwater stamps
+bgp community-list standard COMM_FAIRWATER_BE_PREFIX permit 65219:65219
+! need to advertise the local loopback to BT0 for netscan services
+bgp as-path access-list LOCAL_AS seq 10 permit ^$
 !
-route-map TO_BE_TIER0_V6 deny 100
-  match community LargeComputeAI_BackEnd_BT0
+!
+route-map TO_BE_TIER0_V6 permit 100
+  match community LargeComputeAI_BE_Loopback
 !
 route-map TO_BE_TIER0_V6 permit 110
+  match community LargeComputeAI_BE_Vlan
+!
+route-map TO_BE_TIER0_V6 permit 120
+  match community COMM_FAIRWATER_BE_PREFIX
+!
+route-map TO_BE_TIER0_V6 permit 130
+  match as-path LOCAL_AS
+  set community no-export
+!
+route-map TO_BE_TIER0_V6 deny 200
+!
 !
 route-map FROM_BE_TIER0_V6 permit 100
-  set ipv6 next-hop prefer-global
   on-match next
+  set ipv6 next-hop prefer-global
 !
-route-map FROM_BE_TIER0_V6 permit 110
-  set community 8075:9325 additive
-!
-route-map FROM_BE_TIER0_V6 permit 120
+route-map FROM_BE_TIER0_V6 permit 200
 !
 ! end of template: bgpd/templates/msft.general/v6.leaf.tor.fairwater.backend/policy.conf.j2
 !

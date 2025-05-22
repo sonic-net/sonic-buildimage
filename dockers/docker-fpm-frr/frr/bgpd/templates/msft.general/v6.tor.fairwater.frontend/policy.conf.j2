@@ -1,16 +1,21 @@
 !
 ! template: bgpd/templates/msft.general/v6.tor.fairwater.frontend/policy.conf.j2
 !
-bgp community-list standard LargeComputeAI_BackEnd_Loopback seq 5 permit 13399:9314
+ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
+!
+bgp community-list standard LargeComputeAI_BE_Loopback seq 5 permit 65219:999
 !
 route-map TO_BE_TIER0_V6 permit 100
+  match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map TO_BE_TIER0_V6 deny 200  
 !
 route-map FROM_BE_TIER0_V6 permit 100
-   set ipv6 next-hop prefer-global
-   on-match next
+  on-match next
+  set ipv6 next-hop prefer-global
 !
 route-map FROM_BE_TIER0_V6 permit 110
-   match community LargeComputeAI_BackEnd_Loopback
+  match community LargeComputeAI_BE_Loopback
 !
 route-map FROM_BE_TIER0_V6 deny 200
 !
