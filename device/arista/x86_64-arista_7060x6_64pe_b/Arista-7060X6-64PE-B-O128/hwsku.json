@@ -255,12 +255,6 @@
         "Ethernet504": {
             "default_brkout_mode": "2x400G",
             "autoneg": "on"
-        },
-        "Ethernet512": {
-            "default_brkout_mode": "1x10G"
-        },
-        "Ethernet513": {
-            "default_brkout_mode": "1x10G"
         }
     }
 }
