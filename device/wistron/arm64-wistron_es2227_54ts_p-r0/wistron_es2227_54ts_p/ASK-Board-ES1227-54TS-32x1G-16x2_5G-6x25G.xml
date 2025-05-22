@@ -1676,6 +1676,18 @@ Efficient Ethernet Transceiver</askboardplt:description>
         <askboardplt:mppNum askboardplt:type="mpp-num-type">31</askboardplt:mppNum>
         <askboardplt:mppSelValue askboardplt:type="mpp-select-type">1</askboardplt:mppSelValue>
       </askboardplt:MppSelect-list>
+      <askboardplt:MppSelect-list>
+        <askboardplt:mppNum askboardplt:type="mpp-num-type">43</askboardplt:mppNum>
+        <askboardplt:mppSelValue askboardplt:type="mpp-select-type">1</askboardplt:mppSelValue>
+      </askboardplt:MppSelect-list>
+      <askboardplt:MppSelect-list>
+        <askboardplt:mppNum askboardplt:type="mpp-num-type">44</askboardplt:mppNum>
+        <askboardplt:mppSelValue askboardplt:type="mpp-select-type">1</askboardplt:mppSelValue>
+      </askboardplt:MppSelect-list>
+      <askboardplt:MppSelect-list>
+        <askboardplt:mppNum askboardplt:type="mpp-num-type">45</askboardplt:mppNum>
+        <askboardplt:mppSelValue askboardplt:type="mpp-select-type">1</askboardplt:mppSelValue>
+      </askboardplt:MppSelect-list>
       <askboardplt:laneList-list>
         <askboardplt:laneNumber askboardplt:type="uint32">0</askboardplt:laneNumber>
         <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
@@ -1740,9 +1752,9 @@ Efficient Ethernet Transceiver</askboardplt:description>
         <askboardplt:ledstream-interface-number askboardplt:type="led-interface-type">0</askboardplt:ledstream-interface-number>
         <askboardplt:ledstream-configSet>
           <askboardplt:ledOrganize askboardplt:type="led-stream-order-mode-type">ORDER_MODE_BY_CLASS</askboardplt:ledOrganize>
-          <askboardplt:blink0DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_1</askboardplt:blink0DutyCycle>
+          <askboardplt:blink0DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_2</askboardplt:blink0DutyCycle>
           <askboardplt:blink0Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_0</askboardplt:blink0Duration>
-          <askboardplt:blink1DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_1</askboardplt:blink1DutyCycle>
+          <askboardplt:blink1DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_2</askboardplt:blink1DutyCycle>
           <askboardplt:blink1Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_0</askboardplt:blink1Duration>
           <askboardplt:pulseStretch askboardplt:type="led-stream-pulse-stretch-type">PULSE_STRETCH_1</askboardplt:pulseStretch>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
@@ -1784,10 +1796,9 @@ Efficient Ethernet Transceiver</askboardplt:description>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
-          <askboardplt:forceEnable askboardplt:type="boolean-type">true</askboardplt:forceEnable>
-          <askboardplt:forceData askboardplt:type="uint32">4294967295</askboardplt:forceData>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">false</askboardplt:pulseStretchEnable>
-          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">1</askboardplt:classNum>
@@ -1796,7 +1807,7 @@ Efficient Ethernet Transceiver</askboardplt:description>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
           <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">false</askboardplt:pulseStretchEnable>
-          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">2</askboardplt:classNum>
