@@ -1,7 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-
-FROM $BASE AS base
+FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -10,7 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update      && \
     apt-get install -f -y  \
-            dmidecode
+            dmidecode      \
+            libmnl0
 
 {% if docker_sflow_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -20,6 +19,11 @@ RUN apt-get update      && \
 {{ install_debian_packages(docker_sflow_debs.split(' ')) }}
 {%- endif %}
 
+RUN apt-get clean -y      && \
+    apt-get autoclean -y  && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
 RUN sed -ri '/^DAEMON_ARGS=""/c DAEMON_ARGS="-c /var/log/hsflowd.crash"' /etc/init.d/hsflowd
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
@@ -27,9 +31,4 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["port_index_mapper.py", "/usr/bin"]
 
-FROM $BASE
-
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
-
-ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

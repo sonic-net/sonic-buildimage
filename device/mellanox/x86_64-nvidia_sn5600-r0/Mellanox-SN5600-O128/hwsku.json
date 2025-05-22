@@ -385,7 +385,7 @@
             "default_brkout_mode": "2x400G[200G,100G,50G,40G,25G,10G]"
         },
         "Ethernet512": {
-            "default_brkout_mode": "1x25G(1)[10G]"
+            "default_brkout_mode": "1x25G[10G]"
         }
     }
 }
