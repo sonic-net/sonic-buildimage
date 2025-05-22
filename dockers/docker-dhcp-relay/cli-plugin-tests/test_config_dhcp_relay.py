@@ -169,6 +169,7 @@ class TestConfigDhcpRelay(object):
             assert result.exit_code == 0
             assert "{} is already a DHCP relay for Vlan1000".format(exist_ip) in result.output
             assert mock_run_command.call_count == 0
+            assert 1 == 2
 
     def test_config_del_nonexist_dhcp_relay(self, mock_cfgdb, ip_version):
         runner = CliRunner()

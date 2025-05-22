@@ -8,7 +8,7 @@ import os
 dhcp6_relay = importlib.import_module('show.plugins.dhcp-relay')
 
 import utilities_common.cli as clicommon
-from swsscommon.swsscommon import SonicV2Connector, ConfigDBConnector
+from swsscommon.swsscommon import SonicV2Connector
 
 DHCPV4_CLEAR_COUNTER_LOCK_FILE = "/tmp/clear_dhcpv4_counter.lock"
 SUPPORTED_DHCP_TYPE = [
@@ -22,7 +22,6 @@ COUNTERS_DB_SEPRATOR = ":"
 def clear_dhcp_relay_ipv6_counter(interface):
     counter = dhcp6_relay.DHCPv6_Counter()
     counter_intf = counter.get_interface()
-
     if interface:
         counter.clear_table(interface)
     else:
@@ -48,7 +47,7 @@ def clear_dhcpv4_db_counters(vlan_interface, direction, type, ctx):
     for key in db.keys(db.COUNTERS_DB, counters_key):
         # Make sure we clear the correct interface
         # Sample: If we want to clear Vlan100, but there is a Vlan1000 exists too, we need to exclude Vlan1000
-        if not(":{}:".format(vlan_interface) in key or key.endswith(vlan_interface)):
+        if not (":{}:".format(vlan_interface) in key or key.endswith(vlan_interface)):
             continue
         for dir in directions:
             count_str = db.get(db.COUNTERS_DB, key, dir)
