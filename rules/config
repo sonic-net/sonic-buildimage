@@ -20,6 +20,14 @@ SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
 
+# SONIC_USE_DOCKER_BUILDKIT - use docker buildkit for build.
+# If set to y SONiC build system will set environment variable DOCKER_BUILDKIT=1
+# to enable docker buildkit.
+# This options will speed up docker image build time.
+# NOTE: SONIC_USE_DOCKER_BUILDKIT will produce larger installable SONiC image
+# because of a docker bug (more details: https://github.com/moby/moby/issues/38903)
+# SONIC_USE_DOCKER_BUILDKIT = y
+
 # SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD - use native dockerd for build.
 # If set to y SONiC build container will use native dockerd instead of dind for faster build.
 # Special handling of the docker image file names is needed to avoid conflicts with
