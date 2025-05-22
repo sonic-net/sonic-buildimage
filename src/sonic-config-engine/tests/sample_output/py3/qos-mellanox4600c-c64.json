@@ -180,6 +180,9 @@
         }
     },
     "PORT_QOS_MAP": {
+        "global": {
+            "dscp_to_tc_map"  : "AZURE"
+        },
         "Ethernet0": {
             "dscp_to_tc_map"  : "AZURE_UPLINK",
             "tc_to_queue_map" : "AZURE",
