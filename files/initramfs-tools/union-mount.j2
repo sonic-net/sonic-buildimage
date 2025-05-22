@@ -219,8 +219,8 @@ mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
 ## DEBUG
-{% for key, value in globals().items() %}
-# {{ key }}: {{ value }}
+{% for key in vars() %}
+# {{ key }}: {{ lookup(key) }}
 {% endfor %}
 
 {% if PLATFORM_ARCH != "armhf" %}
