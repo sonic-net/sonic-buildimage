@@ -18,15 +18,14 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "default": "c3441d4f777257d8d2c6ac90fd50d49b9a1d616b",
+        "default": "77e0d8ff297ab3089b234fcd97a20e1c05380f3e",
         "nokia": "bd574779fb4e1116838d18346187bb7f7bd089c9"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
 
 # Command definitions
-RULES_HASH_CMD = r"""find {} -type f -name "[0-9][0-9]-*.rules" \
-! -name "30-audisp-tacplus.rules" \
+RULES_HASH_CMD = r"""find {} -type f -name "*.rules" \
 -exec cat {{}} + | \
 sort | \
 sha1sum""".format(RULES_DIR)

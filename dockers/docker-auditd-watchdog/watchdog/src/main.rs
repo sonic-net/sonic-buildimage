@@ -6,7 +6,7 @@ static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
 // Expected hash values
 static AUDITD_CONF_HASH: &str = "7cdbd1450570c7c12bdc67115b46d9ae778cbd76";
-static AUDITD_RULES_HASH_DEFAULT: &str = "c3441d4f777257d8d2c6ac90fd50d49b9a1d616b";
+static AUDITD_RULES_HASH_DEFAULT: &str = "77e0d8ff297ab3089b234fcd97a20e1c05380f3e";
 static AUDITD_RULES_HASH_NOKIA: &str = "bd574779fb4e1116838d18346187bb7f7bd089c9";
 
 // Helper to run commands
@@ -71,8 +71,7 @@ fn check_auditd_rules() -> String {
     };
 
     let cmd = format!(
-        r#"{NSENTER_CMD} find /etc/audit/rules.d -type f -name "[0-9][0-9]-*.rules" \
-            ! -name "30-audisp-tacplus.rules" -exec cat {{}} + | sort | sha1sum"#
+        r#"{NSENTER_CMD} find /etc/audit/rules.d -type f -name "*.rules" -exec cat {{}} + | sort | sha1sum"#
     );
 
     match run_command(&cmd) {
