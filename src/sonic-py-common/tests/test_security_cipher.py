@@ -61,7 +61,6 @@ class TestSecurityCipher(object):
                 encrypt = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
 
             # Use patch to replace the built-in 'open' function with a mock
-            #with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file:
             with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
                     mock.patch("os.chmod") as mock_chmod:
                 mock_fd = mock.MagicMock()
