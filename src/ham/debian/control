@@ -1,0 +1,58 @@
+Source: ham
+Maintainer: Martin Belanger <Martin.Belanger@dell.com>
+Build-Depends: debhelper (>= 8.0.0),
+               dh-systemd,
+               libdbus-c++-dev,
+               libglib2.0-dev,
+               pkg-config
+Vcs-Git: https://github.com/Azure/sonic-buildimage
+Homepage: https://azure.github.io/SONiC/
+Standards-Version: 3.9.3
+Section: net
+
+Package: ham
+Priority: extra
+Architecture: amd64
+Depends: libdbus-c++-1-0v5, libglib2.0-0, libhiredis0.14, ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC Host Account Management
+ This package provides the daemon, hamd, which runs on the host and provides
+ user and group account management services. It allows applications running
+ in containers to retrieve account from the host. It can also allow users with
+ administrative privileges to create, modify, or delete user accounts on the
+ host. For example, an admin user running a CLI session in a container
+ could request hamd to create a new user account.
+
+Package: libnss-ham
+Priority: extra
+Architecture: amd64
+Depends: libdbus-c++-1-0v5, ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC Host Account Management NSS module
+ The HAM NSS module allows applications running in containers to retrieve
+ host's user accounts (e.g. /etc/passwd, /etc/group, and /etc/shadow). To do
+ that, the NSS module contacts the HAM daemon (hamd) running on the host over
+ DBus. THIS PACKAGE IS MEANT TO BE INSTALLED IN CONTAINERS ONLY!
+
+Package: libnss-sac
+Priority: extra
+Architecture: amd64
+Depends: libdbus-c++-1-0v5, ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC System Assigned Credentials NSS module
+ The SAC NSS module allows the automatic allocation of user credentials
+ when the standard methods (e.g. unix NSS module) fail to find credentials
+ for a user. This is to be used specifically by TACACS+ or RADIUS PAM modules
+ during user authentication.
+
+Package: libham
+Priority: extra
+Architecture: amd64
+Depends: libdbus-c++-1-0v5, ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC Host Account Management NSS module
+ This library contains functions to talk to the HAM daemon over D-Bus.
+
+Package: libham-dev
+Priority: extra
+Architecture: amd64
+Depends: libham ${shlibs:Depends}, ${misc:Depends}
+Description: SONiC Host Account Management NSS module
+ This package provides the development headers to allow using library libham.so
+ provided by package libham.
