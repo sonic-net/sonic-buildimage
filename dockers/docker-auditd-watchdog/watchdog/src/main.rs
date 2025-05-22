@@ -148,14 +148,14 @@ fn check_auditd_rate_limit_status() -> String {
                     }
                 }
                 None => {
-                    // rate limit disabled when config file missing
+                    // rate limit disabled when -r missing in config file
                     "OK".to_string()
                 }
             }
         }
         Err(_e) => {
-            // config file not exist, ignore rate check
-            "OK".to_string()
+            // config file missing
+            format!("FAIL (open config file failed, error message = {})", e)
         }
     }
 }
