@@ -153,7 +153,7 @@ fn check_auditd_rate_limit_status() -> String {
                 }
             }
         }
-        Err(_e) => {
+        Err(e) => {
             // config file missing
             format!("FAIL (open config file failed, error message = {})", e)
         }
