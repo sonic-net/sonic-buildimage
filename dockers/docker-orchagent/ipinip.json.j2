@@ -71,11 +71,7 @@
             "dscp_mode":"pipe",
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
-{% else %}
             "ecn_mode":"copy_from_outer",
-{% endif %}
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -99,11 +95,7 @@
             "dscp_mode":"pipe",
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
-{% else %}
             "ecn_mode":"copy_from_outer",
-{% endif %}
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -134,11 +126,7 @@
             "dscp_mode":"pipe",
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
-{% else %}
             "ecn_mode":"copy_from_outer",
-{% endif %}
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -162,11 +150,7 @@
             "dscp_mode":"pipe",
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
-{% else %}
             "ecn_mode":"copy_from_outer",
-{% endif %}
             "ttl_mode":"pipe"
         },
         "OP": "SET"
