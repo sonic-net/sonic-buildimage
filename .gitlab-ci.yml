@@ -37,7 +37,7 @@ stages:
 
 .configure:sonic:
   # one configure step to build all docker images used by subsequent build stage(s).
-  # This is required to avoid conflicting docker image creation between 
+  # This is required to avoid conflicting docker image creation between
   # build:broadcom and build:docker-syncd-brcm-rpc
   stage: configure
   only:
@@ -116,7 +116,7 @@ build:sonic:x86_64:
   extends: .build:sonic
   needs:
     - configure:sonic:x86_64
-  variables: 
+  variables:
     BUILD_ARCH: x86_64
     TARGET_BIN: sonic-broadcom.bin sonic-broadcom-dnx.bin
 
@@ -126,7 +126,7 @@ build:sonic:armhf:
     - configure:sonic:armhf
   variables:
     BUILD_ARCH: armhf
-    TARGET_BIN: sonic-marvell-armhf.bin
+    TARGET_BIN: sonic-marvell-prestera-armhf.bin
 
 build:sonic:aarch64:
   extends: .build:sonic
@@ -134,7 +134,7 @@ build:sonic:aarch64:
     - configure:sonic:aarch64
   variables:
     BUILD_ARCH: aarch64
-    TARGET_BIN: sonic-marvell-arm64.bin
+    TARGET_BIN: sonic-marvell-prestera-arm64.bin
 
 build:sonic:features:x86_64:
   extends: .build:sonic
@@ -155,10 +155,10 @@ build:sonic:features:aarch64:
     - configure:sonic:aarch64
   variables:
     BUILD_ARCH: aarch64
-    TARGET_BIN: sonic-marvell-arm64.bin
+    TARGET_BIN: sonic-marvell-prestera-arm64.bin
     BUILD_SH_OPTIONS: " --features"
   after_script:
-    - mv target/sonic-marvell-arm64.bin target/sonic-marvell-arm64-features.bin
+    - mv target/sonic-marvell-prestera-arm64.bin target/sonic-marvell-arm64-features.bin
 
 .build:brcm-rpc:
   stage: build
@@ -346,7 +346,7 @@ regress:tb3:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -361,7 +361,7 @@ regress:tb7:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -376,7 +376,7 @@ regress:tb13:
     - build:sonic:aarch64
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -391,7 +391,7 @@ regress:tb20:
     - build:sonic:aarch64
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -406,7 +406,7 @@ regress:tb21:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -421,7 +421,7 @@ regress:tb23:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -451,7 +451,7 @@ regress:tb25:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -466,7 +466,7 @@ regress:tb26:
     - build:sonic:aarch64
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -481,7 +481,7 @@ regress:tb28:
     - build:sonic:aarch64
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-arm64.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
@@ -511,7 +511,7 @@ regress:tb45:
     - build:sonic:armhf
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
-    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    RUN_IMAGE: target/sonic-marvell-prestera-armhf.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS:
   only:
