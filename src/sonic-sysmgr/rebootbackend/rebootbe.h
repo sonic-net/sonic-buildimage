@@ -70,7 +70,7 @@ class RebootBE {
   // request is output: this the request recevied from consumer
   bool RetrieveNotificationData(swss::NotificationConsumer &consumer,
                                 NotificationRequest &request);
-  NotificationResponse send_dbus_reboot_status_request(
+  NotificationResponse RequestRebootStatus(
       const std::string &jsonStatusRequest);
   NotificationResponse HandleRebootRequest(
       const std::string &jsonRebootRequest);

@@ -121,7 +121,7 @@ void RebootBE::SendNotificationResponse(const std::string key,
   m_RebootResponse.send(key, swss::statusCodeToStr(code), ret_values);
 }
 
-NotificationResponse RebootBE::send_dbus_reboot_status_request(
+NotificationResponse RebootBE::RequestRebootStatus(
     const std::string &jsonStatusRequest) {
   SWSS_LOG_ENTER();
   SWSS_LOG_NOTICE("Sending reboot status request to platform");
@@ -141,6 +141,8 @@ NotificationResponse RebootBE::send_dbus_reboot_status_request(
   }
 
   response.json_string = dbus_response.json_string;
+  SWSS_LOG_NOTICE("Received reboot status response from platform: %s",
+                  response.json_string.c_str());
   return response;
 }
 
@@ -219,7 +221,7 @@ NotificationResponse RebootBE::HandleStatusRequest(
 
   //For Halt reboot, we need to send the status request to the platform
   if (m_CurrentStatus == RebManagerStatus::HALT_REBOOT_IN_PROGRESS) {
-    return send_dbus_reboot_status_request(jsonStatusRequest);
+    return RequestRebootStatus(jsonStatusRequest);
   }
 
   gnoi::system::RebootStatusResponse reboot_response =
