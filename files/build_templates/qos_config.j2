@@ -3,6 +3,8 @@
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
 {%- set PORT_QOS_BYPASS = [] %}
+{%- set PORT_UPLINK = [] %}
+{%- set PORT_DOWNLINK = [] %}
 
 {%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
@@ -44,7 +46,6 @@
 {%- endfor %}
 {%- set port_names_all = port_names_list_all | join(',') -%}
 
-
 {%- set PORT_ACTIVE = [] %}
 {%- if DEVICE_NEIGHBOR is not defined %}
     {%- set PORT_ACTIVE = PORT_ALL %}
@@ -68,6 +69,29 @@
 {%- endfor %}
 {%- set port_names_active = port_names_list_active | join(',') -%}
 
+{# Generate uplink and downlink port lists based on router type and neighbors #}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+                {%- if DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+                    {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'ToRRouter' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- elif DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'SpineRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- elif DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                    {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'LeafRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- elif DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'Server' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endif %}
+
 {%- set tunnel_qos_remap_enable = false %}
 {%- if ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) %}
 {%- set tunnel_qos_remap_enable = true %}
@@ -90,6 +114,7 @@
 {%- endif %}
 
 {%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot'] -%}
+{%- set per_queue_priority_direction_supported_asics = ['mellanox'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
 
@@ -268,6 +293,26 @@
 {% else %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
     "SCHEDULER": {
+        "scheduler_Q1_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "8"
+        },
+        "scheduler_Q2_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "18"
+        },
+        "scheduler_Q3_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q4_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q5_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
         "scheduler.0": {
             "type"  : "DWRR",
             "weight": "1"
@@ -308,6 +353,26 @@
     {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
+        "scheduler_Q1_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "8"
+        },
+        "scheduler_Q2_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "18"
+        },
+        "scheduler_Q3_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q4_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q5_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
         "scheduler.0": {
             "type"  : "DWRR",
             "weight": "14"
@@ -401,17 +466,152 @@
     {{- generate_wred_profiles() }}
 {% else %}
     "WRED_PROFILE": {
-        "AZURE_LOSSLESS" : {
+        "AZURE_LOSSY_DOWNLINK_Q1": {
             "wred_green_enable"      : "true",
             "wred_yellow_enable"     : "true",
             "wred_red_enable"        : "true",
             "ecn"                    : "ecn_all",
-            "green_max_threshold"    : "2097152",
-            "green_min_threshold"    : "1048576",
-            "yellow_max_threshold"   : "2097152",
-            "yellow_min_threshold"   : "1048576",
-            "red_max_threshold"      : "2097152",
-            "red_min_threshold"      : "1048576",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q2": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q3": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q4": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q5": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q1": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q2": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q3": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q4": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q5": {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "282624",
+            "green_min_threshold"    : "166912",
+            "yellow_max_threshold"   : "282624",
+            "yellow_min_threshold"   : "166912",
+            "red_max_threshold"      : "282624",
+            "red_min_threshold"      : "166912",
             "green_drop_probability" : "5",
             "yellow_drop_probability": "5",
             "red_drop_probability"   : "5"
@@ -460,8 +660,12 @@
     }
 {% elif generate_single_queue_per_sku is defined %}
     "QUEUE": {
-{% for port in PORT_ACTIVE %}
-        {{ generate_single_queue_per_sku(port) }}
+{% for port in PORT_DOWNLINK %}
+    {{ generate_single_queue_per_sku(port, 'DOWNLINK') }}
+    {%- if not loop.last or PORT_UPLINK|length > 0 -%},{% endif %}
+{% endfor %}
+{% for port in PORT_UPLINK %}
+    {{ generate_single_queue_per_sku(port, 'UPLINK') }}
         {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }

@@ -6,6 +6,18 @@ def
 {%- endif %}
 {%- endmacro -%}
 
+{%- set PORT_UPLINK = [] %}
+{%- if DEVICE_NEIGHBOR_METADATA is defined %}
+    {%- for port in DEVICE_NEIGHBOR %}
+        {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
+            {%- set neighbor = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
+            {%- if neighbor.type == 'LeafRouter' or neighbor.type == 'SpineRouter' %}
+                {%- if PORT_UPLINK.append(port) %}{%- endif %}
+            {%- endif %}
+        {%- endif %}
+    {%- endfor %}
+{%- endif %}
+
 {# Determine device topology and filename postfix #}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['type'] is defined %}
 {%-     set switch_role = DEVICE_METADATA['localhost']['type'] %}
@@ -271,21 +283,28 @@ def
 
 {% if voq_chassis %}
      "BUFFER_QUEUE": {
-{% for system_port in SYSTEM_PORT_ALL %}
-        "{{ system_port }}|3-4": {
-            "profile" : "egress_lossless_profile"
+{% for port in PORT_ACTIVE %}
+    {%- if port in PORT_UPLINK %}
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile_uplink"
         },
-{% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
-        "{{ system_port }}|0-2": {
-            "profile" : "egress_lossy_profile"
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile_uplink"
         },
-{% endfor %}
-{% for system_port in SYSTEM_PORT_ALL %}
-        "{{ system_port }}|5-6": {
-            "profile" : "egress_lossy_profile"
+        "{{ port }}|5-6": {
+            "profile" : "egress_lossy_profile_uplink"
         }{% if not loop.last %},{% endif %}
-
+    {%- else %}
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile_downlink"
+        },
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile_downlink"
+        },
+        "{{ port }}|5-6": {
+            "profile" : "egress_lossy_profile_downlink"
+        }{% if not loop.last %},{% endif %}
+    {%- endif %}
 {% endfor %}
     }
 {% else %}
@@ -300,20 +319,27 @@ def
 {% else %}
     "BUFFER_QUEUE": {
 {% for port in PORT_ACTIVE %}
+    {%- if port in PORT_UPLINK %}
         "{{ port }}|3-4": {
-            "profile" : "egress_lossless_profile"
+            "profile" : "egress_lossless_profile_uplink"
         },
-{% endfor %}
-{% for port in PORT_ACTIVE %}
         "{{ port }}|0-2": {
-            "profile" : "egress_lossy_profile"
+            "profile" : "egress_lossy_profile_uplink"
         },
-{% endfor %}
-{% for port in PORT_ACTIVE %}
         "{{ port }}|5-6": {
-            "profile" : "egress_lossy_profile"
+            "profile" : "egress_lossy_profile_uplink"
         }{% if not loop.last %},{% endif %}
-
+    {%- else %}
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile_downlink"
+        },
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile_downlink"
+        },
+        "{{ port }}|5-6": {
+            "profile" : "egress_lossy_profile_downlink"
+        }{% if not loop.last %},{% endif %}
+    {%- endif %}
 {% endfor %}
     }
 {% endif %}

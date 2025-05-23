@@ -100,109 +100,189 @@
 
 {%- macro generate_scheduler_per_sku() -%}
     "SCHEDULER": {
-        "scheduler.4": {
-            "type"  : "DWRR",
+        "scheduler_q0_downlink": {
+            "type": "DWRR",
             "weight": "4"
         },
-        "scheduler.8": {
-            "type"  : "DWRR",
+        "scheduler_q1_downlink": {
+            "type": "DWRR",
             "weight": "8"
         },
-        "scheduler.18": {
-            "type"  : "DWRR",
+        "scheduler_q2_downlink": {
+            "type": "DWRR",
             "weight": "18"
         },
-        "scheduler.22": {
-            "type"  : "DWRR",
+        "scheduler_q3_downlink": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_q4_downlink": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_q5_downlink": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_q0_uplink": {
+            "type": "DWRR",
+            "weight": "4"
+        },
+        "scheduler_q1_uplink": {
+            "type": "DWRR",
+            "weight": "8"
+        },
+        "scheduler_q2_uplink": {
+            "type": "DWRR",
+            "weight": "18"
+        },
+        "scheduler_q3_uplink": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_q4_uplink": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_q5_uplink": {
+            "type": "DWRR",
             "weight": "22"
         }
     },
 {%- endmacro -%}
 
-{%- macro generate_single_queue_per_sku(port) -%}
-        "{{ port }}|0": {
-            "scheduler": "scheduler.4"
-        },
-        "{{ port }}|1": {
-            "scheduler": "scheduler.8",
-            "wred_profile": "AZURE_LOSSY_Q1"
-        },
-        "{{ port }}|2": {
-            "scheduler": "scheduler.18",
-            "wred_profile": "AZURE_LOSSY_Q2"
-        },
-        "{{ port }}|3": {
-            "scheduler": "scheduler.22",
-            "wred_profile": "AZURE_LOSSY_Q3"
-        },
-        "{{ port }}|4": {
-            "scheduler": "scheduler.22"
-        },
-        "{{ port }}|5": {
-            "scheduler": "scheduler.22"
-        },
-        "{{ port }}|6": {
-            "scheduler": "scheduler.4"
-        }
+{%- macro generate_single_queue_per_sku(port, direction) -%}
+    "{{ port }}|0": {
+        "scheduler": "scheduler_q0_{{ direction }}"
+    },
+    "{{ port }}|1": {
+        "scheduler": "scheduler_q1_{{ direction }}",
+        "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q1"
+    },
+    "{{ port }}|2": {
+        "scheduler": "scheduler_q2_{{ direction }}",
+        "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q2"
+    },
+    "{{ port }}|3": {
+        "scheduler": "scheduler_q3_{{ direction }}",
+        "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q3"
+    },
+    "{{ port }}|4": {
+        "scheduler": "scheduler_q4_{{ direction }}",
+        "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q4"
+    },
+    "{{ port }}|5": {
+        "scheduler": "scheduler_q5_{{ direction }}",
+        "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q5"
+    },
+    "{{ port }}|6": {
+        "scheduler": "scheduler_q6_{{ direction }}"
+    }
 {%- endmacro -%}
 
 {%- macro generate_global_dscp_to_tc_map() %}
 {# This is an empty macro since the global DSCP_TO_TC map is not required #}
 {%- endmacro %}
 
+{# downlink Q use t0, uplink Q use t1 #}
 {%- macro generate_wred_profiles() %}
-    {%- set max_threshold = "282624" %}
     {%- set min_threshold = "166912" %}
-
     {%- if 'type' in DEVICE_METADATA['localhost'] %}
         {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
-            {%- set max_threshold = "282624" %}
+            {%- set t0_max_threshold = "282624" %}
+            {%- set t1_max_threshold = "239616" %}
         {%- elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
-            {%- set max_threshold = "239616" %}
+            {%- set t0_max_threshold = "282624" %}
+            {%- set t1_max_threshold = "239616" %}
         {%- endif %}
     {%- endif %}
 
     "WRED_PROFILE": {
-        "AZURE_LOSSY_Q1" : {
+        "AZURE_LOSSY_DOWNLINK_Q1" : {
             "wred_green_enable"      : "true",
             "wred_yellow_enable"     : "true",
             "wred_red_enable"        : "true",
             "ecn"                    : "ecn_all",
-            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_max_threshold"    : "{{ t0_max_threshold }}",
             "green_min_threshold"    : "{{ min_threshold }}",
-            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_max_threshold"   : "{{ t0_max_threshold }}",
             "yellow_min_threshold"   : "{{ min_threshold }}",
-            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_max_threshold"      : "{{ t0_max_threshold }}",
             "red_min_threshold"      : "{{ min_threshold }}",
             "green_drop_probability" : "5",
             "yellow_drop_probability": "5",
             "red_drop_probability"   : "5"
         },
-        "AZURE_LOSSY_Q2" : {
+        "AZURE_LOSSY_DOWNLINK_Q2" : {
             "wred_green_enable"      : "true",
             "wred_yellow_enable"     : "true",
             "wred_red_enable"        : "true",
             "ecn"                    : "ecn_all",
-            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_max_threshold"    : "{{ t0_max_threshold }}",
             "green_min_threshold"    : "{{ min_threshold }}",
-            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_max_threshold"   : "{{ t0_max_threshold }}",
             "yellow_min_threshold"   : "{{ min_threshold }}",
-            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_max_threshold"      : "{{ t0_max_threshold }}",
             "red_min_threshold"      : "{{ min_threshold }}",
             "green_drop_probability" : "5",
             "yellow_drop_probability": "5",
             "red_drop_probability"   : "5"
         },
-        "AZURE_LOSSY_Q3" : {
+        "AZURE_LOSSY_DOWNLINK_Q3" : {
             "wred_green_enable"      : "true",
             "wred_yellow_enable"     : "true",
             "wred_red_enable"        : "true",
             "ecn"                    : "ecn_all",
-            "green_max_threshold"    : "{{ max_threshold }}",
+            "green_max_threshold"    : "{{ t0_max_threshold }}",
             "green_min_threshold"    : "{{ min_threshold }}",
-            "yellow_max_threshold"   : "{{ max_threshold }}",
+            "yellow_max_threshold"   : "{{ t0_max_threshold }}",
             "yellow_min_threshold"   : "{{ min_threshold }}",
-            "red_max_threshold"      : "{{ max_threshold }}",
+            "red_max_threshold"      : "{{ t0_max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q1" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "{{ t1_max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ t1_max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ t1_max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q2" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "{{ t1_max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ t1_max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ t1_max_threshold }}",
+            "red_min_threshold"      : "{{ min_threshold }}",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        },
+        "AZURE_LOSSY_UPLINK_Q3" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "{{ t1_max_threshold }}",
+            "green_min_threshold"    : "{{ min_threshold }}",
+            "yellow_max_threshold"   : "{{ t1_max_threshold }}",
+            "yellow_min_threshold"   : "{{ min_threshold }}",
+            "red_max_threshold"      : "{{ t1_max_threshold }}",
             "red_min_threshold"      : "{{ min_threshold }}",
             "green_drop_probability" : "5",
             "yellow_drop_probability": "5",
