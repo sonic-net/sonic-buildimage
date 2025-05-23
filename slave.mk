@@ -172,6 +172,7 @@ endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
 INCLUDE_SYSTEM_GNMI = y
+SMARTSWITCH = $(SONIC_SMARTSWITCH) j2 -e $(DOCKER_GNMI)_PATH/base_image_files/monit_gnmi.j2 > $(DOCKER_GNMI)_PATH/base_image_files/monit_gnmi
 endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_BMP),y)
