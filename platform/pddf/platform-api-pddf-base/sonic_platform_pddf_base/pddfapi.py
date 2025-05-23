@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+import fcntl
 import glob
 import json
 import os
@@ -11,6 +13,7 @@ from sonic_py_common import device_info
 bmc_cache = {}
 cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
+LED_CTRL_LOCK_PATH = '/var/lock/pddf-api-led.lock'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
@@ -31,6 +34,17 @@ class PddfApi():
 
         self.data_sysfs_obj = {}
         self.sysfs_obj = {}
+
+        os.makedirs(os.path.dirname(LED_CTRL_LOCK_PATH), exist_ok=True)
+
+    def _acquire_led_ctrl_lock(self):
+        self.lock_fd = os.open(LED_CTRL_LOCK_PATH, os.O_CREAT | os.O_RDWR)
+        fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
+
+    def _release_led_ctrl_lock(self):
+        if hasattr(self, 'lock_fd'):
+            fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
+            os.close(self.lock_fd)
 
     #################################################################################################################
     #   GENERIC DEFS
@@ -156,12 +170,16 @@ class PddfApi():
         return ("off")
 
     def get_led_color_from_cpld(self, led_device_name):
-        index = self.data[led_device_name]['dev_attr']['index']
-        device_name = self.data[led_device_name]['dev_info']['device_name']
-        self.create_attr('device_name', device_name,  self.get_led_path())
-        self.create_attr('index', index, self.get_led_path())
-        self.create_attr('dev_ops', 'get_status',  self.get_led_path())
-        return self.get_led_color()
+        self._acquire_led_ctrl_lock()
+        try:
+            index = self.data[led_device_name]['dev_attr']['index']
+            device_name = self.data[led_device_name]['dev_info']['device_name']
+            self.create_attr('device_name', device_name,  self.get_led_path())
+            self.create_attr('index', index, self.get_led_path())
+            self.create_attr('dev_ops', 'get_status',  self.get_led_path())
+            return self.get_led_color()
+        finally:
+            self._release_led_ctrl_lock()
 
     def get_led_color_from_bmc(self, led_device_name):
         for bmc_attr in self.data[led_device_name]['bmc']['ipmitool']['attr_list']:
@@ -196,13 +214,17 @@ class PddfApi():
         return (True, "Success")
 
     def set_led_color_from_cpld(self, led_device_name, color):
-        index = self.data[led_device_name]['dev_attr']['index']
-        device_name = self.data[led_device_name]['dev_info']['device_name']
-        self.create_attr('device_name', device_name,  self.get_led_path())
-        self.create_attr('index', index, self.get_led_path())
-        self.create_attr('color', color, self.get_led_cur_state_path())
-        self.create_attr('dev_ops', 'set_status',  self.get_led_path())
-        return (True, "Success")
+        self._acquire_led_ctrl_lock()
+        try:
+            index = self.data[led_device_name]['dev_attr']['index']
+            device_name = self.data[led_device_name]['dev_info']['device_name']
+            self.create_attr('device_name', device_name,  self.get_led_path())
+            self.create_attr('index', index, self.get_led_path())
+            self.create_attr('color', color, self.get_led_cur_state_path())
+            self.create_attr('dev_ops', 'set_status',  self.get_led_path())
+            return (True, "Success")
+        finally:
+            self._release_led_ctrl_lock()
 
     def get_system_led_color(self, led_device_name):
         if led_device_name not in self.data.keys():
@@ -528,10 +550,14 @@ class PddfApi():
             self.verify_attr(key, attr, path)
 
     def get_led_device(self, device_name):
-        self.create_attr('device_name', self.data[device_name]['dev_info']['device_name'], "pddf/devices/led")
-        self.create_attr('index', self.data[device_name]['dev_attr']['index'], "pddf/devices/led")
-        cmd = "echo 'verify'  > /sys/kernel/pddf/devices/led/dev_ops"
-        self.runcmd(cmd)
+        self._acquire_led_ctrl_lock()
+        try:
+            self.create_attr('device_name', self.data[device_name]['dev_info']['device_name'], "pddf/devices/led")
+            self.create_attr('index', self.data[device_name]['dev_attr']['index'], "pddf/devices/led")
+            cmd = "echo 'verify'  > /sys/kernel/pddf/devices/led/dev_ops"
+            self.runcmd(cmd)
+        finally:
+            self._release_led_ctrl_lock()
 
     def validate_sysfs_creation(self, obj, validate_type):
         dir = '/sys/kernel/pddf/devices/'+validate_type
