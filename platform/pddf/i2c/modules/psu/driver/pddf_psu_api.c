@@ -279,16 +279,16 @@ static long get_real_world_value(struct i2c_client *client,
         vout_mode = psu_get_vout_mode(client);
         return pmbus_linear16_to_int(reg_value, vout_mode, multiplier);
     }
-    else {
-        /* Default to linear11 if format is unknown or NULL */
-        if (data_format) {
-            printk(KERN_WARNING "%s: Unknown data format '%s', defaulting to linear11\n",
-                   __func__, data_format);
-        } else {
-            printk(KERN_WARNING "%s: NULL data format, defaulting to linear11\n", __func__);
-        }
-        return pmbus_linear11_to_int(reg_value, multiplier);
+
+    /* Default to linear11 if format is unknown or NULL */
+    if (data_format) {
+        printk(KERN_WARNING "%s: Unknown data format '%s', defaulting to linear11\n",
+               __func__, data_format);
+    } else {
+        printk(KERN_WARNING "%s: NULL data format, defaulting to linear11\n", __func__);
     }
+
+    return pmbus_linear11_to_int(reg_value, multiplier);
 }
 
 ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *buf)
@@ -300,9 +300,6 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     PSU_DATA_ATTR *usr_data = NULL;
     struct psu_attr_info *sysfs_attr_info = NULL;
     int i, status=0;
-    u16 value = 0;
-    u8 vout_mode = 0;
-    int exponent, mantissa;
     int multiplier = 1000;
     char new_str[ATTR_NAME_LEN] = "";
     PSU_SYSFS_ATTR_DATA *ptr = NULL;
