@@ -861,6 +861,10 @@ def get_system_mac(namespace=None, hostname=None):
         hw_mac_entry_outputs.append((mac, err))
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
+    elif (version_info['asic_type'] == 'pensando'):
+        iplink_cmd0 = ["ip", 'link', 'show', 'eth0-midplane']
+        (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
+        hw_mac_entry_outputs.append((mac, err))
     else:
         mac_address_cmd = ["cat", "/sys/class/net/eth0/address"]
         if namespace is not None:

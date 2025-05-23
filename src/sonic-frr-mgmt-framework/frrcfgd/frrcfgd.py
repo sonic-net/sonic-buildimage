@@ -119,6 +119,7 @@ class BgpdClientMgr(threading.Thread):
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
             'SRV6_MY_LOCATORS': ['zebra'],
+            'SRV6_MY_SOURCE': ['zebra'],
             'SRV6_MY_SIDS': ['mgmtd']
 
     }
@@ -1772,6 +1773,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
+                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit', ['true', 'false']),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -2318,6 +2320,7 @@ class BGPConfigDaemon:
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
             ('SRV6_MY_LOCATORS', self.bgp_table_handler_common),
+            ('SRV6_MY_SOURCE', self.bgp_table_handler_common),
             ('SRV6_MY_SIDS', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
@@ -2727,6 +2730,13 @@ class BGPConfigDaemon:
                     if not self.__run_command(table, cmd):
                         syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 POLICY config command')
                         continue
+            elif table == 'SRV6_MY_SOURCE':
+                source = data['source-address']
+                cmd =  "vtysh -c 'configure terminal' -c 'segment-routing' -c 'srv6' -c 'encapsulation' "
+                cmd += " -c 'source-address {}' ".format(source.data)
+                if not self.__run_command(table, cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 encap config command {}'.format(cmd))
+                    continue
             elif table == 'SRV6_MY_SIDS':
                 if key is None:
                     syslog.syslog(syslog.LOG_ERR, 'invalid key for SRV6_MY_SIDS table')

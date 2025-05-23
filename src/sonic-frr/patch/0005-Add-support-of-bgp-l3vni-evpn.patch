@@ -11,10 +11,10 @@ Signed-off-by: Kishore Kunal <kishore.kunal@broadcom.com>
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index c03d37487a..52679388fd 100644
+index 6fe45b2c5..527248a74 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
-@@ -814,6 +814,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
+@@ -851,6 +851,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
  	memcpy(&copy->rmap_src, &nexthop->rmap_src, sizeof(nexthop->rmap_src));
  	memcpy(&copy->rmac, &nexthop->rmac, sizeof(nexthop->rmac));
  	copy->rparent = rparent;
@@ -23,10 +23,10 @@ index c03d37487a..52679388fd 100644
  		nexthop_add_labels(copy, nexthop->nh_label_type,
  				   nexthop->nh_label->num_labels,
 diff --git a/lib/nexthop.h b/lib/nexthop.h
-index f35cc5e4e2..f6fb6ec2b7 100644
+index cea7c77e3..65056cd55 100644
 --- a/lib/nexthop.h
 +++ b/lib/nexthop.h
-@@ -66,6 +66,11 @@ enum nh_encap_type {
+@@ -52,6 +52,11 @@ enum nh_encap_type {
  /* Backup index value is limited */
  #define NEXTHOP_BACKUP_IDX_MAX 255
  
@@ -38,7 +38,7 @@ index f35cc5e4e2..f6fb6ec2b7 100644
  /* Nexthop structure. */
  struct nexthop {
  	struct nexthop *next;
-@@ -137,7 +142,7 @@ struct nexthop {
+@@ -147,7 +152,7 @@ struct nexthop {
  	/* Encapsulation information. */
  	enum nh_encap_type nh_encap_type;
  	union {
@@ -48,26 +48,25 @@ index f35cc5e4e2..f6fb6ec2b7 100644
  
  	/* EVPN router's MAC.
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 79d79d74be..325199eff9 100644
+index d696b1985..f12b324e0 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -1969,6 +1969,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
- 				       struct nexthop *nh)
+@@ -2131,6 +2131,7 @@ static int netlink_route_nexthop_encap(bool fpm, struct nlmsghdr *n,
+ 				       size_t nlen, const struct nexthop *nh)
  {
  	struct rtattr *nest;
 +	struct vxlan_nh_encap* encap_data;
  
- 	switch (nh->nh_encap_type) {
- 	case NET_VXLAN:
-@@ -1979,9 +1980,21 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+ 	if (!fpm)
+ 		return true;
+@@ -2144,8 +2145,20 @@ static int netlink_route_nexthop_encap(bool fpm, struct nlmsghdr *n,
  		if (!nest)
  			return false;
  
+-		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */, nh->nh_encap.vni))
 +		encap_data = &nh->nh_encap.encap_data;
 +
- 		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */,
--				   nh->nh_encap.vni))
-+				   encap_data->vni))
++		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */, encap_data->vni))
 +			return false;
 +
 +		if (ZEBRA_DEBUG_KERNEL)
@@ -83,10 +82,10 @@ index 79d79d74be..325199eff9 100644
  		break;
  	}
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
-index 68bb9783f8..c478f83795 100644
+index e9d554ba3..239b9472b 100644
 --- a/zebra/zapi_msg.c
 +++ b/zebra/zapi_msg.c
-@@ -1606,6 +1606,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+@@ -1662,6 +1662,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
  		 * the nexthop and associated MAC need to be installed.
  		 */
  		if (CHECK_FLAG(api_nh->flags, ZAPI_NEXTHOP_FLAG_EVPN)) {
@@ -95,7 +94,7 @@ index 68bb9783f8..c478f83795 100644
  			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN);
  			nexthop->rmac = api_nh->rmac;
  		}
-@@ -1635,6 +1637,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+@@ -1691,6 +1693,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
  		 * the nexthop and associated MAC need to be installed.
  		 */
  		if (CHECK_FLAG(api_nh->flags, ZAPI_NEXTHOP_FLAG_EVPN)) {
@@ -105,10 +104,10 @@ index 68bb9783f8..c478f83795 100644
  			nexthop->rmac = api_nh->rmac;
  		}
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index 639f3cd918..6f8d37e701 100644
+index 9c252cc63..92b571c68 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
-@@ -2934,7 +2934,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
+@@ -3568,7 +3568,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
  		zl3vni = zl3vni_from_vrf(nexthop->vrf_id);
  		if (zl3vni && is_l3vni_oper_up(zl3vni)) {
  			nexthop->nh_encap_type = NET_VXLAN;
