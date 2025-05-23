@@ -81,7 +81,7 @@
     },
     "SMBUS1": {
         "dev_info": {
-            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM" 
+            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM"
         },
         "i2c": {
             "topo_info": {
@@ -102,7 +102,7 @@
                 },
                 {
                     "dev": "FAN-CTRL"
-                }                
+                }
             ]
         }
     },
@@ -326,7 +326,7 @@
                 }
             ]
         }
-    },   
+    },
     "GPIO2": {
         "dev_info": {
             "device_type": "GPIO",
@@ -663,7 +663,7 @@
                 }
             ]
         }
-    }, 
+    },
     "CPLD1": {
         "dev_info": {
             "device_type": "CPLD",
@@ -851,7 +851,7 @@
                 }
             ]
         }
-    },    
+    },
     "PSU1": {
         "dev_info": {
             "device_type": "PSU",
@@ -879,7 +879,7 @@
                     }
                 ]
             }
-        }        
+        }
     },
     "PSU1-PMBUS": {
         "dev_info": {
@@ -949,7 +949,7 @@
                     "attr_mask": "0x0",
                     "attr_cmpval": "0xff",
                     "attr_len": "2"
-                },                
+                },
                 {
                     "attr_name": "psu_v_out",
                     "attr_devaddr": "0x58",
@@ -1027,7 +1027,7 @@
     },
     "PSU1-EEPROM":
     {
-        "dev_info": { 
+        "dev_info": {
             "device_type":"",
             "device_name":"PSU1-EEPROM",
             "device_parent":"MUX1",
@@ -1035,17 +1035,17 @@
         },
         "i2c":
         {
-            "topo_info":{ 
+            "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x50",
                 "dev_type":"eeprom"
-            }, 
-            "attr_list": 
-            [  
+            },
+            "attr_list":
+            [
                 { "attr_name":"eeprom" }
             ]
         }
-    },    
+    },
     "PSU2": {
         "dev_info": {
             "device_type": "PSU",
@@ -1073,7 +1073,7 @@
                     }
                 ]
             }
-        }        
+        }
     },
     "PSU2-PMBUS": {
         "dev_info": {
@@ -1143,7 +1143,7 @@
                     "attr_mask": "0x0",
                     "attr_cmpval": "0xff",
                     "attr_len": "2"
-                },                
+                },
                 {
                     "attr_name": "psu_v_out",
                     "attr_devaddr": "0x59",
@@ -1218,10 +1218,10 @@
                 }
             ]
         }
-    },    
+    },
     "PSU2-EEPROM":
     {
-        "dev_info": { 
+        "dev_info": {
             "device_type":"",
             "device_name":"PSU2-EEPROM",
             "device_parent":"MUX1",
@@ -1229,17 +1229,17 @@
         },
         "i2c":
         {
-            "topo_info":{ 
+            "topo_info":{
                 "parent_bus":"0x2",
                 "dev_addr":"0x51",
                 "dev_type":"eeprom"
-            }, 
-            "attr_list": 
-            [  
+            },
+            "attr_list":
+            [
                 { "attr_name":"eeprom" }
             ]
         }
-    }, 
+    },
     "FAN-CTRL": {
         "dev_info": {
             "device_type": "FAN",
@@ -1296,7 +1296,7 @@
                 }
             ]
         }
-    },                                                         
+    },
     "SYS_LED": {
         "dev_info": {
             "device_type": "LED",
