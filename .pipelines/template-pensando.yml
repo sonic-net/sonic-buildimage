@@ -13,6 +13,7 @@ jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
     ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
       timeoutInMinutes: 840
+    condition: ne(variables.SKIP_PENSANDO, 'y')
     pool:
       type: linux
       isCustom: true

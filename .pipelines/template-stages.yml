@@ -181,6 +181,7 @@ stages:
       - job: nvidia_bluefield
         ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
           timeoutInMinutes: 840
+        condition: ne(variables.SKIP_BLUEFIELD, 'y')
         pool:
           type: linux
           isCustom: true
