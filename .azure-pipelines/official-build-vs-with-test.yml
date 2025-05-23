@@ -13,6 +13,7 @@ schedules:
         - 202311
         - 202405
         - 202411
+        - 202505
 
 # trigger this pipeline automatically on any branch push.
 trigger:
@@ -23,6 +24,7 @@ trigger:
       - 202311
       - 202405
       - 202411
+      - 202505
 
 pr: none
 
