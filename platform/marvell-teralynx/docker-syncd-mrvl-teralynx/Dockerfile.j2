@@ -1,7 +1,5 @@
-{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-
-FROM $BASE AS base
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -10,7 +8,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-# Needed for Innovium Debug Shell
+COPY \
+{% for deb in docker_syncd_mrvl_teralynx_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+# Needed for Marvell Teralynx Debug Shell
 RUN apt-get install -y net-tools
 RUN apt-get install -y libjansson4
 RUN apt-get install -y libyaml-dev
@@ -18,13 +22,10 @@ RUN apt-get install -y binutils
 RUN pip3 install numpy
 RUN pip3 install yamlordereddictloader
 
-{% if docker_syncd_mrvl_teralynx_debs.strip() -%}
-# Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_syncd_mrvl_teralynx_debs.split(' '), "/debs/") }}
-
-# Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_syncd_mrvl_teralynx_debs.split(' ')) }}
-{%- endif %}
+RUN dpkg -i \
+{% for deb in docker_syncd_mrvl_teralynx_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
 
 COPY ["start.sh", "/usr/bin/"]
 COPY ["ivm_start.sh", "/usr/bin/"]
@@ -32,9 +33,8 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
-FROM $BASE
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
-
-ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]
