@@ -8,7 +8,6 @@ import os
 dhcp6_relay = importlib.import_module('show.plugins.dhcp-relay')
 
 import utilities_common.cli as clicommon
-from swsscommon.swsscommon import SonicV2Connector
 
 DHCPV4_CLEAR_COUNTER_LOCK_FILE = "/tmp/clear_dhcpv4_counter.lock"
 SUPPORTED_DHCP_TYPE = [
@@ -29,18 +28,19 @@ def clear_dhcp_relay_ipv6_counter(interface):
             counter.clear_table(intf)
 
 
-def get_db_connector():
-    db = SonicV2Connector(use_unix_socket_path=False)
-    db.connect(db.COUNTERS_DB)
-    db.connect(db.CONFIG_DB)
-    return db
+def is_vlan_interface_valid(vlan_interface, db):
+    # If not vlan interface specified, treat it as valid
+    if vlan_interface == "":
+        return True
+    # If vlan interface is not in config_db VLAN table, treat it as invalid
+    if not db.exists(db.CONFIG_DB, "VLAN|{}".format(vlan_interface)):
+        return False
+    return True
 
 
-def clear_dhcpv4_db_counters(vlan_interface, direction, type, ctx):
-    db = get_db_connector()
-    if vlan_interface != "":
-        if not db.exists(db.CONFIG_DB, "VLAN|{}".format(vlan_interface)):
-            ctx.fail("Vlan {} doesn't exist".format(vlan_interface))
+def clear_dhcpv4_db_counters(db, vlan_interface, direction, type, ctx):
+    if not is_vlan_interface_valid(vlan_interface, db):
+        ctx.fail("{} doesn't exist".format(vlan_interface))
     types = SUPPORTED_DHCP_TYPE if type is None else [type]
     directions = SUPPORTED_DIR if direction is None else [direction]
     counters_key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface + "*"
@@ -52,12 +52,12 @@ def clear_dhcpv4_db_counters(vlan_interface, direction, type, ctx):
         for dir in directions:
             count_str = db.get(db.COUNTERS_DB, key, dir)
             if count_str is None:
-                continue
+                # Would add new entry if corresponding dir doesn't exist in COUNTERS_DB
+                count_str = "{}"
             count_str = count_str.replace("\'", "\"")
             count_obj = json.loads(count_str)
             for current_type in types:
-                if current_type not in count_obj:
-                    continue
+                # Would set count for types to 0 no matter whether this type exists in COUNTERS_DB
                 count_obj[current_type] = "0"
             count_str = json.dumps(count_obj).replace("\"", "\'")
             db.set(db.COUNTERS_DB, key, dir, count_str)
@@ -75,7 +75,10 @@ def notify_dhcpmon_processes(vlan_interface, sig):
         cmd += " | grep '\-id {} '".format(vlan_interface)
     cmd += " | grep \-v grep | awk \'{print $2}\'"
     out, _ = clicommon.run_command(cmd, shell=True, return_cmd=True)
-    for pid in out.strip().split("\n"):
+    out = out.strip()
+    if len(out) == 0:
+        return
+    for pid in out.split("\n"):
         os.kill(int(pid), sig)
         syslog.syslog(syslog.LOG_INFO, "Clear DHCPv4 counter: Sent signal {} to pid {}".format(sig, pid))
 
@@ -116,10 +119,11 @@ def dhcp_relay_ipv4():
 
 
 @dhcp_relay_ipv4.command('counters')
-@click.option('-vi', '--vlan_interface', required=False, default="")
+@click.option('-i', '--interface', required=False, default="")
 @click.option('--dir', type=click.Choice(["TX", "RX"]), required=False)
 @click.option('--type', type=click.Choice(SUPPORTED_DHCP_TYPE), required=False)
-def clear_dhcp_relay_ipv4_counters(vlan_interface, dir, type):
+@clicommon.pass_db
+def clear_dhcp_relay_ipv4_counters(db_obj, interface, dir, type):
     """ Clear dhcp_relay ipv4 counts """
     ctx = click.get_current_context()
     if os.geteuid() != 0:
@@ -127,16 +131,16 @@ def clear_dhcp_relay_ipv4_counters(vlan_interface, dir, type):
     with open(DHCPV4_CLEAR_COUNTER_LOCK_FILE, "w") as lock_file:
         try:
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            notify_dhcpmon_processes(vlan_interface, signal.SIGUSR1)
-            clear_dhcpv4_db_counters(vlan_interface, dir, type, ctx)
-            notify_dhcpmon_processes(vlan_interface, signal.SIGUSR2)
+            notify_dhcpmon_processes(interface, signal.SIGUSR1)
+            clear_dhcpv4_db_counters(db_obj.db, interface, dir, type, ctx)
+            notify_dhcpmon_processes(interface, signal.SIGUSR2)
             click.echo("Clear DHCPv4 relay counter done")
         except BlockingIOError:
             ctx.fail("Cannot lock {}, seems another user is clearing DHCPv4 relay counter simultaneous"
                      .format(DHCPV4_CLEAR_COUNTER_LOCK_FILE))
         finally:
             fcntl.flock(lock_file, fcntl.LOCK_UN)
-    
+
 
 def register(cli):
     cli.add_command(dhcp6relay_clear_counters)
