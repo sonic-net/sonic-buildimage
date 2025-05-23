@@ -127,9 +127,9 @@ struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *fdata, NEW_DEV_ATTR *cda
         {
             FAN_DATA_ATTR *pdata = &fan_platform_data->fan_attrs[i];
             FAN_SYSFS_DATA *sysfs_data = &fdata->fan_attrs[i];
-            strncpy(pdata->aname, sysfs_data->aname, ATTR_NAME_LEN);
-            strncpy(pdata->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
-            strncpy(pdata->devname, sysfs_data->devname, DEV_TYPE_LEN);
+            strscpy(pdata->aname, sysfs_data->aname, ATTR_NAME_LEN);
+            strscpy(pdata->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
+            strscpy(pdata->devname, sysfs_data->devname, DEV_TYPE_LEN);
             if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
                 pdata->fpga_pci_dev =
                     pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));

@@ -130,9 +130,9 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
         {
             PSU_DATA_ATTR *data = &psu_platform_data->psu_attrs[i];
             PSU_SYSFS_DATA *sysfs_data = &pdata->psu_attrs[i];
-            strncpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
-            strncpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
-            strncpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
+            strscpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
+            strscpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
+            strscpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
             if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
                 data->fpga_pci_dev =
                     pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));

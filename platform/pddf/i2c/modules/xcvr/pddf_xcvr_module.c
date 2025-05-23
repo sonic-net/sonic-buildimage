@@ -128,9 +128,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             {
                 XCVR_ATTR *data = &xcvr_platform_data->xcvr_attrs[i];
                 XCVR_SYSFS_DATA *sysfs_data = &pdata->xcvr_attrs[i];
-                strncpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
-                strncpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
-                strncpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
+                strscpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
+                strscpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
+                strscpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
                 if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
                     data->fpga_pci_dev =
                         pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));

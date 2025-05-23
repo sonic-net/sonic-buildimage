@@ -260,8 +260,7 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 		return -ENOMEM;
 	}
 
-	strncpy(fpga_data->bdf, bdf, NAME_SIZE - 1);
-	fpga_data->bdf[NAME_SIZE - 1] = '\0';
+	strscpy(fpga_data->bdf, bdf, NAME_SIZE);
 
 	fpga_data->kobj = kobject_create_and_add(bdf, multifpgapci_kobj);
 
