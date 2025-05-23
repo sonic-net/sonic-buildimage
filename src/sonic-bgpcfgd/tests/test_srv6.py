@@ -224,3 +224,52 @@ def test_out_of_order_add_wait_for_all_deps():
     # verify that both of the sids are programmed because all dependencies are satisfied
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+
+def test_out_of_order_del():
+    loc_mgr, sid_mgr = constructor()
+    SRv6Mgr.fading_locators = dict()
+    loc_mgr.cfg_mgr.push_list = MagicMock()
+    sid_mgr.cfg_mgr.push_list = MagicMock()
+
+    # add the locator loc1
+    loc_mgr.handler(op='SET', key="loc1", data={'prefix': 'fcbb:bbbb:20::'})
+
+    # verify that the locator is added
+    assert loc_mgr.directory.path_exist(loc_mgr.db_name, loc_mgr.table_name, "loc1")
+
+    # add two sids
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20:1::/64", data={'action': 'DT46', 'decap_vrf': 'Vrf1'})
+
+    # verify that the sids are added
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20:1::\\64")
+
+    # delete the locator loc1 firt
+    # verify that the FRR command of deleting the locator loc1 is not sent
+    op_test(loc_mgr, 'DEL', ("loc1",), expected_ret=True, expected_cmds=[])
+    assert "loc1" in SRv6Mgr.fading_locators and SRv6Mgr.fading_locators["loc1"].num_of_sids() == 2
+
+    # delete the second sid
+    # verify that the FRR command of deleting the sid is sent
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:20:1::/64",), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'no sid fcbb:bbbb:20:1::/64 locator loc1 behavior DT46 vrf Vrf1'
+    ])
+    assert SRv6Mgr.fading_locators["loc1"].num_of_sids() == 1
+
+    # delete the first sid
+    # verify that the FRR commands of deleting the sid and deleting the locator are both sent
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:20::/48",), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'no sid fcbb:bbbb:20::/48 locator loc1 behavior uN',
+        'exit',
+        'locators',
+        'no locator loc1'
+    ])
+    assert "loc1" not in SRv6Mgr.fading_locators

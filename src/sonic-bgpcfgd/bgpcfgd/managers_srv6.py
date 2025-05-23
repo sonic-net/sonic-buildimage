@@ -13,6 +13,10 @@ SRV6_MY_SIDS_TABLE_NAME = "SRV6_MY_SIDS"
 
 class SRv6Mgr(Manager):
     """ This class updates SRv6 configurations when SRV6_MY_SID_TABLE table is updated """
+    # class-wide static variable to keep track of locators that are fading out
+    # (i.e. locators that are deleted but still have SIDs associated with them)
+    fading_locators = dict()
+
     def __init__(self, common_objs, db, table):
         """
         Initialize the object
@@ -57,7 +61,6 @@ class SRv6Mgr(Manager):
         locator_name = key.split("|")[0]
         ip_prefix = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_prefix)
-        prefix_len = int(ip_prefix.split("/")[1])
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_warn("Found a SRv6 SID config entry with a locator that does not exist yet: {} | {}".format(key, data))
@@ -95,6 +98,7 @@ class SRv6Mgr(Manager):
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
 
         self.directory.put(self.db_name, self.table_name, key.replace("/", "\\"), (sid, sid_cmd))
+        locator.add_sid(sid)
         return True
 
     def del_handler(self, key):
@@ -105,10 +109,16 @@ class SRv6Mgr(Manager):
 
     def locators_del_handler(self, key):
         locator_name = key
-        cmd_list = ['segment-routing', 'srv6', 'locators', 'no locator {}'.format(locator_name)]
+        locator = self.directory.get(self.db_name, self.table_name, key)
+        if locator.num_of_sids() == 0:
+            cmd_list = ['segment-routing', 'srv6', 'locators', 'no locator {}'.format(locator_name)]
+            self.cfg_mgr.push_list(cmd_list)
 
-        self.cfg_mgr.push_list(cmd_list)
-        log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
+            log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
+        else:
+            log_debug("{} SRv6 static configuration {}|{} is to be removed. Yet, some SIDs are still associated with this locator".format(self.db_name, self.table_name, key))
+            SRv6Mgr.fading_locators[locator_name] = locator
+
         self.directory.remove(self.db_name, self.table_name, key)
         if (self.db_name, "SRV6_MY_LOCATORS", locator_name) in self.deps:
             self.deps.remove((self.db_name, "SRV6_MY_LOCATORS", locator_name))
@@ -123,10 +133,26 @@ class SRv6Mgr(Manager):
             log_warn("Encountered a config deletion with a SRv6 SID that does not exist: {}".format(key))
             return
 
-        _, sid_cmd = self.directory.get(self.db_name, self.table_name, key.replace("/", "\\"))
+        sid, sid_cmd = self.directory.get(self.db_name, self.table_name, key.replace("/", "\\"))
         cmd_list = ['segment-routing', 'srv6', "static-sids"]
         no_sid_cmd = 'no ' + sid_cmd
         cmd_list.append(no_sid_cmd)
+
+        # Check SID's locator and update bookkeeping info
+        if self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
+            # the SID's locator still exists
+            locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
+            locator.remove_sid(sid)
+        elif locator_name in SRv6Mgr.fading_locators:
+            if SRv6Mgr.fading_locators[locator_name].num_of_sids() == 1:
+                # this is the last SID associated with this locator
+                # add the commands to remove the locator
+                cmd_list += ['exit', 'locators']
+                cmd_list.append('no locator {}'.format(locator_name))
+                del SRv6Mgr.fading_locators[locator_name]
+            else:
+                # the locator is still fading, but not the last SID
+                SRv6Mgr.fading_locators[locator_name].remove_sid(sid)
 
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
@@ -140,6 +166,19 @@ class Locator:
         self.func_len = int(data['func_len'] if 'func_len' in data else 16)
         self.arg_len = int(data['arg_len'] if 'arg_len' in data else 0)
         self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
+        self.sids = dict()
+
+    def add_sid(self, sid):
+        self.sids[sid.ip_prefix] = sid
+
+    def remove_sid(self, sid):
+        if sid.ip_prefix in self.sids:
+            del self.sids[sid.ip_prefix]
+        else:
+            log_warn("Attempting to remove a non-existing SID from locator {}: {}".format(self.name, sid.ip_prefix))
+
+    def num_of_sids(self):
+        return len(self.sids)
 
 class SID:
     def __init__(self, locator, ip_prefix, data):
