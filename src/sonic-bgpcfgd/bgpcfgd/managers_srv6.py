@@ -41,7 +41,18 @@ class SRv6Mgr(Manager):
     def locators_set_handler(self, key, data):
         locator_name = key
 
+        if locator_name in SRv6Mgr.fading_locators:
+            # this locator is fading out, but we are trying to add it again
+            # remove the locator from the fading locators list
+            # no need to update the configuration
+            locator = SRv6Mgr.fading_locators[locator_name]
+            SRv6Mgr.fading_locators.pop(locator_name)
+            log_debug("{} SRv6 static configuration {}|{} was there. No updates needed".format(self.db_name, self.table_name, key))
+            self.directory.put(self.db_name, self.table_name, key, locator)
+            return True
+
         locator = Locator(locator_name, data)
+
         cmd_list = ["segment-routing", "srv6"]
         cmd_list += ['locators',
                      'locator {}'.format(locator_name),
