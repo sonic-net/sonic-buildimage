@@ -1627,7 +1627,7 @@ def parse_macsec_profile(val_string):
 def parse_global_info(root):
 
     hwsku = hostname = None
-    docker_routing_config_mode = "separated"
+    docker_routing_config_mode = "unified"
 
     hwsku_qn = QName(ns, "HwSku")
     hostname_qn = QName(ns, "Hostname")
@@ -2005,7 +2005,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     sub_role = None
     resource_type = None
     downstream_subrole = None
-    docker_routing_config_mode = "separated"
+    docker_routing_config_mode = "unified"
     port_speeds_default = {}
     port_speed_png = {}
     port_descriptions = {}

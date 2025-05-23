@@ -124,7 +124,7 @@ class TestVoqChassisSingleAsic(TestChassis):
             'bgp_asn': '65100',
             'region': 'test',
             'cloudtype': None,
-            'docker_routing_config_mode': 'separated',
+            'docker_routing_config_mode': 'unified',
             'hostname': 'str-sonic-lc06',
             'hwsku': 'Sonic-lc-100g-sku',
             'type': 'SpineRouter',
@@ -436,7 +436,7 @@ class TestVoqChassisMultiAsic(TestChassis):
         self.assertDictEqual(output['localhost'], {
             'region': 'test',
             'cloudtype': 'Public',
-            'docker_routing_config_mode': 'separated',
+            'docker_routing_config_mode': 'unified',
             'hostname': 'str-sonic-lc03',
             'hwsku': 'Sonic-400g-lc-sku',
             'type': 'SpineRouter',
@@ -463,7 +463,7 @@ class TestVoqChassisMultiAsic(TestChassis):
             'bgp_asn': '65100',
             'region': 'test',
             'cloudtype': None,
-            'docker_routing_config_mode': 'separated',
+            'docker_routing_config_mode': 'unified',
             'hostname': 'str-sonic-lc03',
             'hwsku': 'Sonic-400g-lc-sku',
             'type': 'SpineRouter',
@@ -915,7 +915,7 @@ class TestVoqChassisSup(TestChassis):
             {
                 "region": "test",
                 "cloudtype": "Public",
-                "docker_routing_config_mode": "separated",
+                "docker_routing_config_mode": "unified",
                 "hostname": "str-sonic-sup00",
                 "hwsku": "Sonic-supvisor-sku",
                 "type": "SpineRouter",
@@ -943,7 +943,7 @@ class TestVoqChassisSup(TestChassis):
             {
                 "region": "test",
                 "cloudtype": None,
-                "docker_routing_config_mode": "separated",
+                "docker_routing_config_mode": "unified",
                 "hostname": "str-sonic-sup00",
                 "hwsku": "Sonic-supvisor-sku",
                 "type": "SpineRouter",
@@ -1051,7 +1051,7 @@ class TestPacketChassisSup(TestChassis):
             {
                 "region": "test",
                 "cloudtype": "Public",
-                "docker_routing_config_mode": "separated",
+                "docker_routing_config_mode": "unified",
                 "hostname": "str-sonic-sup00",
                 "hwsku": "sonic-sup-sku",
                 "type": "SpineRouter",
@@ -1079,7 +1079,7 @@ class TestPacketChassisSup(TestChassis):
             {
                 "region": "test",
                 "cloudtype": None,
-                "docker_routing_config_mode": "separated",
+                "docker_routing_config_mode": "unified",
                 "hostname": "str-sonic-sup00",
                 "hwsku": "sonic-sup-sku",
                 "type": "SpineRouter",
