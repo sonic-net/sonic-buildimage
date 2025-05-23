@@ -178,7 +178,7 @@ RUN rm -rf /debs \
 RUN git clone https://github.com/facebook/tac_plus \
     && cd tac_plus \
     && cd tacacs-F4.0.4.28 \
-    && ./configure \
+    && ./configure LDFLAGS="-Wl,-rpath=/usr/local/lib" \
     && make install \
     && ln -s /usr/local/sbin/tac_plus /usr/sbin/tac_plus \
     && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd \
@@ -187,6 +187,16 @@ RUN git clone https://github.com/facebook/tac_plus \
 COPY ["tacacs_plus", "/etc/init.d"]
 COPY ["tacacs+", "/etc/default"]
 {% endif %}
+
+# Workaround: Tornado installed outside of the
+# virtualenv as the call to the process API
+# Ansible -> Supervisor -> ExaBGP -> Process API
+# causes the process API to have a restricted 
+# environment without access to the virtualenv.
+{% if PTF_ENV_PY_VER == "py3" %}
+    RUN pip3 install --break-system-packages tornado
+{% endif %}
+
 
 RUN python3 -m venv --system-site-packages env-python3
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
@@ -268,6 +278,7 @@ RUN mkdir /var/run/sshd \
 COPY supervisord.conf /etc/supervisor/
 COPY conf.d/ /etc/supervisor/conf.d/
 COPY ptf_tgen.sh /ptf_tgen/
+COPY path-override.sh /etc/profile.d/
 
 {% if PTF_ENV_PY_VER == "mixed" %}
 # Move tcpdump into /usr/bin Otherwise it's impossible to run tcpdump due to a docker bug
@@ -296,14 +307,22 @@ RUN cd gnxi \
 {% endif %}
 
 # Deactivating a virtualenv.
-ENV PATH="$BACKUP_OF_PATH"
+# ENV PATH="$BACKUP_OF_PATH"
 
 # Install gnoic tool
+# Without specifying the version there is a failure
+# to determine the latest version automatically.
+#
+# root@a2014cb5bc54:~/gnoic# ./install.sh
+# Warning: Failed to verify the package: https://api.github.com/repos/karimra/gnoic/releases/latest, the version is not specified
+# Could not determine the latest release
+# Failed to install gnoic
+# For support, go to https://github.com/karimra/gnoic/issues
 RUN git clone https://github.com/karimra/gnoic.git \
     && cd gnoic \
     && git checkout 57aac3d \
     && chmod +x install.sh \
-    && ./install.sh \
+    && ./install.sh --version 0.1.0 \
     && cd .. \
     && rm -rf gnoic
 
@@ -334,7 +353,27 @@ RUN dpkg -i debs/python-saithrift_0.9.4_amd64.deb
 #     && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
 # {% endif %}
 
+# There are some scripts like supervisorctl and others invoked from
+# custom Ansible modules which use exec_command to run these. Since
+# Ansible module's exec_command uses a restricted shell without sourcing
+# the profile or other rc files the PATH does not include the virtualenv.
+# This step keeps links to required binaries from /usr/local/bin to the
+# virtualenv bin directory.
+RUN set -eux; \
+  for f in /root/env-python3/bin/*; do \
+    base="$(basename "$f")"; \
+    case "$base" in \
+      python*|pip*) continue ;; \
+    esac; \
+    ln -sf "$f" "/usr/local/bin/$base"; \
+  done
+
+RUN echo "/root/env-python3/lib/python3.11/site-packages" > /usr/lib/python3/dist-packages/virtualenv.pth; \
+    echo "/root/env-python3/lib/python3.11/site-packages" > /usr/lib/python3.11/dist-packages/virtualenv.pth
+
+RUN echo "PYTHONPATH=/root/env-python3/lib/python3.11/site-packages" >> /etc/environment
+
 COPY ["*.ini", "/etc/ptf/"]
 EXPOSE 22 8009
 
-ENTRYPOINT ["/usr/local/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+ENTRYPOINT ["/root/env-python3/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
