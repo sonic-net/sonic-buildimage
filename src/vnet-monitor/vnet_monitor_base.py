@@ -51,6 +51,10 @@ KEY_PING_STATE = "ping_state"
 LAG_TABLE = 'LAG_TABLE'
 OPER_STATUS_KEY = 'oper_status'
 
+# Increase recv buffer size to workaround packet drop issue
+# The default buffer size is 65536 bytes
+conf.bufsize *= 10
+
 # Ping task list
 g_ping_task_list = []
 
