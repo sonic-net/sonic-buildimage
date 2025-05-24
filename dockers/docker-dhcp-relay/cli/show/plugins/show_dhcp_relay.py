@@ -20,6 +20,10 @@ DHCP_RELAY = 'DHCP_RELAY'
 VLAN = "VLAN"
 DHCPV6_SERVERS = "dhcpv6_servers"
 DHCPV4_SERVERS = "dhcp_servers"
+SUPPORTED_DHCPV4_TYPE = [
+    "Unknown", "Discover", "Offer", "Request", "Decline", "Ack", "Nak", "Release", "Inform", "Bootp"
+]
+SUPPORTED_DIR = ["TX", "RX"]
 config_db = ConfigDBConnector()
 
 
@@ -213,6 +217,15 @@ def dhcp_relay_ipv6_destination():
 @click.option('-i', '--interface', required=False)
 def dhcp_relay_ip6counters(interface):
     ipv6_counters(interface)
+
+
+@dhcp_relay_ipv4.command("counters")
+@clicommon.pass_db
+@click.argument("vlan_interface", required=False, default="")
+@click.option('--dir', type=click.Choice(SUPPORTED_DIR), required=False)
+@click.option('--type', type=click.Choice(SUPPORTED_DHCPV4_TYPE), required=False)
+def dhcp_relay_ip4counters(db, vlan_interface, dir, type):
+    pass
 
 
 def register(cli):
