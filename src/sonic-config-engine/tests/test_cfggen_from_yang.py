@@ -284,7 +284,7 @@ class TestCfgGen(object):
         assert(output == {\
             "Fabric0": {
                 "alias": "Fabric0",
-                "isolateStatus": "False",
+                "isolateStatus": "false",
                 "lanes": "0",
                 "forceUnisolateStatus": "0"
             }
