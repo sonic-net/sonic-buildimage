@@ -190,30 +190,43 @@ static long pmbus_linear11_to_int(u16 value, int multiplier)
     mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
 
     if (exponent >= 0)
+    {
         return (mantissa << exponent) * multiplier;
+    }
     else
+    {
         return (mantissa * multiplier) / (1 << -exponent);
+    }
 }
 
 static long pmbus_linear16_to_int(u16 value, u8 vout_mode, int multiplier)
 {
     s16 exponent;
     long result;
-    
+
     /* Extract exponent from VOUT_MODE */
-    if ((vout_mode >> 5) == 0) /* Mode is linear */
+    if ((vout_mode >> 5) == 0)
+    {
+        /* Mode is linear */
         exponent = two_complement_to_int(vout_mode & 0x1f, 5, 0x1f);
+    }
     else
+    {
         exponent = 0;
-    
+    }
+
     result = value;
     result *= multiplier;
-    
+
     if (exponent >= 0)
+    {
         result <<= exponent;
+    }
     else
+    {
         result >>= -exponent;
-        
+    }
+
     return result;
 }
 
@@ -221,33 +234,34 @@ static long pmbus_direct_to_int(s16 value, s32 m, s32 b, s32 R, int multiplier)
 {
     s64 val = value;
     s64 result;
-    
-    if (m == 0) {
+
+    if (m == 0)
         return 0; /* Avoid division by zero */
-    }
-    
+
     /* X = 1/m * (Y * 10^-R - b) */
     /* First, handle the 10^-R term by scaling val */
     R = -R; /* Invert R to make the calculations more intuitive */
-    
+
     /* Scale result to the requested multiplier */
     val *= multiplier;
     b *= multiplier;
-    
+
     /* Apply power of 10 scaling */
-    while (R > 0) {
+    while (R > 0)
+    {
         val *= 10;
         R--;
     }
-    while (R < 0) {
+    while (R < 0)
+    {
         val = div_s64(val + 5, 10); /* Round to nearest */
         R++;
     }
-    
+
     /* Now calculate (Y - b) / m */
     val -= b;
     result = div_s64(val, m);
-    
+
     return (long)result;
 }
 
@@ -260,31 +274,40 @@ static long get_real_world_value(struct i2c_client *client,
     u16 reg_value;
     u8 vout_mode;
     const char *data_format;
- 
+
     reg_value = sysfs_attr_info->val.shortval;
 
-    if (usr_data->data_format && usr_data->data_format[0] != '\0') {
+    if (usr_data->data_format && usr_data->data_format[0] != '\0')
+    {
         data_format = usr_data->data_format;
-    } else {
+    }
+    else
+    {
         data_format = default_format;
     }
 
-    if (strcmp(data_format, "linear11") == 0) {
+    if (strcmp(data_format, "linear11") == 0)
+    {
         return pmbus_linear11_to_int(reg_value, multiplier);
     }
-    else if (strcmp(data_format, "direct") == 0) {
+    else if (strcmp(data_format, "direct") == 0)
+    {
         return pmbus_direct_to_int(reg_value, usr_data->m, usr_data->b, usr_data->r, multiplier);
     }
-    else if (strcmp(data_format, "linear16") == 0) {
+    else if (strcmp(data_format, "linear16") == 0)
+    {
         vout_mode = psu_get_vout_mode(client);
         return pmbus_linear16_to_int(reg_value, vout_mode, multiplier);
     }
 
     /* Default to linear11 if format is unknown or NULL */
-    if (data_format) {
+    if (data_format)
+    {
         printk(KERN_WARNING "%s: Unknown data format '%s', defaulting to linear11\n",
                __func__, data_format);
-    } else {
+    }
+    else
+    {
         printk(KERN_WARNING "%s: NULL data format, defaulting to linear11\n", __func__);
     }
 
