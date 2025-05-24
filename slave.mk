@@ -1588,8 +1588,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 
 	# Render the base image files templates
 	$(foreach docker, $($*_DOCKERS),\
-		$(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2), \
-			j2 -f env $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file) > $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/${file%.j2}
+		$(if $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2),\
+			$(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2), \
+				j2 -f env $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file) > $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/${file%.j2}
+			)
 		)
 	)
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
