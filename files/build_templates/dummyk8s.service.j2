@@ -1,3 +1,4 @@
+{% if include_dummyk8s == "y" %}
 [Unit]
 Description=Dummy k8s docker to test k8s deployment
 Requires=config-setup.service
@@ -10,9 +11,9 @@ ExecStartPre=/usr/bin/{{ docker_container_name }}.sh start
 ExecStart=/usr/bin/{{ docker_container_name }}.sh wait
 ExecStop=/usr/bin/{{ docker_container_name }}.sh stop
 RestartSec=30
-{% else %}
 # This service is disabled
 # No [Service] section is generated.
 
 [Install]
 WantedBy=sonic.target
+{% endif %}
