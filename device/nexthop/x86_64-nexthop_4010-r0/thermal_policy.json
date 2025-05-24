@@ -1,0 +1,34 @@
+{
+    "interval": 5,
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "thermal control algorithm",
+            "conditions": [
+                {
+                    "type": "fan.always.true"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "thermal.control_algo",
+                    "pid_params": {
+                        "setpoint": 85,
+                        "Kp": 1.0,
+                        "Ki": 1.0,
+                        "Kd": 1.0,
+                        "min_speed": 50,
+                        "max_speed": 100
+                    }
+                }
+            ]
+        }
+    ]
+}
