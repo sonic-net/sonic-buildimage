@@ -64,6 +64,10 @@ function startplatform() {
         fi
     fi
 
+    if [[ x"$sonic_asic_platform" == x"xsight" ]]; then
+        /opt/xlx/start.sh
+    fi
+
     if [[ x"$sonic_asic_platform" == x"nvidia-bluefield" ]]; then
         /usr/bin/bfnet.sh start
         if [[ $? != "0" ]]; then
@@ -136,6 +140,8 @@ function stopplatform2() {
             /usr/bin/mst stop
         elif [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
             /usr/bin/bfnet.sh stop
+        elif [ x$sonic_asic_platform == x'xsight' ]; then
+            /opt/xlx/down.sh $DEBUGLOG
         fi
     fi
 }

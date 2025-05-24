@@ -705,6 +705,10 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+{%- if sonic_asic_platform == "xsight" %}
+        -v /opt/xplt:/opt/xplt:rw \
+        -v /dev/shm:/dev/shm:rw \
+{%- endif %}
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
@@ -740,6 +744,13 @@ start() {
         --env "CONTAINER_NAME"=$DOCKERNAME \
         --env "SYSLOG_TARGET_IP"=$SYSLOG_TARGET_IP \
         --env "PLATFORM"=$PLATFORM \
+{%- if sonic_asic_platform == "xsight" %}
+{%- if docker_container_name == "syncd" %}
+        -p 0.0.0.0:31000:31000/tcp \
+        -p 0.0.0.0:31002:31002/tcp \
+        -p 0.0.0.0:31001:31001/tcp \
+{%- endif %}
+{%- endif %}
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
