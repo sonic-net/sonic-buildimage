@@ -38,9 +38,7 @@ def is_vlan_interface_valid(vlan_interface, db):
     return True
 
 
-def clear_dhcpv4_db_counters(db, vlan_interface, direction, type, ctx):
-    if not is_vlan_interface_valid(vlan_interface, db):
-        ctx.fail("{} doesn't exist".format(vlan_interface))
+def clear_dhcpv4_db_counters(db, vlan_interface, direction, type):
     types = SUPPORTED_DHCP_TYPE if type is None else [type]
     directions = SUPPORTED_DIR if direction is None else [direction]
     counters_key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface + "*"
@@ -123,16 +121,20 @@ def dhcp_relay_ipv4():
 @click.option('--dir', type=click.Choice(SUPPORTED_DIR), required=False)
 @click.option('--type', type=click.Choice(SUPPORTED_DHCP_TYPE), required=False)
 @clicommon.pass_db
-def clear_dhcp_relay_ipv4_counters(db_obj, interface, dir, type):
+def clear_dhcp_relay_ipv4_counters(db, interface, dir, type):
     """ Clear dhcp_relay ipv4 counts """
     ctx = click.get_current_context()
     if os.geteuid() != 0:
         ctx.fail("Clear DHCPv4 counter need to be run with sudo permission")
+        return
+    if not is_vlan_interface_valid(interface, db.db):
+        ctx.fail("{} doesn't exist".format(interface))
+        return
     with open(DHCPV4_CLEAR_COUNTER_LOCK_FILE, "w") as lock_file:
         try:
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             notify_dhcpmon_processes(interface, signal.SIGUSR1)
-            clear_dhcpv4_db_counters(db_obj.db, interface, dir, type, ctx)
+            clear_dhcpv4_db_counters(db.db, interface, dir, type)
             notify_dhcpmon_processes(interface, signal.SIGUSR2)
             click.echo("Clear DHCPv4 relay counter done")
         except BlockingIOError:
