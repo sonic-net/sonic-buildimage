@@ -120,7 +120,7 @@ def dhcp_relay_ipv4():
 
 @dhcp_relay_ipv4.command('counters')
 @click.option('-i', '--interface', required=False, default="")
-@click.option('--dir', type=click.Choice(["TX", "RX"]), required=False)
+@click.option('--dir', type=click.Choice(SUPPORTED_DIR), required=False)
 @click.option('--type', type=click.Choice(SUPPORTED_DHCP_TYPE), required=False)
 @clicommon.pass_db
 def clear_dhcp_relay_ipv4_counters(db_obj, interface, dir, type):
