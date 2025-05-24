@@ -29,7 +29,7 @@
                 },
                 {
                     "type": "fan.all.set_speed",
-                    "speed": "90"
+                    "speed": "100"
                 }
             ]
         },
