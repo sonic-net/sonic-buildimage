@@ -183,6 +183,10 @@ pip3 install --user jinjanator
 > This will avoid [known bugs that falsely report read-only filesystems issues](https://stackoverflow.com/questions/52526219/docker-mkdir-read-only-file-system)
 > during the build process.
 
+> Note: SONiC is built and tested using Docker Engine on Linux, which licensed under
+> the Apache License, Version 2.0. Other Docker products, including Docker Desktop,
+> may be distributed under different licenses and may require a subscription.
+
 ## Clone the repository with all the git submodules
 
 To clone the code repository recursively:
