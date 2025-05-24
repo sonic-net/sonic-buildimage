@@ -6,18 +6,26 @@
 /*
  * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
- *
+ * 
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
+ * modify it under the terms of the GNU General Public License 
  * version 2 as published by the Free Software Foundation.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
  * be found in the LICENSES folder.
+ */
+
+/*
+ * This module implements a Linux PTP Clock driver for Broadcom
+ * XGS switch devices.
+ *
+ * - All the data structures and functions work on the physical port.
+ *   For array indexing purposes, we use (phy_port - 1).
  */
 
 #include <linux/module.h>
@@ -28,7 +36,8 @@ MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("PTP Clock Driver for Broadcom XGS Switch");
 MODULE_LICENSE("GPL");
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) && \
+            (LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)))
 #define NGPTPCLOCK_SUPPORT
 #endif
 
@@ -130,9 +139,9 @@ static int pci_cos;
     } while (0)
 
 
-/* FIXME : SDKLT-38745
- * Check for cmic type dynamically
- */
+
+
+
 #define CMICX_DEV_TYPE              1
 
 /* CMIC MCS-0 SCHAN Messaging registers */
@@ -1489,10 +1498,10 @@ int ngptpclock_ptp_hw_tstamp_rx_time_upscale(struct sk_buff *skb, uint64_t *ts)
     DBG_RX_DUMP(("rxtime_upscale: Incoming packet: \n"));
     if (debug & DBG_LVL_RX_DUMP) dbg_dump_pkt(skb->data, skb->len);
 
-    /* FIXME : SDKLT-38745
-     * Verify cos_q in meta data.
-     * Example: if (pci_cos != (meta[4] & 0x3F)) {}
-     */
+
+
+
+
 
     /* parse custom encap header in pkt for ptp rxtime */
     custom_encap_len = ngptpclock_pkt_custom_encap_ptprx_get((skb->data), ts);
@@ -1601,9 +1610,9 @@ int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
     negCurTS32 = - (int32_t) ptpcounter;
     negCurTS64 = - (int64_t)(ptpcounter);
 
-    /* FIXME : SDKLT-38745
-     * Get packet header length. Current default length 32byte.
-     */
+
+
+
     if (CMICX_DEV_TYPE) {
         pkt_offset = ptp_hdr_offset = hdrlen + 32;
     }
@@ -2732,11 +2741,11 @@ ngptpclock_ptp_dma_init(int dcb_type, int dev_no)
     int num_pports = 256;
     int mem_size = 16384; /*sizeof(ngptpclock_info_t);*/
 
-
     ptp_priv->num_pports = num_pports;
     ptp_priv->dcb_type = dcb_type;
 
     ngptpclock_ptp_fw_data_alloc(dev_no);
+
     if (ptp_priv->shared_addr == NULL) {
         ptp_priv->shared_addr = kzalloc(16384, GFP_KERNEL);
         ptp_priv->port_stats = kzalloc((sizeof(ngptpclock_port_stats_t) * num_pports), GFP_KERNEL);
@@ -2758,7 +2767,6 @@ ngptpclock_ptp_dma_init(int dcb_type, int dev_no)
         DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 1);
 
     }
-
 
     DBG_VERB(("%s %p:%p, dcb_type: %d\n", __FUNCTION__, ptp_priv->base_addr,
                 (void *)ptp_priv->shared_addr, dcb_type));
@@ -2805,9 +2813,9 @@ ngptpclock_ioctl_cmd_handler(ngknet_dev_info_t *dev_info, int cmd, char *data, i
                 memcpy(ieee1588_ipv4pkt_md, &cfg_data[36], sizeof(ieee1588_ipv4pkt_md));
                 memcpy(ieee1588_ipv6pkt_md, &cfg_data[60], sizeof(ieee1588_ipv6pkt_md));
 
-                /* FIXME : SDKLT-38745
-                 * Device dcb_type, currently set to 1.
-                 */
+
+
+
                 ngptpclock_ptp_dma_init(1, dev_info->dev_no);
 
                 fw_status = 0;

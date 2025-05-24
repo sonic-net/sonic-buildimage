@@ -285,6 +285,11 @@ extern int lkbde_intr_cb_register(int d,
 extern int lkbde_get_dev_pci_info(int d, uint32_t *bus,
                                   uint32_t *slot, uint32_t *func);
 
+/*
+ * Get the iproc version number for a device.
+ */
+extern int lkbde_iproc_version_get(int d, uint32 *iproc_ver);
+
 #ifdef INCLUDE_SRAM_DMA
 #ifdef SRAM_DMA_NEEDS_KERNEL_APIS
 extern void _update_apis_for_sram_dma();

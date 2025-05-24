@@ -72,7 +72,7 @@
 #define KCOM_M_CLOCK_CMD        52 /* Clock Commands */
 #define KCOM_M_PCIE_LINK_STATUS 53 /* PCIe link status */
 
-#define KCOM_VERSION            17 /* Protocol version */
+#define KCOM_VERSION            18 /* Protocol version */
 
 /*
  * Message status codes

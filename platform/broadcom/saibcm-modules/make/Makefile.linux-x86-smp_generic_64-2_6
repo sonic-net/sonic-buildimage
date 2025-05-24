@@ -48,13 +48,15 @@ endif
 GCC_MAJOR_VER  = $(shell GCCVER=$(GCCVER) $(CC) -dumpversion | cut -d'.' -f1)
 
 ifeq (${GCC_MAJOR_VER}, 11)
-	CFGFLAGS += -Wno-error=sizeof-array-div
-	CFGFLAGS += -Wno-error=stringop-overread
+CFGFLAGS += -Wno-error=sizeof-array-div
+CFGFLAGS += -Wno-error=stringop-overread
 endif
+ifneq (1,$(USE_CLANG))
 CFGFLAGS += -Wno-error=stringop-truncation
 CFGFLAGS += -Wno-error=maybe-uninitialized
 CFGFLAGS += -Wno-error=format-overflow
 CFGFLAGS += -Wno-error=array-bounds
+endif
 
 ifdef LTSW_CHIPS
 # Ensure we do not use an out-of-date libelf.so

@@ -23,8 +23,7 @@ INCLUDES := -I$(OUTPUT_DIR)/knet/generated/include -I$(OUTPUT_DIR)/knet/generate
 endif
 obj-m := linux_ngknetcb.o
 
-ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
-             $(SDK_PMD_KFLAGS) \
+ccflags-y := $(SDK_PMD_KFLAGS) $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
              -I$(SDK)/shr/include \
              -I$(SDK)/bcmdrd/include \
              -I$(SDK)/bcmltd/include \
