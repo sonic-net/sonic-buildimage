@@ -49,16 +49,9 @@ def run_command(cmd):
 
 
 def get_hwsku():
-    try:
-        with open("/etc/sonic/config_db.json") as fp:
-            config_db = json.load(fp)
-        if "DEVICE_METADATA" in config_db and "hwsku" in config_db["DEVICE_METADATA"]["localhost"]:
-            hwsku = str(config_db['DEVICE_METADATA']['localhost']['hwsku'])
-            logger.log_info("Detected HW SKU: {}".format(hwsku))
-            return hwsku
-    except Exception as e:
-        logger.log_error("Failed to get HW SKU: {}".format(str(e)))
-    return None
+    hwsku_cmd = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
+    rc, out = run_command(hwsku_cmd)
+    return out.rstrip('\n')
 
 
 def is_auditd_rules_configured():
