@@ -121,6 +121,12 @@ if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -R"
 fi
 
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
 trap '' SIGHUP
 
