@@ -317,6 +317,57 @@ class PddfApi():
 
         return ret
 
+    def show_attr_hwmon_device(self, dev, ops, data_sysfs_key):
+        ret = []
+        if 'i2c' not in dev.keys():
+            return ret
+        attr_name = ops['attr']
+        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
+        KEY = data_sysfs_key
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        # Current/Voltage sensors are oftentimes rails that are part of a DPM/DCDC
+        if "virt_parent" in dev['dev_info']:
+            i2c_dev = self.data[dev['dev_info']['virt_parent']]
+        else:
+            i2c_dev = dev
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = attr['attr_name']
+
+                if 'topo_info' in i2c_dev['i2c']:
+                    path = self.show_device_sysfs(i2c_dev, ops)+"/%d-00%02x/"%(int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
+                            int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
+                    if (os.path.exists(path)):
+                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
+                elif 'path_info' in i2c_dev['i2c']:
+                    path = i2c_dev['i2c']['path_info']['sysfs_base_path']
+                    if (os.path.exists(path)):
+                        full_path = "/".join([path, real_name])
+
+                dsysfs_path = full_path
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(full_path)
+
+        return ret
+
+    def show_attr_voltage_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "voltage-sensors")
+
+    def show_attr_current_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "current-sensors")
+
+    def show_attr_temp_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "temp-sensors")
+
     def show_attr_psu_i2c_device(self, dev, ops):
         target = ops['target']
         attr_name = ops['attr']
@@ -400,41 +451,6 @@ class PddfApi():
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
                         self.data_sysfs_obj[KEY].append(dsysfs_path)
                     ret.append(dsysfs_path)
-        return ret
-
-    def show_attr_temp_sensor_device(self, dev, ops):
-        ret = []
-        if 'i2c' not in dev.keys():
-            return ret
-        attr_name = ops['attr']
-        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
-        KEY = "temp-sensors"
-        dsysfs_path = ""
-
-        if KEY not in self.data_sysfs_obj:
-            self.data_sysfs_obj[KEY] = []
-
-        for attr in attr_list:
-            if attr_name == attr['attr_name'] or attr_name == 'all':
-                if 'drv_attr_name' in attr.keys():
-                    real_name = attr['drv_attr_name']
-                else:
-                    real_name = attr['attr_name']
-
-                if 'topo_info' in dev['i2c']:
-                    path = self.show_device_sysfs(dev, ops)+"/%d-00%x/"%(int(dev['i2c']['topo_info']['parent_bus'], 0),
-                            int(dev['i2c']['topo_info']['dev_addr'], 0))
-                    if (os.path.exists(path)):
-                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
-                elif 'path_info' in dev['i2c']:
-                    path = dev['i2c']['path_info']['sysfs_base_path']
-                    if (os.path.exists(path)):
-                        full_path = "/".join([path, real_name])
-
-                dsysfs_path = full_path
-                if dsysfs_path not in self.data_sysfs_obj[KEY]:
-                    self.data_sysfs_obj[KEY].append(dsysfs_path)
-                ret.append(full_path)
         return ret
 
     def show_attr_sysstatus_device(self, dev, ops):
@@ -644,6 +660,28 @@ class PddfApi():
 
         return ret
 
+    def voltage_sensor_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_voltage_sensor_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_voltage_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
+    def current_sensor_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_current_sensor_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_current_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
     def cpld_parse(self, dev, ops):
         ret = []
         ret = getattr(self, ops['cmd']+"_cpld_device")(dev, ops)
@@ -807,6 +845,12 @@ class PddfApi():
 
         if attr['device_type'] == 'TEMP_SENSOR':
             return self.temp_sensor_parse(dev, ops)
+
+        if attr['device_type'] == 'VOLTAGE_SENSOR':
+            return self.voltage_sensor_parse(dev, ops)
+
+        if attr['device_type'] == 'CURRENT_SENSOR':
+            return self.current_sensor_parse(dev, ops)
 
         if attr['device_type'] == 'SFP' or attr['device_type'] == 'QSFP' or \
                 attr['device_type'] == 'SFP+' or attr['device_type'] == 'QSFP+' or \
