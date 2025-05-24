@@ -1,0 +1,14 @@
+[Unit]
+Description=Log DHCP rate limit violations
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart= /usr/bin/dhcp_dos_logger.py
+[Install]
+WantedBy=sonic.target
+
