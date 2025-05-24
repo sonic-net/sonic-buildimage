@@ -160,6 +160,7 @@ export MIRROR_SECURITY_URLS
 
 ifeq ($(SONIC_SMARTSWITCH),1)
 SMARTSWITCH = 1
+export SMARTSWITCH
 endif
 
 ifeq ($(SONIC_ENABLE_PFCWD_ON_START),y)
@@ -172,7 +173,6 @@ endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
 INCLUDE_SYSTEM_GNMI = y
-SMARTSWITCH = $(SONIC_SMARTSWITCH) j2 -e $(DOCKER_GNMI)_PATH/base_image_files/monit_gnmi.j2 > $(DOCKER_GNMI)_PATH/base_image_files/monit_gnmi
 endif
 
 ifeq ($(SONIC_INCLUDE_SYSTEM_BMP),y)
@@ -1586,6 +1586,12 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 	export installer_services="$(SERVICES)"
 
+	# Render the base image files templates
+	$(foreach docker, $($*_DOCKERS),\
+		$(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2), \
+			j2 -f env $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file) > $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/${file%.j2}
+		)
+	)
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 
 	j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
