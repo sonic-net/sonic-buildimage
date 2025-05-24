@@ -16,28 +16,10 @@
     ],
     "policies": [
         {
-            "name": "any fan absence",
+            "name": "any fan presence",
             "conditions": [
                 {
-                    "type": "fan.any.absence"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "thermal_control.control",
-                    "status": "false"
-                },
-                {
-                    "type": "fan.all.set_speed",
-                    "speed": "90"
-                }
-            ]
-        },
-        {
-            "name": "all fan presence",
-            "conditions": [
-                {
-                    "type": "fan.all.presence"
+                    "type": "fan.any.presence"
                 }
             ],
             "actions": [
@@ -48,7 +30,7 @@
                 }
             ]
         },
-	{
+	    {
             "name": "temp over high critical threshold",
             "conditions": [
                 {
