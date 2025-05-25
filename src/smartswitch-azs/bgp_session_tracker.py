@@ -2,7 +2,7 @@
 
 import signal
 import time
-from datetime import datetime, timedelta
+import sys
 from sonic_py_common import daemon_base, logger
 from swsscommon import swsscommon
 
@@ -16,8 +16,8 @@ BGP_NEIGHBOR_TABLE_NAME = "BGP_NEIGHBOR"
 CONFIG_DB_BGP_DEVICE_GLOBAL_NAME = "BGP_DEVICE_GLOBAL"
 BGP_SESSION_TRACKER_STATE_DB_TABLE_NAME = "BGP_SESSION_TRACKER"
 LAG_TABLE_NAME = "LAG_TABLE"
+FEATURE_TABLE_NAME = "FEATURE"
 BGP_SESSION_TRACKER_INSTANCE_NAME = "T1toWL"
-should_bgp_session_tracker_run = True
 
 class BgpSessionTracker():
     """
@@ -27,79 +27,67 @@ class BgpSessionTracker():
         self.should_monitor_run = False
         self.interfaces_down = False
         self.bgp_sessions_up = True
+        self.feature_enabled = False
         self.downstream_portchannels = ['PortChannel1031', 'PortChannel1032']
-        self.appl_db = daemon_base.db_connect(APPL_DB_NAME)
-        self.sel = swsscommon.Select()
-        self.tbl = swsscommon.SubscriberStateTable(self.appl_db, ROUTE_TABLE_NAME)
-        self.sel.addSelectable(self.tbl)
-        self.state_db = swsscommon.DBConnector("STATE_DB", 0, False)
-        self.state_db_tbl = swsscommon.Table(self.state_db, BGP_SESSION_TRACKER_STATE_DB_TABLE_NAME)
-        self.lag_tbl = swsscommon.Table(self.state_db, LAG_TABLE_NAME)
-        self.route_table = swsscommon.Table(self.appl_db, ROUTE_TABLE_NAME)
-        self.config_db = swsscommon.ConfigDBConnector()
-        self.config_db.connect()
         self.last_t1_bgp_session_update_time = None
         self.t1_bgp_session_cache = set()
 
-    def process_new_entry(self, key, op, fvp):
-        """
-        Process the new entry in the table
-        """
-        if not op in ['SET', 'DEL']:
-            return
-        if key == DEFAULT_ROUTE_KEY:
-            logger_helper.log_notice("Changes to default route. key: %s, op: %s, fvp: %s" % (key, op, fvp))
-            try:
-                self.cache_t1_bgp_sessions()
-                self.process_default_route_update()
-            except Exception as e:
-                logger_helper.log_warning("Exception in processing new entry: {}".format(e))
+        self.config_db = swsscommon.ConfigDBConnector()
+        self.config_db.connect()
+        self.config_db_connector = swsscommon.DBConnector("CONFIG_DB", 0, False)
+        self.state_db = swsscommon.DBConnector("STATE_DB", 0, False)
+        self.appl_db = daemon_base.db_connect(APPL_DB_NAME)
+        self.state_db_tbl = swsscommon.Table(self.state_db, BGP_SESSION_TRACKER_STATE_DB_TABLE_NAME)
+        self.lag_tbl = swsscommon.Table(self.state_db, LAG_TABLE_NAME)
+        self.route_table = swsscommon.Table(self.appl_db, ROUTE_TABLE_NAME)
+
+        self.sel = swsscommon.Select()
+        self.tbl = swsscommon.SubscriberStateTable(self.appl_db, ROUTE_TABLE_NAME)
+        self.sel.addSelectable(self.tbl)
+        self.feature_tbl = swsscommon.SubscriberStateTable(self.config_db_connector, FEATURE_TABLE_NAME)
+        self.sel.addSelectable(self.feature_tbl)
+        self.nbr_tbl = swsscommon.SubscriberStateTable(self.config_db_connector, BGP_NEIGHBOR_TABLE_NAME)
+        self.sel.addSelectable(self.nbr_tbl)
 
     def process_default_route_update(self):
         """
         Process the default route update
         """
-        t1_nexthop_present = False
-        nexthops = self.get_nexthops(DEFAULT_ROUTE_KEY)
-        if nexthops:
-            for nexthop in nexthops:
-                if nexthop in self.t1_bgp_session_cache:
-                    logger_helper.log_notice("Nexthop: %s is a BGP session to T1" % (nexthop))
-                    t1_nexthop_present = True
-                    break
-        if t1_nexthop_present:
-            logger_helper.log_notice("Default route with nexthop to T1 found")
-            self.update_state_db("bgp_sessions_up", "yes")
-            if self.interfaces_down:
-                logger_helper.log_notice("Bringing up southbound interfaces")
-                self.update_southbound_portchannels('up')
+        try:
+            t1_nexthop_present = False
+            nexthops = self.get_nexthops(DEFAULT_ROUTE_KEY)
+            if nexthops:
+                for nexthop in nexthops:
+                    if nexthop in self.t1_bgp_session_cache:
+                        logger_helper.log_notice("Nexthop: %s is a BGP session to T1" % (nexthop))
+                        t1_nexthop_present = True
+                        break
+            if t1_nexthop_present:
+                logger_helper.log_notice("Default route with nexthop to T1 found")
+                self.update_state_db("bgp_sessions_up", "yes")
+                if self.interfaces_down:
+                    logger_helper.log_notice("Bringing up southbound interfaces")
+                    self.update_southbound_portchannels('up')
+                else:
+                    logger_helper.log_notice("Southbound interfaces already up")
             else:
-                logger_helper.log_notice("Southbound interfaces already up")
-                self.update_state_db("interfaces_are_shutdown", "no")
-        else:
-            logger_helper.log_notice("Default route with nexthop to T1 not found")
-            self.update_state_db("bgp_sessions_up", "no")
-            if self.interfaces_down == False:
-                logger_helper.log_notice("Bringing down southbound interfaces")
-                self.update_southbound_portchannels('down')
-            else:
-                logger_helper.log_notice("Southbound interfaces already down")
-                self.update_state_db("interfaces_are_shutdown", "yes")
+                logger_helper.log_notice("Default route with nexthop to T1 not found")
+                self.update_state_db("bgp_sessions_up", "no")
+                if self.interfaces_down == False:
+                    logger_helper.log_notice("Bringing down southbound interfaces")
+                    self.update_southbound_portchannels('down')
+                else:
+                    logger_helper.log_notice("Southbound interfaces already down")
+        except Exception as e:
+            logger_helper.log_warning("Exception in process_default_route_update: {}".format(e))
 
     def update_state_db(self, key, value):
         """
         Update the state db with the key and value
         """
         try:
-            ret_code, current_fvs = self.state_db_tbl.get(BGP_SESSION_TRACKER_INSTANCE_NAME)
-            if ret_code:
-                fvs_dict = dict(current_fvs)
-                fvs_dict[key] = value
-                fvs = swsscommon.FieldValuePairs(list(fvs_dict.items()))
-                self.state_db_tbl.set(BGP_SESSION_TRACKER_INSTANCE_NAME, fvs)
-                logger_helper.log_notice("State DB updated with key: %s, value: %s" % (key, value))
-            else:
-                logger.helper.log_warning("BGP Session tracker instance %s not found when updating key: %s with value: %s" % (BGP_SESSION_TRACKER_INSTANCE_NAME, key, value))
+            self.state_db_tbl.hset(BGP_SESSION_TRACKER_INSTANCE_NAME, key, value)
+            logger_helper.log_notice("State DB updated with key: %s, value: %s" % (key, value))
         except Exception as e:
             logger_helper.log_warning("Exception in updating state db: {}".format(e))
 
@@ -125,17 +113,23 @@ class BgpSessionTracker():
             logger_helper.log_warning("Exception in get_nexthops: {}".format(e))
         return nexthop_list
 
-    def cache_t1_bgp_sessions(self):
+    def update_t1_bgp_sessions_cache(self, key, op, fvp):
+        """
+        Update the T1 BGP sessions cache based on the key, operation and field value pairs.
+        """
+        if op == 'SET':
+            if 'T1' in fvp.get('name', ''):
+                self.t1_bgp_session_cache.add(key)
+                logger_helper.log_notice("Added BGP session to T1: %s. Updated cache: %s" % (key, self.t1_bgp_session_cache))
+        elif op == 'DEL':
+            if key in self.t1_bgp_session_cache:
+                self.t1_bgp_session_cache.remove(key)
+                logger_helper.log_notice("Removed BGP session to T1: %s. Updated cache: %s" % (key, self.t1_bgp_session_cache))
+
+    def setup_t1_bgp_sessions_cache(self):
         """
         Get the BGP sessions to T1
         """
-        current_time = datetime.now()
-        if self.last_t1_bgp_session_update_time is None:
-            self.last_t1_bgp_session_update_time = current_time
-        else:
-            elapsed_time = current_time - self.last_t1_bgp_session_update_time
-            if elapsed_time < timedelta(hours=4):
-                return
         logger_helper.log_notice("Fetching BGP sessions to T1")
         try:
             data = self.config_db.get_table(BGP_NEIGHBOR_TABLE_NAME)
@@ -147,11 +141,12 @@ class BgpSessionTracker():
             else:
                 logger_helper.log_warning("No BGP sessions to T1 found.")
         except Exception as e:
-            logger_helper.log_warning("Exception in cache_t1_bgp_sessions: {}".format(e))
+            logger_helper.log_warning("Exception in setup_t1_bgp_sessions_cache: {}".format(e))
 
     def update_southbound_portchannels(self, status):
         """
-        Update the admin status of southbound portchannels
+        Update the admin status of southbound portchannels in config db PORTCHANNEL table.
+        Validate their status in state db LAG_TABLE.
         """
         logger_helper.log_notice("Updating southbound portchannels with status: %s" % (status))
         success = True
@@ -163,18 +158,11 @@ class BgpSessionTracker():
                     portchannel_data['admin_status'] = status
                     self.config_db.set_entry(PORTCHANNEL_TABLE_NAME, portchannel, portchannel_data)
                     time.sleep(5)  # Wait for the config to be applied
-                    pc_entry = self.lag_tbl.get(portchannel)
-                    if pc_entry[0] == True:
-                        pc_attr = self.lag_tbl.hget(portchannel, 'admin_status')
-                        if pc_attr[0] == True:
-                            intf_status = pc_attr[1]
-                            if intf_status == status:
-                                logger_helper.log_notice("Portchannel: %s updated to status: %s" % (portchannel, status))
-                            else:
-                                logger_helper.log_warning("Portchannel: %s could not update to status: %s" % (portchannel, status))
-                                success = False
+                    pc_admin_status = self.lag_tbl.hget(portchannel, 'admin_status')
+                    if pc_admin_status[0] == True and pc_admin_status[1] == status:
+                        logger_helper.log_notice("Portchannel: %s updated to status: %s" % (portchannel, status))
                     else:
-                        logger_helper.log_warning("Portchannel: %s not found in LAG table when updating status to: %s" % (portchannel, status))
+                        logger_helper.log_warning("Portchannel: %s could not update to status: %s" % (portchannel, status))
                         success = False
                 else:
                     logger_helper.log_notice("Portchannel: %s not found for updating status to: %s" % (portchannel, status))
@@ -189,46 +177,78 @@ class BgpSessionTracker():
         except Exception as e:
             logger_helper.log_warning("Exception in update_southbound_portchannels: {}".format(e))
 
-    def can_run_bgp_session_tracker(self):
+    def southbound_interfaces_down(self):
         """
-        Check if the feature is enabled
+        Get the status of southbound interfaces.
+        Returns False if any interface is up, True otherwise.
         """
+        logger_helper.log_notice("Checking southbound interface status")
         try:
-            feature = self.config_db.get_table('FEATURE')
-            ret_code, current_fvs = self.state_db_tbl.get(BGP_SESSION_TRACKER_INSTANCE_NAME)
-            if 'AzSBgpSessionTracker' not in feature:
-                if ret_code:
-                    #clean up the state db if there is an entry but feature is not present in config db
-                    self.cleanup_state_db()
-                return False
-            else:
-                if feature['AzSBgpSessionTracker']['state'] != 'enabled':
-                    if ret_code:
-                        # if the feature is present in config db but not enabled and is_session_tracker_enabled is set to yes, set it to no
-                        fvs_dict = dict(current_fvs)
-                        if 'is_session_tracker_enabled' in fvs_dict and fvs_dict['is_session_tracker_enabled'] == 'yes':
-                            self.update_state_db("is_session_tracker_enabled", "no")
-                    else:
-                        # if the feature is present in config db but not enabled and table for T1toWL is not present, create it.
-                        self.state_db_tbl.set(BGP_SESSION_TRACKER_INSTANCE_NAME, swsscommon.FieldValuePairs([("is_session_tracker_enabled", "no")]))
-                    return False
-                else:
-                    if ret_code:
-                        # if the feature is present in config db and enabled, check if the state db entry is present and set to yes
-                        fvs_dict = dict(current_fvs)
-                        if 'is_session_tracker_enabled' in fvs_dict and fvs_dict['is_session_tracker_enabled'] == 'no':
-                            self.update_state_db("is_session_tracker_enabled", "yes")
-                    else:
-                        # if the feature is present in config db and enabled and table for T1toWL is not present, create it.
-                        self.state_db_tbl.set(BGP_SESSION_TRACKER_INSTANCE_NAME, swsscommon.FieldValuePairs([("is_session_tracker_enabled", "yes")]))
-                    return True
+            data = self.config_db.get_table(PORTCHANNEL_TABLE_NAME)
+            for portchannel in self.downstream_portchannels:
+                if portchannel in data.keys():
+                    if data[portchannel].get('admin_status') == 'up':
+                        logger_helper.log_notice("Portchannel: %s is up" % (portchannel))
+                        return False
+            logger_helper.log_notice("All southbound interfaces are down")
+            return True
         except Exception as e:
-            logger_helper.log_warning("Exception when checking if AzSBgpSessionTracker feature can run: {}".format(e))
+            logger_helper.log_warning("Exception in get_interface_status: {}".format(e))
             return False
 
-    def perform_initial_route_check(self):
-        self.cache_t1_bgp_sessions()
-        self.process_default_route_update(DEFAULT_ROUTE_KEY)
+    def enable_feature(self):
+        """
+        Enable the AzSBgpSessionTracker feature.
+        Cache the T1 BGP sessions, run through the default route processing
+        and update the state db accordingly.
+        """
+        logger_helper.log_notice("Feature AzSBgpSessionTracker is enabled")
+        self.feature_enabled = True
+        self.update_state_db("is_session_tracker_enabled", "yes")
+        self.setup_t1_bgp_sessions_cache()
+        self.process_default_route_update()
+
+    def perform_initial_setup(self):
+        """
+        Perform initial setup to check if the feature is enabled and process the default route.
+        """
+        try:
+            feature_table = self.config_db.get_table(FEATURE_TABLE_NAME)
+            if 'AzSBgpSessionTracker' in feature_table:
+                state = feature_table.get('AzSBgpSessionTracker', {}).get('state')
+                if state == 'enabled':
+                    self.enable_feature()
+                    self.update_state_db("interfaces_are_shutdown", "yes" if self.interfaces_down else "no")
+                else:
+                    logger_helper.log_notice("Feature AzSBgpSessionTracker is not enabled")
+        except Exception as e:
+            logger_helper.log_warning("Exception in perform_initial_setup: {}".format(e))
+            self.feature_enabled = False
+
+    def process_feature_update(self, key, op, fvp):
+        """
+        Process the feature update for AzSBgpSessionTracker.
+        """
+        try:
+            if op == 'SET':
+                if fvp.get('state') == 'enabled':
+                    if not self.feature_enabled:
+                        self.interfaces_down = self.southbound_interfaces_down()
+                        self.update_state_db("interfaces_are_shutdown", "yes" if self.interfaces_down else "no")
+                        self.enable_feature()
+                elif fvp.get('state') == 'disabled':
+                    if self.feature_enabled:
+                        logger_helper.log_notice("Feature AzSBgpSessionTracker disabled")
+                        self.feature_enabled = False
+                        self.update_state_db("is_session_tracker_enabled", "no")
+            elif op == 'DEL':
+                logger_helper.log_notice("Feature AzSBgpSessionTracker deleted")
+                self.cleanup_state_db()
+                self.feature_enabled = False
+            else:
+                logger_helper.log_warning("Unknown operation %s for feature %s" % (op, key))
+        except Exception as e:
+            logger_helper.log_warning("Exception in process_feature_update: {}".format(e))
 
     def start(self):
         """
@@ -237,32 +257,37 @@ class BgpSessionTracker():
         self.should_monitor_run = True
         SELECT_TIMEOUT_MSECS = 1000
 
-        if (self.can_run_bgp_session_tracker()):
-            logger_helper.log_notice("Starting active monitoring for default route.")
-            self.perform_initial_route_check()
-            logger_helper.log_notice("Initial setup and checks completed.")
-            while True:
-                if not self.should_monitor_run:
-                    break
-                if not self.can_run_bgp_session_tracker():
-                    break
-                (state, selectableObj) = self.sel.select(SELECT_TIMEOUT_MSECS)
-                if state == swsscommon.Select.OBJECT:
-                    if selectableObj.getFd() == self.tbl.getFd():
-                        (key, op, fvp) = self.tbl.pop()
-                        self.process_new_entry(key, op, dict(fvp))
-        else:
-            return
+        try:
+            self.perform_initial_setup()
+            while self.should_monitor_run:
+                state, selectableObj = self.sel.select(SELECT_TIMEOUT_MSECS)
+                if state != swsscommon.Select.OBJECT:
+                    continue
+                if selectableObj.getFd() == self.feature_tbl.getFd():
+                    key, op, fvp = self.feature_tbl.pop()
+                    if key == 'AzSBgpSessionTracker' and op in ['SET', 'DEL']:
+                        logger_helper.log_notice("Feature AzSBgpSessionTracker changed. Key: %s, Op: %s, FVP: %s" % (key, op, fvp))
+                        self.process_feature_update(key, op, dict(fvp))
+                elif self.feature_enabled and selectableObj.getFd() == self.tbl.getFd():
+                    key, op, fvp = self.tbl.pop()
+                    if key == DEFAULT_ROUTE_KEY and op in ['SET', 'DEL']:
+                        logger_helper.log_notice("Default route changed. Key: %s, Op: %s, FVP: %s" % (key, op, fvp))
+                        self.process_default_route_update()
+                elif self.feature_enabled and selectableObj.getFd() == self.nbr_tbl.getFd():
+                    key, op, fvp = self.nbr_tbl.pop()
+                    if '|' not in key and op in ['SET', 'DEL']:
+                        logger_helper.log_notice("T1 BGP neighbor changed. Key: %s, Op: %s, FVP: %s" % (key, op, fvp))
+                        self.update_t1_bgp_sessions_cache(key, op, dict(fvp))
+        except Exception as e:
+            logger_helper.log_warning("Exception in BgpSessionTracker start: {}".format(e))
 
     def stop(self):
         """
         Stop the select operation and exit
         """
-        self.update_state_db("is_session_tracker_enabled", "no")
+        self.cleanup_state_db()
         self.should_monitor_run = False
-        if self.sel:
-            self.sel.interrupt()
-    
+
     def cleanup_state_db(self):
         """
         Clean up the state db
@@ -277,17 +302,17 @@ def signal_handler(signal, frame):
     """
     Gracefully exit
     """
-    global should_bgp_session_tracker_run, bgp_session_tracker
+    global bgp_session_tracker
     logger_helper.log_notice("BGP Session tracker going to quit")
     # Ignore any exception during quit
     try:
         if bgp_session_tracker:
             bgp_session_tracker.stop()
-            bgp_session_tracker.cleanup_state_db()
-        should_bgp_session_tracker_run = False
+            bgp_session_tracker = None
     except Exception as e:
         logger_helper.log_warning("Exception in signal handler: {}".format(e))
         #pass
+    sys.exit(0)
 
 def main():
     """
@@ -300,10 +325,7 @@ def main():
 
     global bgp_session_tracker
     bgp_session_tracker = BgpSessionTracker()
-    while True:
-        if not should_bgp_session_tracker_run:
-            break
-        bgp_session_tracker.start()
+    bgp_session_tracker.start()
 
 if __name__ == "__main__":
     main()
