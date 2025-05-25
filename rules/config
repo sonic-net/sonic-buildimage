@@ -43,7 +43,7 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 CHANGE_DEFAULT_PASSWORD ?= n
 
 # Default value for SMARTSWITCH
-SMARTSWITCH ?= 0
+SMARTSWITCH ?= 1
 
 # DEFAULT_USERNAME - default username for installer build
 DEFAULT_USERNAME = admin
