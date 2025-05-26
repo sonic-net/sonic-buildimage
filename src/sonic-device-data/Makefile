@@ -21,6 +21,12 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	mkdir ./device
 	cp -r -L ../../../device/*/* ./device/
 
+	if [ "$(CONFIGURED_PLATFORM)" = "mellanox" ]; then \
+		for sai_profile in `find device/ -name sai.profile | grep simx`; do \
+			echo SAI_KEY_IS_SIMX=1 >> $$sai_profile; \
+		done; \
+	fi;
+
 	# Create hwsku for virtual switch
 	for d in `find -L ../../../device -maxdepth 3 -mindepth 3 -type d | grep -vE "(plugins|led-code|sonic_platform)"`; do \
 		# check if hwsku dir exists, if yes, then continue
