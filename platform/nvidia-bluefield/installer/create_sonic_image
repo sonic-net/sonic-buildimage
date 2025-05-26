@@ -42,7 +42,7 @@ GRUB_CFG="" # Common Grub Config
 BF2_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x01000000 earlycon=pl011,0x01800000"
 BF2_GRUB_CFG="$BF2_BOOT_ARGS isolcpus=1-7 nohz_full=1-7 rcu_nocbs=1-7"
 BF3_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x13010000"
-BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-13 nohz_full=1-13 rcu_nocbs=1-13"
+BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-10 nohz_full=1-10 rcu_nocbs=1-10"
 
 usage() {
 cat << EOF

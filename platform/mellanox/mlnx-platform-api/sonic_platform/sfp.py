@@ -186,6 +186,7 @@ SFP_SW_CONTROL = 1
 SFP_FW_CONTROL = 0
 
 CMIS_MAX_POWER_OFFSET = 201
+CMIS_MEDIA_INTERFACE_TECH_OFFSET = 212
 
 SFF_POWER_CLASS_MASK = 0xE3
 SFF_POWER_CLASS_MAPPING = {
@@ -1105,6 +1106,16 @@ class SFP(NvidiaSFPCommon):
         """
         return isinstance(xcvr_api, sff8636.Sff8636Api) or isinstance(xcvr_api, sff8436.Sff8436Api)
 
+    def check_media_interface_technology(self, xcvr_api):
+        """Check media interface technology
+        0x0F in offset 212, means the module is 'Copper cable, linear active equalizers'.
+        Nvidia doesn't support it to be SW control, so we set it to FW control
+        Args:
+            xcvr_api (object): xcvr api object
+        """
+        media_interface = self.read_eeprom(CMIS_MEDIA_INTERFACE_TECH_OFFSET, 1)
+        return media_interface[0] == 0x0F if media_interface else False
+
     def is_supported_for_software_control(self, xcvr_api):
         """Check if the api object supports software control
 
@@ -1115,9 +1126,12 @@ class SFP(NvidiaSFPCommon):
             bool: True if the api object supports software control
         """
         if xcvr_api.is_flat_memory():
-            return self.is_cmis_api(xcvr_api) or self.is_sff_api(xcvr_api)
-        else:
-            return self.is_cmis_api(xcvr_api)
+            if self.is_cmis_api(xcvr_api):
+                # For Copper active modules, Nvidia doesn't support SW control
+                return self.check_media_interface_technology(xcvr_api)
+            return self.is_sff_api(xcvr_api)
+
+        return self.is_cmis_api(xcvr_api)
 
     def check_power_capability(self):
         """Check module max power with cage power limit

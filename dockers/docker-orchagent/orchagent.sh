@@ -82,7 +82,7 @@ elif [ "$platform" == "pensando" ]; then
         MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
     fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "marvell" ]; then
+elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
     CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
