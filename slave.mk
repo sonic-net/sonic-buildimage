@@ -1340,7 +1340,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		export kversion="$(KVERSION)"
 		export image_type="$($(installer)_IMAGE_TYPE)"
 		export sonicadmin_user="$(USERNAME)"
-		export configured_arch="$(CONFIGURED_ARCH)"
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 		export RFS_SPLIT_FIRST_STAGE=y
 		export RFS_SPLIT_LAST_STAGE=n
