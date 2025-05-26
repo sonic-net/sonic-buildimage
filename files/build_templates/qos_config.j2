@@ -97,6 +97,11 @@
 {%- set tunnel_qos_remap_enable = true %}
 {%- endif %}
 
+{%- set switch_trimming_enable = false %}
+{%- if ('sn5640' in DEVICE_METADATA['localhost']['platform'].lower()) %}
+{%- set switch_trimming_enable = true %}
+{%- endif %}
+
 {%- set port_names_list_extra_queues = [] %}
 {%- for port in PORT_ACTIVE %}
 {% if ((generate_dscp_to_tc_map is defined) and tunnel_qos_remap_enable) and 
@@ -287,6 +292,9 @@
 {% endif %}
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
+{% endif %}
+{% if (generate_switch_trimming is defined) and switch_trimming_enable %}
+    {{- generate_switch_trimming() }}
 {% endif %}
 {% if (generate_scheduler_config is defined) %}
     {{- generate_scheduler_config() }}
@@ -661,11 +669,11 @@
 {% elif generate_single_queue_per_sku is defined %}
     "QUEUE": {
 {% for port in PORT_DOWNLINK %}
-    {{ generate_single_queue_per_sku(port, 'DOWNLINK') }}
+    {{ generate_single_queue_per_sku(port, 'downlink') }}
     {%- if not loop.last or PORT_UPLINK|length > 0 -%},{% endif %}
 {% endfor %}
 {% for port in PORT_UPLINK %}
-    {{ generate_single_queue_per_sku(port, 'UPLINK') }}
+    {{ generate_single_queue_per_sku(port, 'uplink') }}
         {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }

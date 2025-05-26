@@ -300,4 +300,33 @@
 #}
 {%- endmacro %}
 
+{% macro generate_tc_to_dscp_map() %}
+    "TC_TO_DSCP_MAP": {
+        {% if 'type' in DEVICE_METADATA['localhost'] %}
+            {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' -%}
+                "AZURE_DOWNLINK_BT0": {
+                    "8": "21"
+                },
+                "AZURE_UPLINK_BT0": {
+                    "8": "11"
+                }
+            {%- elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' -%}
+                "AZURE_DOWNLINK_BT1": {
+                    "8": "11"
+                }
+            {% endif %}
+        {% endif -%}
+    },
+{%- endmacro -%}
+
+{%- macro generate_switch_trimming() -%}
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "256",
+            "tc_value": "8",
+            "queue_index": "4"
+        }
+    },
+{%- endmacro -%}
+
 {%- include 'qos_config.j2' %}
