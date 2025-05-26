@@ -3,6 +3,7 @@ import subprocess
 import time
 import syslog
 from swsscommon import swsscommon
+from sonic_py_common import device_info
 from sonic_py_common.general import getstatusoutput_noshell
 
 class BfdFrrMon:
@@ -17,6 +18,31 @@ class BfdFrrMon:
         self.bfdd_running = False
         self.init_done = False
         self.MAX_RETRY_ATTEMPTS = 3
+
+        self.remote_db_connector, \
+        self.remote_status_table, \
+        self.remote_table = self.connect_to_remote_db()
+
+    def connect_to_remote_db(self):
+        remote_db = None
+        remote_status_table = None
+        remote_table = None
+        switch_type = device_info.get_localhost_info("switch_type")
+        if switch_type and switch_type == "dpu":
+            try:
+                cmd = ["cat", "/var/run/redis/sonic-db/database_config.json"]
+                _, result = getstatusoutput_noshell(cmd)
+                data = json.loads(result)
+                redis_hostname = data['INSTANCES']['remote_redis']['hostname']
+                redis_port = data['INSTANCES']['remote_redis']['port']
+            except:
+                syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed to read connection info for remote dpu database from: {}".format(cmd))
+                return (None, None, None)
+            remote_db = swsscommon.DBConnector(swsscommon.DPU_STATE_DB, redis_hostname, int(redis_port), 0)
+            remote_status_table = "DASH_BFD_PROBE_STATE"
+            remote_table = swsscommon.Table(remote_db, remote_status_table)
+
+        return (remote_db, remote_status_table, remote_table)
 
     def check_bfdd(self):
         """
@@ -73,7 +99,7 @@ class BfdFrrMon:
                                     self.frr_v6_peers.add(session["peer"])
                                 else:  # IPv4
                                     self.frr_v4_peers.add(session["peer"])
-                    return True
+                return True
             except json.JSONDecodeError as e:
                 # Log the exception and retry if within the maximum attempts
                 retry_attempt += 1
@@ -113,13 +139,19 @@ class BfdFrrMon:
 
             # Update Redis with the new peer sets
             values = [
-                ("v4_bfd_up_sessions", json.dumps(list(self.local_v4_peers))),
-                ("v6_bfd_up_sessions", json.dumps(list(self.local_v6_peers)))
+                ("v4_bfd_up_sessions", json.dumps(list(self.local_v4_peers)).strip("[]")),
+                ("v6_bfd_up_sessions", json.dumps(list(self.local_v6_peers)).strip("[]"))
             ]
             self.table.set("", values)
             syslog.syslog(syslog.LOG_INFO,
                 "{} table in STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
                 self.status_table, self.local_v4_peers, self.local_v6_peers))
+
+            if self.remote_table:
+                self.remote_table.set("", values)
+                syslog.syslog(syslog.LOG_INFO,
+                    "{} table in DPU_STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
+                    self.remote_status_table, self.local_v4_peers, self.local_v6_peers))
 
             self.init_done = True
     
