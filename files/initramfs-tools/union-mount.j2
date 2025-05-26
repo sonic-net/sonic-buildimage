@@ -218,7 +218,7 @@ mkdir -p ${rootmnt}/boot
 mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
-{% if CONFIGURED_ARCH != 'armhf' %}
+{% if asic_type != 'marvell-prestera' %}
 ## Mount the /tmp directory as tmpfs
 mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
 {% endif %}
