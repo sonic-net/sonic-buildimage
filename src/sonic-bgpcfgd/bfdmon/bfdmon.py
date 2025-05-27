@@ -19,30 +19,14 @@ class BfdFrrMon:
         self.init_done = False
         self.MAX_RETRY_ATTEMPTS = 3
 
-        self.remote_db_connector, \
-        self.remote_status_table, \
-        self.remote_table = self.connect_to_remote_db()
-
-    def connect_to_remote_db(self):
-        remote_db = None
-        remote_status_table = None
-        remote_table = None
+        self.remote_status_table = "DASH_BFD_PROBE_STATE"
         switch_type = device_info.get_localhost_info("switch_type")
         if switch_type and switch_type == "dpu":
-            try:
-                cmd = ["cat", "/var/run/redis/sonic-db/database_config.json"]
-                _, result = getstatusoutput_noshell(cmd)
-                data = json.loads(result)
-                redis_hostname = data['INSTANCES']['remote_redis']['hostname']
-                redis_port = data['INSTANCES']['remote_redis']['port']
-            except:
-                syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed to read connection info for remote dpu database from: {}".format(cmd))
-                return (None, None, None)
-            remote_db = swsscommon.DBConnector(swsscommon.DPU_STATE_DB, redis_hostname, int(redis_port), 0)
-            remote_status_table = "DASH_BFD_PROBE_STATE"
-            remote_table = swsscommon.Table(remote_db, remote_status_table)
-
-        return (remote_db, remote_status_table, remote_table)
+            self.remote_db_connector = swsscommon.DBConnector("DPU_STATE_DB", 0, True)
+            self.remote_table = swsscommon.Table(self.remote_db_connector, self.remote_status_table)
+        else:
+            self.remote_db_connector = None
+            self.remote_table = None
 
     def check_bfdd(self):
         """
