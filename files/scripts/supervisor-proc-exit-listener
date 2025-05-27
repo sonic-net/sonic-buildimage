@@ -246,3 +246,4 @@ if __name__ == "__main__":
         main(sys.argv[1:])
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, "Exception: {}, trace: {}".format(e, traceback.format_exc()))
+        sys.exit(1)
