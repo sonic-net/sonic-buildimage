@@ -17,12 +17,12 @@
 #                   ...
 #                   <data_fld_n>: <value>
 #
-
 ---
 bcm_device:
     0:
         global:
             pktio_mode: 1
+            default_cpu_tx_queue: 7
             vlan_flooding_l2mc_num_reserved: 0
             ipv6_lpm_128b_enable: 1
             shared_block_mask_section: uc_bc
@@ -39,19 +39,6 @@ bcm_device:
             sai_tunnel_support: 2
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
-            #enable port queue drop stats
-            sai_stats_support_mask: 0
-            #disable vxlan tunnel stats
-            sai_stats_disable_mask: 0x200
-            #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
-            global_flexctr_ing_action_num_reserved: 20
-            global_flexctr_ing_pool_num_reserved: 8
-            global_flexctr_ing_op_profile_num_reserved: 20
-            global_flexctr_ing_group_num_reserved: 2
-            global_flexctr_egr_action_num_reserved: 8
-            global_flexctr_egr_pool_num_reserved: 5
-            global_flexctr_egr_op_profile_num_reserved: 10
-            global_flexctr_egr_group_num_reserved: 1
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 4096
             sai_mmu_custom_config: 1
@@ -831,7 +818,6 @@ device:
 device:
     0:
         PC_PORT_PHYS_MAP:
-            # data path 0
             ?
                 PORT_ID: 1
             :
@@ -848,7 +834,6 @@ device:
                 PORT_ID: 4
             :
                 PC_PHYS_PORT_ID: 13
-            # data path 1
             ?
                 PORT_ID: 17
             :
@@ -865,7 +850,6 @@ device:
                 PORT_ID: 20
             :
                 PC_PHYS_PORT_ID: 29
-            # data path 2
             ?
                 PORT_ID: 34
             :
@@ -882,7 +866,6 @@ device:
                 PORT_ID: 37
             :
                 PC_PHYS_PORT_ID: 45
-            # data path 3
             ?
                 PORT_ID: 51
             :
@@ -899,7 +882,6 @@ device:
                 PORT_ID: 54
             :
                 PC_PHYS_PORT_ID: 61
-            # data path 4
             ?
                 PORT_ID: 68
             :
@@ -916,7 +898,6 @@ device:
                 PORT_ID: 71
             :
                 PC_PHYS_PORT_ID: 77
-            # data path 5
             ?
                 PORT_ID: 85
             :
@@ -933,7 +914,6 @@ device:
                 PORT_ID: 88
             :
                 PC_PHYS_PORT_ID: 93
-            # data path 6
             ?
                 PORT_ID: 102
             :
@@ -950,7 +930,6 @@ device:
                 PORT_ID: 105
             :
                 PC_PHYS_PORT_ID: 109
-            # data path 7
             ?
                 PORT_ID: 119
             :
@@ -967,7 +946,6 @@ device:
                 PORT_ID: 122
             :
                 PC_PHYS_PORT_ID: 125
-            # data path 8
             ?
                 PORT_ID: 136
             :
@@ -984,7 +962,6 @@ device:
                 PORT_ID: 139
             :
                 PC_PHYS_PORT_ID: 141
-            # data path 9
             ?
                 PORT_ID: 153
             :
@@ -1001,7 +978,6 @@ device:
                 PORT_ID: 156
             :
                 PC_PHYS_PORT_ID: 157
-            # data path 10
             ?
                 PORT_ID: 170
             :
@@ -1018,7 +994,6 @@ device:
                 PORT_ID: 173
             :
                 PC_PHYS_PORT_ID: 173
-            # data path 11
             ?
                 PORT_ID: 187
             :
@@ -1035,7 +1010,6 @@ device:
                 PORT_ID: 190
             :
                 PC_PHYS_PORT_ID: 189
-            # data path 12
             ?
                 PORT_ID: 204
             :
@@ -1052,7 +1026,6 @@ device:
                 PORT_ID: 207
             :
                 PC_PHYS_PORT_ID: 205
-            # data path 13
             ?
                 PORT_ID: 221
             :
@@ -1069,7 +1042,6 @@ device:
                 PORT_ID: 224
             :
                 PC_PHYS_PORT_ID: 221
-            # data path 14
             ?
                 PORT_ID: 238
             :
@@ -1086,7 +1058,6 @@ device:
                 PORT_ID: 241
             :
                 PC_PHYS_PORT_ID: 237
-            # data path 15
             ?
                 PORT_ID: 255
             :
@@ -1103,7 +1074,6 @@ device:
                 PORT_ID: 258
             :
                 PC_PHYS_PORT_ID: 253
-            # data path 16
             ?
                 PORT_ID: 272
             :
@@ -1120,7 +1090,6 @@ device:
                 PORT_ID: 275
             :
                 PC_PHYS_PORT_ID: 269
-            # data path 17
             ?
                 PORT_ID: 289
             :
@@ -1137,7 +1106,6 @@ device:
                 PORT_ID: 292
             :
                 PC_PHYS_PORT_ID: 285
-            # data path 18
             ?
                 PORT_ID: 306
             :
@@ -1154,7 +1122,6 @@ device:
                 PORT_ID: 309
             :
                 PC_PHYS_PORT_ID: 301
-            # data path 19
             ?
                 PORT_ID: 323
             :
@@ -1171,7 +1138,6 @@ device:
                 PORT_ID: 326
             :
                 PC_PHYS_PORT_ID: 317
-            # data path 20
             ?
                 PORT_ID: 340
             :
@@ -1188,7 +1154,6 @@ device:
                 PORT_ID: 343
             :
                 PC_PHYS_PORT_ID: 333
-            # data path 21
             ?
                 PORT_ID: 357
             :
@@ -1205,7 +1170,6 @@ device:
                 PORT_ID: 360
             :
                 PC_PHYS_PORT_ID: 349
-            # data path 22
             ?
                 PORT_ID: 374
             :
@@ -1222,7 +1186,6 @@ device:
                 PORT_ID: 377
             :
                 PC_PHYS_PORT_ID: 365
-            # data path 23
             ?
                 PORT_ID: 391
             :
@@ -1239,7 +1202,6 @@ device:
                 PORT_ID: 394
             :
                 PC_PHYS_PORT_ID: 381
-            # data path 24
             ?
                 PORT_ID: 408
             :
@@ -1256,7 +1218,6 @@ device:
                 PORT_ID: 411
             :
                 PC_PHYS_PORT_ID: 397
-            # data path 25
             ?
                 PORT_ID: 425
             :
@@ -1273,7 +1234,6 @@ device:
                 PORT_ID: 428
             :
                 PC_PHYS_PORT_ID: 413
-            # data path 26
             ?
                 PORT_ID: 442
             :
@@ -1290,7 +1250,6 @@ device:
                 PORT_ID: 445
             :
                 PC_PHYS_PORT_ID: 429
-            # data path 27
             ?
                 PORT_ID: 459
             :
@@ -1307,7 +1266,6 @@ device:
                 PORT_ID: 462
             :
                 PC_PHYS_PORT_ID: 445
-            # data path 28
             ?
                 PORT_ID: 476
             :
@@ -1324,7 +1282,6 @@ device:
                 PORT_ID: 479
             :
                 PC_PHYS_PORT_ID: 461
-            # data path 29
             ?
                 PORT_ID: 493
             :
@@ -1341,7 +1298,6 @@ device:
                 PORT_ID: 496
             :
                 PC_PHYS_PORT_ID: 477
-            # data path 30
             ?
                 PORT_ID: 510
             :
@@ -1358,7 +1314,6 @@ device:
                 PORT_ID: 513
             :
                 PC_PHYS_PORT_ID: 493
-            # data path 31
             ?
                 PORT_ID: 527
             :
@@ -1419,6 +1374,25 @@ device:
                 NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
+...
+---
+bcm_device:
+    0:
+        global:
+            ftem_mem_entries: 65536
+            #enable port queue drop stats
+            sai_stats_support_mask: 0
+            #disable vxlan tunnel stats
+            sai_stats_disable_mask: 0x200
+            #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
 ...
 ---
 device:
@@ -1518,7 +1492,6 @@ device:
                 PFC_PRI: [0,7]
             :
                 TM_PRI_GRP_ID: 0
-
 ...
 # Egress service pool level initialization
 # Output port Thresholds
@@ -1744,10 +1717,8 @@ device:
                 YELLOW_SHARED_RESUME_LIMIT_PKTS: 0
                 RED_SHARED_LIMIT_PKTS: 0
                 RED_SHARED_RESUME_LIMIT_PKTS: 0
-
 ...
 ### Begin MMU ingress threshold settings
-
 ### Pools
 ---
 device:
@@ -2015,7 +1986,6 @@ device:
                 RESUME_OFFSET_CELLS: 0
                 RESUME_FLOOR_CELLS: 0
                 HEADROOM_LIMIT_AUTO: 0
-
 ...
 ### Egress Service Pools
 ---
@@ -2096,7 +2066,6 @@ device:
                 YELLOW_SHARED_RESUME_LIMIT_CELLS: 55
                 RED_SHARED_RESUME_LIMIT_CELLS: 46
 ...
-
 ...
 ### Adaptive Alpha
 ---
@@ -2305,7 +2274,6 @@ device:
                 RED_SHARED_RESUME_LIMIT_CELLS: 45
                 YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
                 SHARED_RESUME_LIMIT_CELLS: 73
-
 ...
 ### PFC mapping
 ---
@@ -2439,7 +2407,6 @@ device:
                 RED_SHARED_RESUME_LIMIT_CELLS: 6956
                 YELLOW_SHARED_RESUME_LIMIT_PKTS: 2220
                 RED_SHARED_RESUME_LIMIT_PKTS: 1847
-
 ...
 ### OBM
 ---
