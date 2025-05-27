@@ -14,3 +14,15 @@ class SonicV2Connector:
 
     def get(self, db, table, field):
         return self.data.get(field, "N/A")
+
+
+class ConfigDBConnector:
+    def __init__(self):
+        self.CONFIG_DB = 'CONFIG_DB'
+        self.data = {"key_encrypt": "True"}
+
+    def connect(self):
+        pass
+
+    def get(self, db, table, field):
+        return self.data.get(field, "N/A")
