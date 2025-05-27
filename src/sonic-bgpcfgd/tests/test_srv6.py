@@ -257,7 +257,7 @@ def test_out_of_order_del1():
         'segment-routing',
         'srv6',
         'static-sids',
-        'no sid fcbb:bbbb:20:1::/64 locator loc1 behavior DT46 vrf Vrf1'
+        'no sid fcbb:bbbb:20:1::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
     assert SRv6Mgr.fading_locators["loc1"].num_of_sids() == 1
 
@@ -306,7 +306,7 @@ def test_out_of_order_del2():
         'segment-routing',
         'srv6',
         'static-sids',
-        'no sid fcbb:bbbb:20:1::/64 locator loc1 behavior DT46 vrf Vrf1'
+        'no sid fcbb:bbbb:20:1::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
     assert SRv6Mgr.fading_locators["loc1"].num_of_sids() == 1
 
