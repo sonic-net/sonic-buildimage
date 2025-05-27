@@ -131,10 +131,11 @@ module sonic-system-tacacs {
                     default 5;
                 }
 
-		leaf key_encrypt {
-		    type boolean;
-		    description "Indicates if the passkey is encrypted.";
-		}
+                leaf key_encrypt {
+                    type boolean;
+                    default false;
+                    description "Indicates if the passkey is encrypted.";
+                }
 
                 leaf passkey {
                     type string {
