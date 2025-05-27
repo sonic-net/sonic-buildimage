@@ -240,7 +240,7 @@ def test_out_of_order_del1():
 
     # add two sids
     sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
-    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20:1::/64", data={'action': 'DT46', 'decap_vrf': 'Vrf1'})
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20:1::/64", data={'action': 'uDT46', 'decap_vrf': 'Vrf1'})
 
     # verify that the sids are added
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
@@ -289,7 +289,7 @@ def test_out_of_order_del2():
 
     # add two sids
     sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
-    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20:1::/64", data={'action': 'DT46', 'decap_vrf': 'Vrf1'})
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20:1::/64", data={'action': 'uDT46', 'decap_vrf': 'Vrf1'})
 
     # verify that the sids are added
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
