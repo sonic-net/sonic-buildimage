@@ -1348,7 +1348,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		if [[ x$(CONFIGURED_ARCH) == x"armhf" || x$(CONFIGURED_ARCH) == x"arm64" ]]; then
 			ONIE_IMAGE_CONF=onie-image-$(CONFIGURED_ARCH).conf
 		fi
-
 		j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/union-mount
 		j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/arista-convertfs
 
@@ -1586,8 +1585,12 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 
-	j2 files/initramfs-tools/union-mount.j2 > files/initramfs-tools/union-mount
-	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
+	ONIE_IMAGE_CONF=onie-image.conf
+	if [[ x$(CONFIGURED_ARCH) == x"armhf" || x$(CONFIGURED_ARCH) == x"arm64" ]]; then
+		ONIE_IMAGE_CONF=onie-image-$(CONFIGURED_ARCH).conf
+	fi
+	j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/union-mount
+	j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
 		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
