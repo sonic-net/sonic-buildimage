@@ -5,7 +5,7 @@ ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
 !
 ip as-path access-list LOCALROUTES permit ^$
 !
-ip community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
 !
 route-map TO_TIER2_V4 permit 100
   match ip address prefix-list DEFAULT_IPV4

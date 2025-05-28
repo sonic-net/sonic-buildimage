@@ -13,7 +13,7 @@ ip prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4 seq 5 permit 127.0.0.1/32
 !
 ip as-path access-list LOCALROUTES permit ^$
 !
-ip community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
 !
 route-map TO_{{ peer_group_type }} permit 100
   match ip address prefix-list DEFAULT_IPV4
