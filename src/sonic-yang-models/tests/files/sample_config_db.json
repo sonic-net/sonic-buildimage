@@ -2225,6 +2225,12 @@
             }
         },
 
+        "DEBUG_DROP_MONITOR": {
+            "CONFIG": {
+                "status": "disabled"
+            }
+        },
+
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",
@@ -2937,7 +2943,11 @@
                 "alias": "BAD_DROPS",
                 "desc": "More port ingress drops",
                 "group": "BAD",
-                "type": "SWITCH_INGRESS_DROPS"
+                "type": "SWITCH_INGRESS_DROPS",
+                "drop_monitor_status": "disabled",
+                "drop_count_threshold": "10",
+                "incident_count_threshold": "2",
+                "window": "300"
             }
         },
         "DEBUG_COUNTER_DROP_REASON": {
