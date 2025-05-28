@@ -1345,7 +1345,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		export RFS_SPLIT_LAST_STAGE=n
 		@echo "CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
 		ONIE_IMAGE_CONF=onie-image.conf
-		if [ x$(CONFIGURED_ARCH) == x"armhf" || x$(CONFIGURED_ARCH) == x"arm64" ]; then
+		if [ x$(CONFIGURED_ARCH) == x"armhf" ] || [ x$(CONFIGURED_ARCH) == x"arm64" ]; then
 			ONIE_IMAGE_CONF=onie-image-$(CONFIGURED_ARCH).conf
 		fi
 		@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
@@ -1587,7 +1587,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 	@echo "CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
 	ONIE_IMAGE_CONF=onie-image.conf
-	if [ x$(CONFIGURED_ARCH) == x"armhf" || x$(CONFIGURED_ARCH) == x"arm64" ]; then
+	if [ x$(CONFIGURED_ARCH) == x"armhf" ] || [ x$(CONFIGURED_ARCH) == x"arm64" ]; then
 		ONIE_IMAGE_CONF=onie-image-$(CONFIGURED_ARCH).conf
 	fi
 	@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
