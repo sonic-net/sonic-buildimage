@@ -21,7 +21,7 @@ function print_targets {
 
 count=1
 for i in $(cat ${target_list_file}); do
-    printf "[ %02d ] [ %s ]\n" "${count}" "$i"
+    printf "[ %02d ] [ %s ]\n\n" "${count}" "$i"
     ((count++))
 done
 }
