@@ -1114,7 +1114,7 @@ class SFP(NvidiaSFPCommon):
             xcvr_api (object): xcvr api object
         """
         media_interface = self.read_eeprom(CMIS_MEDIA_INTERFACE_TECH_OFFSET, 1)
-        return media_interface[0] == 0x0F if media_interface else False
+        return media_interface[0] != 0x0F if media_interface else False
 
     def is_supported_for_software_control(self, xcvr_api):
         """Check if the api object supports software control
