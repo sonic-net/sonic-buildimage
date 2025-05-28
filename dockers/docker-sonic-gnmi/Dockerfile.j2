@@ -12,6 +12,12 @@ ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
 
+# Unit test for monit_gnmi.j2
+COPY ["base_image_files/monit_gnmi.j2", "/tmp/monit_gnmi.j2"]
+RUN SMARTSWITCH=1 j2 -f env /tmp/monit_gnmi.j2 | grep "gnmi 1073741824"
+RUN j2 -f env /tmp/monit_gnmi.j2 | grep "gnmi 419430400"
+RUN rm -f /tmp/monit_gnmi.j2
+
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_sonic_gnmi_debs.split(' '), "/debs/") }}
