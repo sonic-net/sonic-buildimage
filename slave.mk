@@ -1343,16 +1343,16 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 		export RFS_SPLIT_FIRST_STAGE=y
 		export RFS_SPLIT_LAST_STAGE=n
-		@echo "CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
-		export ONIE_IMAGE_CONF="onie-image.conf"
-		@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
+		@echo "1350 - CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
+		ONIE_IMAGE_CONF="onie-image.conf"
+		@echo "1350 - ONIE_IMAGE_CONF: ${ONIE_IMAGE_CONF}"
 		if [ x$(CONFIGURED_ARCH) = x"armhf" ] || [ x$(CONFIGURED_ARCH) = x"arm64" ]; then
-			@echo "Is armhf or arm64"
+			@echo "1350 - Is armhf or arm64"
 			ONIE_IMAGE_CONF="onie-image-$(CONFIGURED_ARCH).conf"
 		fi
-		@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
-		j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/union-mount
-		j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/arista-convertfs
+		@echo "1350 - ONIE_IMAGE_CONF: ${ONIE_IMAGE_CONF}"
+		j2 -f env files/initramfs-tools/union-mount.j2 ${ONIE_IMAGE_CONF} > files/initramfs-tools/union-mount
+		j2 -f env files/initramfs-tools/arista-convertfs.j2 ${ONIE_IMAGE_CONF} > files/initramfs-tools/arista-convertfs
 
 		RFS_SQUASHFS_NAME=$* \
 		USERNAME="$(USERNAME)" \
@@ -1587,16 +1587,16 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export installer_services="$(SERVICES)"
 
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
-	@echo "CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
-	export ONIE_IMAGE_CONF="onie-image.conf"
-	@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
+	@echo "1592 - CONFIGURED_ARCH: $(CONFIGURED_ARCH)"
+	ONIE_IMAGE_CONF="onie-image.conf"
+	@echo "1592 - ONIE_IMAGE_CONF: ${ONIE_IMAGE_CONF}"
 	if [ x$(CONFIGURED_ARCH) = x"armhf" ] || [ x$(CONFIGURED_ARCH) = x"arm64" ]; then
-		@echo "Is armhf or arm64"
+		@echo "1592 - Is armhf or arm64"
 		ONIE_IMAGE_CONF="onie-image-$(CONFIGURED_ARCH).conf"
 	fi
-	@echo "ONIE_IMAGE_CONF: $(ONIE_IMAGE_CONF)"
-	j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/union-mount
-	j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF) > files/initramfs-tools/arista-convertfs
+	@echo "1592 - ONIE_IMAGE_CONF: ${ONIE_IMAGE_CONF}"
+	j2 -f env files/initramfs-tools/union-mount.j2 ${ONIE_IMAGE_CONF} > files/initramfs-tools/union-mount
+	j2 -f env files/initramfs-tools/arista-convertfs.j2 ${ONIE_IMAGE_CONF} > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
 		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh
