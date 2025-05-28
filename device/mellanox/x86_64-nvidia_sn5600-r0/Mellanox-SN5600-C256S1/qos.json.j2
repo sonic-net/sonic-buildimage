@@ -13,6 +13,9 @@
     limitations under the License.
 #}
 
+{%- include 'port_config.j2' %}
+{%- include 'trimming.j2' %}
+
 {%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -124,6 +127,10 @@
             "type": "DWRR",
             "weight": "22"
         },
+        "scheduler_q6_downlink": {
+            "type": "DWRR",
+            "weight": "4"
+        },
         "scheduler_q0_uplink": {
             "type": "DWRR",
             "weight": "4"
@@ -147,11 +154,15 @@
         "scheduler_q5_uplink": {
             "type": "DWRR",
             "weight": "22"
+        },
+        "scheduler_q6_uplink": {
+            "type": "DWRR",
+            "weight": "4"
         }
     },
 {%- endmacro -%}
 
-{%- macro generate_single_queue_per_sku(port, direction) -%}
+{%- macro generate_direction_based_queue_per_sku(port, direction) -%}
     "{{ port }}|0": {
         "scheduler": "scheduler_q0_{{ direction }}"
     },
@@ -186,12 +197,22 @@
 
 {# downlink Q use t0, uplink Q use t1 #}
 {%- macro generate_wred_profiles() %}
+    {# Default threshold values for both ToR and Leaf routers #}
+    {%- set t0_max_threshold = "282624" %}  {# Default t0 threshold for downlink ports #}
+    {%- set t1_max_threshold = "239616" %}  {# Default t1 threshold for uplink ports #}
     {%- set min_threshold = "166912" %}
+
     {%- if 'type' in DEVICE_METADATA['localhost'] %}
         {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+            {# ToR Router thresholds:
+               t0 (downlink): 282624 - Used for server-facing ports
+               t1 (uplink): 239616 - Used for spine-facing ports #}
             {%- set t0_max_threshold = "282624" %}
             {%- set t1_max_threshold = "239616" %}
         {%- elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+            {# Leaf Router thresholds:
+               t0 (downlink): 282624 - Used for ToR-facing ports
+               t1 (uplink): 239616 - Used for spine-facing ports #}
             {%- set t0_max_threshold = "282624" %}
             {%- set t1_max_threshold = "239616" %}
         {%- endif %}
@@ -300,6 +321,25 @@
 #}
 {%- endmacro %}
 
+{%- macro generate_tc_to_queue_map_per_sku() -%}
+    "TC_TO_QUEUE_MAP": {
+        "AZURE": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+{%- if switch_trimming_enable %}
+            ,
+            "8": "4"
+{%- endif %}
+        }
+    },
+{%- endmacro -%}
+
 {% macro generate_tc_to_dscp_map() %}
     "TC_TO_DSCP_MAP": {
         {% if 'type' in DEVICE_METADATA['localhost'] %}
@@ -320,6 +360,7 @@
 {%- endmacro -%}
 
 {%- macro generate_switch_trimming() -%}
+{%- if switch_trimming_enable %}
     "SWITCH_TRIMMING": {
         "GLOBAL": {
             "size": "256",
@@ -327,6 +368,7 @@
             "queue_index": "4"
         }
     },
+{%- endif %}
 {%- endmacro -%}
 
 {%- include 'qos_config.j2' %}

@@ -16,6 +16,9 @@
     limitations under the License.
 #}
 
+{%- include 'port_config.j2' %}
+{%- include 'trimming.j2' %}
+
 {%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
     "BUFFER_POOL": {
         {% if dynamic_mode is not defined and port_names_inactive|length > 0 -%}
@@ -85,64 +88,90 @@
         },
         "queue0_downlink_lossy_profile": {
             "dynamic_th": "0",
+            "size": "0",
             "pool": "egress_lossy_pool"
         },
         "queue1_downlink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue2_downlink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue3_downlink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue4_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "0"
         },
         "queue5_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-3"
         },
         "queue6_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "0"
         },
         "queue0_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "0"
         },
         "queue1_uplink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue2_uplink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue3_uplink_lossy_profile": {
+            {% if switch_trimming_enable %}
             "packet_discard_action": "trim",
+            {% endif %}
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-7"
         },
         "queue4_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "0"
         },
         "queue5_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "-3"
         },
         "queue6_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",
+            "size": "0",
             "dynamic_th": "0"
         }
     },
@@ -217,7 +246,6 @@
         "{{ port }}|6": {
             "profile" : "queue6_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
         }{% if not loop.last %},{% endif %}
-
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
 {% if dynamic_mode is defined %}

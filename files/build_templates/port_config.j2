@@ -1,0 +1,25 @@
+{%- set PORT_UPLINK = [] %}
+{%- set PORT_DOWNLINK = [] %}
+
+{# Generate uplink and downlink port lists based on router type and neighbors #}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+                {%- if DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+                    {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'ToRRouter' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- elif DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'SpineRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- elif DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                    {%- if DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'LeafRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- elif DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'Server' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endif %}
