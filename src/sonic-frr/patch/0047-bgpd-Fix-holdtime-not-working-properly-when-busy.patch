@@ -1,0 +1,41 @@
+From be0e3baf3e720a40d20b853d0fefd0e9c2f98ef2 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Mon, 24 Mar 2025 14:28:38 -0400
+Subject: [PATCH 47/56] bgpd: Fix holdtime not working properly when busy
+
+Commit:  cc9f21da2218d95567eff1501482ce58e6600f54
+
+Modified the bgp_fsm code to dissallow the extension
+of the hold time when the system is under extremely
+heavy load.  This was a attempt to remove the return
+code but it was too aggressive and messed up this bit
+of code.
+
+Put the behavior back that was introduced in:
+d0874d195d0127009a7d9c06920c52c95319eff9
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_fsm.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_fsm.c b/bgpd/bgp_fsm.c
+index d332aca097..6bcbd30386 100644
+--- a/bgpd/bgp_fsm.c
++++ b/bgpd/bgp_fsm.c
+@@ -537,9 +537,11 @@ static void bgp_holdtime_timer(struct event *thread)
+ 	frr_with_mutex (&connection->io_mtx) {
+ 		inq_count = atomic_load_explicit(&connection->ibuf->count, memory_order_relaxed);
+ 	}
+-	if (inq_count)
++	if (inq_count) {
+ 		BGP_TIMER_ON(connection->t_holdtime, bgp_holdtime_timer,
+ 			     peer->v_holdtime);
++		return;
++	}
+ 
+ 	EVENT_VAL(thread) = Hold_Timer_expired;
+ 	bgp_event(thread); /* bgp_event unlocks peer */
+-- 
+2.39.5
+

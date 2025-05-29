@@ -47,14 +47,10 @@
 #
 # For ESW compilation, suppress 'stringop-overflow'
 #
-ifeq ($(BCM_ESW_SUPPORT),1)
-    OPT_CFLAGS += -Wno-error=stringop-overflow
-endif
 ifeq (1,$(GCC_11_2_0))
   export BINUTILSVER := 2.41
   export GCCVER := 11.2.0
   TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/11.2.0-x86_64
-  OPT_CFLAGS += -Wno-error=array-bounds
 else
   ifeq (1,$(GCC_12_1_0))
     export BINUTILSVER := 2.41
@@ -126,16 +122,6 @@ CFGFLAGS += -D__DUNE_GTS_BCM_CPU__
 endif
 CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
 #CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
-#
-#Flags to prevent gcc 8.1.0 new warnings to appear as errors.
-#(All these flags have been removed so as to activate the maximal types of
-#warning)
-#
-#OPT_CFLAGS += -Wno-error=unused-value
-#OPT_CFLAGS += -Wno-error=unused-but-set-variable
-#OPT_CFLAGS += -Wno-error=maybe-uninitialized
-#OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
-#OPT_CFLAGS += -Wno-error=array-bounds
 
 # set up KFLAGS appropriately. #
 # -fno-builtin needed for using kernel's version of memcpy instead of the gcc inline version
@@ -148,10 +134,6 @@ ifeq (,$(KFLAGS))
 ifneq (1,$(USE_CLANG))
 # {
   KFLAGS += -Wno-error=maybe-uninitialized -lc -fno-delete-null-pointer-checks -maccumulate-outgoing-args -fconserve-stack -mpreferred-stack-boundary=3
-# }
-else
-# {
-  OPTFLAGS +=  -Wno-error=address-of-packed-member
 # }
 endif
 ifeq (1,$(NO_PRECOMPILED_MODULE))

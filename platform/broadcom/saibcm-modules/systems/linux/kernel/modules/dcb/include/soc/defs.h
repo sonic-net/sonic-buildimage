@@ -189,29 +189,6 @@
 #define BCM_TIMESYNC_SUPPORT
 #endif
 
-#if defined(BCM_56820_A0)
-#define BCM_56820
-#define BCM_56800
-#define BCM_56304
-#define BCM_FIREBOLT_SUPPORT
-#define BCM_BRADLEY_SUPPORT
-#define BCM_SCORPION_SUPPORT
-#define BCM_TRX_SUPPORT
-#endif
-
-#if defined(BCM_56725_A0)
-#define BCM_56725
-#define BCM_56820
-#define BCM_56800
-#define BCM_56304
-#define BCM_FIREBOLT_SUPPORT
-#define BCM_BRADLEY_SUPPORT
-#define BCM_HUMV_SUPPORT
-#define BCM_SCORPION_SUPPORT
-#define BCM_CONQUEROR_SUPPORT
-#define BCM_TRX_SUPPORT
-#endif
-
 #if defined(BCM_56634_A0) || defined(BCM_56634_B0)
 #define BCM_56634
 #define BCM_56624
@@ -244,22 +221,6 @@
 #define BCM_CMICM_SUPPORT
 #endif
 
-#if defined(BCM_56685_A0) || defined(BCM_56685_B0)
-#define BCM_56685
-#define BCM_56634
-#define BCM_56624
-#define BCM_56304
-#define BCM_56800
-#define BCM_FIREBOLT_SUPPORT
-#define BCM_BRADLEY_SUPPORT
-#define BCM_TRIUMPH_SUPPORT
-#define BCM_TRIUMPH2_SUPPORT
-#define BCM_VALKYRIE2_SUPPORT
-#define BCM_TRX_SUPPORT
-#define BCM_MPLS_SUPPORT
-#define BCM_IPFIX_SUPPORT
-#endif
-
 #if defined(BCM_56334_A0) || defined(BCM_56334_B0)
 #define BCM_56334
 #define BCM_56624
@@ -276,21 +237,6 @@
 #define BCM_TIMESYNC_SUPPORT
 #endif
 
-#if defined(BCM_56142_A0)
-#define BCM_56142
-#define BCM_56334
-#define BCM_56624
-#define BCM_56304
-#define BCM_56800
-#define BCM_FIREBOLT_SUPPORT
-#define BCM_BRADLEY_SUPPORT
-#define BCM_TRIUMPH_SUPPORT
-#define BCM_TRIUMPH2_SUPPORT
-#define BCM_ENDURO_SUPPORT
-#define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
-#define BCM_HURRICANE1_SUPPORT
-#endif
 
 #if defined(BCM_56840_A0) || defined(BCM_56840_B0)
 #define BCM_56840
@@ -388,7 +334,6 @@
 
 #if defined(BCM_56260_A0)
 #define BCM_56260
-#define BCM_56450
 #define BCM_56440
 #define BCM_56840
 #define BCM_56634
@@ -407,7 +352,6 @@
 #define BCM_TRX_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRIDENT_SUPPORT
-#define BCM_KATANA2_SUPPORT
 #define BCM_KATANA_SUPPORT
 #define BCM_MPLS_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -424,7 +368,6 @@
 #if defined(BCM_56270_A0)
 #define BCM_56270
 #define BCM_56260
-#define BCM_56450
 #define BCM_56440
 #define BCM_56840
 #define BCM_56634
@@ -444,7 +387,6 @@
 #define BCM_TRX_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRIDENT_SUPPORT
-#define BCM_KATANA2_SUPPORT
 #define BCM_KATANA_SUPPORT
 #define BCM_MPLS_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -454,39 +396,6 @@
 #define BCM_SBUSDMA_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_UC_MHOST_SUPPORT
-#define BCM_PE_SUPPORT
-#define BCM_OLP_SUPPORT
-#endif
-
-
-#if defined(BCM_56450_A0) || defined(BCM_56450_B0) || defined(BCM_56450_B1)
-#define BCM_56450
-#define BCM_56440
-#define BCM_56840
-#define BCM_56634
-#define BCM_56640
-#define BCM_56334
-#define BCM_56624
-#define BCM_56304
-#define BCM_56800
-#define BCM_FIREBOLT_SUPPORT
-#define BCM_BRADLEY_SUPPORT
-#define BCM_SCORPION_SUPPORT
-#define BCM_TRIUMPH_SUPPORT
-#define BCM_TRIUMPH2_SUPPORT
-#define BCM_TRIUMPH3_SUPPORT
-#define BCM_TRX_SUPPORT
-#define BCM_ENDURO_SUPPORT
-#define BCM_TRIDENT_SUPPORT
-#define BCM_KATANA2_SUPPORT
-#define BCM_KATANA_SUPPORT
-#define BCM_MPLS_SUPPORT
-#define BCM_IPROC_SUPPORT
-#define BCM_DDR3_SUPPORT
-#define BCM_TIMESYNC_SUPPORT
-#define BCM_EXTND_SBUS_SUPPORT
-#define BCM_CMICM_SUPPORT
-#define BCM_SBUSDMA_SUPPORT
 #define BCM_PE_SUPPORT
 #define BCM_OLP_SUPPORT
 #endif
@@ -1252,6 +1161,7 @@
 #endif
 
 
+
 #if defined(BCM_88480_A0) || defined(BCM_88480_B0) /* Defined via mcmrelease: genallchips.pl... ??? */
 #define BCM_88480
 #define BCM_IPROC_SUPPORT
@@ -1377,7 +1287,6 @@
 
 #if defined(BCM_56150_A0)
 #define BCM_56150
-#define BCM_56142
 #define BCM_56334
 #define BCM_56624
 #define BCM_56304
@@ -1388,7 +1297,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -1411,7 +1319,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -1438,7 +1345,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -1464,7 +1370,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_IPROC_SUPPORT
@@ -1490,7 +1395,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICM_SUPPORT
 #define BCM_CMICDV2_SUPPORT
@@ -1528,7 +1432,6 @@
 #define BCM_TRIUMPH2_SUPPORT
 #define BCM_ENDURO_SUPPORT
 #define BCM_TRX_SUPPORT
-#define BCM_HURRICANE_SUPPORT
 #define BCM_HURRICANE2_SUPPORT
 #define BCM_CMICX_SUPPORT
 #define BCM_FIFODMA_SUPPORT
@@ -1572,12 +1475,12 @@
     defined(BCM_56102) || defined(BCM_56304) || defined(BCM_56218) || \
     defined(BCM_56112) || defined(BCM_56314) || defined(BCM_56514) || \
     defined(BCM_56580) || defined(BCM_56700) || defined(BCM_56800) || \
-    defined(BCM_56624) || defined(BCM_56224) || defined(BCM_56820) || \
-    defined(BCM_53314) || defined(BCM_56680) || defined(BCM_56725) || \
-    defined(BCM_56634) || defined(BCM_56524) || defined(BCM_56685) || \
-    defined(BCM_56334) || defined(BCM_56840) || defined(BCM_56142) || \
+    defined(BCM_56624) || defined(BCM_56224) || \
+    defined(BCM_53314) || defined(BCM_56680) || \
+    defined(BCM_56634) || defined(BCM_56524) || \
+    defined(BCM_56334) || defined(BCM_56840) || defined(BCM_56150) || \
     defined(BCM_56640) || defined(BCM_56440) || \
-    defined(BCM_56850) || defined(BCM_56450) || defined(BCM_56340) || \
+    defined(BCM_56850) || defined(BCM_56340) || \
     defined(BCM_56260) || defined(BCM_56160) || defined(BCM_56270) || \
     defined(BCM_56150) || defined(BCM_53400) || defined(BCM_56960) || \
     defined(BCM_56870) || defined(BCM_56965) || defined(BCM_56970) || \
@@ -1591,7 +1494,7 @@
 #define BCM_XGS2_FABRIC_SUPPORT
 #endif
 
-#if defined(BCM_56700) || defined(BCM_56701) || defined(BCM_56725)
+#if defined(BCM_56700) || defined(BCM_56701)
 #define BCM_XGS3_FABRIC_SUPPORT
 #endif
 
@@ -1625,7 +1528,7 @@
 #endif
 
 /* Common XGS5 Port Module Support */
-#if defined(BCM_56450) || defined(BCM_56670) || defined(BCM_53650) || defined(BCM_56860) || \
+#if defined(BCM_56260) || defined(BCM_56270) || defined(BCM_56670) || defined(BCM_53650) || defined(BCM_56860) || \
     defined(BCM_56870) || defined(BCM_56970) || defined(BCM_56370) || \
     defined(BCM_56770) || defined(BCM_56980) || defined(BCM_56275) || \
     defined(BCM_56470)
@@ -1786,12 +1689,12 @@
  */
 #if defined(BCM_56580) || defined(BCM_56700) || defined(BCM_56800) || \
     defined(BCM_56218) || defined(BCM_56624) || defined(BCM_56224) || \
-    defined(BCM_56820) || defined(BCM_56680) || defined(BCM_56725) || \
+    defined(BCM_56680) || \
     defined(BCM_53314) || defined(BCM_56634) || defined(BCM_56524) || \
-    defined(BCM_56685) || defined(BCM_56334) || \
-    defined(BCM_56840) || defined(BCM_56142) || \
+    defined(BCM_56334) || \
+    defined(BCM_56840) || defined(BCM_56150) || \
     defined(BCM_56640) || defined(BCM_56440) || defined(BCM_56850) || \
-    defined(BCM_56450) || defined(BCM_56340) || defined(BCM_56150) || \
+    defined(BCM_56340) || defined(BCM_56150) || \
     defined(BCM_56260) || defined(BCM_56160) || defined(BCM_56270) || \
     defined(BCM_53400) || defined(BCM_56960) || \
     defined(BCM_56860) || defined(BCM_56965) || defined(BCM_56970) || \
@@ -1806,12 +1709,12 @@
  * If any supported chip has GXPORTS
  */
 #if defined(BCM_56580) || defined(BCM_56700) || defined(BCM_56800) || \
-    defined(BCM_56624) || defined(BCM_56820) || defined(BCM_56680) || \
-    defined(BCM_56725) || defined(BCM_56634) || defined(BCM_56524) || \
-    defined(BCM_56685) || defined(BCM_56334) || \
-    defined(BCM_56840) || defined(BCM_56142) || \
+    defined(BCM_56624) || defined(BCM_56680) || \
+    defined(BCM_56634) || defined(BCM_56524) || \
+    defined(BCM_56334) || \
+    defined(BCM_56840) || defined(BCM_56150) || \
     defined(BCM_56640) || defined(BCM_56440) || defined(BCM_56850) || \
-    defined(BCM_56450) || defined(BCM_56340) || defined(BCM_56150) || \
+    defined(BCM_56340) || defined(BCM_56150) || \
     defined(BCM_56260) || defined(BCM_56160) || defined(BCM_56270) || \
     defined(BCM_53400) || defined(BCM_56960) || defined(BCM_56965) || \
     defined(BCM_56970) || defined(BCM_53570) || defined(BCM_56980) || \
@@ -1834,7 +1737,7 @@
     defined(BCM_56102) || defined(BCM_56304) || defined(BCM_56112) || \
     defined(BCM_56314) || defined(BCM_56580) || defined(BCM_56700) || \
     defined(BCM_56800) || defined(BCM_56514) || defined(BCM_56624) || \
-    defined(BCM_56680) || defined(BCM_56820) || defined(BCM_56725) || \
+    defined(BCM_56680) || \
     defined(BCM_56334)
 #define BCM_BIGMAC_SUPPORT
 #endif
@@ -1843,7 +1746,7 @@
  * If any supported chip has XMAC ports
  */
 #if defined(BCM_56840) || defined(BCM_56640) || \
-    defined(BCM_56440) || defined(BCM_56450) || defined(BCM_56340)
+    defined(BCM_56440) || defined(BCM_56260) || defined(BCM_56270) || defined(BCM_56340)
 #define BCM_XMAC_SUPPORT
 #endif
 
@@ -1870,12 +1773,12 @@
 /*
  * If any supported chip has UniMAC ports
  */
-#if defined(BCM_56224) || defined(BCM_56624) || defined(BCM_56820) || \
-    defined(BCM_53314) || defined(BCM_56680) || defined(BCM_56725) || \
+#if defined(BCM_56224) || defined(BCM_56624) || \
+    defined(BCM_53314) || defined(BCM_56680) || \
     defined(BCM_56634) || defined(BCM_56524) || \
-    defined(BCM_56685) || defined(BCM_56334) || \
-    defined(BCM_56840) || defined(BCM_56142) || \
-    defined(BCM_56440) || defined(BCM_56450) || defined(BCM_56150) || \
+    defined(BCM_56334) || \
+    defined(BCM_56840) || defined(BCM_56150) || \
+    defined(BCM_56440) || defined(BCM_56150) || \
     defined(BCM_53400) || defined(BCM_56260) || defined(BCM_56160) || \
     defined(BCM_56270) || defined(BCM_53570) || defined(BCM_53540) || \
     defined(BCM_56070)
@@ -1935,15 +1838,14 @@
     defined(BCM_56580) || defined(BCM_56700) || \
     defined(BCM_56800) || defined(BCM_56218) || \
     defined(BCM_56514) || defined(BCM_56624) || \
-    defined(BCM_56224) || defined(BCM_56820) || \
+    defined(BCM_56224) || \
     defined(BCM_53314) || defined(BCM_56680) || \
-    defined(BCM_56725) || defined(BCM_56634) || \
+    defined(BCM_56634) || \
     defined(BCM_56524) || defined(BCM_56334) || \
-    defined(BCM_56685) || \
-    defined(BCM_56840) || defined(BCM_56142) || \
+    defined(BCM_56840) || defined(BCM_56150) || \
     defined(BCM_56640) || \
     defined(BCM_56440) || defined(BCM_56850) || \
-    defined(BCM_56450) || defined(BCM_56340) || \
+    defined(BCM_56340) || \
     defined(BCM_56150) || \
     defined(BCM_53400) || defined(BCM_56960) || \
     defined(BCM_56260) || defined(BCM_56160) || \
@@ -2064,14 +1966,10 @@ typedef enum soc_chip_types_e {
     SOC_CHIP_BCM56224_B0,
     SOC_CHIP_BCM53314_A0,
     SOC_CHIP_BCM53324_A0,
-    SOC_CHIP_BCM56725_A0,
-    SOC_CHIP_BCM56820_A0,
     SOC_CHIP_BCM56634_A0,
     SOC_CHIP_BCM56634_B0,
     SOC_CHIP_BCM56524_A0,
     SOC_CHIP_BCM56524_B0,
-    SOC_CHIP_BCM56685_A0,
-    SOC_CHIP_BCM56685_B0,
     SOC_CHIP_BCM56334_A0,
     SOC_CHIP_BCM56334_B0,
     SOC_CHIP_BCM56840_A0,
@@ -2088,7 +1986,6 @@ typedef enum soc_chip_types_e {
     SOC_CHIP_BCM56770_A0,
     SOC_CHIP_BCM56771_A0,
     SOC_CHIP_BCM56970_A0,
-    SOC_CHIP_BCM56142_A0,
     SOC_CHIP_BCM56150_A0,
     SOC_CHIP_BCM88660_A0,
     SOC_CHIP_BCM88675_A0,
@@ -2121,9 +2018,6 @@ typedef enum soc_chip_types_e {
     SOC_CHIP_BCM56340_A0, /* Helix4 */
     SOC_CHIP_BCM56440_A0,
     SOC_CHIP_BCM56440_B0,
-    SOC_CHIP_BCM56450_A0,
-    SOC_CHIP_BCM56450_B0,
-    SOC_CHIP_BCM56450_B1,
     SOC_CHIP_BCM56260_A0, /* Saber2 */
     SOC_CHIP_BCM56260_B0, /* Saber2 */
     SOC_CHIP_BCM56270_A0, /* Metrolite */
@@ -2184,6 +2078,7 @@ typedef enum soc_chip_types_e {
 #define SOC_CHIP_TYPE_MAP_INIT_ADDITIONAL
 #endif
 #define SOC_CHIP_DNX_TYPE_MAP_INIT_ADDITIONAL
+#define SOC_CHIP_TYPE_DNXF_MAP_INIT_ADDITIONAL
 #ifdef BCM_DNXF3_SUPPORT
 #define SOC_CHIP_DNXF_TYPE_MAP_INIT_ADDITIONAL  /* SOC_CHIP_BCM88920_A0 */ SOC_CHIP_BCM8892X,
 #else
@@ -2222,14 +2117,10 @@ typedef enum soc_chip_types_e {
     /* SOC_CHIP_BCM56224_B0, */ SOC_CHIP_BCM56224, \
     /* SOC_CHIP_BCM53314_A0, */ SOC_CHIP_BCM53314, \
     /* SOC_CHIP_BCM53324_A0, */ SOC_CHIP_BCM53314, \
-    /* SOC_CHIP_BCM56725_A0, */ SOC_CHIP_BCM56725, \
-    /* SOC_CHIP_BCM56820_A0, */ SOC_CHIP_BCM56820, \
     /* SOC_CHIP_BCM56634_A0, */ SOC_CHIP_BCM56634, \
     /* SOC_CHIP_BCM56634_B0, */ SOC_CHIP_BCM56634, \
     /* SOC_CHIP_BCM56524_A0, */ SOC_CHIP_BCM56524, \
     /* SOC_CHIP_BCM56524_B0, */ SOC_CHIP_BCM56524, \
-    /* SOC_CHIP_BCM56685_A0, */ SOC_CHIP_BCM56685, \
-    /* SOC_CHIP_BCM56685_B0, */ SOC_CHIP_BCM56685, \
     /* SOC_CHIP_BCM56334_A0, */ SOC_CHIP_BCM56334, \
     /* SOC_CHIP_BCM56334_B0, */ SOC_CHIP_BCM56334, \
     /* SOC_CHIP_BCM56840_A0, */ SOC_CHIP_BCM56840, \
@@ -2246,7 +2137,6 @@ typedef enum soc_chip_types_e {
     /* SOC_CHIP_BCM56770_A0, */ SOC_CHIP_BCM56770, \
     /* SOC_CHIP_BCM56771_A0, */ SOC_CHIP_BCM56770, \
     /* SOC_CHIP_BCM56970_A0, */ SOC_CHIP_BCM56970, \
-    /* SOC_CHIP_BCM56142_A0, */ SOC_CHIP_BCM56142, \
     /* SOC_CHIP_BCM56150_A0, */ SOC_CHIP_BCM56150, \
     /* SOC_CHIP_BCM88660_A0  */ SOC_CHIP_BCM88660, \
     /* SOC_CHIP_BCM88675_A0  */ SOC_CHIP_BCM88675, \
@@ -2263,6 +2153,7 @@ typedef enum soc_chip_types_e {
     /* SOC_CHIP_BCM8216_A0 */ SOC_CHIP_BCM8216, \
     SOC_CHIP_TYPE_MAP_INIT_ADDITIONAL \
     SOC_CHIP_DNX_TYPE_MAP_INIT_ADDITIONAL \
+    SOC_CHIP_TYPE_DNXF_MAP_INIT_ADDITIONAL \
     /* SOC_CHIP_BCM88480_A0 */ SOC_CHIP_BCM8848X, \
     /* SOC_CHIP_BCM88480_B0 */ SOC_CHIP_BCM8848X, \
     /* SOC_CHIP_BCM88480_B1 */ SOC_CHIP_BCM8848X, \
@@ -2274,9 +2165,6 @@ typedef enum soc_chip_types_e {
     /* SOC_CHIP_BCM56340_A0, */ SOC_CHIP_BCM56340, \
     /* SOC_CHIP_BCM56440_A0  */ SOC_CHIP_BCM56440, \
     /* SOC_CHIP_BCM56440_B0  */ SOC_CHIP_BCM56440, \
-    /* SOC_CHIP_BCM56450_A0  */ SOC_CHIP_BCM56450, \
-    /* SOC_CHIP_BCM56450_B0  */ SOC_CHIP_BCM56450, \
-    /* SOC_CHIP_BCM56450_B1  */ SOC_CHIP_BCM56450, \
     /* SOC_CHIP_BCM56260_A0  */ SOC_CHIP_BCM56260, \
     /* SOC_CHIP_BCM56260_B0  */ SOC_CHIP_BCM56260, \
     /* SOC_CHIP_BCM56270_A0  */ SOC_CHIP_BCM56270, \
@@ -2332,6 +2220,7 @@ typedef enum soc_chip_types_e {
 #define SOC_CHIP_TYPE_NAMES_INIT_ADDITIONAL
 #endif
 #define SOC_CHIP_DNX_TYPE_NAMES_INIT_ADDITIONAL
+#define SOC_CHIP_TYPE_DNXF_NAMES_INIT_ADDITIONAL
 #ifdef BCM_DNXF3_SUPPORT
 #define SOC_CHIP_DNXF_TYPE_NAMES_INIT_ADDITIONAL     "BCM88920_A0",
 #else
@@ -2370,14 +2259,10 @@ typedef enum soc_chip_types_e {
     "BCM56224_B0", \
     "BCM53314_A0", \
     "BCM53324_A0", \
-    "BCM56725_A0", \
-    "BCM56820_A0", \
     "BCM56634_A0", \
     "BCM56634_B0", \
     "BCM56524_A0", \
     "BCM56524_B0", \
-    "BCM56685_A0", \
-    "BCM56685_B0", \
     "BCM56334_A0", \
     "BCM56334_B0", \
     "BCM56840_A0", \
@@ -2394,7 +2279,6 @@ typedef enum soc_chip_types_e {
     "BCM56770_A0", \
     "BCM56771_A0", \
     "BCM56970_A0", \
-    "BCM56142_A0", \
     "BCM56150_A0", \
     "BCM88660_A0", \
     "BCM88675_A0", \
@@ -2411,6 +2295,7 @@ typedef enum soc_chip_types_e {
     "BCM8216_A0", \
     SOC_CHIP_TYPE_NAMES_INIT_ADDITIONAL \
     SOC_CHIP_DNX_TYPE_NAMES_INIT_ADDITIONAL \
+    SOC_CHIP_TYPE_DNXF_NAMES_INIT_ADDITIONAL \
     "BCM88480_A0", \
     "BCM88480_B0", \
     "BCM88480_B1", \
@@ -2422,9 +2307,6 @@ typedef enum soc_chip_types_e {
     "BCM56340_A0", \
     "BCM56440_A0", \
     "BCM56440_B0", \
-    "BCM56450_A0", \
-    "BCM56450_B0", \
-    "BCM56450_B1", \
     "BCM56260_A0", \
     "BCM56260_B0", \
     "BCM56270_A0", \
@@ -2492,11 +2374,8 @@ typedef enum soc_chip_groups_e {
     SOC_CHIP_BCM56680,
     SOC_CHIP_BCM56224,
     SOC_CHIP_BCM53314,
-    SOC_CHIP_BCM56725,
-    SOC_CHIP_BCM56820,
     SOC_CHIP_BCM56634,
     SOC_CHIP_BCM56524,
-    SOC_CHIP_BCM56685,
     SOC_CHIP_BCM56334,
     SOC_CHIP_BCM56840,
     SOC_CHIP_BCM56850,
@@ -2508,7 +2387,6 @@ typedef enum soc_chip_groups_e {
     SOC_CHIP_BCM56470,
     SOC_CHIP_BCM56770,
     SOC_CHIP_BCM56970,
-    SOC_CHIP_BCM56142,
     SOC_CHIP_BCM56150,
     SOC_CHIP_BCM88660,
     SOC_CHIP_BCM88675,
@@ -2532,7 +2410,6 @@ typedef enum soc_chip_groups_e {
     SOC_CHIP_BCM56640,
     SOC_CHIP_BCM56340,
     SOC_CHIP_BCM56440,
-    SOC_CHIP_BCM56450,
     SOC_CHIP_BCM56260,
     SOC_CHIP_BCM56270,
     SOC_CHIP_BCM56860,
@@ -2580,6 +2457,7 @@ typedef enum soc_chip_groups_e {
 #define SOC_CHIP_GROUP_NAMES_INIT_ADDITIONAL
 #endif
 #define SOC_CHIP_DNX_GROUP_NAMES_INIT_ADDITIONAL
+#define SOC_CHIP_GROUP_DNXF_NAMES_INIT_ADDITIONAL
 #ifdef BCM_DNXF3_SUPPORT
 #define SOC_CHIP_DNXF_GROUP_NAMES_INIT_ADDITIONAL      "BCM8892X",
 #else
@@ -2608,11 +2486,8 @@ typedef enum soc_chip_groups_e {
     "BCM56680", \
     "BCM56224", \
     "BCM53314", \
-    "BCM56725", \
-    "BCM56820", \
     "BCM56634", \
     "BCM56524", \
-    "BCM56685", \
     "BCM56334", \
     "BCM56840", \
     "BCM56850", \
@@ -2624,7 +2499,6 @@ typedef enum soc_chip_groups_e {
     "BCM56470", \
     "BCM56770", \
     "BCM56970", \
-    "BCM56142", \
     "BCM56150", \
     "BCM88660", \
     "BCM88675", \
@@ -2636,6 +2510,7 @@ typedef enum soc_chip_groups_e {
     "BCM8216", \
     SOC_CHIP_GROUP_NAMES_INIT_ADDITIONAL \
     SOC_CHIP_DNX_GROUP_NAMES_INIT_ADDITIONAL \
+    SOC_CHIP_GROUP_DNXF_NAMES_INIT_ADDITIONAL \
     "BCM8848X", \
     "BCM88375", \
     "BCM88470", \
@@ -2643,7 +2518,6 @@ typedef enum soc_chip_groups_e {
     "BCM56640", \
     "BCM56340", \
     "BCM56440", \
-    "BCM56450", \
     "BCM56260", \
     "BCM56270", \
     "BCM56860", \

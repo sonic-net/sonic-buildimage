@@ -1,0 +1,5 @@
+SAI_VS_SWITCH_TYPE=SAI_VS_SWITCH_TYPE_VPP
+SAI_VS_HOSTIF_USE_TAP_DEVICE=true
+SAI_VS_INTERFACE_LANE_MAP_FILE=/usr/share/sonic/hwsku/lanemap.ini
+SAI_VS_CORE_PORT_INDEX_MAP_FILE=/usr/share/sonic/hwsku/coreportindexmap.ini
+SAI_VS_INTERFACE_FABRIC_LANE_MAP_FILE=/usr/share/sonic/hwsku/fabriclanemap.ini

@@ -77,32 +77,18 @@ ENDIAN = LE_HOST=1
 endif
 
 CFLAGS += -fno-aggressive-loop-optimizations
-OPT_CFLAGS += -Wno-error=maybe-uninitialized
-OPT_CFLAGS += -Wno-error=unused-function
-OPT_CFLAGS += -Wno-error=array-bounds
-OPT_CFLAGS += -Wno-error=unused-variable
-OPT_CFLAGS += -Wno-error=memset-elt-size #SDK-232626
-OPT_CFLAGS += -Wno-error=unused-const-variable
 CFLAGS += -fgnu89-inline
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
-    OPT_CFLAGS += -Wno-stringop-overflow
-    OPT_CFLAGS += -Wno-stringop-truncation
-    OPT_CFLAGS += -Wno-error=restrict
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
-	OPT_CFLAGS += -Wno-address-of-packed-member
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
-	OPT_CFLAGS += -Wno-error=uninitialized
-	OPT_CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
 	CFLAGS += -flarge-source-files
-	OPT_CFLAGS += -Wno-error=address
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
-	OPT_CFLAGS += -Wno-error=enum-int-mismatch
 endif
 
 CFGFLAGS += -D$(ENDIAN) -DIPROC_CMICD

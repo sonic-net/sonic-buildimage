@@ -615,20 +615,21 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
         }
 
         /* Update the indicators */
-        if (!(rxq->state & PDMA_RX_BATCH_REFILL) && rxq->halt != curr) {
+        if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
             sal_spinlock_lock(rxq->lock);
-            if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
+            if (!(rxq->status & PDMA_RX_QUEUE_XOFF) && (rxq->halt != curr)) {
                 /* Descriptor cherry pick */
                 rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * curr;
                 hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
                 rxq->halt = curr;
             }
             curr = (curr + 1) % rxq->nb_desc;
+            rxq->curr = curr;
             sal_spinlock_unlock(rxq->lock);
         } else {
             curr = (curr + 1) % rxq->nb_desc;
+            rxq->curr = curr;
         }
-        rxq->curr = curr;
         done++;
 
         /* Restart DMA if in chain mode */
@@ -1104,6 +1105,8 @@ cmicr_pdma_rx_suspend(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
 static int
 cmicr_pdma_rx_resume(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
 {
+    volatile RX_DCB_t *ring = (volatile RX_DCB_t *)rxq->ring;
+
     sal_spinlock_lock(rxq->lock);
     if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
         sal_spinlock_unlock(rxq->lock);
@@ -1112,8 +1115,9 @@ cmicr_pdma_rx_resume(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     if (rxq->state & PDMA_RX_BATCH_REFILL) {
         rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
-    } else if (rxq->halt == rxq->curr || (rxq->halt == rxq->nb_desc && rxq->curr == 0)) {
-        rxq->halt = (rxq->curr + 1) % rxq->nb_desc;
+    } else if ((rxq->halt == rxq->curr) &&
+               !RX_DCB_STATUS_GET(ring[(rxq->curr + 1) % rxq->nb_desc])) {
+        rxq->halt = (rxq->curr + rxq->nb_desc - 1) % rxq->nb_desc;
         rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
     }
