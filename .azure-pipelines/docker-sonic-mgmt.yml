@@ -105,11 +105,11 @@ stages:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: 'Tag docker-sonic-mgmt'
 
-#    - task: Docker@2
-#      displayName: Upload image
-#      condition: succeeded()
-#      inputs:
-#        containerRegistry: ${{ parameters.registry_conn }}
-#        repository: docker-sonic-mgmt
-#        command: push
-#        tags: latest
+    - task: Docker@2
+      displayName: Upload image
+      condition: succeeded()
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-sonic-mgmt
+        command: push
+        tags: latest
