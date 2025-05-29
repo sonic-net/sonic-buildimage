@@ -7,7 +7,7 @@ diff -ur pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
  	memset(conf, 0, sizeof(radius_conf_t)); /* ensure it's initialized */
  
  	conf->conf_file = CONF_FILE;
-+	conf->dont_send_message_authenticato = FALSE;
++	conf->dont_send_message_authenticator = FALSE;
  
  	/* set the default prompt */
  	snprintf(conf->prompt, MAXPROMPT, "%s: ", DEFAULT_PROMPT);
