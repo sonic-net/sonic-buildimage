@@ -231,9 +231,9 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
 
         # Ensure boolean values are returned as lowercase 'true' and 'false'
         # to prevent yang validation failures.
-        if type(data) is bool:
+        if isinstance(data, bool):
             return 'true' if data else 'false'
-        if type(data) is str and data.lower() in [ "true", "false" ]:
+        if isinstance(data, str) and data.lower() in [ "true", "false" ]:
             return data.lower()
         return data
 
