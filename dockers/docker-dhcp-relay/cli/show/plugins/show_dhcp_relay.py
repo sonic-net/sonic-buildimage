@@ -211,7 +211,7 @@ def get_count_from_db(db, key, dir, type):
 def append_vlan_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary):
     key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface
     data[summary].append(vlan_interface)
-    data["Interface Type"].append("VLAN")
+    data["Intf Type"].append("VLAN")
     for current_dir in dirs:
         count = get_count_from_db(db, key, current_dir, current_type)
         data[current_dir].append(count)
@@ -237,7 +237,7 @@ def append_interfaces_count_with_type_specified(data, db, dirs, vlan_interface, 
         interface_name = key.split(COUNTERS_DB_SEPRATOR)[2]
         data[summary].append(interface_name)
         interface_type = get_interfaces_type(interface_name, mgmt_intfs, vlan_interface, vlan_members)
-        data["Interface Type"].append(interface_type)
+        data["Intf Type"].append(interface_type)
         for current_dir in dirs:
             count = get_count_from_db(db, key, current_dir, current_type)
             data[current_dir].append(count)
@@ -251,7 +251,7 @@ def generate_output_with_type_specified(db, vlan_members, types, dirs, vlan_inte
     # Data need to be printed
     data = {
         summary: [],
-        "Interface Type": []
+        "Intf Type": []
     }
     for dir in dirs:
         data.setdefault(dir, [])
@@ -261,13 +261,13 @@ def generate_output_with_type_specified(db, vlan_members, types, dirs, vlan_inte
     # Get physical interfaces count
     append_interfaces_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary,
                                                 vlan_members, mgmt_intfs)
-    return tabulate(data, tablefmt="grid", stralign="right", headers="keys") + "\n"
+    return tabulate(data, tablefmt="pretty", stralign="left", headers="keys") + "\n"
 
 
 def append_vlan_count_without_type_specified(data, db, dir, vlan_interface, types, summary):
     key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface
     data[summary].append(vlan_interface)
-    data["Interface Type"].append("VLAN")
+    data["Intf Type"].append("VLAN")
     for current_type in types:
         count = get_count_from_db(db, key, dir, current_type)
         data[current_type].append(count)
@@ -285,7 +285,7 @@ def append_interfaces_count_without_type_specified(data, db, dir, vlan_interface
         interface_name = key.split(COUNTERS_DB_SEPRATOR)[2]
         data[summary].append(interface_name)
         interface_type = get_interfaces_type(interface_name, mgmt_intfs, vlan_interface, vlan_members)
-        data["Interface Type"].append(interface_type)
+        data["Intf Type"].append(interface_type)
         for current_type in types:
             count = get_count_from_db(db, key, dir, current_type)
             data[current_type].append(count)
@@ -295,7 +295,7 @@ def generate_output_without_type_specified(db, vlan_members, types, dir, vlan_in
     summary = "{} ({})".format(vlan_interface, dir)
     data = {
         summary: [],
-        "Interface Type": []
+        "Intf Type": []
     }
     for type in types:
         data.setdefault(type, [])
@@ -305,7 +305,7 @@ def generate_output_without_type_specified(db, vlan_members, types, dir, vlan_in
     # Get physical interfaces count
     append_interfaces_count_without_type_specified(data, db, dir, vlan_interface, types, summary, vlan_members,
                                                    mgmt_intfs)
-    return tabulate(data, tablefmt="grid", stralign="right", headers="keys") + "\n"
+    return tabulate(data, tablefmt="pretty", stralign="left", headers="keys") + "\n"
 
 
 def get_mgmt_intfs_from_config_db(db):

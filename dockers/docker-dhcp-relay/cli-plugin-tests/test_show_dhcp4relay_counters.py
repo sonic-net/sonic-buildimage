@@ -68,14 +68,14 @@ def test_append_vlan_count_with_type_specified(vlan, dirs_count):
         dummy_summary = "dummy"
         data = {
             dummy_summary: [],
-            "Interface Type": []
+            "Intf Type": []
         }
         for dir in dirs_count.keys():
             data[dir] = []
         expected_res = copy.deepcopy(data)
         show_dhcp_relay.append_vlan_count_with_type_specified(data, MagicMock, list(dirs_count.keys()), vlan, "",
                                                               dummy_summary)
-        expected_res["Interface Type"].append("VLAN")
+        expected_res["Intf Type"].append("VLAN")
         expected_res[dummy_summary].append(vlan)
         for dir, count in dirs_count.items():
             expected_res[dir].append(count)
@@ -115,7 +115,7 @@ def test_append_interfaces_count_with_type_specified(interfaces, dirs_count, vla
         dummy_summary = "dummy"
         data = {
             dummy_summary: [],
-            "Interface Type": []
+            "Intf Type": []
         }
         for dir in dirs_count.keys():
             data[dir] = []
@@ -128,13 +128,13 @@ def test_append_interfaces_count_with_type_specified(interfaces, dirs_count, vla
         expected_data[dummy_summary] = interfaces
         for intf in interfaces:
             if intf in mgmt_intfs:
-                expected_data["Interface Type"].append("MGMT")
+                expected_data["Intf Type"].append("MGMT")
             elif vlan_interface not in vlan_members:
-                expected_data["Interface Type"].append("Unknown")
+                expected_data["Intf Type"].append("Unknown")
             elif intf in vlan_members[vlan_interface]:
-                expected_data["Interface Type"].append("Downlink")
+                expected_data["Intf Type"].append("Downlink")
             else:
-                expected_data["Interface Type"].append("Uplink")
+                expected_data["Intf Type"].append("Uplink")
             for dir in dirs_count.keys():
                 expected_data[dir].append(dirs_count[dir])
         assert expected_data == data
@@ -142,26 +142,24 @@ def test_append_interfaces_count_with_type_specified(interfaces, dirs_count, vla
 
 def test_generate_output_with_type_specified():
     expected_output = """\
-+--------------------+------------------+------+------+
-|   Vlan1000 (Offer) |   Interface Type |   RX |   TX |
-+====================+==================+======+======+
-|           Vlan1000 |             VLAN |    5 |    5 |
-+--------------------+------------------+------+------+
-|          Ethernet0 |         Downlink |   10 |   10 |
-+--------------------+------------------+------+------+
-|          Ethernet1 |           Uplink |   20 |   20 |
-+--------------------+------------------+------+------+
++------------------+-----------+----+----+
+| Vlan1000 (Offer) | Intf Type | RX | TX |
++------------------+-----------+----+----+
+| Vlan1000         | VLAN      | 5  | 5  |
+| Ethernet0        | Downlink  | 10 | 10 |
+| Ethernet1        | Uplink    | 20 | 20 |
++------------------+-----------+----+----+
 """
 
     def mock_append_vlan(data, db, dirs, vlan_interface, current_type, summary):
         data[summary].append("Vlan1000")
-        data["Interface Type"].append("VLAN")
+        data["Intf Type"].append("VLAN")
         for dir in dirs:
             data[dir].append("5")
 
     def mock_append_interfaces(data, db, dirs, vlan_interface, current_type, summary, vlan_members, mgmt_intfs):
         data[summary].extend(["Ethernet0", "Ethernet1"])
-        data["Interface Type"].extend(["Downlink", "Uplink"])
+        data["Intf Type"].extend(["Downlink", "Uplink"])
         for dir in dirs:
             data[dir].extend(["10", "20"])
 
@@ -170,8 +168,6 @@ def test_generate_output_with_type_specified():
                       side_effect=mock_append_interfaces):
         output = show_dhcp_relay.generate_output_with_type_specified(MagicMock(), [], ["Offer"], ["RX", "TX"],
                                                                      "Vlan1000", [])
-        print(repr(output))
-        print(repr(expected_output))
         assert output == expected_output
 
 
@@ -187,14 +183,14 @@ def test_append_vlan_count_without_type_specified(vlan, types_count):
         dummy_summary = "dummy"
         data = {
             dummy_summary: [],
-            "Interface Type": []
+            "Intf Type": []
         }
         for type in types_count.keys():
             data[type] = []
         expected_res = copy.deepcopy(data)
         show_dhcp_relay.append_vlan_count_without_type_specified(data, MagicMock(), "", vlan, list(types_count.keys()),
                                                                  dummy_summary)
-        expected_res["Interface Type"].append("VLAN")
+        expected_res["Intf Type"].append("VLAN")
         expected_res[dummy_summary].append(vlan)
         for type, count in types_count.items():
             expected_res[type].append(count)
@@ -216,7 +212,7 @@ def test_append_interfaces_count_without_type_specified(types_count):
     dummy_summary = "dummy"
     data = {
         dummy_summary: [],
-        "Interface Type": []
+        "Intf Type": []
     }
     for type in types_count.keys():
         data[type] = []
@@ -226,7 +222,7 @@ def test_append_interfaces_count_without_type_specified(types_count):
         show_dhcp_relay.append_interfaces_count_without_type_specified(data, mock_db, "", "", list(types_count.keys()),
                                                                        dummy_summary, {}, [])
         expected_data[dummy_summary].extend(interfaces)
-        expected_data["Interface Type"].extend(["Downlink", "Downlink"])
+        expected_data["Intf Type"].extend(["Downlink", "Downlink"])
         for type, count in types_count.items():
             expected_data[type].extend([count, count])
         assert expected_data == data
@@ -234,27 +230,25 @@ def test_append_interfaces_count_without_type_specified(types_count):
 
 def test_generate_output_without_type_specified():
     expected_output = """\
-+-----------------+------------------+------------+---------+
-|   Vlan1000 (RX) |   Interface Type |   Discover |   Offer |
-+=================+==================+============+=========+
-|        Vlan1000 |             VLAN |         10 |      10 |
-+-----------------+------------------+------------+---------+
-|       Ethernet0 |         Downlink |         20 |      20 |
-+-----------------+------------------+------------+---------+
-|       Ethernet1 |           Uplink |         30 |      30 |
-+-----------------+------------------+------------+---------+
++---------------+-----------+----------+-------+
+| Vlan1000 (RX) | Intf Type | Discover | Offer |
++---------------+-----------+----------+-------+
+| Vlan1000      | VLAN      | 10       | 10    |
+| Ethernet0     | Downlink  | 20       | 20    |
+| Ethernet1     | Uplink    | 30       | 30    |
++---------------+-----------+----------+-------+
 """
 
     def mock_append_vlan(data, db, dir, vlan_interface, types, summary):
         data[summary].append("Vlan1000")
-        data["Interface Type"].append("VLAN")
+        data["Intf Type"].append("VLAN")
         for type in types:
             data[type].append("10")
 
     def mock_append_interfaces(data, db, dir, vlan_interface, types, summary, vlan_members,
                                mgmt_intfs):
         data[summary].extend(["Ethernet0", "Ethernet1"])
-        data["Interface Type"].extend(["Downlink", "Uplink"])
+        data["Intf Type"].extend(["Downlink", "Uplink"])
         for type in types:
             data[type].extend(["20", "30"])
     with patch.object(show_dhcp_relay, "append_vlan_count_without_type_specified", side_effect=mock_append_vlan), \
@@ -262,7 +256,6 @@ def test_generate_output_without_type_specified():
                          side_effect=mock_append_interfaces):
         output = show_dhcp_relay.generate_output_without_type_specified(MagicMock(), {}, ["Discover", "Offer"], "RX",
                                                                         "Vlan1000", [])
-        print(output)
         assert expected_output == output
 
 
