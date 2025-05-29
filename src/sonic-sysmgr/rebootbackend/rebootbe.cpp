@@ -127,7 +127,7 @@ NotificationResponse RebootBE::RequestRebootStatus(
   SWSS_LOG_NOTICE("Sending reboot status request to platform");
 
   NotificationResponse response = {.status = swss::StatusCode::SWSS_RC_SUCCESS,
-                                      .json_string = ""};
+                   .json_string = "{}"};
 
   // Send a request to the reboot host service via dbus.
   DbusInterface::DbusResponse dbus_response =
