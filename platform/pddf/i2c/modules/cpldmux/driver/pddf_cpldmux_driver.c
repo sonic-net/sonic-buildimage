@@ -113,20 +113,9 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
                 (uint8_t)(sdata->cpld_sel & 0xff));
             break;
         case MULTIFPGAPCI_MUX:
-            if (sdata->cpld_sel_bit_mask) {
-                ret = ptr_multifpgapci_readpci(
-                    pdata->fpga_pci_dev, sdata->cpld_offset,
-                    &original_val);
-                if (ret)
-                    goto ret;
-
-                new_val = (sdata->cpld_sel << sdata->cpld_sel_bit_offset) |
-                    (original_val & ~sdata->cpld_sel_bit_mask);
-            } else {
-                new_val = sdata->cpld_sel;
-            }
             ret = ptr_multifpgapci_writepci(
-                pdata->fpga_pci_dev, new_val,
+                pdata->fpga_pci_dev,
+                new_val = sdata->cpld_sel,
                 sdata->cpld_offset);
             if (ret)
                 goto ret;
@@ -176,25 +165,13 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
                      (uint8_t)(sdata->cpld_desel));
         break;
     case MULTIFPGAPCI_MUX:
-      if (sdata->cpld_sel_bit_mask) {
-          ret = ptr_multifpgapci_readpci(
-              pdata->fpga_pci_dev, sdata->cpld_offset,
-              &original_val);
-          if (ret)
-              goto ret;
-
-          new_val = (sdata->cpld_desel << sdata->cpld_sel_bit_offset) |
-              (original_val & ~sdata->cpld_sel_bit_mask);
-      } else {
-          new_val = sdata->cpld_desel;
-      }
-
-      ret = ptr_multifpgapci_writepci(
-          pdata->fpga_pci_dev, new_val,
-          sdata->cpld_offset);
-      if (ret)
-          goto ret;
-      break;
+        ret = ptr_multifpgapci_writepci(
+            pdata->fpga_pci_dev,
+            sdata->cpld_desel,
+            sdata->cpld_offset);
+        if (ret)
+            goto ret;
+        break;
     default:
         printk(KERN_ERR "%s: Unexpected device type %d\n", __FUNCTION__,
                pdata->dev_type);

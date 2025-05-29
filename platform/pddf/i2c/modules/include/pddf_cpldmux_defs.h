@@ -32,10 +32,6 @@ typedef struct CPLDMUX_CHAN_DATA
     int cpld_offset;
     int cpld_sel;
     int cpld_desel;
-    // bits in cpld_offset which hold cpld_sel/cpld_desel set to 1
-    int cpld_sel_bit_mask; // Not for upstreaming
-    // bit offset of cpld_sel/cpld_desel within cpld_offset register
-    int cpld_sel_bit_offset; // Not for upstreaming
 }PDDF_CPLDMUX_CHAN_DATA;
 
 /* CPLDMUX DATA - DATA FOR CPLDMUX CLIENT*/

@@ -59,8 +59,6 @@ PDDF_DATA_ATTR(cpld_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, P
 PDDF_DATA_ATTR(cpld_offset, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_offset, NULL);
 PDDF_DATA_ATTR(cpld_sel, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_sel, NULL);
 PDDF_DATA_ATTR(cpld_desel, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_desel, NULL);
-PDDF_DATA_ATTR(cpld_sel_bit_mask, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_sel_bit_mask, NULL); // Not for upstreaming
-PDDF_DATA_ATTR(cpld_sel_bit_offset, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_sel_bit_offset, NULL); // Not for upstreaming
 
 static struct attribute *cpldmux_attributes[] = {
 	&attr_dev_ops.dev_attr.attr,
@@ -76,8 +74,6 @@ static struct attribute *cpldmux_attributes[] = {
     &attr_cpld_offset.dev_attr.attr,
     &attr_cpld_sel.dev_attr.attr,
     &attr_cpld_desel.dev_attr.attr,
-    &attr_cpld_sel_bit_mask.dev_attr.attr,
-    &attr_cpld_sel_bit_offset.dev_attr.attr,
 	NULL
 };
 
