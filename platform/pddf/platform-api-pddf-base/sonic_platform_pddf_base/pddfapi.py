@@ -523,6 +523,14 @@ class PddfApi():
 
         return ret
 
+    def show_attr_multifpgapci_device(self, dev, ops):
+        ret = []
+        KEY="multifpgapci"
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        return ret
+
     ###################################################################################################################
     #  SPYTEST
     ###################################################################################################################
@@ -817,6 +825,42 @@ class PddfApi():
                         val.extend(ret)
         return val
 
+    def multifpgapcisystem_parse(self, dev, ops):
+        val = []
+        for d in dev['i2c']['DEVICES']:
+            ret = self.dev_parse(self.data[d['dev']], ops)
+            if ret:
+                if str(ret[0]).isdigit():
+                    if ret[0] != 0:
+                        # in case if 'create' functions
+                        return ret
+                else:
+                    val.extend(ret)
+        return val
+
+    def multifpgapci_parse(self, dev, ops):
+        val = []
+        ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_multifpgapci_device() cmd failed".format(ops['cmd']))
+                    return ret
+            else:
+                val.extend(ret)
+
+        for bus in dev['i2c']['channel']:
+            ret = self.dev_parse(self.data[bus['dev']], ops)
+            if ret:
+                 if str(ret[0]).isdigit():
+                      if ret[0] != 0:
+                            # in case if 'create' functions
+                           return ret
+                 else:
+                      val.extend(ret)
+        return val
+
     def dev_parse(self, dev, ops):
         attr = dev['dev_info']
         if attr['device_type'] == 'CPU':
@@ -863,6 +907,12 @@ class PddfApi():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
+
+        if attr['device_type'] == 'MULTIFPGAPCIESYSTEM':
+            return self.multifpgapcisystem_parse(dev, ops)
+
+        if attr['device_type'] == 'MULTIFPGAPCIE':
+            return self.multifpgapci_parse(dev, ops)
 
     def create_attr(self, key, value, path):
         cmd = "echo '%s' > /sys/kernel/%s/%s" % (value,  path, key)
