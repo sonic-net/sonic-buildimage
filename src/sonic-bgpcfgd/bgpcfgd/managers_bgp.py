@@ -119,6 +119,7 @@ class BGPPeerMgrBase(Manager):
             ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"),
+            ("CONFIG_DB", swsscommon.CFG_FEATURE_TABLE_NAME, ""),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
@@ -288,7 +289,11 @@ class BGPPeerMgrBase(Manager):
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
         elif "update" in self.templates and "ip_range" in data and self.peer_type == 'dynamic':
-            self.change_ip_range(vrf, nbr, data)
+            dynamic_iprange_update_enabled = self.directory.get_slot('CONFIG_DB', swsscommon.CFG_FEATURE_TABLE_NAME).get('bgp_dynamic_iprange_update', {}).get('state', '').lower() == 'enabled'
+            if dynamic_iprange_update_enabled:
+                self.change_ip_range(vrf, nbr, data)
+            else:
+                log_err("Peer '(%s|%s)': Dynamic IP range update is not enabled, skipping ip_range update." % (vrf, nbr))
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 

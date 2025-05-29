@@ -57,6 +57,7 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     m.directory.put("LOCAL", "interfaces", "Ethernet4|30.30.30.30/24", {"anything": "anything"})
     m.directory.put("LOCAL", "interfaces", "Ethernet8|fc00:20::20/96", {"anything": "anything"})
     m.directory.put("CONFIG_DB", swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME, "default|10.10.10.1", {"ip_range": None})
+    m.directory.put("CONFIG_DB", swsscommon.CFG_FEATURE_TABLE_NAME, "bgp_dynamic_iprange_update", {"state": "enabled"})
 
     if m.check_neig_meta:
         m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "TOR", {})
@@ -222,6 +223,16 @@ def test_delete_dynamic_peer_range():
     update_log = "Peer '(default|DynNbr2)' ip range is going to be updated. Ranges to delete: ['192.168.1.0/24'] Ranges to add: []"
     final_log = "Peer '(default|DynNbr2)' ip range has been scheduled to be updated with range '192.168.0.0/24'"
     modify_dynamic_peer_common(peer=peer, data=data, update_log=update_log, final_log=final_log)
+
+@patch('bgpcfgd.managers_bgp.log_err')
+def test_modify_dynamic_peer_range_disabled(mocked_log_err):
+    for constant in load_constant_files():
+        m = constructor(constant, peer_type="dynamic")
+        m.directory.put("CONFIG_DB", swsscommon.CFG_FEATURE_TABLE_NAME, "bgp_dynamic_iprange_update", {"state": "disabled"})
+        m.check_neig_meta = False
+        res = m.set_handler("DynNbr1", {"peer_asn": "65200", "ip_range": "10.255.0.0/24,10.255.1.0/24", "name": "DynNbr1"})
+        if "update" in m.templates:
+            mocked_log_err.assert_called_with("Peer '(default|DynNbr1)': Dynamic IP range update is not enabled, skipping ip_range update.")
 
 @patch('bgpcfgd.managers_bgp.log_warn')
 def test_add_peer_no_local_addr(mocked_log_warn):
