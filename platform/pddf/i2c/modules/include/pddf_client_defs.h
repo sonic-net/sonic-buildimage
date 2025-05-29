@@ -34,6 +34,7 @@
 #define SYSSTATUS "PDDF_SYSSTATUS"
 #define XCVR "PDDF_XCVR"
 #define FPGA "PDDF_FPGAPCI"
+#define MULTIFPGA "PDDF_MULTIFPGAPCI"
 
 
 #define PDDF_DEBUG
@@ -62,6 +63,15 @@ typedef struct pddf_data_attribute{
           .len = _len ,   \
           .addr = _addr,  \
           .data = _data }
+
+#define PDDF_DATA_ATTR_VAL(_name, _mode, _show, _store, _type, _len, _addr, _data) \
+        (PDDF_ATTR){                                                               \
+            .dev_attr = __ATTR(_name, _mode, _show, _store),                       \
+            .type = _type,                                                         \
+            .len = _len,                                                           \
+            .addr = _addr,                                                         \
+            .data = _data                                                          \
+        }
 
 
 enum attribute_data_type {
