@@ -1,0 +1,53 @@
+Index: pam_radius/src/pam_radius_auth.c
+===================================================================
+diff -ur pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
+--- pam_radius.orig/src/pam_radius_auth.c	2025-05-13 02:53:01.577393426 +0000
++++ pam_radius/src/pam_radius_auth.c	2025-05-13 02:51:36.185965522 +0000
+@@ -65,6 +65,7 @@
+ 	memset(conf, 0, sizeof(radius_conf_t)); /* ensure it's initialized */
+ 
+ 	conf->conf_file = CONF_FILE;
++	conf->dont_send_message_authenticato = FALSE;
+ 
+ 	/* set the default prompt */
+ 	snprintf(conf->prompt, MAXPROMPT, "%s: ", DEFAULT_PROMPT);
+@@ -187,6 +188,8 @@
+ 			}
+ 		} else if (!strcmp(*argv, "require_message_authenticator")) {
+ 			conf->require_message_authenticator = TRUE;
++		} else if (!strcmp(*argv, "dont_send_msg_auth")) {
++			conf->dont_send_message_authenticator = TRUE;	
+ 		} else if (!strncmp(*argv, "statistics=", 11)) {
+ 			/* Verify filename doesn't contain '/'.
+ 			 */
+@@ -978,7 +981,7 @@
+ 	 *	vector, and always add a Message-Authenticator
+ 	 *	attribute.
+ 	 */
+-	if (request->code == PW_AUTHENTICATION_REQUEST) {
++	if (request->code == PW_AUTHENTICATION_REQUEST && !conf->dont_send_message_authenticator) {
+               uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
+ 
+ 	      get_random_vector(request->vector);
+@@ -1137,7 +1140,7 @@
+ 		}
+ 
+ 
+-		if (request->code == PW_AUTHENTICATION_REQUEST) {
++		if (request->code == PW_AUTHENTICATION_REQUEST && !conf->dont_send_message_authenticator) {
+ 			hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
+ 				 (const uint8_t *) server->secret, strlen(server->secret));
+ 
+Index: pam_radius/src/pam_radius_auth.h
+===================================================================
+diff -ur pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
+--- pam_radius.orig/src/pam_radius_auth.h	2025-05-13 02:53:01.577393426 +0000
++++ pam_radius/src/pam_radius_auth.h	2025-05-12 07:33:39.000000000 +0000
+@@ -178,6 +178,7 @@
+ 	CONST char *trace;        /* Packet Trace File */
+ 	CONST char *statistics;   /* Statistics File   */
+ 	int require_message_authenticator;
++	int dont_send_message_authenticator;
+ 	uint8_t *message_authenticator;
+ } radius_conf_t;
+
