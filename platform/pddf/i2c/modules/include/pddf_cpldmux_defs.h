@@ -32,6 +32,10 @@ typedef struct CPLDMUX_CHAN_DATA
     int cpld_offset;
     int cpld_sel;
     int cpld_desel;
+    // bits in cpld_offset which hold cpld_sel/cpld_desel set to 1
+    int cpld_sel_bit_mask; // Not for upstreaming
+    // bit offset of cpld_sel/cpld_desel within cpld_offset register
+    int cpld_sel_bit_offset; // Not for upstreaming
 }PDDF_CPLDMUX_CHAN_DATA;
 
 /* CPLDMUX DATA - DATA FOR CPLDMUX CLIENT*/
@@ -42,8 +46,15 @@ typedef struct CPLDMUX_DATA
     int chan_cache;
     uint32_t cpld_addr;
     char cpld_name[32];
+    char bdf[32]; // identifies the FPGA when dev_type is multifpgapci_mux
     PDDF_CPLDMUX_CHAN_DATA chan_data[MAX_CPLDMUX_CHAN];
 }PDDF_CPLDMUX_DATA;
+
+typedef enum
+{
+   CPLD_MUX,
+   MULTIFPGAPCI_MUX,
+}PDDF_CPLDMUX_DEV_TYPE;
 
 typedef struct CPLDMUX_PDATA
 {
@@ -51,7 +62,10 @@ typedef struct CPLDMUX_PDATA
     int base_chan;
     int num_chan;
     int chan_cache;
+    PDDF_CPLDMUX_DEV_TYPE dev_type;
     struct i2c_client *cpld;
+    struct pci_dev
+        *fpga_pci_dev; // identifies the FPGA when dev_type is multifpgapci_mux
     PDDF_CPLDMUX_CHAN_DATA *chan_data;
 }PDDF_CPLDMUX_PDATA;
 
