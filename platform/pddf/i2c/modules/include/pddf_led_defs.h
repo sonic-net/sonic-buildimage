@@ -114,6 +114,9 @@ typedef struct
     int swpld_addr_offset;
     char attr_devtype[NAME_SIZE];
     char attr_devname[NAME_SIZE];
+    // For attr_devtype == multifpgapci
+    char bdf[NAME_SIZE];
+    struct pci_dev *fpga_pci_dev;
 } LED_OPS_DATA; 
 
 typedef enum{
@@ -123,9 +126,11 @@ typedef enum{
 	LED_FANTRAY,
 	LED_DIAG,
 	LED_LOC,
-    LED_BMC,
+	LED_BMC,
+	LED_PORT,
 	LED_TYPE_MAX
 } LED_TYPE;
+
 char* LED_TYPE_STR[LED_TYPE_MAX] = 
 {
 	"LED_SYS",
@@ -134,7 +139,8 @@ char* LED_TYPE_STR[LED_TYPE_MAX] =
 	"LED_FANTRAY",
 	"LED_DIAG",
 	"LED_LOC",
-    "LED_BMC"
+	"LED_BMC",
+	"LED_PORT",
 };
 
 /*****************************************
