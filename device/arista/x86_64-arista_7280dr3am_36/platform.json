@@ -1,0 +1,22 @@
+{
+    "chassis": {
+        "name": "DCS-7280DR3AM-36",
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:00:18.7)"
+            },
+            {
+                "name": "Scd(addr=0000:01:00.0)"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}
