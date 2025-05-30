@@ -56,14 +56,11 @@ ifeq ($(PLATFORM_ARCH),)
 	override PLATFORM_ARCH = $(CONFIGURED_ARCH)
 endif
 DOCKER_BASE_ARCH := $(CONFIGURED_ARCH)
-ONIE_IMAGE_CONF_PATH := onie-image.conf
 ifeq ($(CONFIGURED_ARCH),armhf)
 	override DOCKER_BASE_ARCH = arm32v7
-	override ONIE_IMAGE_CONF_PATH = onie-image-armhf.conf
 else
 ifeq ($(CONFIGURED_ARCH),arm64)
 	override DOCKER_BASE_ARCH = arm64v8
-	override ONIE_IMAGE_CONF_PATH = onie-image-arm64.conf
 endif
 endif
 
@@ -92,7 +89,6 @@ export IMAGE_DISTRO
 export IMAGE_DISTRO_DEBS_PATH
 export MULTIARCH_QEMU_ENVIRON
 export DOCKER_BASE_ARCH
-export ONIE_IMAGE_CONF_PATH
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
@@ -1354,8 +1350,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		export RFS_SPLIT_FIRST_STAGE=y
 		export RFS_SPLIT_LAST_STAGE=n
 
-		j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF_PATH) > files/initramfs-tools/union-mount
-		j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF_PATH) > files/initramfs-tools/arista-convertfs
+		j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
+		j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 		RFS_SQUASHFS_NAME=$* \
 		USERNAME="$(USERNAME)" \
@@ -1598,8 +1594,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 
-	j2 -f env files/initramfs-tools/union-mount.j2 $(ONIE_IMAGE_CONF_PATH) > files/initramfs-tools/union-mount
-	j2 -f env files/initramfs-tools/arista-convertfs.j2 $(ONIE_IMAGE_CONF_PATH) > files/initramfs-tools/arista-convertfs
+	j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
+	j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
 
 	$(if $($*_DOCKERS),
 		j2 files/build_templates/sonic_debian_extension.j2 > sonic_debian_extension.sh

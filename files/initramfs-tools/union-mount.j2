@@ -218,10 +218,8 @@ mkdir -p ${rootmnt}/boot
 mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
-{% if ARCH | default("x86_64") != "armhf" %}
 ## Mount the /tmp directory as tmpfs
 mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
-{% endif %}
 
 ## Mount loop device or tmpfs for /var/log
 if $logs_inram; then
