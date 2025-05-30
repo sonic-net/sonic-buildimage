@@ -267,6 +267,7 @@ class DpuCtlPlat():
         try:
             pci_scan_path = "/sys/bus/pci/rescan"
             self.write_file(pci_scan_path, OperationType.SET.value)
+            return True
         except Exception as e:
             self.log_error(f"Failed to rescan with error {e}")
         return False
