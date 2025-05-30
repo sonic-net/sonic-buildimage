@@ -33,7 +33,7 @@
 #define NGKNET_MODULE_MAJOR     121
 
 /*! Must be updated if backward compatibility is broken */
-#define NGKNET_IOC_VERSION      2
+#define NGKNET_IOC_VERSION      4
 
 /*! Max number of input arguments */
 #define NGKNET_IOC_IARG_MAX     2

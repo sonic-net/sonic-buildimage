@@ -135,7 +135,6 @@ function stopplatform2() {
             /etc/init.d/sxdkernel stop
             /usr/bin/mst stop
         elif [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
-            /usr/bin/ip addr flush dev Ethernet0 
             /usr/bin/bfnet.sh stop
         fi
     fi

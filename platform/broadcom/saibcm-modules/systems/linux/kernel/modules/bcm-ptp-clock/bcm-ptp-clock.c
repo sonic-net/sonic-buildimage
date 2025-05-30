@@ -1124,6 +1124,7 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
             ret = 0;
             switch (cmd) {
                 case BKSYNC_GET_TSTIME:
+                case BKSYNC_GETTIME:
 #ifndef BDE_EDK_SUPPORT
                     {
                         u64 d0 = 0ULL;
@@ -1146,10 +1147,10 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
                             ret = -1;
                     }
                     break;
-#endif
-                case BKSYNC_GETTIME:
+#else
                     bksync_hostcmd_data_op(0, (u64 *)data0, (u64 *)data1);
                     break;
+#endif
                 case BKSYNC_BROADSYNC:
                     if ((subcmd == KSYNC_BROADSYNC_BS0_STATUS_GET) ||
                         (subcmd == KSYNC_BROADSYNC_BS1_STATUS_GET)) {
