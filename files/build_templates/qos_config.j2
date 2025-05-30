@@ -46,6 +46,7 @@
 {%- endfor %}
 {%- set port_names_all = port_names_list_all | join(',') -%}
 
+
 {%- set PORT_ACTIVE = [] %}
 {%- if DEVICE_NEIGHBOR is not defined %}
     {%- set PORT_ACTIVE = PORT_ALL %}
@@ -264,7 +265,7 @@
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
 {% endif %}
-{% if (generate_switch_trimming is defined) and switch_trimming_enable %}
+{% if (generate_switch_trimming is defined) and (switch_trimming_enable is defined) and switch_trimming_enable %}
     {{- generate_switch_trimming() }}
 {% endif %}
 {% if (generate_scheduler_config is defined) %}
@@ -272,26 +273,6 @@
 {% else %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
     "SCHEDULER": {
-        "scheduler_Q1_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "8"
-        },
-        "scheduler_Q2_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "18"
-        },
-        "scheduler_Q3_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
-        "scheduler_Q4_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
-        "scheduler_Q5_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
         "scheduler.0": {
             "type"  : "DWRR",
             "weight": "1"
@@ -332,26 +313,6 @@
     {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
-        "scheduler_Q1_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "8"
-        },
-        "scheduler_Q2_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "18"
-        },
-        "scheduler_Q3_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
-        "scheduler_Q4_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
-        "scheduler_Q5_DOWNLINK": {
-            "type": "DWRR",
-            "weight": "22"
-        },
         "scheduler.0": {
             "type"  : "DWRR",
             "weight": "14"
@@ -516,8 +477,8 @@
 {% elif generate_single_queue_per_sku is defined %}
     "QUEUE": {
 {% for port in PORT_ACTIVE %}
-    {{ generate_single_queue_per_sku(port) }}
-    {%- if not loop.last -%},{% endif %}
+        {{ generate_single_queue_per_sku(port) }}
+        {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }
 {% elif generate_queue_config is defined %}

@@ -313,6 +313,7 @@ def
         "{{ port }}|5-6": {
             "profile" : "egress_lossy_profile"
         }{% if not loop.last %},{% endif %}
+
 {% endfor %}
     }
 {% endif %}
