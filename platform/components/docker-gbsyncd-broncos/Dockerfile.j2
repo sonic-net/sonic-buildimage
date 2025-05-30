@@ -1,6 +1,4 @@
-ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-
-FROM $BASE AS base
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -37,8 +35,8 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["files/dsserve", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve
 
-FROM $BASE
-
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

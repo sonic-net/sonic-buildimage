@@ -16,41 +16,21 @@
     ],
     "policies": [
         {
-            "name": "any fan absence",
+            "name": "any fan presence",
             "conditions": [
                 {
-                    "type": "fan.any.absence"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "thermal_control.control",
-                    "status": "false"
-                },
-                {
-                    "type": "fan.all.set_speed",
-                    "speed": "90"
-                }
-            ]
-        },
-        {
-            "name": "all fan presence",
-            "conditions": [
-                {
-                    "type": "fan.all.presence"
+                    "type": "fan.any.presence"
                 }
             ],
             "actions": [
                 {
                     "type": "thermal.temp_check_and_set_all_fan_speed",
-                    "default_speed": "45",
-                    "threshold1_speed": "60",
-                    "threshold2_speed": "70",
-                    "hightemp_speed": "90"
+                    "default_speed": "60",
+                    "hightemp_speed": "100"
                 }
             ]
         },
-	{
+	    {
             "name": "temp over high critical threshold",
             "conditions": [
                 {

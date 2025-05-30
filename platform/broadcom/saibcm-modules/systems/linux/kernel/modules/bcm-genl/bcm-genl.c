@@ -211,7 +211,6 @@ _cleanup(void)
 #ifdef BUILD_GENL_PACKET
     bcmgenl_packet_cleanup();
 #endif
-
     bcmgenl_netif_cleanup();
     bcmgenl_dev_cleanup();
 
@@ -229,9 +228,10 @@ _init(void)
     bcmgenl_netif_init();
 
     bcmgenl_psample_init(BCMGENL_PROCFS_PATH);
-#ifdef BUILD_GENL_PACKET   
+#ifdef BUILD_GENL_PACKET
     bcmgenl_packet_init(BCMGENL_PROCFS_PATH);
 #endif
+
     return 0;
 }
 

@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::process::Command;
+use regex::Regex;
 
 static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
@@ -115,6 +116,50 @@ fn check_auditd_reload_status() -> String {
     }
 }
 
+// Check auditd rate limit
+fn check_auditd_rate_limit_status() -> String {
+    // read auditd rules config file
+    let cmd = format!(r#"{NSENTER_CMD} cat /etc/audit/rules.d/audit.rules"#);
+    match run_command(&cmd) {
+        Ok(file_config) => {
+            let confix_file_regex = Regex::new(r"-r (?<rate>\d+)").unwrap();
+            match confix_file_regex.captures(&file_config) {
+                Some(config_file_caps) => {
+                    let config_file_rate_limit = &config_file_caps["rate"];
+
+                    let cmd = format!(r#"{NSENTER_CMD} auditctl -s"#);
+                    match run_command(&cmd) {
+                        Ok(running_config) => {
+                            let running_config_regex = Regex::new(r"rate_limit (?<rate>\d+)").unwrap();
+                            match running_config_regex.captures(&running_config) {
+                                Some(running_config_caps) => {
+                                    if &running_config_caps["rate"] == config_file_rate_limit {
+                                        "OK".to_string()
+                                    } else {
+                                        format!("FAIL (rate_limit: {} mismatch with config file setting: {})", running_config, config_file_rate_limit)
+                                    }
+                                }
+                                None => {
+                                    format!("FAIL (rate_limit not set = {}, config file setting: {})", running_config, config_file_rate_limit)
+                                }
+                            }
+                        }
+                        Err(e) => format!("FAIL (error message = {})", e),
+                    }
+                }
+                None => {
+                    // rate limit disabled when -r missing in config file
+                    "OK".to_string()
+                }
+            }
+        }
+        Err(e) => {
+            // config file missing
+            format!("FAIL (open config file failed, error message = {})", e)
+        }
+    }
+}
+
 fn main() {
     // Start a HTTP server listening on port 50058
     let listener = TcpListener::bind("127.0.0.1:50058")
@@ -137,6 +182,7 @@ fn main() {
                 let srvc_result      = check_auditd_service();
                 let srvc_active      = check_auditd_active();
                 let reload_result    = check_auditd_reload_status();
+                let rate_limit_result = check_auditd_rate_limit_status();
 
                 // Build a JSON object
                 let json_body = format!(
@@ -146,14 +192,16 @@ fn main() {
   "auditd_rules":"{}",
   "auditd_service":"{}",
   "auditd_active":"{}",
-  "auditd_reload":"{}"
+  "auditd_reload":"{}",
+  "rate_limit":"{}"
 }}"#,
                     conf_result,
                     syslog_result,
                     rules_result,
                     srvc_result,
                     srvc_active,
-                    reload_result
+                    reload_result,
+                    rate_limit_result
                 );
 
                 // Determine overall status
@@ -163,7 +211,8 @@ fn main() {
                     &rules_result,
                     &srvc_result,
                     &srvc_active,
-                    &reload_result
+                    &reload_result,
+                    &rate_limit_result
                 ];
                 let all_passed = all_results.iter().all(|r| r.starts_with("OK"));
 

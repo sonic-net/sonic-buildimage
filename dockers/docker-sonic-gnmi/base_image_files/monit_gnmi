@@ -1,5 +1,0 @@
-###############################################################################
-## Monit configuration for telemetry container
-###############################################################################
-check program container_memory_gnmi with path "/usr/bin/memory_checker gnmi 419430400"
-    if status == 3 for 10 times within 20 cycles then exec "/usr/bin/restart_service gnmi" repeat every 2 cycles

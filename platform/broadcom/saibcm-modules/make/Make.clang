@@ -41,12 +41,7 @@ ifeq (true,$(shell [ $(CLANG_MAJOR) -ge 10 ] && echo true))
 export KERNEL_LLVM ?= 1
 
 # Suppress various Clang warnings
-CLANG_ADD_CFLAGS += \
-    -Wno-gnu-designator \
-    -Wno-gnu-variable-sized-type-not-at-end \
-    -Wno-address-of-packed-member \
-    -Wno-unused-command-line-argument \
-    -Wno-misleading-indentation
+CLANG_ADD_CFLAGS += -Wno-gnu-variable-sized-type-not-at-end
 
 # Suppress Clang build issues on TCL Bindings
 ifeq (TCL,$(findstring TCL,$(FEATURE_LIST)))
@@ -61,9 +56,10 @@ endif
 
 # Use LLD by default
 LDFLAGS += -fuse-ld=lld
+
+# Need these lines in order for GTS Make.custom.all.clang to build
+CLANG_ADD_CFLAGS += -Wno-unused-command-line-argument
 CLANG_ADD_CFLAGS += -fuse-ld=lld
 
-# Use DWARF V4 for compatibility
-CLANG_ADD_CFLAGS += -gdwarf-4
 endif
 endif

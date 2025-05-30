@@ -82,7 +82,7 @@ elif [ "$platform" == "pensando" ]; then
         MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
     fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "marvell" ]; then
+elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
     CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
@@ -119,6 +119,12 @@ fi
 ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -R"
+fi
+
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.

@@ -378,27 +378,27 @@ proc_pkt_stats_show(struct seq_file *m, void *v)
         }
 
         stats = &dev->pdma_dev.stats;
-        seq_printf(m, "rx_packets:     %llu\n", (unsigned long long)stats->rx_packets);
-        seq_printf(m, "rx_bytes:       %llu\n", (unsigned long long)stats->rx_bytes);
+        seq_printf(m, "rx_packets:     %llu\n", (unsigned long long)stats->rxqs.packets);
+        seq_printf(m, "rx_bytes:       %llu\n", (unsigned long long)stats->rxqs.bytes);
         for (qi = 0; qi < dev->pdma_dev.ctrl.nb_rxq; qi++) {
-            seq_printf(m, "rx_packets[%d]:  %llu\n", qi, (unsigned long long)stats->rxq_packets[qi]);
-            seq_printf(m, "rx_bytes[%d]:    %llu\n", qi, (unsigned long long)stats->rxq_bytes[qi]);
+            seq_printf(m, "rx_packets[%d]:  %llu\n", qi, (unsigned long long)stats->rxq[qi].packets);
+            seq_printf(m, "rx_bytes[%d]:    %llu\n", qi, (unsigned long long)stats->rxq[qi].bytes);
         }
-        seq_printf(m, "rx_dropped:     %llu\n", (unsigned long long)stats->rx_dropped);
-        seq_printf(m, "rx_errors:      %llu\n", (unsigned long long)stats->rx_errors);
-        seq_printf(m, "rx_head_errors: %llu\n", (unsigned long long)stats->rx_head_errors);
-        seq_printf(m, "rx_data_errors: %llu\n", (unsigned long long)stats->rx_data_errors);
-        seq_printf(m, "rx_cell_errors: %llu\n", (unsigned long long)stats->rx_cell_errors);
-        seq_printf(m, "rx_nomems:      %llu\n", (unsigned long long)stats->rx_nomems);
-        seq_printf(m, "tx_packets:     %llu\n", (unsigned long long)stats->tx_packets);
-        seq_printf(m, "tx_bytes:       %llu\n", (unsigned long long)stats->tx_bytes);
+        seq_printf(m, "rx_dropped:     %llu\n", (unsigned long long)stats->rxqs.dropped);
+        seq_printf(m, "rx_errors:      %llu\n", (unsigned long long)stats->rxqs.errors);
+        seq_printf(m, "rx_head_errors: %llu\n", (unsigned long long)stats->rxqs.head_errors);
+        seq_printf(m, "rx_data_errors: %llu\n", (unsigned long long)stats->rxqs.data_errors);
+        seq_printf(m, "rx_cell_errors: %llu\n", (unsigned long long)stats->rxqs.cell_errors);
+        seq_printf(m, "rx_nomems:      %llu\n", (unsigned long long)stats->rxqs.nomems);
+        seq_printf(m, "tx_packets:     %llu\n", (unsigned long long)stats->txqs.packets);
+        seq_printf(m, "tx_bytes:       %llu\n", (unsigned long long)stats->txqs.bytes);
         for (qi = 0; qi < dev->pdma_dev.ctrl.nb_txq; qi++) {
-            seq_printf(m, "tx_packets[%d]:  %llu\n", qi, (unsigned long long)stats->txq_packets[qi]);
-            seq_printf(m, "tx_bytes[%d]:    %llu\n", qi, (unsigned long long)stats->txq_bytes[qi]);
+            seq_printf(m, "tx_packets[%d]:  %llu\n", qi, (unsigned long long)stats->txq[qi].packets);
+            seq_printf(m, "tx_bytes[%d]:    %llu\n", qi, (unsigned long long)stats->txq[qi].bytes);
         }
-        seq_printf(m, "tx_dropped:     %llu\n", (unsigned long long)stats->tx_dropped);
-        seq_printf(m, "tx_errors:      %llu\n", (unsigned long long)stats->tx_errors);
-        seq_printf(m, "tx_xoffs:       %llu\n", (unsigned long long)stats->tx_xoffs);
+        seq_printf(m, "tx_dropped:     %llu\n", (unsigned long long)stats->txqs.dropped);
+        seq_printf(m, "tx_errors:      %llu\n", (unsigned long long)stats->txqs.errors);
+        seq_printf(m, "tx_xoffs:       %llu\n", (unsigned long long)stats->txqs.xoffs);
         seq_printf(m, "interrupts:     %llu\n", (unsigned long long)stats->intrs);
     }
 

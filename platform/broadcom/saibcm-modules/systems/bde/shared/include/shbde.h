@@ -38,6 +38,8 @@ typedef void (*shbde_log_func_t)(int level, const char *str, int param);
 #define SHBDE_WARN      1
 #define SHBDE_DBG       2
 
+#define SHBDE_NUM_IPROC_SUBWIN  8
+
 /* iProc configuration (primarily used for PCI-AXI bridge) */
 typedef struct shbde_iproc_config_s {
     unsigned int dev_id;
@@ -50,6 +52,9 @@ typedef struct shbde_iproc_config_s {
     unsigned int mdio_base_addr;
     unsigned int pcie_phy_addr;
     unsigned int adjust_pcie_preemphasis;
+    unsigned int no_subwin_remap;
+    unsigned int subwin_valid;
+    unsigned int subwin_base[SHBDE_NUM_IPROC_SUBWIN];
 } shbde_iproc_config_t;
 
 /* Hardware abstraction functions */

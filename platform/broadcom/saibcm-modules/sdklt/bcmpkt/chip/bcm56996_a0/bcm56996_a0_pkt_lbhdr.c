@@ -493,22 +493,6 @@ const bcmpkt_lbhdr_fget_t bcm56996_a0_lbhdr_fget = {
         NULL,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL
     }
 };
@@ -555,22 +539,6 @@ const bcmpkt_lbhdr_fset_t bcm56996_a0_lbhdr_fset = {
         NULL,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL
     }
 };
@@ -593,7 +561,6 @@ static shr_enum_map_t bcm56996_a0_lbhdr_view_types[] = {
 static int bcm56996_a0_lbhdr_view_infos[BCMPKT_LBHDR_FID_COUNT] = {
      -1, -1, -1, -1, -1, -1, -1,  2,  2, -2,  1,  1,  3,  3,  3,  3,
       3,  3,  3,  3,  3,  3,  3,  3,  3,  3, -2, -2, -2, -2, -2, -2,
-     -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2,
 };
 

@@ -123,6 +123,7 @@ typedef struct genl_stats_s {
     unsigned long pkts_f_genl_mod;
     unsigned long pkts_f_handled;
     unsigned long pkts_f_pass_through;
+    unsigned long pkts_f_tag_checked;
     unsigned long pkts_f_tag_stripped;
     unsigned long pkts_f_dst_mc;
     unsigned long pkts_f_src_cpu;
@@ -322,8 +323,8 @@ genl_task(struct work_struct *work)
 }
 
 static int
-genl_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
-                  int chan, kcom_filter_t *kf)
+genl_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
+               int chan, kcom_filter_t *kf)
 {
     genl_meta_t meta;
     int rv = 0;
@@ -383,16 +384,17 @@ genl_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
         uint16_t vlan = (uint16_t) ((pkt[14] << 8) | pkt[15]);
         strip_tag =  ((vlan_proto == 0x8100) || (vlan_proto == 0x88a8) || (vlan_proto == 0x9100))
                      && (vlan == 0xFFF);
-    }
-
-    if (strip_tag) {
-        size -= 4;
+        if (strip_tag) {
+            size -= 4;
+        }
+        g_genl_stats.pkts_f_tag_checked++;
     }
 
     if ((skb = dev_alloc_skb(size)) == NULL)
     {
         g_genl_stats.pkts_d_no_mem++;
         genl_limited_gprintk(last_skb_fail, "%s: failed to alloc generic mem for pkt skb: %lu\n", __func__, g_genl_stats.pkts_d_no_mem);
+        kfree(genl_pkt);
         goto GENL_FILTER_CB_PKT_HANDLED;
     }
 
@@ -466,18 +468,18 @@ genl_proc_debug_open(struct inode * inode, struct file * file)
  */
 static ssize_t
 genl_proc_debug_write(struct file *file, const char *buf,
-                    size_t count, loff_t *loff)
+                      size_t count, loff_t *loff)
 {
     char debug_str[40];
     char *ptr;
 
-    if (count > sizeof(debug_str)) {
+    if (count >= sizeof(debug_str)) {
         count = sizeof(debug_str) - 1;
-        debug_str[count] = '\0';
     }
     if (copy_from_user(debug_str, buf, count)) {
         return -EFAULT;
     }
+    debug_str[count] = '\0';
 
     if ((ptr = strstr(debug_str, "debug=")) != NULL) {
         ptr += 6;
@@ -506,6 +508,7 @@ genl_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts sent to generic module    %10lu\n", g_genl_stats.pkts_f_genl_mod);
     seq_printf(m, "  pkts handled by generic cb     %10lu\n", g_genl_stats.pkts_f_handled);
     seq_printf(m, "  pkts pass through              %10lu\n", g_genl_stats.pkts_f_pass_through);
+    seq_printf(m, "  pkts with vlan tag checked     %10lu\n", g_genl_stats.pkts_f_tag_checked);
     seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_genl_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_genl_stats.pkts_f_dst_mc);
     seq_printf(m, "  pkts with cpu source           %10lu\n", g_genl_stats.pkts_f_src_cpu);

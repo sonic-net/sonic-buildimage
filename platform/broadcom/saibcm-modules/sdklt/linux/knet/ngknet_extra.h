@@ -109,18 +109,13 @@ ngknet_filter_get_next(struct ngknet_dev *dev, ngknet_filter_t *filter);
  * \brief Filter packet.
  *
  * \param [in] dev Device structure point.
- * \param [in] oskb Rx packet SKB.
- * \param [out] ndev Network interface.
- * \param [out] mskb Mirrored Rx packet SKB.
- * \param [out] mndev Mirrored network interface.
+ * \param [in] skb Rx packet SKB.
  *
  * \retval Matched network interface.
  * \retval NULL No matched network interface.
  */
 extern int
-ngknet_rx_pkt_filter(struct ngknet_dev *dev,
-                     struct sk_buff **oskb, struct net_device **ndev,
-                     struct sk_buff **mskb, struct net_device **mndev);
+ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb);
 
 /*!
  * \brief Rx rate limit control.

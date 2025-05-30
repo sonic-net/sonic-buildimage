@@ -347,8 +347,9 @@ typedef void (*pdma_dev_stats_get_f)(struct pdma_dev *dev);
  * Reset device statistics.
  *
  * \param [in] dev Pointer to device structure.
+ * \param [in] dir Direction of packets specified to reset statistics.
  */
-typedef void (*pdma_dev_stats_reset_f)(struct pdma_dev *dev);
+typedef void (*pdma_dev_stats_reset_f)(struct pdma_dev *dev, pdma_dir_t dir);
 
 /*!
  * Convert logic queue to physical queue.
@@ -847,6 +848,9 @@ struct pdma_dev {
     /*! Device statistics data */
     struct bcmcnet_dev_stats stats;
 
+    /*! Device statistics base data */
+    struct bcmcnet_dev_stats stats_base;
+
     /*! Private data */
     void *priv;
 
@@ -1078,12 +1082,13 @@ bcmcnet_pdma_dev_stats_get(struct pdma_dev *dev);
  * \brief Reset device statistics.
  *
  * \param [in] dev Device structure point.
+ * \param [in] dir Direction of packets specified to reset statistics.
  *
  * \retval SHR_E_NONE No errors.
  * \retval SHR_E_XXXX Operation failed.
  */
 extern int
-bcmcnet_pdma_dev_stats_reset(struct pdma_dev *dev);
+bcmcnet_pdma_dev_stats_reset(struct pdma_dev *dev, pdma_dir_t dir);
 
 /*!
  * \brief Change queue number to channel number.

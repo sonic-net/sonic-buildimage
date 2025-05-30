@@ -12,26 +12,75 @@ struct HealthStatus {
 }
  
 fn check_bmp_supervisorctl() -> String {
-    // TODO: Replace with real health check
-    "OK".to_string()
+    let output = Command::new("docker")
+        .args(["exec", "-i", "bmp", "supervisorctl", "status"])
+        .output();
+
+    match output {
+        Ok(output) => {
+            if !output.status.success() {
+                return format!("ERROR: Command failed with status {}", output.status);
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            let has_openbmpd = stdout.lines().any(|line| {
+                line.starts_with("openbmpd") && line.contains("RUNNING")
+            });
+            let has_bmpcfgd = stdout.lines().any(|line| {
+                line.starts_with("bmpcfgd") && line.contains("RUNNING")
+            });
+
+            if has_openbmpd && has_bmpcfgd {
+                "OK".to_string()
+            } else {
+                format!("ERROR: Statuses - openbmpd: {}, bmpcfgd: {}", has_openbmpd, has_bmpcfgd)
+            }
+        }
+        Err(e) => format!("ERROR: Failed to run command - {}", e),
+    }
 }
  
 fn check_bmp_db() -> String {
-    // TODO: Replace with real health check
-    "OK".to_string()
+    let output = Command::new("docker")
+        .args(["exec", "-i", "database", "supervisorctl", "status"])
+        .output();
+
+    match output {
+        Ok(output) => {
+            if !output.status.success() {
+                return format!("ERROR: Command failed with status {}", output.status);
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            let has_redis_bmp = stdout.lines().any(|line| {
+                line.starts_with("redis_bmp") && line.contains("RUNNING")
+            });
+
+            if has_redis_bmp {
+                "OK".to_string()
+            } else {
+                "ERROR: redis_bmp not running".to_string()
+            }
+        }
+        Err(e) => format!("ERROR: Failed to run command - {}", e),
+    }
 }
  
 fn check_bmp_port() -> String {
-    // TODO: Replace with real health check
-    "OK".to_string()
+    match std::net::TcpStream::connect("127.0.0.1:5000") {
+        Ok(_) => "OK".to_string(),
+        Err(e) => format!("ERROR: {}", e),
+    }
 }
  
 fn main() {
-    // Start a HTTP server listening on port 50058
-    let listener = TcpListener::bind("127.0.0.1:50058")
-    .expect("Failed to bind to 127.0.0.1:50058");
+    // Start a HTTP server listening on port 50060
+    let listener = TcpListener::bind("127.0.0.1:50060")
+    .expect("Failed to bind to 127.0.0.1:50060");
 
-    println!("Watchdog HTTP server running on http://127.0.0.1:50058");
+    println!("Watchdog HTTP server running on http://127.0.0.1:50060");
 
     for stream_result in listener.incoming() {
         match stream_result {

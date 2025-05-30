@@ -1,0 +1,210 @@
+From 5837d98c4a8e1e105ff5d1ddac74f69c4f44f6c9 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 25 Mar 2025 10:43:14 -0400
+Subject: [PATCH 46/56] bgpd: Delay processing MetaQ in some events
+
+If the number of peers that are being handled on
+the peer connection fifo is greater than 10, that
+means we have some network event going on.  Let's
+allow the packet processing to continue instead
+of running the metaQ.  This has advantages because
+everything else in BGP is only run after the metaQ
+is run.  This includes best path processing,
+installation of the route into zebra as well as
+telling our peers about this change.  Why does
+this matter?  It matters because if we are receiving
+the same route multiple times we limit best path processing
+to much fewer times and consequently we also limit
+the number of times we send the route update out and
+we install the route much fewer times as well.
+
+Prior to this patch, with 512 peers and 5k routes.
+CPU time for bgpd was 3:10, zebra was 3:28.  After
+the patch CPU time for bgpd was 0:55 and zebra was
+0:25.
+
+Here are the prior `show event cpu`:
+Event statistics for bgpd:
+
+Showing statistics for pthread default
+--------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0         20.749     33144        0       395        1       396         0         0          0    T    (bgp_generate_updgrp_packets)
+    0       9936.199      1818     5465     43588     5466     43589         0         0          0     E   bgp_handle_route_announcements_to_zebra
+    0          0.220        84        2        20        3        20         0         0          0    T    update_subgroup_merge_check_thread_cb
+    0          0.058         2       29        43       29        43         0         0          0     E   zclient_connect
+    0      17297.733       466    37119     67428    37124     67429         0         0          0   W     zclient_flush_data
+    1          0.134         7       19        40       20        42         0         0          0  R      vtysh_accept
+    0        151.396      1067      141      1181      142      1189         0         0          0  R      vtysh_read
+    0          0.297      1030        0        14        0        14         0         0          0    T    (bgp_routeadv_timer)
+    0          0.001         1        1         1        2         2         0         0          0    T    bgp_sync_label_manager
+    2          9.374       544       17       261       17       262         0         0          0  R      bgp_accept
+    0          0.001         1        1         1        2         2         0         0          0    T    bgp_startup_timer_expire
+    0          0.012         1       12        12       13        13         0         0          0     E   frr_config_read_in
+    0          0.308         1      308       308      309       309         0         0          0    T    subgroup_coalesce_timer
+    0          4.027       105       38        77       39        78         0         0          0    T    (bgp_start_timer)
+    0     112206.442      1818    61719     84726    61727     84736         0         0          0    TE   work_queue_run
+    0          0.345         1      345       345      346       346         0         0          0    T    bgp_config_finish
+    0          0.710       620        1         6        1         9         0         0          0   W     bgp_connect_check
+    2         39.420      8283        4       110        5       111         0         0          0  R      zclient_read
+    0          0.052         1       52        52      578       578         0         0          0    T    bgp_start_label_manager
+    0          0.452        87        5        90        5        90         0         0          0    T    bgp_announce_route_timer_expired
+    0        185.837      3088       60       537       92     21705         0         0          0     E   bgp_event
+    0      48719.671      4346    11210     78292    11215     78317         0         0          0     E   bgp_process_packet
+
+Showing statistics for pthread BGP I/O thread
+---------------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0        321.915     28597       11        86       11       265         0         0          0   W     bgp_process_writes
+  515        115.586     26954        4       121        4       128         0         0          0  R      bgp_process_reads
+
+Event statistics for zebra:
+
+Showing statistics for pthread default
+--------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0          0.109         2       54        62       55        63         0         0          0    T    timer_walk_start
+    1          0.550        11       50       100       50       100         0         0          0  R      vtysh_accept
+    0     112848.163      4441    25410    405489    25413    410127         0         0          0     E   zserv_process_messages
+    0          0.007         1        7         7        7         7         0         0          0     E   frr_config_read_in
+    0          0.005         1        5         5        5         5         0         0          0    T    rib_sweep_route
+    1        573.589      4789      119      1567      120      1568         0         0          0    T    wheel_timer_thread
+  347         30.848        97      318      1367      318      1366         0         0          0    T    zebra_nhg_timer
+    0          0.005         1        5         5        6         6         0         0          0    T    zebra_evpn_mh_startup_delay_exp_cb
+    0          5.404       521       10        38       10        70         0         0          0    T    timer_walk_continue
+    1          1.669         9      185       219      186       219         0         0          0  R      zserv_accept
+    1          0.174        18        9        53       10        53         0         0          0  R      msg_conn_read
+    0          3.028       520        5        47        6        47         0         0          0    T    if_zebra_speed_update
+    0          0.324       274        1         5        1         6         0         0          0   W     msg_conn_write
+    1         24.661      2124       11       359       12       359         0         0          0  R      kernel_read
+    0      73683.333      2964    24859    143223    24861    143239         0         0          0    TE   work_queue_run
+    1         46.649      6789        6       424        7       424         0         0          0  R      rtadv_read
+    0         52.661        85      619      2087      620      2088         0         0          0  R      vtysh_read
+    0         42.660        18     2370     21694     2373     21695         0         0          0     E   msg_conn_proc_msgs
+    0          0.034         1       34        34       35        35         0         0          0     E   msg_client_connect_timer
+    0       2786.938      2300     1211     29456     1219     29555         0         0          0     E   rib_process_dplane_results
+
+Showing statistics for pthread Zebra dplane thread
+--------------------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0       4875.670    200371       24       770       24       776         0         0          0     E   dplane_thread_loop
+    0          0.059         1       59        59       76        76         0         0          0     E   dplane_incoming_request
+    1          9.640       722       13      4510       15      5343         0         0          0  R      dplane_incoming_read
+
+Here are the post `show event cpu` results:
+
+Event statistics for bgpd:
+
+Showing statistics for pthread default
+--------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0      21297.497      3565     5974     57912     5981     57913         0         0          0     E   bgp_process_packet
+    0        149.742      1068      140      1109      140      1110         0         0          0  R      vtysh_read
+    0          0.013         1       13        13       14        14         0         0          0     E   frr_config_read_in
+    0          0.459        86        5       104        5       105         0         0          0    T    bgp_announce_route_timer_expired
+    0          0.139        81        1        20        2        21         0         0          0    T    update_subgroup_merge_check_thread_cb
+    0        405.889    291687        1       179        1       450         0         0          0    T    (bgp_generate_updgrp_packets)
+    0          0.682       618        1         6        1         9         0         0          0   W     bgp_connect_check
+    0          3.888       103       37        81       38        82         0         0          0    T    (bgp_start_timer)
+    0          0.074         1       74        74      458       458         0         0          0    T    bgp_start_label_manager
+    0          0.000         1        0         0        1         1         0         0          0    T    bgp_sync_label_manager
+    0          0.121         3       40        54      100       141         0         0          0     E   bgp_process_conn_error
+    0          0.060         2       30        49       30        50         0         0          0     E   zclient_connect
+    0          0.354         1      354       354      355       355         0         0          0    T    bgp_config_finish
+    0          0.283         1      283       283      284       284         0         0          0    T    subgroup_coalesce_timer
+    0      29365.962      1805    16269     99445    16273     99454         0         0          0    TE   work_queue_run
+    0        185.532      3097       59       497       94     26107         0         0          0     E   bgp_event
+    1          0.290         8       36       151       37       158         0         0          0  R      vtysh_accept
+    2          9.462       548       17       320       17       322         0         0          0  R      bgp_accept
+    2         40.219      8283        4       128        5       128         0         0          0  R      zclient_read
+    0          0.322      1031        0         4        0         5         0         0          0    T    (bgp_routeadv_timer)
+    0        356.812       637      560      3007      560      3007         0         0          0     E   bgp_handle_route_announcements_to_zebra
+
+Showing statistics for pthread BGP I/O thread
+---------------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+  515         62.965     14335        4       103        5       181         0         0          0  R      bgp_process_reads
+    0       1986.041    219813        9       213        9       315         0         0          0   W     bgp_process_writes
+
+Event statistics for zebra:
+
+Showing statistics for pthread default
+--------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0          0.006         1        6         6        7         7         0         0          0     E   frr_config_read_in
+    0       3673.365      2044     1797    259281     1800    261342         0         0          0     E   zserv_process_messages
+    1        651.846      8041       81      1090       82      1233         0         0          0    T    wheel_timer_thread
+    0         38.184        18     2121     21345     2122     21346         0         0          0     E   msg_conn_proc_msgs
+    1          0.651        12       54       112       55       112         0         0          0  R      vtysh_accept
+    0          0.102         2       51        55       51        56         0         0          0    T    timer_walk_start
+    0        202.721      1577      128     29172      141     29226         0         0          0     E   rib_process_dplane_results
+    1         41.650      6645        6       140        6       140         0         0          0  R      rtadv_read
+    1         22.518      1969       11       106       12       154         0         0          0  R      kernel_read
+    0          4.265        48       88      1465       89      1466         0         0          0  R      vtysh_read
+    0       6099.851       650     9384     28313     9390     28314         0         0          0    TE   work_queue_run
+    0          5.104       521        9        30       10        31         0         0          0    T    timer_walk_continue
+    0          3.078       520        5        53        6        55         0         0          0    T    if_zebra_speed_update
+    0          0.005         1        5         5        5         5         0         0          0    T    rib_sweep_route
+    0          0.034         1       34        34       35        35         0         0          0     E   msg_client_connect_timer
+    1          1.641         9      182       214      183       215         0         0          0  R      zserv_accept
+    0          0.358       274        1         6        2         6         0         0          0   W     msg_conn_write
+    1          0.159        18        8        54        9        54         0         0          0  R      msg_conn_read
+
+Showing statistics for pthread Zebra dplane thread
+--------------------------------------------------
+                               CPU (user+system): Real (wall-clock):
+Active   Runtime(ms)   Invoked Avg uSec Max uSecs Avg uSec Max uSecs  CPU_Warn Wall_Warn Starv_Warn   Type  Event
+    0        301.404      7280       41      1878       41      1878         0         0          0     E   dplane_thread_loop
+    0          0.048         1       48        48       49        49         0         0          0     E   dplane_incoming_request
+    1          9.558       727       13      4659       14      5420         0         0          0  R      dplane_incoming_read
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_route.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 859ac26c1c..4c3cd42f30 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -4150,12 +4150,30 @@ static wq_item_status meta_queue_process(struct work_queue *dummy, void *data)
+ {
+ 	struct meta_queue *mq = data;
+ 	uint32_t i;
++	uint32_t peers_on_fifo;
++	static uint32_t total_runs = 0;
++
++	total_runs++;
++
++	frr_with_mutex (&bm->peer_connection_mtx)
++		peers_on_fifo = peer_connection_fifo_count(&bm->connection_fifo);
++
++	/*
++	 * If the number of peers on the fifo is greater than 10
++	 * let's yield this run of the MetaQ  to allow the packet processing to make
++	 * progress against the incoming packets.  But we should also
++	 * attempt to allow this to run occassionally.  Let's run
++	 * something every 10 attempts to process the work queue.
++	 */
++	if (peers_on_fifo > 10 && total_runs % 10 != 0)
++		return WQ_QUEUE_BLOCKED;
+ 
+ 	for (i = 0; i < MQ_SIZE; i++)
+ 		if (process_subq(mq->subq[i], i)) {
+ 			mq->size--;
+ 			break;
+ 		}
++
+ 	return mq->size ? WQ_REQUEUE : WQ_SUCCESS;
+ }
+ 
+-- 
+2.39.5
+
