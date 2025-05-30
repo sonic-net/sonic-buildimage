@@ -44,6 +44,10 @@
 #define BAR0_PAXB_IMAP0_0                       (0x2c00)
 #define BAR0_PAXB_IMAP0_1                       (0x2c04)
 #define BAR0_PAXB_IMAP0_2                       (0x2c08)
+#define BAR0_PAXB_IMAP0_3                       (0x2c0c)
+#define BAR0_PAXB_IMAP0_4                       (0x2c10)
+#define BAR0_PAXB_IMAP0_5                       (0x2c14)
+#define BAR0_PAXB_IMAP0_6                       (0x2c18)
 #define BAR0_PAXB_IMAP0_7                       (0x2c1c)
 
 #define BAR0_PAXB_OARR_FUNC0_MSI_PAGE           0x2d34
@@ -85,6 +89,14 @@
 #define PCI_EXP_LNKSTA2_CDL_3_5DB               0x1
 #endif
 
+#define LOG_OUT(_shbde, _lvl, _str, _prm)             \
+    if ((_shbde)->log_func) {                         \
+        (_shbde)->log_func(_lvl, _str, _prm);         \
+    }
+#define LOG_ERR(_shbde, _str, _prm)     LOG_OUT(_shbde, SHBDE_ERR, _str, _prm)
+#define LOG_WARN(_shbde, _str, _prm)    LOG_OUT(_shbde, SHBDE_WARN, _str, _prm)
+#define LOG_DBG(_shbde, _str, _prm)     LOG_OUT(_shbde, SHBDE_DBG, _str, _prm)
+
 static unsigned int
 iproc32_read(shbde_hal_t *shbde, void *addr)
 {
@@ -115,6 +127,22 @@ wait_usec(shbde_hal_t *shbde, int usec)
             for (count = 0; count < 100; count++);
         }
     }
+}
+
+static void
+subwin_cache_init(shbde_hal_t *shbde, void *iproc_regs,
+                  shbde_iproc_config_t *icfg)
+{
+    unsigned int idx;
+    void *reg;
+
+    /* Cache iProc sub-windows */
+    for (idx = 0; idx < SHBDE_NUM_IPROC_SUBWIN; idx++) {
+        reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_0 + (4 * idx));
+        icfg->subwin_base[idx] = iproc32_read(shbde, reg) & ~0xfff;
+        LOG_DBG(shbde, "subwin:", icfg->subwin_base[idx]);
+    }
+    icfg->subwin_valid = 1;
 }
 
 /*
@@ -199,9 +227,7 @@ shbde_iproc_config_init(shbde_iproc_config_t *icfg,
         icfg->pcie_phy_addr = 0x5;
         icfg->adjust_pcie_preemphasis = 1;
         break;
-    case 0xa450: /* Katana2 */
-    case 0xb240:
-    case 0xb450:
+    case 0xb240: /* Saber */
         icfg->mdio_base_addr = 0x18032000;
         icfg->pcie_phy_addr = 0x5;
         icfg->adjust_pcie_preemphasis = 1;
@@ -242,6 +268,8 @@ shbde_iproc_paxb_init(shbde_hal_t *shbde, void *iproc_regs,
     if (!iproc_regs || !icfg) {
         return -1;
     }
+
+    LOG_DBG(shbde, "iProc version:", icfg->iproc_ver);
 
     /*
      * The following code attempts to auto-detect the correct
@@ -292,11 +320,9 @@ shbde_iproc_paxb_init(shbde_hal_t *shbde, void *iproc_regs,
         }
     }
 
-    /* Configure MSIX interrupt page, need for iproc ver 0x10 and 0x12 */
-    if ((icfg->use_msi == 2) &&
-        ((icfg->iproc_ver == 0x10)
-         || (icfg->iproc_ver == 0x12)
-         || (icfg->iproc_ver == 0x11))){
+    /* Configure MSIX interrupt page, need for iproc ver 16, 17 and 18 */
+    if (icfg->use_msi == 2 &&
+        (icfg->iproc_ver >= 16 && icfg->iproc_ver <= 18)) {
         unsigned int mask = (0x1 << PAXB_0_FUNC0_IMAP1_3_ADDR_SHIFT) - 1;
         reg = ROFFS(iproc_regs, PAXB_0_FUNC0_IMAP1_3);
         data = iproc32_read(shbde, reg);
@@ -320,6 +346,9 @@ shbde_iproc_paxb_init(shbde_hal_t *shbde, void *iproc_regs,
     }
     iproc32_write(shbde, reg, data);
 
+    /* Cache iProc sub-windows */
+    subwin_cache_init(shbde, iproc_regs, icfg);
+
     return pci_num;
 }
 
@@ -340,6 +369,7 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
                      unsigned int addr)
 {
     unsigned int subwin_base;
+    unsigned int idx;
     void *reg = 0;
     shbde_iproc_config_t *icfg = &shbde->icfg;
 
@@ -347,31 +377,29 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
         return -1;
     }
 
+    if (icfg->subwin_valid == 0) {
+        LOG_WARN(shbde, "Re-initializing PCI sub-windows",
+                 shbde->icfg.iproc_ver);
+        subwin_cache_init(shbde, iproc_regs, icfg);
+    }
+
     /* Sub-window size is 0x1000 (4K) */
     subwin_base = (addr & ~0xfff);
 
-    if (icfg->iproc_ver >= 20) {
-        if (subwin_base == 0x292c000) {
-            /* Route PAXB register through IMAP0_2 */
-            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-        } else if (subwin_base == 0x292d000) {
-            /* Route INTC register through IMAP0_6 */
-            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
-        }
-    } else {
-        if((icfg->cmic_ver >= 4) &&
-           ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
-            /* Route the PAXB register through IMAP0_2 */
-            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-        } else if((icfg->cmic_ver >= 4) &&
-           ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
-            /* Route the INTC block access through IMAP0_6 */
-            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+    /* Look for matching sub-window */
+    for (idx = 0; idx < SHBDE_NUM_IPROC_SUBWIN; idx++) {
+        if (icfg->subwin_base[idx] == subwin_base) {
+            reg = ROFFS(iproc_regs, idx * 0x1000 + (addr & 0xfff));
+            break;
         }
     }
 
-    /* Not found fixed sub-window, reuse the sub-window 7 */
-    if (0 == reg) {
+    /* No matching sub-window, reuse the sub-window 7 */
+    if (reg == 0) {
+        if (icfg->no_subwin_remap) {
+            LOG_WARN(shbde, "Attempt to remap PCI sub-window for", addr);
+            return 0;
+        }
         /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);
@@ -404,6 +432,7 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
                       unsigned int addr, unsigned int data)
 {
     unsigned int subwin_base;
+    unsigned int idx;
     void *reg = 0;
     shbde_iproc_config_t *icfg = &shbde->icfg;
 
@@ -411,31 +440,29 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
         return;
     }
 
+    if (icfg->subwin_valid == 0) {
+        LOG_WARN(shbde, "Re-initializing PCI sub-windows",
+                 shbde->icfg.iproc_ver);
+        subwin_cache_init(shbde, iproc_regs, icfg);
+    }
+
     /* Sub-window size is 0x1000 (4K) */
     subwin_base = (addr & ~0xfff);
 
-    if (icfg->iproc_ver >= 20) {
-        if (subwin_base == 0x292c000) {
-            /* Route PAXB register through IMAP0_2 */
-            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-        } else if (subwin_base == 0x292d000) {
-             /* Route INTC register through IMAP0_6 */
-             reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
-        }
-    } else {
-        if((icfg->cmic_ver >= 4) &&
-           ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
-            /* Route the PAXB register through IMAP0_2 */
-            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-        } else if((icfg->cmic_ver >= 4) &&
-           ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
-            /* Route the INTC block access through IMAP0_6 */
-            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+    /* Look for matching sub-window */
+    for (idx = 0; idx < SHBDE_NUM_IPROC_SUBWIN; idx++) {
+        if (icfg->subwin_base[idx] == subwin_base) {
+            reg = ROFFS(iproc_regs, idx * 0x1000 + (addr & 0xfff));
+            break;
         }
     }
 
-    /* Not found fixed sub-window */
-    if (0 == reg) {
+    /* No matching sub-window, reuse the sub-window 7 */
+    if (reg == 0) {
+        if (icfg->no_subwin_remap) {
+            LOG_WARN(shbde, "Attempt to remap PCI sub-window for", addr);
+            return;
+        }
         /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);

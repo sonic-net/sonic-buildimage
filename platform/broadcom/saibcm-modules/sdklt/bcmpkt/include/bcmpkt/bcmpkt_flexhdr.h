@@ -35,7 +35,7 @@
 #define BCMPKT_FLEXHDR_PROFILE_NONE    -1
 
 /*! Max profile count. */
-#define BCMPKT_FLEXHDR_PROFILE_MAX     64
+#define BCMPKT_FLEXHDR_PROFILE_MAX     128
 
 /*! Max profile count. */
 #define BCMPKT_FLEXHDR_PROFILE_BITMAP_MAX     4

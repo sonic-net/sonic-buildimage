@@ -155,12 +155,14 @@ ngbde_user_isr(ngbde_intr_ctrl_t *ic)
         }
         /* Synchronized write when some bits are owned by another ISR */
         sd = ngbde_swdev_get(ic->kdev);
-        if (ngbde_intr_shared_write32(sd, ic, ir->mask_reg, 0, ir->umask) < 0) {
-            printk(KERN_WARNING
-                   "%s: Failed to write shared register for device %d\n",
-                   MOD_NAME, ic->kdev);
-            /* Fall back to normal write to ensure interrupts are masked */
-            NGBDE_IOWRITE32(0, &ic->iomem[ir->mask_reg]);
+        if (sd) {
+            if (ngbde_intr_shared_write32(sd, ic, ir->mask_reg, 0, ir->umask) < 0) {
+                printk(KERN_WARNING
+                       "%s: Failed to write shared register for device %d\n",
+                       MOD_NAME, ic->kdev);
+                /* Fall back to normal write to ensure interrupts are masked */
+                NGBDE_IOWRITE32(0, &ic->iomem[ir->mask_reg]);
+            }
         }
     }
 
@@ -235,6 +237,10 @@ ngbde_intr_ack(ngbde_intr_ctrl_t *ic)
 {
     struct ngbde_dev_s *sd = ngbde_swdev_get(ic->kdev);
     struct ngbde_intr_ack_reg_s *ar = &ic->intr_ack;
+
+    if (!sd) {
+        return 0;
+    }
 
     if (sd->use_msi && ar->ack_valid) {
         if (intr_debug >= 2) {

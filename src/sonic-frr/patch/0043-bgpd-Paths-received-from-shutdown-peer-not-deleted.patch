@@ -1,0 +1,88 @@
+From 14545d84ccb1a1d0b50ec6a7d354a81cb9b1bf01 Mon Sep 17 00:00:00 2001
+From: Soumya Roy <souroy@nvidia.com>
+Date: Mon, 7 Apr 2025 05:36:09 +0000
+Subject: [PATCH 43/56] bgpd: Paths, received from shutdown peer, not deleted
+
+Issue:
+In a scaled setup, (where number of nets > BGP_CLEARING_BATCH_MAX_DESTS
+for walk_batch_table_helper), when peer is shutdown, it is seen some
+of the paths are not deleted, which are received from that peer.
+
+Fix:
+This is due to, in clear_batch_rib_helper, once walk_batch_table_helper
+returns after BGP_CLEARING_BATCH_MAX_DESTS is reached, we just break
+from inner loop for the afi/safi for loops. So during walk for next
+afi/safi that 'ret' state is overwritten with new state. Also the
+resume context is overwritten. This causes to lose the start point
+for next walk, some nets are skipped forever. So they are not marked
+for deletion anymore. To fix this, we immediately return from current
+run. This will have resume state to be stored correctly, and next walk
+will start from there.
+
+Testing:
+32 ecmp paths were received from the shutdown peer
+Before fix:
+show bgp ipv6 2052:52:1:167::/64
+BGP routing table entry for 2052:52:1:167::/64, version 495
+Paths: (246 available, best #127, table default)
+  Not advertised to any peer
+
+<snip>
+  4200165500 4200165002
+    2021:21:51:101::2(spine-5) from spine-5(2021:21:51:101::2) (6.0.0.17)
+    (fe80::202:ff:fe00:55) (prefer-global)
+      Origin incomplete, valid, external, multipath
+      Last update: Fri Apr  4 17:25:05 2025
+  4200165500 4200165002
+    2021:21:11:116::2(spine-1) from spine-1(2021:21:11:116::2) (0.0.0.0)
+    (fe80::202:ff:fe00:3d) (prefer-global)<<<<path not deleted
+      Origin incomplete, valid, external
+      Last update: Fri Apr  4 17:25:05 2025
+  4200165500 4200165002
+    2021:21:11:115::2(spine-1) from spine-1(2021:21:11:115::2) (0.0.0.0)
+    (fe80::202:ff:fe00:3d) (prefer-global)<<<<path not deleted
+      Origin incomplete, valid, external
+      Last update: Fri Apr  4 17:25:05 2025
+<snip>
+
+ 32 paths are supposed to be withdrawn:
+root@leaf-1:mgmt:# vtysh -c "show bgp ipv6 2052:52:1:167::/64" | grep "prefer-global" | wc -l
+256
+root@leaf-1:mgmt# vtysh -c "show bgp ipv6 2052:52:1:167::/64" | grep "prefer-global" | wc -l
+246<<should be 224, but showing 246, which is wrong
+After fix:
+ 32 paths are supposed to be withdrawn:
+root@leaf-1:mgmt:# vtysh -c "show bgp ipv6 2052:52:1:167::/64" | grep "prefer-global" | wc -l
+256
+root@leaf-1:mgmt:# vtysh -c "show bgp ipv6 2052:52:1:167::/64" | grep "prefer-global" | wc -l
+224<<<shows correctly
+
+Signed-off-by: Soumya Roy <souroy@nvidia.com>
+---
+ bgpd/bgp_route.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 89e75f4ba0..859ac26c1c 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -6733,6 +6733,16 @@ static int clear_batch_rib_helper(struct bgp_clearing_info *cinfo)
+ 			 */
+ 			UNSET_FLAG(cinfo->flags, BGP_CLEARING_INFO_FLAG_RESUME);
+ 		}
++
++		/* Return immediately, otherwise the 'ret' state will be overwritten
++		 * by next afi/safi. Also resume state stored for current afi/safi
++		 * in walk_batch_table_helper, will be overwritten. This may cause to
++		 * skip the nets to be walked again, so they won't be marked for deletion
++		 * from BGP table
++		 */
++		if (ret != 0)
++			return ret;
++
+ 		safi = SAFI_UNICAST;
+ 	}
+ 	return ret;
+-- 
+2.39.5
+

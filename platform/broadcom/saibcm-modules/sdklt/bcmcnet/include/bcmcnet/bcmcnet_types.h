@@ -52,10 +52,17 @@
 /*!
  * \brief Transmission direction.
  */
-enum pdma_dir {
-    PDMA_Q_RX = 0,
-    PDMA_Q_TX
-};
+typedef enum pdma_dir_e {
+    PDMA_DIR_RX = 0,
+    PDMA_DIR_TX,
+    PDMA_DIR_RXTX
+} pdma_dir_t;
+
+/*! Channel in Rx direction */
+#define PDMA_Q_RX           PDMA_DIR_RX
+
+/*! Channel in Tx direction */
+#define PDMA_Q_TX           PDMA_DIR_TX
 
 /*!
  * \brief Device information.
@@ -129,89 +136,72 @@ typedef struct bcmcnet_dev_info {
 } bcmcnet_dev_info_t;
 
 /*!
+ * \brief Rx queue statistics.
+ */
+typedef struct bcmcnet_rxq_stats {
+    /*! Number of received packets */
+    uint64_t packets;
+
+    /*! Number of received bytes */
+    uint64_t bytes;
+
+    /*! Number of dropped packets */
+    uint64_t dropped;
+
+    /*! Number of errors */
+    uint64_t errors;
+
+    /*! Number of head errors */
+    uint64_t head_errors;
+
+    /*! Number of data errors */
+    uint64_t data_errors;
+
+    /*! Number of cell errors */
+    uint64_t cell_errors;
+
+    /*! Number of failed allocation */
+    uint64_t nomems;
+} bcmcnet_rxq_stats_t;
+
+/*!
+ * \brief Tx queue statistics.
+ */
+typedef struct bcmcnet_txq_stats {
+    /*! Number of sent packets */
+    uint64_t packets;
+
+    /*! Number of sent bytes */
+    uint64_t bytes;
+
+    /*! Number of dropped packets */
+    uint64_t dropped;
+
+    /*! Number of errors */
+    uint64_t errors;
+
+    /*! Number of suspends */
+    uint64_t xoffs;
+} bcmcnet_txq_stats_t;
+
+/*!
  * \brief Device statistics.
  */
 typedef struct bcmcnet_dev_stats {
-    /*! Number of successfully received packets */
-    uint64_t rx_packets;
+    /*! Queue statistics for Rx */
+    bcmcnet_rxq_stats_t rxq[NUM_Q_MAX];
 
-    /*! Number of successfully received bytes */
-    uint64_t rx_bytes;
+    /*! Global statistics for all Rx queues */
+    bcmcnet_rxq_stats_t rxqs;
 
-    /*! Number of dropped packets */
-    uint64_t rx_dropped;
+    /*! Queue statistics for Tx */
+    bcmcnet_txq_stats_t txq[NUM_Q_MAX];
 
-    /*! Number of erroneous received packets */
-    uint64_t rx_errors;
-
-    /*! Number of error head packets */
-    uint64_t rx_head_errors;
-
-    /*! Number of error data packets */
-    uint64_t rx_data_errors;
-
-    /*! Number of error cell packets */
-    uint64_t rx_cell_errors;
-
-    /*! Number of RX pktbuf allocation failures */
-    uint64_t rx_nomems;
-
-    /*! Number of successfully transmitted packets */
-    uint64_t tx_packets;
-
-    /*! Number of successfully transmitted bytes */
-    uint64_t tx_bytes;
-
-    /*! Number of dropped packets */
-    uint64_t tx_dropped;
-
-    /*! Number of failed transmitted packets */
-    uint64_t tx_errors;
-
-    /*! Number of suspended transmission */
-    uint64_t tx_xoffs;
+    /*! Global statistics for all Tx queues */
+    bcmcnet_txq_stats_t txqs;
 
     /*! Number of interrupts */
     uint64_t intrs;
-
-    /*! Number of successfully received packets per queue */
-    uint64_t rxq_packets[NUM_Q_MAX];
-
-    /*! Number of successfully received bytes per queue */
-    uint64_t rxq_bytes[NUM_Q_MAX];
-
-    /*! Number of dropped packets per queue */
-    uint64_t rxq_dropped[NUM_Q_MAX];
-
-    /*! Number of erroneous received packets per queue */
-    uint64_t rxq_errors[NUM_Q_MAX];
-
-    /*! Number of error head packets per queue */
-    uint64_t rxq_head_errors[NUM_Q_MAX];
-
-    /*! Number of error data packets per queue */
-    uint64_t rxq_data_errors[NUM_Q_MAX];
-
-    /*! Number of error cell packets per queue */
-    uint64_t rxq_cell_errors[NUM_Q_MAX];
-
-    /*! Number of RX pktbuf allocation failures per queue */
-    uint64_t rxq_nomems[NUM_Q_MAX];
-
-    /*! Number of successfully transmitted bytes per queue */
-    uint64_t txq_packets[NUM_Q_MAX];
-
-    /*! Number of successfully transmitted bytes per queue */
-    uint64_t txq_bytes[NUM_Q_MAX];
-
-    /*! Number of dropped packets per queue */
-    uint64_t txq_dropped[NUM_Q_MAX];
-
-    /*! Number of failed transmitted packets per queue */
-    uint64_t txq_errors[NUM_Q_MAX];
-
-    /*! Number of suspended transmission per queue */
-    uint64_t txq_xoffs[NUM_Q_MAX];
 } bcmcnet_dev_stats_t;
 
 /*!

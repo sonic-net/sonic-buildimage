@@ -93,7 +93,7 @@ CLANG_ADD_CFLAGS += --target=$(TARGET_ARCHITECTURE) --gcc-toolchain=$(TOOLCHAIN_
 export KERNEL_LLVM = 0
 OPT_KERNEL_TOOLCHAIN = CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld AR=$(CROSS_COMPILE)ar
 else
-OPT_CFLAGS += -Wno-unused-value -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations
+OPT_CFLAGS += -fno-aggressive-loop-optimizations
 endif
 
 ifdef DPP_CHIPS

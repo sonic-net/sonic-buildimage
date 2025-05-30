@@ -34,6 +34,9 @@
 /*! TX Packet MetaData size (words). */
 #define BCMPKT_TXPMD_SIZE_WORDS         4
 
+/*! TXPMD FID field supported check. */
+#define BCMPKT_TXPMD_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
+
 /*!
  * \name TXPMD Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_TXPMD_DUMP_F_XXX
