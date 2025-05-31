@@ -5,6 +5,7 @@ include $(PLATFORM_PATH)/../template/docker-gbsyncd-bookworm.mk
 
 $(DOCKER_GBSYNCD_BASE)_DEPENDS += $(SYNCD_VS) \
                               $(LIBNL3_DEV) \
+                              $(LIBNL_ROUTE3_DEV) \
                               $(LIBNL3)
 
 $(DOCKER_GBSYNCD_BASE)_DBG_DEPENDS += $(SYNCD_VS_DBG) \
