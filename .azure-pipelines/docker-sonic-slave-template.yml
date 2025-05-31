@@ -16,6 +16,7 @@ parameters:
 - name: dist
   type: string
   values:
+  - trixie
   - bookworm
   - bullseye
   - buster
