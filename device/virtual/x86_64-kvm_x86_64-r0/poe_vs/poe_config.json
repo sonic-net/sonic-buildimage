@@ -1,0 +1,192 @@
+[{
+  "hw_info": "mcu1",
+  "power_limit_mode": "port",
+  "pse_list": [
+    {
+      "pse_index": 0
+    },
+    {
+      "pse_index": 1
+    }
+  ],
+  "port_mapping_list": [
+    {
+      "interface": "Ethernet0",
+      "front_panel_index": 1,
+      "power_priority": "crit"
+    },
+    {
+      "interface": "Ethernet4",
+      "front_panel_index": 2,
+      "power_priority": "crit"
+    },
+    {
+      "interface": "Ethernet8",
+      "front_panel_index": 3,
+      "power_priority": "low"
+    },
+    {
+      "interface": "Ethernet12",
+      "front_panel_index": 4,
+      "power_priority": "low"
+    },
+    {
+      "interface": "Ethernet16",
+      "front_panel_index": 5,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet20",
+      "front_panel_index": 6,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet24",
+      "front_panel_index": 7,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet28",
+      "front_panel_index": 8,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet32",
+      "front_panel_index": 9,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet36",
+      "front_panel_index": 10,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet40",
+      "front_panel_index": 11,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet44",
+      "front_panel_index": 12,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet48",
+      "front_panel_index": 13,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet52",
+      "front_panel_index": 14,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet56",
+      "front_panel_index": 15,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet60",
+      "front_panel_index": 16,
+      "power_priority": "high"
+    }
+  ]
+},
+{
+  "hw_info": "mcu2",
+  "pse_list": [
+    {
+      "pse_index": 2
+    },
+    {
+      "pse_index": 3
+    }
+  ],
+  "port_mapping_list": [
+    {
+      "interface": "Ethernet64",
+      "front_panel_index": 17,
+      "power_priority": "crit"
+    },
+    {
+      "interface": "Ethernet68",
+      "front_panel_index": 18,
+      "power_priority": "crit"
+    },
+    {
+      "interface": "Ethernet72",
+      "front_panel_index": 19,
+      "power_priority": "low"
+    },
+    {
+      "interface": "Ethernet76",
+      "front_panel_index": 20,
+      "power_priority": "low"
+    },
+    {
+      "interface": "Ethernet80",
+      "front_panel_index": 21,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet84",
+      "front_panel_index": 22,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet88",
+      "front_panel_index": 23,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet92",
+      "front_panel_index": 24,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet96",
+      "front_panel_index": 25,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet100",
+      "front_panel_index": 26,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet104",
+      "front_panel_index": 27,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet108",
+      "front_panel_index": 28,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet112",
+      "front_panel_index": 29,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet116",
+      "front_panel_index": 30,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet120",
+      "front_panel_index": 31,
+      "power_priority": "high"
+    },
+    {
+      "interface": "Ethernet124",
+      "front_panel_index": 32,
+      "power_priority": "high"
+    }
+  ]
+},
+{
+  "hw_info": "mcu3",
+  "pse_list": [],
+  "port_mapping_list": []
+}]
