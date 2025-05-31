@@ -32,6 +32,8 @@
 0032-show-ipv6-route-json-displays-seg6local-flavors.patch
 0033-staticd-Install-known-nexthops-upon-connection-with-zebra.patch
 0034-staticd-Fix-an-issue-where-SRv6-SIDs-may-not-be-allocated-on-heavily-loaded-systems.patch
+0035-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
+0036-mgmtd-normalize-argument-order-to-copy-dst-src.patch
 0035-lib-Add-support-for-stream-buffer-to-expand.patch
 0036-zebra-zebra-crash-for-zapi-stream.patch
 0037-bgpd-Replace-per-peer-connection-error-with-per-bgp.patch
