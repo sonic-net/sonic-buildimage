@@ -1,4 +1,6 @@
 import click
+import json
+import re
 from natsort import natsorted
 from tabulate import tabulate
 import show.vlan as show_vlan
@@ -20,6 +22,15 @@ DHCP_RELAY = 'DHCP_RELAY'
 VLAN = "VLAN"
 DHCPV6_SERVERS = "dhcpv6_servers"
 DHCPV4_SERVERS = "dhcp_servers"
+SUPPORTED_DHCPV4_TYPE = [
+    "Unknown", "Discover", "Offer", "Request", "Decline", "Ack", "Nak", "Release", "Inform", "Bootp"
+]
+SUPPORTED_DIR = ["TX", "RX"]
+DHCPV4_COUNTER_TABLE_PREFIX = "DHCPV4_COUNTER_TABLE"
+VLAN_MEMBER_TABLE_PREFIX = "VLAN_MEMBER"
+COUNTERS_DB_SEPRATOR = ":"
+CONFIG_DB_SEPRATOR = "|"
+MGMT_PORT_TABLE = "MGMT_PORT"
 config_db = ConfigDBConnector()
 
 
@@ -165,6 +176,180 @@ def get_dhcp_relay(table_name, entry_name, with_header):
             print(output)
 
 
+def is_vlan_interface_valid(vlan_interface, db):
+    # If not vlan interface specified, treat it as valid
+    if vlan_interface == "":
+        return True
+    if not db.exists(db.COUNTERS_DB, DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface):
+        return False
+    return True
+
+
+def get_vlan_members_from_config_db(db, vlan_interface):
+    vlan_members = {}
+    for key in db.keys(db.CONFIG_DB, VLAN_MEMBER_TABLE_PREFIX + CONFIG_DB_SEPRATOR + vlan_interface + "*"):
+        splits = key.split(CONFIG_DB_SEPRATOR)
+        if not splits[1].endswith(vlan_interface):
+            continue
+        if splits[1] not in vlan_members:
+            vlan_members[splits[1]] = set()
+        vlan_members[splits[1]].add(splits[2])
+    return vlan_members
+
+
+def get_count_from_db(db, key, dir, type):
+    count_str = db.get(db.COUNTERS_DB, key, dir)
+    count = 0
+    if count_str is not None:
+        try:
+            count = json.loads(count_str.replace("\'", "\"")).get(type, "0")
+        except json.JSONDecodeError:
+            pass
+    return count
+
+
+def append_vlan_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary):
+    key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface
+    data[summary].append(vlan_interface)
+    data["Intf Type"].append("VLAN")
+    for current_dir in dirs:
+        count = get_count_from_db(db, key, current_dir, current_type)
+        data[current_dir].append(count)
+
+
+def get_interfaces_type(interface_name, mgmt_intfs, vlan_interface, vlan_members):
+    if interface_name in mgmt_intfs:
+        interface_type = "MGMT"
+    elif vlan_interface not in vlan_members:
+        interface_type = "Unknown"
+    elif interface_name in vlan_members[vlan_interface]:
+        interface_type = "Downlink"
+    else:
+        interface_type = "Uplink"
+    return interface_type
+
+
+def append_interfaces_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary, vlan_members,
+                                                mgmt_intfs):
+    key_pattern = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface + COUNTERS_DB_SEPRATOR + "*"
+    keys = sorted(db.keys(db.COUNTERS_DB, key_pattern), key=natural_sort_key)
+    for key in keys:
+        interface_name = key.split(COUNTERS_DB_SEPRATOR)[2]
+        data[summary].append(interface_name)
+        interface_type = get_interfaces_type(interface_name, mgmt_intfs, vlan_interface, vlan_members)
+        data["Intf Type"].append(interface_type)
+        for current_dir in dirs:
+            count = get_count_from_db(db, key, current_dir, current_type)
+            data[current_dir].append(count)
+
+
+def generate_output_with_type_specified(db, vlan_members, types, dirs, vlan_interface, mgmt_intfs):
+    # If type specified, then there would be only 1 type
+    current_type = types[0]
+    summary = "{} ({})".format(vlan_interface, current_type)
+
+    # Data need to be printed
+    data = {
+        summary: [],
+        "Intf Type": []
+    }
+    for dir in dirs:
+        data.setdefault(dir, [])
+
+    # Get Vlan interface count
+    append_vlan_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary)
+    # Get physical interfaces count
+    append_interfaces_count_with_type_specified(data, db, dirs, vlan_interface, current_type, summary,
+                                                vlan_members, mgmt_intfs)
+    return tabulate(data, tablefmt="pretty", stralign="left", headers="keys") + "\n"
+
+
+def append_vlan_count_without_type_specified(data, db, dir, vlan_interface, types, summary):
+    key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface
+    data[summary].append(vlan_interface)
+    data["Intf Type"].append("VLAN")
+    for current_type in types:
+        count = get_count_from_db(db, key, dir, current_type)
+        data[current_type].append(count)
+
+
+def natural_sort_key(string):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', string)]
+
+
+def append_interfaces_count_without_type_specified(data, db, dir, vlan_interface, types, summary, vlan_members,
+                                                   mgmt_intfs):
+    key_pattern = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface + COUNTERS_DB_SEPRATOR + "*"
+    keys = sorted(db.keys(db.COUNTERS_DB, key_pattern), key=natural_sort_key)
+    for key in keys:
+        interface_name = key.split(COUNTERS_DB_SEPRATOR)[2]
+        data[summary].append(interface_name)
+        interface_type = get_interfaces_type(interface_name, mgmt_intfs, vlan_interface, vlan_members)
+        data["Intf Type"].append(interface_type)
+        for current_type in types:
+            count = get_count_from_db(db, key, dir, current_type)
+            data[current_type].append(count)
+
+
+def generate_output_without_type_specified(db, vlan_members, types, dir, vlan_interface, mgmt_intfs):
+    summary = "{} ({})".format(vlan_interface, dir)
+    data = {
+        summary: [],
+        "Intf Type": []
+    }
+    for type in types:
+        data.setdefault(type, [])
+
+    # Get vlan interface count
+    append_vlan_count_without_type_specified(data, db, dir, vlan_interface, types, summary)
+    # Get physical interfaces count
+    append_interfaces_count_without_type_specified(data, db, dir, vlan_interface, types, summary, vlan_members,
+                                                   mgmt_intfs)
+    return tabulate(data, tablefmt="pretty", stralign="left", headers="keys") + "\n"
+
+
+def get_mgmt_intfs_from_config_db(db):
+    mgmt_intfs = [
+        key.split(CONFIG_DB_SEPRATOR)[1] for key in db.keys(db.CONFIG_DB, MGMT_PORT_TABLE + CONFIG_DB_SEPRATOR + "*")
+        if len(key.split(CONFIG_DB_SEPRATOR)) > 1
+    ]
+    return mgmt_intfs
+
+
+def get_vlans_from_counters_db(vlan_interface, db):
+    # Get vlan set from COUNTERS_DB
+    counters_key = DHCPV4_COUNTER_TABLE_PREFIX + COUNTERS_DB_SEPRATOR + vlan_interface + "*"
+    vlans = set()
+    for key in db.keys(db.COUNTERS_DB, counters_key):
+        splits = key.split(COUNTERS_DB_SEPRATOR)
+        if vlan_interface == "" or vlan_interface == splits[1]:
+            vlans.add(splits[1])
+    return vlans
+
+
+def print_dhcpv4_relay_counter_data(vlan_interface, dirs, types, db):
+    # Get vlan set from COUNTERS_DB
+    vlans = get_vlans_from_counters_db(vlan_interface, db)
+
+    # Get vlan members
+    vlan_members = get_vlan_members_from_config_db(db, vlan_interface)
+
+    # Get mgmt interfaces
+    mgmt_intfs = get_mgmt_intfs_from_config_db(db)
+
+    # If user specify type
+    if len(types) == 1:
+        for vlan in vlans:
+            output = generate_output_with_type_specified(db, vlan_members, types, dirs, vlan, mgmt_intfs)
+            print(output)
+    # type not specified
+    else:
+        for vlan in vlans:
+            for dir in dirs:
+                output = generate_output_without_type_specified(db, vlan_members, types, dir, vlan, mgmt_intfs)
+                print(output)
+
+
 @dhcp_relay_helper.command('ipv6')
 def get_dhcpv6_helper_address():
     """Parse through DHCP_RELAY table for each interface in config_db.json and print dhcpv6 helpers in table format"""
@@ -174,12 +359,12 @@ def get_dhcpv6_helper_address():
 def get_data(table_data, vlan):
     vlan_data = table_data.get(vlan, {})
     helpers_data = vlan_data.get('dhcpv6_servers')
-    addr = {vlan:[]}
+    addr = {vlan: []}
     output = ''
     if helpers_data is not None:
         for ip in helpers_data:
             addr[vlan].append(ip)
-        output = tabulate({'Interface':[vlan], vlan:addr.get(vlan)}, tablefmt='simple', stralign='right') + '\n'
+        output = tabulate({'Interface': [vlan], vlan: addr.get(vlan)}, tablefmt='simple', stralign='right') + '\n'
     return output
 
 
@@ -213,6 +398,20 @@ def dhcp_relay_ipv6_destination():
 @click.option('-i', '--interface', required=False)
 def dhcp_relay_ip6counters(interface):
     ipv6_counters(interface)
+
+
+@dhcp_relay_ipv4.command("counters")
+@clicommon.pass_db
+@click.argument("vlan_interface", required=False, default="")
+@click.option('--dir', type=click.Choice(SUPPORTED_DIR), required=False)
+@click.option('--type', type=click.Choice(SUPPORTED_DHCPV4_TYPE), required=False)
+def dhcp_relay_ip4counters(db, vlan_interface, dir, type):
+    if not is_vlan_interface_valid(vlan_interface, db.db):
+        click.echo("Vlan interface {} doesn't have any count data".format(vlan_interface))
+        return
+    dirs = [dir] if dir else SUPPORTED_DIR
+    types = [type] if type else SUPPORTED_DHCPV4_TYPE
+    print_dhcpv4_relay_counter_data(vlan_interface, dirs, types, db.db)
 
 
 def register(cli):
