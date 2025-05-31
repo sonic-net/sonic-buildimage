@@ -1,3 +1,6 @@
 SYSTEMD_SONIC_GENERATOR = systemd-sonic-generator_1.0.0_$(CONFIGURED_ARCH).deb
 $(SYSTEMD_SONIC_GENERATOR)_SRC_PATH = $(SRC_PATH)/systemd-sonic-generator
 SONIC_DPKG_DEBS += $(SYSTEMD_SONIC_GENERATOR)
+
+SYSTEMD_SONIC_GENERATOR_DBG = systemd-sonic-generator-dbgsym_1.0.0_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(SYSTEMD_SONIC_GENERATOR),$(SYSTEMD_SONIC_GENERATOR_DBG)))
