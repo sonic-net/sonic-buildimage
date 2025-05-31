@@ -635,7 +635,7 @@ class PddfParse():
                     real_name = attr['attr_name']
 
                 dsysfs_path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                    "/%d-00%02x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
                                   int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
                     "/%s" % real_name
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -694,7 +694,7 @@ class PddfParse():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -738,7 +738,7 @@ class PddfParse():
                         real_dev = dev
 
                     dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                        "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                        "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                       int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                         "/%s" % real_name
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -760,7 +760,7 @@ class PddfParse():
         for attr in attr_list:
             if attr_name == attr['attr_name'] or attr_name == 'all':
                 path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%x/" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                    "/%d-00%02x/" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
                                    int(dev['i2c']['topo_info']['dev_addr'], 0))
                 if 'drv_attr_name' in attr.keys():
                     real_name = attr['drv_attr_name']
@@ -827,7 +827,7 @@ class PddfParse():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
