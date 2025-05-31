@@ -30,6 +30,7 @@
 #include <linux/dmi.h>
 #include <linux/kobject.h>
 #include "pddf_client_defs.h"
+#include "pddf_multifpgapci_defs.h"
 #include "pddf_xcvr_defs.h"
 
 static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
@@ -43,6 +44,7 @@ XCVR_DATA xcvr_data = {0};
 PDDF_DATA_ATTR(dev_idx, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&xcvr_data.idx, NULL);
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&xcvr_data.xcvr_attr.aname, NULL);
+PDDF_DATA_ATTR(attr_bdf, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&xcvr_data.xcvr_attr.bdf, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&xcvr_data.xcvr_attr.devtype, NULL);
 PDDF_DATA_ATTR(attr_devname, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&xcvr_data.xcvr_attr.devname, NULL);
 PDDF_DATA_ATTR(attr_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&xcvr_data.xcvr_attr.devaddr, NULL);
@@ -58,6 +60,7 @@ static struct attribute *xcvr_attributes[] = {
     &attr_dev_idx.dev_attr.attr,
 
     &attr_attr_name.dev_attr.attr,
+    &attr_attr_bdf.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
     &attr_attr_devname.dev_attr.attr,
     &attr_attr_devaddr.dev_attr.attr,
@@ -109,6 +112,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             XCVR_PDATA *xcvr_platform_data;
             
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             /* Allocate the xcvr_platform_data */
             xcvr_platform_data = (XCVR_PDATA *)kzalloc(sizeof(XCVR_PDATA), GFP_KERNEL);
             xcvr_platform_data->xcvr_attrs = (XCVR_ATTR *)kzalloc(num*sizeof(XCVR_ATTR), GFP_KERNEL);
@@ -119,7 +126,27 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 
             for (i=0;i<num;i++)
             {
-                xcvr_platform_data->xcvr_attrs[i] = pdata->xcvr_attrs[i];
+                XCVR_ATTR *data = &xcvr_platform_data->xcvr_attrs[i];
+                XCVR_SYSFS_DATA *sysfs_data = &pdata->xcvr_attrs[i];
+                strscpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
+                strscpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
+                strscpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
+                if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
+                    data->fpga_pci_dev =
+                        pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));
+                    if (!data->fpga_pci_dev) {
+                        pddf_dbg(LED,
+                            KERN_ERR
+                            "PDDF_LED ERROR %s cannot find FPGA with bdf: %s\n",
+                            __func__, sysfs_data->bdf);
+                        return -EINVAL;
+                    }
+                    data->devaddr = sysfs_data->devaddr;
+                    data->offset = sysfs_data->offset;
+                    data->mask = sysfs_data->mask;
+                    data->cmpval = sysfs_data->cmpval;
+                    data->len = sysfs_data->len;
+                }
             }
 
             board_info = (struct i2c_board_info) {
@@ -145,6 +172,10 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
 
             adapter = i2c_get_adapter(cdata->parent_bus);
+            if (!adapter) {
+                printk(KERN_ERR "PDDF_ERROR: %s: Failed to get i2c adapter for bus %d\n", __FUNCTION__, cdata->parent_bus);
+                goto clear_data;
+            }
             board_info = (struct i2c_board_info) {
                 .platform_data = (void *)NULL,
             };
@@ -177,6 +208,18 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         if (client_ptr)
         {
             pddf_dbg(XCVR, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
+            if (client_ptr->dev.platform_data) {
+                XCVR_PDATA *pdata = client_ptr->dev.platform_data;
+                if (pdata) {
+                    int i;
+                    for (i = 0; i < pdata->len; i++)
+                    {
+                        XCVR_ATTR *data = &pdata->xcvr_attrs[i];
+                        if(strcmp(data->devtype, "multifpgapci") == 0)
+                            pci_dev_put(data->fpga_pci_dev);
+                    }
+                }
+            }
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
         }
