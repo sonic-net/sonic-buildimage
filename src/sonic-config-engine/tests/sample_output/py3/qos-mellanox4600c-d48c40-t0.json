@@ -287,6 +287,9 @@
         }
     },
     "PORT_QOS_MAP": {
+        "global": {
+            "dscp_to_tc_map"  : "AZURE"
+        },
 
         "Ethernet2": {
 

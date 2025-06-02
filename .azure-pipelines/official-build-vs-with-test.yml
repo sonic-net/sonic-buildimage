@@ -1,0 +1,168 @@
+# This pipeline generates daily, successful virtual SONiC images, primarily for PR testing in non-build repositories.
+
+name: $(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)
+
+# trigger this pipeline automatically by schedule.
+schedules:
+  - cron: "0 8 * * *" # At 08:00, every day UTC
+    displayName: "Daily Build and Test SONiC virtual images"
+    branches:
+      include:
+        - master
+        - 202305
+        - 202311
+        - 202405
+        - 202411
+        - 202505
+
+# trigger this pipeline automatically on any branch push.
+trigger:
+  branches:
+    include:
+      - master
+      - 202305
+      - 202311
+      - 202405
+      - 202411
+      - 202505
+
+pr: none
+
+resources:
+  repositories:
+    - repository: sonic-mgmt
+      type: github
+      name: sonic-net/sonic-mgmt
+      ref: master
+      endpoint: sonic-net
+    - repository: buildimage
+      type: github
+      name: sonic-net/sonic-buildimage
+      endpoint: sonic-net
+      ref: master
+
+variables:
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+  - template: .azure-pipelines/template-variables.yml@buildimage
+  - name: CACHE_MODE
+    value: rcache
+  - name: ENABLE_FIPS
+    value: y
+  - name: BUILD_BRANCH
+    value: $(Build.SourceBranchName)
+
+stages:
+  - stage: BuildVS
+    pool: sonicbld-1es
+    jobs:
+      - template: azure-pipelines-build.yml
+        parameters:
+          buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+          jobGroups:
+            - name: vs
+
+  - stage: Test
+    dependsOn: BuildVS
+    condition: and(succeeded(), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'))
+    variables:
+      - group: SONiC-Elastictest
+
+    jobs:
+      - job: t0_elastictest
+        pool: sonic-ubuntu-1c
+        displayName: "kvmtest-t0 by Elastictest"
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: t0
+              MIN_WORKER: $(T0_INSTANCE_NUM)
+              MAX_WORKER: $(T0_INSTANCE_NUM)
+              MGMT_BRANCH: $(BUILD_BRANCH)
+
+      - job: t0_2vlans_elastictest
+        pool: sonic-ubuntu-1c
+        displayName: "kvmtest-t0-2vlans by Elastictest"
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: t0
+              TEST_SET: t0-2vlans
+              MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
+              MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
+              MGMT_BRANCH: $(BUILD_BRANCH)
+              DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
+
+      - job: t1_lag_elastictest
+        pool: sonic-ubuntu-1c
+        displayName: "kvmtest-t1-lag by Elastictest"
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: t1-lag
+              MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
+              MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
+              MGMT_BRANCH: $(BUILD_BRANCH)
+
+      - job: multi_asic_elastictest
+        displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
+        pool: sonic-ubuntu-1c
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: t1-8-lag
+              TEST_SET: multi-asic-t1-lag
+              MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+              MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+              NUM_ASIC: 4
+              MGMT_BRANCH: $(BUILD_BRANCH)
+
+      - job: dualtor_elastictest
+        pool: sonic-ubuntu-1c
+        displayName: "kvmtest-dualtor-t0 by Elastictest"
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: dualtor
+              MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+              MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+              MGMT_BRANCH: $(BUILD_BRANCH)
+              COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+
+      - job: sonic_t0_elastictest
+        displayName: "kvmtest-t0-sonic by Elastictest"
+        pool: sonic-ubuntu-1c
+        timeoutInMinutes: 240
+        continueOnError: false
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: t0-64-32
+              MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+              MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+              TEST_SET: t0-sonic
+              MGMT_BRANCH: $(BUILD_BRANCH)
+              COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
+              VM_TYPE: vsonic
+
+      - job: dpu_elastictest
+        displayName: "kvmtest-dpu by Elastictest"
+        timeoutInMinutes: 240
+        continueOnError: false
+        pool: sonic-ubuntu-1c
+        steps:
+          - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+            parameters:
+              TOPOLOGY: dpu
+              MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+              MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+              MGMT_BRANCH: $(BUILD_BRANCH)

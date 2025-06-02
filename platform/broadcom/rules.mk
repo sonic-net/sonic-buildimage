@@ -1,5 +1,6 @@
 include $(PLATFORM_PATH)/sai-modules.mk
 include $(PLATFORM_PATH)/sai.mk
+include $(PLATFORM_PATH)/sswsyncd.mk
 # TODO: re-enable once the following have been updated for bookworm:
 # * Nokia
 # * Juniper
@@ -38,6 +39,7 @@ include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.mk
 ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.mk
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.mk
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-milleniob.mk
 endif
 
 BCMCMD = bcmcmd

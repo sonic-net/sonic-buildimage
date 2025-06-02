@@ -1,7 +1,7 @@
 {
     "PORT_MEDIA_SETTINGS": {
         "0": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -17,6 +17,32 @@
                 "post1": {
                     "lane0": "0xfffffff4",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -29,7 +55,7 @@
             }
         },
         "1": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -45,6 +71,32 @@
                 "post1": {
                     "lane0": "0xfffffff4",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -57,7 +109,7 @@
             }
         },
         "2": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -73,6 +125,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x0000008c"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -85,7 +163,7 @@
             }
         },
         "3": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -101,6 +179,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -113,7 +217,7 @@
             }
         },
         "4": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -138,10 +242,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "5": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -166,10 +296,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "6": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -194,10 +350,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "7": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -222,10 +404,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "8": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -250,10 +458,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "9": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -278,10 +512,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "10": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -306,10 +566,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "11": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -334,10 +620,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "12": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -362,10 +674,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "13": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -390,10 +728,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "14": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -418,10 +782,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "15": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -446,10 +836,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "16": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -474,10 +890,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "17": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -502,10 +944,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "18": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -530,10 +998,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "19": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -549,6 +1043,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -561,7 +1081,7 @@
             }
         },
         "20": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -577,6 +1097,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -589,7 +1135,7 @@
             }
         },
         "21": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -605,6 +1151,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -617,7 +1189,7 @@
             }
         },
         "22": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -633,6 +1205,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -645,7 +1243,7 @@
             }
         },
         "23": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -670,10 +1268,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "24": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -698,10 +1322,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "25": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -726,10 +1376,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "26": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -745,6 +1421,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -757,7 +1459,7 @@
             }
         },
         "27": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -773,6 +1475,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -785,7 +1513,7 @@
             }
         },
         "28": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -801,6 +1529,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -813,7 +1567,7 @@
             }
         },
         "29": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -829,6 +1583,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -841,7 +1621,7 @@
             }
         },
         "30": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -857,6 +1637,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -869,7 +1675,7 @@
             }
         },
         "31": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -885,6 +1691,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -897,7 +1729,7 @@
             }
         },
         "32": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -913,6 +1745,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -925,7 +1783,7 @@
             }
         },
         "33": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -950,10 +1808,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "34": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -978,10 +1862,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "35": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -997,6 +1907,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -1009,7 +1945,7 @@
             }
         },
         "36": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -1034,10 +1970,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "37": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1062,10 +2024,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "38": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -1090,10 +2078,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "39": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -1118,10 +2132,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "40": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -1146,10 +2186,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "41": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1165,6 +2231,32 @@
                 "post1": {
                     "lane0": "0xfffffffc",
                     "lane1": "0xfffffffc"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",
@@ -1177,7 +2269,7 @@
             }
         },
         "42": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1202,10 +2294,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "43": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1230,10 +2348,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "44": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
@@ -1258,10 +2402,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "45": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1286,10 +2456,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "46": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1314,10 +2510,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "47": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000006"
@@ -1342,10 +2564,36 @@
                     "lane0": "0x00000000",
                     "lane1": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000088"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000"
+                }
             }
         },
         "48": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1406,10 +2654,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000004",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000006",
+                    "lane5": "0x00000006",
+                    "lane6": "0x00000006",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe4",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe4",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000084",
+                    "lane5": "0x00000088",
+                    "lane6": "0x00000088",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0x00000000",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0x00000000",
+                    "lane5": "0xfffffffc",
+                    "lane6": "0x00000000",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "49": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1470,10 +2780,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000006",
+                    "lane1": "0x00000006",
+                    "lane2": "0x00000006",
+                    "lane3": "0x00000006",
+                    "lane4": "0x00000006",
+                    "lane5": "0x00000006",
+                    "lane6": "0x00000006",
+                    "lane7": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe0",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x00000080",
+                    "lane1": "0x00000080",
+                    "lane2": "0x00000080",
+                    "lane3": "0x00000080",
+                    "lane4": "0x00000080",
+                    "lane5": "0x00000080",
+                    "lane6": "0x00000080",
+                    "lane7": "0x00000080"
+                },
+                "post1": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "50": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1534,10 +2906,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000006",
+                    "lane2": "0x00000006",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000006",
+                    "lane5": "0x00000006",
+                    "lane6": "0x00000006",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe0",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000080",
+                    "lane2": "0x00000080",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000080",
+                    "lane5": "0x00000080",
+                    "lane6": "0x00000080",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffffc",
+                    "lane2": "0x00000000",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0xfffffffc",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "51": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1598,10 +3032,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000006",
+                    "lane1": "0x00000006",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000006",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe0",
+                    "lane1": "0xffffffe0",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000080",
+                    "lane1": "0x00000080",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000080",
+                    "lane5": "0x00000084",
+                    "lane6": "0x00000084",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffffc",
+                    "lane1": "0xfffffffc",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffffc",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "52": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1662,10 +3158,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000084",
+                    "lane5": "0x00000084",
+                    "lane6": "0x00000084",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "53": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1726,10 +3284,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000006",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe0",
+                    "lane5": "0xffffffe8",
+                    "lane6": "0xffffffe8",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000080",
+                    "lane5": "0x00000084",
+                    "lane6": "0x00000084",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0x00000000",
+                    "lane5": "0xfffffff4",
+                    "lane6": "0xfffffff4",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "54": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1790,10 +3410,72 @@
                     "lane6": "0x00000000",
                     "lane7": "0x00000000"
                 }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000006",
+                    "lane6": "0x00000006",
+                    "lane7": "0x00000000"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe8"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000084",
+                    "lane5": "0x00000080",
+                    "lane6": "0x00000080",
+                    "lane7": "0x00000084"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
             }
         },
         "55": {
-            "Default": {
+            "OPTICAL50": {
                 "pre2": {
                     "lane0": "0x00000000",
                     "lane1": "0x00000000",
@@ -1833,6 +3515,68 @@
                     "lane5": "0xffffffec",
                     "lane6": "0xfffffff4",
                     "lane7": "0xfffffff4"
+                },
+                "post2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                },
+                "post3": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
+                }
+            },
+            "COPPER50": {
+                "pre2": {
+                    "lane0": "0x00000000",
+                    "lane1": "0x00000000",
+                    "lane2": "0x00000000",
+                    "lane3": "0x00000000",
+                    "lane4": "0x00000000",
+                    "lane5": "0x00000006",
+                    "lane6": "0x00000006",
+                    "lane7": "0x00000006"
+                },
+                "pre1": {
+                    "lane0": "0xffffffe8",
+                    "lane1": "0xffffffe8",
+                    "lane2": "0xffffffe8",
+                    "lane3": "0xffffffe8",
+                    "lane4": "0xffffffe8",
+                    "lane5": "0xffffffe0",
+                    "lane6": "0xffffffe0",
+                    "lane7": "0xffffffe0"
+                },
+                "main": {
+                    "lane0": "0x00000084",
+                    "lane1": "0x00000084",
+                    "lane2": "0x00000084",
+                    "lane3": "0x00000084",
+                    "lane4": "0x00000084",
+                    "lane5": "0x00000080",
+                    "lane6": "0x00000080",
+                    "lane7": "0x00000080"
+                },
+                "post1": {
+                    "lane0": "0xfffffff4",
+                    "lane1": "0xfffffff4",
+                    "lane2": "0xfffffff4",
+                    "lane3": "0xfffffff4",
+                    "lane4": "0xfffffff4",
+                    "lane5": "0x00000000",
+                    "lane6": "0x00000000",
+                    "lane7": "0x00000000"
                 },
                 "post2": {
                     "lane0": "0x00000000",

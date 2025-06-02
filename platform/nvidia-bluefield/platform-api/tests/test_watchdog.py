@@ -58,14 +58,14 @@ class TestWatchdog:
         test_wd = Watchdog()
         assert test_wd.arm(0) == WD_COMMON_ERROR
         assert test_wd.arm(-1) == WD_COMMON_ERROR
-        assert test_wd.arm(40000) == WD_COMMON_ERROR
+        assert test_wd.arm(4096) == WD_COMMON_ERROR
         # If watchdog is already armed we do not re-arm it
         mock_exec_cmd.return_value = 'standard'
         mock_is_armed_for_time.return_value = True
-        assert test_wd.arm(180)
+        assert test_wd.arm(180) == 180
         mock_exec_cmd.assert_not_called()
         mock_is_armed_for_time.return_value = False
-        assert test_wd.arm(180)
+        assert test_wd.arm(180) == 180
         mock_exec_cmd.assert_called_once_with(['mlxbf-bootctl',
                                                '--watchdog-boot-mode',
                                                'standard',

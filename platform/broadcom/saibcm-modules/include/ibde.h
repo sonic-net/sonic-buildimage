@@ -104,7 +104,9 @@ typedef struct ibde_s {
 #define BDE_256K_REG_SPACE    0x20000000          /* Map 256K (v 64K) */
 #define BDE_128K_REG_SPACE    0x40000000          /* Map 128K (v 64K) */
 #define BDE_320K_REG_SPACE    0x80000000          /* Map 256K+64K */
-
+#ifdef INCLUDE_SRAM_DMA
+#define BDE_TEST_DEVICES 1
+#endif
 
 /* Bus supports only 16bit reads */
 #define BDE_DEV_BUS_RD_16BIT  SAL_DEV_BUS_RD_16BIT 

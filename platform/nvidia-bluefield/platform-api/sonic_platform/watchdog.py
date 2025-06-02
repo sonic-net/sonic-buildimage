@@ -19,9 +19,6 @@
 try:
     from sonic_platform_base.watchdog_base import WatchdogBase
     from sonic_py_common.syslogger import SysLogger
-    import time
-    from . import utils
-    import os
     import subprocess
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -36,7 +33,6 @@ class Watchdog(WatchdogBase):
 
     def __init__(self):
         self.MLXBF_DRIVER = "mlxbf-bootctl"
-        self.TIMESTAMP_FILE = '/tmp/nvidia/watchdog_timestamp'
 
     def exec_cmd(self, cmd, raise_exception=True):
         """Execute commands related to watchdog api"""
@@ -88,8 +84,6 @@ class Watchdog(WatchdogBase):
                 return seconds
             self.exec_cmd(arm_command)
             arm_time = seconds
-            os.makedirs('/tmp/nvidia', exist_ok=True)
-            utils.write_file(self.TIMESTAMP_FILE, str(time.monotonic()))
         except Exception as err:
             # On an error return code check_output raises exception, return Fault
             logger.log_error(f"Could not arm watchdog :{err}")
@@ -146,7 +140,5 @@ class Watchdog(WatchdogBase):
         """
         timeleft = WD_COMMON_ERROR
         if self.is_armed():
-            arm_timestamp = utils.read_float_from_file(self.TIMESTAMP_FILE, raise_exception=True)
-            _, conf_time = self.get_conf_time_and_mode()
-            timeleft = int(conf_time - (time.monotonic() - arm_timestamp))
+            _, timeleft = self.get_conf_time_and_mode()
         return timeleft

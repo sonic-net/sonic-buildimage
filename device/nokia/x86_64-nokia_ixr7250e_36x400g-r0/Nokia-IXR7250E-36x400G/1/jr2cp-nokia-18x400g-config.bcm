@@ -2104,3 +2104,5 @@ trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
 sai_disable_srcmacqedstmac_ctrl=1
 sai_instru_stat_accum_enable=1
+appl_param_active_links_thr_low=1
+appl_param_active_links_thr_high=112

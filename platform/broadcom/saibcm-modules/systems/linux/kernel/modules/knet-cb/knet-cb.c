@@ -108,7 +108,7 @@ static void strip_vlan_tag(struct sk_buff *skb);
 static int  get_tag_status(int dcb_type, void *meta);
 static struct sk_buff *strip_tag_rx_cb(struct sk_buff *skb, int dev_no, void *meta);
 static struct sk_buff *strip_tag_tx_cb(struct sk_buff *skb, int dev_no, void *meta);
-static int  strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
+int strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                                 int chan, kcom_filter_t * kf);
 static int  _pprint(struct seq_file *m);
 static int  _cleanup(void);
@@ -323,7 +323,7 @@ strip_tag_tx_cb(struct sk_buff *skb, int dev_no, void *meta)
 }
 
 /* Filter callback not used */
-static int
+int
 strip_tag_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                     int chan, kcom_filter_t *kf)
 {
