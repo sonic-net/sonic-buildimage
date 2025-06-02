@@ -288,7 +288,6 @@ RUN mkdir /var/run/sshd \
 COPY supervisord.conf /etc/supervisor/
 COPY conf.d/ /etc/supervisor/conf.d/
 COPY ptf_tgen.sh /ptf_tgen/
-COPY path-override.sh /etc/profile.d/
 
 {% if PTF_ENV_PY_VER == "mixed" %}
 # Move tcpdump into /usr/bin Otherwise it's impossible to run tcpdump due to a docker bug
