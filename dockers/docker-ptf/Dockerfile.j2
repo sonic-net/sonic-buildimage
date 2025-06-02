@@ -254,11 +254,21 @@ RUN pip3 install Flask \
     && pip3 install python-libpcap \
     && pip3 install enum34 \
     && pip3 install grpcio \
-    && pip3 install protobuf \
     && pip3 install six==1.16.0 \
     && pip3 install itsdangerous \
     && pip3 install retrying \
     && pip3 install jinja2
+
+# gnxi/gnmi_cli_py requires protobuf 3.20.x or lower
+# Bookworm by default use 5.29.x. Resetting it to 3.20.3
+# to avoid issues with gnmi tests.
+RUN set -e; \
+    . /etc/os-release; \
+    if [ "$VERSION_CODENAME" = "bookworm" ]; then \
+        pip install protobuf==3.20.3; \
+    else \
+        pip install protobuf; \
+    fi
 
 {% if docker_ptf_whls.strip() -%}
 # Copy locally-built Python wheel dependencies
