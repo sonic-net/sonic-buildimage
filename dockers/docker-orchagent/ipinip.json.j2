@@ -4,7 +4,7 @@
 
 {# Check if the ASIC is Broadcom #}
 {% set is_broadcom = false %}
-{% if ASIC_VENDOR is defined and ASIC_VENDOR|lower == "broadcom" %}
+{% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
   {% set is_broadcom = true %}
 {% endif %}
 {% if not is_broadcom and asic_type is defined and "broadcom" in asic_type|lower %}
