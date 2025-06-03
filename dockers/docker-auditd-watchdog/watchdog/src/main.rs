@@ -187,13 +187,13 @@ fn main() {
                 // Build a JSON object
                 let json_body = format!(
                     r#"{{
-  "auditd_conf":"{}",
-  "syslog_conf":"{}",
-  "auditd_rules":"{}",
-  "auditd_service":"{}",
-  "auditd_active":"{}",
-  "auditd_reload":"{}",
-  "rate_limit":"{}"
+  "auditd_conf":{},
+  "syslog_conf":{},
+  "auditd_rules":{},
+  "auditd_service":{},
+  "auditd_active":{},
+  "auditd_reload":{},
+  "rate_limit":{}
 }}"#,
                     conf_result,
                     syslog_result,
