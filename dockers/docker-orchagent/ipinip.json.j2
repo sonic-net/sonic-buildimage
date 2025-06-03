@@ -4,14 +4,14 @@
 
 {# Check if the ASIC is Broadcom #}
 {% set is_broadcom = false %}
-{% if asic_type is defined and "broadcom" in asic_type|lower %}
+{% if ASIC_VENDOR is defined and ASIC_VENDOR|lower == "broadcom" %}
   {% set is_broadcom = true %}
 {% endif %}
-{% if not is_broadcom and DEVICE_METADATA.localhost.hwsku is defined %}
-  {% set hwsku_lower = DEVICE_METADATA.localhost.hwsku|lower %}
-  {% if "arista" in hwsku_lower or "nexus" in hwsku_lower or "force" in hwsku_lower or "celestica" in hwsku_lower or "dell" in hwsku_lower or "nokia" in hwsku_lower %}
-    {% set is_broadcom = true %}
-  {% endif %}
+{% if not is_broadcom and asic_type is defined and "broadcom" in asic_type|lower %}
+  {% set is_broadcom = true %}
+{% endif %}
+{% if not is_broadcom and SONIC_ASIC_PLATFORM is defined and "broadcom" in SONIC_ASIC_PLATFORM|lower %}
+  {% set is_broadcom = true %}
 {% endif %}
 
 {% set ipv4_addresses = [] %}
@@ -72,6 +72,7 @@
 {%- set ipv4_addresses = [] %}
 {%- set ipv6_addresses = [] %}
 {% endif %}
+
 [
 {% if ipv4_loopback_addresses %}
 {% if subnet_decap.enable %}
