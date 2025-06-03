@@ -14,6 +14,7 @@ OPTIONS:
   -s, --submodule       ; test submodule patch function
       --rpc-dnx         ; build dnx syncd rpc image only
       --rpc-xgs         ; build xgs syncd rpc image only
+      --rpc-mrvl        ; build mrvl (arm64) syncd rpc image only
       --features        ; apply features function
 "
   exit $1
@@ -28,7 +29,7 @@ OPTIONS:
 TEMP=`
 getopt \
 -o hcs \
--l help,configure,rpc-dnx,rpc-xgs,submodule,features \
+-l help,configure,rpc-dnx,rpc-xgs,rpc-mrvl,submodule,features \
 --name="$prog" \
 -- "$@" \
 `
@@ -43,6 +44,7 @@ opt_submodule_test=0
 opt_features=0
 opt_rpc_dnx=0
 opt_rpc_xgs=0
+opt_rpc_mrvl=0
 debug=echo
 
 while true; do
@@ -52,6 +54,7 @@ while true; do
     -s | --submodule_add)  opt_submodule_test=1; shift ;;
          --rpc-dnx )       opt_rpc_dnx=1; shift ;;
          --rpc-xgs )       opt_rpc_xgs=1; shift ;;
+         --rpc-mrvl )      opt_rpc_mrvl=1; shift ;;
          --features)       opt_features=1; shift ;;
     --        )        shift;  break ;;
     *         )        break ;;
@@ -198,6 +201,11 @@ build_rpc_xgs () {
   make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
 }
 
+build_rpc_mrvl () {
+  submodule_prs
+  make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/docker-syncd-mrvl-prestera-rpc.gz
+}
+
 if [ $opt_submodule_test -eq 1 ]; then
   echo "Test submodule_prs"
   submodule_prs
@@ -217,6 +225,11 @@ fi
 
 if [ $opt_rpc_xgs -eq 1 ]; then
   build_rpc_xgs
+  exit $?
+fi
+
+if [ $opt_rpc_mrvl -eq 1 ]; then
+  build_rpc_mrvl
   exit $?
 fi
 

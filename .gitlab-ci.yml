@@ -160,7 +160,7 @@ build:sonic:features:aarch64:
   after_script:
     - mv target/sonic-marvell-prestera-arm64.bin target/sonic-marvell-arm64-features.bin
 
-.build:brcm-rpc:
+.build:rpc:
   stage: build
   only:
     - branches
@@ -185,8 +185,8 @@ build:sonic:features:aarch64:
       - target/${TARGET_BIN}
     expire_in: 1 week
 
-build:brcm-rpc:x86_64:
-  extends: .build:brcm-rpc
+build:brcm-rpc:
+  extends: .build:rpc
   needs:
     - configure:sonic:x86_64
   variables:
@@ -194,14 +194,23 @@ build:brcm-rpc:x86_64:
     TARGET_BIN: docker-syncd-brcm-rpc.gz
     TARGET_SAI: xgs
 
-build:brcm-rpc-dnx:x86_64:
-  extends: .build:brcm-rpc
+build:brcm-dnx-rpc:
+  extends: .build:rpc
   needs:
     - configure:sonic:x86_64
   variables:
     BUILD_ARCH: x86_64
     TARGET_BIN: docker-syncd-brcm-dnx-rpc.gz
     TARGET_SAI: dnx
+
+build:mrvl-rpc:
+  extends: .build:rpc
+  needs:
+    - configure:sonic:aarch64
+  variables:
+    BUILD_ARCH: aarch64
+    TARGET_BIN: docker-syncd-mrvl-rpc.gz
+    TARGET_SAI: mrvl
 
 express:chassis7:
   stage: test
@@ -558,15 +567,20 @@ regress:t2:chassis20:
       rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
       find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
 
-post:brcm-rpc:x86_64:
+post:brcm-rpc:
   extends: .post
   needs:
-    - build:brcm-rpc:x86_64
+    - build:brcm-rpc
 
-post:brcm-rpc-dnx:x86_64:
+post:brcm-dnx-rpc:
   extends: .post
   needs:
-    - build:brcm-rpc-dnx:x86_64
+    - build:brcm-dnx-rpc
+
+post:mrvl-rpc:
+  extends: .post
+  needs:
+    - build:mrvl-rpc
 
 post:sonic-gbsyncd:x86_64:
   extends: .post
