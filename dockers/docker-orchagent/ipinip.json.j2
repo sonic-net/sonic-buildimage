@@ -1,6 +1,19 @@
 {% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
 []
 {% else %}
+
+{# Check if the ASIC is Broadcom #}
+{% set is_broadcom = false %}
+{% if asic_type is defined and "broadcom" in asic_type|lower %}
+  {% set is_broadcom = true %}
+{% endif %}
+{% if not is_broadcom and DEVICE_METADATA.localhost.hwsku is defined %}
+  {% set hwsku_lower = DEVICE_METADATA.localhost.hwsku|lower %}
+  {% if "arista" in hwsku_lower or "nexus" in hwsku_lower or "force" in hwsku_lower or "celestica" in hwsku_lower or "dell" in hwsku_lower or "nokia" in hwsku_lower %}
+    {% set is_broadcom = true %}
+  {% endif %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -65,7 +78,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -89,7 +102,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -120,7 +133,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -144,7 +157,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
