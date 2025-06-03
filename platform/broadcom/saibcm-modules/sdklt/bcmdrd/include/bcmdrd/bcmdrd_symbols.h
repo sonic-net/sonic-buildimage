@@ -512,6 +512,19 @@ typedef struct bcmdrd_symbol_s {
 typedef int (*bcmdrd_sym_mem_cmp_f)(void *ent_a, void *ent_b);
 
 /*!
+ * Memory clear-on-read control structure.
+ */
+typedef struct bcmdrd_sym_mem_corctrl_s {
+
+    /*! Memory clear-on-read control register. */
+    bcmdrd_sid_t sid;
+
+    /*! Memory clear-on-read control field. */
+    bcmdrd_fid_t fid;
+
+} bcmdrd_sym_mem_corctrl_t;
+
+/*!
  * Memory profile structure.
  */
 typedef struct bcmdrd_sym_mem_profile_s {
@@ -521,6 +534,9 @@ typedef struct bcmdrd_sym_mem_profile_s {
 
     /*! Null entry data array. */
     const void *null_ent;
+
+    /*! Memory clear-on-read control. */
+    bcmdrd_sym_mem_corctrl_t *cor_ctrl;
 
 } bcmdrd_sym_mem_profile_t;
 
@@ -1031,19 +1047,35 @@ bcmdrd_sym_mem_cmp_fun_get(const bcmdrd_symbols_t *symbols,
 /*!
  * \brief Get null entry of a specified memory symbol.
  *
- * The memory null entry is stored in \c profile of \ref bcmdrd_symbol_t.
- * And \ref bcmdrd_sym_mem_profile_t is used for profile structure of
- * memory symbols. The function is mainly to retrieve the null-entry
+ * The memory null entry is stored in the \c profile member of
+ * \ref bcmdrd_symbol_t. This function is used to retrieve the null-entry
  * pre-defined for memory symbols.
  *
  * \param [in] symbols Symbol table structure.
  * \param [in] symbol Symbol structure.
  *
  * \return Memory null entry pointer. NULL on failure or
- *            no null entry is specified.
+ *         no null entry is specified.
  */
 extern const void *
 bcmdrd_sym_mem_null_ent_get(const bcmdrd_symbols_t *symbols,
+                            const bcmdrd_symbol_t *symbol);
+
+/*!
+ * \brief Get the clear-on-read control for a specified memory symbol.
+ *
+ * The memory clear-on-read control is stored in the \c profile member of
+ * \ref bcmdrd_symbol_t. This function is used to retrieve the clear-on-read
+ * control for memory symbols.
+ *
+ * \param [in] symbols Symbol table structure.
+ * \param [in] symbol Symbol structure.
+ *
+ * \return Pointer to the memory clear-on-read control struct. NULL on failure
+ *         or the control is not availabe.
+ */
+extern const bcmdrd_sym_mem_corctrl_t *
+bcmdrd_sym_mem_cor_ctrl_get(const bcmdrd_symbols_t *symbols,
                             const bcmdrd_symbol_t *symbol);
 
 /*!
