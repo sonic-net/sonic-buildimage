@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dd=$(date "+%y%m%d%H%M%S")
+dd=$(date -u "+%y%m%d%H%M%S")
 i2cset -y 0 0x68 0x03 0x${dd:10:2}
 i2cset -y 0 0x68 0x04 0x${dd:8:2}
 i2cset -y 0 0x68 0x05 0x${dd:6:2}

@@ -1,7 +1,5 @@
-ARG BASE=p4lang/behavioral-model@sha256:ce45720e28a96a50f275c1b511cd84c2558b62f2cf7a7e506765183bc3fb2e32
-## ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-
-FROM $BASE AS base
+FROM p4lang/behavioral-model@sha256:ce45720e28a96a50f275c1b511cd84c2558b62f2cf7a7e506765183bc3fb2e32
+## FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,10 +15,9 @@ COPY ["start.sh", "/usr/bin/"]
 ## COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 ## COPY ["critical_processes", "/etc/supervisor/"]
 
-FROM $BASE
-
-## RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
-COPY --from=base / /
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]
 ENTRYPOINT ["/usr/bin/start.sh"]

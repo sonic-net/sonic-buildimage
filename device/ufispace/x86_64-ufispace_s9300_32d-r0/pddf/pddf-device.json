@@ -185,7 +185,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_ENV",
                         "field_pos": "18"
-                    }               
+                    }
                 ]
             }
         }
@@ -407,6 +407,14 @@
                 {
                     "chn": "4",
                     "dev": "GPIO2"
+                },
+                {
+                    "chn": "1",
+                    "dev": "PSU1"
+                },
+                {
+                    "chn": "1",
+                    "dev": "PSU2"
                 }
             ]
         }
@@ -1060,34 +1068,20 @@
         "dev_info": {
             "device_type": "PSU",
             "device_name": "PSU1",
-            "device_parent": "SMBUS0"
+            "device_parent": "MUX1"
         },
         "dev_attr": {
             "dev_idx": "1",
             "num_psu_fans": "1"
         },
         "i2c": {
-            "interface": []
+            "interface": [
+                { "itf":"eeprom", "dev":"PSU1-EEPROM" }
+            ]
         },
         "bmc": {
             "ipmitool": {
                 "attr_list": [
-                    {
-                        "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU0_PRSNT_L",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU0_PWROK_H",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
                     {
                         "attr_name": "psu_v_out",
                         "bmc_cmd": "ipmitool sdr -c get PSU0_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
@@ -1175,38 +1169,59 @@
             }
         }
     },
+    "PSU1-EEPROM": {
+        "dev_info": {
+            "device_type": "PSU-EEPROM",
+            "device_name": "PSU1-EEPROM",
+            "device_parent": "MUX1",
+            "virt_parent": "PSU1"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x2",
+                "dev_addr": "0x5a",
+                "dev_type": "psu_eeprom"
+            },
+            "attr_list": [
+                {
+                    "attr_name":"psu_present",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x4",
+                    "attr_cmpval":"0x0",
+                    "attr_len":"1"
+                },
+                {
+                    "attr_name":"psu_power_good",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x1",
+                    "attr_cmpval":"0x1",
+                    "attr_len":"1"
+                }
+            ]
+        }
+    },
     "PSU2": {
         "dev_info": {
             "device_type": "PSU",
             "device_name": "PSU2",
-            "device_parent": "SMBUS0"
+            "device_parent": "MUX1"
         },
         "dev_attr": {
             "dev_idx": "2",
             "num_psu_fans": "1"
         },
         "i2c": {
-            "interface": []
+            "interface": [
+                { "itf":"eeprom", "dev":"PSU2-EEPROM" }
+            ]
         },
         "bmc": {
             "ipmitool": {
                 "attr_list": [
-                    {
-                        "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU1_PRSNT_L",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU1_PWROK_H",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
                     {
                         "attr_name": "psu_v_out",
                         "bmc_cmd": "ipmitool sdr -c get PSU1_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
@@ -1292,6 +1307,41 @@
                     }
                 ]
             }
+        }
+    },
+    "PSU2-EEPROM": {
+        "dev_info": {
+            "device_type": "PSU-EEPROM",
+            "device_name": "PSU2-EEPROM",
+            "device_parent": "MUX1",
+            "virt_parent": "PSU2"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x2",
+                "dev_addr": "0x5b",
+                "dev_type": "psu_eeprom"
+            },
+            "attr_list": [
+                {
+                    "attr_name":"psu_present",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x8",
+                    "attr_cmpval":"0x0",
+                    "attr_len":"1"
+                },
+                {
+                    "attr_name":"psu_power_good",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x2",
+                    "attr_cmpval":"0x2",
+                    "attr_len":"1"
+                }
+            ]
         }
     },
     "FAN-CTRL": {
@@ -1722,7 +1772,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT1": {
         "dev_info": {
             "device_type": "QSFP-DD",

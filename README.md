@@ -13,6 +13,20 @@
 
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
 
+*202505 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202505&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202505)
+[![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=202505&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=202505)
+[![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=202505&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=202505)
+[![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=202505&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=202505)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202505&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202505)
+[![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=202505&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202505)
+[![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=202505&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202505)
+[![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=202505&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=202505)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202505&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202505)
+[![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=202505&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=202505)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202505&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202505)
+
 *202405 builds*:
 
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202405&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202405)

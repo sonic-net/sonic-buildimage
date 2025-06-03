@@ -42,6 +42,9 @@
 /*! CELL Error status bitmap. */
 #define BCMPKT_RXMETA_ST_CELL_ERROR     (0x1 << 18)
 
+/*! RXPMD FID field supported check. */
+#define BCMPKT_RXPMD_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
+
 /*! \brief Packet reasons bitmap.
  * Set of "reasons" (\ref BCMPKT_RX_REASON_XXX) why a packet came to the CPU.
  */

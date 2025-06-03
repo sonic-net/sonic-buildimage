@@ -214,14 +214,23 @@ class PddfParse():
 
         return create_ret.append(ret)
 
-    def create_temp_sensor_device(self, dev, ops):
+    def create_non_pddf_i2c_device(self, dev, ops):
+        # Create i2c devices for which a PDDF specific driver is not needed
         create_ret = []
         ret = 0
-        # NO PDDF driver for temp_sensors device
         cmd = "echo %s 0x%x > /sys/bus/i2c/devices/i2c-%d/new_device" % (dev['i2c']['topo_info']['dev_type'],
                 int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
         ret = self.runcmd(cmd)
         return create_ret.append(ret)
+
+    def create_temp_sensor_device(self, dev, ops):
+        return self.create_non_pddf_i2c_device(dev, ops)
+
+    def create_dpm_device(self, dev, ops):
+        return self.create_non_pddf_i2c_device(dev, ops)
+
+    def create_dcdc_device(self, dev, ops):
+        return self.create_non_pddf_i2c_device(dev, ops)
 
     def create_cpld_device(self, dev, ops):
         create_ret = []
@@ -534,11 +543,20 @@ class PddfParse():
             cmd = "echo 'delete' > /sys/kernel/pddf/devices/cpldmux/dev_ops"
             self.runcmd(cmd)
 
-    def delete_temp_sensor_device(self, dev, ops):
-        # NO PDDF driver for temp_sensors device
+    def delete_non_pddf_i2c_device(self, dev, ops):
+        # Delete i2c devices for which a PDDF specific driver is not needed
         cmd = "echo 0x%x > /sys/bus/i2c/devices/i2c-%d/delete_device" % (
                 int(dev['i2c']['topo_info']['dev_addr'], 0), int(dev['i2c']['topo_info']['parent_bus'], 0))
         self.runcmd(cmd)
+
+    def delete_temp_sensor_device(self, dev, ops):
+        return self.delete_non_pddf_i2c_device(dev, ops)
+
+    def delete_dpm_device(self, dev, ops):
+        return self.delete_non_pddf_i2c_device(dev, ops)
+
+    def delete_dcdc_device(self, dev, ops):
+        return self.delete_non_pddf_i2c_device(dev, ops)
 
     def delete_fan_device(self, dev, ops):
         if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['FAN']:
@@ -1402,6 +1420,28 @@ class PddfParse():
 
         return ret
 
+    def dpm_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_dpm_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_dpm_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
+    def dcdc_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_dcdc_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_dcdc_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
     def cpld_parse(self, dev, ops):
         ret = []
         ret = getattr(self, ops['cmd']+"_cpld_device")(dev, ops)
@@ -1678,6 +1718,12 @@ class PddfParse():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
+
+        if attr['device_type'] == 'DCDC':
+            return self.dcdc_parse(dev, ops)
+
+        if attr['device_type'] == 'DPM':
+            return self.dpm_parse(dev, ops)
 
     def is_supported_sysled_state(self, sysled_name, sysled_state):
         if not sysled_name in self.data.keys():

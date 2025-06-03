@@ -65,12 +65,13 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
+{% if "broadcom" in asic_type %}
             "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -88,12 +89,13 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
+{% if "broadcom" in asic_type %}
             "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -118,12 +120,13 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
+{% if "broadcom" in asic_type %}
             "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
@@ -141,12 +144,13 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
+{% if "broadcom" in asic_type %}
             "dscp_mode":"uniform",
-{% if "mlnx" in DEVICE_METADATA.localhost.platform %}
-            "ecn_mode":"standard",
 {% else %}
-            "ecn_mode":"copy_from_outer",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
+            "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
         "OP": "SET"
