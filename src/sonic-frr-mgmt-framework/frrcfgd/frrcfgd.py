@@ -2161,6 +2161,10 @@ class BGPConfigDaemon:
             self.config_mode = db_entry['docker_routing_config_mode']
         else:
             self.config_mode = "separated"
+        if 'frr_mgmt_framework_cfg_template_restore' in db_entry:
+            self.mgmt_framework_cfg_template_restore = db_entry['frr_mgmt_framework_cfg_template_restore']
+        else:
+            self.mgmt_framework_cfg_template_restore = 'true'
         # VRF ==> local_as
         self.bgp_asn = {}
         # VRF ==> confederation peer list
@@ -2334,7 +2338,7 @@ class BGPConfigDaemon:
         syslog.syslog(syslog.LOG_DEBUG, 'Init Cached DB data')
         for key, entry in self.table_data_cache.items():
             syslog.syslog(syslog.LOG_DEBUG, '  %-20s : %s' % (key, entry))
-        if self.config_mode == "unified":
+        if self.config_mode == "unified" and self.mgmt_framework_cfg_template_restore == 'false':
             for table, _ in self.table_handler_list:
                 table_list = self.config_db.get_table(table)
                 for key, data in table_list.items():
