@@ -256,6 +256,11 @@
 #define BCM78905_DEVICE_ID                0xf905
 #define BCM78905_REV_A0                     0x01
 
+/* BCM78907 */
+#define BCM78907_VENDOR_ID                0x14e4
+#define BCM78907_DEVICE_ID                0xf907
+#define BCM78907_REV_A0                     0x01
+
 /*
  * End of Supported Devices and Revisions
  */
@@ -848,6 +853,14 @@ BCMDRD_DEVLIST_ENTRY(BCM78905, BCM78905_VENDOR_ID, BCM78905_DEVICE_ID, BCM78905_
                      0, 0, \
                      bcm78905_a0, bcm78905_a0, bcm78905_a0, \
                      "Tomahawk5+", "BCM78905", \
+                     "51.2 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78907_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78907, BCM78907_VENDOR_ID, BCM78907_DEVICE_ID, BCM78907_REV_A0, \
+                     0, 0, \
+                     bcm78907_a0, bcm78907_a0, bcm78907_a0, \
+                     "Tomahawk5-512", "BCM78907", \
                      "51.2 Tbps Multilayer Switch", 0, 0)
 #endif
 
