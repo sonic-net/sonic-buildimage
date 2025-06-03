@@ -122,7 +122,9 @@ class ThermalUpdater:
             presence = sfp.get_presence()
             pre_presence = self._sfp_status.get(sfp.sdk_index)
             if presence:
-                temperature, warning_thresh, critical_thresh = sfp.get_temperature_info()
+                sw_control, temperature, warning_thresh, critical_thresh = sfp.get_temperature_info()
+                if not sw_control:
+                    return
                 fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
                 temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
                 warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
