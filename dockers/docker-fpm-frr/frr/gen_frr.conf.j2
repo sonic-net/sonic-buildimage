@@ -1,5 +1,7 @@
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
     {% include "/usr/local/sonic/frrcfgd/frr.conf.j2" %}
 {% else %}
-    {% include "/usr/share/sonic/templates/frr.conf.j2" %}
+    {% include "/usr/share/sonic/templates/zebra/zebra.conf.j2" %}
+    {% include "/usr/share/sonic/templates/staticd/staticd.conf.j2" %}
+    {% include "/usr/share/sonic/templates/bgpd/bgpd.conf.j2" %}
 {% endif %}
