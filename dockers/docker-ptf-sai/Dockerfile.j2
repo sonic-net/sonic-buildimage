@@ -36,6 +36,10 @@ COPY \
 debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
+RUN dpkg -i \
+{% for deb in docker_ptf_sai_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
 {% endif %}
 {% else %}
 COPY \
@@ -43,12 +47,11 @@ COPY \
 debs/{{ deb }}{{' '}}
 {%- endfor -%} 
 debs/
-{% endif %}
-
 RUN dpkg -i \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
+{% endif %}
 
 # Remove old ptf package
 RUN dpkg -r python-ptf
