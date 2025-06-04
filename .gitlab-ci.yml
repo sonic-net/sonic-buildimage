@@ -565,7 +565,7 @@ regress:t2:chassis20:
     # make latest link and remove anything older than a week
     cd /var/www/html/${PLUTO_BRANCH_DIR} && \
       rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
-      find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
+      find . -maxdepth 1 -type d -ctime +21 -exec rm -fr {} \+
 
 post:brcm-rpc:
   extends: .post
