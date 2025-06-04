@@ -15,3 +15,20 @@
 
 {# Set traffic_classification_enable to false for Moose platform #}
 {%- set traffic_classification_enable = false %}
+
+{#
+The calculation formula for wred_threshold_limit is as follows:
+egress_lossless_pool total size / 12 / 1024
+Where:
+- egress_lossless_pool total size = 136209408 bytes
+- 12 represents the number of queues
+- 1024 is used to convert the unit from bytes to KB
+
+The result is 11084 (rounded down).
+
+So, wred_threshold_limit = 136209408 / 12 / 1024 = 11084 (KB per queue)
+
+The final total value is:
+11084 (KB) * 12 (queues) * 1024 = 136200192 bytes
+#}
+{% set wred_threshold_limit = 136200192 %}

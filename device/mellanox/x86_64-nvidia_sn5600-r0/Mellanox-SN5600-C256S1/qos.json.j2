@@ -198,6 +198,7 @@
 {%- macro generate_wred_profiles() %}
     {# Default threshold values for both ToR and Leaf routers #}
     {%- set min_threshold = "166912" %}
+    {%- set disable_wred = traffic_config.wred_threshold_limit %}
 
     {%- if 'type' in DEVICE_METADATA['localhost'] %}
         {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
@@ -260,12 +261,12 @@
             "wred_yellow_enable": "true",
             "wred_red_enable": "true",
             "ecn": "ecn_all",
-            "green_max_threshold": "{{ max_threshold }}",
-            "green_min_threshold": "{{ min_threshold }}",
-            "yellow_max_threshold": "{{ max_threshold }}",
-            "yellow_min_threshold": "{{ min_threshold }}",
-            "red_max_threshold": "{{ max_threshold }}",
-            "red_min_threshold": "{{ min_threshold }}",
+            "green_max_threshold": "{{ disable_wred }}",
+            "green_min_threshold": "{{ disable_wred }}",
+            "yellow_max_threshold": "{{ disable_wred }}",
+            "yellow_min_threshold": "{{ disable_wred }}",
+            "red_max_threshold": "{{ disable_wred }}",
+            "red_min_threshold": "{{ disable_wred }}",
             "green_drop_probability": "5",
             "yellow_drop_probability": "5",
             "red_drop_probability": "5"
@@ -275,12 +276,12 @@
             "wred_yellow_enable": "true",
             "wred_red_enable": "true",
             "ecn": "ecn_all",
-            "green_max_threshold": "{{ max_threshold }}",
-            "green_min_threshold": "{{ min_threshold }}",
-            "yellow_max_threshold": "{{ max_threshold }}",
-            "yellow_min_threshold": "{{ min_threshold }}",
-            "red_max_threshold": "{{ max_threshold }}",
-            "red_min_threshold": "{{ min_threshold }}",
+            "green_max_threshold": "{{ disable_wred }}",
+            "green_min_threshold": "{{ disable_wred }}",
+            "yellow_max_threshold": "{{ disable_wred }}",
+            "yellow_min_threshold": "{{ disable_wred }}",
+            "red_max_threshold": "{{ disable_wred }}",
+            "red_min_threshold": "{{ disable_wred }}",
             "green_drop_probability": "5",
             "yellow_drop_probability": "5",
             "red_drop_probability": "5"
@@ -335,12 +336,12 @@
             "wred_yellow_enable": "true",
             "wred_red_enable": "true",
             "ecn": "ecn_all",
-            "green_max_threshold": "{{ max_threshold }}",
-            "green_min_threshold": "{{ min_threshold }}",
-            "yellow_max_threshold": "{{ max_threshold }}",
-            "yellow_min_threshold": "{{ min_threshold }}",
-            "red_max_threshold": "{{ max_threshold }}",
-            "red_min_threshold": "{{ min_threshold }}",
+            "green_max_threshold": "{{ disable_wred }}",
+            "green_min_threshold": "{{ disable_wred }}",
+            "yellow_max_threshold": "{{ disable_wred }}",
+            "yellow_min_threshold": "{{ disable_wred }}",
+            "red_max_threshold": "{{ disable_wred }}",
+            "red_min_threshold": "{{ disable_wred }}",
             "green_drop_probability": "5",
             "yellow_drop_probability": "5",
             "red_drop_probability": "5"
@@ -350,12 +351,12 @@
             "wred_yellow_enable": "true",
             "wred_red_enable": "true",
             "ecn": "ecn_all",
-            "green_max_threshold": "{{ max_threshold }}",
-            "green_min_threshold": "{{ min_threshold }}",
-            "yellow_max_threshold": "{{ max_threshold }}",
-            "yellow_min_threshold": "{{ min_threshold }}",
-            "red_max_threshold": "{{ max_threshold }}",
-            "red_min_threshold": "{{ min_threshold }}",
+            "green_max_threshold": "{{ disable_wred }}",
+            "green_min_threshold": "{{ disable_wred }}",
+            "yellow_max_threshold": "{{ disable_wred }}",
+            "yellow_min_threshold": "{{ disable_wred }}",
+            "red_max_threshold": "{{ disable_wred }}",
+            "red_min_threshold": "{{ disable_wred }}",
             "green_drop_probability": "5",
             "yellow_drop_probability": "5",
             "red_drop_probability": "5"
