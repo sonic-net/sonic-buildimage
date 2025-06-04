@@ -13,7 +13,7 @@
     limitations under the License.
 #}
 
-{%- include 'trimming.j2' %}
+{% import 'traffic_classification.j2' as traffic_config %}
 
 {%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
@@ -383,7 +383,7 @@
             "5": "5",
             "6": "6",
             "7": "7"
-{%- if switch_trimming_enable %}
+{%- if traffic_config.traffic_classification_enable %}
             ,
             "8": "4"
 {%- endif %}
@@ -392,7 +392,7 @@
 {%- endmacro -%}
 
 {% macro generate_tc_to_dscp_map_per_sku() %}
-{%- if switch_trimming_enable %}
+{%- if traffic_config.traffic_classification_enable %}
     "TC_TO_DSCP_MAP": {
         {% if 'type' in DEVICE_METADATA['localhost'] %}
             {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' -%}
@@ -421,17 +421,21 @@
             "pfc_enable"      : "",
             "pfcwd_sw_enable" : "",
             "tc_to_pg_map"    : "AZURE",
-            "pfc_to_queue_map": "AZURE",
-            "tc_to_dscp_map":
+            "pfc_to_queue_map": "AZURE"
+            {% if traffic_config.traffic_classification_enable %}
+            {% if (direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') or
+                  (direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') or
+                  (DEVICE_METADATA['localhost']['type'] == 'LeafRouter') %}
+            ,"tc_to_dscp_map":
                 {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
                     "AZURE_DOWNLINK_BT0"
                 {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
                     "AZURE_UPLINK_BT0"
                 {% elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
                     "AZURE_DOWNLINK_BT1"
-                {% else %}
-                    ""
                 {% endif %}
+            {% endif %}
+            {% endif %}
         }{% if not loop.last %},{% endif %}
 {%- endfor %}
 {%- endmacro -%}

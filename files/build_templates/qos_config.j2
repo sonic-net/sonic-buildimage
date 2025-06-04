@@ -291,9 +291,6 @@
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
 {% endif %}
-{% if (generate_switch_trimming is defined) and (switch_trimming_enable is defined) and switch_trimming_enable %}
-    {{- generate_switch_trimming() }}
-{% endif %}
 {% if (generate_scheduler_config is defined) %}
     {{- generate_scheduler_config() }}
 {% else %}
@@ -370,8 +367,12 @@
     {{- generate_port_qos_map(port_names_active) }}
 {% elif (generate_port_qos_map_per_sku is defined) %}
     "PORT_QOS_MAP": {
-        {{ generate_port_qos_map_per_sku(port_names_downlink, 'downlink') }}{% if port_names_downlink and port_names_uplink %},{% endif %}
+        {% if port_names_downlink and port_names_downlink.strip() %}
+        {{ generate_port_qos_map_per_sku(port_names_downlink, 'downlink') }}{% if port_names_uplink and port_names_uplink.strip() %},{% endif %}
+        {% endif %}
+        {% if port_names_uplink and port_names_uplink.strip() %}
         {{ generate_port_qos_map_per_sku(port_names_uplink, 'uplink') }}
+        {% endif %}
     },
 {% else %}
     "PORT_QOS_MAP": {
