@@ -13,7 +13,7 @@
     limitations under the License.
 #}
 
-{% import 'traffic_classification.j2' as traffic_config %}
+{% import 'traffic_config.j2' as traffic_config %}
 
 {%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
@@ -423,17 +423,12 @@
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE"
             {% if traffic_config.traffic_classification_enable %}
-            {% if (direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') or
-                  (direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') or
-                  (DEVICE_METADATA['localhost']['type'] == 'LeafRouter') %}
-            ,"tc_to_dscp_map":
-                {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
-                    "AZURE_DOWNLINK_BT0"
-                {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
-                    "AZURE_UPLINK_BT0"
-                {% elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
-                    "AZURE_DOWNLINK_BT1"
-                {% endif %}
+            {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                ,"tc_to_dscp_map": "AZURE_DOWNLINK_BT0"
+            {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                ,"tc_to_dscp_map": "AZURE_UPLINK_BT0"
+            {% elif direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+                ,"tc_to_dscp_map": "AZURE_DOWNLINK_BT1"
             {% endif %}
             {% endif %}
         }{% if not loop.last %},{% endif %}

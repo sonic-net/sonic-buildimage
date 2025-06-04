@@ -16,7 +16,7 @@
     limitations under the License.
 #}
 
-{% import 'traffic_classification.j2' as traffic_config %}
+{% import 'traffic_config.j2' as traffic_config %}
 
 {%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
     "BUFFER_POOL": {
@@ -72,11 +72,6 @@
         {% endif -%}
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
-            "size":"0",
-            "dynamic_th":"7"
-        },
-        "egress_lossless_profile": {
-            "pool":"egress_lossless_pool",
             "size":"0",
             "dynamic_th":"7"
         },
@@ -201,7 +196,7 @@
     "BUFFER_PORT_EGRESS_PROFILE_LIST": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}": {
-            "profile_list" : "egress_lossless_profile,egress_lossy_profile"
+            "profile_list" : "egress_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -210,9 +205,9 @@
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
 {% if dynamic_mode is defined %}
-            "profile_list" : "egress_lossless_profile,egress_lossy_profile"
+            "profile_list" : "egress_lossy_profile"
 {% else %}
-            "profile_list" : "egress_lossless_zero_profile,egress_lossy_zero_profile"
+            "profile_list" : "egress_lossy_zero_profile"
 {% endif %}
         }{% if not loop.last %},{% endif %}
 
