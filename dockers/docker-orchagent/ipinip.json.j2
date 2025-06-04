@@ -7,12 +7,6 @@
 {% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
   {% set is_broadcom = true %}
 {% endif %}
-{% if not is_broadcom and asic_type is defined and "broadcom" in asic_type|lower %}
-  {% set is_broadcom = true %}
-{% endif %}
-{% if not is_broadcom and SONIC_ASIC_PLATFORM is defined and "broadcom" in SONIC_ASIC_PLATFORM|lower %}
-  {% set is_broadcom = true %}
-{% endif %}
 
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
