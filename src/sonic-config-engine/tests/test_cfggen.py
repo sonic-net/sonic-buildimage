@@ -172,6 +172,18 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(utils.to_dict(output.strip()), utils.to_dict(data))
 
+    # TODO: this should be removed when https://github.com/sonic-net/sonic-host-services/pull/252 merges
+    def test_boolean_case_4(self):
+        # Field is stored as a boolean in DB, but the field isn't actually tagged as a boolean in YANG,
+        # And it expects a Pythonic boolean True/False (doesn't allow yang true/false)
+        # See has_global_scope for test.
+        data = '{"FEATURE":{"bgp":{"auto_restart":"enabled","check_up_status":"false","has_global_scope":true,"has_per_asic_scope":"true","delayed":"false","has_global_scope":"False","has_per_asic_scope":"True","delayed":"False","high_mem_alert":"disabled","set_owner":"local","state":"enabled"}}}'
+        expt = '{"FEATURE":{"bgp":{"auto_restart":"enabled","check_up_status":"false","has_global_scope":"True","has_per_asic_scope":"true","delayed":"false","has_global_scope":"False","has_per_asic_scope":"True","delayed":"False","high_mem_alert":"disabled","set_owner":"local","state":"enabled"}}}'
+
+        argument = ['-a', data, '--print-data']
+        output = self.run_script(argument)
+        self.assertEqual(utils.to_dict(output.strip()), utils.to_dict(expt))
+
     def test_var_json_data(self, **kwargs):
         graph_file = kwargs.get('graph_file', self.sample_graph_simple)
         tag_mode = kwargs.get('tag_mode', 'untagged')

@@ -238,7 +238,17 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                 path_tokens.pop()
 
         if isinstance(data, bool):
-            data = 'true' if data else 'false'
+            # TODO: once https://github.com/sonic-net/sonic-host-services/pull/252 merges, this should *always*
+            #       rewrite as lowercase true/false if it is a bool.  But we are currently having to maintain
+            #       compatibility with this weird pythonic True/False if the datatype of the yang model isn't
+            #       BOOL.
+            try:
+                schema_xpath = sy.configdb_path_to_xpath(sy.configdb_path_join(path_tokens), schema_xpath = True)
+                datatype = sy.get_data_type(schema_xpath)
+                if datatype == "BOOL":
+                    data = 'true' if data else 'false'
+            except:
+                pass
 
         # If we have a string that we know looks like true/false, but differs by
         # Case, look up from the yang schema to see if we should convert into
