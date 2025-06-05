@@ -361,6 +361,12 @@ For details refer to [SONiC Buildimage Guide](https://github.com/sonic-net/sonic
 Please refer to [SONiC roadmap](https://github.com/sonic-net/SONiC/wiki/Sonic-Roadmap-Planning)
 on the SAI version for each SONiC release.
 
+## SONIC-DASH
+This repository is used to deliver functionality to SONIC-DASH SmartSwitches.
+More information on: https://github.com/sonic-net/dash
+PhyNet side coordination: Prince Sunny (prsunny@microsoft.com), Guohan Lu (gulv@microsoft.com)
+SDN side coordination: Michal Zygmunt (mzygmunt@microsoft.com), Neeraj Motwani (neerajmo@microsoft.com)
+
 ## Notes
 
 * If you are running make for the first time, a sonic-slave-${USER} docker image
