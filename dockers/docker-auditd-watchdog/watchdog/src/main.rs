@@ -176,24 +176,24 @@ fn main() {
                     println!("Received request: {}", req_str);
                 }
 
-                let conf_result      = check_auditd_conf();
-                let syslog_result    = check_syslog_conf();
-                let rules_result     = check_auditd_rules();
-                let srvc_result      = check_auditd_service();
-                let srvc_active      = check_auditd_active();
-                let reload_result    = check_auditd_reload_status();
-                let rate_limit_result = check_auditd_rate_limit_status();
+                let conf_result      = serde_json::to_string(&check_auditd_conf()).unwrap();
+                let syslog_result    = serde_json::to_string(&check_syslog_conf()).unwrap();
+                let rules_result     = serde_json::to_string(&check_auditd_rules()).unwrap();
+                let srvc_result      = serde_json::to_string(&check_auditd_service()).unwrap();
+                let srvc_active      = serde_json::to_string(&check_auditd_active()).unwrap();
+                let reload_result    = serde_json::to_string(&check_auditd_reload_status()).unwrap();
+                let rate_limit_result = serde_json::to_string(&check_auditd_rate_limit_status()).unwrap();
 
                 // Build a JSON object
                 let json_body = format!(
                     r#"{{
-  "auditd_conf":"{}",
-  "syslog_conf":"{}",
-  "auditd_rules":"{}",
-  "auditd_service":"{}",
-  "auditd_active":"{}",
-  "auditd_reload":"{}",
-  "rate_limit":"{}"
+  "auditd_conf":{},
+  "syslog_conf":{},
+  "auditd_rules":{},
+  "auditd_service":{},
+  "auditd_active":{},
+  "auditd_reload":{},
+  "rate_limit":{}
 }}"#,
                     conf_result,
                     syslog_result,

@@ -1,6 +1,13 @@
 {% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
 []
 {% else %}
+
+{# Check if the ASIC is Broadcom #}
+{% set is_broadcom = false %}
+{% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
+  {% set is_broadcom = true %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -59,13 +66,14 @@
 {%- set ipv4_addresses = [] %}
 {%- set ipv6_addresses = [] %}
 {% endif %}
+
 [
 {% if ipv4_loopback_addresses %}
 {% if subnet_decap.enable %}
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -89,7 +97,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -120,7 +128,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -144,7 +152,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if "broadcom" in asic_type %}
+{% if is_broadcom %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
