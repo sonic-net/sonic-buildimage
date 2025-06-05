@@ -64,11 +64,12 @@
 {%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_QOS_BYPASS) | list %}
 {%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
 
+{# Generate uplink and downlink port lists based on router type and neighbors #}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
-    {%- if 'type' in DEVICE_METADATA['localhost'] %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] and DEVICE_NEIGHBOR is defined %}
         {%- set local_router_type = DEVICE_METADATA['localhost']['type'] %}
         {%- for port in PORT_ACTIVE %}
-            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
                 {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
                 {%- if local_router_type == 'LeafRouter' %}
                     {%- if neighbor_info.type == 'ToRRouter' %}
@@ -366,7 +367,7 @@
 {% endif %}
 {% if (generate_port_qos_map is defined) %}
     {{- generate_port_qos_map(port_names_active) }}
-{% elif (generate_port_qos_map_per_sku is defined) %}
+{% elif (generate_port_qos_map_per_sku is defined) and (PORT_DOWNLINK|length > 0 or PORT_UPLINK|length > 0) %}
     "PORT_QOS_MAP": {
         {% if port_names_downlink and port_names_downlink.strip() %}
         {{ generate_port_qos_map_per_sku(port_names_downlink, 'downlink') }}{% if port_names_uplink and port_names_uplink.strip() %},{% endif %}
@@ -496,7 +497,7 @@
         }{% if not loop.last %},{% endif %}
 {% endfor %}
     }
-{% elif generate_direction_based_queue_per_sku is defined %}
+{% elif generate_direction_based_queue_per_sku is defined and (PORT_DOWNLINK|length > 0 or PORT_UPLINK|length > 0) %}
     "QUEUE": {
 {% for port in PORT_DOWNLINK %}
     {{ generate_direction_based_queue_per_sku(port, 'downlink') }}
