@@ -1,8 +1,6 @@
-Index: pam_radius/src/pam_radius_auth.c
-===================================================================
-diff -ur pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
---- pam_radius.orig/src/pam_radius_auth.c	2025-05-13 02:53:01.577393426 +0000
-+++ pam_radius/src/pam_radius_auth.c	2025-05-13 02:51:36.185965522 +0000
+diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
+--- pam_radius.orig/src/pam_radius_auth.c	2025-06-05 01:52:13.000000000 +0000
++++ pam_radius/src/pam_radius_auth.c	2025-06-05 02:18:11.832123766 +0000
 @@ -65,6 +65,7 @@
  	memset(conf, 0, sizeof(radius_conf_t)); /* ensure it's initialized */
  
@@ -20,16 +18,28 @@ diff -ur pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
  		} else if (!strncmp(*argv, "statistics=", 11)) {
  			/* Verify filename doesn't contain '/'.
  			 */
-@@ -978,7 +981,7 @@
- 	 *	vector, and always add a Message-Authenticator
- 	 *	attribute.
- 	 */
--	if (request->code == PW_AUTHENTICATION_REQUEST) {
-+	if (request->code == PW_AUTHENTICATION_REQUEST && !conf->dont_send_message_authenticator) {
+@@ -982,13 +985,14 @@
                uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
  
  	      get_random_vector(request->vector);
-@@ -1137,7 +1140,7 @@
++              if (!conf->dont_send_message_authenticator) {
++                    attr[0] = PW_MESSAGE_AUTHENTICATOR;
++                    attr[1] = 18;
++                    memset(attr + 2, 0, AUTH_VECTOR_LEN);
++	            conf->message_authenticator = attr + 2;
+ 
+-              attr[0] = PW_MESSAGE_AUTHENTICATOR;
+-              attr[1] = 18;
+-              memset(attr + 2, 0, AUTH_VECTOR_LEN);
+-	      conf->message_authenticator = attr + 2;
+-
+-              request->length = htons(AUTH_HDR_LEN + 18);
++                    request->length = htons(AUTH_HDR_LEN + 18);
++	      }
+ 	} else {
+ 		request->length = htons(AUTH_HDR_LEN);
+ 		conf->message_authenticator = NULL;
+@@ -1137,7 +1141,7 @@
  		}
  
  
@@ -38,11 +48,9 @@ diff -ur pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
  			hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
  				 (const uint8_t *) server->secret, strlen(server->secret));
  
-Index: pam_radius/src/pam_radius_auth.h
-===================================================================
-diff -ur pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
---- pam_radius.orig/src/pam_radius_auth.h	2025-05-13 02:53:01.577393426 +0000
-+++ pam_radius/src/pam_radius_auth.h	2025-05-12 07:33:39.000000000 +0000
+diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
+--- pam_radius.orig/src/pam_radius_auth.h	2025-06-05 01:52:13.000000000 +0000
++++ pam_radius/src/pam_radius_auth.h	2025-06-05 01:57:44.960953592 +0000
 @@ -178,6 +178,7 @@
  	CONST char *trace;        /* Packet Trace File */
  	CONST char *statistics;   /* Statistics File   */
@@ -50,4 +58,4 @@ diff -ur pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
 +	int dont_send_message_authenticator;
  	uint8_t *message_authenticator;
  } radius_conf_t;
-
+ 
