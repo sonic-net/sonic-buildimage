@@ -85,6 +85,8 @@
 {%             include path_template % "v4.tor.ai.backend" %}
 {%         elif neighbor_type == 'ToRRouter' %}
 {%             include path_template % "v4.tor.backend" %}
+{%         elif resource_type is defined and (resource_type == 'SmartSWCisco' or resource_type == 'SmartSWMNX') %}
+{%             include path_template % "v4.smartswitch.azs" %}
 {%         else %}
 {%             include path_template % "v4.tor" %}
 {%         endif %}
@@ -179,6 +181,8 @@
 {%             include path_template % "v6.tor.ai.backend" %}
 {%         elif neighbor_type == 'ToRRouter' and is_compute_ai == 'true' %}
 {%             include path_template % "v6.tor.backend" %}
+{%         elif resource_type is defined and (resource_type == 'SmartSWCisco' or resource_type == 'SmartSWMNX') %}
+{%             include path_template % "v6.smartswitch.azs" %}
 {%         else %}
 {%             include path_template % "v6.tor" %}
 {%         endif %}

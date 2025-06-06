@@ -1,0 +1,24 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "resource_type": "SmartSWCisco"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "LeafRouter"
+        }
+    },
+    "CONFIG_DB__LOOPBACK_INTERFACE": {
+        "Loopback0|55.55.55.55/32": {},
+        "Loopback6|66.66.66.66/32": {}
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device",
+        "keepalive": "60",
+        "holdtime": "180"
+    },
+    "neighbor_addr": "11.11.11.11"
+}
