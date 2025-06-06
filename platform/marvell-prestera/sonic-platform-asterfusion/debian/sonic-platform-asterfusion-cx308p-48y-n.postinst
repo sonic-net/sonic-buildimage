@@ -1,0 +1,5 @@
+#!/bin/sh
+
+python3 -m pip install /usr/share/sonic/device/x86_64-asterfusion_cx308p_48y_n-r0/sonic_platform-1.0-py3-none-any.whl
+systemctl enable cx308p-platform-init.service
+systemctl start cx308p-platform-init.service

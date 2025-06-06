@@ -1,0 +1,5 @@
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: '6000'
+  name: 'Ethernet controller [0200]: Marvell Technology Group Ltd. Device'

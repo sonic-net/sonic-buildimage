@@ -1,0 +1,14 @@
+[Unit]
+Description=Asterfusion CX532P-N Platform initialization service
+After=local-fs.target innovium_platform_driver.service
+Before=pmon.service
+
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/asterfusion_cx532p-n_startup start
+ExecStop=/usr/local/bin/asterfusion_cx532p-n_startup stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

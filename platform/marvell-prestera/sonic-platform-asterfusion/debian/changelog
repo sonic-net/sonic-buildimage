@@ -1,0 +1,6 @@
+sonic-asterfusion-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for CX532P-N CX11008-N CX308P-48Y-N series
+
+ -- developer <developer@Asterfusion.com>  Mon, 29 Jul 2019 11:00:00 +0800
+

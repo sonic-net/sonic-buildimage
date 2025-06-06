@@ -1,0 +1,16 @@
+Source: sonic-asterfusion-platform-modules
+Section: main
+Priority: extra
+Maintainer: Asterfusion SONiC Team <Yorke.Yuan@asterfusion.com>
+Build-Depends: debhelper (>= 9), python3
+Standards-Version: 3.9.3
+
+Package: sonic-platform-asterfusion-cx308p-48y-n
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-asterfusion-cx532p-n
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: kernel modules for platform devices such as fan, led, sfp

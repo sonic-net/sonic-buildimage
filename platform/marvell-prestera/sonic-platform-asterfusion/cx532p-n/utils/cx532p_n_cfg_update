@@ -1,0 +1,103 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2021 Asterfusion Network, Inc.
+
+import sys
+import json
+import subprocess
+import re
+import logging
+
+def main():
+
+    # get input parameters:
+    if len(sys.argv)<3:
+        sys.exit(1)
+
+    cfg_file = sys.argv[1]
+    falcon_3T2_32x100_port_file = sys.argv[2]#new falcon_3T2_...
+    falcon_3T2_32x100_port_file_bak = sys.argv[2]+'_bak'#new falcon_3T2_...
+    platform_ini_file = sys.argv[3]#falocon_2T...
+
+    with open(cfg_file) as cfg:
+        old_cfg = json.load(cfg)
+
+    #rewrite falcon_3T2_... and plamform.ini from old_config/config_db
+    port_mac_dict = {}
+    with open(falcon_3T2_32x100_port_file_bak, 'r') as To_C:
+        for line in To_C.readlines():
+            port_num = int(line.split()[1].strip())
+            lane_num = int(line.split()[0].strip())
+            if port_num >= 124:
+                port_mac_dict[str(port_num)] = lane_num
+            if not (port_num % 4) and port_num < 124:
+                port_mac_dict[str(port_num)] = lane_num
+                port_mac_dict[str(port_num + 1)] = lane_num + 1
+                port_mac_dict[str(port_num + 2)] = lane_num + 2
+                port_mac_dict[str(port_num + 3)] = lane_num + 3
+
+    port_profile_list = []
+    for key, value in old_cfg['PORT'].items():
+        if value['speed'] == '100000' or value['speed'] == '40000':
+            port_speed = 1000
+        else:
+            port_speed = 250
+        port_num = int(key[8:])
+        if port_num <= 124:
+            port_profile_list.append([port_mac_dict[str(port_num)], port_num, port_speed])
+        else:
+            port_profile_list.append([port_mac_dict[str(port_num + 3)], port_num + 3, 100])
+    port_profile_list.sort(key= lambda x:x[1])
+
+    with open(falcon_3T2_32x100_port_file, 'w') as To_C:
+        for line in port_profile_list:
+            To_C.write(str(line[0]) + '    ' + str(line[1]) + '   ' + str(line[2]) + '\n')
+    To_C.close()
+
+    with open(platform_ini_file, 'r') as pt:
+        platform_list = []
+        for line in pt.readlines():
+            l = line.split()
+            platform_list.append(l)
+        platform_list = platform_list[1:]
+        for k, v in old_cfg['PORT'].items():
+            k = int(k[8:])
+            if k < 60 and k % 4 == 0:
+                if v['speed'] == '100000':
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k), str(k), str(k), str(k))
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        '100000', '100000', '100000', '100000')
+                if v['speed'] == '25000':
+                    platform_list[k][0], platform_list[k + 1][0], platform_list[k + 2][0], platform_list[k + 3][0] = (
+                        str(k), str(k + 1), str(k + 2), str(k + 3))
+                    platform_list[k][2], platform_list[k + 1][2], platform_list[k + 2][2], platform_list[k + 3][2] = (
+                        '25000', '25000', '25000', '25000')
+            elif k >= 60 and k < 124 and k % 4 == 0:
+                if v['speed'] == '100000':
+                    platform_list[k+4][0], platform_list[k + 5][0], platform_list[k + 6][0], platform_list[k + 7][0] = (
+                        str(k + 4), str(k + 4), str(k + 4), str(k + 4))
+                    platform_list[k+4][2], platform_list[k + 5][2], platform_list[k + 6][2], platform_list[k + 7][2] = (
+                        '100000', '100000', '100000', '100000')
+                if v['speed'] == '25000':
+                    platform_list[k+4][0], platform_list[k + 5][0], platform_list[k + 6][0], platform_list[k + 7][0] = (
+                        str(k + 4), str(k + 5), str(k + 6), str(k + 7))
+                    platform_list[k+4][2], platform_list[k + 5][2], platform_list[k + 6][2], platform_list[k + 7][2] = (
+                        '25000', '25000', '25000', '25000')
+            else:
+                continue
+        with open(platform_ini_file, 'w') as pt_tmp:
+            pt_tmp.write("# Port  lane    speed   DC  BW  HF  LF  sqlch   minLf   maxLf   minHf   maxHf" + '\n')
+            for d in platform_list:
+                st = '    '.join(d)
+                pt_tmp.write('  ' + st + '\n')
+
+    cfg.close()
+    pt.close()
+    pt_tmp.close()
+
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
+

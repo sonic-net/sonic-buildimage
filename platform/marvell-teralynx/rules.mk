@@ -1,4 +1,5 @@
 include $(PLATFORM_PATH)/sai.mk
+include $(PLATFORM_PATH)/platform-modules-asterfusion.mk
 include $(PLATFORM_PATH)/platform-modules-cel.mk
 include $(PLATFORM_PATH)/platform-modules-supermicro.mk
 include $(PLATFORM_PATH)/platform-modules-wistron.mk

@@ -1,0 +1,10 @@
+#!/bin/sh
+NOKEXECFILE=/no-kexec-reboot
+
+/bin/rm -f $NOKEXECFILE
+touch $NOKEXECFILE
+
+#rmmod x86-64-asterfusion-cx308p-48y-n
+#/usr/bin/bmc_get 0x0a 0xa1 0xaa
+/sbin/reboot
+

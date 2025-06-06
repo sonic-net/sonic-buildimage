@@ -1,0 +1,28 @@
+#!/bin/bash
+
+if [ -n "$1" ] && [[ "all" == "$1"* ]]; then
+    sudo python /usr/local/bin/asterfusion_cx732q-n_sensors.py show all
+elif [ -n "$1" ] &&  [[ "fans" == "$1"* ]]; then
+    sudo python /usr/local/bin/asterfusion_cx732q-n_sensors.py show fans
+elif [ -n "$1" ] &&  [[ "power" == "$1"* ]]; then
+    sudo python /usr/local/bin/asterfusion_cx732q-n_sensors.py show power
+elif [ -n "$1" ] &&  [[ "temperature" == "$1"* ]]; then
+    sudo python /usr/local/bin/asterfusion_cx732q-n_sensors.py show temperature
+elif [ -n "$1" ] &&  [[ "voltage" == "$1"* ]]; then
+    sudo python /usr/local/bin/asterfusion_cx732q-n_sensors.py show voltage
+else
+    echo "Usage: show environment [OPTIONS]"
+    echo "Try \"show environment help\" for help."
+    echo "OPTIONS:"
+    echo "  all            Show system environment status"
+    echo "  fans           Show system fan units status"
+    echo "  power          Show system power supply units status"
+    echo "  temperature    Show system thermal sensors status"
+    echo "  voltage        Show system voltage rails status"
+    echo "  help           Show help information"
+    echo ""
+    if [[ "help" != "$1"* ]]; then
+        echo "Error: No such command \"$1\"."
+        exit 1
+    fi
+fi

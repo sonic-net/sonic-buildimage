@@ -1,0 +1,17 @@
+{
+    "chassis": {
+        "FM6256-BNF": {
+            "component": {
+                "CPLD-A": {},
+                "CPLD-B": {},
+                "CPLD-C": {},
+                "CPLD-D": {},
+                "MCU": {},
+                "BIOS": {
+                    "firmware": "/usr/local/share/firmware/bios/bios_bdx-de_v5.11.0.7.bin",
+                    "version": "5.11.0.7"
+                }
+            }
+        }
+    }
+}
