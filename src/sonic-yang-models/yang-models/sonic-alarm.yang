@@ -1,0 +1,142 @@
+  module sonic-alarm {
+
+    namespace "http://github.com/sonic-net/sonic-alarm";
+    prefix salarm;
+    yang-version 1.1;
+
+    import sonic-event {
+        prefix event;
+    }
+
+    // meta
+    organization
+    "SONiC";
+
+    contact
+    "SONiC";
+
+    description
+    "This module defines operational state data for SONiC alarms.";
+
+    revision "2024-01-30" {
+      description
+      "Initial revision.";
+    }
+
+
+    grouping alarm-state {
+
+      leaf id {
+        type string;
+        description "Sequence identifier for an alarm.";
+      }
+
+      leaf resource {
+        type string;
+        description "The item that is under alarm within the device.";
+      }          
+
+      leaf text {
+        type string;
+        description "Dynamic message raised with the alarm.";
+      }
+
+      leaf time-created {
+        type uint64;
+        description
+          "The time at which the alarm was raised by the system.
+          Expressed in nanoseconds since Unix epoch.";
+      }
+
+      leaf type-id {
+        type string;
+        description "Type of the alarm raised";
+      }
+
+      leaf severity {
+        type event:severity-type;
+        description
+        "Severity of a raised condition.";
+      }
+
+      leaf acknowledged {
+        type boolean;
+        description
+        "This denotes whether an alarm is acknowledged by the operator.
+         An acknowledged alarm is not considered in determining the 
+         health of the system.";
+      }
+
+      leaf acknowledge-time {
+        type uint64;
+        description
+         "The time at which alarm is acknowledged by the system.
+          This value is expressed as nanoseconds since the Unix Epoch.";
+      }
+
+    }
+
+    container sonic-alarm {
+
+      container ALARM {
+
+        list ALARM_LIST {
+          key "id";
+          uses alarm-state;
+        }
+      }
+
+      container ALARM_STATS {
+
+
+        list ALARM_STATS_LIST {
+
+          key "id";
+          leaf id {
+            type enumeration {
+              enum state;
+            }
+            description
+            "Table identifier value defined as state.";
+          }
+          
+          leaf alarms {
+            type uint64;
+            description
+            "Total alarms in the system.";
+          }
+
+          leaf critical {
+            type uint64;
+            description
+            "Total critical alarms in the system.";
+          }
+
+          leaf major {
+            type uint64;
+            description
+            "Total major alarms in the system.";
+          }
+
+          leaf minor {
+            type uint64;
+            description
+            "Total minor alarms in the system.";
+          }
+
+          leaf warning {
+            type uint64;
+            description
+            "Total warnings in the system.";
+          }
+
+          leaf acknowledged {
+            type uint64;
+            description
+            "Total acknowledged alarms in the system.";
+          }
+
+        }
+      }
+    }
+}
