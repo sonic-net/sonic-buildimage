@@ -115,10 +115,8 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
         case MULTIFPGAPCI_MUX:
             ret = ptr_multifpgapci_writepci(
                 pdata->fpga_pci_dev,
-                new_val = sdata->cpld_sel,
+                sdata->cpld_sel,
                 sdata->cpld_offset);
-            if (ret)
-                goto ret;
             break;
         default:
             printk(KERN_ERR "%s: Unexpected device type %d\n",
@@ -128,7 +126,6 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
         private->last_chan = chan;
     }
 
-ret:
     if (ret) {
         printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
     }
@@ -169,8 +166,6 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
             pdata->fpga_pci_dev,
             sdata->cpld_desel,
             sdata->cpld_offset);
-        if (ret)
-            goto ret;
         break;
     default:
         printk(KERN_ERR "%s: Unexpected device type %d\n", __FUNCTION__,
@@ -178,7 +173,6 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
         break;
     }
 
-ret:
     if (ret) {
         printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, ret);
     }
