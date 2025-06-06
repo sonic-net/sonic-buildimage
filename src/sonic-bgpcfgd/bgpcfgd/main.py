@@ -5,7 +5,7 @@ import syslog
 import threading
 import traceback
 
-from swsscommon.swsscommon import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector, DBConnector, RestartWaiter
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
@@ -123,8 +123,10 @@ def do_work():
         runner.add_manager(mgr)
     runner.run()
 
-    static_route_managers = [mgr for mgr in managers if mgr.__class__.__name__ == 'StaticRouteMgr']
-    cleanup_static_routes_on_exit(common_objs['cfg_mgr'], static_route_managers)
+    state_db_conn = DBConnector("STATE_DB", 0)
+    if not RestartWaiter.isAdvancedBootInProgress(state_db_conn):
+        static_route_managers = [mgr for mgr in managers if mgr.__class__.__name__ == 'StaticRouteMgr']
+        cleanup_static_routes_on_exit(common_objs['cfg_mgr'], static_route_managers)
 
     thr.join()
 
