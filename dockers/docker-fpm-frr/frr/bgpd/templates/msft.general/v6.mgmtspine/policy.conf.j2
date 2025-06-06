@@ -3,7 +3,7 @@
 !
 ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
 !
-ip as-path access-list LOCALROUTES permit ^$
+bgp as-path access-list LOCALROUTES permit ^$
 !
 ipv6 prefix-list LOOPBACK0_V6 seq 5 permit $Loopback0IpSummary64V6$
 !
