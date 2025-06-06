@@ -1,0 +1,111 @@
+#!/bin/bash
+
+declare -A switch_asic_code
+switch_asic_code=( ["1d98:1b59"]="tl05"
+                   ["1d98:1b58"]="tl07"
+				   ["11ab:6000"]="tl10"
+				   ["11ab:8400"]="fl00" )
+declare -A come_type_code
+come_type_code=( ["Intel"]="e00"    #S02 COMe
+		 ["Insyde"]="e01"   #S01 COMe 3000
+		 ["Default string"]="e02" #Advantech COMe
+		 ['Advantech']='e02'	#Advantech COMe
+		 ['Congatec AG']="e03" #congatec D1508
+		 ['Congatec GmbH']="e04" )  #congatec D1735 or D1712
+
+platform=$1
+cx864n_select=$2
+switch_asic=''
+# setup the proper soft link based on hardware
+# 1)get the switch asic device id
+for key in $(echo ${!switch_asic_code[*]})
+do
+	#echo $key
+	temp_result=$(lspci -n | grep ${key})
+	if [ -n "${temp_result}" ]; then
+	    switch_asic=${switch_asic_code[${key}]}
+	    break;
+	fi
+done
+if [ ! -n "${switch_asic}" ]; then
+	exit 0
+fi
+
+if [ "${switch_asic}" == "tl05" ]; then
+	temp_result=$(mkdir -p /host/warmboot/; touch /host/warmboot/tl05_patch_flag)
+fi
+# 2)get the COMe type id
+come_id=''
+come_type=$(dmidecode -s system-manufacturer)
+#echo ${come_type}
+come_id=${come_type_code[$come_type]}
+if [ ! -n "${come_id}" ]; then
+	come_id="e00"
+fi
+
+# create symbol link for sku-specific directories and file(s)
+if [ -n "${switch_asic}" ] && [ -n "${come_id}" ] ; then
+	device_sku_basedir="/usr/share/sonic/device"
+	default_sku=$(cat ${device_sku_basedir}/${platform}/default_sku | awk '{print $1}')
+	if [ ${platform} = "x86_64-asterfusion_cx864e_n-r0" ];then
+		if [ -n "${cx864n_select}" ] ; then
+			if [ ${cx864n_select} = "64x800g" ];then
+				target_sku="${default_sku}_${switch_asic}${come_id}"
+			else
+				target_sku="${default_sku}_${cx864n_select}_${switch_asic}${come_id}"
+			fi
+		else
+			if [ -f "/etc/sonic/device_sub_sku" ];then
+				cx864n_select=$(cat /etc/sonic/device_sub_sku)
+				if [ ${cx864n_select} = "64x800g" ];then
+					target_sku="${default_sku}_${switch_asic}${come_id}"
+				else
+					target_sku="${default_sku}_${cx864n_select}_${switch_asic}${come_id}"
+				fi
+			else
+				target_sku="${default_sku}_${switch_asic}${come_id}"
+			fi
+		fi
+	else
+		target_sku="${default_sku}_${switch_asic}${come_id}"
+	fi
+	target_sku_upper=$(echo "${target_sku^^}")
+	echo ${target_sku_upper}
+
+	files_to_copy=$(ls ${device_sku_basedir}/${platform}/${target_sku_upper})
+	pushd  ${device_sku_basedir}/${platform}
+	for file in ${files_to_copy}; do
+		echo ${file}
+		# remove the directory or file if it exists
+		if [ -e ${file} ]; then
+			if [ -d ${file} ]; then
+				rm -r ${file}
+			else
+				rm ${file}
+			fi
+		fi
+		# do create symbol link
+		ln -s ${target_sku_upper}/${file} ./${file}
+	done
+	popd
+
+	# if [ ! -d "${device_sku_basedir}/${platform}/${default_sku}" ]; then
+	#     pushd  ${device_sku_basedir}/${platform}
+	#     ln -s "${target_sku_upper}/${default_sku}" ${default_sku}
+	#     if [ $? != 0 ]; then
+	#         echo "Failed to create symbol link ${target_sku_upper}/${default_sku} to ${default_sku}"
+	#     fi
+	#     ln -s "${target_sku_upper}/plugins" plugins
+	#     if [ $? != 0 ]; then
+	#         echo "Failed to create symbol link ${target_sku_upper}/plugins to ${device_sku_basedir}/${platform}/plugins"
+	#     fi
+	# 	# copy other sku-specific files(if exist)
+	# 	other_files=$(ls ${target_sku_upper} | grep -v ${default_sku} | grpe -v plugins)
+	# 	echo ${other_files}
+	# 	for file in other_files
+	# 	do
+	# 		cp "${target_sku_upper}/${file}" ${file}
+	# 	done
+	#     popd
+	# fi
+fi
