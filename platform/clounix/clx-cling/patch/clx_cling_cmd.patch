@@ -1,0 +1,296 @@
+diff --git a/app/diag_shell/cmd/clx_cling_cmd.c b/app/diag_shell/cmd/clx_cling_cmd.c
+new file mode 100755
+index 000000000..fa197317c
+--- /dev/null
++++ b/app/diag_shell/cmd/clx_cling_cmd.c
+@@ -0,0 +1,194 @@
++/*******************************************************************************
++*  Copyright Statement:
++*  --------------------
++*  This software is protected by Copyright and the information contained
++*  herein is confidential. The software may not be copied and the information
++*  contained herein may not be used or disclosed except with the written
++*  permission of Hangzhou Clounix Technology Limited. (C) 2013-2021
++*
++*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("CLOUNIX SOFTWARE")
++*  RECEIVED FROM CLOUNIX AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
++*  AN "AS-IS" BASIS ONLY. CLOUNIX EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++*  NEITHER DOES CLOUNIX PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++*  SUPPLIED WITH THE CLOUNIX SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
++*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. CLOUNIX SHALL ALSO
++*  NOT BE RESPONSIBLE FOR ANY CLOUNIX SOFTWARE RELEASES MADE TO BUYER'S
++*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
++*
++*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND CLOUNIX'S ENTIRE AND CUMULATIVE
++*  LIABILITY WITH RESPECT TO THE CLOUNIX SOFTWARE RELEASED HEREUNDER WILL BE,
++*  AT CLOUNIX'S OPTION, TO REVISE OR REPLACE THE CLOUNIX SOFTWARE AT ISSUE,
++*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
++*  CLOUNIX FOR SUCH CLOUNIX SOFTWARE AT ISSUE.
++*
++*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
++*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
++*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
++*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
++*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
++*
++*******************************************************************************/
++
++#include <clx_error.h>
++#include <clx_types.h>
++#include <osal/osal.h>
++#include <osal/osal_lib.h>
++#include <parser/dsh_parser.h>
++#include <parser/dsh_util.h>
++#include <cmd/dsh_cmd.h>
++#include <pthread.h>
++#include <unistd.h>
++#include <sys/prctl.h>
++#include <dlfcn.h>
++#include <stdlib.h>
++#include <signal.h>
++#include <string.h>
++#include <osal/osal.h>
++
++typedef int (*start_cling_kernel_f_p)(void);
++typedef int (*stop_cling_kernel_f_p)(void);
++
++static int _started = 0;
++static pthread_t clx_cling_kernel_thread;
++void* handle;
++
++static void  _xeus_cling_stop_kernel() {
++    int ret;
++    stop_cling_kernel_f_p stop_cling_kernel_p = NULL;
++    stop_cling_kernel_p = (stop_cling_kernel_f_p)dlsym(handle, "stop_cling_kernel");
++    if (stop_cling_kernel_p == NULL)
++    {
++        osal_printf("stop_cling_kernel ptr is null \n");
++    }
++    stop_cling_kernel_p();
++    //wait for kernel thread stop
++    sleep(2);
++
++    ret = dlclose(handle);
++    if (ret)
++    {
++        osal_printf("dlclose err: %s .\n", dlerror());
++    }
++    _started = 0;
++    return;
++}
++
++static void * _xeus_cling_start_kernel(void * args) {
++    int err = 0;
++    start_cling_kernel_f_p start_cling_kernel_p = NULL;
++
++    handle = dlopen("libxeus-cling.so", RTLD_NOW);
++    if (handle == NULL)
++    {
++        osal_printf("dlopen err: %s .\n", dlerror());
++        _started = 0;
++        return NULL;
++    }
++
++    prctl(PR_SET_NAME, "clx_cling_kernel");
++    start_cling_kernel_p = (start_cling_kernel_f_p)dlsym(handle, "start_cling_kernel");
++    if (start_cling_kernel_p == NULL)
++    {
++        osal_printf("start_cling_kernel ptr is null \n");
++        _started = 0;
++        return NULL;
++    }
++    err = start_cling_kernel_p();
++    if (err)
++    {
++        osal_printf("_xeus_cling_start_kernel not started\n");
++    }
++    //dlclose(handle);
++
++    _started = 0;
++    return NULL;
++}
++
++static CLX_ERROR_NO_T
++_clx_cling_cmd_start(
++    const C8_T                  *tokens[],
++    UI32_T                      token_idx)
++{
++    CLX_ERROR_NO_T    rc = CLX_E_OK;
++    if (_started) {
++        osal_printf("clx_cling kernel already started\n");
++    } else {
++        int status = pthread_create(&clx_cling_kernel_thread, NULL, _xeus_cling_start_kernel, NULL);
++        if (status != 0) {
++            _started = 0;
++            osal_printf("Start clx_cling kernel failed.\n");
++            return (CLX_E_OTHERS);
++        }
++        pthread_detach(clx_cling_kernel_thread);
++        _started = 1;
++
++        /* waiting for kernel started */
++        sleep(2);
++        osal_printf("clx_cling kernel started\n");
++    }
++    osal_printf("Please connect as: jupyter-console --existing /etc/sonic/clx-cling-kernel.json\n");
++
++    return rc;
++}
++
++static CLX_ERROR_NO_T
++_clx_cling_cmd_stop(
++    const C8_T                  *tokens[],
++    UI32_T                      token_idx)
++{
++    CLX_ERROR_NO_T    rc = CLX_E_OK;
++
++    if (!_started) {
++        osal_printf("clx_cling kernel is not started\n");
++    } else {
++        //_started = 0;
++        _xeus_cling_stop_kernel();
++        osal_printf("clx_cling kernel stoped\n");
++    }
++    return rc;
++}
++
++/* -------------------------------------------------------------- callback */
++static DSH_VEC_T  _clx_cling_cmd_vec[] =
++{
++    {
++        "start", 1, _clx_cling_cmd_start,
++        "clx_cling start\n"
++    },
++    {
++        "stop", 1, _clx_cling_cmd_stop,
++        "clx_cling stop\n"
++    },
++};
++
++
++CLX_ERROR_NO_T
++dsh_cmd_clx_cling_commands(
++    const C8_T      *tokens[],
++    UI32_T          token_idx)
++{
++    return (dsh_dispatcher(tokens, token_idx, _clx_cling_cmd_vec, sizeof(_clx_cling_cmd_vec)/sizeof(DSH_VEC_T)));
++}
++
++CLX_ERROR_NO_T
++clx_cling_cmd_usager(void)
++{
++    return (dsh_usager(_clx_cling_cmd_vec, sizeof(_clx_cling_cmd_vec)/sizeof(DSH_VEC_T)));
++}
++
++CLX_ERROR_NO_T
++clx_cling_cmd_get_table_info(DSH_TABLE_INFO_T *table_info)
++{
++    if (NULL == table_info)
++    {
++        return CLX_E_BAD_PARAMETER;
++    }
++
++    table_info->ptr_table = _clx_cling_cmd_vec;
++    table_info->table_entry_num = sizeof(_clx_cling_cmd_vec)/sizeof(DSH_VEC_T);
++    return CLX_E_OK;
++}
+\ No newline at end of file
+diff --git a/app/diag_shell/inc/cmd/clx_cling_cmd.h b/app/diag_shell/inc/cmd/clx_cling_cmd.h
+new file mode 100755
+index 000000000..56eb89d9f
+--- /dev/null
++++ b/app/diag_shell/inc/cmd/clx_cling_cmd.h
+@@ -0,0 +1,55 @@
++/*******************************************************************************
++*  Copyright Statement:
++*  --------------------
++*  This software is protected by Copyright and the information contained
++*  herein is confidential. The software may not be copied and the information
++*  contained herein may not be used or disclosed except with the written
++*  permission of Hangzhou Clounix Technology Limited. (C) 2013-2021
++*
++*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
++*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("CLOUNIX SOFTWARE")
++*  RECEIVED FROM CLOUNIX AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
++*  AN "AS-IS" BASIS ONLY. CLOUNIX EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
++*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
++*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
++*  NEITHER DOES CLOUNIX PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
++*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
++*  SUPPLIED WITH THE CLOUNIX SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
++*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. CLOUNIX SHALL ALSO
++*  NOT BE RESPONSIBLE FOR ANY CLOUNIX SOFTWARE RELEASES MADE TO BUYER'S
++*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
++*
++*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND CLOUNIX'S ENTIRE AND CUMULATIVE
++*  LIABILITY WITH RESPECT TO THE CLOUNIX SOFTWARE RELEASED HEREUNDER WILL BE,
++*  AT CLOUNIX'S OPTION, TO REVISE OR REPLACE THE CLOUNIX SOFTWARE AT ISSUE,
++*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
++*  CLOUNIX FOR SUCH CLOUNIX SOFTWARE AT ISSUE.
++*
++*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
++*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
++*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
++*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
++*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
++*
++*******************************************************************************/
++
++#ifndef CLX_CLING_CMD_H
++#define CLX_CLING_CMD_H
++
++#include <clx_error.h>
++#include <clx_types.h>
++
++/* -------------------------------------------------------------- */
++CLX_ERROR_NO_T
++dsh_cmd_clx_cling_commands(
++    const C8_T                  *tokens[],
++    UI32_T                      token_idx);
++
++CLX_ERROR_NO_T
++clx_cling_cmd_usager(void);
++
++CLX_ERROR_NO_T
++clx_cling_cmd_get_table_info(DSH_TABLE_INFO_T *table_info);
++
++
++#endif
+\ No newline at end of file
+diff --git a/app/diag_shell/parser/dsh_parser.c b/app/diag_shell/parser/dsh_parser.c
+index 86237350d..13641d446 100755
+--- a/app/diag_shell/parser/dsh_parser.c
++++ b/app/diag_shell/parser/dsh_parser.c
+@@ -73,6 +73,7 @@
+ #include <cmd/dsh_cmd.h>
+ #include <cmd/tech_cmd.h>
+ #include <cmd/epg_cmd.h>
++#include <cmd/clx_cling_cmd.h>
+ #include <stdio.h>
+
+ #if defined (CLX_CHIP_DIAG)
+@@ -171,6 +172,7 @@ DSH_VEC_TOP_T   _dsh_vec[] =
+     { "epg",    "EPG",               epg_cmd_dispatcher,    epg_cmd_usager,     epg_cmd_get_table_info},
+     { "all",    "List all supported commands",  dsh_cmd_all_commands,    dsh_cmd_usager, NULL},
+
++    { "clx_cling","cling kernel commands",      dsh_cmd_clx_cling_commands,    dsh_cmd_usager, clx_cling_cmd_get_table_info},
+
+ #if defined (CLX_IPYTHON)
+     { "ipy",     "IPython Shell",    dsh_cmd_ipy,           dsh_cmd_usager,     NULL},
+diff --git a/app/sdk_ref/make/linux_user.mk b/app/sdk_ref/make/linux_user.mk
+index 30b6074e8..f0f54d5c1 100755
+--- a/app/sdk_ref/make/linux_user.mk
++++ b/app/sdk_ref/make/linux_user.mk
+@@ -18,7 +18,7 @@ SRCS_TOTAL              += $(wildcard $(SDK_REF)/common/*.c)
+ OBJS_TOTAL              := $(SRCS_TOTAL:%.c=%.o)
+ DEPS_TOTAL              := $(SRCS_TOTAL:%.c=%.d)
+
+-EXTRA_CFLAGS            += -lpthread
++EXTRA_CFLAGS            += -lpthread -ldl
+ EXTRA_CFLAGS            += -g
+ EXTRA_CFLAGS            += -I$(SDK_REF)/inc
+

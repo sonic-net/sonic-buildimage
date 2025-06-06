@@ -1,0 +1,20 @@
+# libsaithrift-dev package
+
+SAI_VER = 1.7.1
+
+LIBSAITHRIFT_DEV = libsaithrift-dev_$(SAI_VER)_amd64.deb
+$(LIBSAITHRIFT_DEV)_SRC_PATH = $(PLATFORM_PATH)/saithrift/
+$(LIBSAITHRIFT_DEV)_DEPENDS += $(LIBTHRIFT) $(LIBTHRIFT_DEV) $(PYTHON_THRIFT) $(THRIFT_COMPILER) $(CLOUNIX_SAI) $(CLOUNIX_SAI_DEV)
+$(LIBSAITHRIFT_DEV)_RDEPENDS += $(LIBTHRIFT) $(CLOUNIX_SAI)
+SONIC_DPKG_DEBS += $(LIBSAITHRIFT_DEV)
+
+PYTHON_SAITHRIFT = python-saithrift_$(SAI_VER)_amd64.deb
+$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(PYTHON_SAITHRIFT)))
+
+SAISERVER = saiserver_$(SAI_VER)_amd64.deb
+$(SAISERVER)_RDEPENDS += $(LIBTHRIFT) $(CLOUNIX_SAI)
+$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER)))
+
+SAISERVER_DBG = saiserver-dbg_$(SAI_VER)_amd64.deb
+$(SAISERVER_DBG)_RDEPENDS += $(SAISERVER)
+$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER_DBG)))
