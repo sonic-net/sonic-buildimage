@@ -21,7 +21,7 @@ Route-map FROM_BE_TIER1_V6 deny 120
 route-map FROM_BE_TIER1_V6 permit 130
   on-match next  
   set ipv6 next-hop prefer-global
-!  
+!
 route-map FROM_BE_TIER1_V6 permit 200
 !
 route-map TO_BE_TIER1_V6 permit 100
@@ -35,7 +35,7 @@ Route-map TO_BE_TIER1_V6 permit 120
 !
 route-map TO_BE_TIER1_V6 permit 130
   match as-path LOCAL_AS
-  set community no-export
+  set community no-export additive
 !
 route-map TO_BE_TIER1_V6 deny 200
 !
