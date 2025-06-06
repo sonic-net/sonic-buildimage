@@ -23,8 +23,7 @@ class BgpSessionTracker():
     """
     def __init__(self):
         self.should_monitor_run = False
-        self.interfaces_down = False
-        self.bgp_sessions_up = True
+        self.interfaces_down = None
         self.downstream_portchannels = ['PortChannel1031', 'PortChannel1032']
         self.t1_bgp_session_cache = set()
 
@@ -50,22 +49,21 @@ class BgpSessionTracker():
         try:
             t1_nexthop_present = False
             nexthops = self.get_nexthops(DEFAULT_ROUTE_KEY)
-            if nexthops:
-                for nexthop in nexthops:
-                    if nexthop in self.t1_bgp_session_cache:
-                        logger_helper.log_notice("Nexthop: %s is a BGP session to T1" % (nexthop))
-                        t1_nexthop_present = True
-                        break
+            for nexthop in nexthops:
+                if nexthop in self.t1_bgp_session_cache:
+                    logger_helper.log_notice("Nexthop: %s is a BGP session to T1" % (nexthop))
+                    t1_nexthop_present = True
+                    break
             if t1_nexthop_present:
                 self.update_state_db("bgp_sessions_up", "yes")
-                if self.interfaces_down:
+                if self.interfaces_down is not False:
                     self.update_southbound_portchannels('up')
                 else:
                     logger_helper.log_notice("Southbound interfaces already up")
             else:
                 logger_helper.log_notice("Default route with nexthop to T1 not found")
                 self.update_state_db("bgp_sessions_up", "no")
-                if self.interfaces_down == False:
+                if self.interfaces_down is not True:
                     self.update_southbound_portchannels('down')
                 else:
                     logger_helper.log_notice("Southbound interfaces already down")
@@ -88,15 +86,11 @@ class BgpSessionTracker():
         """
         nexthop_list = []
         try:
-            route_entry = self.route_table.get(route_key)
-            if route_entry[0] == True:
-                nexthops = self.route_table.hget(route_key, 'nexthop')
-                if nexthops[0] == True:
-                    nexthop_list = nexthops[1].split(',')
-                else:
-                    logger_helper.log_notice("Nexthops not found for route: %s" % (route_key))
+            nexthops = self.route_table.hget(route_key, 'nexthop')
+            if nexthops[0] == True:
+                nexthop_list = nexthops[1].split(',')
             else:
-                logger_helper.log_notice("Route: %s not found in route table" % (route_key))
+                logger_helper.log_notice("Nexthops not found for route: %s" % (route_key))
         except Exception as e:
             logger_helper.log_warning("Exception in get_nexthops: {}".format(e))
         return nexthop_list
@@ -172,7 +166,6 @@ class BgpSessionTracker():
             self.update_state_db("is_session_tracker_enabled", "yes")
             self.setup_t1_bgp_sessions_cache()
             self.process_default_route_update()
-            self.update_state_db("interfaces_are_shutdown", "yes" if self.interfaces_down else "no")
         except Exception as e:
             logger_helper.log_warning("Exception in perform_initial_setup: {}".format(e))
 
