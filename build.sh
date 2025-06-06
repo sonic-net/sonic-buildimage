@@ -137,9 +137,26 @@ submodule_prs () {
   #     _submodule_add src/sonic-platform-daemons mlok-nokia https://github.com/mlok-nokia/sonic-platform-daemons.git 70caabb
   #
   ############################################################################################################################
+  #https://github.com/sonic-net/sonic-swss/pull/3660
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 8ab3277
+
+  #https://github.com/sonic-net/sonic-swss/pull/3377
+  _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 122ff86
+  
+   #https://github.com/sonic-net/sonic-swss/pull/3833
+  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 5f40ace^..ebde957
+
+  #https://github.com/sonic-net/sonic-utilities/pull/4012
+  # _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities d8671d2^..d6207f1
+
+  #https://github.com/sonic-net/sonic-utilities/pull/4029
+  _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities b6eef8a^..d7a4675
+
+  #https://github.com/sonic-net/sonic-linux-kernel/pull/511
+  _submodule_add src/sonic-linux-kernel master https://github.com/JunhongMao/sonic-linux-kernel 798f76d
 
 
-    # apply patches
+  # apply patches
   apply_patch_files
 }
 
@@ -153,6 +170,9 @@ features()
 }
 
 make init
+
+# echo "Build time patching Nokia sysObjectID"
+# ./NokiaSnmpBuildTimePatch.sh
 
 configure()
 {
