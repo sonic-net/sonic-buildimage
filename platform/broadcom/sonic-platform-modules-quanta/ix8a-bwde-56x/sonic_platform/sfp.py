@@ -881,6 +881,12 @@ class Sfp(SfpBase):
         else:
             return None
 
+    def get_transceiver_status(self):
+        return {}
+
+    def get_transceiver_pm(self):
+        return {}
+
     def get_reset_status(self):
         """
         Retrieves the reset status of SFP
