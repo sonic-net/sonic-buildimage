@@ -6,3 +6,6 @@ export RASDAEMON_VERSION
 RASDAEMON = rasdaemon_$(RASDAEMON_VERSION)_$(CONFIGURED_ARCH).deb
 $(RASDAEMON)_SRC_PATH = $(SRC_PATH)/rasdaemon
 SONIC_MAKE_DEBS += $(RASDAEMON)
+
+RASDAEMON_DBG = rasdaemon-dbgsym_$(RASDAEMON_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(RASDAEMON),$(RASDAEMON_DBG)))
