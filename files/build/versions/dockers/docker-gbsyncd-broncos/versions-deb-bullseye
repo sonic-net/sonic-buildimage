@@ -2,8 +2,8 @@ gdb==10.1-1.7
 gdbserver==10.1-1.7
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
-libc-dev-bin==2.31-13+deb11u11
-libc6-dev==2.31-13+deb11u11
+libc-dev-bin==2.31-13+deb11u12
+libc6-dev==2.31-13+deb11u12
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
 libcurl3-gnutls==7.74.0-1.3+deb11u14
@@ -29,7 +29,7 @@ libswsscommon-dbgsym==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
 linux-libc-dev==5.10.234-1
-openssh-client==1:8.4p1-5+deb11u4
+openssh-client==1:8.4p1-5+deb11u5
 sshpass==1.09-1+b1
 strace==5.10-1
 syncd==1.0.0
