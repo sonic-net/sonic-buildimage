@@ -29,7 +29,4 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
-## Copy all Jinja2 template files into the templates folder
-COPY ["*.j2", "/usr/share/sonic/templates/"]
-
 ENTRYPOINT ["/usr/bin/docker-init.sh"]
