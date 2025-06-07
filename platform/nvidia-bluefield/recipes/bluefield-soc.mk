@@ -17,7 +17,7 @@
 
 # Bluefied Software Distribution Version
 BFSOC_VERSION = 4.11.0
-BFSOC_REVISION = 13582
+BFSOC_REVISION = 13611
 BFB_IMG_TYPE = prod
 BFSOC_BUILD_DATE =
 
