@@ -505,6 +505,15 @@ class BGPPeerMgrBase(Manager):
                  If the interface has not been set, return None
         """
         local_addresses = self.directory.get_slot("LOCAL", "local_addresses")
+
+        # Handle local_addr string that is not represented in canonical text format, especially for IPv6 addresses
+        try:
+            ip = netaddr.IPAddress(str(local_addr))
+        except (netaddr.NotRegisteredError, netaddr.AddrFormatError, netaddr.AddrConversionError):
+            log_warn("IP Address '%s' format is wrong" % (local_addr))
+            return None
+        local_addr = str(ip)
+
         # Check if the local address of this bgp session has been set
         if local_addr not in local_addresses:
             return None
