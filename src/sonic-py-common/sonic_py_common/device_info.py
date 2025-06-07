@@ -857,9 +857,17 @@ def get_system_mac(namespace=None, hostname=None):
             profile_cmd = ["false"]
             (mac, err) = run_command(profile_cmd)
         hw_mac_entry_outputs.append((mac, err))
-        (mac, err) = run_command(syseeprom_cmd)
-        hw_mac_entry_outputs.append((mac, err))
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
+        hw_mac_entry_outputs.append((mac, err))
+        for (mac, err) in hw_mac_entry_outputs:
+            if err:
+                continue
+            mac = mac.strip()
+            if _valid_mac_address(mac):
+                return mac
+        # If mac not found, fetch from syseeprom
+        hw_mac_entry_outputs = []
+        (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
     elif (version_info['asic_type'] == 'pensando'):
         iplink_cmd0 = ["ip", 'link', 'show', 'eth0-midplane']
