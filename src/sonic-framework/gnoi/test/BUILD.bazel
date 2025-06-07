@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "test",
+    srcs = ["simple.go"],
+    importpath = "github.com/openconfig/gnoi/test",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "test_test",
+    srcs = ["simple_test.go"],
+    embed = [":test"],
+    deps = [
+        "//bgp",
+        "//common",
+        "//system",
+        "//types",
+        "@com_github_golang_protobuf//proto:go_default_library",
+    ],
+)
