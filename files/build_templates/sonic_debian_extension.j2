@@ -1010,3 +1010,10 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+
+# Edit the kdump-tools package script to call a custom one, which shall enable ethernet interfaces in the crash kernel environment
+if [ -f "$FILESYSTEM_ROOT/usr/sbin/kdump-config" ]; then
+    sudo sed -i "/PATH=\/bin:\/usr\/bin:\/sbin:\/usr\/sbin/a NET_INTERFACE_INIT=/usr/sbin/network-interface-state-init.sh" "$FILESYSTEM_ROOT/usr/sbin/kdump-config"
+    sudo sed -i "/Network not reachable/a \\\t\t\t. \$NET_INTERFACE_INIT" "$FILESYSTEM_ROOT/usr/sbin/kdump-config"
+fi
