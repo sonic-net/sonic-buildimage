@@ -13,6 +13,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_S5224F_PLATFORM_MODULE) \
                                $(DELL_S5232F_PLATFORM_MODULE) \
                                $(DELL_S5248F_PLATFORM_MODULE) \
+                               $(DELL_S5448F_PLATFORM_MODULE) \
                                $(DELL_Z9332F_PLATFORM_MODULE) \
                                $(DELL_Z9432F_PLATFORM_MODULE) \
                                $(DELL_S5296F_PLATFORM_MODULE) \
