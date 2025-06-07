@@ -1,0 +1,1 @@
+KERNEL=="ttyS[0-9]*", NAME="tts/%n", SYMLINK+="ttyUSB%n", GROUP="dialout", MODE="0666"

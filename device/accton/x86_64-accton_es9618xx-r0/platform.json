@@ -1,0 +1,687 @@
+{
+    "chassis": {
+      "name": "Accton-ES9618XX-O16x400G",
+      "components": [
+          {
+              "name": "BIOS"
+          },
+          {
+              "name": "ONIE"
+          },
+          {
+              "name": "CPLD1"
+          },
+          {
+              "name": "CPLD2"
+          },
+          {
+              "name": "CPLD3"
+          }
+      ],
+      "psus": [
+          {
+            "name": "PSU-1",
+            "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "amber"]
+            },
+            "voltage_high_threshold" : false,
+            "voltage_low_threshold" : false,
+            "fans": [
+                {
+                    "name": "PSU 1 fan 0",
+                    "status_led": {
+                        "controllable": true,
+                        "colors": ["off", "green", "amber"]
+                    },
+                    "speed": {
+                        "controllable": false
+                    }
+                }
+            ]
+          },
+          {
+            "name": "PSU-2",
+            "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "amber"]
+            },
+            "voltage_high_threshold" : false,
+            "voltage_low_threshold" : false,
+             "fans": [
+                {
+                    "name": "PSU 2 fan 0",
+                    "status_led": {
+                        "controllable": true,
+                        "colors": ["off", "green", "amber"]
+                    },
+                    "speed": {
+                        "controllable": false
+                    }
+                }
+            ]
+          }
+      ],
+      "fans": [
+          {
+              "name": "FanTray 0 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 0 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 1 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 1 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 2 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 2 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 3 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 3 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 4 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 4 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 5 fan 0",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          },
+          {
+              "name": "FanTray 5 fan 1",
+              "speed": {
+                  "controllable": true,
+                  "minimum": 50,
+                  "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+          }
+      ],
+      "thermals": [
+        {
+          "name": "Temp sensor 1",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 2",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 3",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 4",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 5",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 6",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 7",
+          "controllable": false
+        },
+        {
+          "name": "Temp sensor 8",
+          "controllable": false
+        },
+        {
+          "name": "ASIC  Core X2",
+          "controllable": false
+        },
+        {
+          "name": "ASIC sensor 1",
+          "high-threshold" : false,
+          "controllable": false
+        },
+        {
+          "name": "ASIC sensor 2",
+          "high-threshold" : false,
+          "controllable": false
+        },
+        {
+          "name": "ASIC sensor 3",
+          "high-threshold" : false,
+          "controllable": false
+        },
+        {
+          "name": "ASIC  average",
+          "high-threshold" : false,
+          "controllable": false
+        },
+        {
+          "name": "ASIC  maximum",
+          "high-threshold" : false,
+          "controllable": false
+        }
+      ],
+      "fan_drawers": [
+        {
+          "name": "FanTray 0",
+          "fans": [
+            {
+            "name": "FanTray 0 fan 0",
+            "speed": {
+              "controllable": true,
+              "minimum": 50,
+              "maximum": 100
+            },
+            "status_led": {
+              "controllable": true,
+              "colors": ["off", "green", "red"]
+            }
+            },
+            {
+              "name": "FanTray 0 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        },
+        {
+          "name": "FanTray 1",
+          "fans": [
+            {
+              "name": "FanTray 1 fan 0",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            },
+            {
+              "name": "FanTray 1 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        },
+        {
+          "name": "FanTray 2",
+          "fans": [
+            {
+              "name": "FanTray 2 fan 0",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            },
+            {
+              "name": "FanTray 2 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        },
+        {
+          "name": "FanTray 3",
+          "fans": [
+            {
+              "name": "FanTray 3 fan 0",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            },
+            {
+              "name": "FanTray 3 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        },
+        {
+          "name": "FanTray 4",
+          "fans": [
+            {
+              "name": "FanTray 4 fan 0",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            },
+            {
+              "name": "FanTray 4 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        },
+        {
+          "name": "FanTray 5",
+          "fans": [
+            {
+              "name": "FanTray 5 fan 0",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            },
+            {
+              "name": "FanTray 5 fan 1",
+              "speed": {
+                "controllable": true,
+                "minimum": 50,
+                "maximum": 100
+              },
+              "status_led": {
+                "controllable": true,
+                "colors": ["off", "green", "red"]
+              }
+            }
+          ],
+          "status_led": {
+            "controllable": true,
+            "colors": ["off", "green", "red"]
+          }
+        }
+      ],
+      "sfps": [
+        {
+            "name": "osfp1"
+        },
+        {
+            "name": "osfp2"
+        },
+        {
+            "name": "osfp3"
+        },
+        {
+            "name": "osfp4"
+        },
+        {
+            "name": "osfp5"
+        },
+        {
+            "name": "osfp6"
+        },
+        {
+            "name": "osfp7"
+        },
+        {
+            "name": "osfp8"
+        },
+        {
+            "name": "osfp9"
+        },
+        {
+            "name": "osfp10"
+        },
+        {
+            "name": "osfp11"
+        },
+        {
+            "name": "osfp12"
+        },
+        {
+            "name": "osfp13"
+        },
+        {
+            "name": "osfp14"
+        },
+        {
+            "name": "osfp15"
+        },
+        {
+            "name": "osfp16"
+        }
+      ]
+    },
+    "interfaces": {
+      "Ethernet0": {
+        "index": "1,1,1,1,1,1,1,1",
+        "lanes": "0,1,2,3,4,5,6,7",
+        "breakout_modes": {
+            "1x400G": ["Eth1/1"],
+            "2x400G": ["Eth1/1", "Eth1/5"],
+            "4x200G": ["Eth1/1", "Eth1/3", "Eth1/5", "Eth1/7"],
+            "8x100G": ["Eth1/1", "Eth1/2", "Eth1/3", "Eth1/4", "Eth1/5", "Eth1/6", "Eth1/7", "Eth1/8"]
+        }
+    },
+    "Ethernet8": {
+        "index": "2,2,2,2,2,2,2,2",
+        "lanes": "8,9,10,11,12,13,14,15",
+        "breakout_modes": {
+            "1x400G": ["Eth2/1"],
+            "2x400G": ["Eth2/1", "Eth2/5"],
+            "4x200G": ["Eth2/1", "Eth2/3", "Eth2/5", "Eth2/7"],
+            "8x100G": ["Eth2/1", "Eth2/2", "Eth2/3", "Eth2/4", "Eth2/5", "Eth2/6", "Eth2/7", "Eth2/8"]
+        }
+    },
+    "Ethernet16": {
+        "index": "3,3,3,3,3,3,3,3",
+        "lanes": "16,17,18,19,20,21,22,23",
+        "breakout_modes": {
+            "1x400G": ["Eth3/1"],
+            "2x400G": ["Eth3/1", "Eth3/5"],
+            "4x200G": ["Eth3/1", "Eth3/3", "Eth3/5", "Eth3/7"],
+            "8x100G": ["Eth3/1", "Eth3/2", "Eth3/3", "Eth3/4", "Eth3/5", "Eth3/6", "Eth3/7", "Eth3/8"]
+        }
+    },
+    "Ethernet24": {
+        "index": "4,4,4,4,4,4,4,4",
+        "lanes": "24,25,26,27,28,29,30,31",
+        "breakout_modes": {
+            "1x400G": ["Eth4/1"],
+            "2x400G": ["Eth4/1", "Eth4/5"],
+            "4x200G": ["Eth4/1", "Eth4/3", "Eth4/5", "Eth4/7"],
+            "8x100G": ["Eth4/1", "Eth4/2", "Eth4/3", "Eth4/4", "Eth4/5", "Eth4/6", "Eth4/7", "Eth4/8"]
+        }
+    },
+    "Ethernet32": {
+        "index": "5,5,5,5,5,5,5,5",
+        "lanes": "32,33,34,35,36,37,38,39",
+        "breakout_modes": {
+            "1x400G": ["Eth5/1"],
+            "2x400G": ["Eth5/1", "Eth5/5"],
+            "4x200G": ["Eth5/1", "Eth5/3", "Eth5/5", "Eth5/7"],
+            "8x100G": ["Eth5/1", "Eth5/2", "Eth5/3", "Eth5/4", "Eth5/5", "Eth5/6", "Eth5/7", "Eth5/8"]
+        }
+    },
+    "Ethernet40": {
+        "index": "6,6,6,6,6,6,6,6",
+        "lanes": "40,41,42,43,44,45,46,47",
+        "breakout_modes": {
+            "1x400G": ["Eth6/1"],
+            "2x400G": ["Eth6/1", "Eth6/5"],
+            "4x200G": ["Eth6/1", "Eth6/3", "Eth6/5", "Eth6/7"],
+            "8x100G": ["Eth6/1", "Eth6/2", "Eth6/3", "Eth6/4", "Eth6/5", "Eth6/6", "Eth6/7", "Eth6/8"]
+        }
+    },
+    "Ethernet48": {
+        "index": "7,7,7,7,7,7,7,7",
+        "lanes": "48,49,50,51,52,53,54,55",
+        "breakout_modes": {
+            "1x400G": ["Eth7/1"],
+            "2x400G": ["Eth7/1", "Eth7/5"],
+            "4x200G": ["Eth7/1", "Eth7/3", "Eth7/5", "Eth7/7"],
+            "8x100G": ["Eth7/1", "Eth7/2", "Eth7/3", "Eth7/4", "Eth7/5", "Eth7/6", "Eth7/7", "Eth7/8"]
+        }
+    },
+    "Ethernet56": {
+        "index": "8,8,8,8,8,8,8,8",
+        "lanes": "56,57,58,59,60,61,62,63",
+        "breakout_modes": {
+            "1x400G": ["Eth8/1"],
+            "2x400G": ["Eth8/1", "Eth8/5"],
+            "4x200G": ["Eth8/1", "Eth8/3", "Eth8/5", "Eth8/7"],
+            "8x100G": ["Eth8/1", "Eth8/2", "Eth8/3", "Eth8/4", "Eth8/5", "Eth8/6", "Eth8/7", "Eth8/8"]
+        }
+    },
+    "Ethernet64": {
+        "index": "9,9,9,9,9,9,9,9",
+        "lanes": "64,65,66,67,68,69,70,71",
+        "breakout_modes": {
+            "1x400G": ["Eth9/1"],
+            "2x400G": ["Eth9/1", "Eth9/5"],
+            "4x200G": ["Eth9/1", "Eth9/3", "Eth9/5", "Eth9/7"],
+            "8x100G": ["Eth9/1", "Eth9/2", "Eth9/3", "Eth9/4", "Eth9/5", "Eth9/6", "Eth9/7", "Eth9/8"]
+        }
+    },
+    "Ethernet72": {
+        "index": "10,10,10,10,10,10,10,10",
+        "lanes": "72,73,74,75,76,77,78,79",
+        "breakout_modes": {
+            "1x400G": ["Eth10/1"],
+            "2x400G": ["Eth10/1", "Eth10/5"],
+            "4x200G": ["Eth10/1", "Eth10/3", "Eth10/5", "Eth10/7"],
+            "8x100G": ["Eth10/1", "Eth10/2", "Eth10/3", "Eth10/4", "Eth10/5", "Eth10/6", "Eth10/7", "Eth10/8"]
+        }
+    },
+    "Ethernet80": {
+        "index": "11,11,11,11,11,11,11,11",
+        "lanes": "80,81,82,83,84,85,86,87",
+        "breakout_modes": {
+            "1x400G": ["Eth11/1"],
+            "2x400G": ["Eth11/1", "Eth11/5"],
+            "4x200G": ["Eth11/1", "Eth11/3", "Eth11/5", "Eth11/7"],
+            "8x100G": ["Eth11/1", "Eth11/2", "Eth11/3", "Eth11/4", "Eth11/5", "Eth11/6", "Eth11/7", "Eth11/8"]
+        }
+    },
+    "Ethernet88": {
+        "index": "12,12,12,12,12,12,12,12",
+        "lanes": "88,89,90,91,92,93,94,95",
+        "breakout_modes": {
+            "1x400G": ["Eth12/1"],
+            "2x400G": ["Eth12/1", "Eth12/5"],
+            "4x200G": ["Eth12/1", "Eth12/3", "Eth12/5", "Eth12/7"],
+            "8x100G": ["Eth12/1", "Eth12/2", "Eth12/3", "Eth12/4", "Eth12/5", "Eth12/6", "Eth12/7", "Eth12/8"]
+        }
+    },
+    "Ethernet96": {
+        "index": "13,13,13,13,13,13,13,13",
+        "lanes": "96,97,98,99,100,101,102,103",
+        "breakout_modes": {
+            "1x400G": ["Eth13/1"],
+            "2x400G": ["Eth13/1", "Eth13/5"],
+            "4x200G": ["Eth13/1", "Eth13/3", "Eth13/5", "Eth13/7"],
+            "8x100G": ["Eth13/1", "Eth13/2", "Eth13/3", "Eth13/4", "Eth13/5", "Eth13/6", "Eth13/7", "Eth13/8"]
+        }
+    },
+    "Ethernet104": {
+        "index": "14,14,14,14,14,14,14,14",
+        "lanes": "104,105,106,107,108,109,110,111",
+        "breakout_modes": {
+            "1x400G": ["Eth14/1"],
+            "2x400G": ["Eth14/1", "Eth14/5"],
+            "4x200G": ["Eth14/1", "Eth14/3", "Eth14/5", "Eth14/7"],
+            "8x100G": ["Eth14/1", "Eth14/2", "Eth14/3", "Eth14/4", "Eth14/5", "Eth14/6", "Eth14/7", "Eth14/8"]
+        }
+    },
+    "Ethernet112": {
+        "index": "15,15,15,15,15,15,15,15",
+        "lanes": "112,113,114,115,116,117,118,119",
+        "breakout_modes": {
+            "1x400G": ["Eth15/1"],
+            "2x400G": ["Eth15/1", "Eth15/5"],
+            "4x200G": ["Eth15/1", "Eth15/3", "Eth15/5", "Eth15/7"],
+            "8x100G": ["Eth15/1", "Eth15/2", "Eth15/3", "Eth15/4", "Eth15/5", "Eth15/6", "Eth15/7", "Eth15/8"]
+        }
+    },
+    "Ethernet120": {
+        "index": "16,16,16,16,16,16,16,16",
+        "lanes": "120,121,122,123,124,125,126,127",
+        "breakout_modes": {
+            "1x400G": ["Eth16/1"],
+            "2x400G": ["Eth16/1", "Eth16/5"],
+            "4x200G": ["Eth16/1", "Eth16/3", "Eth16/5", "Eth16/7"],
+            "8x100G": ["Eth16/1", "Eth16/2", "Eth16/3", "Eth16/4", "Eth16/5", "Eth16/6", "Eth16/7", "Eth16/8"]
+        }
+    }
+  }
+}
