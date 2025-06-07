@@ -5,7 +5,7 @@ FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
 FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
 {% else %}
-FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bullseye
+FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/python:3.9-slim-bullseye
 {% endif %}
 
 # Clean documentation in FROM image
