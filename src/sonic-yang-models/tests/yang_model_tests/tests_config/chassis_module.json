@@ -21,11 +21,11 @@
                     },
                     {
                         "name": "DPU0",
-                        "admin_status": "up"
+                        "admin_status": "down"
                     },
                     {
                         "name": "DPU1",
-                        "admin_status": "up"
+                        "admin_status": "down"
                      
                     }
                 ]
@@ -58,6 +58,30 @@
                 "CHASSIS_MODULE_LIST": [
                     {
                         "name": "LINE-CARD0",
+                        "admin_status": "false"
+                    }
+                ]
+            }
+        }
+    },
+    "CHASSIS_MODULE_WITH_DPU_ADMIN_DOWN": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "DPU0",
+                        "admin_status": "down"
+                    }
+                ]
+            }
+        }
+    },
+    "CHASSIS_MODULE_WITH_DPU_ADMIN_INVALID_VALUE": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "DPU0",
                         "admin_status": "false"
                     }
                 ]
