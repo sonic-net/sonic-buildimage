@@ -63,7 +63,7 @@ module sonic-routing-policy-sets {
         container PREFIX {
 
             list PREFIX_LIST {
-                key "name sequence_number ip_prefix masklength_range";
+                key "name ip_prefix masklength_range";
                 //ext:custom-validation ValidateIpPrefixListCfg;
 
                 leaf name {
@@ -71,16 +71,6 @@ module sonic-routing-policy-sets {
                         path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
                     }
                     description "Prefix name";
-                }
-
-                leaf sequence_number {
-                    type uint32 {
-                        range "1..4294967295";
-                    }
-                    description
-                        "The sequence number determines the order in which prefix-list entries are applied. It must be unique
-                        for each prefix in a prefix-list. Target devices should apply the prefixes in ascending order determined
-                            by sequence no (low to high), rather than relying only on order in the list.";
                 }
 
                 leaf ip_prefix {
