@@ -79,10 +79,6 @@
         "desc": "Referring invalid Mode",
         "eStrKey": "InvalidValue"
     },
-    "ROUTE_PREFIX_INVALID_SEQ_NO": {
-        "desc": "Out of range seqence number",
-        "eStrKey": "Range"
-    },
     "ROUTE_PREFIX_INVALID_IP_PREFIX": {
         "desc": "Invalid IP prefix",
         "eStrKey": "InvalidValue"
