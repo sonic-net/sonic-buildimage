@@ -107,7 +107,8 @@
                     "mode": "IPv6"
                 },
                 {
-                    "name": "nh_set"
+                    "name": "nh_set",
+                    "mode": "IPv4"
                 }
                 ]
             },
@@ -551,6 +552,17 @@
                     "name": "aspath2",
                     "action": "deny",
                     "as_path_set_member": ["65002"]
+                }
+                ]
+            }
+        }
+    },
+    "PREFIX_SET_MISSING_MODE": {
+        "sonic-routing-policy-sets:sonic-routing-policy-sets":{
+            "sonic-routing-policy-sets:PREFIX_SET": {
+                "PREFIX_SET_LIST": [
+                {
+                    "name": "nomode"
                 }
                 ]
             }
