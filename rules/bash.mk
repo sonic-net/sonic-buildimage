@@ -15,6 +15,7 @@ $(BASH)_SRC_PATH = $(SRC_PATH)/bash
 SONIC_MAKE_DEBS += $(BASH)
 
 BASH_DBG = bash-dbgsym_$(BASH_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(BASH_DBG)_RDEPENDS += $(BASH)
 $(eval $(call add_derived_package,$(BASH),$(BASH_DBG)))
 
 export BASH_DBG
