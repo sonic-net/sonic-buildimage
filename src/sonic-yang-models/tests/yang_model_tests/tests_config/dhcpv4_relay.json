@@ -1,0 +1,293 @@
+{
+    "DHCPv4_RELAY_VALID_FORMAT_BASE": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_MULTIPLE_SERVERS": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100",
+                            "10.11.12.13"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf1"
+                    }
+                ]
+            }
+        },
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan888",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "server_vrf": "Vrf1",
+                        "source_interface": "Loopback0",
+                        "link_selection": "enable",
+                        "vrf_selection": "enable",
+                        "server_id_override": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_LINK_SELECT": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "link_selection": "enable",
+                        "source_interface": "Loopback0"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_DISCARD": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "agent_relay_mode": "discard"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "max_hop_count": 16
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_MISSING_SERVER_IP": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan777"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_LINK_SELECT_OPTION": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf1"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan888",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "server_vrf": "Vrf1",
+                        "source_interface": "Loopback0",
+                        "vrf_selection": "enable",
+                        "server_id_override": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_VRF_SELECT_OPTION": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf1"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan888",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "server_vrf": "Vrf1",
+                        "source_interface": "Loopback0",
+                        "server_id_override": "enable",
+                        "link_selection": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SERVER_OVERRIDE_OPTION": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf1"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan888",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "server_vrf": "Vrf1",
+                        "source_interface": "Loopback0",
+                        "vrf_selection": "enable",
+                        "link_selection": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SOURCE_INTERFACE_OPTION": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name": "Vrf1"
+                    }
+                ]
+            }
+        },
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan888",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "server_vrf": "Vrf1",
+                        "vrf_selection": "enable",
+                        "server_id_override": "enable",
+                        "link_selection": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv4_RELAY_WITH_INVALID_MAX_HOP_CNT": {
+        "sonic-dhcpv4-relay:sonic-dhcpv4-relay": {
+            "sonic-dhcpv4-relay:DHCPV4_RELAY": {
+                "DHCPV4_RELAY_LIST": [
+                    {
+                        "name": "Vlan999",
+                        "dhcpv4_servers": [
+                            "192.168.20.100"
+                        ],
+                        "max_hop_count": 17
+                    }
+                ]
+            }
+        }
+    }
+}
