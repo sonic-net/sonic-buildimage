@@ -6,7 +6,7 @@ BAZEL_TARGET_PATH = p4rt_app
 BAZEL_BUILD_TARGETS = //p4rt_app:p4rt_deb //p4rt_app:p4rt_dbg_deb
 
 # Enable debug symbols for remote debugging (generate a .dwp).
-BAZEL_BUILD_OPTS += --fission=yes --features=per_object_debug_info
+BAZEL_BUILD_OPTS += --copt=-gsplit-dwarf
 
 # Override sonic_swss_common to use the version specific to this buildimage.
 BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common
