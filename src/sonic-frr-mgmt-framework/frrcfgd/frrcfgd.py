@@ -1418,7 +1418,7 @@ def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
     if op == CachedDataWithOp.OP_DELETE:
         ip_nh_set = IpNextHopSet(af)
     else:
-        arg_list = lambda v: v.split(',') if len(v.strip()) != 0 else None
+        arg_list = lambda v: [None if x.strip() == '' else x.strip() for x in v.split(',')] if len(v.strip()) != 0 else None
         bkh_list = arg_list(args[2])
         nh_list = arg_list(args[3])
         track_list = arg_list(args[5])
