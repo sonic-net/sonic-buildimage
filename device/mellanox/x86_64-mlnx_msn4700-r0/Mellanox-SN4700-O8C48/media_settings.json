@@ -1013,7 +1013,7 @@
                   }
               }
           },
-          "QSFP+-active_cable_media_interface": {
+          "QSFP\\+-active_cable_media_interface": {
               "speed:CAUI-4": {
                   "idriver": {
                       "lane0": "0x00000028",
@@ -1151,7 +1151,7 @@
                   }
                 }
           },
-          "QSFP+C-active_cable_media_interface": {
+          "QSFP\\+C-active_cable_media_interface": {
                 "speed:CAUI-4": {
                     "idriver": {
                         "lane0": "0x00000028",
