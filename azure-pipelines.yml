@@ -171,7 +171,8 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
-      - template: .azure-pipelines/impacted_area_testing/get-impacted-area.yml@sonic-mgmt
+      - checkout: sonic-mgmt
+      - template: .azure-pipelines/impacted_area_testing/get-impacted-area.yml
         parameters:
           BUILD_BRANCH: $(BUILD_BRANCH)
 
