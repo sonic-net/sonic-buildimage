@@ -67,6 +67,12 @@
 {%- set ipv6_addresses = [] %}
 {% endif %}
 
+{# Check if AZURE QoS map exists #}
+{% set azure_qos_exists = false %}
+{% if DSCP_TO_TC_MAP is defined and DSCP_TO_TC_MAP.AZURE is defined %}
+{% set azure_qos_exists = true %}
+{% endif %}
+
 [
 {% if ipv4_loopback_addresses %}
 {% if subnet_decap.enable %}
@@ -77,7 +83,9 @@
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
+{% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -101,7 +109,9 @@
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
+{% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -132,7 +142,9 @@
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
+{% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
@@ -156,7 +168,9 @@
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
+{% if azure_qos_exists %}
             "decap_dscp_to_tc_map":"AZURE",
+{% endif %}
 {% endif %}
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
