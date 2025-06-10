@@ -1,5 +1,5 @@
 import traceback
-from .log import log_crit, log_err, log_debug
+from .log import log_crit, log_err, log_debug, log_notice
 from .manager import Manager
 from .template import TemplateFabric
 import socket
@@ -256,6 +256,61 @@ class StaticRouteMgr(Manager):
             for vrf in self.vrf_pending_redistribution:
                 self.cfg_mgr.push_list(self.enable_redistribution_command(vrf))
             self.vrf_pending_redistribution.clear()
+
+    def cleanup_on_exit(self):
+        """Clean up all static routes managed by this StaticRouteMgr instance
+
+        This method generates deletion commands for all routes in the cache
+        and commits them directly.
+        """
+        if not self.static_routes:
+            log_debug(f"{self.db_name} StaticRouteMgr: No cached routes to clean up")
+            return
+
+        cleanup_commands = []
+        total_routes = 0
+
+        try:
+            log_debug(f"{self.db_name} StaticRouteMgr: Cleaning up cached static routes")
+
+            for vrf, routes in self.static_routes.items():
+                for ip_prefix, (ip_nh_set, route_tag) in routes.items():
+                    try:
+                        is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
+                        empty_nh_set = IpNextHopSet(is_ipv6)
+
+                        cmd_list = self.static_route_commands(
+                            empty_nh_set, ip_nh_set, ip_prefix, vrf, route_tag, route_tag
+                        )
+
+                        if cmd_list:
+                            cleanup_commands.extend(cmd_list)
+                            total_routes += 1
+                            log_debug(f"{self.db_name} StaticRouteMgr: Generated cleanup for {vrf}/{ip_prefix}")
+
+                        if len(routes) == 1:  # This is the last route in this VRF
+                            if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"):
+                                cleanup_commands.extend(self.disable_redistribution_command(vrf))
+
+                    except Exception as e:
+                        log_err(f"{self.db_name} StaticRouteMgr: Error generating cleanup for {vrf}/{ip_prefix}: {e}")
+
+            if cleanup_commands:
+                log_notice(f"{self.db_name} StaticRouteMgr: Generated cleanup commands for {total_routes} static routes")
+
+                self.cfg_mgr.push_list(cleanup_commands)
+                commit_result = self.cfg_mgr.commit()
+
+                if commit_result:
+                    log_notice(f"{self.db_name} StaticRouteMgr: Static routes cleanup committed successfully")
+                else:
+                    log_err(f"{self.db_name} StaticRouteMgr: Failed to commit static route cleanup changes")
+
+            return
+
+        except Exception as e:
+            log_err(f"{self.db_name} StaticRouteMgr: Error during cleanup: {e}")
+            return
 
 class IpNextHop:
     def __init__(self, af_id, blackhole, dst_ip, if_name, dist, vrf):
