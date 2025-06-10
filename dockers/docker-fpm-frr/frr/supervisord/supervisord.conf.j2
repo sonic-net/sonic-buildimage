@@ -178,8 +178,7 @@ stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
-{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
-{% else %}
+{% if DEVICE_METADATA.localhost.switch_type is defined and DEVICE_METADATA.localhost.switch_type == "chassis-packet" %}
 [program:staticroutebfd]
 command=/usr/local/bin/staticroutebfd
 priority=6
@@ -192,7 +191,10 @@ stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
+{% endif %}
 
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+{% else %}
 [program:bgpmon]
 command=/usr/local/bin/bgpmon
 priority=6
