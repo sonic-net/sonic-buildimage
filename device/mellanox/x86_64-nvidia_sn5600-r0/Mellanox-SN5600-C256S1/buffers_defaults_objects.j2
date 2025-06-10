@@ -18,6 +18,51 @@
 
 {% import 'traffic_config.j2' as traffic_config %}
 
+{%- set PORT_ALL = [] %}
+{%- set PORT_ACTIVE = [] %}
+{%- set PORT_UPLINK = [] %}
+{%- set PORT_DOWNLINK = [] %}
+
+{# Initialize PORT_ALL and PORT_ACTIVE #}
+{%- for port in PORT %}
+    {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
+        {%- if PORT_ALL.append(port) %}{% endif %}
+    {%- endif %}
+{%- endfor %}
+
+{%- if DEVICE_NEIGHBOR is not defined %}
+    {%- set PORT_ACTIVE = PORT_ALL %}
+{%- else %}
+    {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+{# Generate uplink and downlink port lists based on router type and neighbors #}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] and DEVICE_NEIGHBOR is defined %}
+        {%- set local_router_type = DEVICE_METADATA['localhost']['type'] %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+                {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
+                {%- if local_router_type == 'LeafRouter' %}
+                    {%- if neighbor_info.type == 'ToRRouter' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- elif neighbor_info.type == 'SpineRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- elif local_router_type == 'ToRRouter' %}
+                    {%- if neighbor_info.type == 'LeafRouter' %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- elif neighbor_info.type == 'Server' %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endif %}
+
 {%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
     "BUFFER_POOL": {
         {% if dynamic_mode is not defined and port_names_inactive|length > 0 -%}
