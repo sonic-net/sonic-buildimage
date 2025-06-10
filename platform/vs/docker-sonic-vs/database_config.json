@@ -31,7 +31,8 @@
         "CONFIG_DB" : {
             "id" : 4,
             "separator": "|",
-            "instance" : "redis"
+            "instance" : "redis",
+            "event_tables" : [ "PORT" ]
         },
         "PFC_WD_DB" : {
             "id" : 5,
@@ -46,7 +47,8 @@
         "STATE_DB" : {
             "id" : 6,
             "separator": "|",
-            "instance" : "redis"
+            "instance" : "redis",
+            "event_tables" : [ "PORT_TABLE", "TRANSCEIVER_INFO" ]
         },
         "SNMP_OVERLAY_DB" : {
             "id" : 7,
