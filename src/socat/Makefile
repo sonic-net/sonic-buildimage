@@ -17,7 +17,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# Build source and Debian packages
 	pushd socat-1.7.4.1
-	patch -p0 < ../enable_readline.patch
+	patch -p0 < ../patch/enable_readline.patch
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 else
