@@ -187,6 +187,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t0
@@ -212,6 +213,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t0-2vlans
@@ -238,6 +240,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t1
@@ -265,6 +268,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: dualtor
@@ -293,6 +297,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t1-multi-asic
@@ -319,6 +324,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t0-sonic
@@ -351,6 +357,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
+      - checkout: sonic-mgmt
       - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
         parameters:
           TOPOLOGY: dpu
