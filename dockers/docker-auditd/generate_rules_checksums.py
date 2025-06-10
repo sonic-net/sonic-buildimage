@@ -28,11 +28,9 @@ def compute_sha1_cat(files):
     sha1 = hashlib.sha1()
     for file_path in files:
         with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(8192)
-                if not chunk:
-                    break
-                sha1.update(chunk)
+            content = f.read()
+            content = content.replace(b'\r\n', b'\n')
+            sha1.update(content)
     return sha1.hexdigest()
 
 def main():

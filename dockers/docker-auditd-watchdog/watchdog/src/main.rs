@@ -7,8 +7,8 @@ static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
 // Expected hash values
 static AUDITD_CONF_HASH: &str = "7cdbd1450570c7c12bdc67115b46d9ae778cbd76";
-static AUDITD_RULES_HASH_DEFAULT: &str = "865f73660f30d1d600bf6767fc8337df05af0b2c";
-static AUDITD_RULES_HASH_NOKIA: &str = "962d3c0fbe9bb48883bac2acb909916acec75cd4";
+static AUDITD_RULES_HASH_DEFAULT: &str = "3042c67383dccff079755c5f3daa2820e2ca392a";
+static AUDITD_RULES_HASH_NOKIA: &str = "fffb00199104c493d04a621b257c579c48d77225";
 
 // Helper to run commands
 fn run_command(cmd: &str) -> Result<String, String> {
@@ -72,7 +72,7 @@ fn check_auditd_rules() -> String {
     };
 
     let cmd = format!(
-        r#"{NSENTER_CMD} sh -c 'find /etc/audit/rules.d/ -name *.rules -type f | sort | xargs cat 2>/dev/null | sha1sum'"#
+        r#"{NSENTER_CMD} sh -c 'find /etc/audit/rules.d/ -name '*.rules' -type f | sort | xargs cat 2>/dev/null | sha1sum'"#
     );
 
     match run_command(&cmd) {
@@ -207,7 +207,7 @@ fn main() {
                     &srvc_active,
                     &rate_limit_result
                 ];
-                let all_passed = all_results.iter().all(|r| r.starts_with("OK"));
+                let all_passed = all_results.iter().all(|r| r.trim_matches('"').starts_with("OK"));
 
                 let (status_line, content_length) = if all_passed {
                     ("HTTP/1.1 200 OK", json_body.len())
