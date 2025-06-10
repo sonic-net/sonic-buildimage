@@ -172,7 +172,7 @@ stages:
     pool: sonic-ubuntu-1c
     steps:
       - checkout: sonic-mgmt
-      - template: .azure-pipelines/impacted_area_testing/get-impacted-area.yml
+      - template: .azure-pipelines/impacted_area_testing/get-impacted-area.yml@sonic-mgmt
         parameters:
           BUILD_BRANCH: $(BUILD_BRANCH)
 
