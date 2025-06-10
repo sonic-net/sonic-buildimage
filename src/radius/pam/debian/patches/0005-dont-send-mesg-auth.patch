@@ -1,6 +1,6 @@
-diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
+diff '--exclude=.vscode' -Nru pam_radius.orig/src/pam_radius_auth.c pam_radius/src/pam_radius_auth.c
 --- pam_radius.orig/src/pam_radius_auth.c	2025-06-05 07:23:22.000000000 +0000
-+++ pam_radius/src/pam_radius_auth.c	2025-06-05 07:27:43.573001968 +0000
++++ pam_radius/src/pam_radius_auth.c	2025-06-10 07:07:50.693072912 +0000
 @@ -65,6 +65,7 @@
  	memset(conf, 0, sizeof(radius_conf_t)); /* ensure it's initialized */
  
@@ -18,10 +18,14 @@ diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.c pam_radius/src
  		} else if (!strncmp(*argv, "statistics=", 11)) {
  			/* Verify filename doesn't contain '/'.
  			 */
-@@ -982,13 +985,17 @@
-               uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
+@@ -979,16 +982,19 @@
+ 	 *	attribute.
+ 	 */
+ 	if (request->code == PW_AUTHENTICATION_REQUEST) {
+-              uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
++		uint8_t *attr = (uint8_t *) request + AUTH_HDR_LEN;
  
- 	      get_random_vector(request->vector);
+-	      get_random_vector(request->vector);
 -
 -              attr[0] = PW_MESSAGE_AUTHENTICATOR;
 -              attr[1] = 18;
@@ -29,30 +33,35 @@ diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.c pam_radius/src
 -	      conf->message_authenticator = attr + 2;
 -
 -              request->length = htons(AUTH_HDR_LEN + 18);
-+              if (!conf->dont_send_message_authenticator) {
-+                    attr[0] = PW_MESSAGE_AUTHENTICATOR;
-+                    attr[1] = 18;
-+                    memset(attr + 2, 0, AUTH_VECTOR_LEN);
-+	            conf->message_authenticator = attr + 2;
-+
-+                    request->length = htons(AUTH_HDR_LEN + 18);
-+	      } else {
-+                    request->length = htons(AUTH_HDR_LEN);
-+                    conf->message_authenticator = NULL;
-+              }
++		get_random_vector(request->vector);
++ 		if (!conf->dont_send_message_authenticator) {
++			attr[0] = PW_MESSAGE_AUTHENTICATOR;
++			attr[1] = 18;
++			memset(attr + 2, 0, AUTH_VECTOR_LEN);
++			conf->message_authenticator = attr + 2;
++			request->length = htons(AUTH_HDR_LEN + 18);
++        } else {
++			request->length = htons(AUTH_HDR_LEN);
++			conf->message_authenticator = NULL;
++		}
  	} else {
  		request->length = htons(AUTH_HDR_LEN);
  		conf->message_authenticator = NULL;
-@@ -1137,7 +1144,7 @@
- 		}
+@@ -1138,9 +1144,10 @@
  
  
--		if (request->code == PW_AUTHENTICATION_REQUEST) {
-+		if (request->code == PW_AUTHENTICATION_REQUEST && !conf->dont_send_message_authenticator) {
- 			hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
- 				 (const uint8_t *) server->secret, strlen(server->secret));
- 
-diff '--exclude=.git' -Naru pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
+ 		if (request->code == PW_AUTHENTICATION_REQUEST) {
+-			hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
+-				 (const uint8_t *) server->secret, strlen(server->secret));
+-
++			if (!conf->dont_send_message_authenticator) {
++				hmac_md5(conf->message_authenticator, (uint8_t *) request, ntohs(request->length),
++					 (const uint8_t *) server->secret, strlen(server->secret));
++			}
+ 		} else {
+ 			/* make an RFC 2139 p6 request authenticator */
+ 			get_accounting_vector(request, server);
+diff '--exclude=.vscode' -Nru pam_radius.orig/src/pam_radius_auth.h pam_radius/src/pam_radius_auth.h
 --- pam_radius.orig/src/pam_radius_auth.h	2025-06-05 07:23:22.000000000 +0000
 +++ pam_radius/src/pam_radius_auth.h	2025-06-05 07:25:26.101248518 +0000
 @@ -178,6 +178,7 @@
