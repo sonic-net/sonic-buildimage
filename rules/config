@@ -312,7 +312,7 @@ ENABLE_FIPS ?= n
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
-SONIC_OS_VERSION ?= 12
+SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
