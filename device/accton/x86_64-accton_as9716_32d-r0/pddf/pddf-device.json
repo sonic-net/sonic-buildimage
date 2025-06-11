@@ -54,7 +54,8 @@
         "custom_kos":
         [
             "pddf_custom_psu",
-            "accton_as9716_32d_ioport"
+            "accton_as9716_32d_ioport",
+            "ucd9000"
         ]
     },
 
@@ -331,6 +332,178 @@
             ]
         }
     },
+    
+    "CURRENT1" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_CURRENT", "device_name":"CURRENT1", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"CURRENT1"},
+        "i2c":
+        {   
+            
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":""},
+            "dev_attr":{}
+        }
+    },
+    
+    
+    "VOLTAGE1" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE1", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"VCC5V_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in1_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in1_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in1_input" }
+            ]
+        }
+    },
+    "VOLTAGE2" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE2", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"P3V3_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in2_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in2_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in2_input" }
+            ]
+        }
+    },
+    "VOLTAGE3" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE3", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"VDD_0P8_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in3_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in3_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in3_input" }
+            ]
+        }
+    },
+    "VOLTAGE4" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE4", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"P1V8_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in4_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in4_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in4_input" }
+            ]
+        
+        }
+    },
+    "VOLTAGE5" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE5", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"VDD_0P9_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in5_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in5_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in5_input" }
+            ]
+        
+        }
+    },
+    "VOLTAGE6" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE6", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"USB_VCC5P0_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in6_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in6_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in6_input" }
+            ]
+        
+        }
+    },
+    "VOLTAGE7" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE7", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"P1V2_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in7_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in7_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in7_input" }
+            ]
+        
+        }
+    },
+     "VOLTAGE8" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE8", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"P3V3stb_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in8_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in8_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in8_input" }
+            ]
+        
+        }
+    },
+     "VOLTAGE9" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE9", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"VCC12V0_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in9_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in9_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in9_input" }
+            ]
+        
+        }
+    },
+    "VOLTAGE10" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE10", "device_parent":"MUX3"},
+        "dev_attr": { "display_name":"P3V3_2_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":"ucd9090"},
+            "attr_list":
+            [
+                { "attr_name": "volt1_low_threshold",  "drv_attr_name": "in10_min" },
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in10_max" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in10_input" }
+            ]
+        
+        }
+    },
+    
      "TEMP1" :
     {
         "dev_info": { "device_type":"TEMP_SENSOR", "device_name":"TEMP1", "device_parent":"MUX3"},
