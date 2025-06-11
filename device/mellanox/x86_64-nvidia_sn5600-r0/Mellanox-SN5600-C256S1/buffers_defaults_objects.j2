@@ -132,7 +132,7 @@
         },
         "queue1_downlink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
@@ -140,7 +140,7 @@
         },
         "queue2_downlink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
@@ -148,7 +148,7 @@
         },
         "queue3_downlink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
@@ -176,7 +176,7 @@
         },
         "queue1_uplink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
@@ -184,7 +184,7 @@
         },
         "queue2_uplink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
@@ -192,7 +192,7 @@
         },
         "queue3_uplink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
-            "packet_discard_action": "discard",
+            "packet_discard_action": "drop",
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
