@@ -31,9 +31,9 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:24.0.2-1~debian.12~$IMAGE_DISTRO
-CONTAINERD_IO_VERSION=1.6.21-1
-LINUX_KERNEL_VERSION=6.1.0-29-2
+DOCKER_VERSION=5:28.2.2-1~debian.13~$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=1.7.27-1
+LINUX_KERNEL_VERSION=6.12.30
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -135,18 +135,10 @@ echo 'Dir::Bin::dpkg "/usr/local/bin/dpkg";' | sudo tee $FILESYSTEM_ROOT/etc/apt
 sudo LANG=C chroot $FILESYSTEM_ROOT rm /usr/local/sbin/dpkg -f
 
 echo '[INFO] Install packages for building image'
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install makedev psmisc
+sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install psmisc
 
 if [[ $CROSS_BUILD_ENVIRON == y ]]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT dpkg --add-architecture $CONFIGURED_ARCH
-fi
-
-## Create device files
-echo '[INFO] MAKEDEV'
-if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic-arm'
-else
-    sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c 'cd /dev && MAKEDEV generic'
 fi
 
 ## docker and mkinitramfs on target system will use pigz/unpigz automatically
@@ -344,13 +336,16 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     pciutils                \
     iptables-persistent     \
     ebtables                \
+    linux-sysctl-defaults   \
     logrotate               \
     curl                    \
     kexec-tools             \
     less                    \
     unzip                   \
+    fdisk                   \
     gdisk                   \
     sysfsutils              \
+    e2fsprogs               \
     squashfs-tools          \
     $bootloader_packages    \
     rsyslog                 \
@@ -365,15 +360,13 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     makedumpfile            \
     conntrack               \
     python3                 \
-    python3-distutils       \
     python3-pip             \
     python-is-python3       \
     cron                    \
-    libprotobuf32           \
-    libgrpc29               \
-    libgrpc++1.51           \
+    libprotobuf32t64        \
+    libgrpc29t64            \
+    libgrpc++1.51t64        \
     haveged                 \
-    fdisk                   \
     gpg                     \
     dmidecode               \
     jq                      \
@@ -453,7 +446,7 @@ if [[ $TARGET_BOOTLOADER == grub ]]; then
         GRUB_PKG=grub-efi-arm64-bin
     fi
 
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get install -d -o dir::cache=/var/cache/apt \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -d -o dir::cache=/var/cache/apt \
         $GRUB_PKG
 
     sudo cp $FILESYSTEM_ROOT/var/cache/apt/archives/grub*.deb $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
@@ -510,23 +503,7 @@ set /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments/1 -n
 
 sudo mkdir -p $FILESYSTEM_ROOT/var/core
 
-# Config sysctl
-sudo augtool --autosave "
-set /files/etc/sysctl.conf/kernel.core_pattern '|/usr/local/bin/coredump-compress %e %t %p %P'
-set /files/etc/sysctl.conf/kernel.softlockup_panic 1
-set /files/etc/sysctl.conf/kernel.panic 10
-set /files/etc/sysctl.conf/kernel.hung_task_timeout_secs 300
-set /files/etc/sysctl.conf/vm.panic_on_oom 2
-set /files/etc/sysctl.conf/fs.suid_dumpable 2
-" -r $FILESYSTEM_ROOT
-
-sysctl_net_cmd_string=""
-while read line; do
-  [[ "$line" =~ ^#.*$ ]] && continue
-  sysctl_net_conf_key=`echo $line | awk -F '=' '{print $1}'`
-  sysctl_net_conf_value=`echo $line | awk -F '=' '{print $2}'`
-  sysctl_net_cmd_string=$sysctl_net_cmd_string"set /files/etc/sysctl.conf/$sysctl_net_conf_key $sysctl_net_conf_value"$'\n'
-done < files/image_config/sysctl/sysctl-net.conf
+sudo cp files/image_config/sysctl/90-sonic.conf $FILESYSTEM_ROOT/usr/lib/sysctl.d/
 
 sudo augtool --autosave "$sysctl_net_cmd_string" -r $FILESYSTEM_ROOT
 
@@ -540,7 +517,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docker==7.1.0'
 
 # Install scapy
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'scapy==2.4.4'
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-scapy
 
 ## Note: keep pip installed for maintainance purpose
 
@@ -564,13 +541,6 @@ sudo cp files/dhcp/sethostname6 $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/graphserviceurl $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/snmpcommunity $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
 sudo cp files/dhcp/vrf $FILESYSTEM_ROOT/etc/dhcp/dhclient-exit-hooks.d/
-if [ -f files/image_config/ntp/ntpsec ]; then
-    sudo cp ./files/image_config/ntp/ntpsec $FILESYSTEM_ROOT/etc/init.d/
-fi
-
-if [ -f files/image_config/ntp/ntp-systemd-wrapper ]; then
-    sudo cp ./files/image_config/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/libexec/ntpsec/
-fi
 
 ## Version file part 1
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
@@ -750,10 +720,10 @@ fi
 sudo chroot $FILESYSTEM_ROOT update-initramfs -u
 ## Convert initrd image to u-boot format
 if [[ $TARGET_BOOTLOADER == uboot ]]; then
-    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}
-    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}
+    INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}+deb13-sonic-${CONFIGURED_ARCH}
+    KERNEL_FILE=vmlinuz-${LINUX_KERNEL_VERSION}+deb13-sonic-${CONFIGURED_ARCH}
     if [[ $CONFIGURED_ARCH == armhf ]]; then
-        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}-armmp
+        INITRD_FILE=initrd.img-${LINUX_KERNEL_VERSION}+deb13-sonic-armmp
         sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -A arm -O linux -T ramdisk -C gzip -d /boot/$INITRD_FILE /boot/u${INITRD_FILE}
         ## Overwriting the initrd image with uInitrd
         sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
@@ -834,6 +804,8 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+sudo rm -f $FILESYSTEM_ROOT/etc/resolv.conf
+sudo touch $FILESYSTEM_ROOT/etc/resolv.conf
 
 ## Optimize filesystem size
 if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
