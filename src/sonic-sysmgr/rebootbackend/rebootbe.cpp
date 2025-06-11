@@ -50,12 +50,6 @@ void RebootBE::Start() {
   s.addSelectable(&m_Done);
   s.addSelectable(&m_RebootThreadFinished);
 
-  if (swss::WarmStart::isWarmStart()) {
-    SetCurrentStatus(RebManagerStatus::WARM_INIT_WAIT);
-  } else {
-    SWSS_LOG_NOTICE("Warm restart not enabled");
-  }
-
   SWSS_LOG_NOTICE("RebootBE entering operational loop");
   while (true) {
     swss::Selectable *sel;
@@ -202,9 +196,6 @@ bool RebootBE::RebootAllowed(const gnoi::system::RebootMethod rebMethod) {
     case RebManagerStatus::HALT_REBOOT_IN_PROGRESS:
     case RebManagerStatus::WARM_REBOOT_IN_PROGRESS: {
       return false;
-    }
-    case RebManagerStatus::WARM_INIT_WAIT: {
-      return rebMethod == gnoi::system::RebootMethod::COLD;
     }
     case RebManagerStatus::IDLE: {
       return true;
