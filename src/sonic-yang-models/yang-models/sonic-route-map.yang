@@ -27,6 +27,10 @@ module sonic-route-map {
         prefix vrf;
     }
 
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
     organization
         "SONiC";
 
@@ -48,6 +52,9 @@ module sonic-route-map {
             }
             type leafref {
                 path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+            }
+            type leafref {
+                path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
             }
             // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
             //type leafref {
