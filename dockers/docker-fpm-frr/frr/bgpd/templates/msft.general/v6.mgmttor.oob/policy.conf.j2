@@ -9,10 +9,6 @@ ipv6 prefix-list DEFAULT_IPV6 permit ::/0
 route-map TO_VPN_OOB_V6 deny 10
   match ipv6 address prefix-list DEFAULT_IPV6
 !
-route-map TO_VPN_OOB_V6 permit 20
-  match as-path LOCALROUTES
-  set community 8075:316 8075:9120 additive
-!
 route-map TO_VPN_OOB_V6 permit 1000
   set community 8075:9120 additive
 !

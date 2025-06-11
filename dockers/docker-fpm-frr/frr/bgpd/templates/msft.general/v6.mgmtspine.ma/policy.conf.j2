@@ -13,14 +13,10 @@ route-map TO_MA_V6 deny 100
   match ipv6 address prefix-list DEFAULT_IPV6
 !
 route-map TO_MA_V6 permit 110
-  match ipv6 address prefix-list LOOPBACK0_V6
-  set community 8075:316 additive
-!
-route-map TO_MA_V6 permit 120
   match ipv6 address prefix-list AGGREGATE_ROUTES_V6
   set community 8075:8801 additive
 !
-route-map TO_MA_V6 permit 130
+route-map TO_MA_V6 permit 120
   match ipv6 address prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V6
   set community 8075:420 8075:8800 additive
 !

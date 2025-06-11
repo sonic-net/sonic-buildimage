@@ -14,20 +14,12 @@ ipv6 prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V6 seq 5 permit ::1/128
 route-map TO_{{ peer_group_type }} permit 100
   match ipv6 address prefix-list DEFAULT_IPV6
 !
-{% if neighbor_type in ['MgmtLeafRouter', 'MgmtToRRouter'] %}
+{% if neighbor_type in ['SpineTs'] %}
 route-map TO_{{ peer_group_type }} permit 110
-  match as-path LOCALROUTES
-  set community 8075:316 additive
-{% elif neighbor_type in ['SpineTs'] %}
-route-map TO_{{ peer_group_type }} permit 120
-  match ipv6 address prefix-list LOOPBACK0_V6
-  set community 8075:316 additive
-!
-route-map TO_{{ peer_group_type }} permit 130
   match ipv6 address prefix-list AGGREGATE_ROUTES_V6
   set community 8075:8801 additive
 !
-route-map TO_{{ peer_group_type }} permit 140
+route-map TO_{{ peer_group_type }} permit 120
   match ipv6 address prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V6
   set community 8075:8800 additive
 {% endif %}

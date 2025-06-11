@@ -13,25 +13,15 @@ ip prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4 seq 5 permit 127.0.0.1/32
 !
 bgp as-path access-list LOCALROUTES permit ^$
 !
-bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
-!
 route-map TO_{{ peer_group_type }} permit 100
   match ip address prefix-list DEFAULT_IPV4
 !
-{% if neighbor_type in ['MgmtLeafRouter', 'MgmtToRRouter'] %}
+{% if neighbor_type in ['SpineTs'] %}
 route-map TO_{{ peer_group_type }} permit 110
-  match as-path LOCALROUTES
-  set community 8075:316 additive
-{% elif neighbor_type in ['SpineTs'] %}
-route-map TO_{{ peer_group_type }} permit 120
-  match ip address prefix-list LOOPBACK0_V4
-  set community 8075:316 additive
-!
-route-map TO_{{ peer_group_type }} permit 130
   match ip address prefix-list AGGREGATE_ROUTES_V4
   set community 8075:8801 additive
 !
-route-map TO_{{ peer_group_type }} permit 140
+route-map TO_{{ peer_group_type }} permit 120
   match ip address prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4
   set community 8075:8800 additive
 {% endif %}
