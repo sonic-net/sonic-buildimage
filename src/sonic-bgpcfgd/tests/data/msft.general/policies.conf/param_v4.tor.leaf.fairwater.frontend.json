@@ -1,0 +1,19 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "MgmtType": "FairWater",
+            "resource_type": "ND-GB200F"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "BackEndToRRouter"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device"
+    },
+    "neighbor_addr": "11.11.11.11"
+}
