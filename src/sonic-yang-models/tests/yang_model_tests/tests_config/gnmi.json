@@ -134,10 +134,7 @@
                     "client_auth": "true",
                     "user_auth": "none",
                     "log_level": "2",
-                    "port": "50051",
-                    "save_on_set": "wrong",
-                    "enable_crl": "true",
-                    "crl_expire_duration": "86400"
+                    "port": "50052"
                 }
             }
         }
