@@ -170,10 +170,10 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 # Install Python module for ipaddr
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
-# Install Python module for grpcio and grpcio-toole
+# Install Python module for grpcio and grpcio-tools
 if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.58.0"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.66.2"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.66.2"
 fi
 
 # Install Python module for smbus2
@@ -196,6 +196,9 @@ install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
+
+# Install some dependencies for pyangbind
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -226,27 +229,17 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift
 install_pip_package {{system_health_py3_wheel_path}}
 
 # Install m2crypto, cryptography, cffi, and pynacl packages, used by sonic-utilities
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-nacl
+# Install python packages used by sonic-utilities
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-natsort python3-netifaces python3-paramiko python3-scp python3-enlighten python3-requests python3-click
 
 # install libffi-dev to match utilities' dependency.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libffi-dev
-
-# The 'utilities' package depends on the Python 'bcrypt' package.
-# For the armv7 architecture, there is no pre-built manylinux wheel available for 'bcrypt',
-# so it must be built from source. Building 'bcrypt' from source requires Rust tooling
-# (rustc and cargo). These are installed here and removed after installation to minimize
-# the final image size. If a manylinux wheel becomes available for armv7 in the future,
-# this step may no longer be necessary.
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install rustc cargo
 
 # Install SONiC Utilities Python package
 install_pip_package {{sonic_utilities_py3_wheel_path}}
 
 # Install sonic-utilities data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-utilities-data_*.deb
-
-# Uninstall Rust
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y purge rustc cargo
 
 # Install customized bash version to patch bash plugin support.
 install_deb_package $debs_path/bash_*.deb
@@ -392,8 +385,7 @@ sudo cp $IMAGE_CONFIGS/monit/mgmt_oper_status.py $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mgmt_oper_status.py
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
-# TODO: are mismatching versions fine for bookworm?
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -t bookworm-backports smartmontools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install smartmontools
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
@@ -549,7 +541,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 {% endif %}
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-watchdog
 
 # sonic-ctrmgrd-rs is required by container script
 install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
@@ -1210,14 +1202,14 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+{% if installer_python_debs.strip() -%}
 # Install FIPS python package will break apt-get purge command, so install after all purge command finish 
 if [ "$INCLUDE_FIPS" == y ]; then
-    {% if installer_python_debs.strip() -%}
     {% for deb in installer_python_debs.strip().split(' ') -%}
     install_deb_package {{deb}}
     {% endfor %}
-    {% endif %}
 fi
+{% endif %}
 
 
 {% if installer_debs.strip() -%}
