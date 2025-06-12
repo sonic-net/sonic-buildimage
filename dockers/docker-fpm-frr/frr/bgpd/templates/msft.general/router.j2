@@ -82,7 +82,7 @@
 {%             include path_template % "v4.tor.rotterdam" %}
 {%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v4.tor.rotterdam" %}
-{%         elif neighbor_type == 'BackEndToRRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
+{%         elif neighbor_type == 'LeafRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
 {%             include path_template % "v4.tor.leaf.fairwater.frontend" %}
 {%         elif neighbor_type == 'BackEndToRRouter' %}
 {%             include path_template % "v4.tor.frontend" %}
@@ -174,7 +174,7 @@
 {%             include path_template % "v6.tor.rotterdam" %}
 {%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v6.tor.rotterdam" %}
-{%         elif neighbor_type == 'BackEndToRRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
+{%         elif neighbor_type == 'LeafRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
 {%             include path_template % "v6.tor.leaf.fairwater.frontend" %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_fairwater == 'true' and device_type == 'ToRRouter' %}
 {%             include path_template % "v6.tor.fairwater.frontend" %}
