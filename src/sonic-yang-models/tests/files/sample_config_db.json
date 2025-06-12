@@ -1944,7 +1944,6 @@
         },
         "PREFIX_SET": {
             "prefix1": {
-                "mode": "IPv4"
             }
         },
         "PREFIX": {

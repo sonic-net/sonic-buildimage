@@ -104,11 +104,6 @@
     "ROUTE_MAP_MATCH_TAG_MUST_COND_FALSE": {
         "desc": "Configure route map table with more than one match tag in list.",
         "eStr": "Too many match_tag elements"
-    },
-    "PREFIX_SET_MISSING_MODE": {
-        "desc": "Prefix set has a mandatory mode field.",
-        "eStrKey": "Mandatory"
     }
-
 }
 
