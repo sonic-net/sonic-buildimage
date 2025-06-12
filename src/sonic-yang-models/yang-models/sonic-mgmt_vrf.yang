@@ -23,6 +23,11 @@ module sonic-mgmt_vrf {
                     default false;
                 }
 
+                leaf in_band_mgmt_enabled {
+                    type boolean;
+                    default false;
+                }
+
             } /* end of container vrf_global */
 
         } /* end of container MGMT_VRF_CONFIG */
