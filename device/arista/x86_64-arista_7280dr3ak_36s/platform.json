@@ -1,0 +1,251 @@
+{
+    "chassis": {
+        "name": "DCS-7280DR3AK-36S",
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:00:18.7)"
+            },
+            {
+                "name": "Adm1266(addr=10-004f)"
+            },
+            {
+                "name": "Ucd90320(addr=14-0011)"
+            },
+            {
+                "name": "Scd(addr=0000:01:00.0)"
+            },
+            {
+                "name": "CormorantSysCpld(addr=13-0023)"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "slot1",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan1",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot2",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan2",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot3",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan3",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "slot4",
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "fan4",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu1",
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "psu2",
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "CPU"
+            },
+            {
+                "name": "CPU board"
+            },
+            {
+                "name": "Back-panel"
+            },
+            {
+                "name": "JE0 Front Side"
+            },
+            {
+                "name": "Air Inlet"
+            },
+            {
+                "name": "Board Temp"
+            },
+            {
+                "name": "JE1_C Diode"
+            },
+            {
+                "name": "JE0_C Diode"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "osfp1"
+            },
+            {
+                "name": "osfp2"
+            },
+            {
+                "name": "osfp3"
+            },
+            {
+                "name": "osfp4"
+            },
+            {
+                "name": "osfp5"
+            },
+            {
+                "name": "osfp6"
+            },
+            {
+                "name": "osfp7"
+            },
+            {
+                "name": "osfp8"
+            },
+            {
+                "name": "osfp9"
+            },
+            {
+                "name": "osfp10"
+            },
+            {
+                "name": "osfp11"
+            },
+            {
+                "name": "osfp12"
+            },
+            {
+                "name": "osfp13"
+            },
+            {
+                "name": "osfp14"
+            },
+            {
+                "name": "osfp15"
+            },
+            {
+                "name": "osfp16"
+            },
+            {
+                "name": "osfp17"
+            },
+            {
+                "name": "osfp18"
+            },
+            {
+                "name": "osfp19"
+            },
+            {
+                "name": "osfp20"
+            },
+            {
+                "name": "osfp21"
+            },
+            {
+                "name": "osfp22"
+            },
+            {
+                "name": "osfp23"
+            },
+            {
+                "name": "osfp24"
+            },
+            {
+                "name": "osfp25"
+            },
+            {
+                "name": "osfp26"
+            },
+            {
+                "name": "osfp27"
+            },
+            {
+                "name": "osfp28"
+            },
+            {
+                "name": "osfp29"
+            },
+            {
+                "name": "osfp30"
+            },
+            {
+                "name": "osfp31"
+            },
+            {
+                "name": "osfp32"
+            },
+            {
+                "name": "osfp33"
+            },
+            {
+                "name": "osfp34"
+            },
+            {
+                "name": "osfp35"
+            },
+            {
+                "name": "osfp36"
+            },
+            {
+                "name": "osfp37"
+            },
+            {
+                "name": "osfp38"
+            }
+        ]
+    },
+    "interfaces": {}
+}

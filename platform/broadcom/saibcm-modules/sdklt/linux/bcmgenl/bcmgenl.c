@@ -406,7 +406,8 @@ dstport_get(void *raw_hg_hdr)
 {
     /*
      * The bit positions of dest port field is fixed on TH4/TH5.
-     * directly use HIGIG2_DST_PORT_MGIDLf_GET to get dest port.
+     * directly use HIGIG2_DST_MODID_MGIDH & HIGIG2_DST_PORT_MGIDL to
+     * get dest port.
      */
     int dstport = 0;
     const HIGIG2_t *const higig2 = (HIGIG2_t *)raw_hg_hdr;
@@ -414,7 +415,8 @@ dstport_get(void *raw_hg_hdr)
     if (HIGIG2_MCSTf_GET(*higig2)) {
         dstport = 0;
     } else {
-        dstport = HIGIG2_DST_PORT_MGIDLf_GET(*higig2);
+        dstport = (HIGIG2_DST_MODID_MGIDHf_GET(*higig2) << 8) |
+                  HIGIG2_DST_PORT_MGIDLf_GET(*higig2);
     }
     return dstport;
 }

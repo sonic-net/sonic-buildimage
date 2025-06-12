@@ -58,8 +58,6 @@ ifeq (1,$(NO_PRECOMPILED_MODULE))
 # SDK 'include' directories. 
 #
 ccflags-y   := \
-  -Wno-pointer-to-int-cast \
-  -Wno-int-to-pointer-cast \
   -I$(SDK)/include \
   -I$(SDK)/systems/bde/linux/include \
   -I$(SDK)/systems/bde/shared/include \

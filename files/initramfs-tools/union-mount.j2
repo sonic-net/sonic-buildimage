@@ -218,8 +218,10 @@ mkdir -p ${rootmnt}/boot
 mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
 
-## Mount the /tmp directory as tmpfs
-mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
+if [ $DPKG_ARCH != "armhf" ]; then
+    ## Mount the /tmp directory as tmpfs
+    mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
+fi
 
 ## Mount loop device or tmpfs for /var/log
 if $logs_inram; then

@@ -1,0 +1,53 @@
+module sonic-heartbeat {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-heartbeat";
+    prefix heartbeat;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "HEARTBEAT YANG Module for SONiC OS";
+
+    revision 2025-01-09 {
+        description "First Revision";
+    }
+
+    container sonic-heartbeat {
+
+        container HEARTBEAT {
+            description "HEARTBEAT config TABLE part of config_db.json";
+
+            list HEARTBEAT_LIST {
+                key "name";
+
+                leaf name {
+                    description "process name in HEARTBEAT table";
+                    type string {
+                        length 1..32;
+                    }
+                }
+
+                leaf heartbeat_interval {
+                    description "Heartbeat interval in millisecond";
+                    type uint32;
+                    default "10000";
+                }
+
+                leaf alert_interval {
+                    description "Alert interval in millisecond";
+                    type uint32;
+                    default "60000";
+                }
+            }
+        }
+    }
+}

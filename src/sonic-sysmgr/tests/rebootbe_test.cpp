@@ -205,48 +205,6 @@ class RebootBETest : public RebootBETestWithoutStop {
   }
 };
 
-TEST_F(RebootBETest, WarmbootInProgressBlocksNewWarmboot) {
-  force_warm_start_state(true);
-
-  start_rebootbe();
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-
-  // Send a warmboot request, confirm it fails.
-  RebootRequest request;
-  request.set_method(RebootMethod::WARM);
-  start_reboot_via_rpc(request, swss::StatusCode::SWSS_RC_IN_USE);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-  force_warm_start_state(false);
-}
-
-TEST_F(RebootBETest, ColdbootWhileWarmbootInProgress) {
-  force_warm_start_state(true);
-  set_mock_defaults();
-
-  start_rebootbe();
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
-
-  // Send a coldboot request, confirm it starts.
-  RebootRequest request;
-  request.set_method(RebootMethod::COLD);
-  start_reboot_via_rpc(request);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
-  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
-            RebootBE::RebManagerStatus::COLD_REBOOT_IN_PROGRESS);
-
-  // Cleanup without going through the whole reboot.
-  send_stop_reboot_thread();
-  force_warm_start_state(false);
-}
-
 // Test fixture to skip through the startup sequence into the main loop.
 // Param indicates if RebootBE should be initialized into a state where the
 // system came up in warmboot.

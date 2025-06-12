@@ -33,7 +33,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:24.0.2-1~debian.12~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.6.21-1
-LINUX_KERNEL_VERSION=6.1.0-22-2
+LINUX_KERNEL_VERSION=6.1.0-29-2
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -416,6 +416,20 @@ sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/group
 # Needed to install kdump-tools
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "mkdir -p /etc/initramfs-tools/conf.d"
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/initramfs-tools/conf.d/driver-policy"
+
+# Ensure the relevant directories exist
+sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
+sudo mkdir -p /etc/initramfs-tools/hooks
+
+# Copy the network setup scriptgit
+sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+
+# Copy the hook file
+sudo cp files/scripts/network_setup /etc/initramfs-tools/hooks/network_setup
+
+# Make the scripts executable
+sudo chmod +x /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+sudo chmod +x /etc/initramfs-tools/hooks/network_setup
 
 # Copy vmcore-sysctl.conf to add more vmcore dump flags to kernel
 sudo cp files/image_config/kdump/vmcore-sysctl.conf $FILESYSTEM_ROOT/etc/sysctl.d/
