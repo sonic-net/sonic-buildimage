@@ -99,6 +99,20 @@ module sonic-routing-policy-sets {
                                   masklength_range: exact";
                 }
 
+                leaf sequence_number {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description
+                        "The sequence number determines the order in which prefix-list entries are applied. It must
+                         be unique for each prefix in a prefix-list. Target devices should apply the prefixes in
+                         ascending order determined by sequence no (low to high), rather than relying only on order
+                         in the list.";
+                    must "count(../../PREFIX_LIST[name=current()/../name and sequence_number=current()]) <= 1" {
+                        error-message "sequence_number required to be unique for each prefix-list";
+                    }
+                }
+
                 leaf action {
                     type routing-policy-action-type;
                     description
