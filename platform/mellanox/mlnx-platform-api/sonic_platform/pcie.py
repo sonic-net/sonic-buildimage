@@ -22,6 +22,7 @@
 ########################################################################
 import os
 import re
+import mock
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
@@ -42,6 +43,7 @@ class Pcie(PcieUtil):
     # use bus from _device_id_to_bus_map instead of from yaml file
     def get_pcie_check(self):
         self.load_config_file()
+        return_confInfo = []
         for item_conf in self.confInfo:
             id_conf = item_conf["id"]
             dev_conf = item_conf["dev"]
@@ -58,7 +60,7 @@ class Pcie(PcieUtil):
                     key_dict = f"{PCIE_DETACH_INFO_TABLE}|0000:{bus_conf}:{dev_conf}.{fn_conf}"
                     detach_info_dict = dict(self.state_db.hgetall(key_dict))
                     if detach_info_dict and detach_info_dict.get("dpu_state") == PCIE_OPERATION_DETACHING:
-                        item_conf["result"] = "Passed"
+                        # Do not add this device to confInfo list
                         continue
                 except Exception as e:
                     print(f"Error: {e}")
@@ -69,7 +71,8 @@ class Pcie(PcieUtil):
                 item_conf["result"] = "Passed"
             else:
                 item_conf["result"] = "Failed"
-        return self.confInfo
+            return_confInfo.append(item_conf)
+        return return_confInfo
 
     # Create
     def _create_device_id_to_bus_map(self):
