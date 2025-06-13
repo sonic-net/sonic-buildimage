@@ -22,7 +22,6 @@
 ########################################################################
 import os
 import re
-import mock
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
