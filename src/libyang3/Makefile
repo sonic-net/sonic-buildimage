@@ -20,6 +20,13 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Enable large file support for 32-bit arch
 	echo 'add_definitions(-D_FILE_OFFSET_BITS=64)' >> CMakeLists.txt
 
+	# Debian buster and below do not have new enough versions of xxhash and
+	# build fails.  xxhash is an optimization, not a real dependency.
+	if [ "`lsb_release -r | awk '{ print $$2 }'`" -le "10" ] ; then \
+		sed -i -e '/.*libxxhash.*/d' debian/control; \
+		sed -i -e 's/^find_package(XXHash)/#find_package(XXHash)/' CMakeLists.txt; \
+	fi
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -d -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS)
 else
