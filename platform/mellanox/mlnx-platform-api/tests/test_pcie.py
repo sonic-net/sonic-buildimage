@@ -77,7 +77,7 @@ class TestPcie:
         mock_db_instance.hgetall.return_value = {'dpu_state': 'detaching'}
         p.state_db = mock_db_instance
         info = p.get_pcie_check()
-        assert info[0]['result'] == 'Passed'
+        assert len(info) == 0
         # Verify the correct key was used
         expected_key = f"PCIE_DETACH_INFO|0000:02:00.0"
         mock_db_instance.hgetall.assert_called_with(expected_key)
@@ -96,7 +96,11 @@ class TestPcie:
         mock_db_instance = mock.MagicMock()
         mock_db_instance.hgetall.return_value = {'dpu_state': 'attached'}
         p.state_db = mock_db_instance
+        info = p.get_pcie_check()
+        assert len(info) == 1
+        assert info[0]['result'] == 'Failed'
 
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     def test_get_pcie_check_bluefield_db_error(self):
         p = Pcie('')
         p.confInfo = [
