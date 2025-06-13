@@ -13,7 +13,7 @@ struct HealthStatus {
  
 fn check_bmp_supervisorctl() -> String {
     let output = Command::new("docker")
-        .args(["exec", "-i", "bmp", "supervisorctl", "status"])
+        .args(["exec", "-i", "ksdatatest.azurecr.io/docker-sonic-bmp", "supervisorctl", "status"])
         .output();
 
     match output {
