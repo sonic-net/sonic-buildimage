@@ -11,9 +11,10 @@ struct HealthStatus {
     check_bmp_port: String,
 }
  
-fn check_bmp_supervisorctl() -> String {
-    let output = Command::new("docker")
-        .args(["exec", "-i", "bmp", "supervisorctl", "status"])
+fn check_bmp_processes_on_host() -> String {
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg("ps aux | grep -E '/usr/local/bin/bmpcfgd|/usr/bin/openbmpd' | grep -v grep")
         .output();
 
     match output {
@@ -24,17 +25,16 @@ fn check_bmp_supervisorctl() -> String {
 
             let stdout = String::from_utf8_lossy(&output.stdout);
 
-            let has_openbmpd = stdout.lines().any(|line| {
-                line.starts_with("openbmpd") && line.contains("RUNNING")
-            });
-            let has_bmpcfgd = stdout.lines().any(|line| {
-                line.starts_with("bmpcfgd") && line.contains("RUNNING")
-            });
+            let has_bmpcfgd = stdout.lines().any(|line| line.contains("/usr/local/bin/bmpcfgd"));
+            let has_openbmpd = stdout.lines().any(|line| line.contains("/usr/bin/openbmpd"));
 
             if has_openbmpd && has_bmpcfgd {
                 "OK".to_string()
             } else {
-                format!("ERROR: Statuses - openbmpd: {}, bmpcfgd: {}", has_openbmpd, has_bmpcfgd)
+                format!(
+                    "ERROR: Processes - openbmpd: {}, bmpcfgd: {}",
+                    has_openbmpd, has_bmpcfgd
+                )
             }
         }
         Err(e) => format!("ERROR: Failed to run command - {}", e),
