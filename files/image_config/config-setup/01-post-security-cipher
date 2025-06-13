@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+# Restore cipher_pass file from persistent storage
+if [ -f /host/security_cipher/cipher_pass ]; then
+    cp /host/security_cipher/cipher_pass /etc/cipher_pass
+    chmod 640 /etc/cipher_pass
+    echo "Restored /host/security_cipher/cipher_pass  to /etc/"
+fi
+
