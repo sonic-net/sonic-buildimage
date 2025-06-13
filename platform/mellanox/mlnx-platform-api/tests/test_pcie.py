@@ -30,6 +30,13 @@ from sonic_platform.pcie import Pcie
 
 
 class TestPcie:
+    def setup_method(self):
+        os.environ['UNITTEST'] = '1'
+
+    def teardown_method(self):
+        if 'UNITTEST' in os.environ:
+            del os.environ['UNITTEST']
+
     @mock.patch('sonic_platform.pcie.Pcie._create_device_id_to_bus_map', mock.MagicMock())
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     def test_get_pcie_check(self):
@@ -53,6 +60,59 @@ class TestPcie:
         p.check_pcie_sysfs = mock.MagicMock(return_value=True)
         info = p.get_pcie_check()
         assert info[0]['result'] == 'Passed'
+
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    def test_get_pcie_check_bluefield_detaching(self):
+        p = Pcie('')
+        p.confInfo = [
+            {
+                'id': 'c2d5',  # BULEFIELD_SOC_ID
+                'bus': '02',
+                'dev': '00',
+                'fn': '0'
+            }
+        ]
+        # Mock the DB response
+        mock_db_instance = mock.MagicMock()
+        mock_db_instance.hgetall.return_value = {'dpu_state': 'detaching'}
+        p.state_db = mock_db_instance
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Passed'
+        # Verify the correct key was used
+        expected_key = f"PCIE_DETACH_INFO|0000:02:00.0"
+        mock_db_instance.hgetall.assert_called_with(expected_key)
+
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    def test_get_pcie_check_bluefield_not_detaching(self):
+        p = Pcie('')
+        p.confInfo = [
+            {
+                'id': 'a2dc',  # BLUEFIELD_CONNECTX_ID
+                'bus': '03',
+                'dev': '00',
+                'fn': '0'
+            }
+        ]
+        mock_db_instance = mock.MagicMock()
+        mock_db_instance.hgetall.return_value = {'dpu_state': 'attached'}
+        p.state_db = mock_db_instance
+
+    def test_get_pcie_check_bluefield_db_error(self):
+        p = Pcie('')
+        p.confInfo = [
+            {
+                'id': 'c2d5',  # BULEFIELD_SOC_ID
+                'bus': '02',
+                'dev': '00',
+                'fn': '0'
+            }
+        ]
+        # Mock the DB to raise an exception
+        mock_db_instance = mock.MagicMock()
+        mock_db_instance.hgetall.side_effect = Exception("DB Error")
+        p.state_db = mock_db_instance
+        info = p.get_pcie_check()
+        assert info[0]['result'] == 'Failed'
 
     @mock.patch('sonic_platform.pcie.os.listdir')
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
