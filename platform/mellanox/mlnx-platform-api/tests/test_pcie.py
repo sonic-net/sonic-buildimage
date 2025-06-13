@@ -96,9 +96,18 @@ class TestPcie:
         mock_db_instance = mock.MagicMock()
         mock_db_instance.hgetall.return_value = {'dpu_state': 'attached'}
         p.state_db = mock_db_instance
+
+        # Test when check_pcie_sysfs returns False
+        p.check_pcie_sysfs = mock.MagicMock(return_value=False)
         info = p.get_pcie_check()
         assert len(info) == 1
         assert info[0]['result'] == 'Failed'
+
+        # Test when check_pcie_sysfs returns True
+        p.check_pcie_sysfs = mock.MagicMock(return_value=True)
+        info = p.get_pcie_check()
+        assert len(info) == 1
+        assert info[0]['result'] == 'Passed'
 
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     def test_get_pcie_check_bluefield_db_error(self):
