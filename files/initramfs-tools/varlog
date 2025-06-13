@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-PREREQS=""
+PREREQS="swi2bin"
 
 prereqs() { echo "$PREREQS"; }
 
