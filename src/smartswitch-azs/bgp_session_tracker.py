@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import signal
 import time
@@ -9,12 +9,6 @@ from swsscommon import swsscommon
 SYSLOG_IDENTIFIER = "bgp-session-tracker"
 logger_helper = logger.Logger(SYSLOG_IDENTIFIER)
 DEFAULT_ROUTE_KEY = "0.0.0.0/0"
-APPL_DB_NAME = "APPL_DB"
-ROUTE_TABLE_NAME = "ROUTE_TABLE"
-PORTCHANNEL_TABLE_NAME = "PORTCHANNEL"
-BGP_NEIGHBOR_TABLE_NAME = "BGP_NEIGHBOR"
-BGP_SESSION_TRACKER_STATE_DB_TABLE_NAME = "BGP_SESSION_TRACKER"
-LAG_TABLE_NAME = "LAG_TABLE"
 BGP_SESSION_TRACKER_INSTANCE_NAME = "T1toWL"
 
 class BgpSessionTracker():
@@ -31,15 +25,15 @@ class BgpSessionTracker():
         self.config_db.connect()
         self.config_db_connector = swsscommon.DBConnector("CONFIG_DB", 0, False)
         self.state_db = swsscommon.DBConnector("STATE_DB", 0, False)
-        self.appl_db = daemon_base.db_connect(APPL_DB_NAME)
-        self.state_db_tbl = swsscommon.Table(self.state_db, BGP_SESSION_TRACKER_STATE_DB_TABLE_NAME)
-        self.lag_tbl = swsscommon.Table(self.state_db, LAG_TABLE_NAME)
-        self.route_table = swsscommon.Table(self.appl_db, ROUTE_TABLE_NAME)
+        self.appl_db = daemon_base.db_connect("APPL_DB")
+        self.state_db_tbl = swsscommon.Table(self.state_db, swsscommon.STATE_BGP_SESSION_TRACKER_TABLE_NAME)
+        self.lag_tbl = swsscommon.Table(self.state_db, swsscommon.STATE_LAG_TABLE_NAME)
+        self.route_table = swsscommon.Table(self.appl_db, swsscommon.APP_ROUTE_TABLE_NAME)
 
         self.sel = swsscommon.Select()
-        self.tbl = swsscommon.SubscriberStateTable(self.appl_db, ROUTE_TABLE_NAME)
+        self.tbl = swsscommon.SubscriberStateTable(self.appl_db, swsscommon.APP_ROUTE_TABLE_NAME)
         self.sel.addSelectable(self.tbl)
-        self.nbr_tbl = swsscommon.SubscriberStateTable(self.config_db_connector, BGP_NEIGHBOR_TABLE_NAME)
+        self.nbr_tbl = swsscommon.SubscriberStateTable(self.config_db_connector, swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME)
         self.sel.addSelectable(self.nbr_tbl)
 
     def process_default_route_update(self):
@@ -113,7 +107,7 @@ class BgpSessionTracker():
         Get the BGP sessions to T1
         """
         try:
-            data = self.config_db.get_table(BGP_NEIGHBOR_TABLE_NAME)
+            data = self.config_db.get_table(swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME)
             if data:
                 for peerip, value in data.items():
                     if 'T1' in value['name']:
@@ -132,12 +126,12 @@ class BgpSessionTracker():
         logger_helper.log_notice("Updating southbound portchannels with status: %s" % (status))
         success = True
         try:
-            data = self.config_db.get_table(PORTCHANNEL_TABLE_NAME)
+            data = self.config_db.get_table(swsscommon.CFG_LAG_TABLE_NAME)
             for portchannel in self.downstream_portchannels:
                 if portchannel in data.keys():
                     portchannel_data = data[portchannel]
                     portchannel_data['admin_status'] = status
-                    self.config_db.set_entry(PORTCHANNEL_TABLE_NAME, portchannel, portchannel_data)
+                    self.config_db.set_entry(swsscommon.CFG_LAG_TABLE_NAME, portchannel, portchannel_data)
                     time.sleep(5)  # Wait for the config to be applied
                     pc_admin_status = self.lag_tbl.hget(portchannel, 'admin_status')
                     if pc_admin_status[0] == True and pc_admin_status[1] == status:
