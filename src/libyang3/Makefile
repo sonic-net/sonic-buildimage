@@ -23,6 +23,13 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Apply patch series
 	patch -p1 < ../patch/0001-pr2362-lyd_validate_noextdeps.patch
 
+	# Debian buster and below do not have new enough versions of xxhash and
+	# build fails.  xxhash is an optimization, not a real dependency.
+	if [ "`lsb_release -r | awk '{ print $$2 }'`" -le "10" ] ; then \
+		sed -i -e '/.*libxxhash.*/d' debian/control; \
+		sed -i -e 's/^find_package(XXHash)/#find_package(XXHash)/' CMakeLists.txt; \
+	fi
+
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -d -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS)
 else
