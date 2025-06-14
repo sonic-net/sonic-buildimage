@@ -1,8 +1,0 @@
-netifaces==0.11.0
-pyroute2
-sonic-py-common
-
-[testing]
-ijson
-pytest>3
-xmltodict==0.12.0
