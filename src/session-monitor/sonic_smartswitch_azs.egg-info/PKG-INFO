@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: sonic-smartswitch-azs
+Version: 1.0
+Summary: Package contains Python scripts for smartswitch-azs for SONiC.
+Author: AzS Platform Team
+Author-email: anishsdirects@microsoft.com
+License: GNU General Public License v3
+Keywords: sonic-smartswitch-azs,link_state_tracker
+Classifier: Development Status :: 1 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Requires-Python: >=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*
+Provides-Extra: testing
+
+"
+This package includes smartswitch-azs python scripts.
+"
+
+

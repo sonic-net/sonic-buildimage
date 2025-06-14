@@ -166,8 +166,8 @@ stages:
               mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
               make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
               mv target/sonic-mellanox.bin target/release/sonic-mellanox.bin
-              make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_SMARTSWITCH_AZS=y target/sonic-mellanox.bin 2>&1 | tee target/build-smartswitch-azs.log
-              mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch-azs.bin
+              make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_SESSION_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build-session-monitor.log
+              mv target/sonic-mellanox.bin target/sonic-mellanox-session-monitor.bin
               mv target/release/* target/
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz 2>&1 | tee target/buildrpc.log
               cp target/debs/bookworm/python-saithrift*.deb target/
@@ -242,7 +242,7 @@ stages:
       - template: template-cisco.yml
         parameters:
           NAME: cisco-8000-smartswitch
-          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SMARTSWITCH_AZS=y'
+          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SESSION_MONITOR=y'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'pensando') }}:

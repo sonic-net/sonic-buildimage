@@ -21,20 +21,20 @@ RUN pip3 install \
          pyroute2 \
          netifaces==0.11.0
 
-{% if docker_smartswitch_azs_debs.strip() -%}
+{% if docker_session_monitor_debs.strip() -%}
 # Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_smartswitch_azs_debs.split(' '), "/debs/") }}
+{{ copy_files("debs/", docker_session_monitor_debs.split(' '), "/debs/") }}
 
 # Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_smartswitch_azs_debs.split(' ')) }}
+{{ install_debian_packages(docker_session_monitor_debs.split(' ')) }}
 {%- endif %}
 
-{% if docker_smartswitch_azs_whls.strip() %}
+{% if docker_session_monitor_whls.strip() %}
 # Copy locally-built Python wheel dependencies
-{{ copy_files("python-wheels/", docker_smartswitch_azs_whls.split(' '), "/python-wheels/") }}
+{{ copy_files("python-wheels/", docker_session_monitor_whls.split(' '), "/python-wheels/") }}
 
 # Install locally-built Python wheel dependencies
-{{ install_python_wheels(docker_smartswitch_azs_whls.split(' ')) }}
+{{ install_python_wheels(docker_session_monitor_whls.split(' ')) }}
 {% endif %}
 
 ## Clean up

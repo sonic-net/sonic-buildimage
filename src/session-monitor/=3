@@ -1,0 +1,13 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pytest in /home/miatao/.local/lib/python3.10/site-packages (8.3.5)
+Requirement already satisfied: xmltodict==0.12.0 in /usr/lib/python3/dist-packages (0.12.0)
+Collecting ijson
+  Downloading ijson-3.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (130 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130.2/130.2 KB 3.7 MB/s eta 0:00:00
+Requirement already satisfied: tomli>=1 in /home/miatao/.local/lib/python3.10/site-packages (from pytest) (2.2.1)
+Requirement already satisfied: iniconfig in /home/miatao/.local/lib/python3.10/site-packages (from pytest) (2.0.0)
+Requirement already satisfied: pluggy<2,>=1.5 in /home/miatao/.local/lib/python3.10/site-packages (from pytest) (1.5.0)
+Requirement already satisfied: exceptiongroup>=1.0.0rc8 in /home/miatao/.local/lib/python3.10/site-packages (from pytest) (1.2.2)
+Requirement already satisfied: packaging in /usr/lib/python3/dist-packages (from pytest) (21.3)
+Installing collected packages: ijson
+Successfully installed ijson-3.4.0
