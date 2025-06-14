@@ -1,0 +1,7 @@
+PLATFORM_NAME=x86_64-netberg_aurora_621-r0
+SONIC_PLATFORM_WHEEL_PY3="/usr/share/sonic/device/${PLATFORM_NAME}/pddf/sonic_platform-1.0-py3-none-any.whl"
+python3 -m pip install ${SONIC_PLATFORM_WHEEL_PY3}
+
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
