@@ -1,0 +1,101 @@
+From a5a26989d440d4e43c4dcd62ab7610c647adb110 Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Sun, 16 Feb 2025 10:18:20 -0500
+Subject: [PATCH] data: option to allow json int/bool as strings
+
+Depends on https://github.com/CESNET/libyang/pull/2344
+
+Add support for new option to python bindings.
+
+Signed-off-by: Brad House <brad@brad-house.com>
+---
+ cffi/cdefs.h       | 1 +
+ libyang/context.py | 6 ++++++
+ libyang/data.py    | 3 +++
+ 3 files changed, 10 insertions(+)
+
+diff --git a/cffi/cdefs.h b/cffi/cdefs.h
+index aa75004..de05f4a 100644
+--- a/cffi/cdefs.h
++++ b/cffi/cdefs.h
+@@ -321,6 +321,7 @@ LY_ERR lyd_print_all(struct ly_out *, const struct lyd_node *, LYD_FORMAT, uint3
+ #define LYD_PARSE_OPTS_MASK ...
+ #define LYD_PARSE_ORDERED ...
+ #define LYD_PARSE_STRICT ...
++#define LYD_PARSE_JSON_STRING_DATATYPES ...
+ 
+ #define LYD_VALIDATE_NO_STATE ...
+ #define LYD_VALIDATE_PRESENT ...
+diff --git a/libyang/context.py b/libyang/context.py
+index f9bd5a5..b50600d 100644
+--- a/libyang/context.py
++++ b/libyang/context.py
+@@ -533,6 +533,7 @@ def parse_data(
+         validate_multi_error: bool = False,
+         store_only: bool = False,
+         json_null: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         if self.cdata is None:
+             raise RuntimeError("context already destroyed")
+@@ -545,6 +546,7 @@ def parse_data(
+             strict=strict,
+             store_only=store_only,
+             json_null=json_null,
++            json_string_datatypes=json_string_datatypes,
+         )
+         validation_flgs = validation_flags(
+             no_state=no_state,
+@@ -604,6 +606,7 @@ def parse_data_mem(
+         validate_multi_error: bool = False,
+         store_only: bool = False,
+         json_null: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         return self.parse_data(
+             fmt,
+@@ -620,6 +623,7 @@ def parse_data_mem(
+             validate_multi_error=validate_multi_error,
+             store_only=store_only,
+             json_null=json_null,
++            json_string_datatypes=json_string_datatypes,
+         )
+ 
+     def parse_data_file(
+@@ -637,6 +641,7 @@ def parse_data_file(
+         validate_multi_error: bool = False,
+         store_only: bool = False,
+         json_null: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         return self.parse_data(
+             fmt,
+@@ -653,6 +658,7 @@ def parse_data_file(
+             validate_multi_error=validate_multi_error,
+             store_only=store_only,
+             json_null=json_null,
++            json_string_datatypes=json_string_datatypes,
+         )
+ 
+     def __iter__(self) -> Iterator[Module]:
+diff --git a/libyang/data.py b/libyang/data.py
+index 0d63d3c..0d6f6cf 100644
+--- a/libyang/data.py
++++ b/libyang/data.py
+@@ -117,6 +117,7 @@ def parser_flags(
+     strict: bool = False,
+     store_only: bool = False,
+     json_null: bool = False,
++    json_string_datatypes: bool = False,
+ ) -> int:
+     flags = 0
+     if lyb_mod_update:
+@@ -135,6 +136,8 @@ def parser_flags(
+         flags |= lib.LYD_PARSE_STORE_ONLY
+     if json_null:
+         flags |= lib.LYD_PARSE_JSON_NULL
++    if json_string_datatypes:
++        flags |= lib.LYD_PARSE_JSON_STRING_DATATYPES
+     return flags
+ 
+ 
