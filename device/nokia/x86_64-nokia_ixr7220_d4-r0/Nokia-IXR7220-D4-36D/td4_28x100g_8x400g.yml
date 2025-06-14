@@ -1,0 +1,546 @@
+#
+# BCM56780 28x100g+8x400g port configuration.
+#
+# configuration yaml file
+#   device:
+#       <unit>:
+#           <table>:
+#               ?
+#                   <key_fld_1>: <value>
+#                   <key_fld_2>: <value>
+#                   ...
+#                   <key_fld_n>: <value>
+#               :
+#                   <data_fld_1>: <value>
+#                   <data_fld_2>: <value>
+#                   ...
+#                   <data_fld_n>: <value>
+#
+# $Copyright: (c) 2019 Broadcom.
+# Broadcom Proprietary and Confidential. All rights reserved.$
+#
+
+---
+device:
+    0:
+        DEVICE_CONFIG:
+            VARIANT: DNA_6_5_31_7_0
+            # CORE CLOCK FREQUENCY
+            CORE_CLK_FREQ: CLK_1350MHZ
+            # PP CLOCK FREQUENCY
+            PP_CLK_FREQ: CLK_1350MHZ
+...
+---
+device:
+    0:
+        PC_PM_CORE:
+            ?
+                PC_PM_ID: 1
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x23014567
+                TX_LANE_MAP: 0x45672301
+                RX_POLARITY_FLIP: 0x55
+                TX_POLARITY_FLIP: 0x0
+            ?
+                PC_PM_ID: 2
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x27403516
+                TX_LANE_MAP: 0x23014765
+                RX_POLARITY_FLIP: 0x7c
+                TX_POLARITY_FLIP: 0x64
+            ?
+                PC_PM_ID: 3
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x10325476
+                TX_LANE_MAP: 0x01324567
+                RX_POLARITY_FLIP: 0x65
+                TX_POLARITY_FLIP: 0x30
+            ?
+                PC_PM_ID: 4
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x10325476
+                TX_LANE_MAP: 0x01324567
+                RX_POLARITY_FLIP: 0x30
+                TX_POLARITY_FLIP: 0x3F
+            ?
+                PC_PM_ID: 5
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x45672301
+                TX_LANE_MAP: 0x32014567
+                RX_POLARITY_FLIP: 0x9A
+                TX_POLARITY_FLIP: 0x31
+            ?
+                PC_PM_ID: 6
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x32106475
+                TX_LANE_MAP: 0x54673210
+                RX_POLARITY_FLIP: 0x3F
+                TX_POLARITY_FLIP: 0x9A
+            ?
+                PC_PM_ID: 7
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x23014657
+                TX_LANE_MAP: 0x54673210
+                RX_POLARITY_FLIP: 0x95
+                TX_POLARITY_FLIP: 0xE2
+            ?
+                PC_PM_ID: 8
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x23014657
+                TX_LANE_MAP: 0x54673210
+                RX_POLARITY_FLIP: 0xC0
+                TX_POLARITY_FLIP: 0x9A
+            ?
+                PC_PM_ID: 9
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x05763142
+                TX_LANE_MAP: 0x57462301
+                RX_POLARITY_FLIP: 0x5F
+                TX_POLARITY_FLIP: 0x60
+            ?
+                PC_PM_ID: 10
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x45672103
+                TX_LANE_MAP: 0x23014567
+                RX_POLARITY_FLIP: 0xA0
+                TX_POLARITY_FLIP: 0x55
+            ?
+                PC_PM_ID: 11
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x01672345
+                TX_LANE_MAP: 0x67014523
+                RX_POLARITY_FLIP: 0xAA
+                TX_POLARITY_FLIP: 0x0
+            ?
+                PC_PM_ID: 12
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x42763105
+                TX_LANE_MAP: 0x46015723
+                RX_POLARITY_FLIP: 0x0
+                TX_POLARITY_FLIP: 0x64
+            ?
+                PC_PM_ID: 13
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x57014623
+                TX_LANE_MAP: 0x10673254
+                RX_POLARITY_FLIP: 0x9A
+                TX_POLARITY_FLIP: 0xCF
+            ?
+                PC_PM_ID: 14
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x57014623
+                TX_LANE_MAP: 0x67105432
+                RX_POLARITY_FLIP: 0x9A
+                TX_POLARITY_FLIP: 0xC0
+            ?
+                PC_PM_ID: 15
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x75106432
+                TX_LANE_MAP: 0x10673254
+                RX_POLARITY_FLIP: 0x65
+                TX_POLARITY_FLIP: 0xCF
+            ?
+                PC_PM_ID: 16
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x01672345
+                TX_LANE_MAP: 0x01673245
+                RX_POLARITY_FLIP: 0x95
+                TX_POLARITY_FLIP: 0x30
+            ?
+                PC_PM_ID: 17
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x10763254
+                TX_LANE_MAP: 0x67014532
+                RX_POLARITY_FLIP: 0x6A
+                TX_POLARITY_FLIP: 0x3F
+            ?
+                PC_PM_ID: 18
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x10763254
+                TX_LANE_MAP: 0x01673245
+                RX_POLARITY_FLIP: 0x6A
+                TX_POLARITY_FLIP: 0x10
+            ?
+                PC_PM_ID: 19
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x75613240
+                TX_LANE_MAP: 0x74563210
+                RX_POLARITY_FLIP: 0x0
+                TX_POLARITY_FLIP: 0x0
+            ?
+                PC_PM_ID: 20
+                CORE_INDEX: 0
+            :
+                RX_LANE_MAP_AUTO: 0
+                TX_LANE_MAP_AUTO: 0
+                RX_POLARITY_FLIP_AUTO: 0
+                TX_POLARITY_FLIP_AUTO: 0
+                RX_LANE_MAP: 0x45673210
+                TX_LANE_MAP: 0x32105476
+                RX_POLARITY_FLIP: 0x0
+                TX_POLARITY_FLIP: 0x0
+...
+---
+device:
+    0:
+        PC_PORT_PHYS_MAP:
+            ?
+                # CPU port
+                PORT_ID: 0
+            :
+                PC_PHYS_PORT_ID: 0
+            ?
+                PORT_ID: 1
+            :
+                PC_PHYS_PORT_ID: 1 #TSC-BH7 0 in Pipe 0
+            ?
+                PORT_ID: 5
+            :
+                PC_PHYS_PORT_ID: 5 #TSC-BH7 0 in Pipe 0
+            ?
+                PORT_ID: 6
+            :
+                PC_PHYS_PORT_ID: 9 #TSC-BH7 1 in Pipe 0
+            ?
+                PORT_ID: 7
+            :
+                PC_PHYS_PORT_ID: 13 #TSC-BH7 1 in Pipe 0
+            ?
+                PORT_ID: 8
+            :
+                PC_PHYS_PORT_ID: 17 #TSC-BH7 2 in Pipe 0
+            ?
+                PORT_ID: 9
+            :
+                PC_PHYS_PORT_ID: 19 #TSC-BH7 2 in Pipe 0
+            ?
+                PORT_ID: 10
+            :
+                PC_PHYS_PORT_ID: 21 #TSC-BH7 2 in Pipe 0
+            ?
+                PORT_ID: 11
+            :
+                PC_PHYS_PORT_ID: 23 #TSC-BH7 2 in Pipe 0
+            ?
+                PORT_ID: 12
+            :
+                PC_PHYS_PORT_ID: 25 #TSC-BH7 3 in Pipe 0
+            ?
+                PORT_ID: 13
+            :
+                PC_PHYS_PORT_ID: 27 #TSC-BH7 3 in Pipe 0
+            ?
+                PORT_ID: 14
+            :
+                PC_PHYS_PORT_ID: 29 #TSC-BH7 3 in Pipe 0
+            ?
+                PORT_ID: 15
+            :
+                PC_PHYS_PORT_ID: 31 #TSC-BH7 3 in Pipe 0
+            ?
+                PORT_ID: 16
+            :
+                PC_PHYS_PORT_ID: 33 #TSC-BH7 4 in Pipe 0
+            ?
+                PORT_ID: 17
+            :
+                PC_PHYS_PORT_ID: 37 #TSC-BH7 4 in Pipe 0
+            ?
+                PORT_ID: 34
+            :
+                PC_PHYS_PORT_ID: 41 #TSC-BH7 5 in Pipe 1
+            ?
+                PORT_ID: 35
+            :
+                PC_PHYS_PORT_ID: 45 #TSC-BH7 5 in Pipe 1
+            ?
+                PORT_ID: 28
+            :
+                PC_PHYS_PORT_ID: 49 #TSC-BH7 6 in Pipe 1
+            ?
+                PORT_ID: 29
+            :
+                PC_PHYS_PORT_ID: 53 #TSC-BH7 6 in Pipe 1
+            ?
+                PORT_ID: 30
+            :
+                PC_PHYS_PORT_ID: 57 #TSC-BH7 7 in Pipe 1
+            ?
+                PORT_ID: 31
+            :
+                PC_PHYS_PORT_ID: 61 #TSC-BH7 7 in Pipe 1
+            ?
+                PORT_ID: 32
+            :
+                PC_PHYS_PORT_ID: 65 #TSC-BH7 8 in Pipe 1
+            ?
+                PORT_ID: 33
+            :
+                PC_PHYS_PORT_ID: 69 #TSC-BH7 8 in Pipe 1
+            ?
+                PORT_ID: 20
+            :
+                PC_PHYS_PORT_ID: 73 #TSC-BH7 9 in Pipe 1
+            ?
+                PORT_ID: 24
+            :
+                PC_PHYS_PORT_ID: 77 #TSC-BH7 9 in Pipe 1
+            ?
+                PORT_ID: 40
+            :
+                PC_PHYS_PORT_ID: 81 #TSC-BH7 10 in Pipe 2
+            ?
+                PORT_ID: 44
+            :
+                PC_PHYS_PORT_ID: 89 #TSC-BH7 11 in Pipe 2
+            ?
+                PORT_ID: 48
+            :
+                PC_PHYS_PORT_ID: 97 #TSC-BH7 12 in Pipe 3
+            ?
+                PORT_ID: 52
+            :
+                PC_PHYS_PORT_ID: 105 #TSC-BH7 13 in Pipe 3
+            ?
+                PORT_ID: 56
+            :
+                PC_PHYS_PORT_ID: 113 #TSC-BH7 14 in Pipe 3
+            ?
+                PORT_ID: 60
+            :
+                PC_PHYS_PORT_ID: 121 #TSC-BH7 15 in Pipe 4
+            ?
+                PORT_ID: 61
+            :
+                PC_PHYS_PORT_ID: 129 #TSC-BH7 16 in Pipe 4
+            ?
+                PORT_ID: 62
+            :
+                PC_PHYS_PORT_ID: 137 #TSC-BH7 17 in Pipe 4
+            ?
+                PORT_ID: 64
+            :
+                PC_PHYS_PORT_ID: 145 #TSC-BH7 18 in Pipe 4
+            ?
+                PORT_ID: 68
+            :
+                PC_PHYS_PORT_ID: 149 #TSC-BH7 18 in Pipe 4
+            ?
+                PORT_ID: 72
+            :
+                PC_PHYS_PORT_ID: 153 #TSC-BH7 19 in Pipe 4
+            ?
+                PORT_ID: 63
+            :
+                PC_PHYS_PORT_ID: 157 #TSC-BH7 19 in Pipe 4
+            ?
+                # loopback port
+                PORT_ID: 39
+            :
+                PC_PHYS_PORT_ID: 163
+            ?
+                # loopback port
+                PORT_ID: 79
+            :
+                PC_PHYS_PORT_ID: 164
+...
+---
+device:
+    0:
+        PC_PORT:
+            ?
+                PORT_ID: 0
+            :
+                &port_mode_10g
+                ENABLE: 1
+                SPEED: 10000
+                NUM_LANES: 1
+            ?
+                PORT_ID: [39, 79]
+            :
+                &port_mode_10g
+                ENABLE: 1
+                SPEED: 10000
+                NUM_LANES: 1
+            ?
+                PORT_ID: [40, 44, 48, 52, 56, 60, 61, 62]
+            :
+                &port_mode_400g
+                ENABLE: 0
+                SPEED: 400000
+                NUM_LANES: 8
+                FEC_MODE: PC_FEC_RS544_2XN
+                MAX_FRAME_SIZE: 9416
+                #LINK_TRAINING: 1
+            ?
+                PORT_ID: [[8, 15]]
+            :
+                &port_mode_100g
+                ENABLE: 0
+                SPEED: 100000
+                NUM_LANES: 2
+                FEC_MODE: PC_FEC_RS544
+                MAX_FRAME_SIZE: 9416
+                LINK_TRAINING: 1
+            ?
+                PORT_ID: [1, 5, 6, 7, 16, 17, 20, 24,
+                          [28, 35],
+                          63, 64, 68, 72]
+            :
+                &port_mode_100g
+                ENABLE: 0
+                SPEED: 100000
+                NUM_LANES: 4
+                #FEC_MODE: PC_FEC_RS528
+                MAX_FRAME_SIZE: 9416
+                #LINK_TRAINING: 1
+
+        PC_PMD_FIRMWARE:
+            ?
+                PORT_ID: [[8, 15], 1, 5, 6, 7, 16, 17, 20, 24,
+                          [28, 35],
+                          [60, 63],
+                          40, 44, 48, 52, 56, 64, 68, 72]
+            :
+                MEDIUM_TYPE_AUTO: 0
+                MEDIUM_TYPE: PC_PHY_MEDIUM_BACKPLANE
+
+...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+...
+---
+bcm_device:
+    0:
+        global:
+            pktio_mode: 1
+            sai_brcm_sonic_acl_enhancements: 1
+            sai_remap_prio_on_tnl_egress: 1
+            bcm_tunnel_term_compatible_mode: 1
+            vlan_flooding_l2mc_num_reserved: 0
+            l2_hitbit_enable: 0
+            uft_mode: 1
+            l3_enable: 1
+            ipv6_lpm_128b_enable: 1
+            shared_block_mask_section: uc_bc
+            l3_alpm_template: 1
+            skip_protocol_default_entries: 1
+            sai_tunnel_support: 1
+            default_cpu_tx_queue: 7
+            multi_network_groups: 1
+            sai_nbr_bcast_ifp_optimized: 1
+            flexctr_action_reserved_ipmc_hitbit: 1
+            use_all_splithorizon_groups: 1
+            riot_enable: 1
+            riot_overlay_l3_intf_mem_size: 8192
+            riot_overlay_l3_egress_mem_size: 32768
+            l3_ecmp_levels: 2
+            riot_overlay_ecmp_resilient_hash_size: 16384
+            sai_fast_convergence_support: 1
+            sai_modify_hash_flexdigest: 1
+            sai_port_phy_time_sync_en: 1
+...
+---
+device:
+    0:
+        FP_CONFIG:
+            FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
+...
