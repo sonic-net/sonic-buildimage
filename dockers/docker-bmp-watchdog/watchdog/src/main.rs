@@ -6,7 +6,7 @@ use serde::Serialize;
  
 #[derive(Serialize)]
 struct HealthStatus {
-    check_bmp_supervisorctl: String,
+    check_bmp_processes_on_host: String,
     check_bmp_db: String,
     check_bmp_port: String,
 }
@@ -97,12 +97,12 @@ fn main() {
                         continue;
                     }
  
-                    let supervisorctl_result = check_bmp_supervisorctl();
+                    let supervisorctl_result = check_bmp_processes_on_host();
                     let db_result = check_bmp_db();
                     let port_result = check_bmp_port();
  
                     let status = HealthStatus {
-                        check_bmp_supervisorctl: supervisorctl_result.clone(),
+                        check_bmp_processes_on_host: supervisorctl_result.clone(),
                         check_bmp_db: db_result.clone(),
                         check_bmp_port: port_result.clone(),
                     };
