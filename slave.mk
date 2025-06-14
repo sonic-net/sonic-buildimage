@@ -201,8 +201,8 @@ ifeq ($(SONIC_INCLUDE_VNET_MONITOR),y)
 INCLUDE_VNET_MONITOR = y
 endif
 
-ifeq ($(SONIC_INCLUDE_SMARTSWITCH_AZS),y)
-INCLUDE_SMARTSWITCH_AZS = y
+ifeq ($(SONIC_INCLUDE_SESSION_MONITOR),y)
+INCLUDE_SESSION_MONITOR = y
 endif
 
 ifeq ($(SONIC_ENABLE_SYNCD_RPC),y)
@@ -455,7 +455,7 @@ $(info "NO_PROXY"                        : "$(NO_PROXY)")
 $(info "ENABLE_ZTP"                      : "$(ENABLE_ZTP)")
 $(info "INCLUDE_ACMS"                    : "$(INCLUDE_ACMS)")
 $(info "INCLUDE_VNET_MONITOR"            : "$(INCLUDE_VNET_MONITOR)")
-$(info "INCLUDE_SMARTSWITCH_AZS"         : "$(INCLUDE_SMARTSWITCH_AZS)")
+$(info "INCLUDE_SESSION_MONITOR"         : "$(INCLUDE_SESSION_MONITOR)")
 $(info "INCLUDE_PDE"                     : "$(INCLUDE_PDE)")
 $(info "SONIC_DEBUGGING_ON"              : "$(SONIC_DEBUGGING_ON)")
 $(info "SONIC_PROFILING_ON"              : "$(SONIC_PROFILING_ON)")
@@ -1499,7 +1499,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_acms="$(INCLUDE_ACMS)"
 	export include_vnet_monitor="$(INCLUDE_VNET_MONITOR)"
-	export include_smartswitch_azs="$(INCLUDE_SMARTSWITCH_AZS)"
+	export include_session_monitor="$(INCLUDE_SESSION_MONITOR)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
 	export default_buffer_model="$(SONIC_BUFFER_MODEL)"
