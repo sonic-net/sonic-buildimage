@@ -1612,7 +1612,7 @@ class MatchPrefix:
         except ValueError:
             return None
         return '%s/%d' % (normal_ip, mask_len)
-    def __init__(self, af, ip_prefix, len_range = None, action = 'permit'):
+    def __init__(self, af, ip_prefix, len_range = None, action = 'permit', sequence_number = None):
         self.ip_prefix = self.normalize_ip_prefix(af, ip_prefix)
         if self.ip_prefix is None:
             raise ValueError
@@ -1629,10 +1629,12 @@ class MatchPrefix:
         else:
             self.min_len = self.max_len = None
         self.action = action
+        self.sequence_number = sequence_number
     def __hash__(self):
         return hash((self.ip_prefix, self.min_len, self.max_len))
     def __str__(self):
-        ret_str = '%s %s' % (self.action.lower(), self.ip_prefix)
+        seq = 'seq ' + str(self.sequence_number) + ' ' if self.sequence_number is not None else ''
+        ret_str = '%s%s %s' % (seq, self.action.lower(), self.ip_prefix)
         if self.min_len is not None:
             ret_str += ' ge %d' % self.min_len
         if self.max_len is not None:
@@ -1670,7 +1672,7 @@ class MatchPrefixList(list):
             except socket.error:
                 continue
         return None
-    def add_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def add_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         af = self.__get_ip_af(ip_pfx)
         if self.af is None:
             self.af = af
@@ -1678,7 +1680,7 @@ class MatchPrefixList(list):
             if self.af != af:
                 syslog.syslog(syslog.LOG_ERR, 'af of prefix %s is not the  same as prefix set' % ip_pfx)
                 raise ValueError
-        self.append(MatchPrefix(self.af, ip_pfx, len_range, action))
+        self.append(MatchPrefix(self.af, ip_pfx, len_range, action, sequence_number))
         return self[-1]
     def get_prefix(self, ip_pfx, len_range = None, action = 'permit'):
         if self.af is None:
@@ -2227,9 +2229,10 @@ class BGPConfigDaemon:
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
             if len_range == 'exact':
                 len_range = None
-            if pfx_set_name in self.prefix_set_list and 'action' in entry:
+            if pfx_set_name in self.prefix_set_list:
                 try:
-                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry['action'])
+                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'),
+                                                                  entry.get('sequence_number'))
                 except ValueError:
                     pass
         self.as_path_set_list = {}
@@ -2926,7 +2929,8 @@ class BGPConfigDaemon:
                         del(self.prefix_set_list[pfx_set_name][pfx_idx])
                     if pfx_action.op == CachedDataWithOp.OP_ADD or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         try:
-                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data)
+                            add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data,
+                                                                                    data.get('sequence_number'))
                         except ValueError:
                             syslog.syslog(syslog.LOG_ERR, 'failed to update prefix-set %s in cache with prefix %s range %s' %
                                     (pfx_set_name, ip_pfx, len_range))

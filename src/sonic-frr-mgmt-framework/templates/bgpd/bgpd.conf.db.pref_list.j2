@@ -9,16 +9,17 @@
 {% if 'mode' in val %}
 {% for pf_key, pf_val in PREFIX.items() %}
 {% if pf_key[0] == key and md == val['mode'] %}
+{% set seq='seq ' ~ pf_val['sequence_number'] if pf_val['sequence_number'] is defined else '' %}
 {% if pf_key[2] == 'exact' %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_key[1]}}
 {% else %}
 {% set len = pf_key[1].split('/')[1] %}
 {% set rb = pf_key[2].split('..')[0] %}
 {% set re = pf_key[2].split('..')[1] %}
 {% if rb > len %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}} ge {{rb}} le {{re}}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_key[1]}} ge {{rb}} le {{re}}
 {% else %}
-{{ip_str[md]}} prefix-list {{key}} permit {{pf_key[1]}} le {{re}}
+{{ip_str[md]}} prefix-list {{key}} {{seq}} {{pf_val['action']|default('permit')}} {{pf_key[1]}} le {{re}}
 {% endif %}
 {% endif %}
 {% endif %}
