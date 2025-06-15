@@ -121,5 +121,22 @@
                 ]
             }
         }
+    },
+    "GNMI_TABLE_WITH_VALID_USER_AUTH": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "user_auth": "none",
+                    "log_level": "2",
+                    "port": "50052"
+                }
+            }
+        }
     }
 }
