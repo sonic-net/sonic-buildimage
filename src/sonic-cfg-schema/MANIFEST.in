@@ -1,0 +1,4 @@
+include README.md
+include cfg_schema.h
+include *.py
+include LICENSE 
