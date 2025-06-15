@@ -11,7 +11,7 @@
 
     "SCHEDULER_INVALID_WEIGHT": {
         "desc": "Configure outof range weight in SCHEDULER table.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
 
     "SCHEDULER_INVALID_METER_TYPE": {
@@ -49,7 +49,7 @@
 
     "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
         "desc": "Configure invalid drop probability in WRED profile.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
 
     "WRED_PROFILE_INVALID_GREEN_THRESHOLD": {
