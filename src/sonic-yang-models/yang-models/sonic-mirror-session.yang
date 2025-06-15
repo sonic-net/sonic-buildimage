@@ -82,7 +82,7 @@ module sonic-mirror-session {
 
                 leaf src_ip {
                     when "current()/../type = 'ERSPAN'";
-                    type inet:ipv4-address;
+                    type inet:ip-address;
                     description
                         "ERSPAN source ip. This IP will be set as source ip in
                         outer header of mirrored frame ";
@@ -90,7 +90,7 @@ module sonic-mirror-session {
 
                 leaf dst_ip {
                     when "current()/../type = 'ERSPAN'";
-                    type inet:ipv4-address;
+                    type inet:ip-address;
                     description
                         "ERSPAN destination ip. Mirrored frames will be routed to this destination.
                         This IP will be set as destination ip in outer header of mirrored frame ";
