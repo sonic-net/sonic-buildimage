@@ -82,4 +82,7 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
 fi
 
+# Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
+trap '' SIGHUP
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
