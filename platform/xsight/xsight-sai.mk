@@ -1,7 +1,7 @@
 # XSight SAI
 
 XSIGHT_LIBSAI_VERSION = 0.1
-XSIGHT_LIBSAI_URL_PREFIX = "https://github.com/Xsight-Labs/SONiC/raw/refs/heads/main/amd64/sai-plugin"
+XSIGHT_LIBSAI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/SONiC/main/amd64/sai-plugin"
 
 XSIGHT_LIBSAI = xsai-main_$(XSIGHT_LIBSAI_VERSION)_all.deb
 XSIGHT_LIBSAI_DEV = xsai-main-dev_$(XSIGHT_LIBSAI_VERSION)_all.deb
