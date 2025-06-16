@@ -78,7 +78,7 @@ parameters:
 
   - name: STOP_ON_FAILURE
     type: string
-    default: 'False'
+    default: 'True'
     values:
       - 'True'
       - 'False'
