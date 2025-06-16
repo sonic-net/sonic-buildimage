@@ -69,7 +69,7 @@
     {%- if 'type' in DEVICE_METADATA['localhost'] and DEVICE_NEIGHBOR is defined %}
         {%- set local_router_type = DEVICE_METADATA['localhost']['type'] %}
         {%- for port in PORT_ACTIVE %}
-            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR[port].name is defined and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
                 {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
                 {%- if local_router_type == 'LeafRouter' %}
                     {%- if neighbor_info.type == 'ToRRouter' %}
@@ -80,10 +80,12 @@
                 {%- elif local_router_type == 'ToRRouter' %}
                     {%- if neighbor_info.type == 'LeafRouter' %}
                         {%- if PORT_UPLINK.append(port) %}{%- endif %}
-                    {%- elif neighbor_info.type == 'Server' %}
+                    {%- else %}
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
                     {%- endif %}
                 {%- endif %}
+            {%- elif local_router_type == 'ToRRouter' %}
+                {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
             {%- endif %}
         {%- endfor %}
     {%- endif %}
