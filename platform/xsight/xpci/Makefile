@@ -3,7 +3,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 XPCI_DEB = xpci-modules-$(KVERSION)_$(XPCI_VERSION)_amd64.deb
-XPCI_URL_PREFIX = "https://github.com/Xsight-Labs/SONiC/raw/refs/heads/main/amd64/kernel"
+XPCI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/SONiC/main/amd64/kernel"
 REPACKED_XPCI_NAME = xpci-$(XPCI_VERSION)_amd64
 
 XPCI_TMP := $(shell mktemp -u -d -t xpci.XXXXXXXXXX)
