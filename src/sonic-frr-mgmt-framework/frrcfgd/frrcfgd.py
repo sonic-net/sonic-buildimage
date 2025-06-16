@@ -1682,7 +1682,7 @@ class MatchPrefixList(list):
                 raise ValueError
         self.append(MatchPrefix(self.af, ip_pfx, len_range, action, sequence_number))
         return self[-1]
-    def get_prefix(self, ip_pfx, len_range = None, action = 'permit'):
+    def get_prefix(self, ip_pfx, len_range = None, action = 'permit', sequence_number = None):
         if self.af is None:
             return (None, None)
         prefix = MatchPrefix(self.af, ip_pfx, len_range, action)
@@ -2225,14 +2225,17 @@ class BGPConfigDaemon:
                 self.prefix_set_list[key] = MatchPrefixList(entry['mode'].lower())
         pfx_table = self.config_db.get_table('PREFIX')
         for key, entry in pfx_table.items():
-            pfx_set_name, ip_pfx, len_range = key
+            if len(key) == 4:
+                pfx_set_name, seq, ip_pfx, len_range = key
+            else:
+                pfx_set_name, ip_pfx, len_range = key
+                seq = None
             syslog.syslog(syslog.LOG_DEBUG, 'Init Config DB Data: Prefix %s range %s of set %s' % (ip_pfx, len_range, pfx_set_name))
             if len_range == 'exact':
                 len_range = None
             if pfx_set_name in self.prefix_set_list:
                 try:
-                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'),
-                                                                  entry.get('sequence_number'))
+                    self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, entry.get('action', 'permit'), seq)
                 except ValueError:
                     pass
         self.as_path_set_list = {}
@@ -2902,7 +2905,15 @@ class BGPConfigDaemon:
                     if pfx_set_name not in self.prefix_set_list:
                         syslog.syslog(syslog.LOG_ERR, 'could not find prefix-set %s from cache' % pfx_set_name)
                         continue
-                    ip_pfx, len_range = key.split('|')
+                    keys = key.split('|')
+                    if len(keys) == 3:
+                        seq = keys[0]
+                        ip_pfx = keys[1]
+                        len_range = keys[2]
+                    else:
+                        ip_pfx = keys[0]
+                        len_range = keys[1]
+                        seq = None
                     if len_range == 'exact':
                         len_range = None
                     pfx_action = data.get('action', None)
@@ -2915,7 +2926,8 @@ class BGPConfigDaemon:
                     else:
                         daemons = ['bgpd', 'zebra']
                     if pfx_action.op == CachedDataWithOp.OP_DELETE or pfx_action.op == CachedDataWithOp.OP_UPDATE:
-                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                        del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                         pfx_action.data, seq)
                         if del_pfx is None:
                             syslog.syslog(syslog.LOG_ERR, 'prefix of {} with range {} not found from prefix-set {}'.\
                                             format(ip_pfx, len_range, pfx_set_name))
@@ -2930,7 +2942,7 @@ class BGPConfigDaemon:
                     if pfx_action.op == CachedDataWithOp.OP_ADD or pfx_action.op == CachedDataWithOp.OP_UPDATE:
                         try:
                             add_pfx = self.prefix_set_list[pfx_set_name].add_prefix(ip_pfx, len_range, pfx_action.data,
-                                                                                    data.get('sequence_number'))
+                                                                                    seq)
                         except ValueError:
                             syslog.syslog(syslog.LOG_ERR, 'failed to update prefix-set %s in cache with prefix %s range %s' %
                                     (pfx_set_name, ip_pfx, len_range))
@@ -2941,7 +2953,8 @@ class BGPConfigDaemon:
                             syslog.syslog(syslog.LOG_ERR, 'failed to add prefix %s with range %s to set %s' %
                                           (ip_pfx, len_range, pfx_set_name))
                             # revert cached update on failure
-                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range)
+                            del_pfx, pfx_idx = self.prefix_set_list[pfx_set_name].get_prefix(ip_pfx, len_range,
+                                                                                             pfx_action.data, seq)
                             if del_pfx is not None:
                                 del(self.prefix_set_list[pfx_set_name][pfx_idx])
                             continue
