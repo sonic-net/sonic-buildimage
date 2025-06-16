@@ -36,6 +36,11 @@ resources:
     endpoint: sonic-net
     ref: master
 
+parameters:
+- name: TIMEOUT_IN_MINUTES_PR_TEST
+  type: number
+  default: 360
+
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
@@ -166,7 +171,7 @@ stages:
   - job: t0_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0 by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -180,7 +185,7 @@ stages:
   - job: t0_2vlans_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0-2vlans by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -196,7 +201,7 @@ stages:
   - job: t1_lag_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -210,7 +215,7 @@ stages:
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
     pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -226,7 +231,7 @@ stages:
   - job: dualtor_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -241,7 +246,7 @@ stages:
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
     pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -257,7 +262,7 @@ stages:
 
   - job: dpu_elastictest
     displayName: "kvmtest-dpu by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
@@ -268,16 +273,3 @@ stages:
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MGMT_BRANCH: $(BUILD_BRANCH)
           PTF_IMAGE_TAG: $(BUILD_BRANCH)
-
-#  - job: wan_elastictest
-#    displayName: "kvmtest-wan by Elastictest"
-#    pool: sonic-ubuntu-1c
-#    timeoutInMinutes: 240
-#    continueOnError: false
-#    steps:
-#      - template: .azure-pipelines/run-test-scheduler-template.yml
-#        parameters:
-#          TOPOLOGY: wan-pub
-#          MIN_WORKER: $(WAN_INSTANCE_NUM)
-#          MAX_WORKER: $(WAN_INSTANCE_NUM)
-#          COMMON_EXTRA_PARAMS: "--skip_sanity "
