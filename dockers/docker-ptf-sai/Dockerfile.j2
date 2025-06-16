@@ -27,16 +27,31 @@ RUN pip3 install crc16          \
 # 8.0.1 breaks build on 09/20/2023
 RUN pip3 install setuptools_scm==7.1.0
 
+# For py3 based on Bookworm we use the packages from the Debian repos.
+{% if PTF_ENV_PY_VER == "py3" %}
+{% set filtered_debs = docker_ptf_sai_debs.split(' ') | reject('in', ["libthrift0_0.14.1_amd64.deb", "python3-thrift_0.14.1_amd64.deb"]) | list %}
+{% if filtered_debs %}
+COPY \
+{% for deb in filtered_debs -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+RUN dpkg -i \
+{% for deb in docker_ptf_sai_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+{% endif %}
+{% else %}
 COPY \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor -%} 
 debs/
-
 RUN dpkg -i \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
+{% endif %}
 
 # Remove old ptf package
 RUN dpkg -r python-ptf
