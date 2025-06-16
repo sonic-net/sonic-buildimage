@@ -98,10 +98,6 @@
             "PORTCHANNEL_LIST": [
                 {
                     "admin_status": "up",
-                    "members": [
-                        "Ethernet0",
-                        "Ethernet4"
-                    ],
                     "min_links": "1",
                     "mtu": "9100",
                     "lacp_key": "auto",
@@ -109,10 +105,6 @@
                 },
                 {
                     "admin_status": "up",
-                    "members": [
-                        "Ethernet16",
-                        "Ethernet20"
-                    ],
                     "min_links": "1",
                     "mtu": "9100",
                     "lacp_key": "auto",
@@ -300,7 +292,8 @@
                     "DST_IP": "192.169.10.1/32",
                     "SRC_IP": "10.10.1.1/16",
                     "IP_TYPE": "IPV4",
-                    "RULE_NAME": "Rule2"
+                    "RULE_NAME": "Rule2",
+                    "PRIORITY": 101
                 }
             ]
         }
