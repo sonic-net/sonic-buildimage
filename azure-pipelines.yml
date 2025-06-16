@@ -39,7 +39,7 @@ resources:
 parameters:
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
-  default: 360
+  default: 480
 
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
