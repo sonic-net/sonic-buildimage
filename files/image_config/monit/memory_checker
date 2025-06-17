@@ -121,8 +121,16 @@ def get_memory_usage(container_id):
     validate_container_id(container_id)
 
     docker_memory_usage_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.usage_in_bytes"
-    if not os.path.exists(docker_memory_usage_file_path):
-        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND.format(docker_memory_usage_file_path, container_id))
+
+    # Retry once with delay if path does not exist
+    for attempt in range(3):
+        if os.path.exists(docker_memory_usage_file_path):
+            break
+        if attempt == 0:
+            time.sleep(0.1)  # 100 milliseconds delay
+    else:
+        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND.format(docker_memory_usage_file_path,
+                                                                                 container_id))
         sys.exit(INTERNAL_ERROR)
 
     try:
