@@ -1,0 +1,12 @@
+!
+! template: bgpd/templates/dynamic/update.conf.j2
+!
+{% for ip_range in delete_ranges %}
+  no bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+{% for ip_range in add_ranges %}
+  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+! end of template: bgpd/templates/dynamic/update.conf.j2
+!

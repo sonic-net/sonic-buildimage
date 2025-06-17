@@ -139,6 +139,9 @@ apply_tacacs()
         sonic-cfggen -j /etc/sonic/old_config/${TACACS_JSON_BACKUP} --write-to-db
         echo "Applied tacacs json to restore tacacs credentials"
         config save -y
+
+        # Change tacacs config file name, so tacacs config will not be revert when device reboot.
+        mv /etc/sonic/old_config/${TACACS_JSON_BACKUP} /etc/sonic/old_config/${TACACS_JSON_BACKUP}_backup
     else
         echo "Missing tacacs json to restore tacacs credentials"
     fi
@@ -332,7 +335,7 @@ do_db_migration()
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 
     #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
-    if [[ -f /etc/sonic/chassisdb.conf ]]; then
+    if [[ -f /etc/sonic/chassisdb.conf ]] && [[ $disaggregated_chassis -ne 1 ]]; then
        tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
        sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
        OP_CODE=$?
@@ -452,6 +455,10 @@ if [[ -f "$ASIC_CONF" ]]; then
     source $ASIC_CONF
 fi
 
+PLATFORM_ENV_CONF_FILE=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+if [[ -f "$PLATFORM_ENV_CONF_FILE" ]]; then
+    source $PLATFORM_ENV_CONF_FILE
+fi
 
 CMD=$1
 # Default command is boot

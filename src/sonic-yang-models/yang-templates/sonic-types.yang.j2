@@ -65,6 +65,7 @@ module sonic-types {
             enum FORWARD;
             enum REDIRECT;
             enum DO_NOT_NAT;
+            enum DISABLE_TRIM;
         }
     }
 
@@ -351,6 +352,7 @@ module sonic-types {
             enum INNER_SRC_IPV6;
             enum INNER_L4_DST_PORT;
             enum INNER_L4_SRC_PORT;
+            enum IPV6_FLOW_LABEL;
         }
     }
 
@@ -399,6 +401,73 @@ module sonic-types {
     typedef asic_name {
         type string {
             pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
+        }
+    }
+
+    typedef debug_counter_type {
+        type enumeration {
+            enum PORT_INGRESS_DROPS;
+            enum PORT_EGRESS_DROPS;
+            enum SWITCH_INGRESS_DROPS;
+            enum SWITCH_EGRESS_DROPS;
+        }
+    }
+
+    typedef counter_drop_reason {
+        type enumeration {
+            enum L2_ANY;
+            enum SMAC_MULTICAST;
+            enum SMAC_EQUALS_DMAC;
+            enum DMAC_RESERVED;
+            enum VLAN_TAG_NOT_ALLOWED;
+            enum INGRESS_VLAN_FILTER;
+            enum INGRESS_STP_FILTER;
+            enum FDB_UC_DISCARD;
+            enum FDB_MC_DISCARD;
+            enum L2_LOOPBACK_FILTER;
+            enum EXCEEDS_L2_MTU;
+            enum L3_ANY;
+            enum EXCEEDS_L3_MTU;
+            enum TTL;
+            enum L3_LOOPBACK_FILTER;
+            enum NON_ROUTABLE;
+            enum NO_L3_HEADER;
+            enum IP_HEADER_ERROR;
+            enum UC_DIP_MC_DMAC;
+            enum DIP_LOOPBACK;
+            enum SIP_LOOPBACK;
+            enum SIP_MC;
+            enum SIP_CLASS_E;
+            enum SIP_UNSPECIFIED;
+            enum MC_DMAC_MISMATCH;
+            enum SIP_EQUALS_DIP;
+            enum SIP_BC;
+            enum DIP_LOCAL;
+            enum DIP_LINK_LOCAL;
+            enum SIP_LINK_LOCAL;
+            enum IPV6_MC_SCOPE0;
+            enum IPV6_MC_SCOPE1;
+            enum IRIF_DISABLED;
+            enum ERIF_DISABLED;
+            enum LPM4_MISS;
+            enum LPM6_MISS;
+            enum BLACKHOLE_ROUTE;
+            enum BLACKHOLE_ARP;
+            enum UNRESOLVED_NEXT_HOP;
+            enum L3_EGRESS_LINK_DOWN;
+            enum DECAP_ERROR;
+            enum ACL_ANY;
+            enum ACL_INGRESS_PORT;
+            enum ACL_INGRESS_LAG;
+            enum ACL_INGRESS_VLAN;
+            enum ACL_INGRESS_RIF;
+            enum ACL_INGRESS_SWITCH;
+            enum ACL_EGRESS_PORT;
+            enum ACL_EGRESS_LAG;
+            enum ACL_EGRESS_VLAN;
+            enum ACL_EGRESS_RIF;
+            enum ACL_EGRESS_SWITCH;
+            enum EGRESS_VLAN_FILTER;
         }
     }
 

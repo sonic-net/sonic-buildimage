@@ -535,6 +535,7 @@ RUN apt-get purge -y python3-pip python3-yaml
 
 # For building Python packages
 RUN pip3 install setuptools==49.6.00
+RUN pip3 install setuptools-scm==8.1.0
 RUN pip3 install wheel==0.38.1
 
 {%- if CONFIGURED_ARCH == "armhf" %}
@@ -589,8 +590,7 @@ RUN pip3 uninstall -y enum34
 RUN pip3 install j2cli==0.3.10
 
 # For sonic-mgmt-framework
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-RUN pip3 install "PyYAML==5.4.1" --no-build-isolation
+
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN pip3 install "lxml==4.9.1"
 {%- endif %}

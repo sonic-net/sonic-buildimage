@@ -5,12 +5,13 @@ import syslog
 import threading
 import traceback
 
+from swsscommon.swsscommon import ConfigDBConnector, DBConnector, RestartWaiter
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
 from .config import ConfigMgr
 from .directory import Directory
-from .log import log_notice, log_crit
+from .log import log_notice, log_crit, log_err, log_debug
 from .managers_advertise_rt import AdvertiseRouteMgr
 from .managers_allow_list import BGPAllowListMgr
 from .managers_bbr import BBRMgr
@@ -24,12 +25,31 @@ from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
+from .managers_prefix_list import PrefixListMgr
+from .managers_as_path import AsPathMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
 from .utils import read_constants
 from .frr import FRR
 from .vars import g_debug
+
+def cleanup_static_routes_on_exit(cfg_mgr, static_route_managers):
+    """Clean up static routes from FRR when bgpcfgd exits
+
+    Delegates to each StaticRouteMgr instance to handle its own cleanup and commit.
+    """
+    try:
+        log_notice("bgpcfgd exit: Cleaning up static routes from FRR...")
+
+        # Ask each StaticRouteMgr to handle its own cleanup and commit
+        for mgr in static_route_managers:
+            mgr.cleanup_on_exit()
+
+        log_notice("Static routes cleanup delegated to individual managers")
+
+    except Exception as e:
+        log_err(f"Error during static route cleanup: {e}")
 
 def do_work():
     """ Main function """
@@ -79,21 +99,35 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
-        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
     ]
 
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
-    switch_type = device_info.get_localhost_info("switch_type")
-    if switch_type and switch_type == "dpu":
-        log_notice("switch type is dpu, starting bfd manager")
+    config_db = ConfigDBConnector()
+    config_db.connect()
+    sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
+    if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':
+        log_notice("software_bfd feature is enabled, starting bfd manager")
         managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
+
+    device_metadata = config_db.get_table("DEVICE_METADATA")
+    if "localhost" in device_metadata and "type" in device_metadata["localhost"] and device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC":
+        # Prefix List Manager
+        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+        managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
         runner.add_manager(mgr)
     runner.run()
+
+    state_db_conn = DBConnector("STATE_DB", 0)
+    if not RestartWaiter.isAdvancedBootInProgress(state_db_conn):
+        static_route_managers = [mgr for mgr in managers if mgr.__class__.__name__ == 'StaticRouteMgr']
+        cleanup_static_routes_on_exit(common_objs['cfg_mgr'], static_route_managers)
+
     thr.join()
 
 

@@ -40,10 +40,20 @@ ORCHAGENT_ARGS="-d /var/log/swss "
 # Set orchagent pop batch size to 8192
 ORCHAGENT_ARGS+="-b 8192 "
 
-# Set synchronous mode if it is enabled in CONFIG_DB
+# Set zmq mode by default for DPU vs
+# Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
+fi
+
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+="-R "
 fi
 
 # Set mac address

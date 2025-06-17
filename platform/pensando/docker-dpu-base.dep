@@ -1,4 +1,4 @@
-DEP_FILES := rules/docker-dpu-base.dep rules/docker-dpu-base.mk
+DEP_FILES := rules/docker-dpu-base.dep rules/docker-dpu-base.mk platform/checkout/template.j2 platform/checkout/pensando.ini
 
 $(DOCKER_DPU_BASE)_CACHE_MODE  := none
 $(DOCKER_DPU_BASE)_DEP_FILES   := $(DEP_FILES)

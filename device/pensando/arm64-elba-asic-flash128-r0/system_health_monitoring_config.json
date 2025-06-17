@@ -1,0 +1,11 @@
+{
+    "services_to_ignore": ["vlanmgrd", "vxlanmgrd"],
+    "devices_to_ignore": ["psu","fan"],
+    "user_defined_checkers": ["fetch_dpu_status"],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "amber_blink"
+    }
+}

@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+import time
 
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
@@ -110,7 +111,7 @@ def test_uDT46_add_vrf1():
 def test_uN_del():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
-    
+
     # add uN function first
     assert sid_mgr.set_handler("loc1|FCBB:BBBB:1::/48", {
         'action': 'uN'
@@ -130,7 +131,7 @@ def test_uN_del():
 def test_uDT46_del_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
-    
+
     # add a uN action first to make the uDT46 action not the last function
     assert sid_mgr.set_handler("loc1|FCBB:BBBB:1::/48", {
         'action': 'uN'
@@ -163,3 +164,63 @@ def test_invalid_add():
     }), expected_ret=False, expected_cmds=[])
 
     assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21:f1::\\64")
+
+def test_add_unmatched_sid():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:20::'})
+
+    # test the addition of a SID with a non-matching locator
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:21::/48", {
+        'action': 'uN'
+    }), expected_ret=False, expected_cmds=[])
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:21::\\48")
+
+def test_out_of_order_add():
+    loc_mgr, sid_mgr = constructor()
+    loc_mgr.cfg_mgr.push_list = MagicMock()
+    sid_mgr.cfg_mgr.push_list = MagicMock()
+
+    # add two sids first
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
+    sid_mgr.handler(op='SET', key="loc2|FCBB:BBBB:21::/48", data={'action': 'uN'})
+
+    # verify that the sid is not added
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+    # add the locator loc2
+    loc_mgr.handler(op='SET', key="loc2", data={'prefix': 'fcbb:bbbb:21::'})
+
+    # verify that the sid of loc2 is programmed and the sid of loc1 is not prrogrammed
+    # after locator config was added
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+def test_out_of_order_add_wait_for_all_deps():
+    loc_mgr, sid_mgr = constructor()
+    sid_mgr.wait_for_all_deps = True
+    loc_mgr.cfg_mgr.push_list = MagicMock()
+    sid_mgr.cfg_mgr.push_list = MagicMock()
+
+    # add two sids first
+    sid_mgr.handler(op='SET', key="loc1|FCBB:BBBB:20::/48", data={'action': 'uN'})
+    sid_mgr.handler(op='SET', key="loc2|FCBB:BBBB:21::/48", data={'action': 'uN'})
+
+    # verify that the sid is not added
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+    # add the locator loc2
+    loc_mgr.handler(op='SET', key="loc2", data={'prefix': 'fcbb:bbbb:21::'})
+
+    # verify that neither of the sids are programmed because the manager is waiting for all dependencies
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")
+
+    # add the locator loc1
+    loc_mgr.handler(op='SET', key="loc1", data={'prefix': 'fcbb:bbbb:20::'})
+
+    # verify that both of the sids are programmed because all dependencies are satisfied
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:20::\\48")
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21::\\48")

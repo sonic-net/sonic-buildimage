@@ -474,6 +474,11 @@ read_system_eeprom() {
     read_eeprom /tmp/.system-prefdl
 }
 
+get_eeprom_value() {
+    local key="$1"
+    sed -n "s#^$key: *##p" "$target_path/.system-prefdl" || :
+}
+
 write_platform_specific_cmdline() {
     local platform="$(cmdline_get platform)"
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
@@ -566,6 +571,18 @@ write_platform_specific_cmdline() {
     if [ "$sid" = "BlackhawkTH4DD" ] || [ "$sid" = "BlackhawkTh4Dd" ]; then
            aboot_machine=arista_7060dx5_32
     fi
+    if [ "$sid" = "QuartzDd" ]; then
+        aboot_machine=arista_7280dr3a_36
+    fi
+    if [ "$sid" = "QuartzDdBk" ]; then
+        aboot_machine=arista_7280dr3ak_36
+    fi
+    if [ "$sid" = "QuartzDdBkS" ]; then
+        aboot_machine=arista_7280dr3ak_36s
+    fi
+    if [ "$sid" = "QuartzDdMs" ]; then
+        aboot_machine=arista_7280dr3am_36
+    fi
     if [ "$sid" = "Smartsville" ]; then
         aboot_machine=arista_7280cr3_32p4
     fi
@@ -629,6 +646,13 @@ write_platform_specific_cmdline() {
     if in_array "$sid" "Shearwater4Mk2QuicksilverP" "Shearwater4Mk2NQuicksilverP"; then
         aboot_machine=arista_7060x6_64pe
     fi
+    if in_array "$sid" "Redstart8Mk2QuicksilverP512" "Redstart8Mk2NQuicksilverP512" \
+                "Redstart832Mk2QuicksilverP512" "Redstart832Mk2NQuicksilverP512"; then
+        aboot_machine=arista_7060x6_64pe_b
+    fi
+    if in_array "$sid" "MorandaP"; then
+        aboot_machine=arista_7060x6_32pe
+    fi
 
     # disable cpu c-state other than C1
     local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"
@@ -643,6 +667,9 @@ write_platform_specific_cmdline() {
         cmdline_add rhash_entries=1
         cmdline_add usb-storage.delay_use=0
         cmdline_add reassign_prefmem
+    fi
+    if in_array "$platform" "cormorant"; then
+        read_system_eeprom
     fi
     if in_array "$platform" "rook" "sprucefish"; then
         cmdline_add iommu=on
@@ -659,7 +686,7 @@ write_platform_specific_cmdline() {
         cmdline_add sdhci.append_quirks2=0x40
         read_system_eeprom
     fi
-    if in_array "$platform" "woodpecker"; then
+    if in_array "$platform" "woodpecker" "skylark"; then
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi
@@ -679,7 +706,13 @@ write_platform_specific_cmdline() {
         fi
     fi
     if in_array "$sid" "Moby" "RedstartFixed8CNMoby"; then
-        aboot_machine=arista_7060x6_16pe_384c
+        aboot_machine=arista_7060x6_16pe_384c_b
+
+        local hw_api="$(get_eeprom_value HwApi)"
+        info "HwApi for Moby: $hw_api"
+        if [ -z "$hw_api" ] || [ "$hw_api" = "01.00" ]; then
+            aboot_machine=arista_7060x6_16pe_384c
+        fi
     fi
 
     if [ $varlog_size -eq 0 ]; then

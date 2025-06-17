@@ -16,586 +16,348 @@
 # limitations under the License.
 #
 
-"""dpuctlplat Tests Implementation"""
+"""Tests for dpuctlplat Platform API Wrapper"""
 import os
 import sys
+import time
 import pytest
-import sonic_platform
-from sonic_platform.dpuctlplat import DpuCtlPlat, BootProgEnum, PCI_DEV_BASE
-
+import subprocess
 from unittest.mock import MagicMock, patch, Mock, call
+
+from sonic_platform.dpuctlplat import (
+    DpuCtlPlat, BootProgEnum, PCI_DEV_BASE, OperationType,
+    WAIT_FOR_SHTDN, WAIT_FOR_DPU_READY
+)
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 scripts_path = os.path.join(modules_path, "scripts")
 
+# Test data
+TEST_DPU_LIST = ['dpu0', 'dpu1', 'dpu2', 'dpu3']
+TEST_PCI_PATH = os.path.join(PCI_DEV_BASE, "0000:08:00.0")
+TEST_RSHIM_PCI_PATH = os.path.join(PCI_DEV_BASE, "0000:08:00.1")
+TEST_PCI_REMOVE_PATH = os.path.join(TEST_PCI_PATH, "remove")
+TEST_RSHIM_PCI_REMOVE_PATH = os.path.join(TEST_RSHIM_PCI_PATH, "remove")
 
-def create_dpu_list():
-    """Create dpu object list for Function calls"""
-    existing_dpu_list = ['dpu0', 'dpu1', 'dpu2', 'dpu3']
-    dpuctl_list = []
-    for dpu_name in existing_dpu_list:
-        dpuctl_obj = DpuCtlPlat(dpu_name)
+@pytest.fixture
+def dpuctl_obj():
+    """Fixture to create a DpuCtlPlat object for testing"""
+    obj = DpuCtlPlat('dpu0')
+    obj.setup_logger(True)
+    obj.pci_dev_path = [TEST_PCI_PATH, TEST_RSHIM_PCI_PATH]
+    return obj
+
+class TestDpuCtlPlatInit:
+    """Tests for DpuCtlPlat initialization"""
+
+    def test_init(self, dpuctl_obj):
+        """Test initialization of DpuCtlPlat object"""
+        assert dpuctl_obj.dpu_name == 'dpu0'
+        assert dpuctl_obj.dpu_id == 0
+        assert dpuctl_obj._name == 'dpu1'  # hwmgmt name is dpu index + 1
+        assert dpuctl_obj.verbosity is False
+        assert isinstance(dpuctl_obj.boot_prog_map, dict)
+        assert len(dpuctl_obj.boot_prog_map) > 0
+        assert len(dpuctl_obj.pci_dev_path) == 2  # Both PCI and RSHIM paths
+
+    def test_setup_logger(self, dpuctl_obj):
+        """Test logger setup"""
+        # Test with print mode
         dpuctl_obj.setup_logger(True)
-        dpuctl_list.append(dpuctl_obj)
-    context = {
-        "dpuctl_list": dpuctl_list,
-    }
-    return context
+        # Test that the logger functions add timestamps
+        with patch('time.strftime') as mock_time:
+            mock_time.return_value = "2024-01-01 12:00:00"
+            with patch('builtins.print') as mock_print:
+                dpuctl_obj.logger_info("test message")
+                mock_print.assert_called_once_with("[2024-01-01 12:00:00] test message")
 
+        # Test with syslogger mode
+        dpuctl_obj.setup_logger(False)
+        assert dpuctl_obj.logger_info != print
+        assert dpuctl_obj.logger_error != print
+        assert dpuctl_obj.logger_debug != print
 
-obj = create_dpu_list()
+    def test_get_pci_dev_path(self, dpuctl_obj):
+        """Test PCI device path retrieval"""
+        # Test with both PCI and RSHIM paths
+        with patch('sonic_platform.device_data.DeviceDataManager.get_dpu_interface') as mock_get:
+            mock_get.side_effect = ["0000:08:00.0", "0000:08:00.1"]
+            paths = dpuctl_obj.get_pci_dev_path()
+            assert len(paths) == 2
+            assert paths[0].endswith("0000:08:00.0")
+            assert paths[1].endswith("0000:08:00.1")
 
-rshim_interface = "rshim@0"
-pci_dev_path = os.path.join(PCI_DEV_BASE, "0000:08:00.0", 'remove')
+        # Test with missing PCI path
+        with patch('sonic_platform.device_data.DeviceDataManager.get_dpu_interface') as mock_get:
+            mock_get.side_effect = [None, "0000:08:00.1"]
+            dpuctl_obj.pci_dev_path = []
+            with pytest.raises(RuntimeError) as exc:
+                dpuctl_obj.get_pci_dev_path()
+            assert "Unable to obtain PCI device IDs" in str(exc.value)
 
+        # Test with missing RSHIM path
+        with patch('sonic_platform.device_data.DeviceDataManager.get_dpu_interface') as mock_get:
+            mock_get.side_effect = ["0000:08:00.0", None]
+            with pytest.raises(RuntimeError) as exc:
+                dpuctl_obj.get_pci_dev_path()
+            assert "Unable to obtain PCI device IDs" in str(exc.value)
 
-class TestDpuClass:
-    """Tests for dpuctl Platform API Wrapper"""
-    @classmethod
-    def setup_class(cls):
-        """Setup function for all tests for dpuctl implementation"""
-        os.environ["PATH"] += os.pathsep + scripts_path
-        os.environ["MLNX_PLATFORM_API_DPUCTL_UNIT_TESTING"] = "2"
-        dpuctl_obj = obj["dpuctl_list"][0]
-        dpuctl_obj.rshim_interface = rshim_interface
-        dpuctl_obj.pci_dev_path = pci_dev_path
+class TestDpuCtlPlatPCI:
+    """Tests for PCI-related functionality"""
+
+    def test_pci_operations(self, dpuctl_obj):
+        """Test PCI remove and scan operations"""
+        written_data = []
+        def mock_write_file(file_name, content_towrite):
+            written_data.append({"file": file_name, "data": content_towrite})
+            return True
+
+        # Test PCI remove - should remove both devices
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch('os.path.exists', return_value=True):
+            assert dpuctl_obj.dpu_pci_remove()
+            assert len(written_data) == 2
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[0]["data"] == "1"
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[1]["data"] == "1"
+
+        # Test PCI scan - should scan devices
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file):
+            assert dpuctl_obj.dpu_pci_scan()
+            assert written_data[0]["file"].endswith("rescan")
+            assert written_data[0]["data"] == "1"
+
+class TestDpuCtlPlatPower:
+    """Tests for power management functionality"""
 
     @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('multiprocessing.Process.start', MagicMock(return_value=True))
-    @patch('multiprocessing.Process.is_alive', MagicMock(return_value=False))
     @patch('sonic_platform.inotify_helper.InotifyHelper.wait_watch')
     @patch('sonic_platform.inotify_helper.InotifyHelper.__init__')
-    @patch('subprocess.check_output', MagicMock(return_value=True))
-    def test_power_off(self, mock_inotify, mock_add_watch):
-        """Tests for Per DPU Power Off function"""
-        dpuctl_obj = obj["dpuctl_list"][0]
-        mock_inotify.return_value = None
-        mock_add_watch.return_value = True
+    def test_power_off(self, mock_inotify_init, mock_wait_watch, dpuctl_obj):
+        """Test power off functionality"""
+        mock_inotify_init.return_value = None
+        mock_wait_watch.return_value = True
         written_data = []
 
         def mock_write_file(file_name, content_towrite):
-            written_data.append({"file": file_name,
-                                 "data": content_towrite})
+            written_data.append({"file": file_name, "data": content_towrite})
             return True
+
+        # Test force power off
         with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_RUN.value)):
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
             assert dpuctl_obj.dpu_power_off(True)
-            print(f"{written_data}")
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert "0" == written_data[1]["data"]
-            assert written_data[1]["file"].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[2]["data"]
-            assert written_data[2]["file"].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            written_data = []
+            assert len(written_data) == 4  # Both PCI and RSHIM removals + rst + pwr_force
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[0]["data"] == "1"
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[1]["data"] == "1"
+            assert written_data[2]["data"] == "0"  # rst
+            assert written_data[3]["data"] == "0"  # pwr_force
+
+        # Test normal power off
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
             assert dpuctl_obj.dpu_power_off(False)
-            assert mock_inotify.call_args.args[0].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_shtdn_ready")
-            assert written_data[0]["file"].endswith(
-                f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr")
-            assert "0" == written_data[2]["data"]
-            written_data = []
-            mock_add_watch.return_value = None
+            assert len(written_data) == 4  # Both PCI and RSHIM removals + rst + pwr
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[2]["file"].endswith("_rst")
+            assert written_data[3]["file"].endswith("_pwr")
+
+        # Test power off when already off
+        with patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.RST.value), \
+             patch.object(dpuctl_obj, 'log_info') as mock_log:
             assert dpuctl_obj.dpu_power_off(False)
-            assert mock_inotify.call_args.args[0].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_shtdn_ready")
-            assert written_data[0]["file"].endswith(
-                f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "0" == written_data[3]["data"]
-        # Test whether value of boot_progress skips power off
-        with patch.object(dpuctl_obj, 'read_boot_prog') as mock_boot_prog, \
-             patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, '_power_off_force') as mock_power_off_force, \
-             patch.object(dpuctl_obj, '_power_off') as mock_power_off, \
-             patch.object(dpuctl_obj, 'log_info') as mock_obj:
-            mock_boot_prog.return_value = BootProgEnum.RST.value
-            mock_add_watch.return_value = True
-            assert dpuctl_obj.dpu_power_off(False)
-            assert mock_obj.call_args_list[1].args[0] == "Skipping DPU power off as DPU is already powered off"
-        # Test whether value of boot_progress changes power off to force_power_off
-        with patch.object(dpuctl_obj, 'read_boot_prog') as mock_boot_prog, \
-             patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, '_power_off_force') as mock_power_off_force, \
-             patch.object(dpuctl_obj, '_power_off') as mock_power_off, \
-             patch.object(dpuctl_obj, 'log_info') as mock_obj:
-            mock_boot_prog.return_value = BootProgEnum.OS_CRASH_PROG.value
-            mock_add_watch.return_value = True
-            assert dpuctl_obj.dpu_power_off(False)
-            assert mock_obj.call_args_list[1].args[0] == "Power off with force = True since since OS is not in running state on DPU"
-            mock_power_off_force.assert_called_once()
-            mock_power_off.assert_not_called()
-            mock_boot_prog.return_value = BootProgEnum.OS_RUN.value
-            mock_power_off_force.reset_mock()
-            mock_power_off.reset_mock()
-            assert dpuctl_obj.dpu_power_off(False)
-            mock_power_off_force.assert_not_called()
-            mock_power_off.assert_called_once()
+            assert "Skipping DPU power off as DPU is already powered off" in mock_log.call_args_list[-1].args[0]
 
     @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('multiprocessing.Process.start', MagicMock(return_value=True))
-    @patch('multiprocessing.Process.is_alive', MagicMock(return_value=False))
     @patch('sonic_platform.inotify_helper.InotifyHelper.wait_watch')
     @patch('sonic_platform.inotify_helper.InotifyHelper.__init__')
-    @patch('subprocess.check_output', MagicMock(return_value=True))
-    def test_power_on(self, mock_inotify, mock_add_watch):
-        """Tests for Per DPU Power On function"""
-        dpuctl_obj = obj["dpuctl_list"][0]
-        mock_inotify.return_value = None
-        mock_add_watch.return_value = True
+    def test_power_on(self, mock_inotify_init, mock_wait_watch, dpuctl_obj):
+        """Test power on functionality"""
+        mock_inotify_init.return_value = None
+        mock_wait_watch.return_value = True
         written_data = []
 
         def mock_write_file(file_name, content_towrite):
-            written_data.append({"file": file_name,
-                                 "data": content_towrite})
+            written_data.append({"file": file_name, "data": content_towrite})
             return True
+
+        # Test force power on
         with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'wait_for_pci', wraps=MagicMock(return_value=None)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control', wraps=MagicMock(return_value=None)), \
-             patch.object(dpuctl_obj, 'read_boot_prog', wraps=MagicMock(return_value=BootProgEnum.RST.value)):
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.RST.value), \
+             patch.object(dpuctl_obj, 'read_force_power_path', return_value=1):
             assert dpuctl_obj.dpu_power_on(True)
-            assert mock_inotify.call_args.args[0].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_ready")
-            assert written_data[0]["file"].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[1]["data"]
-            written_data = []
+            assert len(written_data) == 3  # pwr_force + rst + rescan
+            assert written_data[0]["file"].endswith("_pwr_force")
+            assert written_data[0]["data"] == "1"
+            assert written_data[1]["file"].endswith("_rst")
+            assert written_data[1]["data"] == "1"
+            assert written_data[2]["file"].endswith("rescan")
+            assert written_data[2]["data"] == "1"
+
+        # Test normal power on
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.RST.value), \
+             patch.object(dpuctl_obj, 'read_force_power_path', return_value=1):
             assert dpuctl_obj.dpu_power_on(False)
-            assert written_data[0]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"rescan")
-            assert "1" == written_data[2]["data"]
-            written_data = []
-            mock_add_watch.return_value = None
-            assert not dpuctl_obj.dpu_power_on(False)
-            assert len(written_data) == 19
-            assert written_data[0]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[1]["data"]
-            for i in range(4):
-                assert written_data[2 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "0" == written_data[2 + 4 * i]["data"]
-                assert written_data[3 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "0" == written_data[3 + 4 * i]["data"]
-                assert written_data[4 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "1" == written_data[4 + 4 * i]["data"]
-                assert written_data[5 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "1" == written_data[5 + 4 * i]["data"]
-            assert written_data[18]["file"].endswith(f"rescan")
-            assert "1" == written_data[18]["data"]
+            assert len(written_data) == 3  # pwr + rst + rescan
+            assert written_data[0]["file"].endswith("_pwr")
+            assert written_data[1]["file"].endswith("_rst")
+            assert written_data[2]["file"].endswith("rescan")
+
+class TestDpuCtlPlatReboot:
+    """Tests for reboot functionality"""
 
     @patch('os.path.exists', MagicMock(return_value=True))
-    @patch('multiprocessing.Process.start', MagicMock(return_value=None))
-    @patch('multiprocessing.Process.is_alive', MagicMock(return_value=False))
     @patch('sonic_platform.inotify_helper.InotifyHelper.wait_watch')
     @patch('sonic_platform.inotify_helper.InotifyHelper.__init__')
-    def test_dpu_reset(self, mock_inotify, mock_add_watch):
-        """Tests for Per DPU Reset function"""
-        dpuctl_obj = obj["dpuctl_list"][0]
-        mock_inotify.return_value = None
-        mock_add_watch.return_value = True
+    def test_reboot(self, mock_inotify_init, mock_wait_watch, dpuctl_obj):
+        """Test reboot functionality"""
+        mock_inotify_init.return_value = None
+        mock_wait_watch.return_value = True
         written_data = []
 
         def mock_write_file(file_name, content_towrite):
-            written_data.append({"file": file_name,
-                                 "data": content_towrite})
+            written_data.append({"file": file_name, "data": content_towrite})
             return True
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_RUN.value)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control', wraps=MagicMock(return_value=None)):
-            dpuctl_obj.write_file = mock_write_file
-            assert dpuctl_obj.dpu_reboot(False)
-            assert len(written_data) == 4
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"rescan")
-            assert "1" == written_data[3]["data"]
-            assert mock_inotify.call_args.args[0].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_ready")
-            mock_add_watch.return_value = None
-            written_data = []
-            assert not dpuctl_obj.dpu_reboot()
-            assert len(written_data) == 22
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "0" == written_data[3]["data"]
-            assert written_data[4]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[4]["data"]
-            for i in range(4):
-                assert written_data[5 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "0" == written_data[5 + 4 * i]["data"]
-                assert written_data[6 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "0" == written_data[6 + 4 * i]["data"]
-                assert written_data[7 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "1" == written_data[7 + 4 * i]["data"]
-                assert written_data[8 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "1" == written_data[8 + 4 * i]["data"]
-            assert written_data[21]["file"].endswith(f"rescan")
-            assert "1" == written_data[21]["data"]
-        # Force Reboot
-        mock_inotify.reset_mock()
-        mock_add_watch.return_value = True
-        mock_inotify.return_value = None
-        written_data = []
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_RUN.value)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control', wraps=MagicMock(return_value=None)):
-            dpuctl_obj.write_file = mock_write_file
-            assert dpuctl_obj.dpu_reboot(True)
-            mock_add_watch.return_value = None
-            assert len(written_data) == 6
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "0" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "1" == written_data[3]["data"]
-            assert written_data[4]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[4]["data"]
-            assert written_data[5]["file"].endswith(f"rescan")
-            assert "1" == written_data[5]["data"]
-            assert mock_inotify.call_args.args[0].endswith(
-                f"{dpuctl_obj.get_hwmgmt_name()}_ready")
-            mock_add_watch.return_value = None
-            written_data = []
-            assert not dpuctl_obj.dpu_reboot(True)
-            assert len(written_data) == 18
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "0" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "1" == written_data[3]["data"]
-            assert written_data[4]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[4]["data"]
-            for i in range(3):
-                assert written_data[5 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "0" == written_data[5 + 4 * i]["data"]
-                assert written_data[6 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "0" == written_data[6 + 4 * i]["data"]
-                assert written_data[7 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-                assert "1" == written_data[7 + 4 * i]["data"]
-                assert written_data[8 + 4 * i]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-                assert "1" == written_data[8 + 4 * i]["data"]
-            assert written_data[17]["file"].endswith(f"rescan")
-            assert "1" == written_data[17]["data"]
-        # Test whether value of boot_progress changes power off to force_power_off
-        with patch.object(dpuctl_obj, 'read_boot_prog') as mock_boot_prog, \
-             patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, '_reboot') as mock_reset, \
-             patch.object(dpuctl_obj, '_reboot_force') as mock_reset_force, \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control', wraps=MagicMock(return_value=None)), \
-             patch.object(dpuctl_obj, 'log_info') as mock_obj:
-            mock_boot_prog.return_value = BootProgEnum.RST.value
-            mock_add_watch.return_value = True
-            assert dpuctl_obj.dpu_reboot(False)
-            assert mock_obj.call_args_list[1].args[0] == "Reboot with force = True since OS is not in running state on DPU"
-            mock_reset_force.assert_called_once()
-            mock_reset.assert_not_called()
-            mock_boot_prog.return_value = 5
-            mock_reset_force.reset_mock()
-            mock_reset.reset_mock()
-            assert dpuctl_obj.dpu_reboot(False)
-            mock_reset_force.assert_not_called()
-            mock_reset.assert_called_once()
-        written_data = []
-        mock_inotify.reset_mock()
-        mock_add_watch.reset_mock()
-        mock_inotify.return_value = None
-        mock_add_watch.return_value = True
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_RUN.value)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control') as mock_rshim:
-            assert dpuctl_obj.dpu_reboot(forced=False, no_wait=True)
-            # Rshim service is only stopped and not started
-            mock_rshim.assert_called_once()
-            mock_rshim.call_args.args[0] == "stop"
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[2]["data"]
-            mock_inotify.called_once()
-            mock_add_watch.called_once()
-        written_data = []
-        mock_inotify.reset_mock()
-        mock_add_watch.reset_mock()
-        mock_inotify.return_value = None
-        mock_add_watch.return_value = True
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_START.value)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control') as mock_rshim:
-            assert dpuctl_obj.dpu_reboot(forced=False, no_wait=True)
-            mock_rshim.assert_called_once()
-            mock_rshim.call_args.args[0] == "stop"
-            assert written_data[0]["file"].endswith(f"{pci_dev_path}")
-            assert "1" == written_data[0]["data"]
-            assert written_data[1]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[1]["data"]
-            assert written_data[2]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "0" == written_data[2]["data"]
-            assert written_data[3]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_pwr_force")
-            assert "1" == written_data[3]["data"]
-            assert written_data[4]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "1" == written_data[4]["data"]
-            mock_inotify.called_once()
-            mock_add_watch.called_once()
-        # Skip pre startup and post shutdown
-        written_data = []
-        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
-             patch.object(dpuctl_obj, 'read_boot_prog', MagicMock(return_value=BootProgEnum.OS_START.value)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control') as mock_rshim:
-            assert dpuctl_obj.dpu_reboot(skip_pre_post=True)
-            mock_rshim.assert_not_called()
-            # We skip writing PCI data
-            assert written_data[0]["file"].endswith(f"{dpuctl_obj.get_hwmgmt_name()}_rst")
-            assert "0" == written_data[0]["data"]
-            assert not written_data[-1]["file"].endswith("rescan")
 
-    def test_prog_update(self):
-        dpuctl_obj = obj["dpuctl_list"][0]
+        # Test normal reboot
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
+            assert dpuctl_obj.dpu_reboot(False)
+            assert len(written_data) == 5  # Both PCI removals + rst + rst + rescan
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[2]["file"].endswith("_rst")
+            assert written_data[3]["file"].endswith("_rst")
+            assert written_data[4]["file"].endswith("rescan")
+
+        # Test force reboot
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
+            assert dpuctl_obj.dpu_reboot(True)
+            assert len(written_data) == 7  # Both PCI removals + rst + pwr_force + pwr_force + rst + rescan
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[2]["file"].endswith("_rst")
+            assert written_data[3]["file"].endswith("_pwr_force")
+            assert written_data[4]["file"].endswith("_pwr_force")
+            assert written_data[5]["file"].endswith("_rst")
+            assert written_data[6]["file"].endswith("rescan")
+
+        # Test no-wait reboot
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
+            assert dpuctl_obj.dpu_reboot(no_wait=True)
+            assert len(written_data) == 4  # Both PCI removals + rst + rst
+            assert written_data[0]["file"] == TEST_PCI_REMOVE_PATH
+            assert written_data[1]["file"] == TEST_RSHIM_PCI_REMOVE_PATH
+            assert written_data[2]["file"].endswith("_rst")
+            assert written_data[3]["file"].endswith("_rst")
+
+        # Test reboot with skip_pre_post=True
+        written_data.clear()
+        with patch.object(dpuctl_obj, 'write_file', wraps=mock_write_file), \
+             patch.object(dpuctl_obj, 'read_boot_prog', return_value=BootProgEnum.OS_RUN.value):
+            assert dpuctl_obj.dpu_reboot(skip_pre_post=True)
+            assert len(written_data) == 2  # Only rst operations
+            assert all("_rst" in data["file"] for data in written_data)
+            assert not any("remove" in data["file"] for data in written_data)
+            assert not any("rescan" in data["file"] for data in written_data)
+
+class TestDpuCtlPlatUtils:
+    """Tests for utility functions"""
+
+    def test_run_cmd_output(self, dpuctl_obj):
+        """Test command execution and error handling"""
+        # Test successful command
+        with patch('subprocess.check_output') as mock_cmd:
+            mock_cmd.return_value = b"success\n"
+            assert dpuctl_obj.run_cmd_output(["test"]) == "success"
+
+        # Test failed command with exception
+        with patch('subprocess.check_output') as mock_cmd:
+            mock_cmd.side_effect = subprocess.CalledProcessError(1, "test")
+            with pytest.raises(subprocess.CalledProcessError):
+                dpuctl_obj.run_cmd_output(["test"])
+
+        # Test failed command without exception
+        with patch('subprocess.check_output') as mock_cmd:
+            mock_cmd.side_effect = subprocess.CalledProcessError(1, "test")
+            assert dpuctl_obj.run_cmd_output(["test"], raise_exception=False) is None
+
+    def test_write_file(self, dpuctl_obj):
+        """Test file writing functionality"""
+        with patch('sonic_platform.utils.write_file') as mock_write:
+            mock_write.return_value = True
+            assert dpuctl_obj.write_file("test_file", "test_content")
+            mock_write.assert_called_once_with("test_file", "test_content", raise_exception=True)
+
+            mock_write.side_effect = Exception("Write error")
+            with pytest.raises(Exception) as exc:
+                dpuctl_obj.write_file("test_file", "test_content")
+            assert "Write error" in str(exc.value)
+
+    def test_get_hwmgmt_name(self, dpuctl_obj):
+        """Test hardware management name generation"""
+        assert dpuctl_obj.get_hwmgmt_name() == "dpu1"  # dpu0 -> dpu1
+        dpuctl_obj.dpu_name = "dpu1"
+        dpuctl_obj.dpu_id = 1
+        assert dpuctl_obj.get_hwmgmt_name() == "dpu2"  # dpu1 -> dpu2
+
+class TestDpuCtlPlatStatus:
+    """Tests for status monitoring functionality"""
+
+    def test_boot_progress(self, dpuctl_obj):
+        """Test boot progress monitoring"""
         dpuctl_obj.boot_prog_path = os.path.join(test_path, 'mock_dpu_boot_prog')
 
-        class Dummy:
+        class DummyPoller:
             def poll(self):
                 return True
-        dummy_obj = Dummy()
-        mock_file_path = "mock_dpu_boot_prog"
-        mock_val = 0
-        boot_prog_map = dpuctl_obj.boot_prog_map
 
-        def mock_read_int_from_file(file_path, default=0, raise_exception=False, log_func=None):
-            if file_path.endswith(mock_file_path):
-                return mock_val
-            else:
-                return 0
-        with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file), \
-             patch.object(dpuctl_obj, 'wait_for_pci', wraps=MagicMock(return_value=None)), \
-             patch.object(dpuctl_obj, 'dpu_rshim_service_control', wraps=MagicMock(return_value=None)):
-            for key_val in boot_prog_map.keys():
-                mock_val = key_val
-                dpuctl_obj.update_boot_prog_once(dummy_obj)
-                assert dpuctl_obj.boot_prog_state == key_val
-                assert dpuctl_obj.boot_prog_indication == f"{key_val} - {boot_prog_map.get(key_val)}"
-            mock_val = 25
-            dpuctl_obj.update_boot_prog_once(dummy_obj)
-            assert dpuctl_obj.boot_prog_state == 25
-            assert dpuctl_obj.boot_prog_indication == "25 - N/A"
-            mock_val = 36
-            dpuctl_obj.update_boot_prog_once(dummy_obj)
-            assert dpuctl_obj.boot_prog_state == 36
-            assert dpuctl_obj.boot_prog_indication == "36 - N/A"
-            mock_file_path = "dpu1_ready"
-            mock_val = 1
-            dpuctl_obj.dpu_status_update()
-            assert dpuctl_obj.boot_prog_state == 0
-            assert dpuctl_obj.boot_prog_indication == f"0 - {boot_prog_map.get(0)}"
+        with patch("sonic_platform.utils.read_int_from_file") as mock_read:
+            # Test known boot progress states
+            for state in BootProgEnum:
+                mock_read.return_value = state.value
+                dpuctl_obj.update_boot_prog_once(DummyPoller())
+                assert dpuctl_obj.boot_prog_state == state.value
+                assert dpuctl_obj.boot_prog_indication == f"{state.value} - {dpuctl_obj.boot_prog_map[state.value]}"
+
+            # Test unknown boot progress state
+            mock_read.return_value = 99
+            dpuctl_obj.update_boot_prog_once(DummyPoller())
+            assert dpuctl_obj.boot_prog_state == 99
+            assert dpuctl_obj.boot_prog_indication == "99 - N/A"
+
+    def test_status_updates(self, dpuctl_obj):
+        """Test DPU status updates"""
+        with patch("sonic_platform.utils.read_int_from_file") as mock_read:
+            # Test ready state
+            mock_read.return_value = 1
+            dpuctl_obj.dpu_ready_update()
             assert dpuctl_obj.dpu_ready_state == 1
-            assert dpuctl_obj.dpu_ready_indication == f"True"
-            assert dpuctl_obj.dpu_shtdn_ready_state == 0
-            assert dpuctl_obj.dpu_shtdn_ready_indication == f"False"
-            mock_file_path = "dpu1_shtdn_ready"
-            dpuctl_obj.dpu_status_update()
-            assert dpuctl_obj.boot_prog_state == 0
-            assert dpuctl_obj.boot_prog_indication == f"0 - {boot_prog_map.get(0)}"
-            assert dpuctl_obj.dpu_ready_state == 0
-            assert dpuctl_obj.dpu_ready_indication == "False"
+            assert dpuctl_obj.dpu_ready_indication == "True"
+
+            # Test shutdown ready state
+            mock_read.return_value = 1
+            dpuctl_obj.dpu_shtdn_ready_update()
             assert dpuctl_obj.dpu_shtdn_ready_state == 1
             assert dpuctl_obj.dpu_shtdn_ready_indication == "True"
-            mock_file_path = "dpu1_shtdn_ready"
-            mock_val = 25
-            dpuctl_obj.dpu_status_update()
+
+            # Test invalid states
+            mock_read.return_value = 25
+            dpuctl_obj.dpu_ready_update()
+            assert dpuctl_obj.dpu_ready_indication == "25 - N/A"
+            dpuctl_obj.dpu_shtdn_ready_update()
             assert dpuctl_obj.dpu_shtdn_ready_indication == "25 - N/A"
-            mock_file_path = "dpu1_ready"
-            mock_val = 50
-            dpuctl_obj.dpu_status_update()
-            assert dpuctl_obj.dpu_ready_indication == "50 - N/A"
-
-    @patch('os.path.exists')
-    @patch('os.open', MagicMock(return_value=-1))
-    @patch('os.close', MagicMock(return_value=None))
-    @patch('sonic_platform.dpuctlplat.poll')
-    def test_pci_func(self, m1, mock_exists):
-        dpuctl_obj = obj["dpuctl_list"][0]
-        mock_exists.return_value = False
-        mock_obj = Mock()
-        mock_obj.register.return_value = None
-        mock_obj.poll.return_value = None
-        m1.return_value = mock_obj
-        timeout_val = 45
-
-        def mock_time_diff():
-            mock_time_diff.counter += 1
-            return mock_time_diff.counter * timeout_val
-        mock_time_diff.counter = 0
-        with patch("time.monotonic", wraps=mock_time_diff):
-            # PCI Device is not recognized
-            assert not dpuctl_obj.wait_for_pci()
-            pci_parent_path = os.path.dirname(pci_dev_path)
-            assert pci_parent_path == mock_exists.call_args.args[0]
-            mock_obj.register.assert_called_once()
-            mock_obj.poll.assert_called_once()
-            # PCI device is recognized immediately
-            mock_obj.reset_mock()
-            mock_exists.reset_mock()
-            mock_exists.return_value = True
-            assert dpuctl_obj.wait_for_pci()
-            assert pci_parent_path == mock_exists.call_args.args[0]
-            mock_obj.register.assert_not_called()
-            mock_obj.poll.assert_not_called()
-            # PCI device is added later (Detected in Loop)
-            timeout_val = 20
-            mock_exists.reset_mock()
-            mock_obj.reset_mock()
-            mock_exists.side_effect = [False, True]
-            mock_obj.poll.return_value = True
-            assert dpuctl_obj.wait_for_pci()
-            mock_obj.register.assert_called_once()
-            mock_obj.poll.assert_called_once()
-            # PCI device is added later (Detected at the end)
-            timeout_val = 80
-            mock_exists.reset_mock()
-            mock_obj.reset_mock()
-            mock_exists.side_effect = [False, True]
-            assert dpuctl_obj.wait_for_pci()
-            mock_obj.register.assert_called_once()
-            mock_obj.poll.assert_not_called()
-        with patch.object(dpuctl_obj, 'pci_dev_path', None), \
-             patch('sonic_platform.device_data.DeviceDataManager.get_dpu_interface') as mock_int,\
-             patch.object(dpuctl_obj, 'log_error') as mock_obj:
-            mock_int.return_value = None
-            dpuctl_obj.wait_for_pci()
-            mock_obj.assert_called_once_with("Unable to wait for PCI device:Unable to obtain pci device id for dpu0 from platform.json")
-            new_pci_dev_id = "0000:05:00.0"
-            mock_int.return_value = new_pci_dev_id
-            dpuctl_obj.wait_for_pci()
-            assert dpuctl_obj.pci_dev_path.endswith(f"{new_pci_dev_id}/remove")
-            # pci dev_path is cached
-            mock_int.reset_mock()
-            mock_int.return_value = "None"
-            dpuctl_obj.wait_for_pci()
-            mock_int.assert_not_called()
-            assert dpuctl_obj.pci_dev_path.endswith(f"{new_pci_dev_id}/remove")
-
-    def test_rshim_service(self):
-        dpuctl_obj = obj["dpuctl_list"][0]
-        with patch.object(dpuctl_obj, 'run_cmd_output') as mock_method:
-            dpuctl_obj.dpu_rshim_service_control('start')
-            mock_method.assert_called_once()
-            cmd_string = ' '.join(mock_method.call_args.args[0])
-            service_name = rshim_interface
-            operation = "Start"
-            assert (operation in cmd_string) and (service_name in cmd_string)
-            mock_method.reset_mock()
-            operation = "Stop"
-            dpuctl_obj.dpu_rshim_service_control('stop')
-            cmd_string = ' '.join(mock_method.call_args.args[0])
-            assert (operation in cmd_string) and (service_name in cmd_string)
-            mock_method.assert_called_once()
-            with pytest.raises(TypeError):
-                dpuctl_obj.dpu_rshim_service_control()
-            with patch.object(dpuctl_obj, 'rshim_interface', None), \
-                 patch('sonic_platform.device_data.DeviceDataManager.get_dpu_interface') as mock_int,\
-                 patch.object(dpuctl_obj, 'log_error') as mock_obj:
-                mock_int.return_value = None
-                dpuctl_obj.dpu_rshim_service_control('start')
-                mock_obj.assert_called_once_with("Failed to start rshim!: Unable to Parse rshim information for dpu0 from Platform.json")
-                mock_int.return_value = "rshim1"
-                dpuctl_obj.dpu_rshim_service_control('start')
-                assert dpuctl_obj.rshim_interface == "rshim@1"
-                mock_int.reset_mock()
-                mock_int.return_value = "rshim20"
-                dpuctl_obj.dpu_rshim_service_control('start')
-                # Rshim name is cached
-                mock_int.assert_not_called()
-                assert dpuctl_obj.rshim_interface == "rshim@1"
-
-    def test_pre_and_post(self):
-        dpuctl_obj = obj["dpuctl_list"][0]
-        with patch.object(dpuctl_obj, 'dpu_rshim_service_control') as mock_rshim, patch.object(dpuctl_obj, 'write_file') as mock_write:
-            manager_mock = Mock()
-            manager_mock.attach_mock(mock_rshim, 'rshim')
-            manager_mock.attach_mock(mock_write, 'write')
-            mock_rshim.return_value = True
-            mock_write.return_value = True
-            assert dpuctl_obj.dpu_pre_shutdown()
-            mock_rshim.assert_called_once()
-            mock_write.assert_called_once()
-            # Confirm the order of calls and the parameters
-            manager_mock.mock_calls[0] == call.rshim('stop')
-            manager_mock.mock_calls[1] == call.rshim(dpuctl_obj.pci_dev_path, '1')
-            mock_rshim.return_value = False
-            assert not dpuctl_obj.dpu_pre_shutdown()
-            mock_rshim.return_value = True
-            # Test post startup
-            mock_rshim.reset_mock()
-            mock_write.reset_mock()
-            manager_mock.reset_mock()
-            with patch.object(dpuctl_obj, 'wait_for_pci') as mock_pci:
-                manager_mock.attach_mock(mock_rshim, 'rshim')
-                manager_mock.attach_mock(mock_write, 'write')
-                manager_mock.attach_mock(mock_pci, 'pci')
-                dpuctl_obj.dpu_post_startup()
-                mock_rshim.assert_called_once()
-                mock_write.assert_called_once()
-                mock_pci.assert_called_once()
-                # Confirm the order of calls and the parameters
-                manager_mock.mock_calls[0] == call.rshim('/sys/bus/pci/rescan', '1')
-                manager_mock.mock_calls[1] == call.pci()
-                manager_mock.mock_calls[2] == call.rshim('start')
-                mock_rshim.return_value = False
-                assert not dpuctl_obj.dpu_post_startup()
-        with patch.object(dpuctl_obj, 'write_file', side_effect=Exception("Mock")), \
-             patch.object(dpuctl_obj, 'run_cmd_output', MagicMock(return_value=True)):
-            assert not dpuctl_obj.dpu_pre_shutdown()
-        with patch.object(dpuctl_obj, 'run_cmd_output', side_effect=Exception("Mock")), \
-             patch.object(dpuctl_obj, 'dpu_pci_remove', MagicMock(return_value=True)):
-            assert not dpuctl_obj.dpu_pre_shutdown()
-        with patch.object(dpuctl_obj, 'write_file', side_effect=Exception("Mock")), \
-             patch.object(dpuctl_obj, 'wait_for_pci', MagicMock(return_value=True)), \
-             patch.object(dpuctl_obj, 'run_cmd_output', MagicMock(return_value=True)):
-            assert not dpuctl_obj.dpu_post_startup()
-        with patch.object(dpuctl_obj, 'run_cmd_output', side_effect=Exception("Mock")), \
-             patch.object(dpuctl_obj, 'wait_for_pci', MagicMock(return_value=True)), \
-             patch.object(dpuctl_obj, 'dpu_pci_scan', MagicMock(return_value=True)):
-            assert not dpuctl_obj.dpu_post_startup()
-
-    @classmethod
-    def teardown_class(cls):
-        """Teardown function for all tests for dpuctl implementation"""
-        os.environ["MLNX_PLATFORM_API_DPUCTL_UNIT_TESTING"] = "0"
-        os.environ["PATH"] = os.pathsep.join(
-            os.environ["PATH"].split(os.pathsep)[:-1])

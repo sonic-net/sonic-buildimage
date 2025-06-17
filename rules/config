@@ -188,6 +188,8 @@ INCLUDE_TEAMD ?= y
 # INCLUDE_ROUTER_ADVERTISER - build docker-router-advertiser for router advertisements support
 INCLUDE_ROUTER_ADVERTISER ?= y
 
+# INCLUDE_TEAMD - build docker-ha for DASH HA support
+INCLUDE_DASH_HA ?= y
 # INCLUDE_KUBERNETES - if set to y kubernetes packages are installed to be able to
 # run as worker node in kubernetes cluster.
 INCLUDE_KUBERNETES ?= n
@@ -330,7 +332,7 @@ BUILD_REDUCE_IMAGE_SIZE = n
 
 # SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the 
 # image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
-SONIC_PTF_ENV_PY_VER = mixed
+SONIC_PTF_ENV_PY_VER = py3
 
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0

@@ -82,52 +82,37 @@ export TCL840  := 1
 # Common CFLAGS
 CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
 #CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
-OPT_CFLAGS += -Wno-error=unused-value
-OPT_CFLAGS += -Wno-error=unused-function
-OPT_CFLAGS += -Wno-error=cpp
-OPT_CFLAGS += -Wno-error=array-bounds
-OPT_CFLAGS += -Wno-error=strict-overflow
+ifneq (1,$(USE_CLANG))
 CFLAGS += -L$(TOOLCHAIN_DIR)/lib
 CFLAGS += -L$(TOOLCHAIN_DIR)/lib64
+endif
 #OPT_CFLAGS += -Wl,--rpath=/lib64                                 # may need to set rpath and dynamic-linker path here (and possibly in KLFAGS below) in the future, #
 #OPT_CFLAGS += -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2   # if we want to build the target executable to be used with shared libs #
 
+# Needed for a warning in src/soc/phy/fcmap/src/bfcmap88060_a0.c that can't be
+# fixed because of a Montreal2 FW dependency
+ifeq ($(LOCALDIR),src/soc/phy/fcmap/src)
+OPT_CFLAGS += -Wno-address-of-packed-member
+endif
+
 # Compiler-specific CFLAGS
 ifeq (1,$(USE_CLANG)) # CLANG-specific CFLAGS
-OPT_CFLAGS += -Wno-strlcpy-strlcat-size
-OPT_CFLAGS += -Wno-strncat-size
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
 	export LIBNSL_DEPRECATED := 1
 endif
 else # GCC-specific CFLAGS
-OPT_CFLAGS += -Wno-error=unused-but-set-variable
-OPT_CFLAGS += -Wno-error=maybe-uninitialized
-OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
-OPT_CFLAGS += -Wno-error=sizeof-pointer-div #SDK-233830
-OPT_CFLAGS += -Wno-error=memset-elt-size #SDK-232626
-OPT_CFLAGS += -Wno-error=unused-variable #SDK-232993
-OPT_CFLAGS += -Wno-deprecated-declarations #SDK-233174
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
-	OPT_CFLAGS += -Wno-stringop-overflow
-	OPT_CFLAGS += -Wno-stringop-truncation
-	OPT_CFLAGS += -Wno-error=restrict
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
-	OPT_CFLAGS += -Wno-address-of-packed-member
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
-	OPT_CFLAGS += -Wno-error=uninitialized
-	OPT_CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
-	OPT_CFLAGS += -Wno-zero-length-bounds
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
 	CFLAGS += -flarge-source-files
-	OPT_CFLAGS += -Wno-error=address
 	export LIBNSL_DEPRECATED := 1
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
-	OPT_CFLAGS += -Wno-error=enum-int-mismatch
 	CFLAGS += -fcf-protection
 endif
 endif # Compiler-specific CFLAGS
@@ -137,9 +122,9 @@ CFGFLAGS += -fgnu89-inline
 
 # set up KFLAGS appropriately. #
 ifeq (,$(KFLAGS))
-KFLAGS := -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -I$(KERNDIR) -lc -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm
+KFLAGS := -I$(KERNDIR) -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm
 ifneq (1,$(USE_CLANG))
-KFLAGS += -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
+KFLAGS += -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -lc -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
 else
 KFLAGS += -fno-pie
 endif

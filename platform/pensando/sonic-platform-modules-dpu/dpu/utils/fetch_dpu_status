@@ -1,0 +1,314 @@
+#!/usr/bin/env python3
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+#############################################################################
+# Pensando
+#
+# This helps to boot to goldfw/mainfwb from sonic
+#
+#############################################################################
+
+import sys
+import subprocess
+from datetime import datetime
+import json
+import syslog
+import docker
+import redis
+from sonic_py_common import syslogger
+
+SYSLOG_IDENTIFIER = 'platform-healthd'
+logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+def log_info(msg, also_print_to_console=False):
+    logger_instance.log_info(msg, also_print_to_console)
+
+def log_err(msg, also_print_to_console=False):
+    logger_instance.log_error(msg, also_print_to_console)
+
+try:
+    from swsscommon import swsscommon
+    from health_checker.manager import HealthCheckerManager
+    from sonic_py_common import daemon_base
+    from sonic_platform.chassis import Chassis
+    from sonic_platform.helper import APIHelper
+except Exception as e:
+    log_err(f'failed to load modules due to {e}')
+
+DPU_HEALTH_INFO_TABLE_NAME = 'DPU_STATE'
+REDIS_CHASSIS_SERVER_PORT = 6380
+REDIS_CHASSIS_SERVER_IP = '169.254.200.254'
+CHASSIS_STATE_DB = 13
+STATE_DB = 6
+REDIS_LOCALHOST_SERVER_PORT = 6379
+REDIS_LOCALHOST_SERVER_IP = '127.0.0.1'
+NOT_AVAILABLE = 'N/A'
+
+try:
+    apiHelper = APIHelper()
+    chassis = Chassis()
+except Exception as e:
+    log_err(f'failed to fetch dpu docker name due to {e}')
+
+def get_slot_id(chassis):
+    try:
+        return chassis.get_my_slot()
+    except:
+        return -1
+
+def bool_to_healthd_status(status):
+    if status:
+        return "OK"
+    else:
+        return "Not OK"
+
+def bool_to_link_status(status):
+    if status:
+        return "up"
+    else:
+        return "down"
+
+class DPUHealthUpdater():
+
+    def __init__(self, chassis):
+        self.db = None
+        self.chassis = chassis
+        slot = get_slot_id(self.chassis)
+        self.slot_id = str(slot) if slot != -1 else 'UNDEFINED'
+        self.pdsagent_status = None
+        self.pciemgrd_status = None
+        self.platform_health_stats = None
+        self.table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
+        try:
+            self.db = redis.Redis(
+                host=REDIS_CHASSIS_SERVER_IP,
+                port=REDIS_CHASSIS_SERVER_PORT,
+                decode_responses=True,
+                db=CHASSIS_STATE_DB)
+            # checking if server is accessible
+            try:
+                self.db.ping()
+            except Exception as e:
+                self.db = None
+                log_err(f'Failed to connect to db due to {e}')
+            if self.db == None:
+                self.db = redis.Redis(
+                    host=REDIS_LOCALHOST_SERVER_IP,
+                    port=REDIS_LOCALHOST_SERVER_PORT,
+                    decode_responses=True,
+                    db=STATE_DB)
+        except Exception as e:
+            self.db = None
+            log_err(f'Failed to connect to db due to {e}')
+            pass
+
+
+    def delete_dpu_health_table_entries(self):
+        try:
+            if self.db:
+                all_keys = self.db.hkeys(self.table)
+                keys_to_delete = [key for key in all_keys if 'data_plane' not in key]
+                for key in keys_to_delete:
+                    self.db.hdel(self.table, key)
+        except Exception as e:
+            log_err(f'failed to delete dpu health table entries due to {e}')
+
+    def _are_containers_running(self):
+        try:
+            client = docker.from_env()
+            containers = client.containers.list(all=True)
+            all_container_status = True
+            container_not_running = []
+            container_restarting = []
+            reason = ""
+            for container in containers:
+                container_name = container.name
+                container_status = container.status
+                if container_status == 'restarting':
+                    all_container_status &= False
+                    container_restarting.append(container_name)
+                elif container_status == 'exited':
+                    all_container_status &= False
+                    container_not_running.append(container_name)
+            if container_not_running:
+                reason += "Container not running : " + ', '.join(container_not_running)
+            if container_restarting:
+                reason += "Container restarting : " + ', '.join(container_restarting)
+            if reason == "":
+                reason = "All containers are up and running"
+            return all_container_status, reason
+        except Exception as e:
+            log_err(f"failed to fetch dpu docker running status due to {e}")
+            return False, f"failed to fetch dpu docker running status due to {e}"
+
+    def _fetch_monitor_list(self):
+        try:
+            manager = HealthCheckerManager()
+            manager.config.load_config()
+            manager.config.user_defined_checkers.clear()
+            stats = manager.check(self.chassis)
+            return stats
+        except:
+            log_err('failed to fetch sonic host health check status')
+            return None
+
+    def _fetch_pdsagent_status(self):
+        try:
+            cmd = "ps -ef | grep 'pdsagent\|pds_dp_app'"
+            output = apiHelper.run_docker_cmd(cmd)
+            name = 'pdsagent'
+            if "pdsagent" in output:
+                self.pdsagent_status = True
+                print("dpu-pdsagent:OK")
+            elif "pds_dp_app" in output:
+                self.pdsagent_status = True
+                name = 'pds_dp_app'
+                print("dpu-pds_dp_app:OK")
+            else:
+                self.pdsagent_status = False
+                print("dpu-pdsagent:Not OK")
+
+            return name
+        except Exception as e:
+            log_err(f'failed to fetch pdsagent status due to {e}')
+            print("dpu-pdsagent:Not OK")
+            return 'pdsagent'
+
+    def _fetch_pciemgrd_status(self):
+        try:
+            cmd = "ps -ef | grep 'pciemgrd'"
+            output = apiHelper.run_docker_cmd(cmd)
+            if "pciemgrd" in output:
+                self.pciemgrd_status = True
+                print("dpu-pciemgrd:OK")
+            else:
+                self.pciemgrd_status = False
+                print("dpu-pciemgrd:Not OK")
+        except Exception as e:
+            log_err(f'failed to fetch pciemgrd status due to {e}')
+            print("dpu-pciemgrd:Not OK")
+
+    def _fetch_eth_link_status(self):
+        stats = []
+        try:
+            cmd = "/nic/bin/pdsctl show interface --type uplink | grep -i uplink"
+            output = apiHelper.run_docker_cmd(cmd)
+            uplinks_info = output.split('\n')
+            num_uplink = int(uplinks_info[-1].split(':')[-1].replace(' ',''))
+            for i in range(num_uplink):
+                uplink_info = uplinks_info[i].split()
+                name = uplink_info[2]
+                admin_status = uplink_info[3]
+                oper_status = uplink_info[4]
+                state = False
+                if admin_status == 'UP' and oper_status == 'UP':
+                    print(f"dpu-eth_{name}_status:OK")
+                    state = True
+                else:
+                    print(f"dpu-eth_{name}_status:Not OK")
+                uplink_stat = {}
+                uplink_stat['name'] = name
+                uplink_stat['state'] = state
+                stats.append(uplink_stat)
+            return stats
+        except Exception as e:
+            print(f"dpu-eth_uplinks_status:Not OK")
+            log_err(f'failed to fetch eth uplink status due to {e}')
+            uplink_stat = {}
+            uplink_stat['name'] = 'host_eth_link'
+            uplink_stat['state'] = False
+            return [uplink_stat]
+
+    def _fetch_pcie_link_status(self):
+        host_mgmt_status = False
+        int_mgmt_status = False
+
+        if self.pdsagent_status != True:
+            print('dpu-pcie_link:DOWN')
+
+        reason = ''
+        try:
+            cmd = "/nic/bin/pdsctl show lif | grep -i adminstate"
+            output = apiHelper.run_docker_cmd(cmd)
+            fields = output.split()
+            admin_state_index = fields.index('AdminState') - 1
+            oper_state_index = fields.index('OperState') - 1
+            cmd = "/nic/bin/pdsctl show lif | grep INTERNAL-MGMT"
+            output = apiHelper.run_docker_cmd(cmd)
+            int_mgmt_data = output.split()
+            admin_status = int_mgmt_data[admin_state_index]
+            oper_status = int_mgmt_data[oper_state_index]
+            if admin_status == 'UP' and oper_status == 'UP':
+                int_mgmt_status = True
+            else:
+                int_mgmt_status = False
+
+            cmd = "/nic/bin/pdsctl show lif | grep HOST-MGMT"
+            output = apiHelper.run_docker_cmd(cmd)
+            host_mgmt_data = output.split()
+            admin_status = host_mgmt_data[admin_state_index]
+            oper_status = host_mgmt_data[oper_state_index]
+            if admin_status == 'UP' and oper_status == 'UP':
+                host_mgmt_status = True
+            else:
+                host_mgmt_status = False
+            if host_mgmt_status and int_mgmt_status:
+                print('dpu-pcie_link:OK')
+            else:
+                print('dpu-pcie_link:Not OK')
+        except:
+            print('dpu-pcie_link:Not OK')
+
+    def _refresh_dpu_health_status(self):
+        try:
+            pdsagent_name = self._fetch_pdsagent_status()
+            self._fetch_pciemgrd_status()
+            eth_link_stats = self._fetch_eth_link_status()
+            self._fetch_pcie_link_status()
+
+            fvs_data = [
+                ('id', self.slot_id)
+            ]
+
+            all_container_status, reason = self._are_containers_running()
+            dpu_control_plane_state = all_container_status
+            dpu_control_plane_reason = [reason]
+            try:
+                eth_link_reason = []
+                for idx, eth_link_stat in enumerate(eth_link_stats):
+                    name = eth_link_stat.get('name', NOT_AVAILABLE)
+                    state = eth_link_stat.get('state', False)
+                    dpu_control_plane_state &= state
+                    eth_link_reason.append(f"{name} is {bool_to_link_status(state)}")
+                dpu_control_plane_reason.append("host-ethlink-status: " + ', '.join(eth_link_reason))
+                dpu_control_plane_reason = ', '.join(dpu_control_plane_reason)
+            except Exception as e:
+                log_err(f'failed to generate fvs data for host eth link due to {e}')
+
+            fvs_control_plane_data = [
+                ('dpu_control_plane_state', bool_to_link_status(dpu_control_plane_state)),
+                ('dpu_control_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
+                ('dpu_control_plane_reason', dpu_control_plane_reason)
+            ]
+            fvs_data.extend(fvs_control_plane_data)
+
+            for name, value in fvs_data:
+                self.db.hset(self.table, name, value)
+
+        except Exception as e:
+            log_err(f'Failed to refresh platform health status due to {e}, deleting db table')
+
+    def run(self):
+        self.platform_health_stats = self._fetch_monitor_list()
+        self._refresh_dpu_health_status()
+
+def fetch_dpu_details():
+    global chassis
+    print(f"DPU Category")
+    try:
+        dpu_health_updater = DPUHealthUpdater(chassis)
+        dpu_health_updater.run()
+    except Exception as e:
+        log_err(f'failed to fetch dpu details due to {e}')\
+
+if __name__ == '__main__':
+    fetch_dpu_details()
