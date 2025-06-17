@@ -132,13 +132,6 @@ class BgpSessionTracker():
                     portchannel_data = data[portchannel]
                     portchannel_data['admin_status'] = status
                     self.config_db.set_entry(swsscommon.CFG_LAG_TABLE_NAME, portchannel, portchannel_data)
-                    time.sleep(5)  # Wait for the config to be applied
-                    pc_admin_status = self.lag_tbl.hget(portchannel, 'admin_status')
-                    if pc_admin_status[0] == True and pc_admin_status[1] == status:
-                        logger_helper.log_notice("Portchannel: %s updated to status: %s" % (portchannel, status))
-                    else:
-                        logger_helper.log_warning("Portchannel: %s could not update to status: %s" % (portchannel, status))
-                        success = False
                 else:
                     logger_helper.log_notice("Portchannel: %s not found for updating status to: %s" % (portchannel, status))
                     success = False
