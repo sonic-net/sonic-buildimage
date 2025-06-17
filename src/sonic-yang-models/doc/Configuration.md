@@ -25,7 +25,7 @@
   * [Console](#console)
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
-  * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
+  * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -41,10 +41,10 @@
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
-  * [IPv6 Link-local] (#ipv6-link-local)
   * [KDUMP](#kdump)
   * [Kubernetes Master](#kubernetes-master)
   * [L2 Neighbors](#l2-neighbors)
+  * [L3 Interfaces](#l3-interfaces)
   * [Loopback Interface](#loopback-interface)
   * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
   * [Memory Statistics](#memory-statistics)
@@ -76,10 +76,12 @@
   * [Telemetry](#telemetry)
   * [Telemetry client](#telemetry-client)
   * [Tunnel](#tunnel)
+  * [Trimming](#trimming)
   * [Versions](#versions)
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
   * [VNET](#vnet)
+  * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
   * [VXLAN](#vxlan)
   * [Virtual router](#virtual-router)
@@ -94,6 +96,7 @@
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)  
   * [SRv6](#srv6)
+  * [Prefix List](#prefix-list)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -376,6 +379,43 @@ and migration plan
     }
 }
 ```
+
+***ACL fine-grained packet trimming control with disable trimming action configuration example***
+```
+{
+    "ACL_TABLE_TYPE": {
+        "TRIMMING_L3": {
+            "MATCHES": [
+                "SRC_IP"
+            ],
+            "ACTIONS": [
+                "DISABLE_TRIM_ACTION"
+            ],
+            "BIND_POINTS": [
+                "PORT"
+            ]
+        }
+    },
+    "ACL_TABLE": {
+        "TRIM_TABLE": {
+            "POLICY_DESC": "Packet trimming",
+            "TYPE": "TRIMMING_L3",
+            "STAGE": "INGRESS",
+            "PORTS": [
+                "Ethernet0"
+            ]
+        }
+    },
+    "ACL_RULE": {
+        "TRIM_TABLE|TRIM_RULE": {
+            "PRIORITY": "999",
+            "SRC_IP": "1.1.1.1/32",
+            "PACKET_ACTION": "DISABLE_TRIM"
+        }
+    }
+}
+```
+
 ### BGP BBR
 
 The **BGP_BBR** table contains device-level BBR state.
@@ -657,6 +697,18 @@ This kind of profiles will be handled by buffer manager and won't be applied to 
 }
 ```
 
+***Packet trimming configuration example***
+```
+{
+    "q_lossy_profile": {
+        "dynamic_th": "3",
+        "pool": "egress_lossy_pool",
+        "size": "0",
+        "packet_discard_action": "drop"
+    }
+}
+```
+
 ### Buffer queue
 
 ```
@@ -927,47 +979,42 @@ It currently allows user to administratively bring down a line-card or fabric-ca
 }
 ```
 
-### Data Plane L3 Interfaces
+### DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON
 
-IP configuration for data plane are defined in **INTERFACE**, **VLAN_SUB_INTERFACE**,
-**PORTCHANNEL_INTERFACE** and **VLAN_INTERFACE** table. The objects
-in all four tables have the interface (could be physical port, port
-channel, vlan or vlan sub interface) that IP address is attached to as first-level key, and
-IP prefix as second-level key. IP interface address objects don't have any attributes.
-IP interface attributes, resides in those tables as well, key is the interface name
-and value is a list of field-values representing the interface attributes, e.g. loopback action.
+These tables contain information on drop counters which have been added
 
+DEBUG_COUNTER:
 ```
-{
-"INTERFACE": {
-        "Ethernet0|10.0.0.0/31": {},
-        "Ethernet4|10.0.0.2/31": {},
-        "Ethernet8|10.0.0.4/31": {}
-        "Ethernet8": {
-            "loopback_action": "drop"
-        }
-    },
+; DEBUG_COUNTER table
 
-"PORTCHANNEL_INTERFACE": {
-        "PortChannel01|10.0.0.56/31": {},
-        "PortChannel01|FC00::71/126": {},
-        "PortChannel02|10.0.0.58/31": {},
-        "PortChannel02|FC00::75/126": {}
-    },
+key             = DEBUG_COUNTER_TABLE:name
+name            = string
+type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias           = string (optional)
+description     = string (optional)
+group           = string (optional)
 
-"VLAN_INTERFACE": {
-        "Vlan1000|192.168.0.1/27": {}
-    },
-
-"VLAN_SUB_INTERFACE": {
-        "Ethernet4.1|10.0.0.2/31": {},
-        "Ethernet4.1": {
-            "loopback_action": "drop"
-        }
+"DEBUG_COUNTER": {
+    "DEBUG_4": {
+        "alias": "BAD_DROPS",
+        "desc": "More port ingress drops",
+        "group": "BAD",
+        "type": "SWITCH_INGRESS_DROPS"
     }
 }
 ```
+```
+; DEBUG_COUNTER_DROP_REASON table
 
+key     = DEBUG_COUNTER_DROP_REASON_TABLE:name:reason
+name    = name of a counter in the DEBUG_COUNTER_TABLE
+reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (https://github.com/sonic-net/sonic-swss/blob/7a965caf4c7211afca5303191cf731858c791bcd/orchagent/debug_counter/drop_counter.cpp#L20)
+
+"DEBUG_COUNTER_DROP_REASON": {
+    "DEBUG_4|DIP_LINK_LOCAL": {},
+    "DEBUG_4|SIP_LINK_LOCAL": {}
+}
+```
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
@@ -1144,7 +1191,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ### FG_NHG
 
-The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size) and match mode for each group.
+The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
 
 ```
 "FG_NHG": {
@@ -1155,7 +1202,17 @@ The FG_NHG table provides information on Next Hop Groups, including a specified 
     "fgnhg_v6": {
         "bucket_size": "120",
         "match_mode": "nexthop-based"
-    }
+    },
+    "dynamic_fgnhg_v4": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    },
+    "dynamic_fgnhg_v6": {
+        "bucket_size": "120",
+        "match_mode": "prefix-based",
+        "max_next_hops": "6"
+    }    
 }
 ```
 
@@ -1189,7 +1246,13 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 	},
     "fc:05::/128": {
 	    "FG_NHG": "fgnhg_v6"
-	}
+	},
+    "200.175.150.125/32": {
+        "FG_NHG": "dynamic_fgnhg_v4"
+    },
+    "fd:06::/128": {
+        "FG_NHG": "dynamic_fgnhg_v6"
+	}    
 }
 ```
 
@@ -1311,7 +1374,8 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "lag_hash": [
                 "DST_MAC",
@@ -1329,37 +1393,14 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_DST_IP",
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
-                "INNER_L4_SRC_PORT"
+                "INNER_L4_SRC_PORT",
+                "IPV6_FLOW_LABEL"
             ],
             "ecmp_hash_algorithm": "CRC",
             "lag_hash_algorithm": "CRC"
         }
     }
 }
-```
-
-### IPv6 Link-local
-```
-{
-    "INTERFACE": {
-        "Ethernet8": {
-            "ipv6_use_link_local_only": "disable"
-        }
-    },
-
-    "PORTCHANNEL_INTERFACE": {
-        "PortChannel01": {
-            "ipv6_use_link_local_only": "enable"
-        }
-    },
-
-    "VLAN_INTERFACE": {
-        "Vlan1000": {
-            "ipv6_use_link_local_only": "enable"
-        }
-    }
-}
-
 ```
 
 ### KDUMP
@@ -1445,6 +1486,96 @@ loopback address can also be defined.
                 "type": "LeafRouter",
                 "port": "Ethernet1"
         }
+    }
+}
+```
+
+### L3 Interfaces
+
+Configuration for L3 data plane interfaces are defined in the `INTERFACE`,
+`VLAN_INTERFACE`, `VLAN_SUB_INTERFACE` and `PORTCHANNEL_INTERFACE` tables,
+respectively.
+
+The objects in all four tables have the interface as the key with the following
+required patterns:
+- `INTERFACE`: Any valid port name from the `PORT` table.  Typically `Ethernet{0-999}`.
+- `VLAN_INTERFACE`: `Vlan{1-4095}`
+- `PORTCHANNEL_INTERFACE`: `PortChannel{0-9999}`
+- `VLAN_SUB_INTERFACE`: Any valid `INTERFACE` or `PORTCHANNEL_INTERFACE` name followed by a `.` and a number between 1 and 4094.  E.g. `Ethernet1.4`
+
+
+These tables have a number of shared attributes as described below:
+ * `vrf_name`: Valid VRF name from the `VRF` table.  Default: `default`
+ * `nat_zone`: NAT Zone for this interface. `0..3`
+ * `mpls`: Enable/disable MPLS routing for the interface. `enable` or `disable`. Default `disable`.
+ * `ipv6_use_link_local_only`: Enable/Disable IPv6 link local address on interface. `enable` or `disable`. Default `disable`.
+ * `mac_addr`: Assign administrator-provided MAC address to Interface.  If not specified will use the system MAC (same for all interfaces). Not applicable to `VLAN_SUB_INTERFACE` as it will use the parent interface's mac address.
+ * `loopback_action`: Packet action when a packet ingress and gets routed on the same IP interface. `drop` or `forward`.
+
+
+```json
+
+{
+    "INTERFACE": {
+        "Ethernet0": {
+            "ipv6_use_link_local_only": "enable",
+            "mac_addr": "12:34:56:78:90:ab"
+        },
+        "Ethernet1": {
+            "loopback_action": "drop"
+        }
+    },
+    "VLAN_INTERFACE": {
+        "Vlan201": {
+            "vrf_name": "red",
+            "mac_addr": "AB:CD:EF:12:34:56"
+        }
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel101": {
+            "mac_addr": "1c:23:a8:56:de:2f"
+        }
+    },
+    "VLAN_SUB_INTERFACE": {
+        "Ethernet0.555": {
+            "vrf_name": "Blue",
+            "vlan": "555"
+        }
+    }
+}
+```
+
+#### Assigning IP addresses to L3 Interfaces
+
+The interface name and IP prefix act as multi-level key for the interface
+objects.  The IP prefixes are stored in the same tables as the interface
+attributes: `INTERFACE`, `VLAN_INTERFACE`, `VLAN_SUB_INTERFACE` and `PORTCHANNEL_INTERFACE`.
+
+In the example below we will show one interface with attributes for clarity,
+but otherwise this is simply an example of how IP addresses may be configured.
+
+```json
+{
+    "INTERFACE": {
+        "Ethernet0": {
+            "ipv6_use_link_local_only": "enable",
+            "mac_addr": "12:34:56:78:90:ab"
+        },
+        "Ethernet0|10.0.0.0/31": {},
+        "Ethernet4|10.0.0.2/31": {},
+        "Ethernet8|10.0.0.4/31": {},
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel01|10.0.0.56/31": {},
+        "PortChannel01|FC00::71/126": {},
+        "PortChannel02|10.0.0.58/31": {},
+        "PortChannel02|FC00::75/126": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan1000|192.168.0.1/27": {}
+    },
+    "VLAN_SUB_INTERFACE": {
+        "Ethernet4.1|10.0.0.2/31": {}
     }
 }
 ```
@@ -2451,6 +2582,34 @@ example mux tunnel configuration for when tunnel_qos_remap is enabled
 }
 ```
 
+### Trimming
+
+When the lossy queue exceeds a buffer threshold, it drops packets without any notification to the destination host.
+
+When a packet is lost, it can be recovered through fast retransmission or by using timeouts.  
+Retransmission triggered by timeouts typically incurs significant latency.
+
+To help the host recover data more quickly and accurately, packet trimming is introduced.  
+This feature upon a failed packet admission to a shared buffer, will trim a packet to a configured size,  
+and try sending it on a different queue to deliver a packet drop notification to an end host.
+
+***TRIMMING***
+
+```
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "48",
+            "queue_index": "6"
+        }
+    }
+}
+```
+
+**Note:**
+* when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
+
 ### Versions
 
 This table is where the curret version of the software is recorded.
@@ -2538,6 +2697,29 @@ monitoring sessions for the vnet routes and is optional.
 		"scope": "default",
 		"vni": "10011",
 	}
+  }
+}
+```
+
+### VNET_ROUTE_TUNNEL
+
+VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
+- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
+- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
+- VNI: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+
+```
+{
+  "VNET_ROUTE_TUNNEL": {
+    "Vnet_2000|100.100.1.1/32": {
+        "endpoint": "192.168.1.1",
+        "mac_address": "f9:22:83:99:22:a2"
+    },
+    "Vnetv4_v4-0|10.0.1.0/24": {
+        "endpoint": "192.168.1.2",
+        "mac_address": "f8:22:83:99:22:a2",
+        "vni": "10012"
+    }
   }
 }
 ```
@@ -2913,6 +3095,18 @@ An example is as follows:
 }
 ```
 
+### Prefix List
+Prefix list table stores a list of prefixes with type and prefix separated by `|`. The specific configuration for the prefix type are then rendered by the PrefixListMgr. Currently ANCHOR_PREFIX is supported to add RADIAN configuration.
+
+An example is as follows:
+```json
+{
+    "PREFIX_LIST": {
+        "ANCHOR_PREFIX|fc00::/48": {}
+    }
+}
+```
+
 ### FIPS
 
 The FIPS table introduces FIPS  configuration.
@@ -2976,42 +3170,51 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 }
 ```
 
-### DPU PORT Configuration^M
+### DPU Configuration
 
-The **DPU_PORT** table introduces the configuration for the DPUs(Data Processing Unit) PORT information available on the platform.
+The **DPU** table introduces the configuration for the DPUs(Data Processing Unit) information available on the platform.
 
 ```json
 {
-    "DPU_PORT": {
-        "dpu0": {
+    "DPU": {
+        "str-8102-t1-dpu0": {
             "state": "up",
+            "local_port": "Ethernet228",
             "vip_ipv4": "192.168.1.1",
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "dpu_id": "0",
             "vdpu_id": "vdpu0",
-            "gnmi_port": "50052"
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
         },
-        "dpu1": {
+        "str-8102-t1-dpu1": {
             "state": "down",
+            "local_port": "Ethernet232",
             "vip_ipv4": "192.168.1.2",
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "dpu_id": "1",
             "vdpu_id": "vdpu1",
-            "gnmi_port": "50052"
+            "gnmi_port": "50052",
+            "orchagent_zmq_port": "50"
         }
     }
 }
 ```
 
 **state**: Administrative status of the DPU (`up` or `down`).
+**local_port**: local port mapped to DPU port on the switch.
 **vip_ipv4**: VIP IPv4 address from minigraph.
 **vip_ipv6**: VIP IPv6 address from minigraph.
 **pa_ipv4**: PA IPv4 address from minigraph.
 **pa_ipv6**: PA IPv6 address from minigraph.
+**dpu_id**: Id of the DPU from minigraph.
 **vdpu_id**: ID of VDPUs from minigraph.
-**gnmi_port**: Port gNMI runs on.
+**gnmi_port**: TCP listening port for gnmi service on DPU.
+**orchagent_zmq_port**: TCP listening port for ZMQ service on DPU orchagent.
 
 # For Developers
 

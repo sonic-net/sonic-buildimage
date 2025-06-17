@@ -93,10 +93,10 @@ ifeq ($(USER), root)
 $(error Add your user account to docker group and use your user account to make. root or sudo are not supported!)
 endif
 
-# Check for j2cli availability
-J2_VER := $(shell j2 --version 2>&1 | grep j2cli | awk '{printf $$2}')
+# Check for j2 availability (https://github.com/kpfleming/jinjanator)
+J2_VER := $(shell j2 --version 2>&1 | grep j2 | awk '{printf $$2}')
 ifeq ($(J2_VER),)
-$(error Please install j2cli (sudo pip install j2cli))
+$(error Please install j2 (sudo pip install jinjanator))
 endif
 
 # Check for minimum Docker version on build host
@@ -129,7 +129,9 @@ else
 TARGET_BOOTLOADER = uboot
 endif
 
-ifeq ($(BLDENV), bookworm)
+ifeq ($(BLDENV), trixie)
+SLAVE_DIR = sonic-slave-trixie
+else ifeq ($(BLDENV), bookworm)
 SLAVE_DIR = sonic-slave-bookworm
 else ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
@@ -537,6 +539,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
                            SONIC_INCLUDE_SYSTEM_BMP=$(INCLUDE_SYSTEM_BMP) \
                            SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
+                           SONIC_SMARTSWITCH=$(SMARTSWITCH) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
@@ -614,7 +617,7 @@ endif
 
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
-		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)" 
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@ SONIC_BUILD_TARGET=$@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
 	$(Q)$(docker-image-cleanup)
 
 docker-cleanup:

@@ -18,14 +18,73 @@
 ACTIVE_FILE="/boot/active.txt"
 NIC_MOUNT=""
 LOG_FILE="/tmp/active_nic"
-TAG="latest"
+TAG=latest
 HOST_DIR=/host/dpu
+HOST_DIR_POLARIS=/host/polaris
+CONTAINER_NAME=dpu
+CONTAINER_NAME_POLARIS=polaris
+DPU_DOCKER_INFO_DIR=/host/dpu-docker-info
+TAG=latest
+IMAGE_NAME=docker-dpu
+
+function start_polaris()
+{
+    modprobe ionic_mnic
+    modprobe mnet_uio_pdrv_genirq
+    modprobe mdev
+    modprobe pciesvc
+    insmod /usr/lib/modules/6.1.0-22-2-arm64/kernel/drivers/watchdog/softdog.ko soft_panic=1 soft_noboot=0
+
+    mkdir -p $HOST_DIR_POLARIS/update
+    mkdir -p $HOST_DIR_POLARIS/sysconfig/config0
+    mkdir -p $HOST_DIR_POLARIS/sysconfig/config1
+    mkdir -p $HOST_DIR_POLARIS/obfl
+    mkdir -p $HOST_DIR_POLARIS/data
+    mkdir -p $HOST_DIR_POLARIS/share
+    mount -t tmpfs -o size=20M sharetmps $HOST_DIR_POLARIS/share
+    mkdir -p $HOST_DIR_POLARIS/dsc
+    mount -t tmpfs -o size=5M dsctmps $HOST_DIR_POLARIS/dsc
+    mkdir -p $HOST_DIR_POLARIS/mnt
+    mkdir -p $HOST_DIR_POLARIS/obfl/a
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt/upper
+    mkdir -p $HOST_DIR_POLARIS/mnt/a/mnt/work
+    mkdir -p $DPU_DOCKER_INFO_DIR
+    echo 256 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+    sync; sync;
+    sleep 3;
+
+    echo $CONTAINER_NAME_POLARIS > $DPU_DOCKER_INFO_DIR/name
+    echo $IMAGE_NAME:$TAG > $DPU_DOCKER_INFO_DIR/image
+    /usr/sbin/ethtool -K Ethernet0 tx off sg off tso off rx off
+
+    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
+
+    docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/share:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
+
+    if [ -f /boot/first_boot ]; then
+        device="/usr/share/sonic/device"
+        platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+        echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
+        python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+        rm /boot/first_boot
+    fi
+
+    sleep 5
+    INTERFACE="eth0-midplane"
+    if ip link show "$INTERFACE" &> /dev/null; then
+        echo "dhclient $INTERFACE"
+        /usr/sbin/dhclient $INTERFACE
+    fi
+}
 
 function start_dpu()
 {
     modprobe ionic_mnic
     modprobe mnet_uio_pdrv_genirq
     modprobe mdev
+    modprobe pciesvc
 
     mkdir -p $HOST_DIR/update
     mkdir -p $HOST_DIR/sysconfig/config0
@@ -35,6 +94,7 @@ function start_dpu()
     mkdir -p $HOST_DIR/tmpfsshare
     mkdir -p $HOST_DIR/runfs
     mkdir -p $HOST_DIR/logfs
+    mkdir -p $DPU_DOCKER_INFO_DIR
     mount -t tmpfs -o size=20M,mode=1777  tmpfs $HOST_DIR/tmpfsshare
     mount -t tmpfs -o size=20M,mode=0755  runs $HOST_DIR/runfs
     mount -t tmpfs -o size=20M,mode=0755  logfs $HOST_DIR/logfs
@@ -53,16 +113,26 @@ function start_dpu()
     echo "Active Nic: $ACTIVE_NIC" >> $LOG_FILE
     echo "NIC_MOUNT: $NIC_MOUNT" >> $LOG_FILE
 
-    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "docker-dpu:latest" | awk '{print $1}' | xargs -I {} docker rm {}
+    echo $CONTAINER_NAME > $DPU_DOCKER_INFO_DIR/name
+    echo $IMAGE_NAME:$TAG > $DPU_DOCKER_INFO_DIR/image
 
-    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=dpu --privileged docker-dpu:$TAG
+    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
+
+    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=$CONTAINER_NAME --privileged $IMAGE_NAME:$TAG &
 }
 
 case "$1" in
 start)
-    echo -n "Start dpu... "
+    platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
+    pipeline=`cat /usr/share/sonic/device/$platform/default_pipeline`
 
-    start_dpu
+    echo -n "Start $pipeline... "
+
+    if [ $pipeline = "polaris" ]; then
+        start_polaris
+    else
+	start_dpu
+    fi
 
     echo "done."
     ;;

@@ -36,12 +36,14 @@ bcm_device:
             sai_feat_tail_timestamp : 1
             sai_port_phy_time_sync_en : 1
             sai_field_group_auto_prioritize: 1
+            sai_mmu_custom_config : 1
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 2
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
@@ -1424,4 +1426,1148 @@ device:
     0:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
+...
+### Baseline
+# Skipping buffer reservation. This means that don't use SDK default setings.
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            MIRROR_ON_DROP_RESERVATION: 0
+            SKIP_BUFFER_RESERVATION: 1
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_4
+
+...
+# Initialize the various thresholds to zero
+---
+# Ingress service pool level initialization
+device:
+    0:
+        # Ingress service pool
+        TM_ING_THD_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_ING_SERVICE_POOL_ID: [[0,3]]
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                SHARED_LIMIT_CELLS: 0
+                SHARED_RESUME_OFFSET_CELLS: 0
+                YELLOW_OFFSET_CELLS: 0
+                RED_OFFSET_CELLS: 0
+
+        # Ingress headroom pool
+        TM_ING_THD_HEADROOM_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_HEADROOM_POOL_ID: [[0,3]]
+            :
+                LIMIT_CELLS: 0
+
+...
+# Ingress priority to PG mappings
+---
+device:
+    0:
+        # priority to PG mapping for UC traffic, 8 profiles (IDs), 16 priorties
+        TM_ING_UC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_UC_ING_PRI_MAP_ID: [0,7]
+                ING_PRI: [0,15]
+            :
+                TM_PRI_GRP_ID: 0
+
+        # priority to PG mapping for MC traffic, 8 profiles( IDs) 16 priorities
+        TM_ING_NONUC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_NONUC_ING_PRI_MAP_ID: [0,7]
+                ING_PRI: [0,15]
+            :
+                TM_PRI_GRP_ID: 0
+
+        TM_PRI_GRP_POOL_MAP:
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: [0,7]
+                TM_PRI_GRP_ID: [[0,7]]
+            :
+                TM_ING_SERVICE_POOL_ID: 0
+                TM_HEADROOM_POOL_ID: 0
+
+        # PFC generation: Priority group(s)
+        TM_PFC_PRI_TO_PRI_GRP_MAP:
+            ?
+                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: [0,7]
+                PFC_PRI: [0,7]
+            :
+                TM_PRI_GRP_ID: 0
+
+...
+# Egress service pool level initialization
+# Output port Thresholds
+---
+device:
+    0:
+        # Egress unicast shared pool
+        TM_EGR_THD_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [[0,3]]
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                SHARED_LIMIT_CELLS: 0
+                SHARED_RESUME_LIMIT_CELLS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 0
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
+                RED_SHARED_LIMIT_CELLS: 0
+                RED_SHARED_RESUME_LIMIT_CELLS: 0
+
+        # Egress multicast CQE pool
+        TM_THD_MC_EGR_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [[0,3]]
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                SHARED_LIMIT_CELLS: 0
+                SHARED_RESUME_LIMIT_CELLS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 0
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
+                RED_SHARED_LIMIT_CELLS: 0
+                RED_SHARED_RESUME_LIMIT_CELLS: 0
+
+        TM_THD_DYNAMIC_MARGIN:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [0,3]
+            :
+                MARGIN: [8256,16513,24769,33026,41282,49539,57795,66052,82565,99078]
+
+...
+# Per Port Registers
+# Input Port Thresholds
+---
+device:
+    0:
+        # Set PG is LOSSLESS, PFC enable bit
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_PRI_GRP_ID: [[0,7]]
+            :
+                PFC: 0
+                LOSSLESS: 0
+                ING_MIN_MODE: USE_PRI_GRP_MIN
+
+        TM_ING_PORT:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+            :
+                # Pause enable bit,
+                PAUSE: 0
+                # Ingress priority profile select, maps to priority group
+                ING_PRI_MAP_ID: 0
+                #Priority group profile select, maps to service pool
+                PRI_GRP_MAP_ID: 0
+
+        # Ingress port Level to Service Pool limits
+        TM_ING_THD_PORT_SERVICE_POOL:
+            ?
+               PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+               TM_ING_SERVICE_POOL_ID: [[0,3]]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMIT_CELLS: 0
+                RESUME_LIMIT_CELLS: 0
+
+        # Port level PG limits
+        TM_ING_THD_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_PRI_GRP_ID: [[0,7]]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 0
+                RESUME_OFFSET_CELLS: 0
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+                HEADROOM_LIMIT_CELLS: 0
+                EARLY_PFC_XOFF_OFFSET_CELLS: 0
+                EARLY_PFC_XON_OFFSET_CELLS: 0
+                EARLY_PFC_FLOOR_CELLS: 0
+...
+# Output Port Thresholds -2
+# Per Unicast Queue Thresholds
+---
+device:
+    0:
+        TM_EGR_SERVICE_POOL_DYNAMIC:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [0,3]
+            :
+                ADAPTIVE_DYNAMIC: ALPHA_1
+
+        TM_PORT_UC_Q_TO_SERVICE_POOL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_UC_Q_ID: [[0,7]]
+            :
+                USE_QGROUP_MIN: 0
+
+        TM_THD_UC_Q:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_UC_Q_ID: [[0,7]]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 0
+
+        TM_PORT_MC_Q_TO_SERVICE_POOL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_MC_Q_ID: [[0,3]]
+            :
+                USE_QGROUP_MIN: 0
+
+        TM_THD_MC_Q:
+            ?
+                # CPU port, 48 MC queues
+                PORT_ID: 0
+                TM_MC_Q_ID: [[0,47]]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 0
+            ?
+                # uplink, downlink and loopback ports, 2 MC queues
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_MC_Q_ID: [[0,3]]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 0
+
+        TM_THD_Q_GRP:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+            :
+                UC_Q_GRP_MIN_GUARANTEE_CELLS: 0
+                MC_Q_GRP_MIN_GUARANTEE_CELLS: 0
+
+        TM_EGR_THD_UC_PORT_SERVICE_POOL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: [0,3]
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                SHARED_LIMIT_CELLS: 0
+                SHARED_RESUME_LIMIT_CELLS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 0
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
+                RED_SHARED_LIMIT_CELLS: 0
+                RED_SHARED_RESUME_LIMIT_CELLS: 0
+
+        TM_EGR_THD_MC_PORT_SERVICE_POOL:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: [0,3]
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                RED_SHARED_LIMIT_CELLS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 0
+                SHARED_LIMIT_CELLS: 0
+                RED_SHARED_RESUME_LIMIT_CELLS: 0
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
+                SHARED_RESUME_LIMIT_CELLS: 0
+...
+### THDR Limits : initialization
+---
+device:
+    0:
+        TM_THD_REPL_Q:
+            ?
+                REPL_Q_NUM: [0,6]
+            :
+                SHARED_LIMITS: 0
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 0
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+                SHARED_LIMIT_PKTS: 0
+                DYNAMIC_SHARED_LIMIT_PKTS: 0
+                SHARED_LIMIT_DYNAMIC_PKTS: ALPHA_1
+                RESUME_OFFSET_PKTS: 0
+                COLOR_SPECIFIC_LIMIT_PKTS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMIT_PKTS: 0
+                YELLOW_LIMIT_DYNAMIC_PKTS: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC_PKTS: PERCENTAGE_625
+                MIN_GUARANTEE_CELLS: 0
+                MIN_GUARANTEE_PKTS: 0
+
+        TM_THD_REPL_SERVICE_POOL:
+                SHARED_LIMIT_CELLS: 0
+                SHARED_RESUME_LIMIT_CELLS: 0
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 0
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
+                RED_SHARED_LIMIT_CELLS: 0
+                RED_SHARED_RESUME_LIMIT_CELLS: 0
+                SHARED_LIMIT_PKTS: 0
+                SHARED_RESUME_LIMIT_PKTS: 0
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_PKTS: 0
+                YELLOW_SHARED_RESUME_LIMIT_PKTS: 0
+                RED_SHARED_LIMIT_PKTS: 0
+                RED_SHARED_RESUME_LIMIT_PKTS: 0
+
+...
+### Begin MMU ingress threshold settings
+### Pools
+---
+device:
+    0:
+# Ingress Service Pool Thresholds
+        TM_ING_THD_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_ING_SERVICE_POOL_ID: 0
+            :
+                SHARED_LIMIT_CELLS: 255127
+                SHARED_RESUME_OFFSET_CELLS: 74
+                COLOR_SPECIFIC_LIMITS: 0
+            ?
+                BUFFER_POOL: [0,1]
+                TM_ING_SERVICE_POOL_ID: 1
+            :
+                SHARED_LIMIT_CELLS: 605
+                SHARED_RESUME_OFFSET_CELLS: 74
+                COLOR_SPECIFIC_LIMITS: 0
+
+# Ingress Headroom Pool Thresholds
+        TM_ING_THD_HEADROOM_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_HEADROOM_POOL_ID: 0
+            :
+                LIMIT_CELLS: 57920
+
+...
+---
+device:
+    0:
+# UC Traffic Priority to PG mapping
+        TM_ING_UC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_UC_ING_PRI_MAP_ID: 0
+                ING_PRI: [0, 1, 2, 5, 6, [8,15]]
+            :
+                TM_PRI_GRP_ID: 0
+            ?
+                TM_ING_UC_ING_PRI_MAP_ID: 0
+                ING_PRI: 3
+            :
+                TM_PRI_GRP_ID: 3
+            ?
+                TM_ING_UC_ING_PRI_MAP_ID: 0
+                ING_PRI: 4
+            :
+                TM_PRI_GRP_ID: 4
+            ?
+                TM_ING_UC_ING_PRI_MAP_ID: 0
+                ING_PRI: 7
+            :
+                TM_PRI_GRP_ID: 7
+            ?
+                # Profile 1
+                TM_ING_UC_ING_PRI_MAP_ID: 1
+                ING_PRI: [[0,7]]
+            :
+                TM_PRI_GRP_ID: 7
+            ?
+                TM_ING_UC_ING_PRI_MAP_ID: 1
+                ING_PRI: [[8,15]]
+            :
+                TM_PRI_GRP_ID: 0
+
+# MC Traffic Priority to PG mapping
+        TM_ING_NONUC_ING_PRI_MAP:
+            ?
+                # Profile 0
+                TM_ING_NONUC_ING_PRI_MAP_ID: 0
+                ING_PRI: [0, 1, 2, 5, 6, [8,15]]
+            :
+                TM_PRI_GRP_ID: 0
+            ?
+                TM_ING_NONUC_ING_PRI_MAP_ID: 0
+                ING_PRI: 3
+            :
+                TM_PRI_GRP_ID: 3
+            ?
+                TM_ING_NONUC_ING_PRI_MAP_ID: 0
+                ING_PRI: 4
+            :
+                TM_PRI_GRP_ID: 4
+            ?
+                TM_ING_NONUC_ING_PRI_MAP_ID: 0
+                ING_PRI: 7
+            :
+                TM_PRI_GRP_ID: 7
+            ?
+                # Profile 1
+                TM_ING_NONUC_ING_PRI_MAP_ID: 1
+                ING_PRI: [[0,7]]
+            :
+                TM_PRI_GRP_ID: 7
+            ?
+                TM_ING_NONUC_ING_PRI_MAP_ID: 1
+                ING_PRI: [[8,15]]
+            :
+                TM_PRI_GRP_ID: 0
+
+# PG to Headroom Pool Mapping
+        TM_PRI_GRP_POOL_MAP:
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: 0
+                TM_PRI_GRP_ID: [[0,6]]
+            :
+                TM_HEADROOM_POOL_ID: 0
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: 0
+                TM_PRI_GRP_ID: 7
+            :
+                TM_HEADROOM_POOL_ID: 1
+
+# PG to Service Pool Mapping
+        TM_PRI_GRP_POOL_MAP:
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: 0
+                TM_PRI_GRP_ID: [[0,6]]
+            :
+                TM_ING_SERVICE_POOL_ID: 0
+            ?
+                TM_PRI_GRP_POOL_MAP_ID: 0
+                TM_PRI_GRP_ID: 7
+            :
+                TM_ING_SERVICE_POOL_ID: 1
+
+# Ingress PG to PFC priority mapping
+# TM_PFC_PRI_TO_PRI_GRP_MAP is mapped to MMU_THDI_PFCPRI_PG_PROFILE in physical table. There are 8 profiles to configure the PFC to priority group mappings. For exmple, you could map multiple PG to a PFC.  This is needed to generate PFC when a PG is hitting the limits.
+        TM_PFC_PRI_TO_PRI_GRP_MAP:
+            ?
+                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 0
+                PFC_PRI: 3
+            :
+                TM_PRI_GRP_ID: 3
+            ?
+                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 0
+                PFC_PRI: 4
+            :
+                TM_PRI_GRP_ID: 4
+
+# Per input port PG and flow control configurations
+# TM_ING_PORT_PRI_GRP is mapped to MMU_THDI_ING_PORT_CONFIG in physical table
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
+
+# ING_PRI_MAP_ID is the ingress priority PG profile select, which maps to the Priority Group
+# PRI_GRP_MAP_ID is the Priority Group profile select, which maps to service pool
+        TM_ING_PORT:
+            ?
+                PORT_ID: [0]
+            :
+                ING_PRI_MAP_ID: 1
+                PRI_GRP_MAP_ID: 0
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                ING_PRI_MAP_ID: 0
+                PRI_GRP_MAP_ID: 0
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                ING_PRI_MAP_ID: 0
+                PRI_GRP_MAP_ID: 0
+            ?
+                PORT_ID: [76, 274]
+            :
+                ING_PRI_MAP_ID: 1
+                PRI_GRP_MAP_ID: 0
+            ?
+                PORT_ID: [21, 43, 65, 87, 109, 131, 153, 175, 197, 219, 241, 263, 285, 307, 329, 351]
+            :
+                ING_PRI_MAP_ID: 1
+                PRI_GRP_MAP_ID: 0
+
+...
+######################################
+---
+device:
+    0:
+# Per input port Service  Pool Thresholds
+        TM_ING_THD_PORT_SERVICE_POOL:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_ING_SERVICE_POOL_ID: [0, 1]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMIT_CELLS: 329816
+                RESUME_LIMIT_CELLS: 329816
+
+# Per input Port PG Thresholds
+        TM_ING_THD_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_PRI_GRP_ID: [0, 1, 2, 5, 6, 7]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 329816
+                HEADROOM_LIMIT_CELLS: 0
+                RESUME_OFFSET_CELLS: 0
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 74
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 14
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+                HEADROOM_LIMIT_CELLS: 2410
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 74
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 14
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+                HEADROOM_LIMIT_CELLS: 2410
+            ?
+                PORT_ID: [76, 274]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 0
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+                HEADROOM_LIMIT_CELLS: 0
+            ?
+                PORT_ID: [21, 43, 65, 87, 109, 131, 153, 175, 197, 219, 241, 263, 285, 307, 329, 351]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 0
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+            ?
+                PORT_ID: [0]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
+                RESUME_OFFSET_CELLS: 0
+                RESUME_FLOOR_CELLS: 0
+                HEADROOM_LIMIT_AUTO: 0
+
+...
+### Egress Service Pools
+---
+device:
+    0:
+# Setting Q group limit to 0
+        TM_THD_Q_GRP:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+            :
+                UC_Q_GRP_MIN_GUARANTEE_CELLS: 0
+                MC_Q_GRP_MIN_GUARANTEE_CELLS: 0
+
+# Unicast Egress Service Pool Limits
+        TM_EGR_THD_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 0
+            :
+                SHARED_LIMIT_CELLS: 255127
+                SHARED_RESUME_LIMIT_CELLS: 31881
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 23919
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 23909
+                RED_SHARED_LIMIT_CELLS: 19932
+                RED_SHARED_RESUME_LIMIT_CELLS: 19922
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 1
+            :
+                SHARED_LIMIT_CELLS: 605
+                SHARED_RESUME_LIMIT_CELLS: 73
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 57
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 55
+                RED_SHARED_LIMIT_CELLS: 48
+                RED_SHARED_RESUME_LIMIT_CELLS: 46
+...
+---
+device:
+    0:
+# Multicast Egress Service Pool Limits, CQEs
+        TM_THD_MC_EGR_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 0
+            :
+                SHARED_LIMIT_CELLS: 19538
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 1
+            :
+                SHARED_LIMIT_CELLS: 605
+...
+---
+device:
+    0:
+# Multicast Egress Service Pool Limits, CQEs
+        TM_THD_MC_EGR_SERVICE_POOL:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 0
+            :
+                SHARED_RESUME_LIMIT_CELLS: 2432
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 1832
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 1822
+                RED_SHARED_LIMIT_CELLS: 1527
+                RED_SHARED_RESUME_LIMIT_CELLS: 1517
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: 1
+            :
+                SHARED_RESUME_LIMIT_CELLS: 73
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 57
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 55
+                RED_SHARED_LIMIT_CELLS: 48
+                RED_SHARED_RESUME_LIMIT_CELLS: 46
+...
+...
+### Adaptive Alpha
+---
+device:
+    0:
+        TM_EGR_SERVICE_POOL_DYNAMIC:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [0]
+            :
+                ADAPTIVE_DYNAMIC: ALPHA_1
+
+        TM_THD_DYNAMIC_MARGIN:
+            ?
+                BUFFER_POOL: [0,1]
+                TM_EGR_SERVICE_POOL_ID: [0]
+            :
+                MARGIN: [16513, 33026, 49539, 66052, 82565, 99078, 115591, 132104, 148617, 165130]
+
+...
+---
+device:
+    0:
+        TM_PORT_UC_Q_TO_SERVICE_POOL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_UC_Q_ID: [0,1,2,5,6]
+            :
+                USE_QGROUP_MIN: 0
+                TM_EGR_SERVICE_POOL_ID: 0
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_UC_Q_ID: [3,4]
+            :
+                USE_QGROUP_MIN: 0
+                TM_EGR_SERVICE_POOL_ID: 0
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_UC_Q_ID: 7
+            :
+                USE_QGROUP_MIN: 0
+                TM_EGR_SERVICE_POOL_ID: 1
+
+        TM_PORT_MC_Q_TO_SERVICE_POOL:
+            ?
+                PORT_ID: [0]
+                TM_MC_Q_ID: [[0,47]]
+            :
+                USE_QGROUP_MIN: 0
+                TM_EGR_SERVICE_POOL_ID: 1
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_MC_Q_ID: [[0,3]]
+            :
+                USE_QGROUP_MIN: 0
+                TM_EGR_SERVICE_POOL_ID: 0
+...
+### Queue Thresholds
+######################################
+---
+device:
+    0:
+        TM_THD_UC_Q:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
+            :
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_CELLS_STATIC: 0
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
+            :
+                MIN_GUARANTEE_CELLS: 7
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                TM_UC_Q_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 0
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 329816
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_CELLS_STATIC: 0
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
+            :
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_CELLS_STATIC: 0
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
+            :
+                MIN_GUARANTEE_CELLS: 7
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                TM_UC_Q_ID: [3,4]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 0
+                DYNAMIC_SHARED_LIMITS: 0
+                SHARED_LIMIT_CELLS_STATIC: 329816
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_CELLS_STATIC: 0
+
+        TM_THD_MC_Q:
+            ?
+                PORT_ID: [0]
+                TM_MC_Q_ID: [[0,47]]
+            :
+                MIN_GUARANTEE_CELLS: 7
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+                RESUME_OFFSET_CELLS: 2
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_MC_Q_ID: [0,3]
+                SHARED_LIMIT_DYNAMIC: ALPHA_2
+            :
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+                RESUME_OFFSET_CELLS: 2
+
+# Egress Port Thresholds.
+        TM_EGR_THD_UC_PORT_SERVICE_POOL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: 0
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                RED_SHARED_LIMIT_CELLS: 19931
+                YELLOW_SHARED_LIMIT_CELLS: 23918
+                SHARED_LIMIT_CELLS: 255127
+                RED_SHARED_RESUME_LIMIT_CELLS: 19929
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 23916
+                SHARED_RESUME_LIMIT_CELLS: 31889
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: 1
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                RED_SHARED_LIMIT_CELLS: 47
+                YELLOW_SHARED_LIMIT_CELLS: 56
+                SHARED_LIMIT_CELLS: 605
+                RED_SHARED_RESUME_LIMIT_CELLS: 45
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
+                SHARED_RESUME_LIMIT_CELLS: 73
+
+        TM_EGR_THD_MC_PORT_SERVICE_POOL:
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: 0
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                RED_SHARED_LIMIT_CELLS: 1526
+                YELLOW_SHARED_LIMIT_CELLS: 1831
+                SHARED_LIMIT_CELLS: 19538
+                RED_SHARED_RESUME_LIMIT_CELLS: 1524
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 1829
+                SHARED_RESUME_LIMIT_CELLS: 2440
+            ?
+                PORT_ID: [[0,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+                TM_EGR_SERVICE_POOL_ID: 1
+            :
+                COLOR_SPECIFIC_LIMITS: 0
+                RED_SHARED_LIMIT_CELLS: 47
+                YELLOW_SHARED_LIMIT_CELLS: 56
+                SHARED_LIMIT_CELLS: 605
+                RED_SHARED_RESUME_LIMIT_CELLS: 45
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
+                SHARED_RESUME_LIMIT_CELLS: 73
+
+...
+### PFC mapping
+---
+device:
+    0:
+        PC_MAC_CONTROL:
+            ?
+                PORT_ID: [[1,4], [11,14], [21,25], [33,36], [43,47], [55,58], [65,69], [76,80], [87,91], [99,102], [109,113], [121,124], [131,135], [143,146], [153,157], [165,168], [175,179], [187,190], [197,201], [209,212], [219,223], [231,234], [241,245], [253,256], [263,267], [274,278], [285,289], [297,300], [307,311], [319,322], [329,333], [341,344], 351]
+            :
+                PAUSE_TX: 0
+                PAUSE_RX: 0
+
+        TM_PFC_EGR:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                TM_PFC_PRI_PROFILE_ID: 0
+
+        TM_PFC_EGR:
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                TM_PFC_PRI_PROFILE_ID: 0
+...
+---
+device:
+    0:
+# TM_PFC_PRI_PROFILE is mapped to MMU_INTFI_PFCRPI_PROFILE in physical table. There are 8 profiles to configure the PFC value to COS/priorities mapping. For example, you could map multiple coses to a PFC. This mapping is needed when receiving PFC frames and stopping queues(coses) according to the PFC frame received.
+        TM_PFC_PRI_PROFILE:
+            ?
+                TM_PFC_PRI_PROFILE_ID: 0
+                PFC_PRI: 3
+            :
+                PFC: 1
+                COS_LIST: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+            ?
+                TM_PFC_PRI_PROFILE_ID: 0
+                PFC_PRI: 4
+            :
+                PFC: 1
+                COS_LIST: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+
+
+# enable the MAC's PFC controls.
+        PC_PFC:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                ENABLE_RX: 1
+                ENABLE_TX: 1
+
+        PC_PFC:
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                ENABLE_RX: 1
+                ENABLE_TX: 1
+...
+### Mirror-on-drop
+---
+device:
+    0:
+        TM_MIRROR_ON_DROP_CONTROL:
+            RESERVED_LIMIT_CELLS: 0
+
+        TM_MIRROR_ON_DROP_PROFILE:
+            ?
+                TM_MIRROR_ON_DROP_PROFILE_ID: 0
+            :
+                PERCENTAGE_0_25: 65535
+                PERCENTAGE_25_50: 65535
+                PERCENTAGE_50_75: 65535
+                PERCENTAGE_75_100: 65535
+                INGRESS_LIMIT: 0
+                SHARED_LIMIT: 0
+
+        TM_MIRROR_ON_DROP_DESTINATION:
+            ?
+                TM_MIRROR_ON_DROP_DESTINATION_ID: 0
+            :
+                TM_MC_Q_ID: 11
+                PORT_ID: 1
+...
+### THDR Limits
+---
+device:
+    0:
+        TM_THD_REPL_Q:
+            ?
+                REPL_Q_NUM: [0,6]
+            :
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                RESUME_OFFSET_CELLS: 14
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+                SHARED_LIMIT_PKTS: 1
+                DYNAMIC_SHARED_LIMIT_PKTS: 1
+                SHARED_LIMIT_DYNAMIC_PKTS: ALPHA_1
+                RESUME_OFFSET_PKTS: 14
+                COLOR_SPECIFIC_LIMIT_PKTS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMIT_PKTS: 0
+                YELLOW_LIMIT_DYNAMIC_PKTS: PERCENTAGE_750
+                RED_LIMIT_DYNAMIC_PKTS: PERCENTAGE_625
+
+        TM_THD_REPL_Q:
+            ?
+                REPL_Q_NUM: [0,3]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                MIN_GUARANTEE_PKTS: 0
+            ?
+                REPL_Q_NUM: [4,6]
+            :
+                MIN_GUARANTEE_CELLS: 37
+                MIN_GUARANTEE_PKTS: 7
+
+        TM_THD_REPL_SERVICE_POOL:
+                SHARED_LIMIT_CELLS: 11153
+                SHARED_RESUME_LIMIT_CELLS: 11139
+                SHARED_LIMIT_PKTS: 3051
+                SHARED_RESUME_LIMIT_PKTS: 3037
+                COLOR_SPECIFIC_LIMITS: 0
+                YELLOW_SHARED_LIMIT_CELLS: 8364
+                RED_SHARED_LIMIT_CELLS: 6970
+                YELLOW_SHARED_LIMIT_PKTS: 2288
+                RED_SHARED_LIMIT_PKTS: 1906
+                YELLOW_SHARED_RESUME_LIMIT_CELLS: 8350
+                RED_SHARED_RESUME_LIMIT_CELLS: 6956
+                YELLOW_SHARED_RESUME_LIMIT_PKTS: 2274
+                RED_SHARED_RESUME_LIMIT_PKTS: 1892
+
+...
+### OBM
+---
+device:
+    0:
+        TM_OBM_PORT_PKT_PARSE:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                OUTER_TPID: 1
+                HEADER_TYPE: OBM_HEADER_TYPE_ETHERNET
+                DEFAULT_PKT_PRI: 0  # mapp to obm_lossy_low
+
+        TM_OBM_PORT_PKT_PARSE:
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                OUTER_TPID: 1
+                HEADER_TYPE: OBM_HEADER_TYPE_ETHERNET
+                DEFAULT_PKT_PRI: 0  # mapp to obm_lossy_low
+
+        TM_OBM_PORT_PKT_PRI_TC_MAP:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: 1
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: 1
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
+
+        TM_OBM_PC_PM_PKT_PARSE:
+            ?
+                PC_PM_ID: [1,65]
+            :
+                OUTER_TPID: 0x8100
+
+        TM_OBM_THD_PORT:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                THD_AUTO: 0
+                MAX_BYTES: 244736
+                LOSSY_LOW_MAX_BYTES: 46720
+                LOSSY_MAX_BYTES: 53504
+                LOSSLESS0_MAX_BYTES: 502528
+                LOSSLESS1_MAX_BYTES: 502528
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                THD_AUTO: 0
+                MAX_BYTES: 244736
+                LOSSY_LOW_MAX_BYTES: 46720
+                LOSSY_MAX_BYTES: 53504
+                LOSSLESS0_MAX_BYTES: 502528
+                LOSSLESS1_MAX_BYTES: 502528
+
+        TM_OBM_THD_PORT_FLOW_CTRL:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                THD_AUTO: 0
+                XOFF_BYTES: 162432
+                XON_BYTES: 161920
+                LOSSLESS0_XOFF_BYTES: 5184
+                LOSSLESS0_XON_BYTES: 4672
+                LOSSLESS1_XOFF_BYTES: 5184
+                LOSSLESS1_XON_BYTES: 4672
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                THD_AUTO: 0
+                XOFF_BYTES: 162432
+                XON_BYTES: 161920
+                LOSSLESS0_XOFF_BYTES: 5184
+                LOSSLESS0_XON_BYTES: 4672
+                LOSSLESS1_XOFF_BYTES: 5184
+                LOSSLESS1_XON_BYTES: 4672
+
+        TM_OBM_PORT_FLOW_CTRL:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+            :
+                FLOW_CTRL: 1
+                FLOW_CTRL_TYPE: PFC
+                LOSSLESS0_FLOW_CTRL: 1
+                LOSSLESS1_FLOW_CTRL: 0
+                COS_BMAP_LOSSLESS0: [0,0,0,1,1,0,0,0]
+                COS_BMAP_LOSSLESS1: 0
+
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+            :
+                FLOW_CTRL: 1
+                FLOW_CTRL_TYPE: PFC
+                LOSSLESS0_FLOW_CTRL: 1
+                LOSSLESS1_FLOW_CTRL: 0
+                COS_BMAP_LOSSLESS0: [0,0,0,1,1,0,0,0]
+                COS_BMAP_LOSSLESS1: 0
+
+        TM_OBM_PORT_PKT_PRI_TC_MAP:
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [0,1,2,5,6,7]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSY_LOW
+            ?
+                PORT_ID: [[1,4], [44,47], [88,91], [132,135], [176,179], [220,223], [264,267], [308,311]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [3,4]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [0,1,2,5,6,7]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSY_LOW
+            ?
+                PORT_ID: [[11,14], [22,25], [33,36], [55,58], [66,69], [77,80], [99,102], [110,113], [121,124], [143,146], [154,157], [165,168], [187,190], [198,201], [209,212], [231,234], [242,245], [253,256], [275,278], [286,289], [297,300], [319,322], [330,333], [341,344]]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [3,4]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
+            ?
+                PORT_ID: [76, 274]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [0,1,2,5,6,7]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSY_LOW
+            ?
+                PORT_ID: [76, 274]
+                PKT_PRI_TYPE: PKT_PRI_TYPE_VLAN
+                PKT_PRI: [3,4]
+            :
+                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
 ...

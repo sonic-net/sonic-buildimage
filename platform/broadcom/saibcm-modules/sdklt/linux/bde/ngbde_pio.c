@@ -71,7 +71,9 @@ ngbde_pio_cleanup(void)
 
     for (idx = 0; idx < num_swdev; idx++) {
         sd = ngbde_swdev_get(idx);
-        ngbde_pio_unmap(sd);
+        if (sd) {
+            ngbde_pio_unmap(sd);
+        }
     }
 }
 

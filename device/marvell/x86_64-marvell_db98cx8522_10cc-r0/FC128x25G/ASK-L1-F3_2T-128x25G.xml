@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-09-24-1.09" profile="Askl1" sid="46b72b06-f2b0-4910-a4a3-b77166e84219">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="Askl1" dsig="md5" sid="20d097a2-1bdd-4b0a-8660-ad188e4d486c">
   <ASKL1plt:ASK-L1 xmlns:ASKL1plt="urn:marvell:ASKL1:yang">
     <ASKL1plt:typedefs>
       <ASKL1plt:typedef>
@@ -20,6 +20,11 @@
           <ASKL1plt:name>ASIC_Falcon</ASKL1plt:name>
           <ASKL1plt:description>FALCON</ASKL1plt:description>
           <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>ASIC_AC5P</ASKL1plt:name>
+          <ASKL1plt:description>AC5P</ASKL1plt:description>
+          <ASKL1plt:value>3</ASKL1plt:value>
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
@@ -255,26 +260,6 @@
         <ASKL1plt:max>1023</ASKL1plt:max>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
-        <ASKL1plt:name>tx-param-type</ASKL1plt:name>
-        <ASKL1plt:type>enumeration</ASKL1plt:type>
-        <ASKL1plt:description>Tx parameter type</ASKL1plt:description>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>pre</ASKL1plt:name>
-          <ASKL1plt:description>pre</ASKL1plt:description>
-          <ASKL1plt:value>0</ASKL1plt:value>
-        </ASKL1plt:enum>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>post</ASKL1plt:name>
-          <ASKL1plt:description>post</ASKL1plt:description>
-          <ASKL1plt:value>1</ASKL1plt:value>
-        </ASKL1plt:enum>
-        <ASKL1plt:enum>
-          <ASKL1plt:name>peak</ASKL1plt:name>
-          <ASKL1plt:description>peak</ASKL1plt:description>
-          <ASKL1plt:value>2</ASKL1plt:value>
-        </ASKL1plt:enum>
-      </ASKL1plt:typedef>
-      <ASKL1plt:typedef>
         <ASKL1plt:name>rx-param-type</ASKL1plt:name>
         <ASKL1plt:type>enumeration</ASKL1plt:type>
         <ASKL1plt:description>Rx parameter type</ASKL1plt:description>
@@ -447,6 +432,96 @@
           <ASKL1plt:name>maxRes1</ASKL1plt:name>
           <ASKL1plt:description>maxRes1</ASKL1plt:description>
           <ASKL1plt:value>33</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current1Sel</ASKL1plt:name>
+          <ASKL1plt:description>current1Sel</ASKL1plt:description>
+          <ASKL1plt:value>34</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1Sel</ASKL1plt:name>
+          <ASKL1plt:description>rl1Sel</ASKL1plt:description>
+          <ASKL1plt:value>35</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1Extra</ASKL1plt:name>
+          <ASKL1plt:description>rl1Extra</ASKL1plt:description>
+          <ASKL1plt:value>36</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>cl1Ctrl</ASKL1plt:name>
+          <ASKL1plt:description>cl1Ctrl</ASKL1plt:description>
+          <ASKL1plt:value>37</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>enMidFreq</ASKL1plt:name>
+          <ASKL1plt:description>enMidFreq</ASKL1plt:description>
+          <ASKL1plt:value>38</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>cs1Mid</ASKL1plt:name>
+          <ASKL1plt:description>cs1Mid</ASKL1plt:description>
+          <ASKL1plt:value>39</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rs1Mid</ASKL1plt:name>
+          <ASKL1plt:description>rs1Mid</ASKL1plt:description>
+          <ASKL1plt:value>40</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rfCtrl</ASKL1plt:name>
+          <ASKL1plt:description>rfCtrl</ASKL1plt:description>
+          <ASKL1plt:value>41</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1TiaSel</ASKL1plt:name>
+          <ASKL1plt:description>rl1TiaSel</ASKL1plt:description>
+          <ASKL1plt:value>42</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl1TiaExtra</ASKL1plt:name>
+          <ASKL1plt:description>rl1TiaExtra</ASKL1plt:description>
+          <ASKL1plt:value>43</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>hpfRSel1st</ASKL1plt:name>
+          <ASKL1plt:description>hpfRSel1st</ASKL1plt:description>
+          <ASKL1plt:value>44</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current1TiaSel</ASKL1plt:name>
+          <ASKL1plt:description>current1TiaSel</ASKL1plt:description>
+          <ASKL1plt:value>45</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl2Tune</ASKL1plt:name>
+          <ASKL1plt:description>rl2Tune</ASKL1plt:description>
+          <ASKL1plt:value>46</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rl2Sel</ASKL1plt:name>
+          <ASKL1plt:description>rl2Sel</ASKL1plt:description>
+          <ASKL1plt:value>47</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>rs2Sel</ASKL1plt:name>
+          <ASKL1plt:description>rs2Sel</ASKL1plt:description>
+          <ASKL1plt:value>48</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>current2Sel</ASKL1plt:name>
+          <ASKL1plt:description>current2Sel</ASKL1plt:description>
+          <ASKL1plt:value>49</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>hpfRsel2nd</ASKL1plt:name>
+          <ASKL1plt:description>hpfRsel2nd</ASKL1plt:description>
+          <ASKL1plt:value>50</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>align90AnaReg</ASKL1plt:name>
+          <ASKL1plt:description>align90AnaReg</ASKL1plt:description>
+          <ASKL1plt:value>51</ASKL1plt:value>
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
@@ -641,11 +716,21 @@
           <ASKL1plt:speed ASKL1plt:type="port-speed-type">10G</ASKL1plt:speed>
           <ASKL1plt:fec ASKL1plt:type="fec-type">enabled</ASKL1plt:fec>
         </ASKL1plt:IfModeSpeedList-list>
+        <ASKL1plt:IfModeSpeedList-list>
+          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:ifMode>
+          <ASKL1plt:speed ASKL1plt:type="port-speed-type">1G</ASKL1plt:speed>
+        </ASKL1plt:IfModeSpeedList-list>
         <ASKL1plt:APIfModeSpeedList-list>
           <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">KR</ASKL1plt:APifMode>
           <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">10G</ASKL1plt:APspeed>
           <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
           <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecRequest>
+        </ASKL1plt:APIfModeSpeedList-list>
+        <ASKL1plt:APIfModeSpeedList-list>
+          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:APifMode>
+          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">1G</ASKL1plt:APspeed>
+          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecSupport>
+          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
         </ASKL1plt:APIfModeSpeedList-list>
       </ASKL1plt:ifModeNameList>
       <ASKL1plt:ifModeNameList>
@@ -740,6 +825,10 @@
           <ASKL1plt:speed ASKL1plt:type="port-speed-type">10G</ASKL1plt:speed>
           <ASKL1plt:fec ASKL1plt:type="fec-type">enabled</ASKL1plt:fec>
         </ASKL1plt:IfModeSpeedList-list>
+        <ASKL1plt:IfModeSpeedList-list>
+          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:ifMode>
+          <ASKL1plt:speed ASKL1plt:type="port-speed-type">1G</ASKL1plt:speed>
+        </ASKL1plt:IfModeSpeedList-list>
         <ASKL1plt:APIfModeSpeedList-list>
           <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">CR</ASKL1plt:APifMode>
           <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">25G</ASKL1plt:APspeed>
@@ -757,6 +846,12 @@
           <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">10G</ASKL1plt:APspeed>
           <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
           <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecRequest>
+        </ASKL1plt:APIfModeSpeedList-list>
+        <ASKL1plt:APIfModeSpeedList-list>
+          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:APifMode>
+          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">1G</ASKL1plt:APspeed>
+          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecSupport>
+          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
         </ASKL1plt:APIfModeSpeedList-list>
       </ASKL1plt:ifModeNameList>
       <ASKL1plt:ifModeNameList>

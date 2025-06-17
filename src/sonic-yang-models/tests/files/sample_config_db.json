@@ -134,7 +134,8 @@
                 "PortChannel0003": {
                     "nat_zone": "1",
                     "loopback_action": "drop",
-                    "ipv6_use_link_local_only": "enable"
+                    "ipv6_use_link_local_only": "enable",
+                    "mac_addr": "02:26:9b:73:c1:1a"
                 },
                 "PortChannel0004": {"vrf_name": "Vrf_blue"},
                 "PortChannel42|10.1.0.1/31": {},
@@ -151,7 +152,8 @@
             "Vlan111": {
                 "nat_zone": "0",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "disable"
+                "ipv6_use_link_local_only": "disable",
+                "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -341,6 +343,12 @@
                 "PACKET_ACTION": "FORWARD",
                 "TUNNEL_TERM": "true",
                 "DST_IP": "1.1.1.1/32"
+            },
+            "SRC-MAC-REWRITE-TABLE|RULE0": {
+                "PRIORITY": "960",
+                "INNER_SRC_MAC_REWRITE_ACTION": "22:33:44:55:66:11",                     
+                "INNER_SRC_IP": "1.1.1.1/32",
+                "TUNNEL_VNI": "45"
             }
         },
         "SWITCH_HASH": {
@@ -365,6 +373,13 @@
                 ],
                 "ecmp_hash_algorithm": "CRC",
                 "lag_hash_algorithm": "XOR"
+            }
+        },
+        "SWITCH_TRIMMING": {
+            "GLOBAL": {
+                "size": "128",
+                "dscp_value": "48",
+                "queue_index": "6"
             }
         },
         "DEVICE_METADATA": {
@@ -1104,9 +1119,24 @@
                     "Ethernet0",
                     "PortChannel0003"
                 ]
+            },
+            "SRC-MAC-REWRITE-TABLE": {
+                "ports": [
+                    "Ethernet14",
+                    "Ethernet15",
+                    "Ethernet23",
+                    "Ethernet30",
+                    "Ethernet31",
+                    "Ethernet18",
+                    "Ethernet19",
+                    "Ethernet25",
+                    "Ethernet24",
+                    "PortChannel0003"
+                ],
+                "stage": "EGRESS",
+                "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
             }
-
-        },
+        }, 
         "PBH_HASH_FIELD": {
             "inner_ip_proto": {
                 "hash_field": "INNER_IP_PROTOCOL",
@@ -1201,7 +1231,8 @@
             "Ethernet18": {
                 "nat_zone": "1",
                 "loopback_action": "forward",
-                "ipv6_use_link_local_only": "enable"
+                "ipv6_use_link_local_only": "enable",
+                "mac_addr": "12:34:56:78:90:ab"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
@@ -1308,7 +1339,8 @@
         },
         "LOOPBACK_INTERFACE": {
             "Loopback0": {
-               "nat_zone": "2"
+               "nat_zone": "2",
+               "admin_status": "up"
             },
             "Loopback0|2a04:5555:40:4::4e9/128": {
                 "scope": "global",
@@ -1390,10 +1422,14 @@
         },
         "GNMI_CLIENT_CERT": {
             "testcert1": {
-                "role": "RW"
+                "role": [
+                        "RW"
+                ]
             },
             "testcert2": {
-                "role": "RO"
+                "role": [
+                        "RO"
+                ]
             }
         },
         "TUNNEL": {
@@ -1507,6 +1543,10 @@
                 "POLL_INTERVAL": "10000"
             },
             "ENI": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             }
@@ -2337,6 +2377,13 @@
                 "overlay_dmac": "22:33:44:55:66:77"
             }
         },
+        "VNET_ROUTE_TUNNEL" : {
+            "vnet1|10.0.0.0/24" : {
+                "endpoint": "192.168.1.2",
+                "mac_address": "f9:22:83:99:22:a2",
+                "vni": "10011"
+            }
+        },
         "PORT_QOS_MAP": {
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
@@ -2413,6 +2460,7 @@
         "MUX_CABLE": {
             "Ethernet4": {
                 "cable_type": "active-active",
+                "prober_type": "software",
                 "server_ipv4": "192.168.0.2/32",
                 "server_ipv6": "fc02:1000::30/128",
                 "soc_ipv4": "192.168.0.3/32",
@@ -2607,7 +2655,20 @@
                      "PORT",
                      "PORTCHANNEL"
                  ]
-             }
+             },
+             "INNER_SRC_MAC_REWRITE_TABLE_TYPE": {
+                "ACTIONS": [
+                    "INNER_SRC_MAC_REWRITE_ACTION"
+                ],
+                "MATCHES": [
+                    "INNER_SRC_IP",
+                    "TUNNEL_VNI"
+                ],
+                "BIND_POINTS": [
+                    "PORT",
+                    "PORTCHANNEL"
+                ]
+            }
         },
 
         "SNMP": {
@@ -2729,6 +2790,11 @@
             "nhg2": {
                 "bucket_size": "32",
                 "match_mode": "route-based"
+            },
+            "nhg3": {
+                "bucket_size": "24",
+                "match_mode": "prefix-based",
+                "max_next_hops": "6"
             }
         },
         "FG_NHG_PREFIX": {
@@ -2737,6 +2803,9 @@
             },
             "192.168.0.0/16": {
                 "FG_NHG": "nhg2"
+            },
+            "172.17.0.1/32": {
+                "FG_NHG": "nhg3"
             }
         },
         "FIPS":{
@@ -2781,24 +2850,30 @@
                 "midplane_interface": "dpu1"
             }
         },
-        "DPU_PORT": {
-            "dpu0": {
+        "DPU": {
+            "str-8102-t1-dpu0": {
                 "state": "up",
+                "local_port": "Ethernet228",
                 "vip_ipv4": "192.168.1.1",
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "dpu_id": "0",
                 "vdpu_id": "vdpu0",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50"
             },
-            "dpu1": {
+            "str-8102-t1-dpu1": {
                 "state": "down",
+                "local_port": "Ethernet232",
                 "vip_ipv4": "192.168.1.2",
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "dpu_id": "1",
                 "vdpu_id": "vdpu1",
-                "gnmi_port": "50052"
+                "gnmi_port": "50052",
+                "orchagent_zmq_port": "50"
             }
         },
 	"XCVRD_LOG": {
@@ -2852,6 +2927,22 @@
                 "action": "uN",
                 "decap_dscp_mode": "pipe"
             }
+        },
+        "PREFIX_LIST": {
+            "ANCHOR_PREFIX|10.0.0.0/8" : {},
+            "ANCHOR_PREFIX|FC00::/48" : {}
+        },
+        "DEBUG_COUNTER": {
+            "DEBUG_4": {
+                "alias": "BAD_DROPS",
+                "desc": "More port ingress drops",
+                "group": "BAD",
+                "type": "SWITCH_INGRESS_DROPS"
+            }
+        },
+        "DEBUG_COUNTER_DROP_REASON": {
+            "DEBUG_4|DIP_LINK_LOCAL": {},
+            "DEBUG_4|SIP_LINK_LOCAL": {}
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -2869,6 +2960,12 @@
         "INTERVALS": {
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
+        }
+    },
+    "HEARTBEAT": {
+        "orchagent": {
+            "heartbeat_interval"   : "10000",
+            "alert_interval"       : "60000"
         }
     }
 }

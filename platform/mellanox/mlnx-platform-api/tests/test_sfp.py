@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -339,6 +339,7 @@ class TestSfp:
 
     def test_get_temperature_threshold(self):
         sfp = SFP(0)
+        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
         sfp.is_sw_control = mock.MagicMock(return_value=True)
 
         mock_api = mock.MagicMock()
@@ -354,10 +355,18 @@ class TestSfp:
         from sonic_platform_base.sonic_xcvr.fields import consts
         mock_api.get_transceiver_thresholds_support.return_value = True
         mock_api.xcvr_eeprom = mock.MagicMock()
-        mock_api.xcvr_eeprom.read = mock.MagicMock(return_value={
-            consts.TEMP_HIGH_ALARM_FIELD: 85.0,
-            consts.TEMP_HIGH_WARNING_FIELD: 75.0
-        })
+        
+        def mock_read(field):
+            if field == consts.TEMP_HIGH_ALARM_FIELD:
+                return 85.0
+            elif field == consts.TEMP_HIGH_WARNING_FIELD:
+                return 75.0
+    
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
+        assert sfp.get_temperature_warning_threshold() == 75.0
+        assert sfp.get_temperature_critical_threshold() == 85.0
+        
+        sfp.reinit_if_sn_changed.return_value = False
         assert sfp.get_temperature_warning_threshold() == 75.0
         assert sfp.get_temperature_critical_threshold() == 85.0
 
@@ -537,3 +546,52 @@ class TestSfp:
 
         assert sfp.set_lpmode(True)
         mock_write.assert_called_with('/sys/module/sx_core/asic0/module0/power_mode_policy', '3')
+
+    @mock.patch('sonic_platform.sfp.SfpOptoeBase.get_temperature')
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    def test_get_temperature_info(self, mock_read_int, mock_super_get_temperature):
+        sfp = SFP(0)
+        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
+        sfp.is_sw_control = mock.MagicMock(return_value=False)
+        sfp.is_sw_control.return_value = False
+        mock_api = mock.MagicMock()
+        mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=True)
+        mock_api.xcvr_eeprom = mock.MagicMock()
+        from sonic_platform_base.sonic_xcvr.fields import consts
+
+        def mock_read(field):
+            if field == consts.TEMP_HIGH_ALARM_FIELD:
+                return 85.0
+            elif field == consts.TEMP_HIGH_WARNING_FIELD:
+                return 75.0
+
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
+        with mock.patch('os.path.exists', mock.MagicMock(return_value=False)):
+            assert sfp.get_temperature_info() == (None, None, None)
+
+        with mock.patch('os.path.exists', mock.MagicMock(return_value=True)):
+            mock_read_int.return_value = None
+            assert sfp.get_temperature_info() == (None, None, None)
+            
+            mock_read_int.return_value = 0.0
+            assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)
+
+            mock_read_int.return_value = 448
+            assert sfp.get_temperature_info() == (56.0, 75.0, 85.0)
+        
+        
+        sfp.is_sw_control.return_value = True
+        mock_super_get_temperature.return_value = 58.0
+        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        
+        mock_api.get_transceiver_thresholds_support.return_value = None
+        assert sfp.get_temperature_info() == (58.0, None, None)
+        
+        mock_api.get_transceiver_thresholds_support.return_value = False
+        assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
+        
+        sfp.reinit_if_sn_changed.return_value = False
+        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        sfp.is_sw_control.side_effect = Exception('')
+        assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)

@@ -25,7 +25,6 @@ $(DOCKER_DHCP_RELAY)_PACKAGE_DEPENDS = database^1.0.0
 
 $(DOCKER_DHCP_RELAY)_SERVICE_REQUIRES = config-setup
 $(DOCKER_DHCP_RELAY)_SERVICE_AFTER = swss syncd teamd
-$(DOCKER_DHCP_RELAY)_SERVICE_BEFORE = ntp-config
 $(DOCKER_DHCP_RELAY)_SERVICE_DEPENDENT_OF = swss
 
 SONIC_DOCKER_IMAGES += $(DOCKER_DHCP_RELAY)
@@ -54,6 +53,6 @@ $(DOCKER_DHCP_RELAY)_CONTAINER_TMPFS += /var/tmp/
 
 $(DOCKER_DHCP_RELAY)_CLI_CONFIG_PLUGIN = /cli/config/plugins/dhcp_relay.py
 $(DOCKER_DHCP_RELAY)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_dhcp_relay.py
-$(DOCKER_DHCP_RELAY)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_dhcp6relay_counter.py
+$(DOCKER_DHCP_RELAY)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_dhcp_relay.py
 
 $(DOCKER_DHCP_RELAY)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
