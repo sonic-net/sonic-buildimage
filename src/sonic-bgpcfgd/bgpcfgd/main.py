@@ -128,7 +128,6 @@ def do_work():
         static_route_managers = [mgr for mgr in managers if mgr.__class__.__name__ == 'StaticRouteMgr']
         cleanup_static_routes_on_exit(common_objs['cfg_mgr'], static_route_managers)
 
-    thr.join()
 
 
 def main():
