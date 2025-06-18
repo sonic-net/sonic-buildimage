@@ -238,7 +238,8 @@ install_pip_package {{sonic_utilities_py3_wheel_path}}
 install_deb_package $debs_path/sonic-utilities-data_*.deb
 
 # Install customized bash version to patch bash plugin support.
-install_deb_package $debs_path/bash_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/bash_*.deb
 
 # sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
 # in bash.bashrc, so we copy a version of the file with it enabled here.
@@ -304,9 +305,11 @@ install_deb_package $debs_path/libtac2_*.deb
 install_deb_package $debs_path/libpam-tacplus_*.deb
 install_deb_package $debs_path/libnss-tacplus_*.deb
 # Install bash-tacplus
-install_deb_package $debs_path/bash-tacplus_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/bash-tacplus_*.deb
 # Install audisp-tacplus
-install_deb_package $debs_path/audisp-tacplus_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/audisp-tacplus_*.deb
 # Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
 ## some local configuration of a PAM module. Currently, there's no clean way of noninteractively specifying
@@ -318,8 +321,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus ldap
 sudo sed -i -e '/^passwd/s/ tacplus//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install pam-radius-auth and nss-radius
-install_deb_package $debs_path/libpam-radius-auth_*.deb
-install_deb_package $debs_path/libnss-radius_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/libpam-radius-auth_*.deb
+#install_deb_package $debs_path/libnss-radius_*.deb
 # Disable radius by default
 # radius does not have any profiles
 #sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove radius tacplus
@@ -377,7 +381,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
-install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
 
 {% if sonic_asic_platform == 'broadcom' %}
 # Install custom-built flashrom
