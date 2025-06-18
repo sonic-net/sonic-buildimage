@@ -132,7 +132,7 @@ def load_heartbeat_alert_interval(use_unix_socket_path):
             if alert_interval:
                 heartbeat_alert_interval_mapping[process] = int(alert_interval) / 1000
 
-    heartbeat_alert_interval_initialized - True
+    heartbeat_alert_interval_initialized = True
 
 def get_heartbeat_alert_interval(process, use_unix_socket_path):
     if not heartbeat_alert_interval_initialized:
