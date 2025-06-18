@@ -58,9 +58,13 @@
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
                     {%- endif %}
                 {%- endif %}
-            {%- elif local_router_type == 'ToRRouter' %}
+            {%- else %}
                 {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
             {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
         {%- endfor %}
     {%- endif %}
 {%- endif %}
@@ -261,52 +265,54 @@
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
     "BUFFER_QUEUE": {
 {% for port in port_names_active.split(',') %}
+    {%- set port_type = 'uplink' if port in PORT_UPLINK else 'downlink' %}
         "{{ port }}|0": {
-            "profile" : "queue0_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue0_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|1": {
-            "profile" : "queue1_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue1_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|2": {
-            "profile" : "queue2_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue2_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|3": {
-            "profile" : "queue3_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue3_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|4": {
-            "profile" : "queue4_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue4_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|5": {
-            "profile" : "queue5_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue5_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|6": {
-            "profile" : "queue6_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue6_{{ port_type }}_lossy_profile"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
 {% if dynamic_mode is defined %}
 {% if port_names_active.split(',')|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
+    {%- set port_type = 'uplink' if port in PORT_UPLINK else 'downlink' %}
         "{{ port }}|0": {
-            "profile" : "queue0_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue0_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|1": {
-            "profile" : "queue1_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue1_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|2": {
-            "profile" : "queue2_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue2_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|3": {
-            "profile" : "queue3_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue3_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|4": {
-            "profile" : "queue4_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue4_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|5": {
-            "profile" : "queue5_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue5_{{ port_type }}_lossy_profile"
         },
         "{{ port }}|6": {
-            "profile" : "queue6_{{ 'uplink' if port in PORT_UPLINK else 'downlink' }}_lossy_profile"
+            "profile" : "queue6_{{ port_type }}_lossy_profile"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
 {% else %}

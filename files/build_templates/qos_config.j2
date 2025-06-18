@@ -84,9 +84,13 @@
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
                     {%- endif %}
                 {%- endif %}
-            {%- elif local_router_type == 'ToRRouter' %}
+            {%- else %}
                 {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
             {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
         {%- endfor %}
     {%- endif %}
 {%- endif %}
