@@ -10,9 +10,11 @@ export LIBYANG_SUBVERSION
 
 LIBYANG = libyang_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
 $(LIBYANG)_SRC_PATH = $(SRC_PATH)/libyang
+ifeq ($(BLDENV),bookworm)
 # introduce artifical dependency between LIBYANG and FRR
 # make sure LIBYANG is compile after FRR
 $(LIBYANG)_AFTER = $(FRR)
+endif
 SONIC_MAKE_DEBS += $(LIBYANG)
 
 LIBYANG_DEV = libyang-dev_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
