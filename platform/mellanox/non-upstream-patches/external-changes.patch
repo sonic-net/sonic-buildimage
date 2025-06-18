@@ -1,7 +1,7 @@
 
 --- a/patch/kconfig-inclusions
 +++ b/patch/kconfig-inclusions
-@@ -126,6 +126,10 @@
+@@ -129,6 +129,10 @@
  CONFIG_EDAC_AMD64=m
  CONFIG_AMD_XGBE_DCB=y
  CONFIG_SENSORS_ISL68137=m
