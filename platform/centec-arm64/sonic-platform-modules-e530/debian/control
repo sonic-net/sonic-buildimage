@@ -7,20 +7,20 @@ Standards-Version: 3.9.3
 
 Package: platform-modules-e530-48t4x-p
 Architecture: arm64
-Depends: linux-image-6.1.0-29-2-arm64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-arm64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-e530-24x2c
 Architecture: arm64
-Depends: linux-image-6.1.0-29-2-arm64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-arm64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-e530-48s4x
 Architecture: arm64
-Depends: linux-image-6.1.0-29-2-arm64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-arm64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: platform-modules-e530-24x2q
 Architecture: arm64
-Depends: linux-image-6.1.0-29-2-arm64-unsigned
+Depends: linux-image-6.12.41+deb13-sonic-arm64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
