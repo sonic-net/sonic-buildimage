@@ -192,31 +192,34 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
     def _compileUsesClauseList(self, model, group, name, refine):
         # If group doesn't have this entry, nothing to do.
-        if not group.get(name):
+        groupobj = group.get(name)
+        if groupobj is None:
             return
 
         # model doesn't have this entry type, create it as a list
-        if not model.get(name):
+        if model.get(name) is None:
             model[name] = []
 
         # model has this entry type, but its not a list, convert
-        if not isinstance(model.get(name), list):
+        if not isinstance(model[name], list):
             model[name] = [ model[name] ]
 
-        if isinstance(group.get(name), list):
-            model[name].extend(group.get(name))
+        if isinstance(groupobj, list):
+            model[name].extend(groupobj)
         else:
-            model[name].append(group.get(name))
+            model[name].append(groupobj)
 
         self._compileUsesClauseRefine(refine, model[name])
 
-    # Recursively process the yang schema looking for the "uses" clause under
-    # "container", "list", and "choice"/"case" nodes.  Merge in the "uses"
-    # dictionaries for leaf and leaf-list so callers don't need to try to do
-    # their own "uses" processing.  Remove the "uses" member when processed so
-    # anyone expecting it won't try to re-process.  It will just look like a
-    # yang model that doesn't use "uses" so shouldn't cause compatibility issues.
     def _compileUsesClauseModel(self, module, model):
+        """
+        Recursively process the yang schema looking for the "uses" clause under
+        "container", "list", and "choice"/"case" nodes.  Merge in the "uses"
+        dictionaries for leaf and leaf-list so callers don't need to try to do
+        their own "uses" processing.  Remove the "uses" member when processed so
+        anyone expecting it won't try to re-process.  It will just look like a
+        yang model that doesn't use "uses" so shouldn't cause compatibility issues.
+        """
         if isinstance(model, list):
             for item in model:
                 self._compileUsesClauseModel(module, item)
@@ -263,14 +266,13 @@ class SonicYangExtMixin(SonicYangPathMixin):
             traceback.print_exc()
             raise e
 
-    """
-    Create a map from config DB tables to container in yang model
-    This module name and topLevelContainer are fetched considering YANG models are
-    written using below Guidelines:
-    https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
-    """
     def _createDBTableToModuleMap(self):
-
+        """
+        Create a map from config DB tables to container in yang model
+        This module name and topLevelContainer are fetched considering YANG models are
+        written using below Guidelines:
+        https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
+        """
         for j in self.yJson:
             # get module name
             moduleName = j['module']['@name']
