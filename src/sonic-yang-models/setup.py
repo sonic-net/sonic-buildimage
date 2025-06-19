@@ -143,6 +143,7 @@ yang_files = [
     'sonic-grpcclient.yang',
     'sonic-serial-console.yang',
     'sonic-smart-switch.yang',
+    'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
 ]
 
