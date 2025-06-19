@@ -1,0 +1,15 @@
+[Unit]
+Description=Accton AS9736_64D Platform Monitoring service
+Before=pmon.service system-health.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/local/bin/accton_as9736_64d_util.py install
+ExecStart=/usr/local/bin/accton_as9736_64d_monitor.py
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
