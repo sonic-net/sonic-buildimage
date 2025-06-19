@@ -41,6 +41,10 @@ parameters:
   - cisco-8000-smartswitch
   - nvidia-bluefield
   - pensando
+- name: TIMEOUT_IN_MINUTES_PR_TEST
+  type: number
+  default: 400
+
 variables:
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
@@ -68,11 +72,15 @@ stages:
   # continueOnError: false means it's a required test job and will block merge if it fails
   # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
+  # For PR test job:
+  # If the current branch is not internal, please reference the remote template by appending @acs-buildimage.
+  # For example, "- template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage"
+
   jobs:
   - job: t0_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0 by Elastictest"
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:
@@ -86,7 +94,7 @@ stages:
   - job: t1_lag_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:
@@ -100,7 +108,7 @@ stages:
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
     pool: sonic-ubuntu-1c
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:
@@ -117,7 +125,7 @@ stages:
   - job: t0_2vlans_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0-2vlans by Elastictest"
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
     - template: elastictest_template/run-test-elastictest-template.yaml
       parameters:
@@ -133,7 +141,7 @@ stages:
   - job: dualtor_elastictest
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:
@@ -148,7 +156,7 @@ stages:
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
     pool: sonic-ubuntu-1c
-    timeoutInMinutes: 400
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:

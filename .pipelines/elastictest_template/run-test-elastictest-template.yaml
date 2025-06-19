@@ -28,8 +28,8 @@ parameters:
     default: ""
 
   - name: LOCK_WAIT_TIMEOUT_SECONDS
-    type: string
-    default: ""
+    type: number
+    default: 0
 
   - name: NUM_ASIC
     type: number
@@ -129,7 +129,7 @@ parameters:
 
   - name: MAX_RUN_TEST_MINUTES
     type: number
-    default: 480
+    default: 0
 
   - name: KVM_IMAGE_BRANCH
     type: string
