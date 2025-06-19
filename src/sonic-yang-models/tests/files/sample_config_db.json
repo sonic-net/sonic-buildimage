@@ -21,6 +21,12 @@
             "1.1.1.1": {},
             "fe80:1000:2000:3000::1": {}
         },
+        "DNS_OPTIONS": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": "0",
+            "timeout": "1",
+            "attempts": "2"
+        },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
                "mode": "static",
