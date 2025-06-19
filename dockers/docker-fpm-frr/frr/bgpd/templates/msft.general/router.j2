@@ -5,6 +5,7 @@
 {% set neighbor_type = CONFIG_DB__DEVICE_NEIGHBOR_METADATA[bgp_session['name']]['type'] %}
 {% set neighbor_deployment_id = CONFIG_DB__DEVICE_NEIGHBOR_METADATA[bgp_session['name']]['deployment_id'] %}
 {% set devicedownstream_subrole = CONFIG_DB__DEVICE_METADATA['localhost']['downstream_subrole'] %}
+{% set device_region = CONFIG_DB__DEVICE_METADATA['localhost']['region'] %}
 {% set is_storage_device = CONFIG_DB__DEVICE_METADATA['localhost']['storage_device'] %}
 {% if is_storage_device is not defined or is_storage_device | length == 0 %}
 {% set is_storage_device = "false" %}
@@ -21,7 +22,7 @@
 {% else %}
 {% set is_afd_safenets = "false" %}
 {% endif %}
-{% set mgmt_type = CONFIG_DB__DEVICE_METADATA['localhost']['MgmtType'] %}
+{% set mgmt_type = CONFIG_DB__DEVICE_METADATA['localhost']['mgmt_type'] %}
 {% if mgmt_type is defined and mgmt_type == 'FairWater' %}
 {% set is_fairwater = "true" %}
 {% else %}
@@ -177,11 +178,23 @@
 {%         elif neighbor_type == 'LeafRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
 {%             include path_template % "v6.tor.leaf.fairwater.frontend" %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_fairwater == 'true' and device_type == 'ToRRouter' %}
-{%             include path_template % "v6.tor.fairwater.frontend" %}
+{%             if device_region == 'uscentral' or device_region == 'ussouth' %}
+{%                 include path_template % "v6.tor.fairwater.frontend.canarypilot" %}
+{%             else                                         %}
+{%                 include path_template % "v6.tor.fairwater.frontend" %}
+{%             endif                                         %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_fairwater == 'true' and device_type == 'BackEndToRRouter' %}
-{%             include path_template % "v6.tor.fairwater.backend" %}
+{%             if device_region == 'uscentral' or device_region == 'ussouth' %}
+{%                 include path_template % "v6.tor.fairwater.backend.canarypilot" %}
+{%             else                                         %}
+{%                 include path_template % "v6.tor.fairwater.backend" %}
+{%             endif                                         %}
 {%         elif neighbor_type == 'ToRRouter' and is_fairwater == 'true' and device_type == 'BackEndToRRouter' %}
-{%             include path_template % "v6.tor.fairwater.backend.frontend" %}
+{%             if device_region == 'uscentral' or device_region == 'ussouth' %}
+{%                 include path_template % "v6.tor.fairwater.backend.frontend.canarypilot" %}
+{%             else                                         %}
+{%                 include path_template % "v6.tor.fairwater.backend.frontend" %}
+{%             endif                                         %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' %}
 {%             include path_template % "v6.tor.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_compute_ai == 'true' and device_type == 'BackEndToRRouter' %}
@@ -202,7 +215,11 @@
 {%             elif neighbor_deployment_id is defined and neighbor_deployment_id == '21' %}
 {%                 include path_template % "v6.leaf.tor.dnsagg" %}
 {%             elif neighbor_type == 'BackEndToRRouter' and is_fairwater == 'true' and device_type == 'BackEndLeafRouter' %}
-{%                 include path_template % "v6.leaf.tor.fairwater.backend" %}
+{%                 if device_region == 'uscentral' or device_region == 'ussouth' %}
+{%                     include path_template % "v6.leaf.tor.fairwater.backend.canarypilot" %}
+{%                 else                                         %}
+{%                     include path_template % "v6.leaf.tor.fairwater.backend" %}
+{%                 endif                                         %}
 {%             elif neighbor_type == 'BackEndSpineRouter' and is_fairwater == 'true' and device_type == 'BackEndLeafRouter' %}
 {%                 include path_template % "v6.leaf.spine.fairwater.backend" %}
 {%             elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' and device_type == 'BackEndLeafRouter' %}
