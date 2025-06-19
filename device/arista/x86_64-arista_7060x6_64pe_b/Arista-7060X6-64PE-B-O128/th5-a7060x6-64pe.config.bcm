@@ -42,6 +42,7 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 4096
             sai_mmu_custom_config: 1
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
