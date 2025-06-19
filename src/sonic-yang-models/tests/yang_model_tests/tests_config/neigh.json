@@ -33,17 +33,9 @@
             "sonic-port:PORT": {
                 "PORT_LIST": [
                     {
-                        "admin_status": "up",
-                        "alias": "eth8",
-                        "description": "Ethernet8",
-                        "fec": "rc",
-                        "lanes": "65",
-                        "mtu": 9000,
-                        "pfc_asym": "off",
                         "name": "Ethernet8",
-                        "tpid": "0x8100",
-                        "speed": 25000,
-                        "mode":"trunk"
+                        "lanes": "1",
+                        "speed": 25000
                     }
                 ]
             }
