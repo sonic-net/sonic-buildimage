@@ -7,7 +7,7 @@ mkdir -p /host/security_cipher
 
 # Copy cipher_pass file to persistent storage
 if [ -f /etc/cipher_pass ]; then
-    cp /etc/cipher_pass /host/security_cipher/cipher_pass 
-    echo "Saved /etc/cipher_pass to /host/security_cipher/"
+    cp /etc/cipher_pass.json /host/security_cipher/cipher_pass.json 
+    echo "Saved /etc/cipher_pass.json to /host/security_cipher/"
 fi
 
