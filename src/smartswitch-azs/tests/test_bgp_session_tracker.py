@@ -37,9 +37,11 @@ class TestBgpSessionTracker(object):
         assert state_db_tbl.hget("T1toWL", "interfaces_are_shutdown")[1] == ("yes" if interface_shutdown else "no")
         assert config_db.get_table("PORTCHANNEL")["PortChannel1031"]["admin_status"] == ("down" if interface_shutdown else "up")
         assert config_db.get_table("PORTCHANNEL")["PortChannel1032"]["admin_status"] == ("down" if interface_shutdown else "up")
-    
-    def test_process_default_route_update(self):
-        bgp_session_tracker.swsscommon = mock.MagicMock()
+
+    @mock.patch('bgp_session_tracker.swsscommon')
+    def test_process_default_route_update(self, mock_swsscommon):
+        mock_swsscommon.CFG_BGP_NEIGHBOR_TABLE_NAME = "BGP_NEIGHBOR"
+        mock_swsscommon.CFG_LAG_TABLE_NAME = "PORTCHANNEL"
         bgp_session_tracker.daemon_base = mock.MagicMock()
         db_monitor = BgpSessionTracker()
         config_db, route_tbl, lag_table, state_db_tbl = self.setup_tables()
@@ -50,12 +52,12 @@ class TestBgpSessionTracker(object):
         db_monitor.route_table = route_tbl
         state_db_tbl.hset("T1toWL", "bgp_sessions_up", "yes")
         state_db_tbl.hset("T1toWL", "interfaces_are_shutdown", "no")
-
-        #TESTCASE 1: Delete 1 nexthop from the default route. Interface should not be brought down
         lag_table.hset("PortChannel1031", "admin_status", "up")
         lag_table.hset("PortChannel1032", "admin_status", "up")
+        db_monitor.perform_initial_setup()
+
+        #TESTCASE 1: Delete 1 nexthop from the default route. Interface should not be brought down
         route_tbl.set(DEFAULT_ROUTE_KEY, {"nexthop": "10.0.0.1"})
-        db_monitor.setup_t1_bgp_sessions_cache()
         db_monitor.process_default_route_update()
         self.validate_default_route_update_behavior(db_monitor, state_db_tbl, config_db, False)
         
