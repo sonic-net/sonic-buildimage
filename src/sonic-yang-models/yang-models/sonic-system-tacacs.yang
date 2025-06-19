@@ -91,6 +91,12 @@ module sonic-system-tacacs {
                     description "Authentication type";
                 }
 
+                leaf key_encrypt {
+                    type boolean;
+                    default false;
+                    description "Indicates if the passkey is encrypted.";
+                }
+
                 leaf passkey {
                     type string {
                         length "1..256";
