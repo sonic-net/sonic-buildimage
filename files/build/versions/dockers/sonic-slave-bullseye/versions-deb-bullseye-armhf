@@ -3,7 +3,7 @@ dvipng==1.15-1.1
 libjpeg-dev==1:2.0.6-4
 libjpeg62-turbo-dev==1:2.0.6-4
 libunicode-linebreak-perl==0.0.20190101-1+b2
-linux-compiler-gcc-10-arm==5.10.226-1
-linux-headers-5.10.0-33-armmp==5.10.226-1
-linux-headers-armmp==5.10.226-1
+linux-compiler-gcc-10-arm==5.10.237-1
+linux-headers-5.10.0-35-armmp==5.10.237-1
+linux-headers-armmp==5.10.237-1
 nasm==2.15.05-1
