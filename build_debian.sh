@@ -386,7 +386,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    nvme-cli
+    nvme-cli                \
+    nftables
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
@@ -664,8 +665,8 @@ if [ "${enable_organization_extensions}" = "y" ]; then
    fi
 fi
 
-## Setup ebtable rules (rule file in text format)
-sudo cp files/image_config/ebtables/ebtables.filter.cfg ${FILESYSTEM_ROOT}/etc
+## Setup nftables rules
+sudo cp files/image_config/nftables/nftables.conf ${FILESYSTEM_ROOT}/etc
 
 ## Debug Image specific changes
 ## Update motd for debug image
