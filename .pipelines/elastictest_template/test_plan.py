@@ -244,6 +244,11 @@ class TestPlanManager(object):
         if max_execute_seconds == 0 and test_plan_type == "PR":
             max_execute_seconds = int(os.environ.get("TIMEOUT_IN_SECONDS_PR_TEST_PLAN", 21600))
 
+        setup_container_params = ""
+        github_api_proxy = os.getenv("SONIC_AUTOMATION_PROXY_GITHUB_ISSUES_URL", None)
+        if github_api_proxy:
+            setup_container_params = f"-e SONIC_AUTOMATION_PROXY_GITHUB_ISSUES_URL={github_api_proxy}"
+
         print(
             f"Creating test plan, topology: {topology}, name: {test_plan_name}, "
             f"build info:{repo_name} {pr_id} {build_id}"
@@ -299,6 +304,7 @@ class TestPlanManager(object):
                 "lock_wait_timeout_seconds": lock_wait_timeout_seconds,
             },
             "test_option": {
+                "setup_container_params": setup_container_params,
                 "stop_on_failure": kwargs.get("stop_on_failure", True),
                 "retry_times": kwargs.get("retry_times", 2),
                 "test_cases": {
