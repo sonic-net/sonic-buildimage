@@ -290,5 +290,7 @@ RUN chmod +x start.sh \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
 
+RUN rm -rf /usr/local/lib/python3.8/dist-packages/tests
+
 USER $user
 WORKDIR /var/$user

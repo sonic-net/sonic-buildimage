@@ -32,6 +32,7 @@
 
 /*! Module information */
 #define BCMGENL_MODULE_NAME     "linux_bcmgenl"
+
 /*! Use similar path to SDK6 genl psample path */
 #define BCM_PROCFS_NAME        "bcm"
 #define BCMGENL_PROCFS_NAME    "genl"

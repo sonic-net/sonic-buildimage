@@ -605,7 +605,7 @@ portmap_123=121:100
 portmap_127=125:100
 
 
-dport_map_enable=1
+dport_map_enable=0
 
 dport_map_port_1=1
 dport_map_port_5=2

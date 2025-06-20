@@ -1,0 +1,42 @@
+{
+    "CONTEXTS": [
+        {
+            "guid" : 0,
+            "name" : "asic0",
+            "dbAsic" : "ASIC_DB",
+            "dbCounters" : "COUNTERS_DB",
+            "dbFlex": "FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5555",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5556",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : ""
+                }
+            ]
+        },
+        {
+            "guid" : 1,
+            "name" : "phys",
+            "dbAsic" : "GB_ASIC_DB",
+            "dbCounters" : "GB_COUNTERS_DB",
+            "dbFlex": "GB_FLEX_COUNTER_DB",
+            "dbState" : "STATE_DB",
+            "zmq_enable" : false,
+            "zmq_endpoint": "tcp://127.0.0.1:5565",
+            "zmq_ntf_endpoint": "tcp://127.0.0.1:5566",
+            "switches": [
+                {
+                    "index" : 0,
+                    "hwinfo" : "0"
+                },
+                {
+                    "index" : 1,
+                    "hwinfo" : "36"
+                }
+            ]
+        }
+   ]
+}

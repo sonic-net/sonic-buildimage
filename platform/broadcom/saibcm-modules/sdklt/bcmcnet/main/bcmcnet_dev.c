@@ -507,113 +507,115 @@ bcmcnet_pdma_info_get(struct pdma_dev *dev)
 }
 
 /*!
+ * Add values in uint64_t array to values
+ * in another array of the same size.
+ */
+static void
+bcmcnet_uint64s_add(void *src, void *add, int num)
+{
+    uint64_t *a = src, *b = add;
+    int i;
+
+    for (i = 0; i < num; i++) {
+        a[i] += b[i];
+    }
+}
+
+/*!
+ * Subtract values in uint64_t array from values
+ * in another array of the same size.
+ */
+static void
+bcmcnet_uint64s_sub(void *src, void *sub, int num)
+{
+    uint64_t *a = src, *b = sub;
+    int i;
+
+    for (i = 0; i < num; i++) {
+        a[i] -= b[i];
+    }
+}
+
+/*!
  * Get device statistics
  */
 static void
 bcmcnet_pdma_stats_get(struct pdma_dev *dev)
 {
     struct dev_ctrl *ctrl = &dev->ctrl;
+    struct bcmcnet_dev_stats *stats = &dev->stats;
+    struct bcmcnet_dev_stats *stats_base = &dev->stats_base;
     struct pdma_rx_queue *rxq = NULL;
     struct pdma_tx_queue *txq = NULL;
-    uint32_t packets = 0, bytes = 0, dropped = 0, errors = 0, nomems = 0, xoffs = 0;
-    uint32_t head_errors = 0, data_errors = 0, cell_errors = 0;
-    uint32_t qi;
+    uint32_t stats_size, stats_num, qi;
 
+    stats_size = sizeof(bcmcnet_rxq_stats_t);
+    stats_num = sizeof(bcmcnet_rxq_stats_t) / sizeof(uint64_t);
+    sal_memset(&stats->rxqs, 0, stats_size);
     for (qi = 0; qi < ctrl->nb_rxq; qi++) {
         rxq = (struct pdma_rx_queue *)ctrl->rx_queue[qi];
         if (!rxq) {
             continue;
         }
-        packets += rxq->stats.packets;
-        bytes += rxq->stats.bytes;
-        dropped += rxq->stats.dropped;
-        errors += rxq->stats.errors;
-        head_errors += rxq->stats.head_errors;
-        data_errors += rxq->stats.data_errors;
-        cell_errors += rxq->stats.cell_errors;
-        nomems += rxq->stats.nomems;
-        dev->stats.rxq_packets[qi] = rxq->stats.packets;
-        dev->stats.rxq_bytes[qi] = rxq->stats.bytes;
-        dev->stats.rxq_dropped[qi] = rxq->stats.dropped;
-        dev->stats.rxq_errors[qi] = rxq->stats.errors;
-        dev->stats.rxq_head_errors[qi] = rxq->stats.head_errors;
-        dev->stats.rxq_data_errors[qi] = rxq->stats.data_errors;
-        dev->stats.rxq_cell_errors[qi] = rxq->stats.cell_errors;
-        dev->stats.rxq_nomems[qi] = rxq->stats.nomems;
+        sal_memcpy(&stats->rxq[qi], &rxq->stats, stats_size);
+        bcmcnet_uint64s_add(&stats->rxqs, &stats->rxq[qi], stats_num);
+        bcmcnet_uint64s_sub(&stats->rxq[qi], &stats_base->rxq[qi], stats_num);
     }
+    bcmcnet_uint64s_sub(&stats->rxqs, &stats_base->rxqs, stats_num);
 
-    dev->stats.rx_packets = packets;
-    dev->stats.rx_bytes = bytes;
-    dev->stats.rx_dropped = dropped;
-    dev->stats.rx_errors = errors;
-    dev->stats.rx_head_errors = head_errors;
-    dev->stats.rx_data_errors = data_errors;
-    dev->stats.rx_cell_errors = cell_errors;
-    dev->stats.rx_nomems = nomems;
-
-    packets = bytes = dropped = errors = 0;
+    stats_size = sizeof(bcmcnet_txq_stats_t);
+    stats_num = sizeof(bcmcnet_txq_stats_t) / sizeof(uint64_t);
+    sal_memset(&stats->txqs, 0, stats_size);
     for (qi = 0; qi < ctrl->nb_txq; qi++) {
         txq = (struct pdma_tx_queue *)ctrl->tx_queue[qi];
         if (!txq) {
             continue;
         }
-        packets += txq->stats.packets;
-        bytes += txq->stats.bytes;
-        dropped += txq->stats.dropped;
-        errors += txq->stats.errors;
-        xoffs += txq->stats.xoffs;
-        dev->stats.txq_packets[qi] = txq->stats.packets;
-        dev->stats.txq_bytes[qi] = txq->stats.bytes;
-        dev->stats.txq_dropped[qi] = txq->stats.dropped;
-        dev->stats.txq_errors[qi] = txq->stats.errors;
-        dev->stats.txq_xoffs[qi] = txq->stats.xoffs;
+        sal_memcpy(&stats->txq[qi], &txq->stats, stats_size);
+        bcmcnet_uint64s_add(&stats->txqs, &stats->txq[qi], stats_num);
+        bcmcnet_uint64s_sub(&stats->txq[qi], &stats_base->txq[qi], stats_num);
     }
-
-    dev->stats.tx_packets = packets;
-    dev->stats.tx_bytes = bytes;
-    dev->stats.tx_dropped = dropped;
-    dev->stats.tx_errors = errors;
-    dev->stats.tx_xoffs = xoffs;
+    bcmcnet_uint64s_sub(&stats->txqs, &stats_base->txqs, stats_num);
 }
 
 /*!
  * Reset device statistics
  */
 static void
-bcmcnet_pdma_stats_reset(struct pdma_dev *dev)
+bcmcnet_pdma_stats_reset(struct pdma_dev *dev, pdma_dir_t dir)
 {
     struct dev_ctrl *ctrl = &dev->ctrl;
+    struct bcmcnet_dev_stats *stats = &dev->stats_base;
     struct pdma_rx_queue *rxq = NULL;
     struct pdma_tx_queue *txq = NULL;
-    uint32_t qi;
+    uint32_t stats_size, stats_num, qi;
 
-    sal_memset(&dev->stats, 0, sizeof(struct bcmcnet_dev_stats));
-
-    for (qi = 0; qi < ctrl->nb_rxq; qi++) {
-        rxq = (struct pdma_rx_queue *)ctrl->rx_queue[qi];
-        if (!rxq) {
-            continue;
+    if (dir == PDMA_DIR_RX || dir == PDMA_DIR_RXTX) {
+        stats_size = sizeof(bcmcnet_rxq_stats_t);
+        stats_num = sizeof(bcmcnet_rxq_stats_t) / sizeof(uint64_t);
+        sal_memset(&stats->rxqs, 0, stats_size);
+        for (qi = 0; qi < ctrl->nb_rxq; qi++) {
+            rxq = (struct pdma_rx_queue *)ctrl->rx_queue[qi];
+            if (!rxq) {
+                continue;
+            }
+            sal_memcpy(&stats->rxq[qi], &rxq->stats, stats_size);
+            bcmcnet_uint64s_add(&stats->rxqs, &stats->rxq[qi], stats_num);
         }
-        rxq->stats.packets = 0;
-        rxq->stats.bytes = 0;
-        rxq->stats.dropped = 0;
-        rxq->stats.errors = 0;
-        rxq->stats.head_errors = 0;
-        rxq->stats.data_errors = 0;
-        rxq->stats.cell_errors = 0;
-        rxq->stats.nomems = 0;
     }
 
-    for (qi = 0; qi < ctrl->nb_txq; qi++) {
-        txq = (struct pdma_tx_queue *)ctrl->tx_queue[qi];
-        if (!txq) {
-            continue;
+    if (dir == PDMA_DIR_TX || dir == PDMA_DIR_RXTX) {
+        stats_size = sizeof(bcmcnet_txq_stats_t);
+        stats_num = sizeof(bcmcnet_txq_stats_t) / sizeof(uint64_t);
+        sal_memset(&stats->txqs, 0, stats_size);
+        for (qi = 0; qi < ctrl->nb_txq; qi++) {
+            txq = (struct pdma_tx_queue *)ctrl->tx_queue[qi];
+            if (!txq) {
+                continue;
+            }
+            sal_memcpy(&stats->txq[qi], &txq->stats, stats_size);
+            bcmcnet_uint64s_add(&stats->txqs, &stats->txq[qi], stats_num);
         }
-        txq->stats.packets = 0;
-        txq->stats.bytes = 0;
-        txq->stats.dropped = 0;
-        txq->stats.errors = 0;
-        txq->stats.xoffs = 0;
     }
 }
 
