@@ -30,8 +30,6 @@ class Chassis(ChassisBase):
         if os.path.exists(self.metadata_file):
             with open(self.metadata_file, 'r') as f:
                 metadata = json.load(f)
-        else:
-            raise FileNotFoundError("Metadata file {} not found".format(self.metadata_file))
         return metadata
 
     def get_supervisor_slot(self):
