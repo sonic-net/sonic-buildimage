@@ -1,0 +1,18 @@
+{
+    "chassis": {
+        "DS5000": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "BMC": {},
+                "FPGA": {},
+                "CPLD COMe": {},
+                "CPLD BASE": {},
+                "CPLD SW1": {},
+                "CPLD SW2": {},
+                "SSD1": {},
+                "SSD2": {}
+            }
+        }
+    }
+}
