@@ -1374,6 +1374,7 @@ bcm_device:
             global_flexctr_egr_op_profile_num_reserved: 10
             global_flexctr_egr_group_num_reserved: 1
             flowtracker_flexctr_alloc_enable: 1
+            stat_custom_receive0_management_mode: 1
             sai_postinit_cmd_file: /usr/share/sonic/platform/postinit_cmd_file.soc
 ...
 
