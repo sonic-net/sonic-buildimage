@@ -32,8 +32,6 @@ endif
 $(DOCKER_SESSION_MONITOR)_CONTAINER_NAME = session-monitor
 $(DOCKER_SESSION_MONITOR)_RUN_OPT += -t
 $(DOCKER_SESSION_MONITOR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_SESSION_MONITOR)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
-$(DOCKER_SESSION_MONITOR)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
 $(DOCKER_SESSION_MONITOR)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_SESSION_MONITOR)
