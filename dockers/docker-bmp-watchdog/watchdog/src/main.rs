@@ -6,39 +6,8 @@ use serde::Serialize;
  
 #[derive(Serialize)]
 struct HealthStatus {
-    check_bmp_supervisorctl: String,
     check_bmp_db: String,
     check_bmp_port: String,
-}
- 
-fn check_bmp_supervisorctl() -> String {
-    let output = Command::new("docker")
-        .args(["exec", "-i", "bmp", "supervisorctl", "status"])
-        .output();
-
-    match output {
-        Ok(output) => {
-            if !output.status.success() {
-                return format!("ERROR: Command failed with status {}", output.status);
-            }
-
-            let stdout = String::from_utf8_lossy(&output.stdout);
-
-            let has_openbmpd = stdout.lines().any(|line| {
-                line.starts_with("openbmpd") && line.contains("RUNNING")
-            });
-            let has_bmpcfgd = stdout.lines().any(|line| {
-                line.starts_with("bmpcfgd") && line.contains("RUNNING")
-            });
-
-            if has_openbmpd && has_bmpcfgd {
-                "OK".to_string()
-            } else {
-                format!("ERROR: Statuses - openbmpd: {}, bmpcfgd: {}", has_openbmpd, has_bmpcfgd)
-            }
-        }
-        Err(e) => format!("ERROR: Failed to run command - {}", e),
-    }
 }
  
 fn check_bmp_db() -> String {
@@ -97,18 +66,16 @@ fn main() {
                         continue;
                     }
  
-                    let supervisorctl_result = check_bmp_supervisorctl();
                     let db_result = check_bmp_db();
                     let port_result = check_bmp_port();
  
                     let status = HealthStatus {
-                        check_bmp_supervisorctl: supervisorctl_result.clone(),
                         check_bmp_db: db_result.clone(),
                         check_bmp_port: port_result.clone(),
                     };
  
                     let json_body = serde_json::to_string(&status).unwrap();
-                    let all_passed = [supervisorctl_result, db_result, port_result]
+                    let all_passed = [db_result, port_result]
                         .iter()
                         .all(|s| s.starts_with("OK"));
  
