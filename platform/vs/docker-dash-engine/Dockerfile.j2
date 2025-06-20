@@ -17,9 +17,9 @@ COPY ["start.sh", "/usr/bin/"]
 ## COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 ## COPY ["critical_processes", "/etc/supervisor/"]
 
-FROM $BASE
+FROM scratch
 
-## RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
+# RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 COPY --from=base / /
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]
