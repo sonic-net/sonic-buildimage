@@ -2,6 +2,7 @@ import json
 import subprocess
 import time
 import syslog
+from datetime import datetime, timezone
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 from sonic_py_common.general import getstatusoutput_noshell
@@ -126,6 +127,13 @@ class BfdFrrMon:
                 ("v4_bfd_up_sessions", json.dumps(list(self.local_v4_peers)).strip("[]")),
                 ("v6_bfd_up_sessions", json.dumps(list(self.local_v6_peers)).strip("[]"))
             ]
+
+            timestamp = datetime.now(timezone.utc).strftime("%a %b %d %I:%M:%S %p UTC %Y")
+            if new_v4_peers or removed_v4_peers:
+                values.append(("v4_bfd_up_sessions_timestamp", json.dumps(timestamp)))
+            if new_v6_peers or removed_v6_peers:
+                values.append(("v6_bfd_up_sessions_timestamp", json.dumps(timestamp)))
+
             self.table.set("", values)
             syslog.syslog(syslog.LOG_INFO,
                 "{} table in STATE_DB updated. v4_peers: {}, v6_peers: {}".format(
