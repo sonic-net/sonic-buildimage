@@ -1,0 +1,16 @@
+[Unit]
+Description=Platform es1227_54ts sensor conf Service
+After=pmon.service es1227_54ts-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/bin/sleep 60
+ExecStart=/bin/bash /usr/local/bin/sensor_conf.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+Restart=on-failure
+RestartSec=60s
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
