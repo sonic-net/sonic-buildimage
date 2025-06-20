@@ -131,7 +131,11 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {# TODO: COPP policy type rules #}
 {% endfor %}
 {% else %}
-{% if not (DEVICE_METADATA['localhost']['subtype'] == 'SmartSwitch' and DEVICE_METADATA['localhost']['switch_type'] == 'dpu') %}
+{% if (DEVICE_METADATA is not defined)
+      or (DEVICE_METADATA['localhost']['subtype'] is not defined)
+      or (DEVICE_METADATA['localhost']['switch_type'] is not defined)
+      or not (DEVICE_METADATA['localhost']['subtype'] == 'SmartSwitch'
+              and DEVICE_METADATA['localhost']['switch_type'] == 'dpu') %}
 auto eth0
 iface eth0 inet dhcp
     metric 202
