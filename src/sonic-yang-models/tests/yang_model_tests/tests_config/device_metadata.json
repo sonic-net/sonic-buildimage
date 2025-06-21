@@ -674,7 +674,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "orch_dash_zmq_enabled": true
+                    "orch_northbond_dash_zmq_enabled": true
                 }
             }
         }
@@ -683,7 +683,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "orch_route_zmq_enabled": true
+                    "orch_northbond_route_zmq_enabled": true
                 }
             }
         }

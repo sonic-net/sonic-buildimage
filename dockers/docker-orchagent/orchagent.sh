@@ -100,12 +100,12 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
     if [[ $midplane_mgmt_state == "UP" ]]; then
         # Enable ZMQ with eth0-midplane interface name
-        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane:8100"
+        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane"
     elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
         # If eth0-midplane interface does not up, enable ZMQ with eth0 address
-        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
+        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}"
     else
-        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
+        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
     fi
 fi
 
