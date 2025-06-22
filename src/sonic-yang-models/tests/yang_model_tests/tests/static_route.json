@@ -41,7 +41,8 @@
         "eStrKey": "Pattern"
     },
     "STATIC_ROUTE_TEST_WITH_ADVERTISE_INVALID": {
-        "desc": "Configure static route with invalid advertise flag value"
+        "desc": "Configure static route with invalid advertise flag value",
+        "eStrKey": "Pattern"
     },
      "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
         "desc": "Configure with invalid value for VRF",
