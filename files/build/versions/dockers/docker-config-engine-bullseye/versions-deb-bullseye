@@ -3,6 +3,7 @@ dpkg-dev==1.20.13
 icu-devtools==67.1-7
 libboost-serialization1.74.0==1.74.0-9
 libc-dev-bin==2.31-13+deb11u11
+libc6==2.31-13+deb11u13
 libc6-dev==2.31-13+deb11u11
 libcrypt-dev==1:4.4.18-4
 libhiredis0.14==0.14.1-1
@@ -15,7 +16,7 @@ libnl-genl-3-200==3.7.0-0.2+b1sonic1
 libnl-nf-3-200==3.7.0-0.2+b1sonic1
 libnl-route-3-200==3.7.0-0.2+b1sonic1
 libnsl-dev==1.3.0-2
-libpython3.9==3.9.2-1+deb11u2
+libpython3.9==3.9.2-1+deb11u3
 libswsscommon==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
 libxml2==2.9.10+dfsg-6.7+deb11u5
