@@ -32,7 +32,15 @@ route-map FROM_AH_V4 deny 200
 route-map FROM_AH_V4 deny 300
   match as-path RNG_ASNS
 !
-route-map FROM_AH_V4 permit 1100
+route-map FROM_AH_V4 permit 500
+ match community NO_EXPORT
+ set local-preference 80
+exit
+!
+route-map FROM_AH_V4 permit 1000
+ set community no-export additive
+ set local-preference 80
+exit
 !
 route-map TO_AZNG_MIGRATION_FILTER_V4 permit 1
   match ip address prefix-list DEFAULT_IPV4
