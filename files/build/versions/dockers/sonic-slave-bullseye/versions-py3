@@ -101,7 +101,6 @@ python-debian==0.1.39
 python-magic==0.4.20
 pytz==2021.1
 pyxdg==0.27
-pyyaml==5.4.1
 redis==5.2.1
 regex==2024.11.6
 requests==2.25.1
@@ -109,6 +108,7 @@ roman==2.0.0
 scapy==2.4.4
 service-identity==18.1.0
 setuptools==49.6.0
+setuptools-scm==8.1.0
 six==1.16.0
 snowballstemmer==2.1.0
 soupsieve==2.2.1
@@ -118,6 +118,7 @@ stdeb==0.10.0
 stgit==0.19
 thrift==0.13.0
 toml==0.10.1
+tomli==2.2.1
 traitlets==5.0.5
 twisted==20.3.0
 typing-extensions==3.7.4.3
