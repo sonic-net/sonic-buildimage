@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+#include "datatypes.h"
 #include "osapi.h"
 #include "mab_include.h"
 #include "auth_mgr_exports.h"
