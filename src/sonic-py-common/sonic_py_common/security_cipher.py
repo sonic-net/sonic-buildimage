@@ -46,7 +46,7 @@ class master_key_mgr:
             with open(CIPHER_PASS_FILE, 'r') as f:
                 return json.load(f)
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "del_cipher_passwd: Exception occurred: {}".format(e))
+            syslog.syslog(syslog.LOG_ERR, "_load_registry: Exception occurred: {}".format(e))
             return {}
 
     def _save_registry(self, data):
@@ -101,6 +101,7 @@ class master_key_mgr:
             data[feature_type] = {"callbacks": [], "password": None}
         if data[feature_type]["password"] is not None:
             syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password already set for feature {}, not updating the new password.".format(feature_type))
+            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Note: Make use of rotate_feature_passwd() method for udpating the existing pass")
             return
         data[feature_type]["password"] = password
         self._save_registry(data)
