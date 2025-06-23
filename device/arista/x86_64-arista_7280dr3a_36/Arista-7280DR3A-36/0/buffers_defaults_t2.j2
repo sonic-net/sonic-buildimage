@@ -1,0 +1,49 @@
+{%- set default_cable = '300m' %}
+
+{%- set ports2cable = {
+        'torrouter_server'       : '300m',
+        'leafrouter_torrouter'   : '300m',
+        'spinerouter_leafrouter' : '2000m',
+        'upperspinerouter_spinerouter' : '50m',
+        'regionalhub_upperspinerouter': '120000m',
+        'aznghub_upperspinerouter'    : '120000m',
+        'regionalhub_spinerouter': '120000m',
+        'aznghub_spinerouter'    : '120000m'
+        }
+-%}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {%- for port_idx in range(0,144,8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "6441610000",
+            "type": "both",
+            "mode": "dynamic",
+            "xoff": "792476467"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+	    "xon_offset": "0",
+            "dynamic_th":"0"
+        },
+        "egress_lossless_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-1"
+        },
+        "egress_lossy_profile": {
+            "pool":"ingress_lossless_pool",
+            "size":"0",
+            "dynamic_th":"-4"
+        }
+    },
+{%- endmacro %}

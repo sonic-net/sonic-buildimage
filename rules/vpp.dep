@@ -1,8 +1,8 @@
-SPATH       := $(VPPINFRA)_SRC_PATH/$(VPP_REPO_DIR)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/vpp.mk rules/vpp.dep $(VPPINFRA)_SRC_PATH/Makefile
+SPATH       := $($(VPPINFRA)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/vpp.mk rules/vpp.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
+SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
 
-$(VPPINFRA)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(VPPINFRA)_CACHE_MODE  := GIT_CONTENT_SHA
 $(VPPINFRA)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(VPPINFRA)_DEP_FILES   := $(DEP_FILES)
