@@ -57,6 +57,7 @@ class master_key_mgr:
     def register(self, feature_type, callback):
         """
         Register a callback for a feature type.
+        Feature types: TACPLUS, RADIUS, LDAP etc.
         """
         data = self._load_registry()
         if feature_type not in data:
