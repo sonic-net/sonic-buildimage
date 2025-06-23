@@ -737,7 +737,7 @@
             }
         }
     },
-        "STATIC_ROUTE_TEST_WITH_ADVERTISE_INVALID": {
+    "STATIC_ROUTE_TEST_WITH_ADVERTISE_INVALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
@@ -785,8 +785,7 @@
             }
         }
     },
-
-        "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
+    "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
