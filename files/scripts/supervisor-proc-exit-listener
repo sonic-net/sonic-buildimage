@@ -44,6 +44,7 @@ ALERTING_INTERVAL_SECS = 60
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "process-exited-unexpectedly"
 
+heartbeat_alert_interval_initialized = False
 heartbeat_alert_interval_mapping = defaultdict(dict)
 
 def get_group_and_process_list(process_file):
@@ -131,7 +132,11 @@ def load_heartbeat_alert_interval(use_unix_socket_path):
             if alert_interval:
                 heartbeat_alert_interval_mapping[process] = int(alert_interval) / 1000
 
-def get_heartbeat_alert_interval(process):
+    heartbeat_alert_interval_initialized = True
+
+def get_heartbeat_alert_interval(process, use_unix_socket_path):
+    if not heartbeat_alert_interval_initialized:
+        load_heartbeat_alert_interval(use_unix_socket_path)
     if process in heartbeat_alert_interval_mapping:
         return heartbeat_alert_interval_mapping[process]
 
@@ -158,8 +163,6 @@ def main(argv):
         sys.exit(1)
 
     critical_group_list, critical_process_list = get_group_and_process_list(CRITICAL_PROCESSES_FILE)
-
-    load_heartbeat_alert_interval(use_unix_socket_path)
 
     # WATCH_PROCESSES_FILE is optional
     watch_process_list = []
@@ -236,7 +239,7 @@ def main(argv):
         for process in process_heart_beat_info.keys():
             epoch_time = time.time()
             elapsed_secs = epoch_time - process_heart_beat_info[process]["last_heart_beat"]
-            threshold = get_heartbeat_alert_interval(process)
+            threshold = get_heartbeat_alert_interval(process, use_unix_socket_path)
             if threshold > 0 and elapsed_secs >= threshold:
                 elapsed_mins = elapsed_secs // 60
                 generate_alerting_message(process, "stuck", elapsed_mins, syslog.LOG_WARNING)
