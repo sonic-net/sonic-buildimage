@@ -12,59 +12,69 @@ sys.path.append('../cli/config/plugins/')
 import dhcp_relay
 
 config_dhcpv4_relay_add_output = """\
-Added DHCPv4 relay configuration for Vlan200
+Added DHCPv4 Servers as 3.3.3.3 to Vlan200
 """
 
 config_dhcpv4_relay_update_output = """\
-Updated DHCPv4 Relay Configuration to Vlan200
+Updated DHCPv4 Servers as 4.4.4.4 to Vlan200
 """
 
 config_dhcpv4_relay_del_output = """\
-Removed DHCPv4 relay configuration from Vlan200
+Removed complete DHCPv4 relay configuration for Vlan200
+"""
+
+config_dhcpv4_relay_add_multiple_ips_output = """\
+Added DHCPv4 Servers as {initial_servers} to Vlan200
+"""
+
+config_dhcpv4_relay_update_multiple_ips_output = """\
+Updated DHCPv4 Servers as {updated_servers} to Vlan200
 """
 
 config_dhcpv4_relay_add_source_interface_output = """\
-Added Source Interface to Vlan200
+Added DHCPv4 Servers as 3.3.3.3, Source Interface as {interface} to Vlan200
 """
 
 config_dhcpv4_relay_update_source_interface_output = """\
-Updated Source Interface Configuration to Vlan200
+Updated Source Interface as {updated_interface} to Vlan200
 """
 
 config_dhcpv4_relay_add_server_vrf_output = """\
-Added Server VRF VrfRED to Vlan200
+Added DHCPv4 Servers as 3.3.3.3, Server VRF as VrfRED, link_selection as enable, vrf_selection as enable, server_id_override as enable to Vlan200
 """
 
 config_dhcpv4_relay_update_server_vrf_output = """\
-Updated Server VRF VrfBLUE to Vlan200
+Updated DHCPv4 Servers as 4.4.4.4, Server VRF as VrfBLUE to Vlan200
 """
 
 config_dhcpv4_relay_en_selection_flag_output = """\
-Added {flag} flag configuration as {value} to {vlan}
+Added DHCPv4 Servers as 3.3.3.3, {flag} as {value} to {vlan}
 """
 
 config_dhcpv4_relay_upd_selection_flag_output = """\
-Updated {flag} flag configuration to {value} to {vlan}
+Updated {flag} as {value} to {vlan}
 """
 
 config_dhcpv4_relay_add_agent_relay_mode_output = """\
-Added Agent Relay Mode to Vlan200
+Added DHCPv4 Servers as 3.3.3.3, Agent Relay Mode as {mode} to Vlan200
 """
 
 config_dhcpv4_relay_update_agent_relay_mode_output = """\
-Updated Agent Relay Mode to Vlan200
+Updated Agent Relay Mode as {mode} to Vlan200
 """
 
 config_dhcpv4_relay_add_max_hop_count_output = """\
-Added Max Hop Count as 1 to Vlan200
+Added DHCPv4 Servers as 3.3.3.3, Max Hop Count as 1 to Vlan200
 """
 
 config_dhcpv4_relay_update_max_hop_count_output = """\
-Updated Max Hop Count to Vlan200
+Updated Max Hop Count as {count} to Vlan200
 """
 
 config_dhcpv4_relay_add_all_option_output = """\
-Added Source Interface, Server VRF VrfRED, agent_relay_mode and max_hop_count to Vlan200
+Added DHCPv4 Servers as 3.3.3.3, Source Interface as Ethernet8, Server VRF as VrfRED, \
+link_selection as enable, vrf_selection as enable, server_id_override as enable, \
+Agent Relay Mode as discard, Max Hop Count as 8 to Vlan200
 """
 
 class TestConfigDhcpv4Relay(object):
@@ -83,7 +93,7 @@ class TestConfigDhcpv4Relay(object):
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["del"], ["Vlan300"], obj=db)
             assert result.exit_code != 0
-            assert "Error: Vlan Vlan300 does not exist in the configDB" in result.output
+            assert "Error: DHCPv4 relay configuration not found for Vlan Vlan300" in result.output
             assert mock_run_command.call_count == 0
 
         db.cfgdb.set_entry.reset_mock()
@@ -93,7 +103,6 @@ class TestConfigDhcpv4Relay(object):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        mock_cfgdb.get_entry.return_value = {}
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(
@@ -115,6 +124,7 @@ class TestConfigDhcpv4Relay(object):
         db.cfgdb = mock_cfgdb
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+
             result = runner.invoke(
                 dhcp_relay.dhcpv4_relay.commands["add"],
                 [
@@ -136,9 +146,6 @@ class TestConfigDhcpv4Relay(object):
         db = Db()
         db.cfgdb = mock_cfgdb
 
-        # Ensure the invalid VRF does not exist in the VRF table
-        db.cfgdb.get_entry.return_value = {}
-
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(
                 dhcp_relay.dhcpv4_relay.commands["add"],
@@ -152,7 +159,7 @@ class TestConfigDhcpv4Relay(object):
                 ],
                 obj=db
             )
-            assert result.exit_code != 0  
+            assert result.exit_code != 0
             assert "Error: VRF Vrf99 does not exist in the VRF table." in result.output
             assert mock_run_command.call_count == 0
 
@@ -200,7 +207,7 @@ class TestConfigDhcpv4Relay(object):
             result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"],
                                    ["--dhcpv4-servers", initial_servers, "Vlan200"], obj=db)
             assert result.exit_code == 0
-            assert result.output == config_dhcpv4_relay_add_output
+            assert result.output == config_dhcpv4_relay_add_multiple_ips_output.format(initial_servers=initial_servers)
             assert mock_run_command.call_count == 0
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -208,11 +215,10 @@ class TestConfigDhcpv4Relay(object):
             result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["update"],
                                    ["--dhcpv4-servers", updated_servers, "Vlan200"], obj=db)
             assert result.exit_code == 0
-            assert result.output == config_dhcpv4_relay_update_output
+            assert result.output == config_dhcpv4_relay_update_multiple_ips_output.format(updated_servers=updated_servers)
             assert mock_run_command.call_count == 0
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
-            # Delete
             result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["del"], ["Vlan200"], obj=db)
             assert result.exit_code == 0
             assert result.output == config_dhcpv4_relay_del_output
@@ -225,32 +231,27 @@ class TestConfigDhcpv4Relay(object):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        
+
         interfaces = [
-            ("Loopback2", "LOOPBACK_INTERFACE", "Loopback3"),
-            ("Ethernet8", "INTERFACE", "Ethernet12"),
-            ("PortChannel2", "PORTCHANNEL", "PortChannel3")
+            ("Loopback2", "Loopback3"),
+            ("Ethernet8", "Ethernet12"),
+            ("PortChannel5", "PortChannel6")
         ]
 
-        for interface, table, updated_interface in interfaces:
-            # Adding "interface" and "updated_interface" to global "table" for add and update case
-            runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"], ["config", table.lower(), "add", interface], obj=db)
-            runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"], ["config", table.lower(), "add", updated_interface], obj=db)
+        for interface, updated_interface in interfaces:
 
-            #Adding "interface" as source interface
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
                 result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"],
                                        ["--dhcpv4-servers", "3.3.3.3", "--source-interface", interface, "Vlan200"], obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_add_source_interface_output
+                assert result.output == config_dhcpv4_relay_add_source_interface_output.format(interface=interface)
                 assert mock_run_command.call_count == 0
 
-            # Updating source interface from "interface" to "updated_interface
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
                 result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["update"],
-                                       ["--dhcpv4-servers", "3.3.3.3", "--source-interface", updated_interface, "Vlan200"], obj=db)
+                                       ["--source-interface", updated_interface, "Vlan200"], obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_update_source_interface_output
+                assert result.output == config_dhcpv4_relay_update_source_interface_output.format(updated_interface=updated_interface)
                 assert mock_run_command.call_count == 0
 
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -260,6 +261,7 @@ class TestConfigDhcpv4Relay(object):
                 assert mock_run_command.call_count == 0
 
         db.cfgdb.set_entry.reset_mock()
+
 
     def test_config_dhcpv4_relay_server_vrf(self, mock_cfgdb):
         """Validating server vrf in DHCPv4 Relay Config"""
@@ -285,18 +287,15 @@ class TestConfigDhcpv4Relay(object):
             assert mock_run_command.call_count == 0
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
-            result = runner.invoke(
-                dhcp_relay.dhcpv4_relay.commands["update"],
+            result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["update"],
                 [
-                    "--dhcpv4-servers", "3.3.3.3",
-                    "--link-selection", "enable",
-                    "--vrf-selection", "enable",
-                    "--server-id-override", "enable",
+                    "--dhcpv4-servers", "4.4.4.4",
                     "--server-vrf", "VrfBLUE",
                     "Vlan200"
                 ],
                 obj=db
             )
+            print(result.output)
             assert result.exit_code == 0
             assert result.output == config_dhcpv4_relay_update_server_vrf_output
             assert mock_run_command.call_count == 0
@@ -340,31 +339,28 @@ class TestConfigDhcpv4Relay(object):
         db = Db()
         db.cfgdb = mock_cfgdb
 
-        flags = ["link-selection", "vrf-selection", "server-id-override"]
-        test_cases = [
-            ("Vlan200", "enable", "disable"),
-            ("Vlan200", "enable", "disable"),
-            ("Vlan200", "enable", "disable")
-        ]
-        for i, flag in enumerate(flags):
-            vlan, add_val, update_val = test_cases[i]
+        flag_map = {
+            "link-selection": "link_selection",
+            "vrf-selection": "vrf_selection",
+            "server-id-override": "server_id_override"
+        }
+        for flag, config_key in flag_map.items():
+            vlan, add_val, update_val = ("Vlan200", "enable", "disable")
 
-            # For add case, we will loop through the three flags to enable them
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
                 result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["add"],
                                        ["--dhcpv4-servers", "3.3.3.3", f"--{flag}", add_val, vlan],
                                        obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_en_selection_flag_output.format(flag=flag, value=add_val, vlan=vlan)
+                assert result.output == config_dhcpv4_relay_en_selection_flag_output.format(flag=config_key, value=add_val, vlan=vlan)
                 assert mock_run_command.call_count == 0
 
-            #For update case, we will loop through the three flags to disable them
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
                 result = runner.invoke(dhcp_relay.dhcpv4_relay.commands["update"],
                                        [f"--{flag}", update_val, vlan],
                                        obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_upd_selection_flag_output.format(flag=flag, value=update_val, vlan=vlan)
+                assert result.output == config_dhcpv4_relay_upd_selection_flag_output.format(flag=config_key, value=update_val, vlan=vlan)
                 assert mock_run_command.call_count == 0
 
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -394,7 +390,7 @@ class TestConfigDhcpv4Relay(object):
                                        ["--dhcpv4-servers", "3.3.3.3", "--agent-relay-mode", add_mode, "Vlan200"],
                                        obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_add_agent_relay_mode_output
+                assert result.output == config_dhcpv4_relay_add_agent_relay_mode_output.format(mode=add_mode)
                 assert mock_run_command.call_count == 0
 
             update_modes = [mode for mode in agent_relay_modes if mode != add_mode]
@@ -405,7 +401,7 @@ class TestConfigDhcpv4Relay(object):
                                            ["--agent-relay-mode", update_mode, "Vlan200"],
                                            obj=db)
                     assert result.exit_code == 0
-                    assert result.output == config_dhcpv4_relay_update_agent_relay_mode_output
+                    assert result.output == config_dhcpv4_relay_update_agent_relay_mode_output.format(mode=update_mode)
                     assert mock_run_command.call_count == 0
 
             with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -439,7 +435,7 @@ class TestConfigDhcpv4Relay(object):
                                        ["--max-hop-count", count, "Vlan200"],
                                        obj=db)
                 assert result.exit_code == 0
-                assert result.output == config_dhcpv4_relay_update_max_hop_count_output
+                assert result.output == config_dhcpv4_relay_update_max_hop_count_output.format(count=count)
                 assert mock_run_command.call_count == 0
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:

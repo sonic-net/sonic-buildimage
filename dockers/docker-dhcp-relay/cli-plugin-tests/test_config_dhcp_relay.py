@@ -401,7 +401,6 @@ class TestConfigDhcpRelay(object):
 
 
     def test_add_dhcpv4_relay_compatibility_check(self, mock_cfgdb):
-        op = "add"
         ip_version = "ipv4_dhcp"
         test_ip = IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0]
         runner = CliRunner()
@@ -411,12 +410,13 @@ class TestConfigDhcpRelay(object):
 
         #set feature flag
         db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
+        db.cfgdb.set_entry("DHCPV4_RELAY", "Vlan1000", None)
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             #Default 'ipv4 helper' command should work when has_sonic_dhcpv4_relay is enabled
             result = runner.invoke(dhcp_relay.dhcp_relay.commands["ipv4"]
                                    .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
-                                   .commands[op], [
+                                   .commands["add"], [
                                    '1000',
                                    test_ip
                                    ], obj=db)
@@ -427,7 +427,7 @@ class TestConfigDhcpRelay(object):
             # Configuring additional parameters also should work with new feature flag set
             result = runner.invoke(dhcp_relay.dhcp_relay.commands["ipv4"]
                                    .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
-                                   .commands[op], [
+                                   .commands["update"], [
                                    '1000',
                                    test_ip,
                                    '--server-vrf', 'default',
@@ -442,6 +442,7 @@ class TestConfigDhcpRelay(object):
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
+        db.cfgdb.set_entry.reset_mock()
 
 
     def test_delete_dhcpv4_relay_compatibility_check(self, mock_cfgdb):
@@ -566,4 +567,3 @@ class TestConfigDhcpRelay(object):
             print(result.output)
             assert result.exit_code == 0
             assert "This command is applicable for new DHCPv4 Relay feature" in result.output
-
