@@ -17,9 +17,15 @@ ports = config_db.get_table('PORT').keys()
 logger.log_info(f"Monitoring ports: {list(ports)}")
 drop_pkts = {port: 0 for port in ports}
 
+def interface_exists(ifname):
+    return os.path.exists(f"/sys/class/net/{ifname}")
+
 def handler():
     while True:
         for port in drop_pkts.keys():
+            if not interface_exists(port):
+                logger.log_warning(f"Skipping non-existent interface: {port}")
+                continue
             try:
                 output = subprocess.run(
                     ["tc", "-s", "qdisc", "show", "dev", str(port), "handle", "ffff:"],
@@ -27,7 +33,7 @@ def handler():
                     text=True
                 )
                 logger.log_debug(f"TC output for {port}: {output.stdout}")
-                
+
                 if output.returncode == 0:
                     match = re.search(r'dropped (\d+)', output.stdout)
                     if match:
