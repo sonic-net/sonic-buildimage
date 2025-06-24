@@ -1107,7 +1107,7 @@ class PddfParse():
 
 
     def validate_xcvr_device(self, dev, ops):
-        devtype_list = ['optoe1', 'optoe2']
+        devtype_list = ['optoe1', 'optoe2', 'optoe3']
         dev_attribs = ['xcvr_present', 'xcvr_reset', 'xcvr_intr_status', 'xcvr_lpmode']
         ret_val = "xcvr validation failed"
 
