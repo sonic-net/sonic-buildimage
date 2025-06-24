@@ -466,7 +466,7 @@ echo "copp-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.py $FILESYSTEM_ROOT/usr/bin/
-#sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/dhcp_dos_logger.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/dhcp_dos_logger.py
 echo "dhcp_dos_logger.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy dhcp client configuration template and create an initial configuration
