@@ -1,3 +1,9 @@
+{% if DEVICE_METADATA
+  and DEVICE_METADATA['localhost']
+  and DEVICE_METADATA['localhost'].type == "ToRRouter"
+  and DEVICE_NEIGHBOR
+  and DEVICE_NEIGHBOR_METADATA %}
+
 {%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -69,9 +75,6 @@
     },
 {%- endmacro -%}
 
-{% if DEVICE_METADATA
-  and DEVICE_METADATA['localhost']
-  and DEVICE_METADATA['localhost'].type == "ToRRouter" %}
 {% macro generate_port_qos_map(ports) %}
     "PORT_QOS_MAP": {
         {% for port in ports.split(',') %}
@@ -96,11 +99,7 @@
         {% endfor %}
     },
 {%- endmacro -%}
-{% endif %}
 
-{% if DEVICE_METADATA
-  and DEVICE_METADATA['localhost']
-  and DEVICE_METADATA['localhost'].type == "ToRRouter" %}
 {%- macro generate_single_queue_per_sku(port) -%}
     {% if DEVICE_NEIGHBOR[port]
       and DEVICE_NEIGHBOR[port].name
@@ -163,7 +162,6 @@
         }
     {% endif %}
 {%- endmacro -%}
-{% endif %}
 
 {%- macro generate_scheduler_per_sku() -%}
     "SCHEDULER": {
@@ -234,6 +232,7 @@
         "AZURE_UPLINK_BT0": {
             "8": "11"
         }
+    },
 {%- endmacro %}
 
 {%- macro generate_wred_profiles() -%}
@@ -289,21 +288,26 @@
             "yellow_min_threshold": "166912"
             {% endblock %}
         },
-
-        {%- set min_wred_threshold = 0 -%}
-        {%- set max_wred_threshold = 999999 -%}
-
         "AZURE_LOSSY_DOWNLINK_Q4": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         },
         "AZURE_LOSSY_DOWNLINK_Q5": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         },
         "AZURE_LOSSY_DOWNLINK_Q6": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         },
         "AZURE_LOSSY_UPLINK_Q1": {
             {{ self.azure_lossy_q1() }}
@@ -315,18 +319,29 @@
             {{ self.azure_lossy_q3() }}
         },
         "AZURE_LOSSY_UPLINK_Q4": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         },
         "AZURE_LOSSY_UPLINK_Q5": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         },
         "AZURE_LOSSY_UPLINK_Q6": {
-            "green_min_threshold": {{ min_wred_threshold }},
-            "green_max_threshold": {{ max_wred_threshold }}
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "true"
         }
     },
 {%- endmacro -%}
+
+{% endif %}
 
 {%- include 'qos_config.j2' %}
