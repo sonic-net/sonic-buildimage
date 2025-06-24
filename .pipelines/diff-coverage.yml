@@ -25,7 +25,7 @@ variables:
 jobs:
   - job:
     timeoutInMinutes: 60
-    pool: sonic-image-builder-1ES
+    pool: sonicms1ES
     container:
       image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye:master
     steps:

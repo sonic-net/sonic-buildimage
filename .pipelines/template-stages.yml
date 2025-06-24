@@ -25,7 +25,7 @@ stages:
       pool:
         type: linux
         isCustom: true
-        name: sonic-image-builder-1ES
+        name: sonicms1ES
       variables:
         ob_artifactBaseName: sonic-buildimage.vs
       steps:
@@ -76,7 +76,7 @@ stages:
         pool:
           type: linux
           isCustom: true
-          name: sonic-image-builder-1ES
+          name: sonicms1ES
         variables:
           ob_artifactBaseName: sonic-buildimage.broadcom
         steps:
@@ -149,7 +149,7 @@ stages:
         pool:
           type: linux
           isCustom: true
-          name: sonic-image-builder-1ES
+          name: sonicms1ES
         variables:
           ob_artifactBaseName: sonic-buildimage.mellanox
         steps:

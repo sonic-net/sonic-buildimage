@@ -49,7 +49,7 @@ stages:
     - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
       - template: docker-sonic-slave-template.yml
         parameters:
-          pool: sonic-image-builder-1ES
+          pool: sonicms1ES
           arch: amd64
           dist: ${{ dist }}
 - stage: Build_native_arm

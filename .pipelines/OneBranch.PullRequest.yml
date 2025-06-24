@@ -36,11 +36,11 @@ parameters:
   - vs
   - broadcom
   - mellanox
-  - marvell-prestera-armhf
+#  - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-  - nvidia-bluefield
-  - pensando
+#  - nvidia-bluefield
+#  - pensando
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
   default: 400

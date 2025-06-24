@@ -74,7 +74,7 @@ steps:
       displayName: "Make soft links for trusty8"
       retryCountOnTaskFailure: 5
       inputs:
-        sshEndpoint: 'acs-trusty8'
+        sshEndpoint: 'jumpbox'
         failOnStdErr: false
         runOptions: 'inline'
         readyTimeout: '20000'

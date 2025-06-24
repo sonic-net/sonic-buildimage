@@ -1,14 +1,19 @@
 steps:
   - script: |
+      set -x
+      ip addr || echo $?
+      docker info || echo $?
+      df -h || echo $?
+      lsblk -i || echo $?
+      ls -al / || echo $?
+      echo $USER $(id) || echo $?
+    displayName: debug
+  - script: |
       set -ex
-
-      # disable auto upgrade, because it will conflict with apt-get install.
-      # It will breaks init step and breaks build.
-      sudo sed -i 's/1/0/' /etc/apt/apt.conf.d/20auto-upgrades
 
       # Install Azure cli
       curl -sL https://aka.ms/InstallAzureCLIDeb | sed 's/apt-get/apt-get -o DPkg::Lock::Timeout=600 -o DPkg::Lock::Tries=3/' | sudo bash
-      az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 --certificate /usr/local/CloudTest/ProvisioningScript/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
+      az login --identity --client-id a9a0b0f2-cd25-4abf-b3a2-2ef735a27c89
       # Install Azcopy
       if dpkg --print-architecture | grep amd64; then
         wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
@@ -21,96 +26,39 @@ steps:
       export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
       azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
 
-      if [[ $PLATFORM_ARCH != arm* ]];then
-        sudo pip3 install jinja2==3.0.0
-        echo "Skipped, platform arch = $PLATFORM_ARCH"
-        exit 0
-      fi
-      
-      if [ -n "$(which docker)" ]; then
-        echo "Skipped, docker installed"
-        exit 0
-      fi
-      
+      # Init /data
       if ! mountpoint /data;then
         sudo mkdir -p /data
-        disk=$(realpath /dev/disk/azure/scsi1/lun0)
-        sudo sgdisk -n 0:0:0 -t 0:8300 -c 0:data $disk || true
-        sudo mkfs.ext4 -F ${disk}1 || true
+        disk=$(lsblk -i | grep '1T' | awk '{print$1}' | head -n 1)
+        sudo sgdisk -n 0:0:0 -t 0:8300 -c 0:data /dev/$disk
+        sudo mkfs.ext4 -F /dev/${disk}p1
         sudo mount ${disk}1 /data
       fi
 
-      arch=$PLATFORM_ARCH 
-      sudo dpkg --add-architecture $arch
-
+      # Install NFS related packages
       sudo apt-get update
       sleep 1
-      sudo apt-get install -y  apt-transport-https ca-certificates curl gnupg-agent software-properties-common nfs-common unzip wget
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-      sudo add-apt-repository \
-       "deb [arch=$arch] https://download.docker.com/linux/ubuntu \
-       $(lsb_release -cs) \
-       stable"
+      sudo apt-get install -y nfs-common unzip wget aznfs
+      # Upgrade jinja2 to use j2 in Makefile.work
+      sudo pip3 install --upgrade jinja2
       
-      sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-      if [ "$arch" == "armhf" ]; then
-        sudo mkdir -p /etc/systemd/system/docker.service.d
-        echo '[Service]' | sudo tee /etc/systemd/system/docker.service.d/override.conf
-        echo 'ExecStart=' | sudo tee -a /etc/systemd/system/docker.service.d/override.conf
-        echo 'ExecStart=/usr/bin/setarch linux32 -B /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --data-root /data/docker' | sudo tee -a /etc/systemd/system/docker.service.d/override.conf
-      
-        sudo mkdir -p /etc/systemd/system/containerd.service.d
-        echo '[Service]' | sudo tee /etc/systemd/system/containerd.service.d/override.conf
-        echo 'ExecStart=' | sudo tee -a /etc/systemd/system/containerd.service.d/override.conf
-        echo 'ExecStart=/usr/bin/setarch linux32 -B /usr/bin/containerd' | sudo tee -a /etc/systemd/system/containerd.service.d/override.conf
-      
-        sudo sed -i 's#ExecStart=/usr/bin/dockerd#ExecStart=/usr/bin/setarch linux32 -B /usr/bin/dockerd#' /lib/systemd/system/docker.service
-        sudo systemctl daemon-reload
-        sudo service docker restart
-        sudo service containerd restart
-      fi
-
-      # Change docker permission group
-      sudo mkdir -p /etc/docker
-      echo "{\"group\": \"$(id -gn)\"}" | sudo tee /etc/docker/daemon.json
-      sudo chown root:$(id -gn) /var/run/docker.sock
-      sudo systemctl restart docker
-      
-      sudo apt-get install -y make acl
-      sudo apt-get install -y python3-pip
-      sudo pip3 install --force-reinstall --upgrade jinja2==3.0.0
-      sudo pip3 install j2cli==0.3.10
-      
-      curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
-      sudo apt-get install -y git-lfs
-      sudo usermod -a -G docker $USER
-      sudo mkdir -p /etc/docker
-      echo "{\"group\": \"$(id -gn)\"}" | sudo tee /etc/docker/daemon.json
-
-      # Change docker data root
-      sudo systemctl stop docker
-      sudo sed -i 's/^ExecStart=.*$/& --data-root \/data\/docker/' /lib/systemd/system/docker.service
-      sudo systemctl daemon-reload
-      sudo systemctl start docker
-      docker info
-
       # Make symbolic link for the workspace to increase the space
       sudo rm -rf $(Agent.BuildDirectory)/s /data/w
       sudo mkdir /data/w
+      sudo setfacl -R -b /data/w
       sudo chown $USER:$(id -gn) /data/w
-      mv -f $(Agent.BuildDirectory)/* /data/w/
       mkdir /data/w/s
       sudo rm -rf $(Agent.BuildDirectory)
       ln -s /data/w $(Agent.BuildDirectory)
       echo "pwd=$(pwd)"
-      ls -lt $(Agent.BuildDirectory)
-      ls -lt
+      ls -lt $(Agent.BuildDirectory) $(Agent.BuildDirectory)/s
 
       # Mount nfs
-      sudo mkdir /nfs
-      sudo mount -t nfs -o sec=sys,vers=4.1 172.16.17.4:/nfs-int /nfs
-      sudo chown nobody /nfs
-      sudo chmod u=rwx,g=rwx,o=r /nfs
-      df -h
+      if ! mount | grep 'on /nfs'; then
+        sudo mkdir /nfs -p
+        sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
+        sudo chown nobody /nfs
+        sudo chmod u=rwx,g=rwx,o=r /nfs
+      fi
     retryCountOnTaskFailure: 5
     displayName: 'Init agent'

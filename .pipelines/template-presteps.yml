@@ -21,7 +21,7 @@ parameters:
     type: string
 
 steps:
-  - template: /.pipelines/prepare_agent.yml
+  - template: /.pipelines/init-agent.yml
   - template: /.azure-pipelines/cleanup.yml
   - template: /.azure-pipelines/template-daemon.yml
   - checkout: self
