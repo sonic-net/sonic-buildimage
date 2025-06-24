@@ -42,6 +42,7 @@ bcm_device:
             l3_ecmp_member_first_lkup_mem_size: 12288
             fpem_mem_entries: 64000
             default_cpu_tx_queue: 7
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
