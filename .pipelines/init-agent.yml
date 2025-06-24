@@ -43,13 +43,12 @@ steps:
       sudo pip3 install --upgrade jinja2
       
       # Make symbolic link for the workspace to increase the space
-      sudo rm -rf $(Agent.BuildDirectory)/s /data/w
-      sudo mkdir /data/w
+      sudo mkdir -p /data/w
+      sudo mv $(Agent.BuildDirectory)/ /data/w
       sudo setfacl -R -b /data/w
       sudo chown $USER:$(id -gn) /data/w
-      mkdir /data/w/s
-      sudo rm -rf $(Agent.BuildDirectory)
-      ln -s /data/w $(Agent.BuildDirectory)
+
+      ln -s /data/w/$(basename $(Agent.BuildDirectory)) $(Agent.BuildDirectory)
       echo "pwd=$(pwd)"
       ls -lt $(Agent.BuildDirectory) $(Agent.BuildDirectory)/s
 
