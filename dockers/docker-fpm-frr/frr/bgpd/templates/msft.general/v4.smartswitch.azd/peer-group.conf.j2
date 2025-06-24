@@ -10,6 +10,7 @@
 {% if lo6_ipv4 is not none %}
     network {{ lo6_ipv4 }}/32
 {% endif %}
+    neighbor TIER1_V4 activate
     neighbor TIER1_V4 soft-reconfiguration inbound
     neighbor TIER1_V4 allowas-in 1
     neighbor TIER1_V4 route-map FROM_TIER1_V4 in

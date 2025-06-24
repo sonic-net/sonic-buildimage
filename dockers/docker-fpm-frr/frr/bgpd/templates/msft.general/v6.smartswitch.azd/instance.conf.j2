@@ -11,9 +11,5 @@
   neighbor {{ neighbor_addr }} shutdown
 {% endif %}
 !
-  address-family ipv6 unicast
-    neighbor {{ neighbor_addr }} activate
-  exit-address-family
-!
 ! end of template: bgpd/templates/msft.general/v6.smartswitch.azd/instance.conf.j2
 !

@@ -14,6 +14,7 @@
 {% if lo6_ipv6 is not none %}
     aggregate-address {{ lo6_ipv6 }}/64 summary-only
 {% endif %}
+    neighbor TIER1_V6 activate
     neighbor TIER1_V6 soft-reconfiguration inbound
     neighbor TIER1_V6 allowas-in 1
     neighbor TIER1_V6 route-map FROM_TIER1_V6 in
