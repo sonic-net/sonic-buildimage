@@ -337,6 +337,11 @@ class PddfParse():
                     ret = self.runcmd(cmd)
                     if ret != 0:
                         return create_ret.append(ret)
+                    if inst['active_low'] == "1" :
+                        cmd = "echo %s >/sys/class/gpio/gpio%d/active_low" % (inst['active_low'], port_no)
+                        ret = self.runcmd(cmd)
+                        if ret != 0:
+                            return create_ret.append(ret)
                     if inst['value'] != "":
                         for i in inst['value'].split(','):
                             cmd = "echo %s >/sys/class/gpio/gpio%d/value" % (i.rstrip(), port_no)
