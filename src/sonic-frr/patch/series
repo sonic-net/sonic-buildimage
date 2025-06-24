@@ -56,3 +56,4 @@
 0056-zebra-Display-interface-name-not-ifindex-in-nh-dump.patch
 0057-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
 0058-mgmtd-normalize-argument-order-to-copy-dst-src.patch
+0059-zebra-Ensure-that-the-dplane-can-send-the-full-packe.patch
