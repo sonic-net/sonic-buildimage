@@ -1,0 +1,27 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "LeafRouter",
+            "bgp_asn": "65100",
+            "downstream_subrole" : "TycoonAVS"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "MseeRouter",
+            "deployment_id": "26"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device"
+    },
+    "neighbor_addr": "fc00::15",
+    "constants": {
+        "bgp": {
+            "allow_list": {
+                "enabled": false
+            }
+        }
+    }
+}

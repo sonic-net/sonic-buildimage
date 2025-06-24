@@ -1,0 +1,18 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "LeafRouter"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "ToRRouter",
+            "deployment_id": "26"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device"
+    },
+    "neighbor_addr": "fc00::15"
+}
