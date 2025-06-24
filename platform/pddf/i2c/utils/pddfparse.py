@@ -373,6 +373,9 @@ class PddfParse():
     def create_xcvr_i2c_device(self, dev, ops):
         create_ret = []
         ret = 0
+        # Check if topo_info is present otherwise return from here
+        if "topo_info" not in dev['i2c']:
+            return create_ret.append(ret)
         if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['PORT_MODULE']:
             self.create_device(dev['i2c']['topo_info'], "pddf/devices/xcvr/i2c", ops)
             cmd = "echo '%s' > /sys/kernel/pddf/devices/xcvr/i2c/i2c_name" % (dev['dev_info']['device_name'])
