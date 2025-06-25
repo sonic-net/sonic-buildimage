@@ -59,7 +59,6 @@ class Pcie(PcieUtil):
                         self.state_db = swsscommon.swsscommon.DBConnector("STATE_DB", 0)
                     key_dict = f"{PCIE_DETACH_INFO_TABLE}|0000:{bus_conf}:{dev_conf}.{fn_conf}"
                     detach_info_dict = dict(self.state_db.hgetall(key_dict))
-                    print(f"detach_info_dict: {detach_info_dict}")
                     if detach_info_dict and detach_info_dict.get("dpu_state") == PCIE_OPERATION_DETACHING:
                         # Do not add this device to confInfo list
                         continue
