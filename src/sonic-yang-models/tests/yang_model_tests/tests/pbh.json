@@ -12,7 +12,7 @@
     },
     "PBH_TABLE_INVALID_DESCRIPTION": {
         "desc": "Configure invalid DESCRIPTION in PBH_TABLE.",
-        "eStrKey": "Range"
+        "eStrKey": "Length"
     },
     "PBH_RULE_INVALID_TABLE": {
         "desc": "Configure non-existing PBH_TABLE in PBH_RULE.",
@@ -20,7 +20,7 @@
     },
     "PBH_RULE_INVALID_PRIORITY": {
         "desc": "Configure invalid PRIORITY in PBH_RULE.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "PBH_RULE_INVALID_GRE_KEY": {
         "desc": "Configure invalid GRE_KEY in PBH_RULE.",
@@ -102,6 +102,6 @@
     },
     "PBH_HASH_FIELD_INVALID_SEQUENCE_ID": {
         "desc": "Configure invalid SEQUENCE_ID in PBH_HASH_FIELD.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     }
 }

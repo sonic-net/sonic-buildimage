@@ -12,7 +12,7 @@
     },
     "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
         "desc": "Add netmask which is not in correct ip-prefix format.",
-        "eStrKey": "Pattern"
+        "eStrKey": "IPv4"
     },
     "DHCP_SERVER_IPV4_STATE_WRONG_VALUE": {
         "desc": "Configure wrong value for state.",
