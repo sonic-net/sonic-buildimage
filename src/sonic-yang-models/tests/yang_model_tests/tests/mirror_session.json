@@ -23,7 +23,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
@@ -31,7 +31,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",
