@@ -9,7 +9,7 @@ if sys.version_info.major == 3:
 else:
     import mock
 
-from security_cipher import master_key_mgr
+from sonic_py_common.security_cipher import master_key_mgr
 
 # TODO: Remove this if/else block once we no longer support Python 2
 if sys.version_info.major == 3:
