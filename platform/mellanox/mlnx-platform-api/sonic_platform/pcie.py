@@ -33,8 +33,8 @@ SYSFS_PCI_DEVICE_PATH = '/sys/bus/pci/devices/'
 # Constants from module_base.py
 PCIE_DETACH_INFO_TABLE = "PCIE_DETACH_INFO"
 PCIE_OPERATION_DETACHING = "detaching"
-BULEFIELD_SOC_ID = "c2d5"
-BLUEFIELD_CONNECTX_ID = "a2dc"
+BULEFIELD_SOC_NAME = "DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management Interface (rev 01)"
+BLUEFIELD_CONNECTX_NAME = "Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller (rev 01)"
 
 
 class Pcie(PcieUtil):
@@ -45,9 +45,10 @@ class Pcie(PcieUtil):
         return_confInfo = []
         for item_conf in self.confInfo:
             id_conf = item_conf["id"]
+            name_conf = item_conf["name"]
             dev_conf = item_conf["dev"]
             fn_conf = item_conf["fn"]
-            if id_conf == BULEFIELD_SOC_ID or id_conf == BLUEFIELD_CONNECTX_ID:
+            if name_conf == BULEFIELD_SOC_NAME or name_conf == BLUEFIELD_CONNECTX_NAME:
                 # Special handling for Bluefield Devices
                 bus_conf = item_conf["bus"]
                 # Ideally even with BIOS updates, the PCI ID for bluefield devices should not change.

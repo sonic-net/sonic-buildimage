@@ -26,7 +26,7 @@ test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
-from sonic_platform.pcie import Pcie
+from sonic_platform.pcie import Pcie, BULEFIELD_SOC_NAME, BLUEFIELD_CONNECTX_NAME
 
 
 class TestPcie:
@@ -45,6 +45,7 @@ class TestPcie:
         p.confInfo = [
             {
                 'id': '1f0b',
+                'name': 'Some other device',
                 'dev': '00',
                 'fn': '00'
             }
@@ -67,6 +68,7 @@ class TestPcie:
         p.confInfo = [
             {
                 'id': 'c2d5',  # BULEFIELD_SOC_ID
+                'name': BULEFIELD_SOC_NAME,
                 'bus': '02',
                 'dev': '00',
                 'fn': '0'
@@ -88,6 +90,7 @@ class TestPcie:
         p.confInfo = [
             {
                 'id': 'a2dc',  # BLUEFIELD_CONNECTX_ID
+                'name': BLUEFIELD_CONNECTX_NAME,
                 'bus': '03',
                 'dev': '00',
                 'fn': '0'
@@ -115,6 +118,7 @@ class TestPcie:
         p.confInfo = [
             {
                 'id': 'c2d5',  # BULEFIELD_SOC_ID
+                'name': BULEFIELD_SOC_NAME,
                 'bus': '02',
                 'dev': '00',
                 'fn': '0'
