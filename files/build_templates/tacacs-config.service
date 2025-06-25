@@ -10,3 +10,5 @@ Type=oneshot
 ExecStart=/usr/bin/config-setup apply_tacacs
 RemainAfterExit=yes
 
+[Install]
+WantedBy=updategraph.service
