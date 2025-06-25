@@ -111,6 +111,15 @@ class PddfApi():
 
         return self.data[dev]['dev_attr']['num_psu_fans']
 
+    def get_num_psu_thermals(self, dev):
+        if dev not in self.data.keys():
+            return str(1)
+
+        if 'num_psu_thermals' not in self.data[dev]['dev_attr']:
+            return str(1)
+
+        return self.data[dev]['dev_attr']['num_psu_thermals']
+
     def get_led_path(self):
         return ("pddf/devices/led")
 

@@ -74,7 +74,7 @@ class PddfThermal(ThermalBase):
     def get_temperature(self):
         if self.is_psu_thermal:
             device = "PSU{}".format(self.thermals_psu_index)
-            output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_input")
+            output = self.pddf_obj.get_attr_name_output(device, "psu_temp{}_input".format(self.thermal_index))
             if not output:
                 return None
 

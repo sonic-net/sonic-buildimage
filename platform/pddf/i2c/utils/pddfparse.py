@@ -101,6 +101,15 @@ class PddfParse():
 
         return self.data[dev]['dev_attr']['num_psu_fans']
 
+    def get_num_psu_thermals(self, dev):
+        if dev not in self.data.keys():
+            return str(1)
+
+        if 'num_psu_thermals' not in self.data[dev]['dev_attr']:
+            return str(1)
+
+        return self.data[dev]['dev_attr']['num_psu_thermals']
+
     def get_led_path(self):
         return ("pddf/devices/led")
 
@@ -147,6 +156,15 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
             cmd = "echo '%s'  > /sys/kernel/pddf/devices/psu/i2c/psu_idx" % (self.get_dev_idx(dev, ops))
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/psu/i2c/psu_thermals" % (self.get_num_psu_thermals(dev['dev_info']['virt_parent']))
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/psu/i2c/psu_temp_high_thresh_bitmap" % (self.get_psu_temp_high_thresh_bitmap(dev['dev_info']['device_name'],
+                                                                                                    int(self.get_num_psu_thermals(dev['dev_info']['virt_parent']))))
             ret = self.runcmd(cmd)
             if ret != 0:
                 return create_ret.append(ret)
@@ -1827,6 +1845,37 @@ class PddfParse():
         self.populate_pddf_sysfsobj()
         v_ops = {'cmd': 'validate', 'target': 'all', 'attr': 'all'}
         self.dev_parse(self.data['SYSTEM'], v_ops)
+
+    def get_psu_temp_high_thresh_bitmap(self, psu_pmbus_device, num_psu_thermals):
+        """
+        Check which PSU thermal sensors have high threshold support
+
+        Args:
+            psu_pmbus_device (str): PSU PMBUS device name (e.g. "PSU1-PMBUS")
+            num_psu_thermals (int): Number of thermal sensors in the PSU
+
+        Returns:
+            int: Bitmap where each bit represents whether a thermal sensor supports high threshold
+                 Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+                 A bit value of 1 means the sensor supports high threshold, 0 means it doesn't
+        """
+        bitmap = 0
+
+        # Get the set of attribute names for this device (if it exists)
+        attr_names = set()
+        if psu_pmbus_device in self.data:
+            device_data = self.data[psu_pmbus_device]
+            if "i2c" in device_data and "attr_list" in device_data["i2c"]:
+                attr_names = {attr.get("attr_name") for attr in device_data["i2c"]["attr_list"]}
+
+        # Check each thermal sensor's high threshold attribute and set corresponding bit
+        for thermal_idx in range(1, num_psu_thermals + 1):
+            attr_name = f"psu_temp{thermal_idx}_high_threshold"
+            if attr_name in attr_names:
+                # Set the bit corresponding to this thermal sensor (0-indexed)
+                bitmap |= (1 << (thermal_idx - 1))
+
+        return bitmap
 
     ##################################################################################################################
     #   BMC APIs 

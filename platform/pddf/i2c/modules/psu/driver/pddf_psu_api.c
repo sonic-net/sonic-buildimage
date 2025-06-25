@@ -60,6 +60,12 @@ void get_psu_duplicate_sysfs(int idx, char *str)
         case PSU_TEMP1_INPUT:
             strcpy(str, "temp1_input");
             break;
+        case PSU_TEMP2_INPUT:
+            strcpy(str, "temp2_input");
+            break;
+        case PSU_TEMP3_INPUT:
+            strcpy(str, "temp3_input");
+            break;
         default:
             break;
     }
@@ -241,6 +247,10 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
             break;
         case PSU_TEMP1_INPUT:
         case PSU_TEMP1_HIGH_THRESHOLD:
+        case PSU_TEMP2_INPUT:
+        case PSU_TEMP2_HIGH_THRESHOLD:
+        case PSU_TEMP3_INPUT:
+        case PSU_TEMP3_HIGH_THRESHOLD:
             multiplier = 1000;
             value = sysfs_attr_info->val.shortval;
             exponent = two_complement_to_int(value >> 11, 5, 0x1f);
