@@ -108,7 +108,7 @@ class master_key_mgr:
         self._save_registry(data)
         syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password set for feature {}".format(feature_type))
 
-    def rotate_feature_passwd(self, feature_type, table_info, new_password=None):
+    def rotate_feature_passwd(self, feature_type, table_info, secret, new_password=None):
         """
         On each call, read JSON data fresh from disk. Update password if provided,
         and call all registered callbacks with the latest password.
@@ -132,7 +132,7 @@ class master_key_mgr:
 
         syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Rotating password for feature {} and notifying callbacks...".format(feature_type))
         for cb in callbacks:
-            cb(table_info)
+            cb(secret, table_info)
 
     def encrypt_passkey(self, feature_type, secret: str) -> str:
         """
@@ -200,10 +200,8 @@ class master_key_mgr:
 
     # Check if the encryption is enabled
     def is_key_encrypt_enabled(self, table, entry):
-        key = 'key_encrypt'
         data = self._config_db.get_entry(table, entry)
-        if data:
-            if key in data:
-                return data[key]
+        if data and 'key_encrypt' in data:
+            return data['key_encrypt'].lower() == 'true'
         return False
 
