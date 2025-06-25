@@ -648,10 +648,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable config-setup.service
 # Copy reset-factory script and service
 sudo cp $IMAGE_CONFIGS/reset-factory/reset-factory $FILESYSTEM_ROOT/usr/bin/reset-factory
 
-# Add delayed tacacs application service
-sudo cp files/build_templates/tacacs-config.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-echo "tacacs-config.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-
+# Add tacacs config service
 sudo cp files/build_templates/tacacs-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 echo "tacacs-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
