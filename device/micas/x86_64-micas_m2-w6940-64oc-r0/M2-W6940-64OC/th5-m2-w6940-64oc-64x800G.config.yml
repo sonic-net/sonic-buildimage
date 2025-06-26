@@ -1166,9 +1166,7 @@ bcm_device:
             # Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
             sai_adjust_port_if_in_discards: 1
             sai_cpu_mirror_queue: 28
-            sai_cpu_drop_mirror_queue: 29
-            ecmp_dlb_port_speeds: 1
-            sai_common_hash_crc: 1            
+            sai_cpu_drop_mirror_queue: 29          
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 0
             l3_alpm_template: 1
