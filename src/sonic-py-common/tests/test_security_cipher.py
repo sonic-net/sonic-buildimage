@@ -30,9 +30,9 @@ UPDATED_JSON = {
     "LDAP": {"callbacks": [], "password": None}
 }
 
-def dummy_cb(table_info): pass
-def cb1(table_info): pass
-def cb2(table_info): pass
+def dummy_cb(table_info, secret): pass
+def cb1(table_info, secret): pass
+def cb2(table_info, secret): pass
 
 class TestSecurityCipher(object):
     def setup_method(self):
@@ -78,8 +78,9 @@ class TestSecurityCipher(object):
             temp = master_key_mgr(callback_lookup=lookup)
             with mock.patch.object(temp, "_save_registry") as mock_save:
                 table_info = {"foo": "bar"}
-                temp.rotate_feature_passwd("RADIUS", table_info)
-                cb_mock.assert_called_once_with(table_info)
+                secret = "dummysecret"
+                temp.rotate_feature_passwd("RADIUS", table_info, secret)
+                cb_mock.assert_called_once_with(able_info, secret)
 
     def test_encrypt_and_decrypt_passkey(self):
         # Use a known password and mock openssl subprocess
@@ -129,7 +130,8 @@ class TestSecurityCipher(object):
             temp = master_key_mgr(callback_lookup=lookup)
             with mock.patch.object(temp, "_save_registry") as mock_save:
                 table_info = {"foo": "bar"}
-                temp.rotate_feature_passwd("RADIUS", table_info, new_password="radius_secret2")
-                cb_mock.assert_called_once_with(table_info)
+                secret = "dummysecret"
+                temp.rotate_feature_passwd("RADIUS", table_info, secret, new_password="radius_secret2")
+                cb_mock.assert_called_once_with(table_info, secret)
                 args = mock_save.call_args[0][0]
                 assert args["RADIUS"]["password"] == "radius_secret2"

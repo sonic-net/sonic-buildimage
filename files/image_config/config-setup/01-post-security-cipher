@@ -6,6 +6,6 @@ set -e
 if [ -f /host/security_cipher/cipher_pass ]; then
     cp /host/security_cipher/cipher_pass.json /etc/cipher_pass.json
     chmod 640 /etc/cipher_pass.json
-    echo "Restored /host/security_cipher/cipher_pass.json  to /etc/"
+    echo "Restored /host/security_cipher/cipher_pass.json to /etc/"
 fi
 
