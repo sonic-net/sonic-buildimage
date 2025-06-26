@@ -101,7 +101,7 @@ stages:
     - bash: |
        set -ex
 
-       docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:yutongtest22
+       docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:yutongtest
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: 'Tag docker-sonic-mgmt'
@@ -113,4 +113,4 @@ stages:
         containerRegistry: ${{ parameters.registry_conn }}
         repository: docker-sonic-mgmt
         command: push
-        tags: yutongtest22
+        tags: yutongtest
