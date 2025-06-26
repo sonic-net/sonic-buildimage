@@ -102,7 +102,7 @@ class master_key_mgr:
             data[feature_type] = {"callbacks": [], "password": None}
         if data[feature_type]["password"] is not None:
             syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password already set for feature {}, not updating the new password.".format(feature_type))
-            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Note: Make use of rotate_feature_passwd() method for udpating the existing pass")
+            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Note: Make use of rotate_feature_passwd() method for updating the existing pass")
             return
         data[feature_type]["password"] = password
         self._save_registry(data)
@@ -132,7 +132,7 @@ class master_key_mgr:
 
         syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Rotating password for feature {} and notifying callbacks...".format(feature_type))
         for cb in callbacks:
-            cb(secret, table_info)
+            cb(table_info, secret)
 
     def encrypt_passkey(self, feature_type, secret: str) -> str:
         """
