@@ -80,7 +80,7 @@ class TestSecurityCipher(object):
                 table_info = {"foo": "bar"}
                 secret = "dummysecret"
                 temp.rotate_feature_passwd("RADIUS", table_info, secret)
-                cb_mock.assert_called_once_with(able_info, secret)
+                cb_mock.assert_called_once_with(table_info, secret)
 
     def test_encrypt_and_decrypt_passkey(self):
         # Use a known password and mock openssl subprocess
