@@ -4,18 +4,14 @@
 {% import 'common/functions.conf.j2' as common %}
 {% set lo0_ipv4 = common.get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback0") | ip %}
 {% set lo6_ipv4 = common.get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback6") | ip %}
+!
 ip prefix-list PL_LoopbackV4 seq 5 permit {{ lo0_ipv4 }}/32
 ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
-ip prefix-list IPV4_32_ONLY seq 5 permit 0.0.0.0/0 ge 32
 ip prefix-list STD_TYCOON_LOOPBACK seq 10 permit {{ lo0_ipv4 }}/32
+!
 {% if lo6_ipv4 is not none %}
 ip prefix-list REG_TYCOON_LOOPBACK seq 10 permit {{ lo6_ipv4 }}/32
 {% endif %}
-ip prefix-list IPV4_DOWNSTREAM_PREFIXES description DEFAULT_WLP_LIST
-ip prefix-list IPV4_DOWNSTREAM_PREFIXES seq 5 permit 100.64.0.0/10 ge 16 le 16
-!
-route-map RM_SET_SRC permit 10
-  set src {{ lo0_ipv4 }}
 !
 route-map ADVERTISE_AZURE_TYCOON_LOOPBACKS permit 10
   match ip address prefix-list STD_TYCOON_LOOPBACK
@@ -27,21 +23,10 @@ route-map ADVERTISE_AZURE_TYCOON_LOOPBACKS permit 30
 !
 route-map ADVERTISE_AZURE_TYCOON_LOOPBACKS deny 40
 !
-route-map FROM_TIER1_V4 permit 10
-  match ip address prefix-list DEFAULT_IPV4
-!
-route-map FROM_TIER1_V4 permit 20
-  match ip address prefix-list IPV4_32_ONLY
-!
-route-map FROM_TIER1_V4 deny 100
+route-map FROM_TIER1_V4 permit 100
 !
 bgp community alias 8075:420 COMM_REG_TYCOON_LOOPBACK
 bgp community alias 8075:10451 COMM_STD_TYCOON_LOOPBACK
-!
-route-map FROM_WLPARTNER_V4 permit 10
-  match ip address prefix-list IPV4_DOWNSTREAM_PREFIXES
-!
-route-map FROM_WLPARTNER_V4 deny 65535
 !
 route-map TO_WLPARTNER_V4 permit 10
   match ip address prefix-list DEFAULT_IPV4
@@ -49,7 +34,6 @@ route-map TO_WLPARTNER_V4 permit 10
 route-map TO_WLPARTNER_V4 deny 100
 !
 ip nht resolve-via-default
-ip protocol bgp route-map RM_SET_SRC
 !
-! end of template: bgpd/templates/msft.general/v4.smartswitch.ADVERTISE_AZURE_TYCOON_LOOPBACKS/policy.conf.j2
+! end of template: bgpd/templates/msft.general/v4.smartswitch.azd/policy.conf.j2
 !
