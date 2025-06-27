@@ -141,7 +141,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
                 goto free_data;
             }
         }
-        else if((strcmp(cdata->dev_type, "optoe1")==0) || (strcmp(cdata->dev_type, "optoe2")==0)) 
+        else if((strcmp(cdata->dev_type, "optoe1")==0) ||
+                (strcmp(cdata->dev_type, "optoe2")==0) ||
+                (strcmp(cdata->dev_type, "optoe3")==0))
         {
 
             adapter = i2c_get_adapter(cdata->parent_bus);
