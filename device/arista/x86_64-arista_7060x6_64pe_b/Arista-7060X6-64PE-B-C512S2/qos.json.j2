@@ -225,7 +225,6 @@
 {%- endmacro -%}
 
 {%- macro generate_tc_to_dscp_map_per_sku() %}
-{%- if traffic_config.traffic_classification_enable %}
     "TC_TO_DSCP_MAP": {
         "AZURE_DOWNLINK_BT0": {
             "8": "21"
@@ -234,7 +233,6 @@
             "8": "11"
         }
     },
-{%- endif %}
 {%- endmacro %}
 
 {%- macro generate_wred_profiles() -%}
