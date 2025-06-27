@@ -22,21 +22,18 @@ class master_key_mgr:
     _lock = threading.Lock()
     _initialized = False
 
-    def __new__(cls, callback_lookup=None):
+    def __new__(cls):
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(master_key_mgr, cls).__new__(cls)
                 cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, callback_lookup=None):
+    def __init__(self):
         if not self._initialized:
             self._file_path = CIPHER_PASS_FILE
             self._config_db = ConfigDBConnector()
             self._config_db.connect()
-            if callback_lookup is None:
-                callback_lookup = {}
-            self.callback_lookup = callback_lookup
             self._initialized = True
 
     def _load_registry(self):
@@ -54,99 +51,11 @@ class master_key_mgr:
             json.dump(data, f, indent=2)
         os.chmod(self._file_path, 0o640)
 
-    def register(self, feature_type, callback):
-        """
-        Register a callback for a feature type.
-        Feature types: TACPLUS, RADIUS, LDAP etc.
-        """
-        data = self._load_registry()
-        if feature_type not in data:
-            data[feature_type] = {"callbacks": [], "password": None}
-        cb_name = callback.__name__
-        if cb_name not in data[feature_type]["callbacks"]:
-            data[feature_type]["callbacks"].append(cb_name)
-        self._save_registry(data)
-        syslog.syslog(syslog.LOG_INFO, "register: Callback {} attached to feature {}".format(cb_name, feature_type))
-
-    def deregister(self, feature_type, callback):
-        """
-        Deregister (remove) a callback for a feature type.
-        If, after removal, there are no more callbacks for that feature,
-        that means there is no one who is going to use the password thus
-        remove the respective password too.
-        """
-        data = self._load_registry()
-        if feature_type in data:
-            cb_name = callback.__name__
-            if cb_name in data[feature_type]["callbacks"]:
-                data[feature_type]["callbacks"].remove(cb_name)
-                if not data[feature_type]["callbacks"]:
-                    # No more callbacks left; remove password as well
-                    data[feature_type]["password"] = None
-                    syslog.syslog(syslog.LOG_INFO, "deregister: No more callbacks for feature {}. Password also removed.".format(feature_type))
-                self._save_registry(data)
-                syslog.syslog(syslog.LOG_INFO, "deregister: Callback {} removed from feature {}".format(cb_name, feature_type))
-                
-            else:
-                syslog.syslog(syslog.LOG_ERR, "deregister: Callback {} not found for feature {}".format(cb_name, feature_type))
-        else:
-            syslog.syslog(syslog.LOG_ERR, "deregister: No callbacks registered for {}".format(feature_type))
-
-    def set_feature_password(self, feature_type, password):
-        """
-        Set a new password for a feature type.
-        It will not update if already exist.
-        """
-        data = self._load_registry()
-        if feature_type not in data:
-            data[feature_type] = {"callbacks": [], "password": None}
-        if data[feature_type]["password"] is not None:
-            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password already set for feature {}, not updating the new password.".format(feature_type))
-            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Note: Make use of rotate_feature_passwd() method for updating the existing pass")
-            return
-        data[feature_type]["password"] = password
-        self._save_registry(data)
-        syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password set for feature {}".format(feature_type))
-
-    def rotate_feature_passwd(self, feature_type, table_info, secret, new_password=None):
-        """
-        On each call, read JSON data fresh from disk. Update password if provided,
-        and call all registered callbacks with the latest password.
-        """
-        data = self._load_registry()
-        if feature_type not in data:
-            syslog.syslog(syslog.LOG_ERR, "rotate_feature_passwd: No callbacks registered for {}".format(feature_type))
-            return
-
-        if new_password is not None:
-            data[feature_type]["password"] = new_password
-            self._save_registry(data)
-            syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Password for {} updated during rotation.".format(feature_type))
-
-        cb_names = data[feature_type].get("callbacks", [])
-        callbacks = [self.callback_lookup[name] for name in cb_names if name in self.callback_lookup]
-
-        if not callbacks:
-            syslog.syslog(syslog.LOG_ERR, "rotate_feature_passwd: No callbacks registered for {}".format(feature_type))
-            return
-
-        syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Rotating password for feature {} and notifying callbacks...".format(feature_type))
-        for cb in callbacks:
-            cb(table_info, secret)
-
-    def encrypt_passkey(self, feature_type, secret: str) -> str:
+    def _encrypt_passkey(self, feature_type, secret: str, passwd: str) -> str:
         """
         Encrypts the plaintext using OpenSSL (AES-128-CBC, with salt and pbkdf2, no base64)
         and returns the result as a hex string.
         """
-        # Retrieve password from cipher_pass registry
-        data = self._load_registry()
-        passwd = None
-        if feature_type in data:
-            passwd = data[feature_type].get("password")
-        if not passwd:
-            raise ValueError(f"No password set for feature {feature_type}")
-
         cmd = [
             "openssl", "enc", "-aes-128-cbc", "-salt", "-pbkdf2",
             "-pass", f"pass:{passwd}"
@@ -163,22 +72,14 @@ class master_key_mgr:
             b64_encoded = base64.b64encode(encrypted_bytes).decode()
             return b64_encoded
         except subprocess.CalledProcessError as e:
-            syslog.syslog(syslog.LOG_ERR, "encrypt_passkey: {} Encryption failed with ERR: {}".format((e)))
+            syslog.syslog(syslog.LOG_ERR, "_encrypt_passkey: {} Encryption failed with ERR: {}".format(e))
             return ""
 
-    def decrypt_passkey(self, feature_type,  b64_encoded: str) -> str:
+    def _decrypt_passkey(self, feature_type,  b64_encoded: str, passwd: str) -> str:
         """
         Decrypts a hex-encoded encrypted string using OpenSSL (AES-128-CBC, with salt and pbkdf2, no base64).
         Returns the decrypted plaintext.
         """
-        # Retrieve password from cipher_pass registry
-        data = self._load_registry()
-        passwd = None
-        if feature_type in data:
-            passwd = data[feature_type].get("password")
-        if not passwd:
-            raise ValueError(f"No password set for feature {feature_type}")
-
         try:
             encrypted_bytes = base64.b64decode(b64_encoded)
 
@@ -197,6 +98,119 @@ class master_key_mgr:
         except subprocess.CalledProcessError as e:
             syslog.syslog(syslog.LOG_ERR, "decrypt_passkey: Decryption failed with an ERR: {}".format(e.stderr.decode()))
             return ""
+
+    def register(self, feature_type, table_info):
+        """
+        Register a table_info for a feature type.
+        Feature types: TACPLUS, RADIUS, LDAP etc.
+        """
+        data = self._load_registry()
+        if feature_type not in data:
+            data[feature_type] = {"table_info": [], "password": None}
+        if table_info not in data[feature_type]["table_info"]:
+            data[feature_type]["table_info"].append(table_info)
+        self._save_registry(data)
+        syslog.syslog(syslog.LOG_INFO, "register: table_info {} attached to {} feature".format(table_info, feature_type))
+
+    def deregister(self, feature_type, table_info):
+        """
+        Deregister (remove) a table_info string (like "TACPLUS|global") for a feature type.
+        If, after removal, there are no more table_info entries for that feature,
+        remove the respective password as well.
+        """
+        data = self._load_registry()
+        if feature_type in data:
+            if table_info in data[feature_type]["table_info"]:
+                data[feature_type]["table_info"].remove(table_info)
+                if not data[feature_type]["table_info"]:
+                    # No more table_info left; remove password as well
+                    data[feature_type]["password"] = None
+                    syslog.syslog(syslog.LOG_INFO, "deregister: No more table_info for feature {}. Password also removed.".format(feature_type))
+                self._save_registry(data)
+                syslog.syslog(syslog.LOG_INFO, "deregister: table_info {} removed from feature {}".format(table_info, feature_type))
+            else:
+                syslog.syslog(syslog.LOG_ERR, "deregister: table_info {} not found for feature {}".format(table_info, feature_type))
+        else:
+            syslog.syslog(syslog.LOG_ERR, "deregister: No table_info registered for {}".format(feature_type))
+
+    def set_feature_password(self, feature_type, password):
+        """
+        Set a new password for a feature type.
+        It will not update if already exist.
+        """
+        data = self._load_registry()
+        if feature_type not in data:
+            data[feature_type] = {"table_info": [], "password": None}
+        if data[feature_type]["password"] is not None:
+            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password already set for feature {}, not updating the new password.".format(feature_type))
+            syslog.syslog(syslog.LOG_INFO, "set_feature_password: Note: Make use of rotate_feature_passwd() method for updating the existing pass")
+            return
+        data[feature_type]["password"] = password
+        self._save_registry(data)
+        syslog.syslog(syslog.LOG_INFO, "set_feature_password: Password set for feature {}".format(feature_type))
+
+    def rotate_feature_passwd(self, feature_type, new_password):
+        """
+        For each registered table_info, extract encrypted passkey, decrypt, re-encrypt with new password, and update.
+        """
+        data = self._load_registry()
+        if feature_type not in data:
+            syslog.syslog(syslog.LOG_ERR, "No table_info registered for {} Feature".format(feature_type))
+            return
+
+        old_password = data[feature_type]["password"]
+        table_infos = data[feature_type].get("table_info", [])
+        for table_info in table_infos:
+            table, entry = table_info.split("|")
+            db_entry = self._config_db.get_entry(table, entry)
+            encrypted_passkey = db_entry.get("passkey")
+            if encrypted_passkey:
+                # Decrypt with old password
+                plain_passkey = self._decrypt_passkey(feature_type, encrypted_passkey, old_password)
+                # Re-encrypt with new password
+                new_encrypted_passkey = self._encrypt_passkey(feature_type, plain_passkey, new_password)
+                # Update DB
+                db_entry["passkey"] = new_encrypted_passkey
+                # Make sure key_encrypt should be set true
+                db_entry["key_encrypt"] = 'True'
+                self._config_db.set_entry(table, entry, db_entry)
+                syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Updated passkey for {}".format(table_info))
+            else:
+                syslog.syslog(syslog.LOG_WARNING, "No passkey found in DB for {}".format(table_info))
+
+        # Update stored password
+        data[feature_type]["password"] = new_password
+        self._save_registry(data)
+        syslog.syslog(syslog.LOG_INFO, f"rotate_feature_passwd: Password for {feature_type} updated.")
+
+    def encrypt_passkey(self, feature_type, secret: str) -> str:
+        """
+        Encrypts the plaintext and returns the result as a hex string.
+        """
+        # Retrieve password from cipher_pass registry
+        data = self._load_registry()
+        passwd = None
+        if feature_type in data:
+            passwd = data[feature_type].get("password")
+        if not passwd:
+            raise ValueError(f"encrypt_passkey: No password set for feature {feature_type}")
+
+        return self._encrypt_passkey(feature_type, secret, passwd)
+
+    def decrypt_passkey(self, feature_type,  b64_encoded: str) -> str:
+        """
+        Decrypts a hex-encoded encrypted string using OpenSSL (AES-128-CBC, with salt and pbkdf2, no base64).
+        Returns the decrypted plaintext.
+        """
+        # Retrieve password from cipher_pass registry
+        data = self._load_registry()
+        passwd = None
+        if feature_type in data:
+            passwd = data[feature_type].get("password")
+        if not passwd:
+            raise ValueError(f"decrypt_passkey: No password set for feature {feature_type}")
+
+        return self._decrypt_passkey(feature_type, b64_encoded, passwd)
 
     # Check if the encryption is enabled
     def is_key_encrypt_enabled(self, table, entry):

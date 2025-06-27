@@ -1,7 +1,6 @@
 import sys
 import json
 import base64
-
 import pytest
 
 if sys.version_info.major == 3:
@@ -19,20 +18,16 @@ else:
     BUILTINS = "__builtin__"
 
 DEFAULT_JSON = {
-    "TACPLUS": {"callbacks": [], "password": None},
-    "RADIUS": {"callbacks": [], "password": None},
-    "LDAP": {"callbacks": [], "password": None}
+    "TACPLUS": {"table_info": [], "password": None},
+    "RADIUS": {"table_info": [], "password": None},
+    "LDAP": {"table_info": [], "password": None}
 }
 
 UPDATED_JSON = {
-    "TACPLUS": {"callbacks": [], "password": None},
-    "RADIUS": {"callbacks": [], "password": "TEST2"},
-    "LDAP": {"callbacks": [], "password": None}
+    "TACPLUS": {"table_info": [], "password": None},
+    "RADIUS": {"table_info": [], "password": "TEST2"},
+    "LDAP": {"table_info": [], "password": None}
 }
-
-def dummy_cb(table_info, secret): pass
-def cb1(table_info, secret): pass
-def cb2(table_info, secret): pass
 
 class TestSecurityCipher(object):
     def setup_method(self):
@@ -42,9 +37,8 @@ class TestSecurityCipher(object):
     def test_set_feature_password_sets_password(self):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
              mock.patch("os.chmod"), \
-             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(DEFAULT_JSON))) as mock_file, \
+             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(DEFAULT_JSON))), \
              mock.patch("os.path.exists", return_value=True):
-
             temp = master_key_mgr()
             # Patch _save_registry to check written value
             with mock.patch.object(temp, "_save_registry") as mock_save:
@@ -58,40 +52,76 @@ class TestSecurityCipher(object):
              mock.patch("os.chmod"), \
              mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(json_data))), \
              mock.patch("os.path.exists", return_value=True):
-
             temp = master_key_mgr()
             with mock.patch.object(temp, "_save_registry") as mock_save:
                 temp.set_feature_password("RADIUS", "should_not_overwrite")
                 mock_save.assert_not_called()
 
-    def test_rotate_feature_passwd(self):
-        cb_mock = mock.Mock()
-        lookup = {"cb1": cb_mock}
-        json_data = {
-            "RADIUS": {"callbacks": ["cb1"], "password": "radius_secret"}
+    def test_register_table_info(self):
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+             mock.patch("os.chmod"), \
+             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(DEFAULT_JSON))), \
+             mock.patch("os.path.exists", return_value=True):
+            temp = master_key_mgr()
+            with mock.patch.object(temp, "_save_registry") as mock_save:
+                temp.register("RADIUS", "RADIUS|global")
+                args = mock_save.call_args[0][0]
+                assert "RADIUS|global" in args["RADIUS"]["table_info"]
+
+    def test_deregister_table_info(self):
+        test_json = {
+            "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
         }
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
              mock.patch("os.chmod"), \
-             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(json_data))), \
+             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
              mock.patch("os.path.exists", return_value=True):
-
-            temp = master_key_mgr(callback_lookup=lookup)
+            temp = master_key_mgr()
             with mock.patch.object(temp, "_save_registry") as mock_save:
-                table_info = {"foo": "bar"}
-                secret = "dummysecret"
-                temp.rotate_feature_passwd("RADIUS", table_info, secret)
-                cb_mock.assert_called_once_with(table_info, secret)
+                temp.deregister("RADIUS", "RADIUS|global")
+                args = mock_save.call_args[0][0]
+                assert "RADIUS|global" not in args["RADIUS"]["table_info"]
+                assert args["RADIUS"]["password"] == "radius_secret"
+                # Remove last and check password removed
+                temp.deregister("RADIUS", "RADIUS|backup")
+                args = mock_save.call_args[0][0]
+                assert args["RADIUS"]["table_info"] == []
+                assert args["RADIUS"]["password"] is None
+
+    def test_rotate_feature_passwd(self):
+        # Simulate DB entries and encryption/decryption
+        test_json = {
+            "RADIUS": {"table_info": ["RADIUS|global"], "password": "oldpw"}
+        }
+        db_entry = {"passkey": "ENCRYPTED", "some_other_field": "keepme"}
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+             mock.patch("os.chmod"), \
+             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
+             mock.patch("os.path.exists", return_value=True):
+            temp = master_key_mgr()
+            temp._config_db.get_entry = mock.Mock(return_value=db_entry.copy())
+            temp._config_db.set_entry = mock.Mock()
+            temp._decrypt_passkey = mock.Mock(return_value="plaintext")
+            temp._encrypt_passkey = mock.Mock(return_value="NEW_ENCRYPTED")
+            with mock.patch.object(temp, "_save_registry") as mock_save:
+                temp.rotate_feature_passwd("RADIUS", "newpw")
+                temp._config_db.set_entry.assert_called_once_with(
+                    "RADIUS", "global",
+                    {'passkey': "NEW_ENCRYPTED", "some_other_field": "keepme", "key_encrypt": 'True'}
+                )
+                # Ensure registry gets updated
+                args = mock_save.call_args[0][0]
+                assert args["RADIUS"]["password"] == "newpw"
 
     def test_encrypt_and_decrypt_passkey(self):
         # Use a known password and mock openssl subprocess
         json_data = {
-            "RADIUS": {"callbacks": [], "password": "secretpw"}
+            "RADIUS": {"table_info": [], "password": "secretpw"}
         }
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
              mock.patch("os.chmod"), \
              mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(json_data))), \
              mock.patch("os.path.exists", return_value=True):
-
             temp = master_key_mgr()
             # Mock subprocess for encryption
             fake_cipher = b"\x01\x02\x03"
@@ -111,27 +141,35 @@ class TestSecurityCipher(object):
              mock.patch("os.chmod"), \
              mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(DEFAULT_JSON))), \
              mock.patch("os.path.exists", return_value=True):
-
             temp = master_key_mgr()
             with pytest.raises(ValueError):
                 temp.encrypt_passkey("RADIUS", "plaintext")
 
-    def test_rotate_feature_passwd_with_new_password(self):
-        cb_mock = mock.Mock()
-        lookup = {"cb1": cb_mock}
-        json_data = {
-            "RADIUS": {"callbacks": ["cb1"], "password": "radius_secret"}
-        }
-        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-             mock.patch("os.chmod"), \
-             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(json_data))), \
-             mock.patch("os.path.exists", return_value=True):
+    def test_is_key_encrypt_enabled(self):
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector):
+            temp = master_key_mgr()
+            temp._config_db.get_entry = mock.Mock()
 
-            temp = master_key_mgr(callback_lookup=lookup)
-            with mock.patch.object(temp, "_save_registry") as mock_save:
-                table_info = {"foo": "bar"}
-                secret = "dummysecret"
-                temp.rotate_feature_passwd("RADIUS", table_info, secret, new_password="radius_secret2")
-                cb_mock.assert_called_once_with(table_info, secret)
-                args = mock_save.call_args[0][0]
-                assert args["RADIUS"]["password"] == "radius_secret2"
+            # Test when key_encrypt is 'True'
+            temp._config_db.get_entry.return_value = {"key_encrypt": "True"}
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is True
+
+            # Test when key_encrypt is 'true'
+            temp._config_db.get_entry.return_value = {"key_encrypt": "true"}
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is True
+
+            # Test when key_encrypt is 'False'
+            temp._config_db.get_entry.return_value = {"key_encrypt": "False"}
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is False
+
+            # Test when key_encrypt is missing
+            temp._config_db.get_entry.return_value = {"foo": "bar"}
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is False
+
+            # Test when entry is empty
+            temp._config_db.get_entry.return_value = {}
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is False
+
+            # Test when entry is None
+            temp._config_db.get_entry.return_value = None
+            assert temp.is_key_encrypt_enabled("TACPLUS", "global") is False
