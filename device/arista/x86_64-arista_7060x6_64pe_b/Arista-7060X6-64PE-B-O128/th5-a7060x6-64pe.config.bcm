@@ -1385,7 +1385,7 @@ device:
             ?
                 PORT_ID: [118, 254]
             :
-                ENABLE: 1
+                ENABLE: 0
                 SPEED: 10000
                 NUM_LANES: 1
                 MAX_FRAME_SIZE: 9416
