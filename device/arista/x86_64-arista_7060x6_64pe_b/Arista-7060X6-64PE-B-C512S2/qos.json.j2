@@ -84,14 +84,14 @@
           and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type in ('LeafRouter', 'ToRRouter') %}
             "{{ port }}": {
                 "dscp_to_tc_map": "AZURE",
-                "tc_to_dscp_map": "AZURE_UPLINK_BT0",
+                {#- "tc_to_dscp_map": "AZURE_UPLINK_BT0", #-}
                 "tc_to_pg_map": "AZURE",
                 "tc_to_queue_map": "AZURE"
             }{% if not loop.last %},{% endif %}
         {% else %}
             "{{ port }}": {
                 "dscp_to_tc_map": "AZURE",
-                "tc_to_dscp_map": "AZURE_DOWNLINK_BT0",
+                {#- "tc_to_dscp_map": "AZURE_DOWNLINK_BT0", #-}
                 "tc_to_pg_map": "AZURE",
                 "tc_to_queue_map": "AZURE"
             }{% if not loop.last %},{% endif %}
@@ -224,6 +224,7 @@
     },
 {%- endmacro -%}
 
+{#-
 {%- macro generate_tc_to_dscp_map() %}
     "TC_TO_DSCP_MAP": {
         "AZURE_DOWNLINK_BT0": {
@@ -234,6 +235,7 @@
         }
     },
 {%- endmacro %}
+-#}
 
 {%- macro generate_wred_profiles() -%}
     "WRED_PROFILE": {
