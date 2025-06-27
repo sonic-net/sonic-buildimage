@@ -14941,6 +14941,7 @@ bcm_device:
             global_flexctr_egr_pool_num_reserved: 5
             global_flexctr_egr_op_profile_num_reserved: 10
             global_flexctr_egr_group_num_reserved: 1
+            sai_field_group_auto_prioritize: 1
 ...
 ### Baseline
 # Skipping buffer reservation. This means that don't use SDK default settings.

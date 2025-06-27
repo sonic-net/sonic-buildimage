@@ -15,4 +15,10 @@ class Psu(PddfPsu):
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
         PddfPsu.__init__(self, index, pddf_data, pddf_plugin_data)
 
-    # Provide the functions/variables below for which implementation is to be overwritten
+    def get_revision(self):
+        return "N/A"
+
+    def get_temperature(self):
+        if not self.get_presence():
+            return "N/A"
+        return PddfPsu.get_temperature(self)

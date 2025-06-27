@@ -32,6 +32,10 @@ def echo_available_eeproms():
     for eeprom_path in get_at24_eeprom_paths():
         click.secho(f"{eeprom_path}", fg="green")
 
+def complete_available_eeproms(ctx, args, incomplete):
+    eeproms = get_at24_eeprom_paths()
+    return [eeprom for eeprom in eeproms if eeprom.startswith(incomplete)]
+
 
 def decode_eeprom(eeprom_path: str):
     eeprom_class = eeprom_tlvinfo.TlvInfoDecoder(
@@ -112,7 +116,7 @@ def cli_list():
 
 
 @cli.command("decode")
-@click.argument("eeprom_path")
+@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
 def decode(eeprom_path):
     check_root_privileges()
     decode_eeprom(eeprom_path)
@@ -127,7 +131,7 @@ def decode_all():
 
 
 @cli.command("program")
-@click.argument("eeprom_path")
+@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
 @click.option("--product-name", default=None)
 @click.option("--part-num", default=None)
 @click.option("--serial-num", default=None)
@@ -171,7 +175,7 @@ def program(
 
 
 @cli.command("clear")
-@click.argument("eeprom_path")
+@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
 def clear(eeprom_path):
     check_root_privileges()
     clear_eeprom(eeprom_path)

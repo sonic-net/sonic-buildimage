@@ -1,19 +1,22 @@
 import os
+import pytest
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+sys.modules["portconfig"] = MagicMock()
 sys.modules["sonic_platform"] = MagicMock()
 sys.modules["sonic_platform.platform"] = MagicMock()
 sys.modules["sonic_platform_pddf_base.pddf_chassis"] = MagicMock()
+sys.modules["sonic_py_common"] = MagicMock()
 sys.modules["swsscommon.swsscommon"] = MagicMock()
 
 CWD = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(CWD)
 sys.path.append(os.path.join(CWD, "../"))
 sys.path.append(os.path.join(CWD, "../../"))
-from example_led_control import ExampleLedControl
+
+sys.path.append(os.path.join(CWD, "../../../../../../src/sonic-platform-common"))
+from nexthop.led_control import LedControl
 
 
 @pytest.mark.parametrize(
@@ -50,7 +53,6 @@ from example_led_control import ExampleLedControl
                 "Ethernet13": ("down", "down"),
                 "Ethernet14": ("down", "down"),
                 "Ethernet15": ("down", "down"),
-                "Ethernet16": ("down", "down"),
             },
             True,
             "PORT_LED_2",
@@ -215,12 +217,16 @@ from example_led_control import ExampleLedControl
         ),
     ],
 )
-@patch.object(ExampleLedControl, "_get_xcvr_presence")
-@patch.object(ExampleLedControl, "_get_port_status")
-@patch.object(ExampleLedControl, "_get_port_num")
+@patch.object(LedControl, "_get_xcvr_presence")
+@patch.object(LedControl, "_get_port_status")
+@patch.object(LedControl, "_get_port_num")
+@patch.object(LedControl, "_get_interfaces_for_port")
+@patch("nexthop.led_control.get_port_config")
 @patch("nexthop.led_control.get_chassis", return_value=MagicMock())
 def test_led_control(
     mock_get_chassis,
+    mock_get_port_config,
+    mock_get_interfaces_for_port,
     mock_get_port_num,
     mock_get_port_status,
     mock_get_xcvr_presence,
@@ -231,8 +237,10 @@ def test_led_control(
     expected_led_device_name,
     expected_color,
 ):
-    # Mock the physical port number we read from CONFIG_DB for a given logical port
+    # Mock the physical and logical port mappings
+    mock_get_port_config.return_value = ({"placeholder": {}}, {}, {})
     mock_get_port_num.return_value = get_port_num_return
+    mock_get_interfaces_for_port.return_value = list(port_status_map.keys())
 
     # Mock the admin_status and oper_status for each logical port
     def side_effect_get_port_status(logical_port):
@@ -243,7 +251,7 @@ def test_led_control(
     # Mock the xcvr presence check
     mock_get_xcvr_presence.return_value = xcvr_presence
 
-    led_control = ExampleLedControl()
+    led_control = LedControl()
     led_control.port_link_state_change(port_name)
 
     # Assert we're setting the expected LED color
@@ -308,16 +316,212 @@ def test_led_control(
         ),
     ],
 )
-@patch.object(ExampleLedControl, "_get_xcvr_info")
+@patch.object(LedControl, "_get_xcvr_info")
+@patch.object(LedControl, "_get_interfaces_for_port")
+@patch("nexthop.led_control.get_port_config")
 def test_get_xcvr_presence(
+    mock_get_port_config,
+    mock_get_interfaces_for_port,
     mock_get_xcvr_info,
     port_num,
     xcvr_info_map,
     expected_xcvr_presence,
 ):
+    mock_get_port_config.return_value = ({"placeholder": {}}, {}, {})
+    mock_get_interfaces_for_port.return_value = list(xcvr_info_map.keys())
     mock_get_xcvr_info.side_effect = lambda port: xcvr_info_map.get(port)
 
-    led_control = ExampleLedControl()
+    led_control = LedControl()
     xcvr_presence = led_control._get_xcvr_presence(port_num)
 
     assert xcvr_presence == expected_xcvr_presence
+
+@pytest.mark.parametrize(
+    "ports_dict, expected_logical_to_physical, expected_physical_to_logical",
+    [
+        (
+            # Default, no breakouts
+            {
+                "Ethernet0": {
+                    "admin_status": "up",
+                    "alias": "Port1",
+                    "dhcp_rate_limit": "300",
+                    "index": "1",
+                    "lanes": "9,10,11,12,13,14,15,16",
+                    "mtu": "9100",
+                    "speed": "800000",
+                    "subport": "0"
+                },
+                "Ethernet8": {
+                    "admin_status": "up",
+                    "alias": "Port2",
+                    "dhcp_rate_limit": "300",
+                    "index": "2",
+                    "lanes": "1,2,3,4,5,6,7,8",
+                    "mtu": "9100",
+                    "speed": "800000",
+                    "subport": "0"
+                },
+            },
+            {
+                "Ethernet0": 1,
+                "Ethernet1": 1,
+                "Ethernet2": 1,
+                "Ethernet3": 1,
+                "Ethernet4": 1,
+                "Ethernet5": 1,
+                "Ethernet6": 1,
+                "Ethernet7": 1,
+                "Ethernet8": 2,
+                "Ethernet9": 2,
+                "Ethernet10": 2,
+                "Ethernet11": 2,
+                "Ethernet12": 2,
+                "Ethernet13": 2,
+                "Ethernet14": 2,
+                "Ethernet15": 2,
+            },
+            {
+                1: [
+                    "Ethernet0",
+                    "Ethernet1",
+                    "Ethernet2",
+                    "Ethernet3",
+                    "Ethernet4",
+                    "Ethernet5",
+                    "Ethernet6",
+                    "Ethernet7",
+                ],
+                2: [
+                    "Ethernet8",
+                    "Ethernet9",
+                    "Ethernet10",
+                    "Ethernet11",
+                    "Ethernet12",
+                    "Ethernet13",
+                    "Ethernet14",
+                    "Ethernet15",
+                ],
+            },
+        ),
+        # SFPs
+        (
+            {
+                "Ethernet512": {
+                    "alias": "Port65",
+                    "dhcp_rate_limit": "300",
+                    "index": "65",
+                    "lanes": "515",
+                    "speed": "25000",
+                    "subport": "0"
+                },
+                "Ethernet513": {
+                    "alias": "Port66",
+                    "dhcp_rate_limit": "300",
+                    "index": "66",
+                    "lanes": "516",
+                    "speed": "25000",
+                    "subport": "0"
+                },
+            },
+            {
+                "Ethernet512": 65,
+                "Ethernet513": 66,
+            },
+            {
+                65: ["Ethernet512"],
+                66: ["Ethernet513"],
+            },
+        ),
+        # Breakout example
+        (
+            {
+                "Ethernet8": {
+                    "alias": "Port2/1",
+                    "dhcp_rate_limit": "300",
+                    "index": "2",
+                    "lanes": "1,2,3,4",
+                    "speed": "400000",
+                    "subport": "1"
+                },
+                "Ethernet12": {
+                    "alias": "Port2/2",
+                    "dhcp_rate_limit": "300",
+                    "index": "2",
+                    "lanes": "5,6,7,8",
+                    "speed": "400000",
+                    "subport": "2"
+                },
+                "Ethernet16": {
+                    "alias": "Port3/1",
+                    "dhcp_rate_limit": "300",
+                    "index": "3",
+                    "lanes": "25,26,27,28",
+                    "speed": "400000",
+                    "subport": "1"
+                },
+                "Ethernet20": {
+                    "alias": "Port3/2",
+                    "dhcp_rate_limit": "300",
+                    "index": "3",
+                    "lanes": "29,30,31,32",
+                    "speed": "400000",
+                    "subport": "2"
+                },
+            },
+            {
+                "Ethernet8": 2,
+                "Ethernet9": 2,
+                "Ethernet10": 2,
+                "Ethernet11": 2,
+                "Ethernet12": 2,
+                "Ethernet13": 2,
+                "Ethernet14": 2,
+                "Ethernet15": 2,
+                "Ethernet16": 3,
+                "Ethernet17": 3,
+                "Ethernet18": 3,
+                "Ethernet19": 3,
+                "Ethernet20": 3,
+                "Ethernet21": 3,
+                "Ethernet22": 3,
+                "Ethernet23": 3,
+            },
+            {
+                2: [
+                    "Ethernet8",
+                    "Ethernet9",
+                    "Ethernet10",
+                    "Ethernet11",
+                    "Ethernet12",
+                    "Ethernet13",
+                    "Ethernet14",
+                    "Ethernet15",
+                ],
+                3: [
+                    "Ethernet16",
+                    "Ethernet17",
+                    "Ethernet18",
+                    "Ethernet19",
+                    "Ethernet20",
+                    "Ethernet21",
+                    "Ethernet22",
+                    "Ethernet23",
+                ],
+            },
+        ),
+    ],
+)
+@patch("nexthop.led_control.get_port_config")
+def test_get_port_mappings(
+    mock_get_port_config,
+    ports_dict,
+    expected_logical_to_physical,
+    expected_physical_to_logical,
+):
+    mock_get_port_config.return_value = (ports_dict, {}, {})
+
+    led_control = LedControl()
+
+    assert led_control.logical_to_physical_map == expected_logical_to_physical
+    assert led_control.physical_to_logical_map == expected_physical_to_logical

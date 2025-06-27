@@ -6,14 +6,31 @@
         },
         {
             "type": "thermal_info"
+        },
+        {
+            "type": "psu_info"
         }
     ],
     "policies": [
         {
+            "name": "Two or fewer fans present",
+            "conditions": [
+                {
+                    "type": "fan.two.or.fewer.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
             "name": "thermal control algorithm",
             "conditions": [
                 {
-                    "type": "fan.always.true"
+                    "type": "default.operation"
                 }
             ],
             "actions": [

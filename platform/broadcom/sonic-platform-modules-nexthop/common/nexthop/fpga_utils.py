@@ -85,13 +85,18 @@ def check_valid_pci_address(pci_address):
         sys.exit(1)
 
 
+def complete_available_fpgas(ctx, args, incomplete):
+    list_of_fpgas = find_xilinx_fpgas()
+    return [fpga for fpga in list_of_fpgas if fpga.startswith(incomplete)]
+
+
 @click.group()
 def cli():
     check_root_privileges()
 
 
 @cli.command("write32")
-@click.argument("pci_address")
+@click.argument("pci_address", autocompletion=complete_available_fpgas)
 @click.argument("offset")
 @click.argument("value")
 def write32(pci_address, offset, value):
@@ -101,7 +106,7 @@ def write32(pci_address, offset, value):
 
 
 @cli.command("read32")
-@click.argument("pci_address")
+@click.argument("pci_address", autocompletion=complete_available_fpgas)
 @click.argument("offset")
 def read32(offset, pci_address):
     check_valid_pci_address(pci_address)

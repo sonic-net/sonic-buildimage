@@ -6,6 +6,41 @@
 from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
 from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
 
+@thermal_json_object('fan.set_speed')
+class FanSetSpeedAction(ThermalPolicyActionBase):
+    # JSON field definition
+    JSON_FIELD_SPEED = 'speed'
+
+    def __init__(self):
+        """
+        Constructor of SetFanSpeedAction
+        """
+        self.speed = None
+    
+    def load_from_json(self, set_speed_json):
+        """
+        Construct FanSetSpeedAction via JSON. JSON example:
+            {
+                "type": "fan.set_speed"
+                "speed": "100"
+            }
+        :param json_obj: A JSON object representing a FanSetSpeedAction action.
+        :return:
+        """
+        self.speed = int(set_speed_json[FanSetSpeedAction.JSON_FIELD_SPEED])
+    
+    def execute(self, thermal_info_dict):
+        """
+        Set speed for all fans
+        :param thermal_info_dict: A dictionary stores all thermal information.
+        :return:
+        """
+        from .thermal_infos import FanInfo
+        fan_info = thermal_info_dict.get(FanInfo.INFO_TYPE)
+        for fan in fan_info.get_fans():
+            # No op if fan is not present
+            fan.set_speed(self.speed)
+
 @thermal_json_object('thermal.control_algo')
 class ThermalControlAlgorithmAction(ThermalPolicyActionBase):
     def __init__(self):

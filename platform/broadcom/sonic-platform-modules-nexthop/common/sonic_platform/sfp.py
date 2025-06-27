@@ -5,6 +5,7 @@
 
 try:
     from sonic_platform_pddf_base.pddf_sfp import PddfSfp
+    from sonic_platform.thermal import SfpThermal
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -16,5 +17,6 @@ class Sfp(PddfSfp):
 
     def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
         PddfSfp.__init__(self, index, pddf_data, pddf_plugin_data)
+        self._thermal_list.append(SfpThermal(self))
 
     # Provide the functions/variables below for which implementation is to be overwritten

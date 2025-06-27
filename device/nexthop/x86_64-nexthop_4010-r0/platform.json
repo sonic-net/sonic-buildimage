@@ -3,22 +3,34 @@
         "name": "NH-4010",
         "thermals": [
             {
-                "name": "Switch Card Lower Rear"
+                "name": "Switch Card Lower Rear",
+                "low-threshold": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "PSU 2 Intake"
+                "name": "PSU 2 Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "ASIC Diode 0"
+                "name": "ASIC Diode 0",
+                "low-threshold": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "ASIC Diode 1"
+                "name": "ASIC Diode 1",
+                "low-threshold": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "PSU 1 Intake"
+                "name": "PSU 1 Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "Chassis Intake"
+                "name": "Chassis Intake",
+                "low-threshold": false,
+                "low-crit-threshold": false
             }
         ],
         "components": [
@@ -71,48 +83,108 @@
             {
                 "name": "Fantray1",
                 "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
                 "fans": [
                     {
-                        "name": "Fantray1_1"
+                        "name": "Fantray1_1",
+                        "status_led": {
+                            "available": false
+                        }
                     },
                     {
-                        "name": "Fantray1_2"
+                        "name": "Fantray1_2",
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Fantray2",
                 "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
                 "fans": [
                     {
-                        "name": "Fantray2_1"
+                        "name": "Fantray2_1",
+                        "status_led": {
+                            "available": false
+                        }
                     },
                     {
-                        "name": "Fantray2_2"
+                        "name": "Fantray2_2",
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Fantray3",
                 "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
                 "fans": [
                     {
-                        "name": "Fantray3_1"
+                        "name": "Fantray3_1",
+                        "status_led": {
+                            "available": false
+                        }
                     },
                     {
-                        "name": "Fantray3_2"
+                        "name": "Fantray3_2",
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Fantray4",
                 "num_fans" : 2,
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": true,
+                    "colors": [
+                        "off",
+                        "red",
+                        "green"
+                    ]
+                },
                 "fans": [
                     {
-                        "name": "Fantray4_1"
+                        "name": "Fantray4_1",
+                        "status_led": {
+                            "available": false
+                        }
                     },
                     {
-                        "name": "Fantray4_2"
+                        "name": "Fantray4_2",
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             }
@@ -120,9 +192,18 @@
         "psus": [
             {
                 "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
-                        "name": "PSU1_FAN1"
+                        "name": "PSU1_FAN1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
@@ -133,9 +214,18 @@
             },
             {
                 "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
-                        "name": "PSU2_FAN1"
+                        "name": "PSU2_FAN1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
@@ -143,6 +233,206 @@
                         "name": "PSU2_TEMP1"
                     }
                 ]
+            }
+        ],
+        "sfps": [
+            {
+              "name": "PORT1"
+            },
+            {
+              "name": "PORT2"
+            },
+            {
+              "name": "PORT3"
+            },
+            {
+              "name": "PORT4"
+            },
+            {
+              "name": "PORT5"
+            },
+            {
+              "name": "PORT6"
+            },
+            {
+              "name": "PORT7"
+            },
+            {
+              "name": "PORT8"
+            },
+            {
+              "name": "PORT9"
+            },
+            {
+              "name": "PORT10"
+            },
+            {
+              "name": "PORT11"
+            },
+            {
+              "name": "PORT12"
+            },
+            {
+              "name": "PORT13"
+            },
+            {
+              "name": "PORT14"
+            },
+            {
+              "name": "PORT15"
+            },
+            {
+              "name": "PORT16"
+            },
+            {
+              "name": "PORT17"
+            },
+            {
+              "name": "PORT18"
+            },
+            {
+              "name": "PORT19"
+            },
+            {
+              "name": "PORT20"
+            },
+            {
+              "name": "PORT21"
+            },
+            {
+              "name": "PORT22"
+            },
+            {
+              "name": "PORT23"
+            },
+            {
+              "name": "PORT24"
+            },
+            {
+              "name": "PORT25"
+            },
+            {
+              "name": "PORT26"
+            },
+            {
+              "name": "PORT27"
+            },
+            {
+              "name": "PORT28"
+            },
+            {
+              "name": "PORT29"
+            },
+            {
+              "name": "PORT30"
+            },
+            {
+              "name": "PORT31"
+            },
+            {
+              "name": "PORT32"
+            },
+            {
+              "name": "PORT33"
+            },
+            {
+              "name": "PORT34"
+            },
+            {
+              "name": "PORT35"
+            },
+            {
+              "name": "PORT36"
+            },
+            {
+              "name": "PORT37"
+            },
+            {
+              "name": "PORT38"
+            },
+            {
+              "name": "PORT39"
+            },
+            {
+              "name": "PORT40"
+            },
+            {
+              "name": "PORT41"
+            },
+            {
+              "name": "PORT42"
+            },
+            {
+              "name": "PORT43"
+            },
+            {
+              "name": "PORT44"
+            },
+            {
+              "name": "PORT45"
+            },
+            {
+              "name": "PORT46"
+            },
+            {
+              "name": "PORT47"
+            },
+            {
+              "name": "PORT48"
+            },
+            {
+              "name": "PORT49"
+            },
+            {
+              "name": "PORT50"
+            },
+            {
+              "name": "PORT51"
+            },
+            {
+              "name": "PORT52"
+            },
+            {
+              "name": "PORT53"
+            },
+            {
+              "name": "PORT54"
+            },
+            {
+              "name": "PORT55"
+            },
+            {
+              "name": "PORT56"
+            },
+            {
+              "name": "PORT57"
+            },
+            {
+              "name": "PORT58"
+            },
+            {
+              "name": "PORT59"
+            },
+            {
+              "name": "PORT60"
+            },
+            {
+              "name": "PORT61"
+            },
+            {
+              "name": "PORT62"
+            },
+            {
+              "name": "PORT63"
+            },
+            {
+              "name": "PORT64"
+            },
+            {
+              "name": "PORT65"
+            },
+            {
+              "name": "PORT66"
             }
         ]
     },

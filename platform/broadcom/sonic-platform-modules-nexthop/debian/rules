@@ -70,6 +70,11 @@ override_dh_auto_install:
 			cp $(MOD_SRC_DIR)/$${mod}/udev/* \
 				debian/$${pkg_name}/etc/udev/rules.d/; \
 		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/bash_completion.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/bash_completion.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/bash_completion.d/* \
+				debian/$${pkg_name}/etc/bash_completion.d/; \
+		fi; \
 		python3 setup.py install \
 			--root=$(MOD_SRC_DIR)/debian/$${pkg_name} \
 			--install-layout=deb; \

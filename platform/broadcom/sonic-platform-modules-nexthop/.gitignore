@@ -34,3 +34,7 @@ __pycache__/
 /debian/debhelper-build-stamp
 /debian/sonic-platform-nexthop-4010/
 /sonic_platform-1.0-py3-none-any.whl
+
+# bash completion scripts
+!/common/bash_completion.d/
+!/nh-4010/bash_completion.d/

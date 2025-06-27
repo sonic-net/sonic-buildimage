@@ -16,6 +16,12 @@ class FanDrawer(PddfFanDrawer):
         # idx is 0-based 
         PddfFanDrawer.__init__(self, tray_idx, pddf_data, pddf_plugin_data)
 
+    def get_model(self):
+        return self._fan_list[0].get_model()
+
+    def get_serial(self):
+        return self._fan_list[0].get_serial()
+
     def get_status_led(self):
         fan_led_device = "FANTRAY_LED_{}".format(self.fantray_index)
         success, color = self.pddf_obj.get_system_led_color(fan_led_device)

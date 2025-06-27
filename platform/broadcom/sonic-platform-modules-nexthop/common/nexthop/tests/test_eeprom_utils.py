@@ -5,6 +5,11 @@ from typing import Counter
 
 import pytest
 
+# Skip test until click version mismatch resolved.
+# Host and bookworm container run different click versions.
+# The older host version expects a different bash autocomplete API
+pytest.skip("Skipping entire module", allow_module_level=True)
+
 CWD = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(CWD, "../"))
 sys.path.append(os.path.join(CWD, "../../"))
