@@ -85,7 +85,7 @@
         # After rotated all log files are empty since log partition is full, then logrotate skips since it asserts notifempty and file size.
         # On that condition, we need to clean up on postrotate
         # Again, one time clean up during a logrotate round is enough, more running just add useless scanning.
-        # Hook and trigger clean up on rotation on syslog, to avoid useless running on other log files
+        # Hook and trigger clean up on rotation on syslog(last rotation log in the configuration), to avoid useless running on other log files
         if [ $(echo $1 | grep -c "/var/log/syslog") -gt 0 ]; then
 {% include 'on_demand_archived_log_clean_up.j2' %}
         fi
