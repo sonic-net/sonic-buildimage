@@ -1,0 +1,64 @@
+From 13fa4b71cfd97a9c0065052c2b3dda10715b4fd2 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Tue, 21 Oct 2025 12:21:20 +0200
+Subject: [PATCH] zebra: Fix SRv6 explicit SID allocation to use the provided
+ locator
+
+Currently, when staticd allocates an explicit SID using the CLI:
+
+  segment-routing
+   srv6
+    static-sids
+     sid fcbb:bbbb:1:fe00::/64 locator MAIN behavior uDT46 vrf Vrf10
+
+staticd requests the SRv6 SID Manager to allocate SID fcbb:bbbb:1:fe00::
+from locator MAIN. However, the SID Manager incorrectly ignores the
+provided locator MAIN and instead performs a lookup to find the first
+locator that matches the SID prefix, then allocates the SID from that
+locator regardless of which locator was requested.
+
+This behavior can lead to SIDs being allocated from unintended locators
+when multiple locators have overlapping prefixes, violating the user's
+explicit locator specification.
+
+This commit fixes the issue by adding a constraint in zebra_srv6_sid_decompose()
+that enforces the SID Manager to allocate the SID only from the provided
+locator when one is specified. The fix adds an early check in the locator
+lookup loop to skip locators that don't match the caller-provided locator,
+ensuring explicit SID allocation respects the user's locator choice.
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/zebra_srv6.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index 4231233f0e..3f83ad03d0 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -1322,10 +1322,14 @@ static bool zebra_srv6_sid_decompose(struct in6_addr *sid_value,
+ 	tmp_prefix.prefix = *sid_value;
+ 
+ 	/*
+-	 * Lookup the parent locator of the SID and return the locator and
+-	 * the function of the SID.
++	 * If parent locator of the SID is provided, use it to decompose the SID;
++	 * otherwise lookup the parent locator. Return the locator and SID function.
+ 	 */
+ 	for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, l)) {
++		/* Skip locators that don't match the provided locator */
++		if (*locator != NULL && *locator != l)
++			continue;
++
+ 		/*
+ 		 * Check if the locator prefix includes the temporary prefix
+ 		 * representing the SID.
+@@ -1801,7 +1805,7 @@ static int get_srv6_sid_explicit(struct zebra_srv6_sid **sid, struct srv6_sid_ct
+ {
+ 	struct zebra_srv6_sid_ctx *zctx = NULL;
+ 	uint32_t sid_func = 0, sid_func_wide = 0;
+-	struct srv6_locator *loc = NULL;
++	struct srv6_locator *loc = locator;
+ 	struct zebra_srv6_sid_block *block = NULL;
+ 	char buf[256];
+ 

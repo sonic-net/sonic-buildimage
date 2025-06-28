@@ -60,3 +60,14 @@
 0060-bgpd-Convert-bmp-path_info-tracking-from-hash-to-rbt.patch
 0061-bgpd-Fix-JSON-wrapper-brace-consistency-in-neighbor.patch
 0062-zebra-if-speed-change-check-fix.patch
+0063-zebra-Add-CLI-to-display-SRv6-SIDs-allocated.patch
+0064-bgpd-add-usid-behavior-for-bgp-srv6-instructions.patch
+0065-bgpd-Implement-Link-Local-Next-Hop-capability.patch
+0066-Add-BGP-redistribution-in-SRv6-BGP.patch
+0067-bgpd-Add-support-for-BGP-to-use-SRv6-SID-in-an-explicit-way.patch
+0068-lib-staticd-isisd-add-B6-ENCAPS-codepoint-extensions.patch
+0069-zebra-Provide-SID-value-when-sending-SRv6-SID-release-notify-message.patch
+0070-zebra-Cleanup-SRv6-output-of-show-running-config.patch
+0071-zebra-Free-up-tt-when-failure-mode-happens.patch
+0072-SRv6-Add-support-for-multiple-SRv6-locators.patch
+0073-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
