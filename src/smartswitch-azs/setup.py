@@ -24,7 +24,8 @@ setup(
         long_description=readme + '\n\n',
     scripts=[
       'link_state_tracker.py',
-      'bgp_session_tracker.py'
+      'bgp_session_tracker.py',
+      'periodic_config_saver.py',
     ],
     install_requires = [
         'pyroute2',
@@ -48,9 +49,9 @@ setup(
         'wheel'
     ],
     include_package_data=True,
-    keywords=['sonic-smartswitch-azs', 'link_state_tracker'],
+    keywords=['sonic-smartswitch-azs', 'link_state_tracker', 'periodic-config-saver'],
     name='sonic-smartswitch-azs',
-    py_modules=['link_state_tracker', 'configutil', 'bgp_session_tracker', 'mock_modules'],
+    py_modules=['link_state_tracker','bgp_session_tracker', 'mock_modules', 'periodic_config_saver'],
     packages=find_packages(),
     version='1.0',
     zip_safe=False,
