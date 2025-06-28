@@ -375,7 +375,9 @@
 {% if port in port_names_list_extra_queues %}
             "pfc_to_pg_map"   : "AZURE_DUALTOR",
 {% else %}
+{% if LOSSLESS_TC|length > 0 %}
             "pfc_to_pg_map"   : "AZURE",
+{% endif %}
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
@@ -391,7 +393,9 @@
 {% else %}
             "tc_to_pg_map"    : "AZURE_DPC",
 {% endif %}
+{% if LOSSLESS_TC|length > 0 %}
             "pfc_to_queue_map": "AZURE"
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
