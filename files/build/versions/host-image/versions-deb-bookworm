@@ -68,7 +68,7 @@ hdparm==9.65+ds-1
 hping3==3.a2.ds2-10
 hw-management==1.mlnx.7.0040.4001
 i2c-tools==4.3-2+b3
-icu-devtools==72.1-3
+icu-devtools==72.1-3+deb12u1
 ifmetric==0.3-5
 ifupdown2==3.0.0-1
 initramfs-tools==0.142
@@ -155,8 +155,8 @@ libhavege2==1.9.14-1+b1
 libhiredis0.14==0.14.1-3
 libhwasan0==12.2.0-14+deb12u1
 libi2c0==4.3-2+b3
-libicu-dev==72.1-3
-libicu72==72.1-3
+libicu-dev==72.1-3+deb12u1
+libicu72==72.1-3+deb12u1
 libiio-utils==0.24-4
 libiio0==0.24-4
 libiniparser1==4.1-6
@@ -168,7 +168,7 @@ libjansson4==2.14-2
 libjq1==1.6-2.1
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
 libjson-c5==0.16-2
-libk5crypto3==1.20.1-2+deb12u1+fips
+libk5crypto3==1.20.1-2+deb12u3
 libkeyutils1==1.6.3-2
 libklibc==2.0.12-1
 libkmod2==30+20221128-1
@@ -225,9 +225,9 @@ libpsl5==0.21.2-1
 libpwquality-common==1.4.5-1
 libpwquality1==1.4.5-1+b1
 libpython3-stdlib==3.11.2-1+b1
-libpython3.11==3.11.2-6+fips
-libpython3.11-minimal==3.11.2-6+fips
-libpython3.11-stdlib==3.11.2-6+fips
+libpython3.11==3.11.2-6+deb12u6
+libpython3.11-minimal==3.11.2-6+deb12u6
+libpython3.11-stdlib==3.11.2-6+deb12u6
 libquadmath0==12.2.0-14+deb12u1
 libre2-9==20220601+dfsg-1+b1
 libreadline8==8.2-1.3
@@ -241,7 +241,7 @@ libsodium23==1.0.18-1
 libsqlite3-0==3.40.1-2+deb12u1
 libssh2-1==1.10.0-3+b1
 libssl-dev==3.0.11-1~deb12u2+fips
-libssl3==3.0.11-1~deb12u2+fips
+libssl3==3.0.16-1~deb12u1
 libswsscommon==1.0.0
 libsysfs2==2.1.1-4
 libsystemd-shared==252.38-1~deb12u1
@@ -270,8 +270,8 @@ libxenmisc4.17==4.17.5+23-ga4e5191dc0-1+deb12u1
 libxenstore4==4.17.5+23-ga4e5191dc0-1+deb12u1
 libxentoolcore1==4.17.5+23-ga4e5191dc0-1+deb12u1
 libxentoollog1==4.17.5+23-ga4e5191dc0-1+deb12u1
-libxml2==2.9.14+dfsg-1.3~deb12u1
-libxml2-dev==2.9.14+dfsg-1.3~deb12u1
+libxml2==2.9.14+dfsg-1.3~deb12u2
+libxml2-dev==2.9.14+dfsg-1.3~deb12u2
 libxslt1-dev==1.1.35-1+deb12u1
 libxslt1.1==1.1.35-1+deb12u1
 libxtables12==1.8.9-2
@@ -313,10 +313,10 @@ netfilter-persistent==1.0.20
 nslcd==0.9.12-4
 nvme-cli==2.4+really2.3-3
 opennsl-modules==7.1.0.0
-openssh-client==1:9.2p1-2+deb12u5+fips
-openssh-server==1:9.2p1-2+deb12u5+fips
-openssh-sftp-server==1:9.2p1-2+deb12u5+fips
-openssl==3.0.11-1~deb12u2+fips
+openssh-client==1:9.2p1-2+deb12u6
+openssh-server==1:9.2p1-2+deb12u6
+openssh-sftp-server==1:9.2p1-2+deb12u6
+openssl==3.0.16-1~deb12u1
 pci.ids==0.0~2023.04.11-1
 pciutils==1:3.9.0-4
 perl==5.36.0-7+deb12u2
@@ -351,8 +351,8 @@ python3-swsscommon==1.0.0
 python3-wheel==0.38.4-2
 python3-yaml==6.0-3+b2
 python3-yang==1.0.73
-python3.11==3.11.2-6+fips
-python3.11-minimal==3.11.2-6+fips
+python3.11==3.11.2-6+deb12u6
+python3.11-minimal==3.11.2-6+deb12u6
 rasdaemon==0.6.8-1
 readline-common==8.2-1.3
 resolvconf==1.91+nmu1

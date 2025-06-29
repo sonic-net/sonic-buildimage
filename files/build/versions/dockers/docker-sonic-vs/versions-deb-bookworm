@@ -25,7 +25,7 @@ gpg-wks-client==2.2.40-1.1
 gpg-wks-server==2.2.40-1.1
 gpgconf==2.2.40-1.1
 gpgsm==2.2.40-1.1
-icu-devtools==72.1-3
+icu-devtools==72.1-3+deb12u1
 ifupdown==0.8.41
 iptables==1.8.9-2
 krb5-multidev==1.20.1-2+deb12u1+fips
@@ -46,8 +46,8 @@ libglib2.0-0==2.74.6-2+deb12u6
 libglib2.0-data==2.74.6-2+deb12u6
 libgssapi-krb5-2==1.20.1-2+deb12u1+fips
 libgssrpc4==1.20.1-2+deb12u1+fips
-libicu-dev==72.1-3
-libicu72==72.1-3
+libicu-dev==72.1-3+deb12u1
+libicu72==72.1-3+deb12u1
 libip4tc2==1.8.9-2
 libip6tc2==1.8.9-2
 libjson-c5==0.16-2
@@ -84,8 +84,8 @@ libssl3==3.0.16-1~deb12u1
 libteam-utils==1.31-1
 libtirpc-dev==1.3.3+ds-1
 libunwind8==1.6.2-3
-libxml2==2.9.14+dfsg-1.3~deb12u1
-libxml2-dev==2.9.14+dfsg-1.3~deb12u1
+libxml2==2.9.14+dfsg-1.3~deb12u2
+libxml2-dev==2.9.14+dfsg-1.3~deb12u2
 libyang2t64==2.1.148-0.2
 libzmq3-dev==4.3.4-6
 linux-libc-dev==6.1.140-1
