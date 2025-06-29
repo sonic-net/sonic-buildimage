@@ -20,16 +20,6 @@ XSIGHT_PCI_ID=""
 XSIGHT_DEVICE=""
 FIRSTBOOT="/tmp/notify_firstboot_to_platform"
 
-if [ -f $FIRSTBOOT ]; then
-    PLATFORM=$(sed -n 's/onie_platform=\(.*\)/\1/p' /host/machine.conf)
-
-    # update default config from custom.json
-    if [ -f /usr/share/sonic/device/$PLATFORM/custom.json ]; then
-        sonic-cfggen --from-db -j /usr/share/sonic/device/$PLATFORM/custom.json --print-data > /etc/sonic/config_db.json
-        sonic-cfggen -j /usr/share/sonic/device/$PLATFORM/custom.json --write-to-db
-    fi
-fi
-
 fname=$(basename $0)
 
 # The eth0 interface intermittently disappears on reboot.
