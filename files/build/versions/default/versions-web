@@ -22,7 +22,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==551d3780d615557674e93fa11210499d
 http://www.mellanox.com/downloads/MFT/mft-4.32.0-120-arm64-deb.tgz==aa764d986742a82303c1e77b7bda8e71
 http://www.mellanox.com/downloads/MFT/mft-4.32.0-120-x86_64-deb.tgz==3a1a489483241240701576ca4cace1f9
-https://api.github.com/repos/karimra/gnoic/releases/latest==ce3b4a8f4ac6ba89049d4debf22486f3
+https://api.github.com/repos/karimra/gnoic/releases/latest==002aa5001100d669331128dd7fccd94d
 https://archive.apache.org/dist/thrift/0.14.1/thrift-0.14.1.tar.gz==c64434548438df2cb1e53fb27c600e85
 https://bootstrap.pypa.io/pip/get-pip.py==a9c622fd4e0f4bcc1d070e374f3c68eb
 https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.8.1.dsc==cf20d7dc926e6efb6946622f25728074
