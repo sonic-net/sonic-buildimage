@@ -20,8 +20,10 @@ libthrift-dev==0.11.0-4
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
+libyang3==3.12.2-1
 python-swsscommon==1.0.0
 python-thrift==0.11.0-4
+python3-libyang==3.1.0-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-mgmt-common==1.0.0
