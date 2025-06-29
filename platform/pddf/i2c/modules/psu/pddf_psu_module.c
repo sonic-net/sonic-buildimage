@@ -46,6 +46,9 @@ PSU_DATA psu_data = {0};
 /* PSU CLIENT DATA */
 PDDF_DATA_ATTR(psu_idx, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.idx, NULL);
 PDDF_DATA_ATTR(psu_fans, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_fans, NULL);
+PDDF_DATA_ATTR(psu_thermals, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_thermals, NULL);
+PDDF_DATA_ATTR(psu_temp_high_thresh_bitmap, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_temp_high_thresh_bitmap, NULL);
+
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.aname, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devtype, NULL);
@@ -63,6 +66,8 @@ PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*
 static struct attribute *psu_attributes[] = {
     &attr_psu_idx.dev_attr.attr,
     &attr_psu_fans.dev_attr.attr,
+    &attr_psu_thermals.dev_attr.attr,
+    &attr_psu_temp_high_thresh_bitmap.dev_attr.attr,
 
     &attr_attr_name.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
@@ -121,6 +126,8 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
 
         psu_platform_data->idx = pdata->idx;
         psu_platform_data->num_psu_fans = pdata->num_psu_fans;
+        psu_platform_data->num_psu_thermals = pdata->num_psu_thermals;
+        psu_platform_data->psu_temp_high_thresh_bitmap = pdata->psu_temp_high_thresh_bitmap;
         psu_platform_data->len = pdata->len;
 
         for (i=0;i<num;i++)
