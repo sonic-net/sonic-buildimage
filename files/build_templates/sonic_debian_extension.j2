@@ -951,16 +951,17 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-man
 {% set name, path, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
 name_repo=$(basename {{name}} .gz)
-
-# Prevents docker image naming conflicts when multiple builds run on same server:
-# - Native dockerd: tag SONIC_IMAGE_VERSION -> latest
-# - Non-native dockerd: tag latest -> SONIC_IMAGE_VERSION
-# This check aligns with docker-get-tag in slave.mk which returns SONIC_IMAGE_VERSION
-# for packages when SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y, otherwise returns 'latest'
-if [ "x$SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD" == "xy" ]; then
-    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag "$name_repo:${SONIC_IMAGE_VERSION}" "$name_repo:latest"
+image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{{.Tag}}" $name_repo | grep -v "<none>")
+if echo "$image_tags" | grep -q "latest"; then
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
 else
-    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag "$name_repo:latest" "$name_repo:${SONIC_IMAGE_VERSION}"
+    # If not tagged with latest, find existing tag and tag with latest
+    existing_tag=$(echo "$image_tags" | head -1)
+    if [ -n "$existing_tag" ]; then
+        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:$existing_tag $name_repo:latest
+    else
+        echo "Warning: No existing tag found for image $name_repo, skipping version tagging"
+    fi
 fi
 {% endfor -%}
 
