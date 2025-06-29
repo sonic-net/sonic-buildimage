@@ -683,5 +683,9 @@
             "8x100G": ["Eth16/1", "Eth16/2", "Eth16/3", "Eth16/4", "Eth16/5", "Eth16/6", "Eth16/7", "Eth16/8"]
         }
     }
+  },
+  "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
   }
 }
