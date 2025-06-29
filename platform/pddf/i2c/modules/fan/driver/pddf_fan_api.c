@@ -701,8 +701,11 @@ int sonic_i2c_get_fan_rpm_default(void *client, FAN_DATA_ATTR *udata, void *info
             if (divisor == 0) {
                 printk(KERN_ERR "%s: failed to calculate fan rpm, divisor is 0\n", __FUNCTION__);
                 return -1;
+            } else if (divisor < 0) {
+                painfo->val.intval = 0;
+            } else {
+                painfo->val.intval = udata->mult / divisor;
             }
-            painfo->val.intval = udata->mult / divisor;
         } else {
             painfo->val.intval = udata->mult * val;
         }
