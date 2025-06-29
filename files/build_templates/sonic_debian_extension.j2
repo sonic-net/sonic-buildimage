@@ -951,7 +951,7 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-man
 {% set name, path, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
 name_repo=$(basename {{name}} .gz)
-image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{{.Tag}}" $name_repo | grep -v "<none>")
+image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
 if echo "$image_tags" | grep -q "latest"; then
     sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
 else
