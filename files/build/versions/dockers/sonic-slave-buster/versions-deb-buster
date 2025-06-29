@@ -1472,8 +1472,8 @@ phpunit-resource-operations==2.0.1-1
 phpunit-version==2.0.1-1
 pigz==2.4-1
 pinentry-curses==1.1.0-2
-pkg-config==0.29-6
 pkg-php-tools==1.37
+pkgconf==1.6.0-1
 po-debconf==1.0.21
 policykit-1==0.105-25+deb10u1
 poppler-data==0.4.9-2
@@ -1600,6 +1600,7 @@ python3-atomicwrites==1.1.5-2
 python3-attr==18.2.0-1
 python3-babel==2.6.0+dfsg.1-1+deb10u1
 python3-certifi==2018.8.24-1
+python3-cffi==1.12.2-1
 python3-cffi-backend==1.12.2-1
 python3-chardet==3.0.4-3
 python3-cov-core==1.15.0-2
@@ -1637,7 +1638,9 @@ python3-pbr==4.2.0-5
 python3-pil==5.4.1-2+deb10u6
 python3-pkg-resources==40.8.0-1
 python3-pluggy==0.8.0-1
+python3-ply==3.11-3
 python3-py==1.7.0-2
+python3-pycparser==2.19-1
 python3-pycurl==7.43.0.2-0.1
 python3-pygments==2.3.1+dfsg-1+deb10u2
 python3-pyparsing==2.2.0+dfsg1-2
@@ -1722,6 +1725,7 @@ systemd==241-7~deb10u10
 systemd-sysv==241-7~deb10u10
 t1utils==1.41-3
 tcl==8.6.9+1
+tcl-expect==5.45.4-2
 tcl8.6==8.6.9+dfsg-2
 teckit==2.5.8+ds2-5
 telnet==0.17-41.2

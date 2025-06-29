@@ -1,3 +1,14 @@
 binutils-arm-linux-gnueabihf==2.40-2
+libk5crypto3==1.20.1-2+deb12u1+fips
+libpython3.11==3.11.2-6+fips
+libpython3.11-minimal==3.11.2-6+fips
+libpython3.11-stdlib==3.11.2-6+fips
+libssl3==3.0.11-1~deb12u2+fips
 linux-image-6.1.0-29-2-armmp==6.1.123-1
 mrvlprestera==1.0
+openssh-client==1:9.2p1-2+deb12u5+fips
+openssh-server==1:9.2p1-2+deb12u5+fips
+openssh-sftp-server==1:9.2p1-2+deb12u5+fips
+openssl==3.0.11-1~deb12u2+fips
+python3.11==3.11.2-6+fips
+python3.11-minimal==3.11.2-6+fips

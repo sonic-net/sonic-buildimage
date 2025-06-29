@@ -36,8 +36,8 @@ libssl-dev==3.0.16-1~deb12u1
 libssl3==3.0.16-1~deb12u1
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
-libyang2t64==2.1.148-0.2
-libyang2t64-dbgsym==2.1.148-0.2
+libyang3==3.12.2-1
+libyang3-dbgsym==3.12.2-1
 logrotate==3.21.0-1
 lsof==4.95.0-1
 openssh-client==1:9.2p1-2+deb12u6
