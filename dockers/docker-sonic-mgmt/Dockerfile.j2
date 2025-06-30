@@ -54,11 +54,11 @@ RUN apt-get update && apt-get install -y apt-transport-https \
                                          vim \
                                          bats
 
-RUN python3 -m pip install --upgrade pip setuptools wheel
+RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages --ignore-installed
 
 
-RUN python3 -m pip install grpcio grpcio-tools
-RUN python3 -m pip install --verbose \
+RUN python3 -m pip install grpcio grpcio-tools --break-system-packages
+RUN python3 -m pip install --break-system-packages --verbose \
                  aiohttp \
                  allure-pytest \
                  ansible \
@@ -142,7 +142,7 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && rm -fr nanomsg-1.2  \
     && rm -f 1.2.tar.gz
 
-RUN python3 -m pip install nnpy
+RUN python3 -m pip install nnpy --break-system-packages
 
 # Install docker-ce-cli
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
@@ -183,7 +183,7 @@ RUN cd /tmp \
     && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
     && cd utils \
     && python3 setup.py bdist_wheel \
-    && python3 -m pip install dist/dash_pipeline_utils*.whl \
+    && python3 -m pip install --break-system-packages dist/dash_pipeline_utils*.whl \
     && cd / \
     && rm -rf /tmp/utils
 
