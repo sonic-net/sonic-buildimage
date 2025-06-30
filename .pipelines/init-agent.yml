@@ -38,26 +38,33 @@ steps:
       # Install NFS related packages
       sudo apt-get update
       sleep 1
-      sudo apt-get install -y nfs-common unzip wget aznfs
       # Upgrade jinja2 to use j2 in Makefile.work
       sudo pip3 install --upgrade jinja2
+      sudo apt-get install -y nfs-common unzip wget
+      if dpkg --print-architecture | grep amd64; then
+        sudo apt-get install -y aznfs
+      fi
       
       # Make symbolic link for the workspace to increase the space
       sudo mkdir -p /data/w
-      sudo mv $(Agent.BuildDirectory)/ /data/w
+      if [[ "$(realpath $(Agent.BuildDirectory)/../)" != "$(realpath /data/w)" ]];then
+        sudo mv $(Agent.BuildDirectory)/ /data/w
+        ln -s /data/w/$(basename $(Agent.BuildDirectory)) $(Agent.BuildDirectory)
+      fi
       sudo setfacl -R -b /data/w
       sudo chown $USER:$(id -gn) /data/w
 
-      ln -s /data/w/$(basename $(Agent.BuildDirectory)) $(Agent.BuildDirectory)
       echo "pwd=$(pwd)"
       ls -lt $(Agent.BuildDirectory) $(Agent.BuildDirectory)/s
 
       # Mount nfs
       if ! mount | grep 'on /nfs'; then
-        sudo mkdir /nfs -p
-        sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
-        sudo chown nobody /nfs
-        sudo chmod u=rwx,g=rwx,o=r /nfs
+        if dpkg --print-architecture | grep amd64; then
+          sudo mkdir /nfs -p
+          sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
+          sudo chown nobody /nfs
+          sudo chmod u=rwx,g=rwx,o=r /nfs
+        fi
       fi
     retryCountOnTaskFailure: 5
     displayName: 'Init agent'

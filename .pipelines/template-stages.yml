@@ -211,7 +211,7 @@ stages:
         pool:
           type: linux
           isCustom: true
-          name: sonic-armhf
+          name: sonicms1ES-armhf
         variables:
           ob_artifactBaseName: sonic-buildimage.marvell-prestera-armhf
           PLATFORM_ARCH: armhf
