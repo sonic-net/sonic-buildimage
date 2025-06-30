@@ -389,7 +389,7 @@
                 "high-threshold": true,
                 "minimum-recorded": true,
                 "maximum-recorded": true
-            },
+            }
         ],
         "modules": [],
         "sfps": []
