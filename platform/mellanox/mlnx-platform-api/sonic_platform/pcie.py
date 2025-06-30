@@ -24,6 +24,7 @@
 ########################################################################
 import os
 import re
+import logging
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
@@ -38,6 +39,7 @@ PCIE_OPERATION_DETACHING = "detaching"
 BULEFIELD_SOC_NAME = "DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management Interface (rev 01)"
 BLUEFIELD_CONNECTX_NAME = "Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller (rev 01)"
 
+logger = logging.getLogger("pcieutil")
 
 class Pcie(PcieUtil):
     # check the current PCIe device with config file and return the result
@@ -72,7 +74,7 @@ class Pcie(PcieUtil):
                     return_confInfo.append(item_conf)
                     continue
                 except Exception as e:
-                    print(f"Error: {e}")
+                    logger.error(f"Error: {e}")
                     pass
             bus_conf = self._device_id_to_bus_map.get(str(id_conf))
             if bus_conf and self.check_pcie_sysfs(bus=int(bus_conf, base=16), device=int(dev_conf, base=16),
