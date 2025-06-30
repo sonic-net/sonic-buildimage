@@ -9,6 +9,10 @@ export LIBYANG_VERSION
 export LIBYANG_SUBVERSION
 
 LIBYANG = libyang_$(LIBYANG_VERSION)_$(CONFIGURED_ARCH).deb
+ifeq ($(BLDENV),trixie)
+$(LIBYANG)_DEPENDS += $(LIBPCRE3_DEV) $(LIBPCRE3) $(LIBPCRE16_3) $(LIBPCRE32_3) $(LIBPCRECPP0V5)
+$(LIBYANG)_RDEPENDS += $(LIBPCRE3)
+endif
 $(LIBYANG)_SRC_PATH = $(SRC_PATH)/libyang
 ifeq ($(BLDENV),bookworm)
 # introduce artifical dependency between LIBYANG and FRR
