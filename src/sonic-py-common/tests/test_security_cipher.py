@@ -68,25 +68,27 @@ class TestSecurityCipher(object):
                 args = mock_save.call_args[0][0]
                 assert "RADIUS|global" in args["RADIUS"]["table_info"]
 
-    def test_deregister_table_info(self):
-        test_json = {
-            "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
-        }
-        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-             mock.patch("os.chmod"), \
-             mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
-             mock.patch("os.path.exists", return_value=True):
-            temp = master_key_mgr()
-            with mock.patch.object(temp, "_save_registry") as mock_save:
-                temp.deregister("RADIUS", "RADIUS|global")
-                args = mock_save.call_args[0][0]
-                assert "RADIUS|global" not in args["RADIUS"]["table_info"]
-                assert args["RADIUS"]["password"] == "radius_secret"
-                # Remove last and check password removed
-                temp.deregister("RADIUS", "RADIUS|backup")
-                args = mock_save.call_args[0][0]
-                assert args["RADIUS"]["table_info"] == []
-                assert args["RADIUS"]["password"] is None
+def test_deregister_table_info(self):
+    test_json = {
+        "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
+    }
+    with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+         mock.patch("os.chmod"), \
+         mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
+         mock.patch("os.path.exists", return_value=True):
+        temp = master_key_mgr()
+        with mock.patch.object(temp, "_save_registry") as mock_save:
+            temp.deregister("RADIUS", "RADIUS|global")
+            temp.deregister("RADIUS", "RADIUS|backup")
+            # First call: after removing "RADIUS|global"
+            args_first = mock_save.call_args_list[0][0][0]
+            assert "RADIUS|global" not in args_first["RADIUS"]["table_info"]
+            assert "RADIUS|backup" in args_first["RADIUS"]["table_info"]
+            assert args_first["RADIUS"]["password"] == "radius_secret"
+            # Second call: after removing "RADIUS|backup"
+            args_second = mock_save.call_args_list[1][0][0]
+            assert args_second["RADIUS"]["table_info"] == []
+            assert args_second["RADIUS"]["password"] is None
 
     def test_rotate_feature_passwd(self):
         # Simulate DB entries and encryption/decryption
