@@ -164,24 +164,23 @@ class master_key_mgr:
             table, entry = table_info.split("|")
             db_entry = self._config_db.get_entry(table, entry)
             encrypted_passkey = db_entry.get("passkey")
-            if encrypted_passkey:
+            #Rotate only if valid passkey is present and 'key_encyrpt' flag is True
+            if encrypted_passkey and db_entry.get("key_encrypt") == 'True':
                 # Decrypt with old password
                 plain_passkey = self._decrypt_passkey(feature_type, encrypted_passkey, old_password)
                 # Re-encrypt with new password
                 new_encrypted_passkey = self._encrypt_passkey(feature_type, plain_passkey, new_password)
                 # Update DB
                 db_entry["passkey"] = new_encrypted_passkey
-                # Make sure key_encrypt should be set true
-                db_entry["key_encrypt"] = 'True'
                 self._config_db.set_entry(table, entry, db_entry)
                 syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Updated passkey for {}".format(table_info))
             else:
-                syslog.syslog(syslog.LOG_WARNING, "No passkey found in DB for {}".format(table_info))
+                syslog.syslog(syslog.LOG_WARNING, "Either no passkey found or key_encrypt flag is not set to True for {}".format(table_info))
 
         # Update stored password
         data[feature_type]["password"] = new_password
         self._save_registry(data)
-        syslog.syslog(syslog.LOG_INFO, f"rotate_feature_passwd: Password for {feature_type} updated.")
+        syslog.syslog(syslog.LOG_INFO, "rotate_feature_passwd: Password for {} Feature has been updated.".format(feature_type))
 
     def encrypt_passkey(self, feature_type, secret: str) -> str:
         """

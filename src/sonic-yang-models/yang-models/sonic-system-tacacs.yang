@@ -46,6 +46,12 @@ module sonic-system-tacacs {
         }
     }
 
+    typedef key_encrypt_type {
+        type boolean;
+        default false;
+        description "Indicates if the passkey is encrypted.";
+    }
+
     container sonic-system-tacacs {
 
         container TACPLUS_SERVER {
@@ -92,9 +98,7 @@ module sonic-system-tacacs {
                 }
 
                 leaf key_encrypt {
-                    type boolean;
-                    default false;
-                    description "Indicates if the passkey is encrypted.";
+                    type key_encrypt_type;
                 }
 
                 leaf passkey {
@@ -138,9 +142,7 @@ module sonic-system-tacacs {
                 }
 
                 leaf key_encrypt {
-                    type boolean;
-                    default false;
-                    description "Indicates if the passkey is encrypted.";
+                    type key_encrypt_type;
                 }
 
                 leaf passkey {
