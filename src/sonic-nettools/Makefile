@@ -1,9 +1,6 @@
 include ../../rules/sonic-nettools.mk
 
-MAIN_TARGET = $(SONIC_NETTOOLS)
-DERIVED_TARGETS = $(SONIC_NETTOOLS_DBG)
-
-$(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
+$(addprefix $(DEST)/, $(SONIC_NETTOOLS)): $(DEST)/% :
 	mkdir -p bin
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	cargo test --target=$(RUST_CROSS_COMPILE_TARGET)
