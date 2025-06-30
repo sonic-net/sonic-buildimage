@@ -75,7 +75,6 @@ pytest-cov==2.6.0
 pytest-runner==4.4
 pytz==2019.1
 pyxdg==0.25
-pyyaml==5.4.1
 redis==3.5.3
 requests==2.21.0
 roman==2.0.0

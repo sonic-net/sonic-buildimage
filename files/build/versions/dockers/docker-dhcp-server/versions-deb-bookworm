@@ -2,10 +2,10 @@ kea-common==2.2.0-6
 kea-dhcp4-server==2.2.0-6
 liblog4cplus-2.0.5==2.0.8-1
 liblua5.1-0==5.1.5-9
-libmariadb3==1:10.11.6-0+deb12u1
+libmariadb3==1:10.11.11-0+deb12u1
 libpcap0.8==1.10.3-1
-libpq5==15.10-0+deb12u1
-mariadb-common==1:10.11.6-0+deb12u1
+libpq5==15.13-0+deb12u1
+mariadb-common==1:10.11.11-0+deb12u1
 mysql-common==5.8+1.1.0
 sonic-rsyslog-plugin==1.0.0-0
 tcpdump==4.99.3-1
