@@ -3,7 +3,7 @@ export PASSWORD=password
 export DOCKER_EXTRA_OPTS='--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
 export NOJESSIE=1
 export NOSTRETCH=1
-export SONIC_BUILD_JOBS=2
+export SONIC_BUILD_JOBS=${SONIC_BUILD_JOBS:-2}
 export SONIC_VERSION_CONTROL_COMPONENTS=py3
 
 mach=$(uname -m)
