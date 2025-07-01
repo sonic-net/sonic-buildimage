@@ -66,11 +66,11 @@ struct psu_data {
 	int						num_psu_fans;
 	int						num_psu_thermals;
 	/*
-	* Bitmap of supported thermal thresholds
-	* Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
-	* A bit value of 1 means the sensor supports high threshold.
-	* Needed as some PSUs may not support high threshold for all thermal sensors.
-	*/
+	 * Bitmap of supported thermal thresholds
+	 * Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+	 * A bit value of 1 means the sensor supports high threshold.
+	 * Needed as some PSUs may not support high threshold for all thermal sensors.
+	 */
 	u32						psu_temp_high_thresh_bitmap;
 	int						num_attr;
 	struct attribute		*psu_attribute_list[MAX_PSU_ATTRS];
