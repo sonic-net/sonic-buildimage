@@ -12944,19 +12944,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in2_max"
+          "drv_attr_name": "in2_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in2_min"
+          "drv_attr_name": "in2_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in2_max_alarm"
+          "drv_attr_name": "in2_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in2_min_alarm"
+          "drv_attr_name": "in2_lcrit_alarm"
         }
       ]
     }
@@ -12979,19 +12979,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in3_max"
+          "drv_attr_name": "in3_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in3_min"
+          "drv_attr_name": "in3_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in3_max_alarm"
+          "drv_attr_name": "in3_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in3_min_alarm"
+          "drv_attr_name": "in3_lcrit_alarm"
         }
       ]
     }
@@ -13014,19 +13014,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in2_max"
+          "drv_attr_name": "in2_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in2_min"
+          "drv_attr_name": "in2_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in2_max_alarm"
+          "drv_attr_name": "in2_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in2_min_alarm"
+          "drv_attr_name": "in2_lcrit_alarm"
         }
       ]
     }
@@ -13049,19 +13049,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in3_max"
+          "drv_attr_name": "in3_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in3_min"
+          "drv_attr_name": "in3_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in3_max_alarm"
+          "drv_attr_name": "in3_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in3_min_alarm"
+          "drv_attr_name": "in3_lcrit_alarm"
         }
       ]
     }
@@ -13084,19 +13084,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in2_max"
+          "drv_attr_name": "in2_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in2_min"
+          "drv_attr_name": "in2_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in2_max_alarm"
+          "drv_attr_name": "in2_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in2_min_alarm"
+          "drv_attr_name": "in2_lcrit_alarm"
         }
       ]
     }
@@ -13119,19 +13119,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in2_max"
+          "drv_attr_name": "in2_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in2_min"
+          "drv_attr_name": "in2_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in2_max_alarm"
+          "drv_attr_name": "in2_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in2_min_alarm"
+          "drv_attr_name": "in2_lcrit_alarm"
         }
       ]
     }
@@ -13154,19 +13154,19 @@
         },
         {
           "attr_name": "volt1_high_threshold",
-          "drv_attr_name": "in3_max"
+          "drv_attr_name": "in3_crit"
         },
         {
           "attr_name": "volt1_low_threshold",
-          "drv_attr_name": "in3_min"
+          "drv_attr_name": "in3_lcrit"
         },
         {
           "attr_name": "volt1_crit_high_threshold",
-          "drv_attr_name": "in3_max_alarm"
+          "drv_attr_name": "in3_crit_alarm"
         },
         {
           "attr_name": "volt1_crit_low_threshold",
-          "drv_attr_name": "in3_min_alarm"
+          "drv_attr_name": "in3_lcrit_alarm"
         }
       ]
     }
@@ -13227,7 +13227,7 @@
   },
   "CURRENT3": {
     "dev_info": {
-      "device_type": "VOLTAGE_SENSOR",
+      "device_type": "CURRENT_SENSOR",
       "device_name": "DCDC2-RAIL3",
       "device_parent": "MULTIFPGAPCIE1",
       "virt_parent": "DCDC2"
