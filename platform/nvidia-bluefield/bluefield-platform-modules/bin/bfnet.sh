@@ -16,63 +16,62 @@
 # limitations under the License.
 #
 
-pci_iface=eth0-midplane
-cp_iface=Ethernet0
-pidfile=/run/dhcl-internal.$cp_iface.pid
-leasefile=/var/lib/dhcp/dhcl-internal.$cp_iface.leases
-
-stop_cp_dhclient()
-{
-    if [[ -f $pidfile ]]; then
-        kill $(cat $pidfile)
-	rm -f $pidfile
-    fi
-    rm -f $leasefile
-}
-
-start_cp_dhclient()
-{
-    stop_cp_dhclient
-
-    /sbin/dhclient -pf $pidfile -lf $leasefile $cp_iface -nw
-}
+midplane_iface=eth0-midplane
 
 start()
 {
-    modprobe mlx5_core
     /usr/bin/mst start
 
-    hwsku=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]')
-    if [[ $hwsku == *"-C1" ]]; then
-        start_cp_dhclient
+    /usr/bin/mlnx-fw-upgrade.sh --dry-run -v
+    if [[ $? != "0" ]]; then
+        exit 1
     fi
 }
 
 stop()
 {
-    stop_cp_dhclient
-
-    /usr/bin/mst stop
-    rmmod mlx5_ib mlx5_core
+    return 0
 }
 
-configure_pci_iface()
+configure_midplane_iface()
 {
+    # Get the MAC address of the mgmt interface
     mgmt_mac=$(cat /sys/devices/platform/MLNXBF17:00/net/*/address)
 
-    # Set PCI interface MAC address to the MAC address of the mgmt interface
-    ip link set dev $pci_iface address $mgmt_mac
+    # Create systemd-networkd configuration directory if it doesn't exist
+    mkdir -p /etc/systemd/network
+
+    # Create bridge configuration file if it doesn't exist
+    if [ ! -f /etc/systemd/network/${midplane_iface}.netdev ]; then
+        cat > /etc/systemd/network/${midplane_iface}.netdev << EOF
+[NetDev]
+Name=${midplane_iface}
+Kind=bridge
+MACAddress=$mgmt_mac
+EOF
+    fi
+
+    # Create pf0 configuration file if it doesn't exist
+    if [ ! -f /etc/systemd/network/pf0.network ]; then
+        cat > /etc/systemd/network/pf0.network << EOF
+[Match]
+Name=pf0
+
+[Network]
+Bridge=${midplane_iface}
+EOF
+    fi
 }
 
 case "$1" in
     start|stop)
         $1
         ;;
-    configure-pci-iface)
-        configure_pci_iface
+    configure-midplane-iface)
+        configure_midplane_iface
         ;;
     *)
-        echo "Usage: $0 {start|stop|configure-pci-iface}"
+        echo "Usage: $0 {start|stop|configure-midplane-iface}"
         exit 1
         ;;
 esac

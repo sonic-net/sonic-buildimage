@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_MAIN_H
@@ -57,6 +57,10 @@
 #define DBG_PDMP(_s)        do { if (debug & DBG_LVL_PDMP) printk _s; } while (0)
 #define DBG_RATE(_s)        do { if (debug & DBG_LVL_RATE) printk _s; } while (0)
 #define DBG_LINK(_s)        do { if (debug & DBG_LVL_LINK) printk _s; } while (0)
+
+/* Take over the control of SKB and send packet to network interface. */
+typedef void (*ngknet_pkt_recv_f)(struct net_device *ndev, struct sk_buff *skb);
+
 
 /* FIXME: SAI_FIXUP */
 #define SAI_FIXUP           1
@@ -132,6 +136,9 @@ struct ngknet_dev {
     /*! PTP Tx work */
     struct work_struct ptp_tx_work;
 
+    /*! NGKNET work queue for link process */
+    struct workqueue_struct *link_wq;
+
     /*! Flags */
     int flags;
     /*! NGKNET device is active */
@@ -153,6 +160,12 @@ struct ngknet_private {
 
     /*! Network interface */
     ngknet_netif_t netif;
+
+    /*! Packet receive callback */
+    ngknet_pkt_recv_f pkt_recv;
+
+    /*! Link work */
+    struct work_struct link_work;
 
     /*! Users of this network interface */
     int users;

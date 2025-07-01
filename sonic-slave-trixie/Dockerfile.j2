@@ -1,0 +1,750 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
+{%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
+FROM --platform=linux/arm/v7 {{ prefix }}debian:trixie
+COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
+{%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
+FROM --platform=linux/arm64 {{ prefix }}debian:trixie
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
+{%- elif CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
+FROM {{ prefix }}debian:trixie
+COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
+{%- elif CONFIGURED_ARCH == "arm64" and CROSS_BUILD_ENVIRON == "y" %}
+FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
+FROM {{ prefix }}debian:trixie
+COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
+{%- else -%}
+FROM {{ prefix }}debian:trixie
+{%- endif %}
+
+MAINTAINER gulv@microsoft.com
+
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+
+{%- if CROSS_BUILD_ENVIRON != "y" %}
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+{%- else %}
+COPY ["sources.list.amd64", "/etc/apt/sources.list"]
+{%- if CONFIGURED_ARCH == "armhf" %}
+ARG arch=armhf
+ARG gcc_arch=arm-linux-gnueabihf
+ARG PYTHON_CROSS_PLATFORM=linux_armv7l
+{%- elif CONFIGURED_ARCH == "arm64" %}
+ARG arch=arm64
+ARG gcc_arch=aarch64-linux-gnu
+ARG PYTHON_CROSS_PLATFORM=linux_aarch64
+{%- endif %}
+
+RUN dpkg --add-architecture $arch
+RUN apt-get update && apt-get install -y eatmydata
+RUN eatmydata apt-get install -y crossbuild-essential-$arch
+RUN eatmydata apt-get install -y gcc-$gcc_arch
+
+RUN apt-mark hold g++-$gcc_arch
+RUN apt-mark hold g++-10-$gcc_arch
+RUN apt-mark hold gcc-$gcc_arch
+RUN apt-mark hold gcc-10-$gcc_arch
+
+ARG CROSS_CC=${gcc_arch}-gcc
+ARG CROSS_CXX=${gcc_arch}-g++
+{%- endif %}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY ["pip.conf", "/etc/pip.conf"]
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
+RUN eatmydata apt-get install -y python3 python3-pip
+RUN eatmydata apt-get install -y python3-minimal:$arch python3.13:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
+RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
+RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
+RUN which pip3 && pip3 install enum34
+RUN pip3 install virtualenv
+
+# Create target arm python3 virtual environments with all required packages installed
+RUN mkdir /python_virtualenv
+RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 env3
+
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==75.8.0 setuptools-scm==8.2.1 wheel==0.45.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.2 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3","
+RUN eatmydata apt-get --fix-broken install -y
+RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
+
+RUN eatmydata apt-get install -y swig libssl-dev
+
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
+RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
+{%- endif %}
+
+RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
+        apt-utils \
+        default-jre-headless \
+        openssh-server \
+        curl \
+        wget \
+        unzip \
+        gzip \
+        pigz \
+        git \
+        build-essential \
+        remake \
+        libtool \
+        lintian \
+        sudo \
+        dh-make \
+        dh-exec \
+        kmod \
+        libtinyxml2-dev \
+        python3 \
+        python3-pip \
+        python3-setuptools \
+        python3-wheel \
+        python3-build \
+        libncurses5-dev \
+        texinfo \
+        dh-autoreconf \
+        doxygen \
+        devscripts \
+        git-buildpackage \
+        perl-modules \
+        libclass-accessor-perl \
+        libcap2-bin \
+        libswitch-perl \
+        libzmq5 \
+        libzmq3-dev \
+        libyaml-cpp-dev \
+        uuid-dev \
+        jq \
+        cron \
+        debootstrap \
+# For sonic-swss-common
+        nlohmann-json3-dev \
+        libhiredis-dev \
+# For quagga build
+        libreadline-dev \
+        texlive-latex-base \
+        texlive-plain-generic \
+        texlive-fonts-recommended \
+        libpam0g-dev \
+        libpam-dev \
+        libcap-dev \
+        imagemagick \
+        ghostscript \
+        groff \
+        gawk \
+        chrpath \
+# For frr build
+        libc-ares-dev \
+        libsnmp-dev \
+        libjson-c-dev \
+        libsystemd-dev \
+        libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
+#{%- if CROSS_BUILD_ENVIRON != "y" %}
+        python3-all-dev \
+        python3-all-dbg \
+#{%- endif %}
+        install-info \
+        logrotate \
+# For libnl3 (local) build
+        cdbs \
+# For SAI meta build
+        libxml-simple-perl \
+        graphviz \
+        aspell \
+# For SAI meta rpc build - make rpc
+        libgetopt-long-descriptive-perl \
+        libconst-fast-perl \
+        libtemplate-perl \
+        libnamespace-autoclean-perl \
+        libmoose-perl \
+        libmoosex-aliases-perl \
+# For linux build
+        bc \
+        fakeroot \
+        build-essential \
+        devscripts \
+        quilt \
+        stgit \
+        sbsigntool \
+# For platform-modules build
+        module-assistant \
+# For thrift build\
+        gem2deb \
+        libevent-dev \
+        libglib2.0-dev \
+#{%- if CROSS_BUILD_ENVIRON != "y" %}
+        python3-all-dev \
+#{%- endif %}
+        python3-twisted \
+        phpunit \
+        libbit-vector-perl \
+        default-jdk \
+        javahelper \
+        maven-debian-helper \
+        ant \
+        libhttpclient-java \
+        libslf4j-java \
+        libservlet3.1-java \
+        pkg-php-tools \
+# For mellanox sdk build
+        byacc \
+        flex \
+        libglib2.0-dev \
+        bison \
+        expat \
+        libexpat1-dev \
+        libdb-dev \
+        libiptc-dev \
+        libxtables-dev \
+        libbpf-dev \
+# For mellanox sai build
+        libtool-bin \
+        libxml2-dev \
+# For BFN sdk build
+        libusb-1.0-0-dev \
+        libcurl4-openssl-dev \
+        libunwind8-dev \
+        telnet \
+        libc-ares2 \
+        libgoogle-perftools4t64 \
+# For build image
+        cpio \
+        squashfs-tools \
+        zip \
+# For broadcom sdk build
+{%- if CONFIGURED_ARCH == "amd64" %}
+{%- endif %}
+{%- if CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON != "y" %}
+{%- endif %}
+# teamd build
+        libdaemon-dev \
+        libdbus-1-dev \
+        libjansson-dev \
+# For cavium sdk build
+        libpcap-dev \
+        dnsutils \
+        libusb-dev \
+# For cisco sdk build
+        libgrpc++1 \
+        libabsl-dev \
+# For debian image reconfiguration
+        augeas-tools \
+# For p4 build
+        libyaml-dev \
+        libevent-dev \
+        libjudy-dev \
+        libedit-dev \
+        libnanomsg-dev \
+        python3-stdeb \
+# For redis build
+        libjemalloc-dev \
+        liblua5.1-0-dev \
+        lua-bitop-dev  \
+        lua-cjson-dev \
+# For mft kernel module build
+        dkms \
+# For Jenkins static analysis, unit testing and code coverage
+        cppcheck \
+        clang \
+        pylint \
+        python3-pytest \
+        python3-nose2 \
+        python3-venv \
+        gcovr \
+        lcov \
+        python3-pytest-cov \
+        python3-pytest-cov \
+        python3-parse \
+# For snmpd
+        default-libmysqlclient-dev \
+        libssl-dev \
+        libperl-dev \
+        libpci-dev \
+        libpci3 \
+        libsensors5 \
+        libsensors-dev \
+        libwrap0-dev \
+# For lldpd
+        debhelper \
+        autotools-dev \
+        libbsd-dev \
+        pkg-config \
+        check \
+# For bmp
+        librdkafka-dev \
+        libyaml-cpp-dev \
+        libsasl2-dev \
+# For mpdecimal
+        docutils-common \
+        libjs-sphinxdoc \
+        libjs-underscore \
+        python3-docutils \
+        python3-jinja2 \
+        python3-markupsafe \
+        python3-pygments \
+        python3-roman \
+        python3-sphinx \
+        sphinx-common \
+        python3-sphinx \
+# For sonic config engine testing
+{%- if CROSS_BUILD_ENVIRON != "y" %}
+        python3-dev \
+{%- endif %}
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+        libxslt-dev \
+{%- endif %}
+        j2cli \
+# For lockfile
+        procmail \
+# For gtest
+        libgtest-dev \
+        cmake \
+# For gmock
+        libgmock-dev \
+# For pam_tacplus build
+        autoconf-archive \
+# For iproute2
+        cm-super-minimal \
+        libatm1-dev \
+        libbpf-dev \
+        libelf-dev \
+        libmnl-dev \
+        libselinux1-dev \
+        linuxdoc-tools \
+        lynx \
+        texlive-latex-extra \
+        texlive-latex-recommended \
+        iproute2 \
+# For bash
+        texi2html \
+        sharutils \
+        locales \
+        time \
+        man2html-base \
+        libcunit1 \
+        libcunit1-dev \
+# For initramfs
+        shellcheck \
+        bash-completion \
+{%- if CONFIGURED_ARCH == "amd64" %}
+# For sonic vs image build
+        dosfstools \
+        qemu-kvm \
+        libvirt-clients \
+        python3-pexpect \
+# For rasdaemon build
+        libsqlite3-dev \
+        libgettextpo-dev \
+{%- endif %}
+# For ntp
+        autogen \
+        libopts25-dev \
+        pps-tools \
+        dh-apparmor \
+# For lm-sensors
+        librrd8t64 \
+        librrd-dev \
+        rrdtool \
+# For kdump-tools
+        liblzo2-dev \
+# For iptables
+        libnetfilter-conntrack-dev \
+        libnftnl-dev \
+# For SAI3.7
+        xxd \
+# For DHCP Monitor tool
+        libexplain-dev \
+        libevent-dev \
+# For libyang
+        swig \
+        pkgconf \
+        tcl-expect \
+        libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
+# For build dtb
+        device-tree-compiler \
+# For sonic-mgmt-framework
+        autoconf \
+        m4 \
+        libxml2-utils \
+        xsltproc \
+        python3-lxml \
+        libexpat1-dev \
+        libcurl4t64 \
+        libcjson-dev \
+        python3-yaml \
+        python3-parameterized \
+# For WPA supplication
+        qtbase5-dev          \
+        aspell-en            \
+        libssl-dev           \
+        dbus                 \
+        libdbus-1-dev        \
+        libdbus-glib-1-2     \
+        libdbus-glib-1-dev   \
+        libreadline-dev      \
+        libncurses5-dev      \
+        libpcsclite-dev      \
+        docbook-to-man       \
+        docbook-utils        \
+# For kdump-tools
+        libbz2-dev \
+# For linkmgrd
+        libboost-dev \
+        libboost-program-options-dev \
+        libboost-system-dev \
+        libboost-serialization-dev \
+        libboost-thread-dev \
+        libboost-atomic-dev \
+        libboost-chrono-dev \
+        libboost-container-dev \
+        libboost-context-dev \
+        libboost-contract-dev \
+        libboost-coroutine-dev \
+        libboost-date-time-dev \
+        libboost-fiber-dev \
+        libboost-filesystem-dev \
+        libboost-graph-parallel-dev \
+        libboost-log-dev \
+        libboost-regex-dev \
+        googletest \
+        libgtest-dev \
+        libgmock-dev \
+# For sonic-host-services build
+        libcairo2-dev \
+        libdbus-1-dev \
+        libgirepository1.0-dev \
+        libsystemd-dev \
+        pkg-config \
+# For sonic-utilities build
+        python3-cryptography \
+# For audisp-tacplus
+        libauparse-dev \
+        auditd \
+# For framework container build
+        libdbus-c++-dev \
+# For protobuf
+        protobuf-compiler \
+        libprotobuf-dev \
+# For sonic-dhcp6relay build
+        libjsoncpp-dev \
+#for nvidia-bluefield driver compilation
+        pciutils \
+        dh-dkms \
+        rpm2cpio \
+        libsnmp-dev \
+        libpopt-dev \
+        libfuse-dev \
+{%- if CONFIGURED_ARCH == "arm64" %}
+        grub-efi-arm64-bin \
+{%- endif %}
+        efibootmgr \
+        watchdog \
+        dmidecode \
+        usbutils \
+        xmlstarlet \
+# For nvidia-bluefield sdk compilation
+        cython3 \
+        pandoc \
+        valgrind \
+        udev \
+        inkscape \
+        meson \
+        python3-pyelftools \
+        hwdata \
+        libzip-dev
+
+{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
+RUN eatmydata apt-get install -y \
+# For p4 libraries
+        libgrpc++-dev \
+        libgrpc-dev \
+        libprotoc-dev \
+        protobuf-compiler-grpc \
+        valgrind \
+        python3-protobuf \
+        python3-grpcio \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-dev \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift
+{%- endif %}
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
+# Arm vs. amd64 versions conflict - remove amd64 packages
+RUN apt-get remove -y libnl-3-200
+{%- endif %}
+
+RUN eatmydata apt-get -y build-dep openssh
+
+# Build fix for ARM64 and ARMHF /etc/debian_version
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+RUN eatmydata apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
+{%- endif %}
+
+## Config dpkg
+## install the configuration file if it’s currently missing
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confmiss"
+## combined with confold: overwrite configuration files that you have not modified
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confdef"
+## do not modify the current configuration file, the new version is installed with a .dpkg-dist suffix
+RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
+
+{%- if CROSS_BUILD_ENVIRON != "y" %}
+# For linux build
+RUN eatmydata apt-get -y build-dep linux
+{%- else %}
+RUN eatmydata apt-get install -y kernel-wedge
+{%- endif %}
+
+# For gobgp and telemetry build
+RUN eatmydata apt-get install -y golang golang-go
+# TODO(trixie): This needs to be updated with the symcrypt FIPS build
+#{%- if INCLUDE_FIPS == "y" %}
+#RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+# && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+# && eatmydata dpkg -i golang-go.deb golang-src.deb \
+# && ln -sf /usr/lib/go-1.19 /usr/local/go \
+# && rm golang-go.deb golang-src.deb
+#{%- else %}
+#RUN eatmydata apt-get install -y golang-go \
+# && ln -sf /usr/lib/go-1.19 /usr/local/go
+#{%- endif %}
+
+# For building sonic-utilities
+RUN pip3 install fastentrypoints mock
+
+# For DASH BMv2
+RUN pip3 install jsonpath_ng pyyaml-include
+
+# For building sonic_ycabled
+# Note: Match version in trixie
+RUN pip3 install grpcio==1.71.0 grpcio-tools==1.71.0
+
+# For running Python unit tests
+RUN pip3 install pytest-runner==5.2
+RUN pip3 install mockredispy==2.9.3
+RUN pip3 install pyfakefs
+
+RUN pip3 install pillow==11.1.0
+
+# For p4 build
+RUN pip3 install \
+         ctypesgen==1.0.2 \
+         crc16
+
+# For sonic config engine testing
+# Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
+# enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
+# https://github.com/robshakir/pyangbind/issues/232
+RUN pip3 install pyangbind==0.8.2
+RUN pip3 uninstall -y enum34
+
+# For sonic-platform-common testing
+RUN pip3 install redis
+RUN pip3 install psutil
+RUN pip3 install blkinfo
+
+# For sonic-swss-common testing
+RUN pip3 install Pympler==1.1
+
+# For sonic_yang_model build
+RUN pip3 install pyang==2.4.0
+
+# For mgmt-framework build
+RUN pip3 install mmh3==2.5.1
+
+# For ptf-py3 0.10.0
+#RUN pip3 install setuptools==75.8.0 setuptools-scm==8.2.1 setuptools-scm-git-archive==1.4.1
+# remove - setuptools-scm-git-archive - setuptools-scm 8 [1] and redundant starting with setuptools-scm 7 [2]
+RUN pip3 install setuptools==75.8.0 setuptools-scm==8.2.1
+
+RUN eatmydata apt-get install -y xsltproc
+
+# Install dependencies for isc-dhcp-relay build
+RUN eatmydata apt-get -y build-dep isc-dhcp
+
+# Install vim
+RUN eatmydata apt-get install -y vim
+
+# Install rsyslog
+RUN eatmydata apt-get install -y rsyslog
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
+RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest
+{%- else %}
+RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
+{%- endif %}
+
+# mkdir: cannot create directory '/var/run/sshd': File exists
+#RUN mkdir /var/run/sshd
+EXPOSE 22
+
+# Install docker engine 24 inside docker and enable experimental feature
+RUN apt-get update
+RUN eatmydata apt-get install -y \
+           apt-transport-https \
+           ca-certificates \
+           curl \
+           gnupg2
+{%- if CONFIGURED_ARCH == "armhf" %}
+    RUN update-ca-certificates --fresh
+{%- endif %}
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
+COPY docker.sources /etc/apt/sources.list.d/docker.sources
+# TODO(trixie) - Migrate to trixie docker packages
+#RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
+# Install docker packages from bookworm
+RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources
+{%- if CROSS_BUILD_ENVIRON != "y" %}
+RUN echo "Architectures: {{ CONFIGURED_ARCH }}" >> /etc/apt/sources.list.d/docker.sources
+{%- endif %}
+RUN apt-get update
+RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
+RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
+RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
+
+# Install m2crypto package, needed by SWI tools
+RUN eatmydata apt-get install python3-m2crypto
+
+# Install libthrift package needed by saithrift
+RUN eatmydata apt-get install -y libthrift-0.19.0t64\
+        libthrift-dev \
+        thrift-compiler\
+        python3-thrift
+
+# Install swi tools
+RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
+
+{% if CONFIGURED_ARCH != "amd64" -%}
+# Install node.js for azure pipeline
+RUN eatmydata apt-get install -y nodejs
+
+{%- if CROSS_BUILD_ENVIRON == "y" %}
+RUN eatmydata apt-get install -y rsync dh-python
+
+RUN eatmydata apt-get install -y \
+        libelf-dev:$arch \
+        libdw-dev:$arch \
+        libbz2-dev:$arch \
+        liblzo2-dev:$arch \
+        libedit-dev:$arch \
+        libevent-dev:$arch \
+        libopts25-dev:$arch \
+        libssl-dev:$arch \
+        pps-tools:$arch \
+        libpam-cap:$arch \
+        libcap-dev:$arch \
+        libcap2-bin:$arch \
+        libpam0g-dev:$arch \
+        libaudit-dev:$arch \
+        libgtk-3-dev:$arch \
+        libkrb5-dev:$arch \
+        libsystemd-dev:$arch \
+        libwrap0-dev:$arch \
+        libkrb5-dev:$arch \
+        libboost-dev:$arch \
+        libboost-dev:$arch \
+        libzmq5:$arch \
+        libzmq3-dev:$arch \
+        libdaemon-dev:$arch \
+        libjansson-dev:$arch \
+        libmnl-dev:$arch \
+        libsensors5:$arch \
+        libsensors-dev:$arch \
+        libperl-dev:$arch \
+        libmariadb-dev:$arch \
+        libmariadb-dev-compat:$arch \
+        libpci-dev:$arch \
+        libjson-c-dev:$arch \
+        libreadline-dev:$arch \
+        librtr-dev:$arch \
+        librrd-dev:$arch \
+        libnetfilter-conntrack-dev:$arch \
+        libnetfilter-conntrack3:$arch \
+        libnfnetlink-dev:$arch \
+        libnftnl-dev:$arch \
+        libldap2-dev:$arch \
+        libbind-export-dev:$arch check:$arch \
+        libboost-atomic-dev:$arch \
+        libboost-test-dev:$arch \
+        libglib2.0-dev:$arch \
+        libexplain-dev:$arch \
+        libc-ares-dev:$arch \
+        libiptc0:$arch \
+        libxtables12:$arch \
+        libatm1-dev:$arch \
+        libbpf-dev:$arch \
+        libdb-dev:$arch pkg-config:$arch \
+        libnghttp2-14:$arch \
+        librtmp1:$arch \
+        libssh2-1:$arch \
+        libcjson1:$arch \
+        libcjson-dev:$arch \
+        libcurl4-openssl-dev:$arch \
+        libboost-thread-dev:$arch \
+        libboost-system-dev:$arch \
+        libgtest-dev:$arch \
+        libgmock-dev:$arch \
+        libfido2-dev:$arch \
+        libcunit1:$arch \
+        libcunit1-dev:$arch \
+        libauparse-dev:$arch \
+        libnetsnmptrapd40:$arch \
+        qtbase5-dev:$arch \
+        libboost-log-dev:$arch \
+        libboost-filesystem-dev:$arch \
+        libboost-program-options-dev:$arch
+
+RUN apt-get download libgirepository1.0-dev:$arch && eatmydata dpkg --force-all -i libgirepository1.0-dev*
+RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install pycairo
+
+# Install libpcsclite-dev for wpasupplicant using download because regular install removes amd64 python package
+RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && eatmydata dpkg --force-all -i libpcsclite-dev*
+# Install python3-dev for frr (/usr/bin/python3-config for $arch) using download because regular install removes amd64 python package
+RUN apt-get download python3.13-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
+{% endif %}
+
+# Tell azure pipeline to use node.js in the docker
+LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
+{% endif -%}
+
+RUN eatmydata apt install -y python-is-python3
+
+# Install Bazel build system (amd64 and arm64 architectures are supported using this method)
+# TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
+{%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
+ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
+RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
+{% endif -%}
+
+# Install Rust
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "arm64" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-gnu && echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"aarch64-linux-gnu-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+ENV RUSTUP_HOME=$RUST_ROOT
+ENV PATH=$PATH:$RUST_ROOT/bin

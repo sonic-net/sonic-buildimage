@@ -1,0 +1,57 @@
+module sonic-subnet-decap {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-subnet-decap";
+
+    prefix subnet-decap;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "Subnet decap configuration for SONiC OS.";
+
+    revision 2024-12-19 {
+        description "Initial version";
+    }
+
+    container sonic-subnet-decap {
+        container SUBNET_DECAP {
+
+            description "CONFIG_DB subnet decap configuration.";
+
+            list SUBNET_DECAP_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string;
+                    description "Subnet Decap config name.";
+                }
+
+                leaf status {
+                    type stypes:mode-status;
+                    default disable;
+                    description "Subnet Decap status.";
+                }
+
+                leaf src_ip {
+                    type inet:ipv4-prefix;
+                    description "Subnet decap term source IPv4 prefix.";
+                    mandatory true;
+                }
+
+                leaf src_ip_v6 {
+                    type inet:ipv6-prefix;
+                    description "Subnet decap term source IPv6 prefix.";
+                    mandatory true;
+                }
+            }
+        }
+    }
+}

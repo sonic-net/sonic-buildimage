@@ -7,7 +7,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  *
  * This file provides field macros for RX Packet Metadata (RXPMD, called
  * EP_TO_CPU in hardware) access.
@@ -279,8 +279,20 @@
 #define BCMPKT_RXPMD_RX_CHIP_PORT                91
 /*! VPP copy. */
 #define BCMPKT_RXPMD_VPP_COPY_TYPE               92
+/*! SV tag present status. */
+#define BCMPKT_RXPMD_SVTAG_PRESENT               93
+/*! Ingress vpp port. */
+#define BCMPKT_RXPMD_RX_VPP_PORT                 94
+/*! Non switch copy. */
+#define BCMPKT_RXPMD_NONSW_COPY                  95
+/*!  */
+#define BCMPKT_RXPMD_MATCHED_RULE_EP             96
+/*!  */
+#define BCMPKT_RXPMD_IS_EGR_TS                   97
+/*! If set, then packet has been modified by the EP and CRC needs to be regenerated */
+#define BCMPKT_RXPMD_MODIFIED_PKT                98
 /*! RXPMD FIELD ID NUMBER */
-#define BCMPKT_RXPMD_FID_COUNT                   93
+#define BCMPKT_RXPMD_FID_COUNT                   99
 /*! \} */
 
 /*! RXPMD field name strings for debugging. */
@@ -378,6 +390,12 @@
     {"VRF", BCMPKT_RXPMD_VRF},\
     {"RX_CHIP_PORT", BCMPKT_RXPMD_RX_CHIP_PORT},\
     {"VPP_COPY_TYPE", BCMPKT_RXPMD_VPP_COPY_TYPE},\
+    {"SVTAG_PRESENT", BCMPKT_RXPMD_SVTAG_PRESENT},\
+    {"RX_VPP_PORT", BCMPKT_RXPMD_RX_VPP_PORT},\
+    {"NONSW_COPY", BCMPKT_RXPMD_NONSW_COPY},\
+    {"MATCHED_RULE_EP", BCMPKT_RXPMD_MATCHED_RULE_EP},\
+    {"IS_EGR_TS", BCMPKT_RXPMD_IS_EGR_TS},\
+    {"MODIFIED_PKT", BCMPKT_RXPMD_MODIFIED_PKT},\
     {"fid count", BCMPKT_RXPMD_FID_COUNT}
 
 /*!
@@ -470,6 +488,49 @@
 #define BCMPKT_RXPMD_REASON_TYPE_NAME_MAP_INIT \
     {"CTC_INITIATED_FROM_IP", BCMPKT_RXPMD_REASON_T_FROM_IP},\
     {"CTC_INITIATED_FROM_EP", BCMPKT_RXPMD_REASON_T_FROM_EP},\
+
+/*!
+ * \name BCMPKT_RXPMD_TUNNEL_DECAP_TYPE encodings.
+ * \anchor BCMPKT_RXPMD_TUNNEL_DECAP_TYPE_XXX
+ */
+/*! \{ */
+/*! No decapsulation */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_NONE         0
+/*! IP */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_IP           1
+/*! L2 MPLS with one label */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_1LABEL 2
+/*! L2 MPLS with two labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_2LABEL 3
+/*! L2 MPLS with three labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_3LABEL 4
+/*! L3 MPLS with one label */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_1LABEL 5
+/*! L3 MPLS with two labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_2LABEL 6
+/*! L3 MPLS with three labels */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_3LABEL 7
+/*! VxLAN */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_VXLAN        8
+/*! SRv6 with L2 */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_L2      9
+/*! SRv6 with SRH */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_SRH     10
+/*! \} */
+
+/*! BCMPKT_RXPMD_TUNNEL_DECAP_TYPE encoding name strings for debugging. */
+#define BCMPKT_RXPMD_TUNNEL_DECAP_TYPE_NAME_MAP_INIT \
+    {"NONE", BCMPKT_RXPMD_TUNNEL_DECAP_T_NONE},\
+    {"IP", BCMPKT_RXPMD_TUNNEL_DECAP_T_IP},\
+    {"L2MPLS_1LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_1LABEL},\
+    {"L2MPLS_2LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_2LABEL},\
+    {"L2MPLS_3LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L2MPLS_3LABEL},\
+    {"L3MPLS_1LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_1LABEL},\
+    {"L3MPLS_2LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_2LABEL},\
+    {"L3MPLS_3LABEL", BCMPKT_RXPMD_TUNNEL_DECAP_T_L3MPLS_3LABEL},\
+    {"VXLAN", BCMPKT_RXPMD_TUNNEL_DECAP_T_VXLAN},\
+    {"SRV6_L2", BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_L2},\
+    {"SRV6_SRH", BCMPKT_RXPMD_TUNNEL_DECAP_T_SRV6_SRH},\
 
 /*!
  * \name RX packet metadata internal usage field IDs.
@@ -772,12 +833,18 @@
 #define BCMPKT_RX_REASON_INVALID_GSH_NON_GSH     137
 /*! Copy to CPU triggered at egress pipeline. */
 #define BCMPKT_RX_REASON_EP_CTC                  138
-/*! Indicates SVTAG.ERROR !=0 or SVTAG.CPU = 1. */
-#define BCMPKT_RX_REASON_MACSEC                  139
 /*! APU Policy CTC. */
-#define BCMPKT_RX_REASON_APU_POLICY_CTC          140
+#define BCMPKT_RX_REASON_APU_POLICY_CTC          139
+/*! Delayed CTC. */
+#define BCMPKT_RX_REASON_DELAYED_CTC             140
+/*! Indicates Copy to CPU is for PORT_DOWN event. */
+#define BCMPKT_RX_REASON_PORT_DOWN               141
+/*! SRV6 Control Packet */
+#define BCMPKT_RX_REASON_SRV6_CONTROL_PKT        142
+/*! OUI Compression miss */
+#define BCMPKT_RX_REASON_OUI_COMPRESSION_MISS    143
 /*! BCMPKT_RX_REASON TYPE NUMBER */
-#define BCMPKT_RX_REASON_COUNT                   141
+#define BCMPKT_RX_REASON_COUNT                   144
 /*! \} */
 
 /*! RXPMD reason name strings for debugging. */
@@ -921,8 +988,11 @@
     {"RESERVED_REASON", 136},\
     {"INVALID_GSH_NON_GSH", BCMPKT_RX_REASON_INVALID_GSH_NON_GSH},\
     {"EP_CTC", BCMPKT_RX_REASON_EP_CTC},\
-    {"MACSEC", BCMPKT_RX_REASON_MACSEC},\
     {"APU_POLICY_CTC", BCMPKT_RX_REASON_APU_POLICY_CTC},\
+    {"DELAYED_CTC", BCMPKT_RX_REASON_DELAYED_CTC},\
+    {"PORT_DOWN", BCMPKT_RX_REASON_PORT_DOWN},\
+    {"SRV6_CONTROL_PKT", BCMPKT_RX_REASON_SRV6_CONTROL_PKT},\
+    {"OUI_COMPRESSION_MISS", BCMPKT_RX_REASON_OUI_COMPRESSION_MISS},\
     {"reason count", BCMPKT_RX_REASON_COUNT}
 
 #endif /*! BCMPKT_RXPMD_DEFS_H */

@@ -3,7 +3,7 @@
 #
 # $Id: mktool.pl,v 1.5 Broadcom SDK $
 # 
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -27,6 +27,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 
 use File::Path;

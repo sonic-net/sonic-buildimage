@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMPKT_TXPMD_H
@@ -34,8 +34,11 @@
 /*! TX Packet MetaData size (words). */
 #define BCMPKT_TXPMD_SIZE_WORDS         4
 
+/*! TXPMD FID field supported check. */
+#define BCMPKT_TXPMD_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
+
 /*!
- * \name TXPMD Dumping flags.
+ * \name TXPMD Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_TXPMD_DUMP_F_XXX
  */
 /*! \{ */
@@ -44,7 +47,7 @@
  */
 #define BCMPKT_TXPMD_DUMP_F_ALL         0
 /*!
- * Dump none zero field content only.
+ * Dump non-zero field content only.
  */
 #define BCMPKT_TXPMD_DUMP_F_NONE_ZERO   1
 /*! \} */

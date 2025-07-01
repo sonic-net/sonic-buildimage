@@ -1,4 +1,19 @@
 #!/usr/bin/python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import os
@@ -20,6 +35,7 @@ __all__ = [
     "PMON_SYSLOG_STATUS",
     "REBOOT_CAUSE_PARA",
     "UPGRADE_SUMMARY",
+    "FW_UPGRADE_STARTED_FLAG",
     "WARM_UPGRADE_PARAM",
     "WARM_UPG_FLAG",
     "WARM_UPGRADE_STARTED_FLAG",
@@ -43,7 +59,9 @@ __all__ = [
     "MONITOR_DEV_STATUS",
     "MONITOR_DEV_STATUS_DECODE",
     "DEV_LEDS",
-    "fanloc"
+    "fanloc",
+    "PLATFORM_POWER_CONF",
+    "POWER_CTRL_CONF"
 ]
 
 
@@ -115,6 +133,7 @@ REBOOT_CAUSE_PARA = module_product.REBOOT_CAUSE_PARA
 
 # upgrade parameter
 UPGRADE_SUMMARY = module_product.UPGRADE_SUMMARY
+FW_UPGRADE_STARTED_FLAG = module_product.FW_UPGRADE_STARTED_FLAG
 
 # warm_uprade parameter
 WARM_UPGRADE_PARAM = module_product.WARM_UPGRADE_PARAM
@@ -139,6 +158,12 @@ SET_MAC_CONF = module_product.SET_MAC_CONF
 
 # driver update config
 DRVIER_UPDATE_CONF = module_product.DRVIER_UPDATE_CONF
+
+# platform power config
+PLATFORM_POWER_CONF = module_product.PLATFORM_POWER_CONF
+
+# power control config
+POWER_CTRL_CONF = module_product.POWER_CTRL_CONF
 
 ################################ fancontrol parameter###################################
 

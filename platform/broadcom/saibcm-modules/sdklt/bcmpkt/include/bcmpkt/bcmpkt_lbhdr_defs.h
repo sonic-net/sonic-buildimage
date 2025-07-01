@@ -7,7 +7,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  *
  * This file provides field macros for the Packet Loopback HeaDeR (LBHDR, called
  * LOOPBACK_MH in hardware.) access.
@@ -156,31 +156,13 @@
 /*! CNG ethernet */
 #define BCMPKT_LBHDR_CNG_ETH                     36
 /*!  */
-#define BCMPKT_LBHDR_PKT_PROFILE_MD_ETH          37
+#define BCMPKT_LBHDR_INPUT_PRIORITY_MD_ETH       37
 /*!  */
-#define BCMPKT_LBHDR_QOS_FIELD_VALID_MD_ETH      38
+#define BCMPKT_LBHDR_VFI_VALID_MD_ETH            38
 /*!  */
-#define BCMPKT_LBHDR_PP_PORT_MD_ETH              39
-/*!  */
-#define BCMPKT_LBHDR_DESTINATION_MD_ETH          40
-/*!  */
-#define BCMPKT_LBHDR_SVTAG_TX_PRESENT_MD_ETH     41
-/*!  */
-#define BCMPKT_LBHDR_EXTENDED_DELETE_ENABLE_MD_ETH 42
-/*!  */
-#define BCMPKT_LBHDR_EXTENDED_DELETE_BYTE_COUNT_MD_ETH 43
-/*!  */
-#define BCMPKT_LBHDR_IFA_AT_OUTER_LAYER_MD_ETH   44
-/*!  */
-#define BCMPKT_LBHDR_OPAQUE_OBJECT_MD_ETH        45
-/*!  */
-#define BCMPKT_LBHDR_QOS_FIELD_ETH_MD_ETH        46
-/*!  */
-#define BCMPKT_LBHDR_INPUT_PRIORITY_MD_ETH       47
-/*!  */
-#define BCMPKT_LBHDR_CNP                         48
+#define BCMPKT_LBHDR_VFI_MD_ETH                  39
 /*! LBHDR FIELD ID NUMBER */
-#define BCMPKT_LBHDR_FID_COUNT                   49
+#define BCMPKT_LBHDR_FID_COUNT                   40
 /*! \} */
 
 /*! LBHDR field name strings for debugging. */
@@ -222,18 +204,9 @@
     {"INT_PRI_ETH", BCMPKT_LBHDR_INT_PRI_ETH},\
     {"INT_CN_ETH", BCMPKT_LBHDR_INT_CN_ETH},\
     {"CNG_ETH", BCMPKT_LBHDR_CNG_ETH},\
-    {"PKT_PROFILE_MD_ETH", BCMPKT_LBHDR_PKT_PROFILE_MD_ETH},\
-    {"QOS_FIELD_VALID_MD_ETH", BCMPKT_LBHDR_QOS_FIELD_VALID_MD_ETH},\
-    {"PP_PORT_MD_ETH", BCMPKT_LBHDR_PP_PORT_MD_ETH},\
-    {"DESTINATION_MD_ETH", BCMPKT_LBHDR_DESTINATION_MD_ETH},\
-    {"SVTAG_TX_PRESENT_MD_ETH", BCMPKT_LBHDR_SVTAG_TX_PRESENT_MD_ETH},\
-    {"EXTENDED_DELETE_ENABLE_MD_ETH", BCMPKT_LBHDR_EXTENDED_DELETE_ENABLE_MD_ETH},\
-    {"EXTENDED_DELETE_BYTE_COUNT_MD_ETH", BCMPKT_LBHDR_EXTENDED_DELETE_BYTE_COUNT_MD_ETH},\
-    {"IFA_AT_OUTER_LAYER_MD_ETH", BCMPKT_LBHDR_IFA_AT_OUTER_LAYER_MD_ETH},\
-    {"OPAQUE_OBJECT_MD_ETH", BCMPKT_LBHDR_OPAQUE_OBJECT_MD_ETH},\
-    {"QOS_FIELD_ETH_MD_ETH", BCMPKT_LBHDR_QOS_FIELD_ETH_MD_ETH},\
     {"INPUT_PRIORITY_MD_ETH", BCMPKT_LBHDR_INPUT_PRIORITY_MD_ETH},\
-    {"CNP", BCMPKT_LBHDR_CNP},\
+    {"VFI_VALID_MD_ETH", BCMPKT_LBHDR_VFI_VALID_MD_ETH},\
+    {"VFI_MD_ETH", BCMPKT_LBHDR_VFI_MD_ETH},\
     {"fid count", BCMPKT_LBHDR_FID_COUNT}
 
 /*!

@@ -1,6 +1,6 @@
 /*
  * $Id: ibde.h,v 1.27 Broadcom SDK $
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  */
 
@@ -103,7 +104,9 @@ typedef struct ibde_s {
 #define BDE_256K_REG_SPACE    0x20000000          /* Map 256K (v 64K) */
 #define BDE_128K_REG_SPACE    0x40000000          /* Map 128K (v 64K) */
 #define BDE_320K_REG_SPACE    0x80000000          /* Map 256K+64K */
-
+#ifdef INCLUDE_SRAM_DMA
+#define BDE_TEST_DEVICES 1
+#endif
 
 /* Bus supports only 16bit reads */
 #define BDE_DEV_BUS_RD_16BIT  SAL_DEV_BUS_RD_16BIT 

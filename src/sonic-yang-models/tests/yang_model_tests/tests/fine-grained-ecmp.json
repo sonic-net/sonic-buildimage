@@ -38,15 +38,15 @@
     },
     "FG_NHG_MEMBER_TEST_MISSING_FG_NHG_REF": {
         "desc": "Fine-grained ECMP next-hop member configuration with missing FG_NHG reference in FG_NHG_MEMBER_LIST table.",
-        "eStr": "Missing required element \"FG_NHG\" in \"FG_NHG_MEMBER_LIST\". "
+        "eStrKey": "Mandatory"
     },
     "FG_NHG_PREFIX_TEST_MISSING_FG_NHG_REF": {
         "desc": "Fine-grained ECMP prefix configuration with missing FG_NHG reference in FG_NHG_PREFIX_LIST table.",
-        "eStr": "Missing required element \"FG_NHG\" in \"FG_NHG_PREFIX_LIST\". "
+        "eStrKey": "Mandatory"
     },
     "FG_NHG_MEMBER_TEST_MISSING_BANK": {
         "desc": "Fine-grained ECMP next-hop member configuration with missing bank in FG_NHG_MEMBER_LIST table.",
-        "eStr": "Missing required element \"bank\""
+        "eStrKey": "Mandatory"
     },
     "FG_NHG_PREFIX_TEST_DUPLICATE_ENTRY": {
         "desc": "Fine-grained ECMP prefix configuration with duplicate entry in FG_NHG_PREFIX_LIST table.",
@@ -55,5 +55,19 @@
     "FG_NHG_MEMBER_TEST_DUPLICATE_MEMBER": {
         "desc": "Fine-grained ECMP next-hop member configuration with duplicate member in FG_NHG_MEMBER_LIST table.",
         "eStr": "Duplicated instance of \"FG_NHG_MEMBER_LIST\" list."
+    },
+    "FG_NHG_PREFIX_BASED_MISSING_MAX_NEXT_HOPS": {
+        "desc": "Fine-grained ECMP prefix-based match-mode configuration with missing max_next_hops in FG_NHG_LIST table.",
+        "eStrKey": "Mandatory",
+        "eStr": ["max_next_hops"]
+    },
+    "FG_NHG_PREFIX_BASED_INVALID_MAX_NEXT_HOPS": {
+        "desc": "Fine-grained ECMP prefix-based match-mode configuration with out-of-range max_next_hops value in FG_NHG_LIST table.",
+        "eStrKey": "Range",
+        "eStr": ["1..128"]
+    },
+    "FG_NHG_PREFIX_BASED_MISSING_BUCKET_SIZE": {
+        "desc": "Fine-grained ECMP prefix-based match-mode configuration with missing bucket_size in FG_NHG_LIST table.",
+        "eStr": "Missing required element \"bucket_size\" in \"FG_NHG_LIST\"."
     }
 }

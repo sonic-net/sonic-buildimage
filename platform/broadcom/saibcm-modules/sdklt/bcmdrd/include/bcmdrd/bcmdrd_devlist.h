@@ -4,7 +4,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/drd/instpkgs.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 /*
@@ -82,6 +82,12 @@
 #define BCM56692_VENDOR_ID                0x14e4
 #define BCM56692_DEVICE_ID                0xb692
 #define BCM56692_REV_A0                     0x01
+
+/* BCM56089 */
+#define BCM56089_VENDOR_ID                0x14e4
+#define BCM56089_DEVICE_ID                0xb089
+#define BCM56089_REV_A0                     0x01
+#define BCM56089_REV_A1                     0x02
 
 /* BCM56780 */
 #define BCM56780_VENDOR_ID                0x14e4
@@ -220,6 +226,16 @@
 #define BCM56999_REV_A0                     0x01
 #define BCM56999_REV_B0                     0x11
 
+/* BCM78800 */
+#define BCM78800_VENDOR_ID                0x14e4
+#define BCM78800_DEVICE_ID                0xf800
+#define BCM78800_REV_A0                     0x01
+
+/* BCM78808 */
+#define BCM78808_VENDOR_ID                0x14e4
+#define BCM78808_DEVICE_ID                0xf808
+#define BCM78808_REV_A0                     0x01
+
 /* BCM78900 */
 #define BCM78900_VENDOR_ID                0x14e4
 #define BCM78900_DEVICE_ID                0xf900
@@ -239,6 +255,11 @@
 #define BCM78905_VENDOR_ID                0x14e4
 #define BCM78905_DEVICE_ID                0xf905
 #define BCM78905_REV_A0                     0x01
+
+/* BCM78907 */
+#define BCM78907_VENDOR_ID                0x14e4
+#define BCM78907_DEVICE_ID                0xf907
+#define BCM78907_REV_A0                     0x01
 
 /*
  * End of Supported Devices and Revisions
@@ -406,6 +427,26 @@ BCMDRD_DEVLIST_ENTRY(BCM56692, BCM56692_VENDOR_ID, BCM56692_DEVICE_ID, BCM56692_
                      bcm56690_a0, bcm56692_a0, bcm56692_a0, \
                      "Trident4-X7", "BCM56690", \
                      "2T cost-optimized 50G-DL ToR", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56089_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56089, BCM56089_VENDOR_ID, BCM56089_DEVICE_ID, BCM56089_REV_A0, \
+                     0, 0, \
+                     bcm56780_a0, bcm56089_a0, bcm56089_a0, \
+                     "Trident4-X9", "BCM56780", \
+                     "6.4 Tb/s Firelight3 linecard switch.", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM56089_A1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM56089, BCM56089_VENDOR_ID, BCM56089_DEVICE_ID, BCM56089_REV_A1, \
+                     0, 0, \
+                     bcm56780_a0, bcm56089_a0, bcm56089_a1, \
+                     "Trident4-X9", "BCM56780", \
+                     "6.4 Tb/s Firelight3 linecard switch.", 0, 0)
 #endif
 #endif
 
@@ -761,6 +802,24 @@ BCMDRD_DEVLIST_ENTRY(BCM56999, BCM56999_VENDOR_ID, BCM56999_DEVICE_ID, BCM56999_
 #endif
 #endif
 
+#if BCMDRD_CONFIG_INCLUDE_BCM78800_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78800, BCM78800_VENDOR_ID, BCM78800_DEVICE_ID, BCM78800_REV_A0, \
+                     0, 0, \
+                     bcm78800_a0, bcm78800_a0, bcm78800_a0, \
+                     "Trident5", "BCM78800", \
+                     "16 Tbps Programmable Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78808_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78808, BCM78808_VENDOR_ID, BCM78808_DEVICE_ID, BCM78808_REV_A0, \
+                     0, 0, \
+                     bcm78800_a0, bcm78808_a0, bcm78808_a0, \
+                     "Trident5", "BCM78800", \
+                     "8 Tbps Programmable Switch", 0, 0)
+#endif
+#endif
+
 #if BCMDRD_CONFIG_INCLUDE_BCM78900_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
 BCMDRD_DEVLIST_ENTRY(BCM78900, BCM78900_VENDOR_ID, BCM78900_DEVICE_ID, BCM78900_REV_B0, \
                      0, 0, \
@@ -794,6 +853,14 @@ BCMDRD_DEVLIST_ENTRY(BCM78905, BCM78905_VENDOR_ID, BCM78905_DEVICE_ID, BCM78905_
                      0, 0, \
                      bcm78905_a0, bcm78905_a0, bcm78905_a0, \
                      "Tomahawk5+", "BCM78905", \
+                     "51.2 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78907_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78907, BCM78907_VENDOR_ID, BCM78907_DEVICE_ID, BCM78907_REV_A0, \
+                     0, 0, \
+                     bcm78907_a0, bcm78907_a0, bcm78907_a0, \
+                     "Tomahawk5-512", "BCM78907", \
                      "51.2 Tbps Multilayer Switch", 0, 0)
 #endif
 

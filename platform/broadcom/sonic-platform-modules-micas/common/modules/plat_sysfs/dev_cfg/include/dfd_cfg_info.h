@@ -1,3 +1,23 @@
+/*
+ * A header definition for dfd_cfg_info driver
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #ifndef __DFD_CFG_INFO_H__
 #define __DFD_CFG_INFO_H__
 
@@ -97,7 +117,8 @@ typedef enum sensor_format_mem_s {
     LINEAR16,
     TMP464,
     MAC_TH5,
-    MAC_TD3
+    MAC_TD3,
+    MAC_TH4
 } sensor_format_mem_t;
 
 typedef int (*info_hwmon_buf_f)(uint8_t *buf, int buf_len, uint8_t *buf_new, int *buf_len_new, info_ctrl_t *info_ctrl);

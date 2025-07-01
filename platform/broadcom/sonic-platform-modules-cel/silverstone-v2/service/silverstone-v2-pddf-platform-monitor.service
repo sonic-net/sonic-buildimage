@@ -1,0 +1,18 @@
+[Unit]
+Description=Silverstone-V2 Platform background monitor service
+Before=pmon.service
+After=pddf-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/pddf_fan_control_sensor_refresh.py
+Restart=always
+RestartSec=30s
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

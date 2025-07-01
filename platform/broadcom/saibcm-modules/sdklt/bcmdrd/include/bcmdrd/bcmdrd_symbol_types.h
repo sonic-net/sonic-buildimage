@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMDRD_SYMBOL_TYPES_H
@@ -31,6 +31,9 @@
  */
 
 /*! \{ */
+
+/*! Symbol applicable for SER test. */
+#define BCMDRD_SYMBOL_FLAG_SER_TEST                         (1U << 7)
 
 /*! Symbol data will be cleared on read. */
 #define BCMDRD_SYMBOL_FLAG_CLEAR_ON_READ                    (1U << 8)

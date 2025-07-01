@@ -25,6 +25,8 @@ route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
  {% endif %}
 {% elif CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
 bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
+bgp community-list standard DEVICE_INTERNAL_FALLBACK_COMMUNITY permit {{ constants.bgp.internal_fallback_community }}
+bgp community-list standard LOCAL_ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.local_anchor_route_community }}
 bgp community-list standard NO_EXPORT permit no-export
 !
 route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
@@ -35,6 +37,18 @@ route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
 route-map FROM_BGP_INTERNAL_PEER_V4 permit 2
   match community NO_EXPORT
   set local-preference 80
+  on-match next
+!
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'DownstreamLC' %}
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 3
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+{% else %}
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 3
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+  set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
+{% endif %}
 !
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 1
  set ipv6 next-hop prefer-global
@@ -48,14 +62,32 @@ route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 3
   match community NO_EXPORT
   set local-preference 80
+  on-match next
+!
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'DownstreamLC' %}
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 4
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+{% else %}
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 4
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+  set comm-list DEVICE_INTERNAL_FALLBACK_COMMUNITY delete
+  set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
+{% endif %}
 !
 route-map TO_BGP_INTERNAL_PEER_V4 permit 1
   match ip address prefix-list PL_LoopbackV4
   set community {{ constants.bgp.internal_community }}
 !
+route-map TO_BGP_INTERNAL_PEER_V4 deny 15
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
+!
 route-map TO_BGP_INTERNAL_PEER_V6 permit 2
   match ipv6 address prefix-list PL_LoopbackV6
   set community {{ constants.bgp.internal_community }}
+!
+route-map TO_BGP_INTERNAL_PEER_V6 deny 15
+  match community LOCAL_ANCHOR_ROUTE_COMMUNITY
 !
 {% else %}
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 1

@@ -1,6 +1,6 @@
 /*
  * $Id$
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -25,10 +25,11 @@
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
  * 
+ * 
  *
  * File:        soc/shared/dcbformats/type35.h
  * Purpose:     Define dma control block (DCB) format for a type35 DCB
- *              used by the 56560 (APACHE)
+ *              used by the 56670 (MONTEREY)
  *
  *              This file is shared between the SDK and the embedded applications.
  */

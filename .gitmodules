@@ -46,7 +46,7 @@
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
 	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr/8.5
+	branch = frr-10.3
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -106,6 +106,9 @@
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
+[submodule "src/sonic-bmp"]
+	path = src/sonic-bmp
+	url = https://github.com/sonic-net/sonic-bmp.git
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
@@ -115,12 +118,24 @@
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
 	url = https://github.com/sonic-net/sonic-dash-api.git
-[submodule "platform/marvell/mrvl-prestera"]
-	path = platform/marvell/mrvl-prestera
+[submodule "src/sonic-dash-ha"]
+	path = src/sonic-dash-ha
+	url = https://github.com/sonic-net/sonic-dash-ha
+[submodule "src/sonic-stp"]
+	path = src/sonic-stp
+	url = https://github.com/sonic-net/sonic-stp
+[submodule "platform/marvell-teralynx/sonic-platform-marvell-teralynx"]
+	path = platform/marvell-teralynx/sonic-platform-marvell-teralynx
+	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
+[submodule "platform/vpp"]
+	path = platform/vpp
+	url = https://github.com/sonic-net/sonic-platform-vpp.git
+[submodule "platform/marvell-prestera/mrvl-prestera"]
+	path = platform/marvell-prestera/mrvl-prestera
 	url = https://github.com/Marvell-switching/mrvl-prestera.git
-[submodule "platform/marvell/sonic-platform-marvell"]
-	path = platform/marvell/sonic-platform-marvell
+[submodule "platform/marvell-prestera/sonic-platform-marvell"]
+	path = platform/marvell-prestera/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
-[submodule "platform/innovium/sonic-platform-marvell"]
-	path = platform/innovium/sonic-platform-marvell
-	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "src/sonic-sysmgr/gnoi"]
+	path = src/sonic-sysmgr/gnoi
+	url = https://github.com/openconfig/gnoi

@@ -1,5 +1,5 @@
 # $Id: Make.depend,v 1.14 Broadcom SDK $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -23,6 +23,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 #
 # Default rule to build dependencies.  This builds a x.d file for each
@@ -104,6 +105,15 @@ endif
 endif
 
 endif	# !CLEANING
+
+ifeq ($(ARCH),arm64)
+# SAI: SONIC-76388 and SDK: SDK-367718
+# This macro removes the redundant macros and gcc options
+# JIRA SONIC-69062
+UNIQE = $(if $1,$(firstword $1) $(call UNIQE,$(filter-out $(firstword $1),$1)))
+CFLAGS := $(call UNIQE,$(CFLAGS))
+CFGFLAGS := $(call UNIQE,$(CFGFLAGS))
+endif
 
 clean_d::
 ifdef QUIET

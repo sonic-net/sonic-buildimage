@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,13 +17,21 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_CALLBACK_H
 #define NGKNET_CALLBACK_H
 
 #include <lkm/ngknet_kapi.h>
+
+typedef struct dev_cb_s {
+    /*! List head */
+    struct list_head list;
+
+    /*! Device callback */
+    ngknet_dev_init_cb_f cb;
+} dev_cb_t;
 
 typedef struct netif_cb_s {
     /*! List head */
@@ -47,8 +55,8 @@ typedef struct filter_cb_s {
  * \brief NGKNET callback control.
  */
 struct ngknet_callback_ctrl {
-    /*! Handle TX/RX callback initialization. */
-    ngknet_dev_init_cb_f dev_init_cb;
+    /*! Device initialization callback list */
+    struct list_head dev_init_cb_list;
 
     /*! Handle Rx packet */
     ngknet_rx_cb_f rx_cb;

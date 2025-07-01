@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""
+    This scripts's job is to verify that there are no control plane
+    packet drops reported by /proc/net/sofnet_stats.
+    This is to be run periodically on a SONiC device using a monit
+    configuration file.
+"""
+import os
+import sys
+import syslog
+
+
+def write_syslog(message, *args):
+    """
+    Write a message to syslog.
+
+    Args:
+        message (str): Message string to be logged
+        args: Optional args
+
+    Returns:
+        None
+    """
+
+    if args:
+        message %= args
+    syslog.syslog(syslog.LOG_NOTICE, message)
+
+
+def get_softnet_dropped_count():
+    """
+    Get dropped count from softnet stats procfs.
+
+    Returns:
+        drop_count (int): Number of dropped packets
+    """
+    drop_count = 0
+    softnet_stats_file = "/proc/net/softnet_stat"
+
+    with open(softnet_stats_file, 'r') as f:
+        for line in f:
+            if line.strip():  # Ensure the line is not empty
+                stat = line.split()
+                # Drop count is in the second column for each CPU. Ref:
+                # https://github.com/torvalds/linux/blob/v5.10/net/core/net-procfs.c#L153
+                if len(stat) > 1:
+                    drop_count += int(stat[1], 16)
+
+    return drop_count
+
+
+def check_packet_drops():
+    """
+    The function that checks for kernel packet drops
+
+    Returns:
+        True if there are packet drops, False otherwise
+    """
+    # Path to the file to store the last drop count
+    drop_count_stash = '/tmp/softnet_dropped_count.txt'
+
+    # Read the last drop count if drop count stash file exists
+    if os.path.exists(drop_count_stash):
+        with open(drop_count_stash, 'r') as f:
+            count = f.read().strip()
+            last_drop_count = int(count) if count else 0
+    else:
+    # Initial run. Read drop count, update stash and return normally
+        last_drop_count = get_softnet_dropped_count()
+        with open(drop_count_stash, 'w') as f:
+            f.write(str(last_drop_count))
+        return False
+
+    current_drop_count = get_softnet_dropped_count()
+    with open(drop_count_stash, 'w') as f:
+        f.write(str(current_drop_count))
+
+    if current_drop_count > last_drop_count:
+        write_syslog("control_plane_drop_check: packet drops detected, current drop count: {}".format(current_drop_count))
+        return True
+    else:
+        return False
+
+
+if __name__ == "__main__":
+    res = True
+    try:
+        res = check_packet_drops()
+    except Exception as e:
+        write_syslog("control_plane_drop_check exception: {}".format(str(e)))
+
+    sys.exit(1 if res else 0)

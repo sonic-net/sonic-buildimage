@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_DEV_H
@@ -87,7 +87,7 @@
 /*! Max network interface name length */
 #define NGKNET_NETIF_NAME_MAX       16
 /*! Max network interface meta bytes */
-#define NGKNET_NETIF_META_MAX       16
+#define NGKNET_NETIF_META_MAX       32
 /*! Max netif user data in bytes */
 #define NGKNET_NETIF_USER_DATA      64
 
@@ -135,6 +135,9 @@ typedef struct ngknet_netif_s {
     /*! Network interface bound to channel */
     uint32_t chan;
 
+    /*! Network interface port */
+    uint32_t port;
+
     /*! Network interface name */
     char name[NGKNET_NETIF_NAME_MAX];
 
@@ -149,9 +152,6 @@ typedef struct ngknet_netif_s {
 
     /*! User data gotten back through callbacks */
     uint8_t user_data[NGKNET_NETIF_USER_DATA];
-
-    /*! Network interface port */
-    uint32_t port;
 } ngknet_netif_t;
 
 /*!
@@ -303,11 +303,15 @@ typedef struct ngknet_dev_info_s {
     /*! Device number (from BDE) */
     int dev_no;
 
+    /*! Device ID */
+    uint32_t dev_id;
+
     /*! Device type string */
     char type_str[NGKNET_DEV_NAME_MAX];
 
     /*! Device variant string */
     char var_str[NGKNET_DEV_NAME_MAX];
+
     /*! Virtual network devices, pointer to ngknet_dev.vdev[] */
     struct net_device **vdev;
 } ngknet_dev_info_t;
@@ -377,9 +381,12 @@ typedef struct ngknet_chan_cfg_s {
     /*! Rx or Tx */
     int dir;
     /*! Rx channel */
-#define NGKNET_RX_CHAN          0
+#define NGKNET_RX_CHAN          PDMA_Q_RX
     /*! Tx channel */
-#define NGKNET_TX_CHAN          1
+#define NGKNET_TX_CHAN          PDMA_Q_TX
+
+    /*! Pipe specified for Rx/Tx */
+    int pipe;
 } ngknet_chan_cfg_t;
 
 /*!

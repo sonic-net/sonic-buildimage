@@ -1050,7 +1050,7 @@ void update_peerlink_isolate_from_all_csm_lif(
     char *msg_buf = g_iccp_mlagsyncd_send_buf;
     struct System *sys;
 
-    char mlag_po_buf[512];
+    char mlag_po_buf[MCLAG_MEMBER_NAME_STR_LEN];
     int src_len = 0, dst_len = 0;
     ssize_t rc;
 
@@ -1065,7 +1065,7 @@ void update_peerlink_isolate_from_all_csm_lif(
         return;
 
     memset(msg_buf, 0, ICCP_MLAGSYNCD_SEND_MSG_BUFFER_SIZE);
-    memset(mlag_po_buf, 0, 511);
+    memset(mlag_po_buf, 0, MCLAG_MEMBER_NAME_STR_LEN);
 
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
     msg_hdr->ver = ICCPD_TO_MCLAGSYNCD_HDR_VERSION;
@@ -1130,12 +1130,24 @@ void update_peerlink_isolate_from_all_csm_lif(
         /* check pif port state and lif pochannel state */
         if (lif->isolate_to_peer_link == 1)
         {
-            /* need to isolate port,  get it's member name */
-            if (strlen(mlag_po_buf) != 0)
-                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+            //The return value of the snprintf function is the length of the source string.
+            if ((sizeof(mlag_po_buf) - dst_len) > 
+                (strlen(lif->name) + strlen(lif->portchannel_member_buf) + 2))
+            {
+                /* need to isolate port,  get it's member name */
+                if (strlen(mlag_po_buf) != 0)
+                {
+                    dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+                }
 
-            dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
-                                lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
+                                    lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
+            else
+            {
+                ICCPD_LOG_WARN(__FUNCTION__, "the remaining length %d is not enough to store:%s%s%s", 
+                    sizeof(mlag_po_buf) - dst_len, lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
         }
     }
 

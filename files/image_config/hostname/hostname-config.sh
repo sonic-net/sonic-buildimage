@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-CURRENT_HOSTNAME=`hostname`
-HOSTNAME=`sonic-cfggen -d -v DEVICE_METADATA[\'localhost\'][\'hostname\']`
+CURRENT_HOSTNAME=$(hostname)
+HOSTNAME=$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' hostname)
 
 if [ -z "$HOSTNAME" ] ; then
        echo "Missing hostname in the config file, setting to default 'sonic'"

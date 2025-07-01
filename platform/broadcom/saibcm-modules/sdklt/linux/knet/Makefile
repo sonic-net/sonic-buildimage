@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -12,7 +12,7 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
 #
 # Linux KNET module.
 #
@@ -25,7 +25,6 @@ ifneq ($(OUTPUT_DIR),)
 GENDIR = $(OUTPUT_DIR)/knet/generated
 endif
 DSTIDIR = $(GENDIR)/include/bcmcnet
-
 
 # Change comma-separated list to space-separated list
 comma = ,
@@ -70,28 +69,28 @@ R = 2>/dev/null
 
 mklinks:
 	mkdir -p $(DSTIDIR)
-	-ln -s $(KNETDIR)/ngknet_dep.h $(DSTIDIR)/bcmcnet_dep.h $(R)
-	-ln -s $(KNETDIR)/ngknet_buff.h $(DSTIDIR)/bcmcnet_buff.h $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_types.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_internal.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_core.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_dev.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_rxtx.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicd.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicx.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicr_acc.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicr.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicr2.h $(DSTIDIR) $(R)
-	-ln -s $(CNETDIR)/chip/*/*attach.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicd/*.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicx/*.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicr/*.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_core.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_dev.c $(GENDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_rxtx.c $(GENDIR) $(R)
-	-ln -s $(KNETDIR)/*.[ch] $(GENDIR) $(R)
-	-ln -s $(KNETDIR)/Makefile $(GENDIR) $(R)
-	-ln -s $(KNETDIR)/Kbuild $(GENDIR) $(R)
+	-ln -sr $(KNETDIR)/ngknet_dep.h $(DSTIDIR)/bcmcnet_dep.h $(R)
+	-ln -sr $(KNETDIR)/ngknet_buff.h $(DSTIDIR)/bcmcnet_buff.h $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_types.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_internal.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_core.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_dev.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_rxtx.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_cmicd.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_cmicx.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_cmicr_acc.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_cmicr.h $(DSTIDIR) $(R)
+	-ln -sr $(SRCIDIR)/bcmcnet_cmicr2.h $(DSTIDIR) $(R)
+	-ln -sr $(CNETDIR)/chip/*/*attach.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/hmi/cmicd/*.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/hmi/cmicx/*.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/hmi/cmicr/*.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/main/bcmcnet_core.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/main/bcmcnet_dev.c $(GENDIR) $(R)
+	-ln -sr $(CNETDIR)/main/bcmcnet_rxtx.c $(GENDIR) $(R)
+	-ln -sr $(KNETDIR)/*.[ch] $(GENDIR) $(R)
+	-ln -sr $(KNETDIR)/Makefile $(GENDIR) $(R)
+	-ln -sr $(KNETDIR)/Kbuild $(GENDIR) $(R)
 
 rmlinks:
 	-rm -rf $(GENDIR)

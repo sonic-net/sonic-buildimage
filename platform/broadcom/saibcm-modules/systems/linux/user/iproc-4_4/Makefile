@@ -1,6 +1,6 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.7 Broadcom SDK $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -24,6 +24,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 
 #
@@ -60,7 +61,6 @@ export IPROC_BUILD
 export BUILD_PLATFORM
 export ARM_LINUX_VERSION
 
-LINUX_MAKE_USER=1
 export ADD_TO_CFLAGS
 export BR_NO_CCACHE
 

@@ -4,20 +4,20 @@ import syslog
 from json import dump
 from glob import glob
 from sonic_yang_ext import SonicYangExtMixin, SonicYangException
+from sonic_yang_path import SonicYangPathMixin
 
 """
 Yang schema and data tree python APIs based on libyang python
 Here, sonic_yang_ext_mixin extends funtionality of sonic_yang,
 i.e. it is mixin not parent class.
 """
-class SonicYang(SonicYangExtMixin):
+class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
 
     def __init__(self, yang_dir, debug=False, print_log_enabled=True, sonic_yang_options=0):
         self.yang_dir = yang_dir
         self.ctx = None
         self.module = None
         self.root = None
-
         # logging vars
         self.SYSLOG_IDENTIFIER = "sonic_yang"
         self.DEBUG = debug
@@ -44,6 +44,12 @@ class SonicYang(SonicYangExtMixin):
         # below dict will store preProcessed yang objects, which may be needed by
         # all yang modules, such as grouping.
         self.preProcessedYang = dict()
+        # Lazy caching for backlinks lookups
+        self.backlinkCache = dict()
+        # Lazy caching for must counts
+        self.mustCache = dict()
+        # Lazy caching for configdb to xpath
+        self.configPathCache = dict()
         # element path for CONFIG DB. An example for this list could be:
         # ['PORT', 'Ethernet0', 'speed']
         self.elementPath = []
@@ -493,12 +499,88 @@ class SonicYang(SonicYangExtMixin):
             return list
 
     """
+    find_schema_must_count():  find the number of must clauses for the schema path
+    input:    schema_xpath     of the schema node
+              match_ancestors  whether or not to treat the specified path as
+                               an ancestor rather than a full path.  If set to
+                               true, will add recursively.
+    returns:  - count of must statements encountered
+              - Exception if schema node not found
+    """
+    def find_schema_must_count(self, schema_xpath, match_ancestors: bool=False):
+        # See if we have this cached
+        key = ( schema_xpath, match_ancestors )
+        result = self.mustCache.get(key)
+        if result is not None:
+            return result
+
+        try:
+            schema_node = self._find_schema_node(schema_xpath)
+        except Exception as e:
+            self.sysLog(msg="Cound not find the schema node from xpath: " + str(schema_xpath), debug=syslog.LOG_ERR, doPrint=True)
+            self.fail(e)
+            return 0
+
+        # If not doing recursion, just return the result.  This will internally
+        # cache the child so no need to update the cache ourselves
+        if not match_ancestors:
+            return self.__find_schema_must_count_only(schema_node)
+
+        count = 0
+        # Recurse first
+        for elem in schema_node.tree_dfs():
+            count += self.__find_schema_must_count_only(elem)
+
+        # Pull self
+        count += self.__find_schema_must_count_only(schema_node)
+
+        # Save in cache
+        self.mustCache[key] = count
+
+        return count
+
+    def __find_schema_must_count_only(self, schema_node):
+        # Check non-recursive cache
+        key = ( schema_node.path(), False )
+        result = self.mustCache.get(key)
+        if result is not None:
+            return result
+
+        count = 0
+        if schema_node.nodetype() == ly.LYS_CONTAINER:
+            schema_leaf = ly.Schema_Node_Container(schema_node)
+            if schema_leaf.must() is not None:
+                count += 1
+        elif schema_node.nodetype() == ly.LYS_LEAF:
+            schema_leaf = ly.Schema_Node_Leaf(schema_node)
+            count += schema_leaf.must_size()
+        elif schema_node.nodetype() == ly.LYS_LEAFLIST:
+            schema_leaf = ly.Schema_Node_Leaflist(schema_node)
+            count += schema_leaf.must_size()
+        elif schema_node.nodetype() == ly.LYS_LIST:
+            schema_leaf = ly.Schema_Node_List(schema_node)
+            count += schema_leaf.must_size()
+
+        # Cache result
+        self.mustCache[key] = count
+        return count
+
+    """
     find_schema_dependencies():  find the schema dependencies from schema xpath
-    input:    schema_xpath of the schema node
+    input:    schema_xpath     of the schema node
+              match_ancestors  whether or not to treat the specified path as
+                               an ancestor rather than a full path. If set to
+                               true, will add recursively.
     returns:  - list of xpath of the dependencies
               - Exception if schema node not found
     """
-    def _find_schema_dependencies(self, schema_xpath):
+    def find_schema_dependencies(self, schema_xpath, match_ancestors: bool=False):
+        # See if we have this cached
+        key = ( schema_xpath, match_ancestors )
+        result = self.backlinkCache.get(key)
+        if result is not None:
+            return result
+
         ref_list = []
         try:
             schema_node = self._find_schema_node(schema_xpath)
@@ -507,12 +589,46 @@ class SonicYang(SonicYangExtMixin):
             self.fail(e)
             return ref_list
 
-        schema_node = ly.Schema_Node_Leaf(schema_node)
-        backlinks = schema_node.backlinks()
-        if backlinks.number() > 0:
-            for link in backlinks.schema():
-                self.sysLog(msg="backlink schema: {}".format(link.path()), doPrint=True)
-                ref_list.append(link.path())
+        # If not doing recursion, just return the result.  This will internally
+        # cache the child so no need to update the cache ourselves
+        if not match_ancestors:
+            return self.__find_schema_dependencies_only(schema_node)
+
+        # Recurse first
+        for elem in schema_node.tree_dfs():
+            ref_list.extend(self.__find_schema_dependencies_only(elem))
+
+        # Pull self
+        ref_list.extend(self.__find_schema_dependencies_only(schema_node))
+
+        # Save in cache
+        self.backlinkCache[key] = ref_list
+
+        return ref_list
+
+    def __find_schema_dependencies_only(self, schema_node):
+        # Check non-recursive cache
+        key = ( schema_node.path(), False )
+        result = self.backlinkCache.get(key)
+        if result is not None:
+            return result
+
+        # New lookup
+        ref_list = []
+        schema_leaf = None
+        if schema_node.nodetype() == ly.LYS_LEAF:
+            schema_leaf = ly.Schema_Node_Leaf(schema_node)
+        elif schema_node.nodetype() == ly.LYS_LEAFLIST:
+            schema_leaf = ly.Schema_Node_Leaflist(schema_node)
+
+        if schema_leaf is not None:
+            backlinks = schema_leaf.backlinks()
+            if backlinks is not None and backlinks.number() > 0:
+                for link in backlinks.schema():
+                    ref_list.append(link.path())
+
+        # Cache result
+        self.backlinkCache[key] = ref_list
         return ref_list
 
     """
@@ -533,11 +649,10 @@ class SonicYang(SonicYangExtMixin):
         try:
             value = str(self._find_data_node_value(data_xpath))
 
-            schema_node = ly.Schema_Node_Leaf(data_node.schema())
-            backlinks = schema_node.backlinks()
-            if backlinks is not None and backlinks.number() > 0:
-                for link in backlinks.schema():
-                     node_set = node.find_path(link.path())
+            backlinks = self.find_schema_dependencies(data_node.schema().path(), False)
+            if backlinks is not None and len(backlinks) > 0:
+                for link in backlinks:
+                     node_set = node.find_path(link)
                      for data_set in node_set.data():
                           data_set.schema()
                           casted = data_set.subtype()

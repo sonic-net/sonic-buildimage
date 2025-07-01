@@ -1,7 +1,23 @@
 /*
- * wb_io_dev.c
- * ko to read/write i2c client through /dev/XXX device
+ * An wb_i2c_dev driver for i2c dev function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -27,8 +43,8 @@
 #define WIDTH_2Byte          (2)
 #define WIDTH_4Byte          (4)
 
-#define KERNEL_SPASE         (0)
-#define USER_SPASE           (1)
+#define KERNEL_SPACE         (0)
+#define USER_SPACE           (1)
 
 static int g_i2c_dev_debug = 0;
 static int g_i2c_dev_error = 0;
@@ -467,7 +483,7 @@ static ssize_t i2c_dev_read(struct file *file, char __user *buf, size_t count, l
     }
 
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         I2C_DEV_DEBUG_DMESG("user space read, buf: %p, offset: %lld, read count %lu.\n",
             buf, *offset, count);
         if (copy_to_user(buf, val, read_len)) {
@@ -491,7 +507,7 @@ static ssize_t i2c_dev_read_user(struct file *file, char __user *buf, size_t cou
 
     I2C_DEV_DEBUG_DMESG("i2c_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = i2c_dev_read(file, buf, count, offset, USER_SPASE);
+    ret = i2c_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -501,7 +517,7 @@ static ssize_t i2c_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 
     I2C_DEV_DEBUG_DMESG("i2c_dev_read_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = i2c_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = i2c_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 
@@ -530,7 +546,7 @@ static ssize_t i2c_dev_write(struct file *file, const char __user *buf, size_t c
     mem_clear(val, sizeof(val));
 
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         I2C_DEV_DEBUG_DMESG("user space write, buf: %p, offset: %lld, write count %lu.\n",
             buf, *offset, count);
         if (copy_from_user(val, buf, count)) {
@@ -560,7 +576,7 @@ static ssize_t i2c_dev_write_user(struct file *file, const char __user *buf, siz
 
     I2C_DEV_DEBUG_DMESG("i2c_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = i2c_dev_write(file, buf, count, offset, USER_SPASE);
+    ret = i2c_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -570,7 +586,7 @@ static ssize_t i2c_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 
     I2C_DEV_DEBUG_DMESG("i2c_dev_write_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = i2c_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = i2c_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 

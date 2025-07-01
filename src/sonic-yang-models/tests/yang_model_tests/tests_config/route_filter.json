@@ -195,6 +195,29 @@
             }
         }
     },
+    "ROUTE_MAP_MATCH_INTERFACE_LOOPBACK": {
+        "sonic-loopback-interface:sonic-loopback-interface": {
+            "sonic-loopback-interface:LOOPBACK_INTERFACE": {
+                "LOOPBACK_INTERFACE_LIST": [
+                    {
+                        "name": "Loopback0"
+                    }
+                ]
+            }
+        },
+        "sonic-route-map:sonic-route-map": {
+            "sonic-route-map:ROUTE_MAP": {
+                "ROUTE_MAP_LIST": [
+                {
+                    "name": "map1",
+                    "stmt_name": 1,
+                    "route_operation": "permit",
+                    "match_interface": "Loopback0"
+                }
+                ]
+            }
+        }
+    },
     "ROUTE_MAP_INVALID_STMT": {
         "sonic-route-map:sonic-route-map":{
             "sonic-route-map:ROUTE_MAP": {
