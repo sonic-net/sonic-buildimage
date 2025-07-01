@@ -69,31 +69,31 @@ class TestSecurityCipher(object):
                 assert "RADIUS|global" in args["RADIUS"]["table_info"]
 
     def test_deregister_table_info(self):
-    # Use an in-memory registry that can be mutated
-    registry = {
-        "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
-    }
-    with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-         mock.patch("os.chmod"), \
-         mock.patch("{}.open".format(BUILTINS), mock.mock_open()), \
-         mock.patch("os.path.exists", return_value=True):
+        # Use an in-memory registry that can be mutated
+        registry = {
+            "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
+        }
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+                mock.patch("os.chmod"), \
+                mock.patch("{}.open".format(BUILTINS), mock.mock_open()), \
+                mock.patch("os.path.exists", return_value=True):
 
-        temp = master_key_mgr()
-        # Patch _load_registry to always return current registry
-        temp._load_registry = mock.Mock(side_effect=lambda: registry.copy())
-        # Patch _save_registry to update our in-memory registry
-        def save_registry(data):
-            registry.clear()
-            registry.update(json.loads(json.dumps(data)))  # Deep copy
-        temp._save_registry = mock.Mock(side_effect=save_registry)
+            temp = master_key_mgr()
+            # Patch _load_registry to always return current registry
+            temp._load_registry = mock.Mock(side_effect=lambda: registry.copy())
+            # Patch _save_registry to update our in-memory registry
+            def save_registry(data):
+                registry.clear()
+                registry.update(json.loads(json.dumps(data)))  # Deep copy
+            temp._save_registry = mock.Mock(side_effect=save_registry)
 
-        temp.deregister("RADIUS", "RADIUS|global")
-        assert registry["RADIUS"]["table_info"] == ["RADIUS|backup"]
-        assert registry["RADIUS"]["password"] == "radius_secret"
+            temp.deregister("RADIUS", "RADIUS|global")
+            assert registry["RADIUS"]["table_info"] == ["RADIUS|backup"]
+            assert registry["RADIUS"]["password"] == "radius_secret"
 
-        temp.deregister("RADIUS", "RADIUS|backup")
-        assert registry["RADIUS"]["table_info"] == []
-        assert registry["RADIUS"]["password"] is None
+            temp.deregister("RADIUS", "RADIUS|backup")
+            assert registry["RADIUS"]["table_info"] == []
+            assert registry["RADIUS"]["password"] is None
 
     def test_rotate_feature_passwd(self):
         test_json = {
