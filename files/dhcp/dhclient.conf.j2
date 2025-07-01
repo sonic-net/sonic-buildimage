@@ -41,7 +41,7 @@ request subnet-mask, broadcast-address, time-offset, routers,
 {% if ZTP is defined and ZTP_DHCP_DISABLED is not defined %}
 send user-class "SONiC-ZTP";
 send dhcp6.user-class "SONiC-ZTP";
-send dhcp-client-identifier "SONiC##{{ ZTP['mode']['product-name'] }}##{{ ZTP['mode']['serial-no'] }}";
+send dhcp-client-identifier "\x00SONiC##{{ ZTP['mode']['product-name'] }}##{{ ZTP['mode']['serial-no'] }}";
 retry 60;
 {% endif %}
 
