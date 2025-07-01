@@ -5,13 +5,13 @@ import syslog
 import threading
 import traceback
 
-from swsscommon.swsscommon import ConfigDBConnector, DBConnector, RestartWaiter
+from swsscommon.swsscommon import ConfigDBConnector
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
 from .config import ConfigMgr
 from .directory import Directory
-from .log import log_notice, log_crit, log_err, log_debug
+from .log import log_notice, log_crit
 from .managers_advertise_rt import AdvertiseRouteMgr
 from .managers_allow_list import BGPAllowListMgr
 from .managers_bbr import BBRMgr
@@ -33,23 +33,6 @@ from .template import TemplateFabric
 from .utils import read_constants
 from .frr import FRR
 from .vars import g_debug
-
-def cleanup_static_routes_on_exit(cfg_mgr, static_route_managers):
-    """Clean up static routes from FRR when bgpcfgd exits
-
-    Delegates to each StaticRouteMgr instance to handle its own cleanup and commit.
-    """
-    try:
-        log_notice("bgpcfgd exit: Cleaning up static routes from FRR...")
-
-        # Ask each StaticRouteMgr to handle its own cleanup and commit
-        for mgr in static_route_managers:
-            mgr.cleanup_on_exit()
-
-        log_notice("Static routes cleanup delegated to individual managers")
-
-    except Exception as e:
-        log_err(f"Error during static route cleanup: {e}")
 
 def do_work():
     """ Main function """
@@ -122,13 +105,6 @@ def do_work():
     for mgr in managers:
         runner.add_manager(mgr)
     runner.run()
-
-    state_db_conn = DBConnector("STATE_DB", 0)
-    if not RestartWaiter.isAdvancedBootInProgress(state_db_conn):
-        static_route_managers = [mgr for mgr in managers if mgr.__class__.__name__ == 'StaticRouteMgr']
-        cleanup_static_routes_on_exit(common_objs['cfg_mgr'], static_route_managers)
-
-    thr.join()
 
 
 def main():

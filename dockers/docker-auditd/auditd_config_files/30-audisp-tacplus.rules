@@ -36,7 +36,6 @@
 -a exclude,always -F msgtype=CRED_REFR
 -a exclude,always -F msgtype=CWD
 -a exclude,always -F msgtype=LOGIN
--a exclude,always -F msgtype=PATH
 -a exclude,always -F msgtype=PROCTITLE
 -a exclude,always -F msgtype=SERVICE_START
 -a exclude,always -F msgtype=SERVICE_STOP
