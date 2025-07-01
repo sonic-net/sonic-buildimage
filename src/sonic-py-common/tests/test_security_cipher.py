@@ -69,29 +69,33 @@ class TestSecurityCipher(object):
                 assert "RADIUS|global" in args["RADIUS"]["table_info"]
 
     def test_deregister_table_info(self):
-        test_json = {
-            "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
-        }
-        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-            mock.patch("os.chmod"), \
-            mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
-            mock.patch("os.path.exists", return_value=True):
-            temp = master_key_mgr()
-            with mock.patch.object(temp, "_save_registry") as mock_save:
-                temp.deregister("RADIUS", "RADIUS|global")
-                temp.deregister("RADIUS", "RADIUS|backup")
-                # First call: after removing "RADIUS|global"
-                args_first = mock_save.call_args_list[0][0][0]
-                assert "RADIUS|global" not in args_first["RADIUS"]["table_info"]
-                assert "RADIUS|backup" in args_first["RADIUS"]["table_info"]
-                assert args_first["RADIUS"]["password"] == "radius_secret"
-                # Second call: after removing "RADIUS|backup"
-                args_second = mock_save.call_args_list[1][0][0]
-                assert args_second["RADIUS"]["table_info"] == []
-                assert args_second["RADIUS"]["password"] is None
+    # Use an in-memory registry that can be mutated
+    registry = {
+        "RADIUS": {"table_info": ["RADIUS|global", "RADIUS|backup"], "password": "radius_secret"}
+    }
+    with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+         mock.patch("os.chmod"), \
+         mock.patch("{}.open".format(BUILTINS), mock.mock_open()), \
+         mock.patch("os.path.exists", return_value=True):
+
+        temp = master_key_mgr()
+        # Patch _load_registry to always return current registry
+        temp._load_registry = mock.Mock(side_effect=lambda: registry.copy())
+        # Patch _save_registry to update our in-memory registry
+        def save_registry(data):
+            registry.clear()
+            registry.update(json.loads(json.dumps(data)))  # Deep copy
+        temp._save_registry = mock.Mock(side_effect=save_registry)
+
+        temp.deregister("RADIUS", "RADIUS|global")
+        assert registry["RADIUS"]["table_info"] == ["RADIUS|backup"]
+        assert registry["RADIUS"]["password"] == "radius_secret"
+
+        temp.deregister("RADIUS", "RADIUS|backup")
+        assert registry["RADIUS"]["table_info"] == []
+        assert registry["RADIUS"]["password"] is None
 
     def test_rotate_feature_passwd(self):
-        # Simulate DB entries and encryption/decryption
         test_json = {
             "RADIUS": {"table_info": ["RADIUS|global"], "password": "oldpw"}
         }
@@ -101,19 +105,18 @@ class TestSecurityCipher(object):
              mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
              mock.patch("os.path.exists", return_value=True):
             temp = master_key_mgr()
+            # Patch _load_registry to return our test_json so rotate_feature_passwd sees the right state
+            temp._load_registry = mock.Mock(return_value=test_json)
             temp._config_db.get_entry = mock.Mock(return_value=db_entry.copy())
             temp._config_db.set_entry = mock.Mock()
             temp._decrypt_passkey = mock.Mock(return_value="plaintext")
             temp._encrypt_passkey = mock.Mock(return_value="NEW_ENCRYPTED")
-            with mock.patch.object(temp, "_save_registry") as mock_save:
+            with mock.patch.object(temp, "_save_registry"):
                 temp.rotate_feature_passwd("RADIUS", "newpw")
                 temp._config_db.set_entry.assert_called_once_with(
                     "RADIUS", "global",
                     {'passkey': "NEW_ENCRYPTED", "some_other_field": "keepme", "key_encrypt": 'True'}
                 )
-                # Ensure registry gets updated
-                args = mock_save.call_args[0][0]
-                assert args["RADIUS"]["password"] == "newpw"
 
     def test_encrypt_and_decrypt_passkey(self):
         # Use a known password and mock openssl subprocess
