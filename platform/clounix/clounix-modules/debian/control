@@ -1,0 +1,12 @@
+Source: clounix-modules
+Section: main
+Priority: extra
+Maintainer: support <zhoujd@clounix.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: clounix-modules
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, lsb-base (>= 4.19.0-12-2)
+Description: kernel modules for clounix asic
+

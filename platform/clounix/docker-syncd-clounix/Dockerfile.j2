@@ -1,0 +1,52 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+COPY \
+{% for deb in docker_syncd_clounix_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+COPY \
+{% for deb in docker_syncd_clounix_pydebs.split(' ') -%}
+python-debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get install -y libxml2 \
+# Install IPython, jupyter-console packages
+        jupyter-console      \
+        jupyter-client \
+        libunwind8
+
+RUN dpkg -i \
+{% for deb in docker_syncd_clounix_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+##RUN dpkg -i \
+##{% for deb in docker_syncd_clounix_pydebs.split(' ') -%}
+##debs/{{ deb }}{{' '}}
+##{%- endfor %}
+
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+# IPython kernel config
+COPY ["ipython_config.json", "/etc/ipython/"]
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
