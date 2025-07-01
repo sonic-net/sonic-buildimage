@@ -14,9 +14,27 @@ XCVR_INSERTED = "1"
 XCVR_REMOVED = "0"
 
 
-class PddfChassisMock(Mock):
+class PddfChassisMock:
     platform_inventory = {}
     platform_inventory['num_components'] = 0
+
+    def __init__(self, pddf_data=None, pddf_plugin_data=None):
+        # Initialize required attributes that the Chassis class expects
+        self._thermal_list = []
+        self._sfp_list = []
+        self._watchdog = None
+        self._eeprom = Mock()
+        self._eeprom.modelstr = Mock(return_value="Test Model")
+        self.plugin_data = {'REBOOT_CAUSE': {'reboot_cause_file': '/tmp/test_reboot_cause'}}
+
+    def get_all_sfps(self):
+        return self._sfp_list
+
+    def set_system_led(self, led_name, color):
+        return True
+
+    def get_system_led(self, led_name):
+        return "green"
 
 class SfpTestHelper(object):
     def __init__(self):
@@ -44,11 +62,14 @@ def chassis():
     pddf_chassis_mock.PddfChassis = PddfChassisMock
     sys.modules['sonic_platform_pddf_base.pddf_chassis'] = pddf_chassis_mock
     sys.modules['sonic_platform.component'] = Mock()
+    sys.modules['sonic_platform.thermal'] = Mock()
     # Import the module under test
     cwd = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(os.path.join(cwd, "../"))
     from chassis import Chassis
-    return Chassis()
+    data_mock = Mock()
+    data_mock.data = {'PLATFORM': {'num_nexthop_fpga_asic_temp_sensors': 0}}
+    return Chassis(pddf_data=data_mock)
 
 @pytest.fixture
 def mock_sfps(chassis):

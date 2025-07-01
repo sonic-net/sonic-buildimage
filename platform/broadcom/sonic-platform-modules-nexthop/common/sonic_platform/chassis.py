@@ -9,8 +9,10 @@
 #
 #############################################################################
 
+import sys
 import time
 
+from sonic_platform.thermal import NexthopFpgaAsicThermal
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
 except ImportError as e:
@@ -33,6 +35,11 @@ class Chassis(PddfChassis):
 
         # {'port': 'presence'}
         self._xcvr_presence = {}
+
+        num_asic_thermals = pddf_data.data['PLATFORM'].get('num_nexthop_fpga_asic_temp_sensors', 0)
+        for index in range(num_asic_thermals):
+            thermal = NexthopFpgaAsicThermal(index, pddf_data)
+            self._thermal_list.append(thermal)
 
     # Provide the functions/variables below for which implementation is to be overwritten
 

@@ -8,6 +8,7 @@
     "num_asic_temps": 56,
     "num_voltage_sensors" : 24,
     "num_current_sensors" : 8,
+    "num_nexthop_fpga_asic_temp_sensors": 2,
     "num_components": 6,
     "pddf_dev_types": {
       "description": " - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -1170,6 +1171,38 @@
         { "chn": "66", "dev": "PORT63" },
         { "chn": "67", "dev": "PORT64" }
       ]
+    }
+  },
+  "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0": {
+    "dev_info": {
+      "device_type": "NEXTHOP_FPGA_ASIC_TEMP_SENSOR",
+      "device_name": "NEXTHOP-FPGA-ASIC-TEMP-SENSOR0",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "dev_attr": {
+      "display_name": "ASIC Min",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110,
+      "fpga_min_rev": "0xe8020214",
+      "value_type": "nh1",
+      "reg_addr": "0x24",
+      "field_range": "12:0"
+    }
+  },
+  "NEXTHOP-FPGA-ASIC-TEMP-SENSOR1": {
+    "dev_info": {
+      "device_type": "NEXTHOP_FPGA_ASIC_TEMP_SENSOR",
+      "device_name": "NEXTHOP-FPGA-ASIC-TEMP-SENSOR1",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "dev_attr": {
+      "display_name": "ASIC Max",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110,
+      "fpga_min_rev": "0xe8020214",
+      "value_type": "nh1",
+      "reg_addr": "0x24",
+      "field_range": "28:16"
     }
   },
   "FAN-CTRL": {

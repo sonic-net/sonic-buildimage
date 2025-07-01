@@ -5,11 +5,19 @@
 
 import time
 
+from nexthop import fpga_lib
 try:
+    from sonic_platform_base.thermal_base import ThermalBase
     from sonic_platform_pddf_base.pddf_thermal import PddfThermal
     from sonic_platform_base.thermal_base import ThermalBase
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+
+# Nexthop FPGA thermal sensor value to Celsius conversion
+TYPE_TO_CELSIUS_LAMBDA_DICT = {
+  'nh1': lambda field_val:  0.158851 * (3000 - field_val),
+}
 
 
 class Thermal(PddfThermal):
@@ -47,12 +55,95 @@ class Thermal(PddfThermal):
         return temp
 
     def get_minimum_recorded(self):
-        self.get_temperature()
         return self._min_temperature
 
     def get_maximum_recorded(self):
-        self.get_temperature()
         return self._max_temperature
+
+
+class NexthopFpgaAsicThermal(ThermalBase):
+    """ASIC temperature sensor read from the FPGA register"""
+
+    def __init__(
+        self,
+        index,
+        pddf_data
+    ):
+        super().__init__()
+
+        pddf_obj_name = f'NEXTHOP-FPGA-ASIC-TEMP-SENSOR{index}'
+        pddf_obj_data = pddf_data.data[pddf_obj_name]
+
+        dev_info = pddf_obj_data['dev_info']
+        device_parent_name = dev_info['device_parent']
+        self._fpga_pci_addr = pddf_data.data[device_parent_name]['dev_info']['device_bdf']
+
+        dev_attr = pddf_obj_data['dev_attr']
+        self._display_name = dev_attr['display_name']
+        self._fpga_min_rev = int(dev_attr.get('fpga_min_rev', 0), 16)
+        self._value_type = dev_attr['value_type']
+        self._reg_addr = int(dev_attr['reg_addr'], 16)
+        self._field_range_end, self._field_range_start = map(int, dev_attr['field_range'].split(':'))
+        self._temp1_high_threshold = dev_attr['temp1_high_threshold']
+        self._temp1_high_crit_threshold = dev_attr['temp1_high_crit_threshold']
+
+        self._supported = self._check_sensor_supported()
+        self._min_temperature = None
+        self._max_temperature = None
+
+    def _check_sensor_supported(self):
+        try:
+            fpga_ver = fpga_lib.read_32(self._fpga_pci_addr, 0x0)
+        except PermissionError:
+            # PermissionError is expected if running as non-root
+            return False
+        return fpga_ver >= self._fpga_min_rev
+
+    def get_num_thermals(self):
+        return 1
+
+    def get_name(self):
+        return self._display_name
+
+    def get_temp_label(self):
+        return None
+
+    def get_temperature(self):
+        if not self._supported:
+            return None
+        reg_val = fpga_lib.read_32(self._fpga_pci_addr, self._reg_addr)
+        field_val = reg_val >> self._field_range_start
+        field_val = field_val & ((1 << (self._field_range_end - self._field_range_start + 1)) - 1)
+        get_celsius_fn = TYPE_TO_CELSIUS_LAMBDA_DICT.get(self._value_type)
+        if get_celsius_fn:
+            val = get_celsius_fn(field_val)
+        else:
+            raise NotImplementedError(f'Unsupported NexthopFpgaAsicThermal value type: {self._value_type}')
+        val = round(val, 3)
+        if self._min_temperature is None or val < self._min_temperature:
+            self._min_temperature = val
+        if self._max_temperature is None or val > self._max_temperature:
+            self._max_temperature = val
+        return val
+
+    def get_low_threshold(self):
+        return None
+
+    def get_low_critical_threshold(self):
+        return None
+
+    def get_high_threshold(self):
+        return self._temp1_high_threshold
+
+    def get_high_critical_threshold(self):
+        return self._temp1_high_crit_threshold
+
+    def get_minimum_recorded(self):
+        return self._min_temperature
+
+    def get_maximum_recorded(self):
+        return self._max_temperature
+
 
 class SfpThermal(ThermalBase):
     """SFP thermal interface class"""
@@ -94,6 +185,8 @@ class SfpThermal(ThermalBase):
         return True
 
     def get_temperature(self):
+        if not self.get_presence():
+            return None
         temp = self._sfp.get_temperature()
         if self._min_temperature is None or temp < self._min_temperature:
             self._min_temperature = temp
@@ -136,9 +229,7 @@ class SfpThermal(ThermalBase):
         return False
 
     def get_minimum_recorded(self):
-        self.get_temperature()
         return self._min_temperature
 
     def get_maximum_recorded(self):
-        self.get_temperature()
         return self._max_temperature
