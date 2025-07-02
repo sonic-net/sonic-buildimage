@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VRF_ENABLED=$(sonic-db-cli CONFIG_DB HGET "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled")
+VRF_ENABLED=$(sonic-db-cli CONFIG_DB HGET "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled" 2> /dev/null)
 if [ "$VRF_ENABLED" = "true" ]; then
     VRF_CONFIGURED=$(sonic-db-cli CONFIG_DB HGET "NTP|global" "vrf")
     if [ "$VRF_CONFIGURED" = "default" ]; then
