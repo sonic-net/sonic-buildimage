@@ -229,7 +229,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift
 sudo cp -a platform/xsight/files/xlx $FILESYSTEM_ROOT/opt/
 sudo chmod +x $FILESYSTEM_ROOT/opt/xlx/*.sh
 sudo LANG=C chroot $FILESYSTEM_ROOT chown -R $USERNAME /opt/xlx
-sudo cp -a platform/xsight/files/link/* $FILESYSTEM_ROOT/lib/systemd/network/
 
 {% endif %}
 
