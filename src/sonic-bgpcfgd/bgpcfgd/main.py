@@ -5,6 +5,7 @@ import syslog
 import threading
 import traceback
 
+from swsscommon.swsscommon import ConfigDBConnector
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
@@ -22,7 +23,10 @@ from .managers_static_rt import StaticRouteMgr
 from .managers_rm import RouteMapMgr
 from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
+from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
+from .managers_prefix_list import PrefixListMgr
+from .managers_as_path import AsPathMgr
 from .static_rt_timer import StaticRouteTimer
 from .runner import Runner, signal_handler
 from .template import TemplateFabric
@@ -78,17 +82,29 @@ def do_work():
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
-        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
     ]
 
     if device_info.is_chassis():
         managers.append(ChassisAppDbMgr(common_objs, "CHASSIS_APP_DB", "BGP_DEVICE_GLOBAL"))
 
+    config_db = ConfigDBConnector()
+    config_db.connect()
+    sys_defaults = config_db.get_table('SYSTEM_DEFAULTS')
+    if 'software_bfd' in sys_defaults and 'status' in sys_defaults['software_bfd'] and sys_defaults['software_bfd']['status'] == 'enabled':
+        log_notice("software_bfd feature is enabled, starting bfd manager")
+        managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
+
+    device_metadata = config_db.get_table("DEVICE_METADATA")
+    if "localhost" in device_metadata and "type" in device_metadata["localhost"] and device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC":
+        # Prefix List Manager
+        managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
+        managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
+
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
         runner.add_manager(mgr)
     runner.run()
-    thr.join()
 
 
 def main():

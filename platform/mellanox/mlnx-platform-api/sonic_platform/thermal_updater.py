@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -119,18 +120,11 @@ class ThermalUpdater:
             presence = sfp.get_presence()
             pre_presence = self._sfp_status.get(sfp.sdk_index)
             if presence:
-                temperature = sfp.get_temperature()
-                if temperature == 0:
-                    warning_thresh = 0
-                    critical_thresh = 0
-                    fault = 0
-                else:
-                    warning_thresh = sfp.get_temperature_warning_threshold()
-                    critical_thresh = sfp.get_temperature_critical_threshold()
-                    fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
-                    temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
-                    warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
-                    critical_thresh = 0 if critical_thresh is None else critical_thresh * SFP_TEMPERATURE_SCALE
+                temperature, warning_thresh, critical_thresh = sfp.get_temperature_info()
+                fault = ERROR_READ_THERMAL_DATA if (temperature is None or warning_thresh is None or critical_thresh is None) else 0
+                temperature = 0 if temperature is None else temperature * SFP_TEMPERATURE_SCALE
+                warning_thresh = 0 if warning_thresh is None else warning_thresh * SFP_TEMPERATURE_SCALE
+                critical_thresh = 0 if critical_thresh is None else critical_thresh * SFP_TEMPERATURE_SCALE
 
                 hw_management_independent_mode_update.thermal_data_set_module(
                     0, # ASIC index always 0 for now
@@ -142,7 +136,16 @@ class ThermalUpdater:
                 )
             else:
                 if pre_presence != presence:
-                    hw_management_independent_mode_update.thermal_data_clean_module(0, sfp.sdk_index + 1)
+                    # thermal control service requires to
+                    # set value 0 to all temperature files when module is not present
+                    hw_management_independent_mode_update.thermal_data_set_module(
+                        0,  # ASIC index always 0 for now
+                        sfp.sdk_index + 1,
+                        0,
+                        0,
+                        0,
+                        0
+                    )
 
             if pre_presence != presence:
                 self._sfp_status[sfp.sdk_index] = presence

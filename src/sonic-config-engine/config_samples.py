@@ -50,7 +50,8 @@ def generate_t1_sample_config(data):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
-    data['LOOPBACK_INTERFACE'] = {"Loopback0|10.1.0.1/32": {}}
+    data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
+                                  "Loopback0|10.1.0.1/32": {}}
     data['BGP_NEIGHBOR'] = {}
     data['DEVICE_NEIGHBOR'] = {}
     data['INTERFACE'] = {}
@@ -63,6 +64,7 @@ def generate_t1_sample_config(data):
         peer_addr = '10.0.{}.{}'.format(2 * port_count // 256, 2 * port_count % 256 + 1)
         peer_name='ARISTA{0:02d}{1}'.format(1+port_count%(total_port_amount // 2), 'T2' if port_count < (total_port_amount // 2) else 'T0')
         peer_asn = 65200 if port_count < (total_port_amount // 2) else 64001 + port_count - (total_port_amount // 2)
+        data['INTERFACE']['{}'.format(port)] = {}
         data['INTERFACE']['{}|{}/31'.format(port, local_addr)] = {}
         data['BGP_NEIGHBOR'][peer_addr] = {
                 'rrclient': 0,
@@ -92,14 +94,16 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
         }
     }
     dhcp_server_ports = {}
+    dpu_midplane_dict = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
         midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
+        dpu_midplane_dict[dpu_name] = {'midplane_interface': midplane_interface}
         dpu_id = int(midplane_interface.replace('dpu', ''))
         dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
 
     if dhcp_server_ports:
-        data['DPUS'] = ss_config['DPUS']
+        data['DPUS'] = dpu_midplane_dict
 
         data['FEATURE'] = {
             "dhcp_relay": {
@@ -138,14 +142,23 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
+    data['NTP'] = {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
-    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    if "SYSTEM_DEFAULTS" not in data:
+        data["SYSTEM_DEFAULTS"] = {}
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
@@ -162,6 +175,23 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
 
     crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
     crmconfig.update(dash_crm_thresholds)
+
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        data['SYSTEM_DEFAULTS'] = {
+            "polaris": {
+                "status": "enabled"
+            }
+        }
+
+    data["SYSTEM_DEFAULTS"]["software_bfd"] = {
+        "status": "enabled"
+    }
+
+    data['NTP_SERVER'] = {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    }
 
     return data
 
@@ -185,7 +215,7 @@ def generate_global_dualtor_tables():
     data = defaultdict(lambda: defaultdict(dict))
     data['LOOPBACK_INTERFACE'] = {
                                     'Loopback2': {},
-                                    'Loopback2|3.3.3.3': {}
+                                    'Loopback2|3.3.3.3/32': {}
                                     }
     data['MUX_CABLE'] = {}
     data['PEER_SWITCH'] = {

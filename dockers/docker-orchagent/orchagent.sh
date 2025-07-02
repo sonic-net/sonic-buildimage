@@ -18,12 +18,23 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 1024
-ORCHAGENT_ARGS+="-b 1024 "
+LOCALHOST_SWITCHTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "switch_type"`
+if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
+    # Set orchagent pop batch size to 128 for faster link notification handling 
+    # during route-churn
+    ORCHAGENT_ARGS+="-b 128 "
+else
+    # Set orchagent pop batch size to 1024
+    ORCHAGENT_ARGS+="-b 1024 "
+fi
 
-# Set synchronous mode if it is enabled in CONFIG_DB
+# Set zmq mode by default for smartswitch DPU
+# Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
 
@@ -51,8 +62,6 @@ fi
 # Add platform specific arguments if necessary
 if [ "$platform" == "broadcom" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "cavium" ]; then
-    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "nephos" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "centec" ]; then
@@ -68,9 +77,12 @@ elif [ "$platform" == "marvell-teralynx" ]; then
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
-    MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
+    MAC_ADDRESS=$(ip link show int_mnic0 | grep ether | awk '{print $2}')
+    if [ "$MAC_ADDRESS" == "" ]; then
+        MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
+    fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "marvell" ]; then
+elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
     CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
@@ -102,5 +114,20 @@ MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgm
 if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -v mgmt"
 fi
+
+# Enable ring buffer
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
+if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -R"
+fi
+
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
+# Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
+trap '' SIGHUP
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}

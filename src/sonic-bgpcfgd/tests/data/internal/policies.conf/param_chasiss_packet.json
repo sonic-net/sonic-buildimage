@@ -10,9 +10,10 @@
     "constants": {
         "bgp": {
             "internal_community": "12345:556",
-	    "internal_community_match_tag": "101",
-	    "route_eligible_for_fallback_to_default_tag": "203",
-	    "internal_fallback_community": "1111:2222"
+	        "internal_community_match_tag": "101",
+	        "route_eligible_for_fallback_to_default_tag": "203",
+	        "internal_fallback_community": "1111:2222",
+            "local_anchor_route_community": "12345:555"
         }
     },
     "loopback0_ipv4": "10.10.10.10/32"

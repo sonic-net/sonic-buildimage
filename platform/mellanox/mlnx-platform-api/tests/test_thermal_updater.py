@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,18 +95,17 @@ class TestThermalUpdater:
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
-        mock_sfp.get_temperature = mock.MagicMock(return_value=55.0)
-        mock_sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70.0)
-        mock_sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80.0)
+        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(55.0, 70.0, 80.0))
         updater = ThermalUpdater([mock_sfp])
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 55000, 80000, 70000, 0)
 
-        mock_sfp.get_temperature = mock.MagicMock(return_value=0.0)
+        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(0.0, 0.0, 0.0))
         hw_management_independent_mode_update.reset_mock()
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)
 
         mock_sfp.get_presence = mock.MagicMock(return_value=False)
+        hw_management_independent_mode_update.reset_mock()
         updater.update_module()
-        hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once_with(0, 11)
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 0)

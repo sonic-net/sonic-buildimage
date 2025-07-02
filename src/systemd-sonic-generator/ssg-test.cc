@@ -231,6 +231,7 @@ class SsgMainTest : public SsgFunctionTest {
             while (getline(file, line) && !found) {
                 if (str == line) {
                     found = true;
+                    break;
                 }
             }
         return found;
@@ -364,6 +365,32 @@ class SsgMainTest : public SsgFunctionTest {
             "system", !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu, cfg.num_dpus, false);
     }
 
+    void validate_environment_variable(const SsgMainConfig &cfg) {
+        std::unordered_map<std::string, std::string> env_vars;
+        env_vars["IS_DPU_DEVICE"] = (cfg.is_smart_switch_dpu ? "true" : "false");
+        env_vars["NUM_DPU"] = std::to_string(cfg.num_dpus);
+
+        std::vector<std::string> checked_service_list;
+
+        checked_service_list.insert(checked_service_list.end(), common_service_list.begin(), common_service_list.end());
+        if (cfg.num_dpus > 0) {
+            checked_service_list.insert(checked_service_list.end(), npu_service_list.begin(), npu_service_list.end());
+        }
+        if (cfg.num_asics > 1) {
+            checked_service_list.insert(checked_service_list.end(), multi_asic_service_list.begin(), multi_asic_service_list.end());
+        }
+
+        for (const auto &target: checked_service_list) {
+            if (find_string_in_file("[Service]", target)) {
+                for (const auto& item : env_vars) {
+                    std::string str = "Environment=\"" + item.first + "=" + item.second + "\"";
+                    EXPECT_EQ(find_string_in_file(str, target), true)
+                        << "Error validating " + str + " in " + target;
+                }
+            }
+        }
+    }
+
     /* ssg_main test routine.
      * input: num_asics    number of asics
      */
@@ -431,6 +458,9 @@ class SsgMainTest : public SsgFunctionTest {
 
         /* Validate Test Unit file for dependency creation. */
         validate_depedency_in_unit_file(cfg);
+
+        /* Validate environment variables */
+        validate_environment_variable(cfg);
     }
 
     /* Save global variables before running tests */
@@ -719,7 +749,6 @@ TEST_F(SsgMainTest, ssg_main_argv) {
         std::vector<std::string> arguments = {
                     "ssg_main",
                 };
-
         /* Create argv list for ssg_main. */
         for (const auto& arg : arguments) {
             argv_.push_back((char*)arg.data());

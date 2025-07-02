@@ -42,6 +42,7 @@ bcm_device:
             mmu_init_config: "\"TH5-MSFT-PROD\""
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
@@ -1847,4 +1848,13 @@ device:
     0:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
+...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            SKIP_BUFFER_RESERVATION: 0
+            THRESHOLD_MODE: LOSSY
+        TM_SCHEDULER_CONFIG:
+            NUM_MC_Q: NUM_MC_Q_2
 ...

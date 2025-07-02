@@ -17,6 +17,14 @@ Package: sonic-platform-ufispace-s9301-32db
 Architecture: amd64
 Description: This package contains s9301-32db platform driver utility for SONiC project.
 
+Package: sonic-platform-ufispace-s9321-64e
+Architecture: amd64
+Description: This package contains s9321-64e platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s9321-64eo
+Architecture: amd64
+Description: This package contains s9321-64eo platform driver utility for SONiC project.
+
 Package: sonic-platform-ufispace-s9110-32x
 Architecture: amd64
 Description: This package contains s9110-32x platform driver utility for SONiC project.

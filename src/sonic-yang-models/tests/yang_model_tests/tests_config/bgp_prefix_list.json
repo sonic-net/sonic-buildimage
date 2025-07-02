@@ -1,0 +1,40 @@
+{
+    "BGP_PREFIX_LIST_WITH_VALID_IPV4_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "ANCHOR_PREFIX",
+                        "ip-prefix": "10.0.0.0/8"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_VALID_IPV6_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "ANCHOR_PREFIX",
+                        "ip-prefix": "fc00::/48"
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_PREFIX_LIST_WITH_INVALID_PREFIX": {
+        "sonic-bgp-prefix-list:sonic-bgp-prefix-list": {
+            "sonic-bgp-prefix-list:PREFIX_LIST": {
+                "PREFIX_LIST_LIST": [
+                    {
+                        "prefix_type": "ANCHOR_PREFIX",
+                        "ip-prefix": "invalid_prefix"
+                    }
+                ]
+            }
+        },
+        "eStrKey": "InvalidValue",
+        "eStr": ["prefix"]
+    }
+}
