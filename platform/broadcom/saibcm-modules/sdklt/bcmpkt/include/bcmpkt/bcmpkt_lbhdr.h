@@ -34,8 +34,11 @@
 /*! TX Packet MetaData size (words). */
 #define BCMPKT_LBHDR_SIZE_WORDS         4
 
+/*! LBHDR FID field supported check. */
+#define BCMPKT_LBHDR_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
+
 /*!
- * \name LBHDR Dumping flags.
+ * \name LBHDR Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_LBHDR_DUMP_F_XXX
  */
 /*! \{ */
@@ -44,7 +47,7 @@
  */
 #define BCMPKT_LBHDR_DUMP_F_ALL         0
 /*!
- * Dump none zero field content only.
+ * Dump non-zero field content only.
  */
 #define BCMPKT_LBHDR_DUMP_F_NONE_ZERO   1
 /*! \} */

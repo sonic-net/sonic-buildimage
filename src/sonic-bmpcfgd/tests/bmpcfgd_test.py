@@ -53,8 +53,8 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon.register_callbacks()
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
-            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)
 
@@ -66,8 +66,8 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
-            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)
 
@@ -79,7 +79,7 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
-            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)

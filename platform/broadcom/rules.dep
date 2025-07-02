@@ -25,6 +25,7 @@ include $(PLATFORM_PATH)/platform-modules-micas.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.dep
 include $(PLATFORM_PATH)/docker-saiserver-brcm.dep
+include $(PLATFORM_PATH)/sswsyncd.dep
 ifeq ($(INCLUDE_PDE), y)
 include $(PLATFORM_PATH)/docker-pde.dep
 include $(PLATFORM_PATH)/sonic-pde-tests.dep
@@ -38,4 +39,5 @@ include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.dep
 ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.dep
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.dep
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-milleniob.dep
 endif

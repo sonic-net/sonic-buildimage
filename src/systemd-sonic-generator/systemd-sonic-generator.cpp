@@ -11,6 +11,9 @@
 #include <string>
 #include <sstream>
 #include <unordered_set>
+#include <fstream>
+#include <unordered_map>
+#include <regex>
 
 #define MAX_NUM_TARGETS 48
 #define MAX_NUM_INSTALL_LINES 48
@@ -258,7 +261,7 @@ static bool is_multi_instance_service_for_dpu(const std::string& service_name) {
         return false;
     }
 
-    std::unordered_set<std::string> multi_instance_services_for_dpu = {"database"};
+    std::unordered_set<std::string> multi_instance_services_for_dpu = {"database", "dash-ha"};
     return is_multi_instance_service(service_name, multi_instance_services_for_dpu);
 }
 
@@ -383,6 +386,56 @@ static void replace_multi_inst_dep(const char *src) {
      */
     remove(src);
     rename(tmp_file_path, src);
+}
+
+static void update_environment(const std::string &src)
+{
+    std::ifstream src_file(src);
+    std::ofstream tmp_file(src + ".tmp");
+    bool has_service_section = false;
+    std::string line;
+
+    // locate the [Service] section
+    while (std::getline(src_file, line)) {
+        tmp_file << line << std::endl;
+        if (line.find("[Service]") != std::string::npos) {
+            has_service_section = true;
+            break;
+        }
+    }
+
+    if (!has_service_section) {
+        tmp_file << "[Service]" << std::endl;
+    }
+
+    std::unordered_map<std::string, std::string> env_vars;
+    env_vars["IS_DPU_DEVICE"] = (smart_switch_dpu ? "true" : "false");
+    env_vars["NUM_DPU"] = std::to_string(num_dpus);
+
+    for (const auto& [key, value] : env_vars) {
+        tmp_file << "Environment=\"" << key << "=" << value << "\"" << std::endl;
+    }
+
+    // copy the rest of the file
+    if (has_service_section) {
+        const static std::regex env_var_regex("Environment=\"?(\\w+)");
+        while (std::getline(src_file, line)) {
+            // skip the existing environment variables
+            std::smatch match;
+            if (std::regex_search(line, match, env_var_regex)) {
+                if (env_vars.find(match[1]) != env_vars.end()) {
+                    continue;
+                }
+            }
+            tmp_file << line << std::endl;
+        }
+    }
+
+    src_file.close();
+    tmp_file.close();
+    // remove the original file and rename the temporary file
+    remove(src.c_str());
+    rename((src + ".tmp").c_str(), src.c_str());
 }
 
 int get_install_targets(std::string unit_file, char* targets[]) {
@@ -1154,6 +1207,8 @@ int ssg_main(int argc, char **argv) {
 
             free(targets[j]);
         }
+
+        update_environment(get_unit_file_prefix() + unit_instance);
 
         free(unit_files[i]);
     }

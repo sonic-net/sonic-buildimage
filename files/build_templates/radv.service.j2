@@ -2,7 +2,6 @@
 Description=Router advertiser container
 Requires=config-setup.service
 After=config-setup.service swss.service syncd.service
-Before=ntp-config.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200

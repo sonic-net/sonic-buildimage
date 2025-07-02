@@ -72,7 +72,6 @@ static int debug;
 #endif
 
 #define FCS_SZ 4
-#define PSAMPLE_NLA_PADDING 4
 
 #define PSAMPLE_RATE_DFLT 1
 #define PSAMPLE_SIZE_DFLT 128
@@ -87,6 +86,23 @@ LKM_MOD_PARAM(psample_qlen, "i", int, 0);
 MODULE_PARM_DESC(psample_qlen,
 "psample queue length (default 1024 buffers)");
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0))
+static inline void
+bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
+                      u32 trunc_size, int in_ifindex, int out_ifindex,
+                      u32 sample_rate)
+{
+    struct psample_metadata md = {};
+
+    md.trunc_size = trunc_size;
+    md.in_ifindex = in_ifindex;
+    md.out_ifindex = out_ifindex;
+    psample_sample_packet(group, skb, sample_rate, &md);
+}
+#else
+#define bcmgenl_sample_packet psample_sample_packet
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) */
+
 /* driver proc entry root */
 static struct proc_dir_entry *psample_proc_root = NULL;
 static char psample_procfs_path[80];
@@ -96,6 +112,9 @@ typedef struct psample_info_s {
     struct net *netns;
     struct list_head group_list;
     uint64_t rx_reason_sample_source[LINUX_BDE_MAX_DEVICES];
+    uint64_t rx_reason_sample_source_mask[LINUX_BDE_MAX_DEVICES];
+    uint64_t rx_reason_sample_dest[LINUX_BDE_MAX_DEVICES];
+    uint64_t rx_reason_sample_dest_mask[LINUX_BDE_MAX_DEVICES];
 } psample_info_t;
 static psample_info_t g_psample_info;
 
@@ -111,7 +130,10 @@ typedef struct psample_stats_s {
     unsigned long pkts_f_psample_mod;
     unsigned long pkts_f_handled;
     unsigned long pkts_f_pass_through;
+    unsigned long pkts_f_tag_checked;
+    unsigned long pkts_f_tag_stripped;
     unsigned long pkts_f_dst_mc;
+    unsigned long pkts_f_dst_cpu;
     unsigned long pkts_c_qlen_cur;
     unsigned long pkts_c_qlen_hi;
     unsigned long pkts_d_qlen_max;
@@ -123,14 +145,21 @@ typedef struct psample_stats_s {
     unsigned long pkts_d_meta_srcport;
     unsigned long pkts_d_meta_dstport;
     unsigned long pkts_d_invalid_size;
+    unsigned long pkts_d_psample_only;
 } psample_stats_t;
 static psample_stats_t g_psample_stats;
+
+/*! Sampling type */
+#define SAMPLE_TYPE_NONE     0
+#define SAMPLE_TYPE_INGRESS  1
+#define SAMPLE_TYPE_EGRESS   2
 
 typedef struct psample_meta_s {
     int trunc_size;
     int src_ifindex;
     int dst_ifindex;
     int sample_rate;
+    int sample_type;
 } psample_meta_t;
 
 typedef struct psample_pkt_s {
@@ -203,29 +232,31 @@ psample_meta_dstport_get(int dev_no, void *pkt_meta, bool *is_mcast)
 }
 
 static int
-psample_meta_sample_reason(int dev_no, void *pkt_meta)
+psample_meta_sample_type_get(int dev_no, void *pkt_meta)
 {
     uint64_t rx_reason;
-    uint64_t *exp_reason = &g_psample_info.rx_reason_sample_source[dev_no];
+    static bool rx_reason_set[LINUX_BDE_MAX_DEVICES];
+    uint64_t *smpls = &g_psample_info.rx_reason_sample_source[dev_no];
+    uint64_t *smpls_mask = &g_psample_info.rx_reason_sample_source_mask[dev_no];
+    uint64_t *smpld = &g_psample_info.rx_reason_sample_dest[dev_no];
+    uint64_t *smpld_mask = &g_psample_info.rx_reason_sample_dest_mask[dev_no];
 
     if (bcmgenl_dev_pktmeta_rx_reason_get(dev_no, pkt_meta, &rx_reason) < 0) {
-        return 0;
-    }
-    if (*exp_reason == 0) {
-        if (bcmgenl_dev_rx_reason_sample_source_get(dev_no, exp_reason) < 0) {
-            return 0;
-        }
+        return SAMPLE_TYPE_NONE;
     }
 
-    /* Check if only sample reason code is set.
-     * If only sample reason code, then consume pkt.
-     * If other reason codes exist, then pkt should be
-     * passed through to Linux network stack.
-     */
-    if ((rx_reason & *exp_reason) == *exp_reason) {
-        return 1;
+    if (!rx_reason_set[dev_no]) {
+        bcmgenl_dev_rx_reason_sample_source_get(dev_no, smpls, smpls_mask);
+        bcmgenl_dev_rx_reason_sample_dest_get(dev_no, smpld, smpld_mask);
+        rx_reason_set[dev_no] = true;
     }
-    return 0;
+
+    if (*smpls && (rx_reason & *smpls_mask) == *smpls) {
+        return SAMPLE_TYPE_INGRESS;
+    } else if (*smpld && (rx_reason & *smpld_mask) == *smpld) {
+        return SAMPLE_TYPE_EGRESS;
+    }
+    return SAMPLE_TYPE_NONE;
 }
 
 static int
@@ -236,6 +267,7 @@ psample_meta_get(int dev_no, kcom_filter_t *kf, void *pkt_meta,
     int srcport, dstport;
     int src_ifindex = 0;
     int dst_ifindex = 0;
+    int sample_type;
     int sample_rate = 1;
     int sample_size = PSAMPLE_SIZE_DFLT;
     bcmgenl_netif_t bcmgenl_netif;
@@ -261,6 +293,8 @@ psample_meta_get(int dev_no, kcom_filter_t *kf, void *pkt_meta,
         return -1;
     }
 
+    sample_type = psample_meta_sample_type_get(dev_no, pkt_meta);
+
     /* find src port netif (no need to lookup CPU port) */
     if (srcport != 0) {
         if (bcmgenl_netif_get_by_port(srcport, &bcmgenl_netif) == 0) {
@@ -273,17 +307,28 @@ psample_meta_get(int dev_no, kcom_filter_t *kf, void *pkt_meta,
         }
     }
 
-    /* set sFlow dst type for MC pkts */
     if (mcast) {
         g_psample_stats.pkts_f_dst_mc++;
-    /* find dst port netif for UC pkts (no need to lookup CPU port) */
-    } else if (dstport != 0) {
-        if (bcmgenl_netif_get_by_port(dstport, &bcmgenl_netif) == 0) {
-            dst_ifindex = bcmgenl_netif.dev->ifindex;
-        } else {
-            g_psample_stats.pkts_d_meta_dstport++;
-            PSAMPLE_CB_DBG_PRINT("%s: could not find dstport(%d)\n", __func__, dstport);
-        }
+    }
+
+    /*
+     * Identify these packets uniquely.
+     * 1) Packet forwarded over front panel port   = dst_ifindex
+     * 2) Packet dropped in forwarding and sampled = 0xffff
+     * 3) else CPU destination                     = 0
+     */
+    if (dstport != 0 &&
+        bcmgenl_netif_get_by_port(dstport, &bcmgenl_netif) == 0) {
+        dst_ifindex = bcmgenl_netif.dev->ifindex;
+    } else if (sample_type != SAMPLE_TYPE_NONE) {
+        dst_ifindex = 0xffff;
+        g_psample_stats.pkts_d_psample_only++;
+    } else if (dstport == 0) {
+        dst_ifindex = 0;
+        g_psample_stats.pkts_f_dst_cpu++;
+    } else {
+        g_psample_stats.pkts_d_meta_dstport++;
+        PSAMPLE_CB_DBG_PRINT("%s: could not find dstport(%d)\n", __func__, dstport);
     }
 
     PSAMPLE_CB_DBG_PRINT("%s: dstport %d, src_ifindex 0x%x, dst_ifindex 0x%x\n",
@@ -293,6 +338,7 @@ psample_meta_get(int dev_no, kcom_filter_t *kf, void *pkt_meta,
     sflow_meta->dst_ifindex = dst_ifindex;
     sflow_meta->trunc_size  = sample_size;
     sflow_meta->sample_rate = sample_rate;
+    sflow_meta->sample_type = sample_type;
     return 0;
 }
 
@@ -311,36 +357,23 @@ psample_task(struct work_struct *work)
         list_del(list_ptr);
         g_psample_stats.pkts_c_qlen_cur--;
         spin_unlock_irqrestore(&psample_work->lock, flags);
- 
+
         /* send to psample */
         if (pkt) {
-#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
-     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
-            struct psample_metadata md = {0};
-            md.trunc_size = pkt->meta.trunc_size;
-            md.in_ifindex = pkt->meta.src_ifindex;
-            md.out_ifindex = pkt->meta.dst_ifindex;
-#endif
             PSAMPLE_CB_DBG_PRINT("%s: group 0x%x, trunc_size %d, src_ifdx 0x%x, dst_ifdx 0x%x, sample_rate %d\n",
-                    __func__, pkt->group->group_num, 
-                    pkt->meta.trunc_size, pkt->meta.src_ifindex, 
+                    __func__, pkt->group->group_num,
+                    pkt->meta.trunc_size, pkt->meta.src_ifindex,
                     pkt->meta.dst_ifindex, pkt->meta.sample_rate);
-#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
-     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
-            psample_sample_packet(pkt->group,
+
+            bcmgenl_sample_packet(pkt->group,
                                   pkt->skb,
-                                  pkt->meta.sample_rate,
-                                  &md);
-#else
-            psample_sample_packet(pkt->group,
-                                  pkt->skb, 
                                   pkt->meta.trunc_size,
                                   pkt->meta.src_ifindex,
                                   pkt->meta.dst_ifindex,
                                   pkt->meta.sample_rate);
-#endif
+
             g_psample_stats.pkts_f_psample_mod++;
- 
+
             dev_kfree_skb_any(pkt->skb);
             kfree(pkt);
         }
@@ -354,8 +387,11 @@ psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
                   int chan, kcom_filter_t *kf)
 {
     struct psample_group *group = NULL;
-    psample_meta_t meta;   
+    psample_meta_t meta;
+    bool strip_tag = false;
     int rv = 0;
+
+    memset(&meta, 0, sizeof(meta));
 
     PSAMPLE_CB_DBG_PRINT("%s: pkt size %d, kf->dest_id %d, kf->cb_user_data %d\n",
             __func__, size, kf->dest_id, kf->cb_user_data);
@@ -382,12 +418,18 @@ psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
         g_psample_stats.pkts_d_invalid_size++;
         goto PSAMPLE_FILTER_CB_PKT_HANDLED;
     } else {
-       size -= FCS_SZ; 
+       size -= FCS_SZ;
     }
 
-    /* Account for padding in libnl used by psample */
-    if (meta.trunc_size >= size) {
-        meta.trunc_size = size - PSAMPLE_NLA_PADDING;
+    if (size >= 16) {
+        uint16_t vlan_proto = (uint16_t) ((pkt[12] << 8) | pkt[13]);
+        uint16_t vlan = (uint16_t) ((pkt[14] << 8) | pkt[15]);
+        strip_tag =  ((vlan_proto == 0x8100) || (vlan_proto == 0x88a8) || (vlan_proto == 0x9100))
+                     && (vlan == 0xFFF);
+        if (strip_tag) {
+            size -= 4;
+        }
+        g_psample_stats.pkts_f_tag_checked++;
     }
 
     PSAMPLE_CB_DBG_PRINT("%s: group 0x%x, trunc_size %d, src_ifdx 0x%x, dst_ifdx 0x%x, sample_rate %d\n",
@@ -413,21 +455,28 @@ psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
         memcpy(&psample_pkt->meta, &meta, sizeof(psample_meta_t));
         psample_pkt->group = group;
 
-        if ((skb = dev_alloc_skb(meta.trunc_size)) == NULL) {
+        if ((skb = dev_alloc_skb(size)) == NULL) {
             gprintk("%s: failed to alloc psample mem for pkt skb\n", __func__);
             g_psample_stats.pkts_d_no_mem++;
+            kfree(psample_pkt);
             goto PSAMPLE_FILTER_CB_PKT_HANDLED;
         }
 
         /* setup skb to point to pkt */
-        memcpy(skb->data, pkt, meta.trunc_size);
-        skb_put(skb, meta.trunc_size);
+        if (strip_tag) {
+            memcpy(skb->data, pkt, 12);
+            memcpy(skb->data + 12, pkt + 16, size - 12);
+            g_psample_stats.pkts_f_tag_stripped++;
+        } else {
+            memcpy(skb->data, pkt, size);
+        }
+        skb_put(skb, size);
         skb->len = size;
         psample_pkt->skb = skb;
 
         spin_lock_irqsave(&g_psample_work.lock, flags);
-        list_add_tail(&psample_pkt->list, &g_psample_work.pkt_list); 
-        
+        list_add_tail(&psample_pkt->list, &g_psample_work.pkt_list);
+
         g_psample_stats.pkts_c_qlen_cur++;
         if (g_psample_stats.pkts_c_qlen_cur > g_psample_stats.pkts_c_qlen_hi) {
             g_psample_stats.pkts_c_qlen_hi = g_psample_stats.pkts_c_qlen_cur;
@@ -437,17 +486,17 @@ psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
         spin_unlock_irqrestore(&g_psample_work.lock, flags);
     } else {
         g_psample_stats.pkts_d_sampling_disabled++;
-    }    
+    }
 
 PSAMPLE_FILTER_CB_PKT_HANDLED:
     /* if sample reason only, consume pkt. else pass through */
-    rv = psample_meta_sample_reason(dev_no, pkt_meta);
-    if (rv) {
+    if (meta.sample_type == SAMPLE_TYPE_INGRESS ||
+        meta.sample_type == SAMPLE_TYPE_EGRESS) {
         g_psample_stats.pkts_f_handled++;
-    } else {
-        g_psample_stats.pkts_f_pass_through++;
+        return 1;
     }
-    return rv;
+    g_psample_stats.pkts_f_pass_through++;
+    return 0;
 }
 
 /*
@@ -457,7 +506,7 @@ static int
 proc_rate_show(void *cb_data, bcmgenl_netif_t *netif)
 {
     struct seq_file *m = (struct seq_file *)cb_data;
-    
+
     seq_printf(m, "  %-14s %d\n",
                netif->dev->name, netif->sample_rate);
     return 0;
@@ -550,7 +599,7 @@ static int
 proc_size_show(void *cb_data, bcmgenl_netif_t *netif)
 {
     struct seq_file *m = (struct seq_file *)cb_data;
-    
+
     seq_printf(m, "  %-14s %d\n", netif->dev->name, netif->sample_size);
     return 0;
 }
@@ -622,7 +671,7 @@ psample_proc_size_write(struct file *file, const char *buf,
         gprintk("Warning: Failed setting psample size on "
                 "unknown network interface: '%s'\n", sample_str);
     }
-    
+
     return count;
 }
 
@@ -668,18 +717,18 @@ psample_proc_debug_open(struct inode * inode, struct file * file)
  */
 static ssize_t
 psample_proc_debug_write(struct file *file, const char *buf,
-                    size_t count, loff_t *loff)
+                         size_t count, loff_t *loff)
 {
     char debug_str[40];
     char *ptr;
 
-    if (count > sizeof(debug_str)) {
+    if (count >= sizeof(debug_str)) {
         count = sizeof(debug_str) - 1;
-        debug_str[count] = '\0';
     }
     if (copy_from_user(debug_str, buf, count)) {
         return -EFAULT;
     }
+    debug_str[count] = '\0';
 
     if ((ptr = strstr(debug_str, "debug=")) != NULL) {
         ptr += 6;
@@ -708,7 +757,10 @@ psample_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts sent to psample module    %10lu\n", g_psample_stats.pkts_f_psample_mod);
     seq_printf(m, "  pkts handled by psample        %10lu\n", g_psample_stats.pkts_f_handled);
     seq_printf(m, "  pkts pass through              %10lu\n", g_psample_stats.pkts_f_pass_through);
+    seq_printf(m, "  pkts with vlan tag checked     %10lu\n", g_psample_stats.pkts_f_tag_checked);
+    seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_psample_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_psample_stats.pkts_f_dst_mc);
+    seq_printf(m, "  pkts with cpu destination      %10lu\n", g_psample_stats.pkts_f_dst_cpu);
     seq_printf(m, "  pkts current queue length      %10lu\n", g_psample_stats.pkts_c_qlen_cur);
     seq_printf(m, "  pkts high queue length         %10lu\n", g_psample_stats.pkts_c_qlen_hi);
     seq_printf(m, "  pkts drop max queue length     %10lu\n", g_psample_stats.pkts_d_qlen_max);
@@ -720,6 +772,7 @@ psample_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts with invalid src port     %10lu\n", g_psample_stats.pkts_d_meta_srcport);
     seq_printf(m, "  pkts with invalid dst port     %10lu\n", g_psample_stats.pkts_d_meta_dstport);
     seq_printf(m, "  pkts with invalid orig pkt sz  %10lu\n", g_psample_stats.pkts_d_invalid_size);
+    seq_printf(m, "  pkts with psample only reason  %10lu\n", g_psample_stats.pkts_d_psample_only);
     return 0;
 }
 

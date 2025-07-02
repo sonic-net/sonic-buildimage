@@ -42,6 +42,9 @@
 /*! CELL Error status bitmap. */
 #define BCMPKT_RXMETA_ST_CELL_ERROR     (0x1 << 18)
 
+/*! RXPMD FID field supported check. */
+#define BCMPKT_RXPMD_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
+
 /*! \brief Packet reasons bitmap.
  * Set of "reasons" (\ref BCMPKT_RX_REASON_XXX) why a packet came to the CPU.
  */
@@ -51,7 +54,7 @@ typedef struct bcmpkt_rx_reasons_s {
 } bcmpkt_rx_reasons_t;
 
 /*!
- * \name RXPMD Dumping flags.
+ * \name RXPMD Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_RXPMD_DUMP_F_XXX
  */
 /*! \{ */
@@ -60,7 +63,7 @@ typedef struct bcmpkt_rx_reasons_s {
  */
 #define BCMPKT_RXPMD_DUMP_F_ALL         0
 /*!
- * Dump none zero field content only.
+ * Dump non-zero field content only.
  */
 #define BCMPKT_RXPMD_DUMP_F_NONE_ZERO   1
 /*! \} */

@@ -58,11 +58,69 @@ $UDPServerRun 514
 $template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
 $template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME%  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+
+{% if forward_with_osversion and forward_with_osversion == "true" %}
+$ActionForwardDefaultTemplate SONiCForwardFormatWithOsVersion
+{% else%}
 $ActionForwardDefaultTemplate SONiCForwardFormat
+{% endif%}
+
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
 :::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
 :::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
+
+#
+# Remote syslog logging
+#
+
+# The omfwd plug-in provides the core functionality of traditional message
+# forwarding via UDP and plain TCP. It is a built-in module that does not need
+# to be loaded.
+
+{% set servers = SYSLOG_SERVER | d({}) -%}
+{% for server in servers %}
+{% set conf = servers[server] | d({}) -%}
+
+{% set source = conf.get('source') -%}
+{% set port = conf.get('port', 514) -%}
+{% set proto = conf.get('protocol', 'udp') -%}
+{% set vrf = conf.get('vrf', 'default') -%}
+{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
+{% set filter = conf.get('filter') -%}
+{% set regex = conf.get('filter_regex') -%}
+
+{% set fmodifier = '!' if filter == 'exclude' else '' %}
+{% set device = vrf if vrf != '' and vrf != 'default' -%}
+
+{% if format == 'welf' %}
+{% set template = 'WelfRemoteFormat'%}
+{% elif forward_with_osversion and forward_with_osversion == "true"%}
+{% set template = 'SONiCForwardFormatWithOsVersion'%}
+{% else%}
+{% set template = 'SONiCForwardFormat'%}
+{% endif%}
+
+
+{# Server extra options -#}
+{% set options = '' -%}
+
+{% if source -%}
+    {% set options = options ~ ' Address="' ~ source ~ '"'-%}
+    {% set device = device if device != 'eth0' else '' -%}
+{% endif -%}
+
+{% if device -%}
+    {% set options = options ~ ' Device="' ~ device ~ '"'-%}
+{% endif -%}
+
+{% if filter %}
+:msg, {{ fmodifier }}ereregex, "{{ regex }}"
+{% endif %}
+*.{{ severity }}
+action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
+{% endfor %}
 
 #
 # Set the default permissions for all log files.
@@ -91,46 +149,3 @@ $RepeatedMsgReduction on
 ###############
 #### RULES ####
 ###############
-
-#
-# Remote syslog logging
-#
-
-# The omfwd plug-in provides the core functionality of traditional message
-# forwarding via UDP and plain TCP. It is a built-in module that does not need
-# to be loaded.
-
-{% set servers = SYSLOG_SERVER | d({}) -%}
-{% for server in servers %}
-{% set conf = servers[server] | d({}) -%}
-
-{% set source = conf.get('source') -%}
-{% set port = conf.get('port', 514) -%}
-{% set proto = conf.get('protocol', 'udp') -%}
-{% set vrf = conf.get('vrf', 'default') -%}
-{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
-{% set filter = conf.get('filter') -%}
-{% set regex = conf.get('filter_regex') -%}
-
-{% set fmodifier = '!' if filter == 'exclude' else '' %}
-{% set device = vrf if vrf != '' and vrf != 'default' -%}
-{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
-
-{# Server extra options -#}
-{% set options = '' -%}
-
-{% if source -%}
-    {% set options = options ~ ' Address="' ~ source ~ '"'-%}
-    {% set device = device if device != 'eth0' else '' -%}
-{% endif -%}
-
-{% if device -%}
-    {% set options = options ~ ' Device="' ~ device ~ '"'-%}
-{% endif -%}
-
-{% if filter %}
-:msg, {{ fmodifier }}ereregex, "{{ regex }}"
-{% endif %}
-*.{{ severity }}
-action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
-{% endfor %}

@@ -74,7 +74,6 @@ override kernel_version=4_18
 endif
 platform=x86-64-fc28
 
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 
 # SHARED_LIBRARY_SUPPORT will enable the shared library creation - add a PIC to the compilation flags.

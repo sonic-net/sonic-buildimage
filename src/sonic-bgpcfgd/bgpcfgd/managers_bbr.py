@@ -158,6 +158,8 @@ class BBRMgr(Manager):
                     if peer_group_name.startswith(pg_name) and af in self.bbr_enabled_pgs[pg_name]:
                         cmds.append("  %sneighbor %s allowas-in 1" % (prefix_of_commands, peer_group_name))
                         peer_groups_to_restart.add(peer_group_name)
+            cmds.append(" exit-address-family")
+        cmds.append("exit")
         return cmds, list(peer_groups_to_restart)
 
     def __get_available_peer_groups(self):

@@ -66,9 +66,9 @@ RUN apt-get -y purge     \
     find / | grep -E "__pycache__" | xargs rm -rf && \
     rm -rf /debs /python-wheels ~/.cache
 
+COPY ["docker-snmp-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
 COPY ["snmp_yml_to_configdb.py", "/usr/bin/"]
-COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["*.j2", "/usr/share/sonic/templates/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
@@ -76,4 +76,5 @@ COPY ["critical_processes", "/etc/supervisor"]
 # Although exposing ports is not needed for host net mode, keep it for possible bridge mode
 EXPOSE 161/udp 162/udp
 
-ENTRYPOINT ["/usr/local/bin/supervisord"]
+RUN chmod +x /usr/bin/docker-snmp-init.sh
+ENTRYPOINT ["/usr/bin/docker-snmp-init.sh"]

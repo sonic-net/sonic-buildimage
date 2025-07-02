@@ -62,7 +62,6 @@ export SDK
 
 override kernel_version=3_14
 platform=slk
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 
 include ${SDK}/make/Make.linux

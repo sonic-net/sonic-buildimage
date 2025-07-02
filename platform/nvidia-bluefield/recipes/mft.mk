@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-MFT_VERSION = 4.28.0
-MFT_REVISION = 96
+MFT_VERSION = 4.32.0
+MFT_REVISION = 120
 
 MFT_INTERNAL_SOURCE_BASE_URL =
 

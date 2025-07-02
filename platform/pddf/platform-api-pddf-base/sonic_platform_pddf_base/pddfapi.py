@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+import fcntl
 import glob
 import json
 import os
@@ -11,6 +13,7 @@ from sonic_py_common import device_info
 bmc_cache = {}
 cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
+LED_CTRL_LOCK_PATH = '/var/lock/pddf-api-led.lock'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
@@ -31,6 +34,17 @@ class PddfApi():
 
         self.data_sysfs_obj = {}
         self.sysfs_obj = {}
+
+        os.makedirs(os.path.dirname(LED_CTRL_LOCK_PATH), exist_ok=True)
+
+    def _acquire_led_ctrl_lock(self):
+        self.lock_fd = os.open(LED_CTRL_LOCK_PATH, os.O_CREAT | os.O_RDWR)
+        fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
+
+    def _release_led_ctrl_lock(self):
+        if hasattr(self, 'lock_fd'):
+            fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
+            os.close(self.lock_fd)
 
     #################################################################################################################
     #   GENERIC DEFS
@@ -156,12 +170,16 @@ class PddfApi():
         return ("off")
 
     def get_led_color_from_cpld(self, led_device_name):
-        index = self.data[led_device_name]['dev_attr']['index']
-        device_name = self.data[led_device_name]['dev_info']['device_name']
-        self.create_attr('device_name', device_name,  self.get_led_path())
-        self.create_attr('index', index, self.get_led_path())
-        self.create_attr('dev_ops', 'get_status',  self.get_led_path())
-        return self.get_led_color()
+        self._acquire_led_ctrl_lock()
+        try:
+            index = self.data[led_device_name]['dev_attr']['index']
+            device_name = self.data[led_device_name]['dev_info']['device_name']
+            self.create_attr('device_name', device_name,  self.get_led_path())
+            self.create_attr('index', index, self.get_led_path())
+            self.create_attr('dev_ops', 'get_status',  self.get_led_path())
+            return self.get_led_color()
+        finally:
+            self._release_led_ctrl_lock()
 
     def get_led_color_from_bmc(self, led_device_name):
         for bmc_attr in self.data[led_device_name]['bmc']['ipmitool']['attr_list']:
@@ -196,13 +214,17 @@ class PddfApi():
         return (True, "Success")
 
     def set_led_color_from_cpld(self, led_device_name, color):
-        index = self.data[led_device_name]['dev_attr']['index']
-        device_name = self.data[led_device_name]['dev_info']['device_name']
-        self.create_attr('device_name', device_name,  self.get_led_path())
-        self.create_attr('index', index, self.get_led_path())
-        self.create_attr('color', color, self.get_led_cur_state_path())
-        self.create_attr('dev_ops', 'set_status',  self.get_led_path())
-        return (True, "Success")
+        self._acquire_led_ctrl_lock()
+        try:
+            index = self.data[led_device_name]['dev_attr']['index']
+            device_name = self.data[led_device_name]['dev_info']['device_name']
+            self.create_attr('device_name', device_name,  self.get_led_path())
+            self.create_attr('index', index, self.get_led_path())
+            self.create_attr('color', color, self.get_led_cur_state_path())
+            self.create_attr('dev_ops', 'set_status',  self.get_led_path())
+            return (True, "Success")
+        finally:
+            self._release_led_ctrl_lock()
 
     def get_system_led_color(self, led_device_name):
         if led_device_name not in self.data.keys():
@@ -317,6 +339,57 @@ class PddfApi():
 
         return ret
 
+    def show_attr_hwmon_device(self, dev, ops, data_sysfs_key):
+        ret = []
+        if 'i2c' not in dev.keys():
+            return ret
+        attr_name = ops['attr']
+        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
+        KEY = data_sysfs_key
+        dsysfs_path = ""
+
+        if KEY not in self.data_sysfs_obj:
+            self.data_sysfs_obj[KEY] = []
+
+        # Current/Voltage sensors are oftentimes rails that are part of a DPM/DCDC
+        if "virt_parent" in dev['dev_info']:
+            i2c_dev = self.data[dev['dev_info']['virt_parent']]
+        else:
+            i2c_dev = dev
+
+        for attr in attr_list:
+            if attr_name == attr['attr_name'] or attr_name == 'all':
+                if 'drv_attr_name' in attr.keys():
+                    real_name = attr['drv_attr_name']
+                else:
+                    real_name = attr['attr_name']
+
+                if 'topo_info' in i2c_dev['i2c']:
+                    path = self.show_device_sysfs(i2c_dev, ops)+"/%d-00%02x/"%(int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
+                            int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
+                    if (os.path.exists(path)):
+                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
+                elif 'path_info' in i2c_dev['i2c']:
+                    path = i2c_dev['i2c']['path_info']['sysfs_base_path']
+                    if (os.path.exists(path)):
+                        full_path = "/".join([path, real_name])
+
+                dsysfs_path = full_path
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(full_path)
+
+        return ret
+
+    def show_attr_voltage_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "voltage-sensors")
+
+    def show_attr_current_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "current-sensors")
+
+    def show_attr_temp_sensor_device(self, dev, ops):
+        return self.show_attr_hwmon_device(dev, ops, "temp-sensors")
+
     def show_attr_psu_i2c_device(self, dev, ops):
         target = ops['target']
         attr_name = ops['attr']
@@ -400,41 +473,6 @@ class PddfApi():
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
                         self.data_sysfs_obj[KEY].append(dsysfs_path)
                     ret.append(dsysfs_path)
-        return ret
-
-    def show_attr_temp_sensor_device(self, dev, ops):
-        ret = []
-        if 'i2c' not in dev.keys():
-            return ret
-        attr_name = ops['attr']
-        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
-        KEY = "temp-sensors"
-        dsysfs_path = ""
-
-        if KEY not in self.data_sysfs_obj:
-            self.data_sysfs_obj[KEY] = []
-
-        for attr in attr_list:
-            if attr_name == attr['attr_name'] or attr_name == 'all':
-                if 'drv_attr_name' in attr.keys():
-                    real_name = attr['drv_attr_name']
-                else:
-                    real_name = attr['attr_name']
-
-                if 'topo_info' in dev['i2c']:
-                    path = self.show_device_sysfs(dev, ops)+"/%d-00%x/"%(int(dev['i2c']['topo_info']['parent_bus'], 0),
-                            int(dev['i2c']['topo_info']['dev_addr'], 0))
-                    if (os.path.exists(path)):
-                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
-                elif 'path_info' in dev['i2c']:
-                    path = dev['i2c']['path_info']['sysfs_base_path']
-                    if (os.path.exists(path)):
-                        full_path = "/".join([path, real_name])
-
-                dsysfs_path = full_path
-                if dsysfs_path not in self.data_sysfs_obj[KEY]:
-                    self.data_sysfs_obj[KEY].append(dsysfs_path)
-                ret.append(full_path)
         return ret
 
     def show_attr_sysstatus_device(self, dev, ops):
@@ -528,10 +566,14 @@ class PddfApi():
             self.verify_attr(key, attr, path)
 
     def get_led_device(self, device_name):
-        self.create_attr('device_name', self.data[device_name]['dev_info']['device_name'], "pddf/devices/led")
-        self.create_attr('index', self.data[device_name]['dev_attr']['index'], "pddf/devices/led")
-        cmd = "echo 'verify'  > /sys/kernel/pddf/devices/led/dev_ops"
-        self.runcmd(cmd)
+        self._acquire_led_ctrl_lock()
+        try:
+            self.create_attr('device_name', self.data[device_name]['dev_info']['device_name'], "pddf/devices/led")
+            self.create_attr('index', self.data[device_name]['dev_attr']['index'], "pddf/devices/led")
+            cmd = "echo 'verify'  > /sys/kernel/pddf/devices/led/dev_ops"
+            self.runcmd(cmd)
+        finally:
+            self._release_led_ctrl_lock()
 
     def validate_sysfs_creation(self, obj, validate_type):
         dir = '/sys/kernel/pddf/devices/'+validate_type
@@ -641,6 +683,28 @@ class PddfApi():
                 if ret[0] != 0:
                     # in case if 'create' functions
                     print("{}_temp_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
+    def voltage_sensor_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_voltage_sensor_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_voltage_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
+    def current_sensor_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_current_sensor_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_current_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -807,6 +871,12 @@ class PddfApi():
 
         if attr['device_type'] == 'TEMP_SENSOR':
             return self.temp_sensor_parse(dev, ops)
+
+        if attr['device_type'] == 'VOLTAGE_SENSOR':
+            return self.voltage_sensor_parse(dev, ops)
+
+        if attr['device_type'] == 'CURRENT_SENSOR':
+            return self.current_sensor_parse(dev, ops)
 
         if attr['device_type'] == 'SFP' or attr['device_type'] == 'QSFP' or \
                 attr['device_type'] == 'SFP+' or attr['device_type'] == 'QSFP+' or \

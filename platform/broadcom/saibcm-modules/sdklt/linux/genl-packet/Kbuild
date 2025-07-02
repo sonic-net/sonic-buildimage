@@ -8,6 +8,6 @@
 
 obj-m := genl-packet.o
 
-ccflags-y := $(LKM_CFLAGS) \
+ccflags-y := $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
 	     -I$(SDK)/linux/include/lkm \
 	     -I$(SDK)/linux/include/kernel

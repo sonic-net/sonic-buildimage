@@ -1,0 +1,46 @@
+# This file contains the auditctl rules that are loaded
+# whenever the audit daemon is started via the initscripts.
+# The rules are simply the parameters that would be passed
+# to auditctl.  This file can be loaded with
+#   auditctl -R audisp-tacplus.rules
+# In debian wheezy, it can be installed in /etc/audisp/plugins.d 
+# and it will be loaded when audispd starts.
+# In debian jessie, it needs to be installed into /etc/auditd/rules.d
+# and then run the augenrules program.  This package assumes jessie,
+# and installs into the jessie location, and attempts to run augenrules
+# in the postinst
+
+# Do not use -D in this file!  This file is loaded after
+# auditd.rules
+
+# The following rules are for TACACS+ accounting with audisp-tacplus
+# don't write audit records for process where auid isn't set (-1), or for
+# "system" uids, including "cumulus"
+# We want to catch exec and exit for the start and stop accounting
+
+# Use the "tacplus" key for ease of use with ausearch, etc.
+# We assume here that user 1000 is the first local user, and therefore
+# should not be looked up for tacacs.  You may need to change this for
+# your local configuration
+-a always,exit -F arch=b32 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+# No 64bit support -a always,exit -F arch=b64 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+
+# In newer distributions (such as debian jessie), a number of auditing events
+# are logged by default even after the -D initialization.  If you are using
+# auditing only for TACACS+ accounting, you may want to include the rules below, to
+# reduce the growth of the audit log.  EXECVE is needed in order to get the args
+# to the exec syscall so we can send them to accounting.
+
+-a exclude,always -F msgtype=CRED_ACQ
+-a exclude,always -F msgtype=CRED_DISP
+-a exclude,always -F msgtype=CRED_REFR
+-a exclude,always -F msgtype=CWD
+-a exclude,always -F msgtype=LOGIN
+-a exclude,always -F msgtype=PROCTITLE
+-a exclude,always -F msgtype=SERVICE_START
+-a exclude,always -F msgtype=SERVICE_STOP
+-a exclude,always -F msgtype=USER_ACCT
+-a exclude,always -F msgtype=USER_AUTH
+-a exclude,always -F msgtype=USER_CMD
+-a exclude,always -F msgtype=USER_END
+-a exclude,always -F msgtype=USER_START

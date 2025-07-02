@@ -1,0 +1,164 @@
+###############################################################################
+# This file was AUTOMATICALLY GENERATED. DO NOT MODIFY.
+# Controlled by chrony-config.sh
+###############################################################################
+
+# Welcome to the chrony configuration file. See chrony.conf(5) for more
+# information about usable directives.
+
+# Include configuration files found in /etc/chrony/conf.d.
+confdir /etc/chrony/conf.d
+
+{# Getting NTP global configuration -#}
+{% set global = (NTP | d({})).get('global', {}) -%}
+
+{# Getting DEVICE_METADATA localhost configuration -#}
+{% set device_metadata = (DEVICE_METADATA | d({})).get('localhost', {}) -%}
+
+{# Adding NTP servers. We need to know if we have some pools, to set proper config -#}
+{% set ns = namespace(is_pools=false) %}
+{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' -%}
+    {% set config = NTP_SERVER[server] -%}
+    {# Server options -#}
+    {% set soptions = '' -%}
+
+    {# Define defaults if not defined -#}
+    {% set association_type = config.association_type | d('server') -%}
+    {% set resolve_as = config.resolve_as | d(server) -%}
+
+    {# Authentication key -#}
+    {% if global.authentication == 'enabled' -%}
+        {% if config.key -%}
+            {% set soptions = soptions ~ ' key ' ~ config.key -%}
+        {% endif -%}
+    {% endif -%}
+
+    {# Aggressive polling -#}
+    {% if config.iburst -%}
+        {% set soptions = soptions ~ ' iburst' -%}
+    {% endif -%}
+
+    {# Protocol version -#}
+    {% if config.version -%}
+        {% set soptions = soptions ~ ' version ' ~ config.version -%}
+    {% endif -%}
+
+    {# Check if there are any pool configured. BTW it doesn't matter what was
+    configured as "resolve_as" for pools. If they were configured with FQDN they
+    must remain like that -#}
+    {% if association_type == 'pool' -%}
+        {% set resolve_as = server -%}
+    {% endif -%}
+
+{{ association_type }} {{ resolve_as }}{{ soptions }}
+
+{% endfor -%}
+
+{# Enable the NTP server configuration only if the switch type is smartswitch -#}
+{% if device_metadata.subtype == 'SmartSwitch' -%}
+{# Enable NTP server functionality if server_role is enabled or DHCP configuration is enabled -#}
+{% if global.server_role == 'enabled' or global.dhcp == 'enabled' -%}
+allow
+binddevice bridge-midplane
+{% endif -%}
+{% endif -%}
+
+{# use source interface if configured to send NTP requests, else use eth0 if running in mgmt
+vrf (default is not to listen on anything) -#}
+
+{# Set interface to listen on:
+     * Set global variable for configured source interface name.
+     * Set global boolean to indicate if the ip of the configured source
+       interface is configured.
+     * If the source interface is configured but no ip on that
+       interface, then listen on another interface based on existing logic. -#}
+{%- macro check_ip_on_interface(interface_name, table_name) %}
+    {%- set ns = namespace(valid_intf = 'false') %}
+    {%- if table_name %}
+        {%- for (name, source_prefix) in table_name|pfx_filter %}
+            {%- if source_prefix and name == interface_name %}
+                {%- set ns.valid_intf = 'true' %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{{ ns.valid_intf }}
+{%- endmacro %}
+
+{% set ns = namespace(source_intf = "") %}
+{%- set ns = namespace(source_intf_ip = 'false') %}
+{%- if global.src_intf  %}
+    {%- set ns.source_intf = global.src_intf %}
+    {%- if ns.source_intf != "" %}
+        {%- if ns.source_intf == "eth0" %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, MGMT_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Vlan') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, VLAN_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Ethernet') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, INTERFACE) %}
+        {%- elif ns.source_intf.startswith('PortChannel') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Loopback') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE) %}
+        {%- endif %}
+    {%- endif %}
+{% endif %}
+
+{% if ns.source_intf_ip == 'true' -%}
+bindacqdevice {{ns.source_intf}}
+{% elif (NTP) and NTP['global']['vrf'] == 'mgmt' -%}
+bindacqdevice eth0
+{% endif %}
+
+# Use time sources from DHCP.
+sourcedir /run/chrony-dhcp
+
+# Use NTP sources found in /etc/chrony/sources.d.
+sourcedir /etc/chrony/sources.d
+
+{% if global.authentication == 'enabled' %}
+# This directive specify the location of the file containing ID/key pairs for
+# NTP authentication.
+keyfile /etc/chrony/chrony.keys
+{% endif %}
+
+# This directive specify the file into which chronyd will store the rate
+# information.
+driftfile /var/lib/chrony/chrony.drift
+
+# Save NTS keys and cookies.
+ntsdumpdir /var/lib/chrony
+
+# Uncomment the following line to turn logging on.
+#log tracking measurements statistics
+
+# Log files location.
+logdir /var/log/chrony
+
+# Stop bad estimates upsetting machine clock.
+maxupdateskew 100.0
+
+# This directive enables kernel synchronisation (every 11 minutes) of the
+# real-time clock. Note that it can’t be used along with the 'rtcfile' directive.
+#rtcsync
+
+# Instead of having the kernel manage the real-time clock, have chrony do this
+# instead. The reason for this is that if the system time and the real-time clock
+# are signficantly different from the actual time, then the system time must be
+# slewed, while the real-time clock can be stepped to the actual time. That way,
+# when the device next reboots (whether it be cold, warm, or fast), it will come
+# up with the actual time from the real-time clock.
+rtcfile /var/lib/chrony/rtc
+hwclockfile /etc/adjtime
+rtconutc
+rtcautotrim 15
+
+# Step the system clock instead of slewing it if the adjustment is larger than
+# one second, but only in the first three clock updates.
+#
+# Disabled because we don't want chrony to do any clock steps; it should only slew
+#makestep 1 3
+
+# Get TAI-UTC offset and leap seconds from the system tz database.
+# This directive must be commented out when using time sources serving
+# leap-smeared time.
+leapsectz right/UTC

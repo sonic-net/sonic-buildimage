@@ -1,0 +1,36 @@
+{%- set default_cable = '5m' %}
+
+{%- include 'buffer_ports.j2' %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+   "BUFFER_POOL": {
+        "ingress_lossless_pool": {
+            "size": "61293228",
+            "type": "ingress",
+            "mode": "dynamic",
+            "xoff": "20325220"
+        },
+        "egress_lossless_pool": {
+            "size": "84219120",
+            "type": "egress",
+            "mode": "dynamic"
+        }
+   },
+   "BUFFER_PROFILE": {
+       "egress_lossless_profile": {
+           "dynamic_th": "2",
+           "pool": "egress_lossless_pool",
+           "size": "0"
+       },
+       "egress_lossy_profile": {
+           "dynamic_th": "-4",
+           "pool": "egress_lossless_pool",
+           "size": "0"
+       },
+       "ingress_lossy_profile": {
+           "dynamic_th": "-1",
+           "pool": "ingress_lossless_pool",
+           "size": "0"
+       }
+   },
+{%- endmacro %}

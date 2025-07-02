@@ -58,6 +58,13 @@ MODULE_PARM_DESC(dma_pools,
 "Number of DMA memory pools to pre-allocate per device (default 1).");
 /*! \endcond */
 
+/*! \cond */
+static int dma_32bit = 0;
+module_param(dma_32bit, int, S_IRUSR);
+MODULE_PARM_DESC(dma_32bit,
+"Request DMA memory with 32-bit physical address (default 0).");
+/*! \endcond */
+
 /*!
  * \brief Allocate DMA memory via kernel API.
  *
@@ -72,8 +79,8 @@ ngbde_dmamem_kapi_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
     void *vaddr;
     dma_addr_t baddr;
 
-    vaddr = dma_alloc_coherent(dmactrl->dev, dmactrl->size, &baddr,
-                               dmactrl->flags);
+    vaddr = dma_alloc_attrs(dmactrl->dev, dmactrl->size, &baddr,
+                            dmactrl->flags, DMA_FORCE_CONTIGUOUS);
     if (vaddr) {
         /* Store allocation information in dmamem structure */
         dmamem->vaddr = vaddr;
@@ -84,7 +91,7 @@ ngbde_dmamem_kapi_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         dmamem->baddr = baddr;
 
         /* Write small signature for debug purposes */
-        strcpy((char *)vaddr, "DMA_KAPI");
+        strlcpy((char *)vaddr, "DMA_KAPI", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of KAPI memory at 0x%08lx\n",
@@ -131,7 +138,7 @@ ngbde_dmamem_pgmem_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         }
 
         /* Write small signature for debug purposes */
-        strcpy((char *)vaddr, "DMA_PGMEM");
+        strlcpy((char *)vaddr, "DMA_PGMEM", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of PGMEM memory at 0x%08lx\n",
@@ -226,8 +233,9 @@ ngbde_dmamem_free(ngbde_dmamem_t *dmamem)
             printk("DMA: Freeing %d KB of KAPI memory\n",
                    (int)(dmamem->size / ONE_KB));
         }
-        dma_free_coherent(dmamem->dev, dmamem->size,
-                          dmamem->vaddr, dmamem->baddr);
+        dma_free_attrs(dmamem->dev, dmamem->size,
+                       dmamem->vaddr, dmamem->baddr,
+                       DMA_FORCE_CONTIGUOUS);
         memset(dmamem, 0, sizeof(*dmamem));
         break;
     case NGBDE_DMA_T_PGMEM:
@@ -329,7 +337,14 @@ ngbde_dma_init(void)
             dmapool->dmactrl.dev = swdev[idx].dma_dev;
             dmapool->dmactrl.size = dma_size * ONE_MB;
             dmapool->dmactrl.pref_type = dma_type;
-            dmapool->dmactrl.flags = GFP_KERNEL | GFP_DMA32;
+            dmapool->dmactrl.flags = GFP_KERNEL;
+            if (dma_32bit) {
+                dmapool->dmactrl.flags |= GFP_DMA32;
+            }
+            if (dma_type == NGBDE_DMA_T_AUTO && dma_debug == 0) {
+                /* Prevent warning if CMA is unavailable */
+                dmapool->dmactrl.flags |= __GFP_NOWARN;
+            }
         }
 
         /* Allocate DMA pools */

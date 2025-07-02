@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +27,9 @@ try:
     from sonic_platform_base.thermal_base import ThermalBase
     from sonic_py_common.logger import Logger
     import copy
+    import glob
     import os
+    import re
 
     from .device_data import DeviceDataManager
     from . import utils
@@ -133,7 +136,9 @@ THERMAL_NAMING_RULE = {
             "temperature": "sodimm{}_temp_input",
             "high_threshold": "sodimm{}_temp_max",
             "high_critical_threshold": "sodimm{}_temp_crit",
-            "type": "indexable",
+            "search_pattern": '/run/hw-management/thermal/sodimm*_temp_input',
+            'index_pattern': r'sodimm(\d+)_temp_input',
+            "type": "discrete",
         }
     ],
     'linecard thermals': {
@@ -153,14 +158,13 @@ def initialize_chassis_thermals():
     rules = THERMAL_NAMING_RULE['chassis thermals']
     position = 1
     for rule in rules:
-        if 'type' in rule and rule['type'] == 'indexable':
+        thermal_type = rule.get('type')
+        if thermal_type == 'indexable':
             count = 0
             if 'Gearbox' in rule['name']:
                 count = DeviceDataManager.get_gearbox_count('/run/hw-management/config')
             elif 'CPU Core' in rule['name']:
                 count = DeviceDataManager.get_cpu_thermal_count()
-            elif 'SODIMM' in rule['name']:
-                count = DeviceDataManager.get_sodimm_thermal_count()
             if count == 0:
                 logger.log_debug('Failed to get thermal object count for {}'.format(rule['name']))
                 continue
@@ -168,6 +172,11 @@ def initialize_chassis_thermals():
             for index in range(count):
                 thermal_list.append(create_indexable_thermal(rule, index, CHASSIS_THERMAL_SYSFS_FOLDER, position))
                 position += 1
+        elif thermal_type == 'discrete':
+            discrete_thermals = create_discrete_thermal(rule, position)
+            if discrete_thermals:
+                position += len(discrete_thermals)
+                thermal_list.extend(discrete_thermals)
         else:
             thermal_object = create_single_thermal(rule, CHASSIS_THERMAL_SYSFS_FOLDER, position)
             if thermal_object:
@@ -272,6 +281,22 @@ def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
         return Thermal(name, temp_file, high_th_file, high_crit_th_file, high_th_default, high_crit_th_default, scale, position)
     else:
         return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, high_th_default, high_crit_th_default, scale, position, presence_cb)
+
+
+def create_discrete_thermal(rule, position):
+    search_pattern = rule.get('search_pattern')
+    index_pattern = rule.get('index_pattern')
+    thermal_list = []
+    for file_path in glob.iglob(search_pattern):
+        file_name = os.path.basename(file_path)
+        match = re.search(index_pattern, file_name)
+        if not match:
+            logger.log_error(f'Failed to extract index from {file_name} using pattern {index_pattern}')
+            continue
+        index = int(match.group(1))
+        thermal_list.append(create_indexable_thermal(rule, index - 1, CHASSIS_THERMAL_SYSFS_FOLDER, position))
+        position += 1
+    return thermal_list
 
 
 def _check_thermal_sysfs_existence(file_path, presence_cb):

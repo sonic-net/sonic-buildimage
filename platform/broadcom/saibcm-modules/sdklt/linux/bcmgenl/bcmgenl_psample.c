@@ -216,18 +216,18 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
                       __func__, cbd->net_dev->name, src_ifindex);
     }
 
+    /* set generic dst type for MC pkts */
+    if (dstport_type == DSTPORT_TYPE_MC) {
+        g_bcmgenl_psample_stats.pkts_f_dst_mc++;
+    }
     /*
      * Identify these packets uniquely.
      * 1) Packet forwarded over front panel port   = dst_ifindex
      * 2) Packet dropped in forwarding and sampled = 0xffff
      * 3) else CPU destination                     = 0
      */
-
-    /* set generic dst type for MC pkts */
-    if (dstport_type == DSTPORT_TYPE_MC) {
-        g_bcmgenl_psample_stats.pkts_f_dst_mc++;
-    } else if ((dstport != 0) &&
-               (psample_netif = psample_netif_lookup_by_port(dstport))) {
+    if ((dstport != 0) &&
+        (psample_netif = psample_netif_lookup_by_port(dstport))) {
         /* find dst port netif for UC pkts (no need to lookup CPU port) */
         dst_ifindex = psample_netif->dev->ifindex;
     } else if (bcmgenl_pkt->meta.sample_type != SAMPLE_TYPE_NONE) {
@@ -277,7 +277,9 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
-    match_filt = cbd->filt;
+    if (cbd) {
+        match_filt = cbd->filt;
+    }
 
     if (!cbd || !match_filt) {
         GENL_DBG_WARN("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
@@ -287,9 +289,8 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
     /* check if this packet is sampled packet (from sample filter) */
-    if (!match_filt ||
-        (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB) ||
-        (strncmp(match_filt->desc, BCMGENL_PSAMPLE_NAME, NGKNET_FILTER_DESC_MAX) != 0)) {
+    if (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB ||
+        strncmp(match_filt->desc, BCMGENL_PSAMPLE_NAME, NGKNET_FILTER_DESC_MAX) != 0) {
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
@@ -370,10 +371,6 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         g_bcmgenl_psample_stats.pkts_f_tag_checked++;
     }
 
-    /* Account for padding in libnl used by psample */
-    if (meta.trunc_size >= pkt_len) {
-        meta.trunc_size = pkt_len;
-    }
     GENL_DBG_VERB
         ("%s: trunc_size %d, sample_rate %d "
          "src_ifindex %d, dst_ifindex %d\n",
@@ -385,7 +382,7 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     /* drop if configured sample rate is 0 */
     if (meta.sample_rate > 0) {
         unsigned long flags;
-        psample_pkt_t *psample_pkt;
+        psample_pkt_t *psample_pkt = NULL;
         struct sk_buff *skb_psample;
 
         if (g_bcmgenl_psample_stats.pkts_c_qlen_cur >= bcmgenl_psample_qlen) {
@@ -410,24 +407,25 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         /* psample_pkt start */
         memcpy(&psample_pkt->meta, &meta, sizeof(psample_meta_t));
         psample_pkt->group = group;
-        if ((skb_psample = dev_alloc_skb(meta.trunc_size)) == NULL) {
+        if ((skb_psample = dev_alloc_skb(pkt_len)) == NULL) {
             g_bcmgenl_psample_stats.pkts_d_no_mem++;
             last_skb = 0;
             bcmgenl_limited_gprintk
                 (last_skb, "%s: failed to alloc generic mem for pkt skb: %lu\n",
                  __func__, g_bcmgenl_psample_stats.pkts_d_no_mem);
+            kfree(psample_pkt);
             goto PSAMPLE_FILTER_CB_PKT_HANDLED;
         }
 
         /* setup skb to point to pkt */
         if (strip_tag) {
             memcpy(skb_psample->data, pkt, 12);
-            memcpy(skb_psample->data + 12, pkt + 16, meta.trunc_size - 12);
+            memcpy(skb_psample->data + 12, pkt + 16, pkt_len - 12);
             g_bcmgenl_psample_stats.pkts_f_tag_stripped++;
         } else {
-            memcpy(skb_psample->data, pkt, meta.trunc_size);
+            memcpy(skb_psample->data, pkt, pkt_len);
         }
-        skb_put(skb_psample, meta.trunc_size);
+        skb_put(skb_psample, pkt_len);
         skb_psample->len = pkt_len;
         psample_pkt->skb = skb_psample;
         if (debug & GENL_DBG_LVL_PDMP) {
@@ -452,13 +450,11 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
 PSAMPLE_FILTER_CB_PKT_HANDLED:
     if (bcmgenl_pkt.meta.sample_type != SAMPLE_TYPE_NONE) {
         g_bcmgenl_psample_stats.pkts_f_handled++;
-        /* Not sending to network protocol stack */
-        dev_kfree_skb_any(skb);
-        skb = NULL;
     } else {
         g_bcmgenl_psample_stats.pkts_f_pass_through++;
     }
-    return skb;
+    dev_kfree_skb_any(skb);
+    return NULL;
 }
 
 static void
@@ -880,13 +876,13 @@ bcmgenl_psample_proc_debug_write(
     char debug_str[40];
     char *ptr;
 
-    if (count > sizeof(debug_str)) {
+    if (count >= sizeof(debug_str)) {
         count = sizeof(debug_str) - 1;
-        debug_str[count] = '\0';
     }
     if (copy_from_user(debug_str, buf, count)) {
         return -EFAULT;
     }
+    debug_str[count] = '\0';
 
     if ((ptr = strstr(debug_str, "debug=")) != NULL) {
         ptr += 6;
@@ -918,6 +914,7 @@ bcmgenl_psample_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts with vlan tag checked     %10lu\n", g_bcmgenl_psample_stats.pkts_f_tag_checked);
     seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_bcmgenl_psample_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_bcmgenl_psample_stats.pkts_f_dst_mc);
+    seq_printf(m, "  pkts with cpu destination      %10lu\n", g_bcmgenl_psample_stats.pkts_f_dst_cpu);
     seq_printf(m, "  pkts current queue length      %10lu\n", g_bcmgenl_psample_stats.pkts_c_qlen_cur);
     seq_printf(m, "  pkts high queue length         %10lu\n", g_bcmgenl_psample_stats.pkts_c_qlen_hi);
     seq_printf(m, "  pkts drop max queue length     %10lu\n", g_bcmgenl_psample_stats.pkts_d_qlen_max);

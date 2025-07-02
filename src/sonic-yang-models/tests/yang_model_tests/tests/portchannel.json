@@ -7,7 +7,7 @@
     },
     "PORT_CHANNEL_OUT_OF_RANGE_MIN_LINKS": {
         "desc": "Configure PortChannel with greater than maximum valid value of min-links.",
-        "eStr": ["Value", "does not satisfy the constraint"]
+        "eStrKey": "Range"
     },
     "PORT_CHANNEL_WRONG_PATTERN": {
         "desc": "INCORRECT PORTCHANNEL_NAME IN PORT_CHANNEL TABLE.",
@@ -59,13 +59,11 @@
     },
     "PORTCHANNEL_INTERFACE_LIST_VRF_TEST_ON_NON_EXIST_PO": {
         "desc": "Configure vrf name on a non existent PortChannel.",
-        "eStrKey": "LeafRef",
-        "eStr": ["sonic-portchannel:name"]
+        "eStrKey": "LeafRef"
     },
     "PORTCHANNEL_INTERFACE_LIST_NON_EXIST_VRF_TEST": {
         "desc": "Configure a non existent Vrf in PORTCHANNEL_INTERFACE table.",
-        "eStrKey": "LeafRef",
-        "eStr": ["sonic-vrf:name"]
+        "eStrKey": "LeafRef"
     },
     "PORTCHANNEL_INTERFACE_WRONG_NAT_ZONE_RANGE": {
         "desc": "Configure wrong value for nat zone.",
@@ -85,5 +83,15 @@
     "PORTCHANNEL_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
         "desc": "Enable the ipv6 link-local as true.",
         "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "PORTCHANNEL_INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "PORTCHANNEL_INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStrKey": "Pattern"
     }
 }
