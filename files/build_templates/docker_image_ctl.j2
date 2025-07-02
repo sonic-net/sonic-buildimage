@@ -652,12 +652,6 @@ start() {
     fi
 
     CAP_ADD=""
-{%- if docker_container_name == "dhcp_relay" %}
-    INCLUDE_DNSMASQ=$(docker inspect --format='{{'{{'}}range $index, $value := .Config.Env{{'}}{{'}}if eq (index (split $value "=") 0) "include_dnsmasq"{{'}}{{'}}index (split $value "=") 1{{'}}{{end}}{{end}}'}}' {{docker_image_id}})
-    if [ "$INCLUDE_DNSMASQ" = "y" ]; then
-        CAP_ADD="--cap-add=NET_ADMIN"
-    fi
-{%- endif %}
 
 {%- if sonic_asic_platform == "mellanox" %}
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
