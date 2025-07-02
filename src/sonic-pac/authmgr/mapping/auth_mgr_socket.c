@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include "datatypes.h"
 #include "osapi.h"
 #include "auth_mgr_include.h"
 #include "auth_mgr_auth_method.h"
@@ -183,7 +184,7 @@ AUTH_MGR_COPY(ATTR_INFO)
     cInfo->info.authInfo.attrInfo.sessionTimeout = cReply->info.authInfo.attrInfo.sessionTimeout;
     cInfo->info.authInfo.attrInfo.terminationAction = cReply->info.authInfo.attrInfo.terminationAction;
     cInfo->info.authInfo.attrInfo.idFromServer = cReply->info.authInfo.attrInfo.idFromServer;
-    osapiStrncpySafe(cInfo->info.authInfo.attrInfo.vlanString, cReply->info.authInfo.attrInfo.vlanString, strlen(Reply->info.authInfo.attrInfo.vlanString)+1);
+    osapiStrncpySafe(cInfo->info.authInfo.attrInfo.vlanString, cReply->info.authInfo.attrInfo.vlanString, strlen(cReply->info.authInfo.attrInfo.vlanString)+1);
     cInfo->info.authInfo.attrInfo.attrFlags = cReply->info.authInfo.attrInfo.attrFlags;
     cInfo->info.authInfo.attrInfo.vlanAttrFlags = cReply->info.authInfo.attrInfo.vlanAttrFlags;
  

@@ -1,0 +1,18 @@
+Source: sonic
+Maintainer: Broadcom
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9), autotools-dev
+Standards-Version: 1.0.0
+
+Package: pac
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains PAC for SONiC project.
+
+Package: pac-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: pac (=${binary:Version})
+Description: debugging symbols for pac
