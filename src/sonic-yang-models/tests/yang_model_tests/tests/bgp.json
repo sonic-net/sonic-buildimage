@@ -51,8 +51,7 @@
     },
     "BGP_NEIGHBOR_NEG_INVALID_NAME": {
         "desc": "Incorrect neighbor name.",
-        "eStrKey": "InvalidValue",
-        "eStr": ["neighbor"]
+        "eStrKey": "InvalidValue"
     },
     "BGP_NEIGHBOR_NEG_INVALID_ASN": {
         "desc": "Invalid local AS number.",
@@ -78,7 +77,7 @@
     },
     "BGP_NEIGHBOR_AF_NEG_INVALID_MAXTHRESHOLD": {
         "desc": "Invalid maximum prefix warning threshold in neighbor AF.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
     "BGP_NEIGHBOR_AF_NEG_INVALID_SOFT_RECFG_IN": {
         "desc": "Invalid boolean value for soft reconfiguration-in in neighbor AF.",
@@ -89,6 +88,9 @@
         "desc": "Invalid value for send community type in neighbor AF.",
         "eStrKey" : "InvalidValue",
         "eStr": ["send_community"]
+    },
+    "BGP_NEIGHBOR_AF_ROUTE_MAP_VALID": {
+        "desc": "Reference valid route map"
     },
     "BGP_NEIGHBOR_AF_NEG_ROUTE_MAP_NOT_EXIST": {
         "desc": "Reference to non-existent route-map.",
@@ -118,11 +120,11 @@
     },
     "BGP_PEERGROUP_INVALID_HOPS": {
         "desc": "Invalid TTL hops for peergroup.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
     "BGP_PEERGROUP_AF_INVALID_MAXTHRESHOLD": {
         "desc": "Invalid maximum prefix warning threshold in peergroup AF.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
     "BGP_PEERGROUP_AF_INVALID_SOFT_RECFG_IN": {
         "desc": "Invalid boolean value for soft reconfiguration-in in peergroup AF.",
@@ -133,6 +135,9 @@
         "desc": "Invalid value for send community type in peergroup AF.",
         "eStrKey" : "InvalidValue",
         "eStr": ["send_community"]
+    },
+    "BGP_PEERGROUP_AF_ROUTE_MAP_VALID": {
+        "desc": "Validate route-map reference in peergroup AF."
     },
     "BGP_PEERGROUP_AF_ROUTE_MAP_NOT_EXIST": {
         "desc": "Missing or non-existent route-map reference in peergroup AF.",
@@ -157,7 +162,7 @@
     },
     "BGP_NEIGHBOR_NEG_INVALID_HOPS": {
         "desc": "Invalid TTL hops for unnumbered interface neigbhor.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "Range"
     },
     "BGP_MONITORS_ALL_VALID": {
         "desc": "Configure BGP monitor table."
