@@ -250,7 +250,7 @@ SECURE_UPGRADE_MODE = "no_sign"
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 # PACKAGE_URL_PREFIX - the package url prefix
-PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/public/packages
+PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
 TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,https://packages.microsoft.com/keys/microsoft.asc
