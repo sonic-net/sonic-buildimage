@@ -97,28 +97,28 @@ class TestSecurityCipher(object):
 
     
     def test_rotate_feature_passwd(self):
-		test_json = {
-			"RADIUS": {"table_info": ["RADIUS|global"], "password": "oldpw"}
-		}
-		db_entry = {"passkey": "ENCRYPTED", "some_other_field": "keepme"}
-		with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-			 mock.patch("os.chmod"), \
-			 mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
-			 mock.patch("os.path.exists", return_value=True):
+        test_json = {
+            "RADIUS": {"table_info": ["RADIUS|global"], "password": "oldpw"}
+        }
+        db_entry = {"passkey": "ENCRYPTED", "some_other_field": "keepme"}
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+                mock.patch("os.chmod"), \
+                mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=json.dumps(test_json))), \
+                mock.patch("os.path.exists", return_value=True):
 
-			temp = master_key_mgr()
-			# Patch _load_registry to return a fresh copy of test_json every time
-			temp._load_registry = mock.Mock(side_effect=lambda: json.loads(json.dumps(test_json)))
-			temp._config_db.get_entry = mock.Mock(return_value=db_entry.copy())
-			temp._config_db.set_entry = mock.Mock()
-			temp._decrypt_passkey = mock.Mock(return_value="plaintext")
-			temp._encrypt_passkey = mock.Mock(return_value="NEW_ENCRYPTED")
-			with mock.patch.object(temp, "_save_registry"):
-				temp.rotate_feature_passwd("RADIUS", "newpw")
-				temp._config_db.set_entry.assert_called_once_with(
-					"RADIUS", "global",
-					{'passkey': "NEW_ENCRYPTED", "some_other_field": "keepme", "key_encrypt": 'True'}
-				)
+            temp = master_key_mgr()
+            # Patch _load_registry to return a fresh copy of test_json every time
+            temp._load_registry = mock.Mock(side_effect=lambda: json.loads(json.dumps(test_json)))
+            temp._config_db.get_entry = mock.Mock(return_value=db_entry.copy())
+            temp._config_db.set_entry = mock.Mock()
+            temp._decrypt_passkey = mock.Mock(return_value="plaintext")
+            temp._encrypt_passkey = mock.Mock(return_value="NEW_ENCRYPTED")
+            with mock.patch.object(temp, "_save_registry"):
+                temp.rotate_feature_passwd("RADIUS", "newpw")
+                temp._config_db.set_entry.assert_called_once_with(
+                    "RADIUS", "global",
+                    {'passkey': "NEW_ENCRYPTED", "some_other_field": "keepme", "key_encrypt": 'True'}
+                )
 
 
     def test_encrypt_and_decrypt_passkey(self):
