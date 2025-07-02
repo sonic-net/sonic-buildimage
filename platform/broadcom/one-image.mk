@@ -13,6 +13,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_S5224F_PLATFORM_MODULE) \
                                $(DELL_S5232F_PLATFORM_MODULE) \
                                $(DELL_S5248F_PLATFORM_MODULE) \
+                               $(DELL_S5448F_PLATFORM_MODULE) \
                                $(DELL_Z9332F_PLATFORM_MODULE) \
                                $(DELL_Z9432F_PLATFORM_MODULE) \
                                $(DELL_S5296F_PLATFORM_MODULE) \
@@ -85,9 +86,11 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(RUIJIE_B6510_48VS8CQ_PLATFORM_MODULE) \
                                $(RAGILE_RA_B6510_48V8C_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220D4_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H3_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H4_32D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H4_64D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H5_64O_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(TENCENT_TCS8400_PLATFORM_MODULE) \
