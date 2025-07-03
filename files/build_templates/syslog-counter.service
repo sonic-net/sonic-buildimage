@@ -1,0 +1,6 @@
+[Unit]
+Description=Syslog counter update Service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/update_syslog_counter.py

@@ -1,0 +1,11 @@
+[Unit]
+Description=Syslog counter update service timer
+PartOf=syslog-counter.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Unit=syslog-counter.service
+
+[Install]
+WantedBy=timers.target

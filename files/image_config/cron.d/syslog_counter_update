@@ -1,2 +1,0 @@
-# Attempts to update syslog counter every 10 minutes
-*/10 * * * * root /usr/local/bin/update_syslog_counter.py > /dev/null 2>&1

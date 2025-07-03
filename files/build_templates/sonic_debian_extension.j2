@@ -1038,6 +1038,13 @@ sudo LANG=C cp $SCRIPTS_DIR/update_syslog_counter.py $FILESYSTEM_ROOT/usr/local/
 sudo chown root $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/update_syslog_counter.py
 
+# Add syslog counter update service
+sudo cp files/build_templates/syslog-counter.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+echo "syslog-counter.timer" | sudo tee -a $GENERATED_SERVICE_FILE
+
+sudo cp files/build_templates/syslog-counter.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+echo "syslog-counter.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
