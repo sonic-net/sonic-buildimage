@@ -1,0 +1,36 @@
+From 0d38f38299ba5109b564004409b23b1e0c206e4b Mon Sep 17 00:00:00 2001
+From: Mai Bui <maibui@microsoft.com>
+Date: Thu, 3 Jul 2025 03:48:41 +0000
+Subject: [PATCH] Update audisp-tacplus rules
+
+Signed-off-by: Mai Bui <maibui@microsoft.com>
+---
+ audisp-tacplus.rules | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/audisp-tacplus.rules b/audisp-tacplus.rules
+index 573638a..481ee83 100644
+--- a/audisp-tacplus.rules
++++ b/audisp-tacplus.rules
+@@ -22,8 +22,8 @@
+ # We assume here that user 1000 is the first local user, and therefore
+ # should not be looked up for tacacs.  You may need to change this for
+ # your local configuration
+--a always,exit -F arch=b32 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+--a always,exit -F arch=b64 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
++-a always,exit -F arch=b32 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
++-a always,exit -F arch=b64 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+ 
+ # In newer distributions (such as debian jessie), a number of auditing events
+ # are logged by default even after the -D initialization.  If you are using
+@@ -36,7 +36,6 @@
+ -a exclude,always -F msgtype=CRED_REFR
+ -a exclude,always -F msgtype=CWD
+ -a exclude,always -F msgtype=LOGIN
+--a exclude,always -F msgtype=PATH
+ -a exclude,always -F msgtype=PROCTITLE
+ -a exclude,always -F msgtype=SERVICE_START
+ -a exclude,always -F msgtype=SERVICE_STOP
+-- 
+2.34.1
+
