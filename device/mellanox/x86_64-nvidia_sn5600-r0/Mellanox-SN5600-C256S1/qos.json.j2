@@ -421,19 +421,23 @@
         "{{ port }}": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
-            "pfc_to_pg_map"   : "AZURE",
             "pfc_enable"      : "",
             "pfcwd_sw_enable" : "",
-            "tc_to_pg_map"    : "AZURE",
-            "pfc_to_queue_map": "AZURE"
             {% if traffic_config.traffic_classification_enable %}
-            {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
-                ,"tc_to_dscp_map": "AZURE_DOWNLINK_BT0"
-            {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
-                ,"tc_to_dscp_map": "AZURE_UPLINK_BT0"
-            {% elif direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
-                ,"tc_to_dscp_map": "AZURE_DOWNLINK_BT1"
-            {% endif %}
+                {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                    "tc_to_pg_map": "AZURE",
+                    "tc_to_dscp_map": "AZURE_DOWNLINK_BT0"
+                {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                    "tc_to_pg_map": "AZURE",
+                    "tc_to_dscp_map": "AZURE_UPLINK_BT0"
+                {% elif direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+                    "tc_to_pg_map": "AZURE",
+                    "tc_to_dscp_map": "AZURE_DOWNLINK_BT1"
+                {% else %}
+                    "tc_to_pg_map": "AZURE"
+                {% endif %}
+            {% else %}
+                "tc_to_pg_map": "AZURE"
             {% endif %}
         }{% if not loop.last %},{% endif %}
 {%- endfor %}
