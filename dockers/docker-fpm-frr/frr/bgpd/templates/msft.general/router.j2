@@ -80,7 +80,7 @@
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
-{%             include path_template % "v4.tor.rotterdam" %}
+{%             include path_template % "v4.smartswitch.azd" %}
 {%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v4.tor.rotterdam" %}
 {%         elif neighbor_type == 'LeafRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
@@ -172,7 +172,7 @@
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
-{%             include path_template % "v6.tor.rotterdam" %}
+{%             include path_template % "v6.smartswitch.azd" %}
 {%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v6.tor.rotterdam" %}
 {%         elif neighbor_type == 'LeafRouter' and is_gb200f == 'true' and is_fairwater == 'true' and device_type == 'ToRRouter'%}
