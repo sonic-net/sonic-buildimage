@@ -24,7 +24,6 @@
 device:
     0:
         DEVICE_CONFIG:
-            VARIANT: DNA_6_5_31_7_0
             # CORE CLOCK FREQUENCY
             CORE_CLK_FREQ: CLK_1350MHZ
             # PP CLOCK FREQUENCY
@@ -537,6 +536,8 @@ bcm_device:
             sai_fast_convergence_support: 1
             sai_modify_hash_flexdigest: 1
             sai_port_phy_time_sync_en: 1
+            egress_pkt_pri_remark_mode: 1
+            sai_mdio_access_clause45: 1
 ...
 ---
 device:
