@@ -110,7 +110,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:28.2.2-1~debian.12~bookworm
+docker-ce-rootless-extras==5:28.3.0-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -171,7 +171,7 @@ ghostscript==10.0.0~dfsg-11+deb12u7
 gir1.2-atk-1.0==2.46.0-5
 gir1.2-atspi-2.0==2.46.0-5
 gir1.2-freedesktop==1.74.0-3
-gir1.2-gdkpixbuf-2.0==2.42.10+dfsg-1+deb12u1
+gir1.2-gdkpixbuf-2.0==2.42.10+dfsg-1+deb12u2
 gir1.2-glib-2.0==1.74.0-3
 gir1.2-gtk-3.0==3.24.38-2~deb12u3
 gir1.2-harfbuzz-0.0==6.0.0+dfsg-3
@@ -707,10 +707,10 @@ libgd-perl==2.76-4+b1
 libgd3==2.3.3-9
 libgdbm-compat4==1.23-3
 libgdbm6==1.23-3
-libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u1
-libgdk-pixbuf-2.0-dev==2.42.10+dfsg-1+deb12u1
-libgdk-pixbuf2.0-bin==2.42.10+dfsg-1+deb12u1
-libgdk-pixbuf2.0-common==2.42.10+dfsg-1+deb12u1
+libgdk-pixbuf-2.0-0==2.42.10+dfsg-1+deb12u2
+libgdk-pixbuf-2.0-dev==2.42.10+dfsg-1+deb12u2
+libgdk-pixbuf2.0-bin==2.42.10+dfsg-1+deb12u2
+libgdk-pixbuf2.0-common==2.42.10+dfsg-1+deb12u2
 libgeronimo-annotation-1.3-spec-java==1.3-1
 libgeronimo-interceptor-3.0-spec-java==1.0.1-4
 libgetopt-long-descriptive-perl==0.111-1
@@ -1566,9 +1566,9 @@ libxml-sax-perl==1.02+dfsg-3
 libxml-simple-perl==2.25-2
 libxml-twig-perl==1:3.52-2
 libxml-xpathengine-perl==0.14-2
-libxml2==2.9.14+dfsg-1.3~deb12u1
-libxml2-dev==2.9.14+dfsg-1.3~deb12u1
-libxml2-utils==2.9.14+dfsg-1.3~deb12u1
+libxml2==2.9.14+dfsg-1.3~deb12u2
+libxml2-dev==2.9.14+dfsg-1.3~deb12u2
+libxml2-utils==2.9.14+dfsg-1.3~deb12u2
 libxmlb2==0.3.10-2
 libxmlgraphics-commons-java==2.8-2
 libxmlrpc-lite-perl==0.717-5
@@ -1598,6 +1598,7 @@ libxv1==2:1.0.11-1.1
 libxvidcore4==2:1.3.7-1
 libxxf86dga1==2:1.1.5-1
 libxxf86vm1==1:1.1.4-1+b2
+libxxhash-dev==0.8.1-1
 libxz-java==1.9-1
 libyajl2==2.1.0-3+deb12u2
 libyaml-0-2==0.2.5-1
@@ -1759,7 +1760,6 @@ phpunit-version==3.0.2-3
 pigz==2.6-1
 pinentry-curses==1.2.1-1
 pixz==1.0.7-2
-pkg-config==1.8.1-1
 pkg-php-tools==1.44
 pkgconf==1.8.1-1
 pkgconf-bin==1.8.1-1
@@ -1804,6 +1804,7 @@ python3-brotli==1.0.9-2+b6
 python3-bs4==4.11.2-2
 python3-build==0.9.0-1
 python3-certifi==2022.9.24-1
+python3-cffi==1.15.1-5
 python3-cffi-backend==1.15.1-5+b1
 python3-chardet==5.1.0+dfsg-2
 python3-charset-normalizer==3.0.1-2
@@ -1893,6 +1894,7 @@ python3-pure-eval==0.2.2-1
 python3-py==1.11.0-1
 python3-pyasn1==0.4.8-3
 python3-pyasn1-modules==0.2.8-1
+python3-pycparser==2.21-1
 python3-pyelftools==0.29-1
 python3-pygments==2.14.0+dfsg-1
 python3-pyparsing==3.0.9-1
@@ -2010,6 +2012,7 @@ systemd-sysv==252.38-1~deb12u1
 systemd-timesyncd==252.38-1~deb12u1
 t1utils==1.41-4
 tcl==8.6.13
+tcl-expect==5.45.4-2+b1
 tcl8.6==8.6.13+dfsg-2
 tcpdump==4.99.3-1
 teckit==2.5.11+ds1-1+b1
