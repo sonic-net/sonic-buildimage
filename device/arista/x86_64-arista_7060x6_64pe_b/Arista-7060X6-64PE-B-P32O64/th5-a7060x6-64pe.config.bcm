@@ -1229,7 +1229,7 @@ device:
                           [238, 239],
                           [255, 256]]
             :
-                ENABLE: 1
+                ENABLE: 0
                 SPEED: 800000
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN
@@ -1252,7 +1252,7 @@ device:
                           [510, 513],
                           [527, 530]]
             :
-                ENABLE: 1
+                ENABLE: 0
                 SPEED: 400000
                 NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN

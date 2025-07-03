@@ -450,6 +450,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -493,6 +494,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -536,6 +538,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
@@ -579,6 +582,7 @@ devices = {
                 "green": 0x04, "red": 0x02, "amber": 0x06, "default": 0x04,
                 "flash": 0xff, "light": 0xff, "off": 0xff, "mask": 0x07
             },
+            "PowerMax": 192,
             "Rotor": {
                 "Rotor1_config": {
                     "name": "Rotor1",
