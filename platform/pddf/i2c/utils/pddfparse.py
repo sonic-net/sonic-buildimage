@@ -337,6 +337,11 @@ class PddfParse():
                     ret = self.runcmd(cmd)
                     if ret != 0:
                         return create_ret.append(ret)
+                    if inst['active_low'] == "1" :
+                        cmd = "echo %s >/sys/class/gpio/gpio%d/active_low" % (inst['active_low'], port_no)
+                        ret = self.runcmd(cmd)
+                        if ret != 0:
+                            return create_ret.append(ret)
                     if inst['value'] != "":
                         for i in inst['value'].split(','):
                             cmd = "echo %s >/sys/class/gpio/gpio%d/value" % (i.rstrip(), port_no)
@@ -373,6 +378,9 @@ class PddfParse():
     def create_xcvr_i2c_device(self, dev, ops):
         create_ret = []
         ret = 0
+        # Check if topo_info is present otherwise return from here
+        if "topo_info" not in dev['i2c']:
+            return create_ret.append(ret)
         if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['PORT_MODULE']:
             self.create_device(dev['i2c']['topo_info'], "pddf/devices/xcvr/i2c", ops)
             cmd = "echo '%s' > /sys/kernel/pddf/devices/xcvr/i2c/i2c_name" % (dev['dev_info']['device_name'])
@@ -1107,7 +1115,7 @@ class PddfParse():
 
 
     def validate_xcvr_device(self, dev, ops):
-        devtype_list = ['optoe1', 'optoe2']
+        devtype_list = ['optoe1', 'optoe2', 'optoe3']
         dev_attribs = ['xcvr_present', 'xcvr_reset', 'xcvr_intr_status', 'xcvr_lpmode']
         ret_val = "xcvr validation failed"
 
