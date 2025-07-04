@@ -14,9 +14,10 @@
     "NTP": {
         "global": {
             "admin_state": "enabled",
-            "authentication": "enabled",
+            "authentication": "disabled",
             "dhcp": "enabled",
             "server_role": "disabled",
+            "src_intf": "eth0",
             "vrf": "default"
         }
     },
