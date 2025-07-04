@@ -47,7 +47,7 @@ function load_kernel_modules()
     if [[ $is_ltsw_chip -eq 1 ]]; then
         modprobe psample
         modprobe linux_ngbde
-        modprobe linux_ngknet
+        modprobe linux_ngknet rx_buffer_size=9238
         modprobe linux_ngknetcb
     else
         modprobe linux-kernel-bde dmasize=$dmasize maxpayload=128 debug=4 dma_debug=1 usemsi=$usemsi
