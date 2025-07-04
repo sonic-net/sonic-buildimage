@@ -1,0 +1,94 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2021 Asterfusion Network, Inc.
+
+import sys
+import json
+import subprocess
+import re
+import logging
+import ruamel.yaml
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString as dq 
+
+
+def mod_yaml(src_yaml, lane_cnt_map):
+    for target_lane, cnt in lane_cnt_map.items():
+        devports_yaml = src_yaml['nodes'][0]['devports']
+        target_devports = []
+        if cnt == 4:
+            for lane in devports_yaml:
+                if lane['id'] != target_lane:
+                    target_devports.append(lane)
+                else:
+                    index = int(lane['id'])
+                    if lane['lanes'] == '0:4':
+                        ret = 0
+                    elif lane['lanes'] == '4:4':
+                        ret = 4
+                    port1 = {'fec': dq('KRFEC'), 'id': dq(index), 'lanes': dq(str(ret)+":1"), 'serdes_group': lane['serdes_group'], 'speed': dq("25G"), 'sysport': dq(index), 'type': dq("eth")}
+                    port2 = {'fec': dq('KRFEC'), 'id': dq(index+1), 'lanes': dq(str(ret+1)+':1'), 'serdes_group': lane['serdes_group'], 'speed': dq('25G'), 'sysport': dq(index+1), 'type': dq('eth')}
+                    port3 = {'fec': dq('KRFEC'), 'id': dq(index+2), 'lanes': dq(str(ret+2)+':1'), 'serdes_group': lane['serdes_group'], 'speed': dq('25G'), 'sysport': dq(index+2), 'type': dq('eth')}
+                    port4 = {'fec': dq('KRFEC'), 'id': dq(index+3), 'lanes': dq(str(ret+3)+':1'), 'serdes_group': lane['serdes_group'], 'speed': dq('25G'), 'sysport': dq(index+3), 'type': dq('eth')}
+                    target_devports.append(port1)
+                    target_devports.append(port2)
+                    target_devports.append(port3)
+                    target_devports.append(port4)
+
+            del src_yaml['nodes'][0]['devports']
+            src_yaml['nodes'][0]['devports'] = target_devports
+
+    return src_yaml
+
+
+def main():
+
+    # get input parameters:
+    if len(sys.argv)<3:
+        sys.exit(1)
+
+    target_file = sys.argv[1]
+    cfg_file = sys.argv[2]
+    source_file = sys.argv[3]
+
+    with open(cfg_file) as cfg:
+        old_cfg = json.load(cfg)
+
+    alias_lanes_map = dict()
+    for key in old_cfg['PORT'].keys():
+        alias_lanes_map.update({old_cfg['PORT'][key]['alias']: old_cfg['PORT'][key]['lanes']})
+
+    dict_parent_lanes_cnt = dict()
+    for alias, lane in alias_lanes_map.items():
+        if '_' in alias:
+            palias = re.split("_",alias)
+            child_speed = palias[1][:1]
+            parent_alias = palias[0] + '_'  + child_speed + '1'
+            parent_lane = alias_lanes_map[parent_alias]
+            if parent_lane not in dict_parent_lanes_cnt.keys():
+                dict_parent_lanes_cnt.update({parent_lane: 1})
+            else:
+                dict_parent_lanes_cnt[parent_lane] += 1
+
+    cfg.close()
+
+    if len(dict_parent_lanes_cnt) != 0:
+        with open(source_file) as src:
+            file_content = src.read()
+        src_yaml = ruamel.yaml.round_trip_load(file_content, preserve_quotes=True)
+        new_yaml = mod_yaml(src_yaml, dict_parent_lanes_cnt)
+        src.close()
+        # write to new yaml file
+        try:
+            yaml_file = open(target_file, 'w')
+        except Exception:
+            logging.error("Error: unable to create file: %s".format(target_file))
+            sys.exit(1)
+        ruamel.yaml.round_trip_dump(new_yaml,yaml_file)
+        yaml_file.close()
+        sys.exit(0)
+    else:
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
