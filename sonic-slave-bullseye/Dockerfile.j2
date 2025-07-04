@@ -528,8 +528,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-src_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-src_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.15 /usr/local/go \
  && rm golang-go.deb golang-src.deb
