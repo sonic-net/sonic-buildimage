@@ -472,6 +472,8 @@ def main():
     if args.template_dir:
         paths.append(os.path.abspath(args.template_dir))
 
+    paths.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../files/build_templates')))
+
     if args.template:
         for template_file, _ in args.template:
             paths.append(os.path.dirname(os.path.abspath(template_file)))
