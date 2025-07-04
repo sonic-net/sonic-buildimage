@@ -120,6 +120,7 @@ module sonic-pbh {
 					type leafref {
 						path "/pbh:sonic-pbh/pbh:PBH_HASH_FIELD/pbh:PBH_HASH_FIELD_LIST/pbh:hash_field_name";
 					}
+					ordered-by user;
 				}
 
 			}
@@ -248,6 +249,7 @@ module sonic-pbh {
 							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
 						}
 					}
+					ordered-by user;
 				}
 
 				leaf description {
