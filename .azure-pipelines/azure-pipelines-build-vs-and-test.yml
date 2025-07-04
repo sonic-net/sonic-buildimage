@@ -47,7 +47,7 @@ parameters:
 
   - name: TOPOLOGY
     type: string
-    default: ''
+    default: 't0'
     values:
       - t0
       - t0-64-32
@@ -73,6 +73,10 @@ parameters:
     default: '1'
 
   - name: MAX_WORKER
+    type: string
+    default: '1'
+  
+  - name: NUM_ASIC
     type: string
     default: '1'
 
@@ -121,5 +125,6 @@ stages:
           MGMT_BRANCH: ${{ parameters.MGMT_BRANCH }}
           SCRIPTS: ${{ parameters.SCRIPTS }}
           FEATURES: ${{ parameters.FEATURES }}
+          NUM_ASIC: ${{ parameters.NUM_ASIC }}
           DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
           STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
