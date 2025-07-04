@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 ########################################################################
 #
 # Module contains a platform specific implementation of SONiC Platform
@@ -22,6 +24,7 @@
 ########################################################################
 import os
 import re
+from sonic_py_common import logger
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
@@ -30,23 +33,56 @@ except ImportError as e:
 
 SYSFS_PCI_DEVICE_PATH = '/sys/bus/pci/devices/'
 
+# Constants from module_base.py
+PCIE_DETACH_INFO_TABLE = "PCIE_DETACH_INFO"
+PCIE_OPERATION_DETACHING = "detaching"
+BULEFIELD_SOC_NAME = "DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management Interface (rev 01)"
+BLUEFIELD_CONNECTX_NAME = "Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller (rev 01)"
+
 
 class Pcie(PcieUtil):
     # check the current PCIe device with config file and return the result
     # use bus from _device_id_to_bus_map instead of from yaml file
     def get_pcie_check(self):
         self.load_config_file()
+        return_confInfo = []
         for item_conf in self.confInfo:
             id_conf = item_conf["id"]
+            name_conf = item_conf["name"]
             dev_conf = item_conf["dev"]
             fn_conf = item_conf["fn"]
+            if name_conf == BULEFIELD_SOC_NAME or name_conf == BLUEFIELD_CONNECTX_NAME:
+                # Special handling for Bluefield Devices
+                bus_conf = item_conf["bus"]
+                # Ideally even with BIOS updates, the PCI ID for bluefield devices should not change.
+                try:
+                    # Connect to STATE_DB to check for detached devices
+                    if not os.environ.get('UNITTEST'):
+                        import swsscommon
+                        self.state_db = swsscommon.swsscommon.DBConnector("STATE_DB", 0)
+                    key_dict = f"{PCIE_DETACH_INFO_TABLE}|0000:{bus_conf}:{dev_conf}.{fn_conf}"
+                    detach_info_dict = dict(self.state_db.hgetall(key_dict))
+                    if detach_info_dict and detach_info_dict.get("dpu_state") == PCIE_OPERATION_DETACHING:
+                        # Do not add this device to confInfo list
+                        continue
+                    elif self.check_pcie_sysfs(bus=int(bus_conf, base=16), device=int(dev_conf, base=16), func=int(fn_conf, base=16)):
+                        # Add device to confInfo list if not present in state_db
+                        item_conf["result"] = "Passed"
+                    else:
+                        item_conf["result"] = "Failed"
+                    return_confInfo.append(item_conf)
+                    continue
+                except Exception as e:
+                    self.logger.log_error(f"Error: {e}")
+                    pass
             bus_conf = self._device_id_to_bus_map.get(str(id_conf))
             if bus_conf and self.check_pcie_sysfs(bus=int(bus_conf, base=16), device=int(dev_conf, base=16),
                                                   func=int(fn_conf, base=16)):
                 item_conf["result"] = "Passed"
             else:
                 item_conf["result"] = "Failed"
-        return self.confInfo
+            return_confInfo.append(item_conf)
+        return return_confInfo
 
     # Create
     def _create_device_id_to_bus_map(self):
@@ -81,3 +117,5 @@ class Pcie(PcieUtil):
     def __init__(self, platform_path):
         PcieUtil.__init__(self, platform_path)
         self._create_device_id_to_bus_map()
+        self.state_db = None
+        self.logger = logger.Logger()
