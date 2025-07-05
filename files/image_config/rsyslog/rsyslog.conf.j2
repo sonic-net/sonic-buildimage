@@ -13,7 +13,8 @@
 #### MODULES ####
 #################
 
-$ModLoad imuxsock # provides support for local system logging omprog
+$ModLoad imuxsock # provides support for local system logging
+$ModLoad omprog
 
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
