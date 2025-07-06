@@ -110,7 +110,7 @@ docbook-xml==4.5-12
 docker-buildx-plugin==0.10.5-1~debian.12~bookworm
 docker-ce==5:24.0.2-1~debian.12~bookworm
 docker-ce-cli==5:24.0.2-1~debian.12~bookworm
-docker-ce-rootless-extras==5:28.3.0-1~debian.12~bookworm
+docker-ce-rootless-extras==5:28.3.1-1~debian.12~bookworm
 docker-compose-plugin==2.18.1-1~debian.12~bookworm
 docutils-common==0.19+dfsg-6
 dosfstools==4.2-1
@@ -2002,7 +2002,7 @@ sphinx-rtd-theme-common==1.2.0+dfsg-1
 squashfs-tools==1:4.5.1-1
 stgit==0.19-1.1
 strace==6.1-0.1
-sudo==1.9.13p3-1+deb12u1
+sudo==1.9.13p3-1+deb12u2
 swig==4.1.0-0.2
 swig4.0==4.1.0-0.2
 systemd==252.38-1~deb12u1
