@@ -7,9 +7,10 @@ babel==2.8.0
 backcall==0.2.0
 bcrypt==3.1.7
 beautifulsoup4==4.9.3
-bitarray==3.4.2
+bitarray==3.4.3
 blkinfo==0.2.0
 certifi==2020.6.20
+cffi==1.14.5
 chardet==4.0.0
 click==7.1.2
 colorama==0.4.4
@@ -82,8 +83,9 @@ pyang==2.4.0
 pyangbind==0.8.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.1
+pycparser==2.20
 pycurl==7.43.0.6
-pyfakefs==5.9.0
+pyfakefs==5.9.1
 pygments==2.7.1
 pygobject==3.38.0
 pyhamcrest==1.9.0

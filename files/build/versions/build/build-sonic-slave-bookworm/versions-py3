@@ -1,7 +1,6 @@
 blessed==1.21.0
-cffi==1.17.1
 click-log==0.4.0
-colorful==0.5.6
+colorful==0.5.7
 deepdiff==6.2.2
 docker==7.1.0
 docker-image-py==0.1.13
@@ -16,6 +15,7 @@ jsondiff==2.2.1
 jsonpatch==1.33
 jsonpointer==3.0.0
 jsonschema==2.6.0
+libyang==3.1.0
 natsort==8.4.0
 netaddr==0.8.0
 netifaces==0.11.0
@@ -26,7 +26,6 @@ prefixed==0.9.0
 prettyprinter==0.18.0
 ptyprocess==0.7.0
 pycairo==1.26.1
-pycparser==2.22
 pynacl==1.5.0
 pyroute2==0.7.12
 python-arptable==0.0.2

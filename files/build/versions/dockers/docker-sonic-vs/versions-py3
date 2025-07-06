@@ -6,8 +6,8 @@ cffi==1.17.1
 charset-normalizer==3.4.2
 click==7.0
 click-log==0.4.0
-colorful==0.5.6
-cryptography==45.0.4
+colorful==0.5.7
+cryptography==45.0.5
 dbus-python==1.4.0
 docker==7.1.0
 docker-image-py==0.1.13
