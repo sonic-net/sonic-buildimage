@@ -11,6 +11,9 @@ http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.3-P1.orig.tar.gz.
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1.debian.tar.xz==2dfa6e22972d0af32fd7afe99734a304
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.1.dsc==efbde3517ddc5ac129532871651444af
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0.orig.tar.gz==f60e47b5eb50bbeed48a9f43bb08dd5e
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.debian.tar.xz==3f8c497b000b1ec30fb66f107f61107a
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2-1.dsc==346672dc8c2fc303a133051205deedc7
+http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang/libyang_3.12.2.orig.tar.xz==3bb7e265e14eb5cb817e9608bb7a6baf
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.debian.tar.xz==f4d249b77d4f8d120b229834aac02df5
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==38011efbe33e6a461d36ca2c683e2019
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==cbbb4a0d5b1e17dca0532c3ca761e05c
@@ -108,9 +111,6 @@ https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.16
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.16-1+deb12u1.dsc==d566d5f5ff64eaff40c2013468919c73
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.16.orig.tar.gz==3b8aa604d32a4acc34345987d2d7d631
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.16.orig.tar.gz.asc==273f3e4f9f68314c3e59f694adf08024
-https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang/libyang2_2.1.148-0.2.debian.tar.xz==2385ff45433e3239e962791228c94ba5
-https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang/libyang2_2.1.148-0.2.dsc==121866bf803a7d1fab455088de5a9733
-https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang/libyang2_2.1.148.orig.tar.xz==ca6915c2c2e02525630777a626224ec7
 https://sonicstorage.blob.core.windows.net/debian/pool/main/n/net-snmp/net-snmp_5.7.3+dfsg-5.debian.tar.xz==ad957e90207d0669beb2109e4e325def
 https://sonicstorage.blob.core.windows.net/debian/pool/main/n/net-snmp/net-snmp_5.7.3+dfsg-5.dsc==2443e4dffbdb020e7ab4f947a7904912
 https://sonicstorage.blob.core.windows.net/debian/pool/main/n/net-snmp/net-snmp_5.7.3+dfsg.orig.tar.xz==6391ae27eb1ae34ff5530712bb1c4209

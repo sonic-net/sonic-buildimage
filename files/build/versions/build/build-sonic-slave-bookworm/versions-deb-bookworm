@@ -39,6 +39,7 @@ libteamdctl0==1.31-1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
+libyang3==3.12.2-1
 linux-headers-6.1.0-29-2-amd64==6.1.123-1
 linux-headers-6.1.0-29-2-arm64==6.1.123-1
 linux-headers-6.1.0-29-2-common==6.1.123-1
@@ -54,6 +55,7 @@ mlxbf-bootimages==4.11.0-13611
 p4lang-bmv2==1.15.0-7
 p4lang-p4c==1.2.4.2-2
 p4lang-pi==0.1.0-15
+python3-libyang==3.1.0-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 rdma-core==2501mlnx56-1.2501060
