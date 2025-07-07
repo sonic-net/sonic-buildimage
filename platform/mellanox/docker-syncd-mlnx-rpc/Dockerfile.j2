@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +45,8 @@ RUN apt-get update        \
     libnanomsg-dev        \
     libthrift-0.17.0      \
     thrift-compiler       \
-    python3-thrift
+    python3-thrift        \
+    pciutils
 
 RUN pip3 install --upgrade pip
 

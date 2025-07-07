@@ -1,6 +1,6 @@
 ##
 ## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,8 @@ RUN apt-get update && \
         python3-pip \
         python3-dev \
         python3-jsonschema \
-        python-is-python3
+        python-is-python3 \
+        pciutils
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python-pip
