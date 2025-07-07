@@ -17,17 +17,17 @@ original_import_module = importlib.import_module
 @pytest.fixture(scope="module")
 def patch_import_module():
     # We need to mock import module because clear_dhcp_relay.py has below import
-    # dhcp6_relay = importlib.import_module('show.plugins.dhcp-relay')
+    # dhcprelay = importlib.import_module('show.plugins.dhcp-relay')
     # When install current container, sonic-application-extension would move below file to destination in switch
     # Src: dockers/docker-dhcp-relay/cli/show/plugins/show_dhcp_relay.py
     # Dst: python-package-patch/show/plugins/dhcp-relay.py
     # The dst path doesn't exist in UT env, hence we need to mock it
-    fake_dhcp6_relay = MagicMock()
+    fake_dhcprelay = MagicMock()
 
     with patch('importlib.import_module') as mock_import:
         def side_effect(name):
             if name == 'show.plugins.dhcp-relay':
-                return fake_dhcp6_relay
+                return fake_dhcprelay
             return original_import_module(name)  # fallback
 
         mock_import.side_effect = side_effect
@@ -52,7 +52,7 @@ def test_clear_dhcp_relay_ipv6_counter(interface, patch_import_module):
     gotten_interfaces = ["Ethernet0, Ethernet1"]
 
     mock_counter = MagicMock()
-    clear_dhcp_relay.dhcp6_relay.DHCPv6_Counter.return_value = mock_counter
+    clear_dhcp_relay.dhcprelay.DHCPv6_Counter.return_value = mock_counter
     mock_counter.get_interface.return_value = gotten_interfaces
     clear_dhcp_relay.clear_dhcp_relay_ipv6_counter(interface)
     if interface:
