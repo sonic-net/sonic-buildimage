@@ -52,7 +52,7 @@ DEFAULT_PASSWORD = YourPaSsWoRd
 # ENABLE_DHCP_GRAPH_SERVICE = y
 
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
-# ENABLE_ZTP = y
+ENABLE_ZTP = y
 
 # INCLUDE_PDE - Enable platform development enviroment
 # INCLUDE_PDE = y
