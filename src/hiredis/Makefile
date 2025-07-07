@@ -8,9 +8,9 @@ DERIVED_TARGETS = libhiredis0.14-dbgsym_$(HIREDIS_VERSION_FULL)_$(CONFIGURED_ARC
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf hiredis-$(HIREDIS_VERSION)
 
-	wget -O hiredis_$(HIREDIS_VERSION).orig.tar.gz http://http.debian.net/debian/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION).orig.tar.gz
-	wget -O hiredis_$(HIREDIS_VERSION_FULL).debian.tar.xz http://http.debian.net/debian/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION_FULL).debian.tar.xz
-	wget -O hiredis_$(HIREDIS_VERSION_FULL).dsc http://http.debian.net/debian/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION_FULL).dsc
+	wget -O hiredis_$(HIREDIS_VERSION).orig.tar.gz https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION).orig.tar.gz
+	wget -O hiredis_$(HIREDIS_VERSION_FULL).debian.tar.xz https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION_FULL).debian.tar.xz
+	wget -O hiredis_$(HIREDIS_VERSION_FULL).dsc https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/h/hiredis/hiredis_$(HIREDIS_VERSION_FULL).dsc
 
 	dpkg-source -x hiredis_$(HIREDIS_VERSION_FULL).dsc
 	pushd hiredis-$(HIREDIS_VERSION)

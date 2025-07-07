@@ -9,7 +9,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./kdump-tools-$(KDUMP_TOOLS_VERSION)*
 
 	# Get kdump-tools release
-	dget https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_$(KDUMP_TOOLS_VERSION).dsc
+	dget https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/k/kdump-tools/kdump-tools_$(KDUMP_TOOLS_VERSION).dsc
 	pushd ./kdump-tools-$(KDUMP_TOOLS_VERSION)
 
 	git init
