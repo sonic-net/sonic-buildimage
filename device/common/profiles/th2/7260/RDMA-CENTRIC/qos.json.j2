@@ -153,6 +153,7 @@
 {% elif ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR') %}
 {% set different_dscp_to_tc_map = true %}
 {% set different_tc_to_queue_map = true %}
+{% set pfc_4q = true %}
 {%- macro generate_dscp_to_tc_map() %}
     "DSCP_TO_TC_MAP": {
         "AZURE": {

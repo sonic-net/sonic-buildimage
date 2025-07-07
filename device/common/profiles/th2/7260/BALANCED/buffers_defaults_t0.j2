@@ -6,6 +6,11 @@
 {%- set ingress_lossless_pool_size = defs.ingress_lossless_pool_size %}
 {%- set egress_lossy_pool_size = defs.egress_lossy_pool_size %}
 
+{% if DEVICE_METADATA is defined and 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype']
+== 'DualToR' %}
+{%- set pfc_4q = true %}
+{% endif %}
+
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
         "ingress_lossless_pool": {

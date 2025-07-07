@@ -32,6 +32,14 @@
 {%- set tunnel_qos_remap_enable = true %}
 {%- endif %}
 
+{%- if pfc_4q is defined and tunnel_qos_remap_enable %}
+    {%- set CONFIG_PORTS_LIST = PORT_ALL %}
+{%- else %}
+    {%- set CONFIG_PORTS_LIST = PORT_ACTIVE %}
+{%- endif %}
+
+{%- set config_ports = CONFIG_PORTS_LIST | join(',') %}
+
 {%- set port_names_list_extra_queues = [] %}
 {%- for port in PORT_ACTIVE %}
 {% if ((generate_dscp_to_tc_map is defined) and tunnel_qos_remap_enable) and 
@@ -233,7 +241,7 @@
         }{% if PORT_ACTIVE %},{% endif %}
 
 {% endif %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}": {
 {% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] in backend_device_types and 'storage_device' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['storage_device'] == 'true' %}
             "dot1p_to_tc_map" : "[DOT1P_TO_TC_MAP|AZURE]",
@@ -266,7 +274,7 @@
             "pfc_to_pg_map"   : "[PFC_PRIORITY_TO_PRIORITY_GROUP_MAP|AZURE]",
 {% endif %}
 {% endif %}
-{% if port in port_names_list_extra_queues %}
+{% if pfc_4q or port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
             "pfc_enable"      : "3,4",
@@ -298,38 +306,38 @@
     },
 {% endif %}
     "QUEUE": {
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|3": {
             "scheduler"   : "[SCHEDULER|scheduler.1]",
             "wred_profile": "[WRED_PROFILE|AZURE_LOSSLESS]"
         },
 {% endfor %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|4": {
             "scheduler"   : "[SCHEDULER|scheduler.2]",
             "wred_profile": "[WRED_PROFILE|AZURE_LOSSLESS]"
         },
 {% endfor %}
 {% else %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|4": {
             "scheduler"   : "[SCHEDULER|scheduler.1]",
             "wred_profile": "[WRED_PROFILE|AZURE_LOSSLESS]"
         },
 {% endfor %}
 {% endif %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|0": {
             "scheduler": "[SCHEDULER|scheduler.0]"
         },
 {% endfor %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|1": {
             "scheduler": "[SCHEDULER|scheduler.0]"
         },
 {% endfor %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|2": {
 {% if port in port_names_list_extra_queues %}
             "scheduler"   : "[SCHEDULER|scheduler.1]",
@@ -339,7 +347,7 @@
 {% endif %}
         },
 {% endfor %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|5": {
             "scheduler": "[SCHEDULER|scheduler.0]"
         },
@@ -350,7 +358,7 @@
         },
 {% endif %}
 {% endfor %}
-{% for port in PORT_ACTIVE %}
+{% for port in CONFIG_PORTS_LIST %}
         "{{ port }}|6": {
 {% if port in port_names_list_extra_queues %}
             "scheduler"   : "[SCHEDULER|scheduler.1]",
