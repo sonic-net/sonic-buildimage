@@ -1,0 +1,4 @@
+sw-to3200k/utils/* usr/local/bin
+sw-to3200k/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-wistron_sw_to3200k-r0
+sw-to3200k/cfg/sw-to3200k-modules.conf etc/modules-load.d
+sw-to3200k/service/*.service lib/systemd/system

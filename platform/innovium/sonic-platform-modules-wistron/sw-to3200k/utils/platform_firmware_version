@@ -1,0 +1,24 @@
+#!/bin/bash
+ver_str=$(ipmitool raw 0x30 0x23 2>>/dev/null)
+fpga_ver=$(echo $ver_str | awk '{printf $3}')
+cpld1_ver=$(echo $ver_str | awk '{printf $4}')
+cpld2_ver=$(echo $ver_str | awk '{printf $5}')
+fan_cpld_ver=$(echo $ver_str | awk '{printf $6}')
+
+cpld1_ver=$( printf "%d" 0x$cpld1_ver )
+cpld2_ver=$( printf "%d" 0x$cpld2_ver )
+fan_cpld_ver=$( printf "%d" 0x$fan_cpld_ver )
+fpga_ver=$( printf "%d" 0x$fpga_ver )
+
+cpld1_ver_path="/sys/bus/i2c/devices/0-0061/version"
+cpld2_ver_path="/sys/bus/i2c/devices/0-0062/version"
+fan_cpld_ver_path="/sys/bus/i2c/devices/0-0066/version"
+fpga_ver_path="/sys/bus/i2c/devices/0-0060/version"
+
+echo $cpld1_ver > $cpld1_ver_path
+echo $cpld2_ver > $cpld2_ver_path
+echo $fpga_ver > $fpga_ver_path
+echo $fan_cpld_ver > $fan_cpld_ver_path
+
+exit 0
+

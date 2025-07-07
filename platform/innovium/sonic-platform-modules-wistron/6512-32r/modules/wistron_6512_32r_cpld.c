@@ -37,6 +37,7 @@ struct wistron_cpld_data {
 	int              reset[PORT_NUM];
 	int              lpmod[PORT_NUM];
 	int              modsel[PORT_NUM];
+	int              data_rdy[PORT_NUM];
 };
 
 static const struct i2c_device_id wistron_cpld_id[] = {
@@ -51,6 +52,7 @@ MODULE_DEVICE_TABLE(i2c, wistron_cpld_id);
 #define TRANSCEIVER_RESET_ATTR_ID(index)	MODULE_RESET_##index
 #define TRANSCEIVER_LPMOD_ATTR_ID(index)	MODULE_LPMOD_##index
 #define TRANSCEIVER_MODSEL_ATTR_ID(index)	MODULE_MODSEL_##index
+#define TRANSCEIVER_DATA_RDY_ATTR_ID(index)	MODULE_DATA_RDY_##index
 
 enum wistron_cpld_sysfs_attributes {
 	/* chip version */
@@ -189,6 +191,38 @@ enum wistron_cpld_sysfs_attributes {
 	TRANSCEIVER_MODSEL_ATTR_ID(30),
 	TRANSCEIVER_MODSEL_ATTR_ID(31),
 	TRANSCEIVER_MODSEL_ATTR_ID(32),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(1),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(2),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(3),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(4),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(5),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(6),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(7),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(8),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(9),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(10),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(11),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(12),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(13),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(14),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(15),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(16),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(17),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(18),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(19),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(20),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(21),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(22),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(23),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(24),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(25),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(26),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(27),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(28),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(29),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(30),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(31),
+	TRANSCEIVER_DATA_RDY_ATTR_ID(32),
 };
 
 /* sysfs attributes for hwmon */
@@ -204,6 +238,8 @@ static ssize_t get_mode_lpmod(struct device *dev, struct device_attribute *da, c
 static ssize_t set_mode_lpmod(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 static ssize_t get_mode_modsel(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_mode_modsel(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
+static ssize_t get_mode_data_rdy(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_mode_data_rdy(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
 /* version */
 static SENSOR_DEVICE_ATTR(version, S_IWUSR | S_IRUGO, get_version, set_version, CPLD_VERSION);
@@ -233,6 +269,10 @@ static SENSOR_DEVICE_ATTR(psu_led,  S_IWUSR | S_IRUGO, get_led_status, set_led_s
 #define DECLARE_TRANSCEIVER_SENSOR_DEVICE_MODSEL_ATTR(index) \
 	static SENSOR_DEVICE_ATTR(port##index##_modsel, S_IWUSR | S_IRUGO, get_mode_modsel, set_mode_modsel, MODULE_MODSEL_##index)
 #define DECLARE_TRANSCEIVER_MODSEL_ATTR(index)  &sensor_dev_attr_port##index##_modsel.dev_attr.attr
+
+#define DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(index) \
+	static SENSOR_DEVICE_ATTR(port##index##_data_rdy, S_IWUSR | S_IRUGO, get_mode_data_rdy, set_mode_data_rdy, MODULE_DATA_RDY_##index)
+#define DECLARE_TRANSCEIVER_DATA_RDY_ATTR(index)  &sensor_dev_attr_port##index##_data_rdy.dev_attr.attr
 
 /* transceiver attributes */
 DECLARE_TRANSCEIVER_PRESENT_SENSOR_DEVICE_ATTR(1);
@@ -363,6 +403,38 @@ DECLARE_TRANSCEIVER_SENSOR_DEVICE_MODSEL_ATTR(29);
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_MODSEL_ATTR(30);
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_MODSEL_ATTR(31);
 DECLARE_TRANSCEIVER_SENSOR_DEVICE_MODSEL_ATTR(32);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(1);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(2);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(3);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(4);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(5);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(6);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(7);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(8);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(9);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(10);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(11);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(12);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(13);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(14);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(15);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(16);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(17);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(18);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(19);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(20);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(21);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(22);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(23);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(24);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(25);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(26);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(27);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(28);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(29);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(30);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(31);
+DECLARE_TRANSCEIVER_SENSOR_DEVICE_DATA_RDY_ATTR(32);
 
 static struct attribute *wistron_fpga_attributes[] = {
 	&sensor_dev_attr_version.dev_attr.attr,
@@ -443,6 +515,22 @@ static struct attribute *wistron_cpld1_attributes[] = {
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(14),
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(15),
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(16),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(1),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(2),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(3),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(4),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(5),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(6),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(7),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(8),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(9),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(10),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(11),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(12),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(13),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(14),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(15),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(16),
 	NULL
 };
 
@@ -516,6 +604,22 @@ static struct attribute *wistron_cpld2_attributes[] = {
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(30),
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(31),
 	DECLARE_TRANSCEIVER_MODSEL_ATTR(32),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(17),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(18),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(19),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(20),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(21),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(22),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(23),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(24),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(25),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(26),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(27),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(28),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(29),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(30),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(31),
+	DECLARE_TRANSCEIVER_DATA_RDY_ATTR(32),
 	NULL
 };
 
@@ -753,6 +857,43 @@ static ssize_t set_mode_modsel(struct device *dev, struct device_attribute *da, 
 
 	mutex_lock(&data->lock);
 	data->modsel[update_idx] = modsel;
+	mutex_unlock(&data->lock);
+
+	return count;
+}
+
+static ssize_t get_mode_data_rdy(struct device *dev, struct device_attribute *da, char *buf)
+{
+	struct sensor_device_attribute  *attr = to_sensor_dev_attr(da);
+	struct i2c_client               *client = to_i2c_client(dev);
+	struct wistron_cpld_data    	*data = i2c_get_clientdata(client);
+	int                             update_idx, data_rdy = 0;
+
+	update_idx = attr->index - MODULE_DATA_RDY_1;
+
+	mutex_lock(&data->lock);
+	data_rdy = data->data_rdy[update_idx];
+	mutex_unlock(&data->lock);
+
+	return sprintf(buf, "%d", data_rdy);
+}
+
+static ssize_t set_mode_data_rdy(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+	struct sensor_device_attribute  *attr = to_sensor_dev_attr(da);
+	struct i2c_client               *client = to_i2c_client(dev);
+	struct wistron_cpld_data     *data = i2c_get_clientdata(client);
+	int                             error, data_rdy;
+	int                             update_idx;
+
+	error = kstrtoint(buf, 10, &data_rdy);
+	if (error)
+		return error;
+
+	update_idx = attr->index - MODULE_DATA_RDY_1;
+
+	mutex_lock(&data->lock);
+	data->data_rdy[update_idx] = data_rdy;
 	mutex_unlock(&data->lock);
 
 	return count;

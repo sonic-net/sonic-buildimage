@@ -16,6 +16,8 @@
 
 static ssize_t get_fan_value(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_fan_value(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
+static ssize_t get_version(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_version(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
 enum fan_id {
     FAN1_ID,
@@ -49,7 +51,7 @@ enum sysfs_fan_attributes {
     FAN4_DIRECTION,
     FAN5_DIRECTION,
     FAN6_DIRECTION,
-    FAN7_DIRECTION, 
+    FAN7_DIRECTION,
     FAN1_FRONT_SPEED_RPM,
     FAN2_FRONT_SPEED_RPM,
     FAN3_FRONT_SPEED_RPM,
@@ -64,6 +66,7 @@ enum sysfs_fan_attributes {
     FAN5_REAR_SPEED_RPM,
     FAN6_REAR_SPEED_RPM,
     FAN7_REAR_SPEED_RPM,
+    CPLD_VERSION,
     FAN_ATTR_MAX
 };
 
@@ -71,8 +74,12 @@ enum sysfs_fan_attributes {
 struct sw_to3200k_fan_data {
     struct device   *hwmon_dev;
     struct mutex     update_lock;
+    int              version;
     int              fan_val[FAN_ATTR_MAX];
 };
+
+/* version */
+static SENSOR_DEVICE_ATTR(version, S_IWUSR | S_IRUGO, get_version, set_version, CPLD_VERSION);
 
 /* Define attributes */
 #define DECLARE_FAN_DUTY_CYCLE_SENSOR_DEV_ATTR(index) \
@@ -171,8 +178,39 @@ static struct attribute *sw_to3200k_fan_attributes[] = {
     DECLARE_FAN_DIRECTION_ATTR(6),
     DECLARE_FAN_DIRECTION_ATTR(7),
     DECLARE_FAN_DUTY_CYCLE_ATTR(),
+    &sensor_dev_attr_version.dev_attr.attr,
     NULL
 };
+
+static ssize_t get_version(struct device *dev, struct device_attribute *da, char *buf)
+{
+	struct i2c_client               *client = to_i2c_client(dev);
+	struct sw_to3200k_fan_data     *data = i2c_get_clientdata(client);
+	int                             version;
+
+	mutex_lock(&data->update_lock);
+	version = data->version;
+	mutex_unlock(&data->update_lock);
+	return sprintf(buf, "%d", version);
+}
+
+static ssize_t set_version(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+	struct i2c_client               *client = to_i2c_client(dev);
+	struct sw_to3200k_fan_data     *data = i2c_get_clientdata(client);
+	int                             error, version;
+
+	error = kstrtoint(buf, 10, &version);
+	if (error)
+	{
+		return error;
+	}
+
+	mutex_lock(&data->update_lock);
+	data->version = version;
+	mutex_unlock(&data->update_lock);
+	return count;
+}
 
 static ssize_t get_fan_value(struct device *dev, struct device_attribute *da, char *buf)
 {
@@ -245,7 +283,7 @@ static int sw_to3200k_fan_probe
         goto exit_free;
     }
 
-    data->hwmon_dev = hwmon_device_register(&client->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_fan", NULL, NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);

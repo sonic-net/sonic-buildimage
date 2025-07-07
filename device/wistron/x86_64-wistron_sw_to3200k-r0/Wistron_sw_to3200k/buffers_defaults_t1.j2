@@ -1,4 +1,4 @@
-{# Default values which will be used if no actual configura available #}
+{# Default values which will be used if no actual configuration available #}
 {% set default_cable = '40m' %}
 
 {# Port configuration to cable length look-up table #}
@@ -76,7 +76,7 @@
     },
     "BUFFER_POOL": {
         "ingress_lossless_pool": {
-            "size": "47218432",
+            "size": "51691264",
             "type": "ingress",
             "mode": "dynamic",
             "xoff": "17708800"
@@ -86,52 +86,77 @@
             "type": "egress",
             "mode": "dynamic",
             "xoff": "0"
+        },
+        "egress_lossless_pool": {
+            "size": "70565632",
+            "type": "egress",
+            "mode": "static"
         }
     },
     "BUFFER_PROFILE": {
         "ingress_lossless_profile": {
-            "pool":"[BUFFER_POOL|ingress_lossless_pool]",
-            "xoff":"38816",
+            "pool":"ingress_lossless_pool",
+            "xoff":"135520",
             "size":"1518",
             "dynamic_th":"1",
-            "xon_offset":"13440"
+            "xon_offset":"9408"
         },
         "egress_lossless_profile": {
-            "pool":"[BUFFER_POOL|ingress_lossless_pool]",
+            "pool":"ingress_lossless_pool",
             "size":"0",
-            "static_th":"9497600"
+            "static_th":"10243072"
         },
         "ingress_lossy_profile": {
-            "pool":"[BUFFER_POOL|lossy_pool]",
+            "pool":"lossy_pool",
             "size":"0",
-            "static_th":"9497600"
+            "static_th":"10243072"
         },
         "egress_lossy_profile": {
-            "pool":"[BUFFER_POOL|lossy_pool]",
+            "pool":"lossy_pool",
             "size":"1518",
             "dynamic_th":"2"
         }
     },
     "BUFFER_PG": {
-        "{{ port_names }}|0-2": {
-            "profile" : "[BUFFER_PROFILE|ingress_lossy_profile]"
-        },
-        "{{ port_names }}|3-4": {
-            "profile" : "[BUFFER_PROFILE|ingress_lossless_profile]"
-        },
-        "{{ port_names }}|5-7": {
-            "profile" : "[BUFFER_PROFILE|ingress_lossy_profile]"
-        }
+{% for port in port_names_list %}
+                "{{ port }}|3-4": {
+                     "profile" : "ingress_lossless_profile"
+                },
+{% endfor %}
+{% for port in port_names_list %}
+                "{{ port }}|0": {
+                    "profile" : "ingress_lossy_profile"
+                },
+{% endfor %}
+{% for port in port_names_list %}
+                "{{ port }}|1-2": {
+                    "profile" : "ingress_lossy_profile"
+                },
+{% endfor %}
+{% for port in port_names_list %}
+                "{{ port }}|5-7": {
+                    "profile" : "ingress_lossy_profile"
+                }{% if not loop.last %},{% endif %}
+
+{% endfor %}
     },
+
     "BUFFER_QUEUE": {
-        "{{ port_names }}|3-4": {
-            "profile" : "[BUFFER_PROFILE|egress_lossless_profile]"
+{% for port in port_names_list %}
+        "{{ port }}|3-4": {
+             "profile" : "egress_lossless_profile"
         },
-        "{{ port_names }}|0-2": {
-            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile"
         },
-        "{{ port_names }}|5-7": {
-            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
-        }
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5-7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
     }
 }
