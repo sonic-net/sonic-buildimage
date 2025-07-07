@@ -10,8 +10,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./makedumpfile-$(KDUMP_TOOLS_VERSION_BASE)
 
 	# Get makedumpfile release
-	wget http://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_$(KDUMP_TOOLS_VERSION_BASE).orig.tar.gz
-	wget http://deb.debian.org/debian/pool/main/m/makedumpfile/makedumpfile_$(KDUMP_TOOLS_VERSION).debian.tar.xz
+	wget https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/m/makedumpfile/makedumpfile_$(KDUMP_TOOLS_VERSION_BASE).orig.tar.gz
+	wget https://packages.trafficmanager.net/snapshot/debian/20230101T000234Z/pool/main/m/makedumpfile/makedumpfile_$(KDUMP_TOOLS_VERSION).debian.tar.xz
 	tar -f makedumpfile_$(KDUMP_TOOLS_VERSION_BASE).orig.tar.gz -x
 	pushd ./makedumpfile-$(KDUMP_TOOLS_VERSION_BASE)
 	tar -f ../makedumpfile_$(KDUMP_TOOLS_VERSION).debian.tar.xz -x
