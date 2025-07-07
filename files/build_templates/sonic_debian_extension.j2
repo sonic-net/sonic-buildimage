@@ -1187,3 +1187,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unho
 {% if ENABLE_MULTIDB == "y" %}
 sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 {% endif %}
+
+# Install rsyslog update syslog counter plugin
+sudo LANG=C cp $SCRIPTS_DIR/syslog_counter.py $FILESYSTEM_ROOT/usr/bin/syslog_counter.py
+sudo chown root $FILESYSTEM_ROOT/usr/bin/syslog_counter.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/syslog_counter.py
