@@ -218,13 +218,13 @@ RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
