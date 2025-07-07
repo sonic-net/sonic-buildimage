@@ -1,0 +1,96 @@
+name: MSConflictDetect
+on:
+  pull_request_target:
+    branches:
+      - 'master'
+      - '202[0-9][0-9][0-9]'
+
+jobs:
+  MSConflictDetect:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Debug
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+        USER: mssonicbld
+        PAT: ${{ secrets.GH_TOKEN }}
+        TOKEN: ${{ secrets.AZURE_DEVOPS_EXT_PAT }}
+      run: |
+        set -e
+        echo $GITHUB_CONTEXT | jq
+        git config --global user.email "sonicbld@microsoft.com"
+        git config --global user.name "Sonic Build Admin"
+        git remote add ms https://$TOKEN@dev.azure.com/msazure/One/_git/Networking-acs-buildimage
+        git fetch ms 2>/dev/null
+
+        echo ${PAT} | gh auth login --with-token
+
+        curl "https://$USER:$PAT@raw.githubusercontent.com/Azure/sonic-pipelines-internal/main/azure-pipelines/azdevops_git_api.sh" -o ../azdevops_git_api.sh
+    - name: Main
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+        AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_DEVOPS_EXT_PAT }}
+      run: |
+        set -e
+        branch_base=$(echo $GITHUB_CONTEXT | jq -r ".base_ref")
+        pr_id=$(echo $GITHUB_CONTEXT | jq -r ".event.number")
+
+        echo PRID: $pr_id
+        export PAT=$AZURE_DEVOPS_EXT_PAT
+        . ../azdevops_git_api.sh
+
+        # check conflict
+        [[ $branch_base =~ ^202[0-9]{3}$ ]] && branch_int=internal-$branch_base
+        [[ $branch_base == master ]] && branch_int=internal
+        [[ -z "$branch_int" ]] && echo "bypass branch: $branch_base" && exit 0
+
+        git branch -D test &>/dev/null || true
+        git checkout -b test
+        git branch -D $branch_int &>/dev/null || true
+        git checkout -b $branch_int --track ms/$branch_int
+
+        git merge test && echo "No merge conflicts." && exit 0
+
+        PRID=$(listPR sonicbld/conflict_prefix/$pr_id-fix sonicbld/conflict_prefix/$pr_id-base 2>/dev/null | tee tmp | jq -r .value[0].pullRequestId)
+        echo "PRID: $PRID"
+        # if no this branch or branch is out of date.
+        if [[ "$(git log ms/sonicbld/conflict_prefix/$pr_id-base --format=%at -n 1)" < "$(git log test --format=%at -n 1)" ]];then
+          echo "MS PR is out of date!"
+          az boards work-item update --org https://dev.azure.com/mssonic/ --id 49 --discussion "https://github.com/sonic-net/sonic-buildimage/$pr_id"
+          conflict_commit=$(git log $branch_int..HEAD --merge --format=%H | tail -n 1)
+          pr_start_commit=$(git log origin/$branch_base..test --merge --format=%H | tail -n 1)
+          git merge --abort
+          if git merge origin/$branch_base;then
+            git push -f ms HEAD:sonicbld/conflict_prefix/$pr_id-base
+          else
+            git merge --abort
+            git merge $conflict_commit~ || (echo "Unexpected Error" && exit 2)
+            git push -f ms HEAD:sonicbld/conflict_prefix/$pr_id-base
+          fi
+
+          git merge test || true
+          git add .
+          GIT_EDITOR=/bin/true git merge --continue
+          git push -f ms HEAD:sonicbld/conflict_prefix/$pr_id-fix
+
+          # no active PR
+          if [[ "$(cat tmp | jq -r .value[0].status)" != "active" ]];then
+            echo "No active MS PR found."
+            echo "sonicbld/conflict_prefix/$pr_id-fix --> sonicbld/conflict_prefix/$pr_id-base"
+            createPR sonicbld/conflict_prefix/$pr_id-fix sonicbld/conflict_prefix/$pr_id-base "Please approve and complete the PR after resolving conflict!!!" > tmp
+            PRID=$(cat tmp | jq -r .pullRequestId)
+            echo "Please resolve conflict and complete:"
+            echo "https://dev.azure.com/msazure/One/_git/Networking-acs-buildimage/pullrequest/$PRID"
+          else
+            echo "Please resolve conflict and complete:"
+            echo "https://dev.azure.com/msazure/One/_git/Networking-acs-buildimage/pullrequest/$PRID"
+          fi
+          exit 1
+        fi
+
+        [[ "$(cat tmp | jq -r .value[0].status)" != "completed" ]] && echo "Please resolve conflict and complete:" && echo "https://dev.azure.com/msazure/One/_git/Networking-acs-buildimage/pullrequest/$PRID" && exit 1
+        exit 0
+
