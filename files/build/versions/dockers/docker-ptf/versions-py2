@@ -35,6 +35,7 @@ prompt-toolkit==1.0.18
 protobuf==3.6.1
 ptf==0.9.1
 ptyprocess==0.7.0
+pyaml==21.10.1
 pybrctl==0.1.4
 pycparser==2.21
 pygments==2.5.2
@@ -42,6 +43,7 @@ pylibpcap==0.6.4
 pynacl==1.4.0
 pyro4==4.82
 pysubnettree==0.26
+pyyaml==5.4.1
 rpyc==4.1.5
 saithrift==0.9
 scandir==1.10.0
@@ -58,7 +60,6 @@ traitlets==4.3.3
 twisted==16.0.0
 typing==3.10.0.0
 unittest-xml-reporting==2.5.2
-unknown==0.0.0
 wcwidth==0.2.6
 werkzeug==1.0.1
 yabgp==0.8.2

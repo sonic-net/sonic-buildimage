@@ -42,7 +42,7 @@ libstdc++-8-dev==8.3.0-6
 libswsscommon==1.0.0
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 make==4.2.1-1.2
 patch==2.7.6-3+deb10u1
 python3-dev==3.7.3-1

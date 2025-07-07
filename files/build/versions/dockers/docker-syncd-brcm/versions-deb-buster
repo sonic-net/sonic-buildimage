@@ -25,7 +25,7 @@ libswsscommon-dbg==1.0.0
 libunwind8==1.2.1-10~deb10u1
 libyaml-0-2==0.2.1-1
 libyaml-dev==0.2.1-1
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 openssh-client==1:7.9p1-10+deb10u2
 sshpass==1.06-1
 strace==4.26-0.2

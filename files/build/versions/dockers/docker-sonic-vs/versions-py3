@@ -1,4 +1,4 @@
-certifi==2023.5.7
+certifi==2022.12.7
 charset-normalizer==3.1.0
 click==7.0
 idna==3.4
@@ -9,8 +9,8 @@ netifaces==0.10.9
 pexpect==4.8.0
 ptyprocess==0.7.0
 pyroute2==0.5.14
-requests==2.30.0
+requests==2.29.0
 scapy==2.4.4
 tabulate==0.9.0
-urllib3==2.0.2
+urllib3==1.26.15
 xmltodict==0.12.0

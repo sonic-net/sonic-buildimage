@@ -1,6 +1,6 @@
 charset-normalizer==3.1.0
 click==7.0
-docker==6.1.1
+docker==6.0.1
 ijson==2.6.1
 ipaddress==1.0.23
 jsondiff==2.0.0

@@ -30,8 +30,8 @@ libsairedis==1.0.0
 libsairedis-dbg==1.0.0
 libswsscommon-dbg==1.0.0
 libunwind8==1.2.1-10~deb10u1
-libxml2==2.9.4+dfsg1-7+deb10u6
-linux-libc-dev==4.19.282-1
+libxml2==2.9.4+dfsg1-7+deb10u5
+linux-libc-dev==4.19.269-1
 mft==4.21.0-100
 mlnx-sai==1.mlnx.SAIRel1.22.0.0
 openssh-client==1:7.9p1-10+deb10u2

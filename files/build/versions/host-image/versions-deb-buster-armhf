@@ -3,8 +3,8 @@ icu-devtools==63.1-6+deb10u3
 libcryptsetup12==2:2.3.7-1+deb11u1~bpo10+1
 libicu-dev==63.1-6+deb10u3
 libicu63==63.1-6+deb10u3
-libxml2==2.9.4+dfsg1-7+deb10u6
-libxml2-dev==2.9.4+dfsg1-7+deb10u6
+libxml2==2.9.4+dfsg1-7+deb10u5
+libxml2-dev==2.9.4+dfsg1-7+deb10u5
 libxslt1-dev==1.1.32-2.2~deb10u2
 libxslt1.1==1.1.32-2.2~deb10u2
 linux-image-4.19.0-12-2-armmp==4.19.152-1

@@ -47,7 +47,7 @@ libsnmp30-dbg==5.7.3+dfsg-5
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
 libunwind8==1.2.1-10~deb10u1
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 locales==2.28-10+deb10u2
 make==4.2.1-1.2
 mariadb-common==1:10.3.38-0+deb10u1

@@ -48,9 +48,9 @@ libstdc++-8-dev==8.3.0-6
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
 libunwind8==1.2.1-10~deb10u1
-libxml2==2.9.4+dfsg1-7+deb10u6
+libxml2==2.9.4+dfsg1-7+deb10u5
 libyang==1.0.73
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 openssh-client==1:7.9p1-10+deb10u2
 python==2.7.16-1
 python-dev==2.7.16-1

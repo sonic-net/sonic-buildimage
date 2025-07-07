@@ -53,7 +53,7 @@ libswsscommon-dbg==1.0.0
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
 libunwind8==1.2.1-10~deb10u1
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 make==4.2.1-1.2
 ndisc6==1.0.4-1
 ndppd==0.2.5-4+deb10u1

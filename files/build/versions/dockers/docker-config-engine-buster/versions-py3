@@ -8,5 +8,5 @@ pyangbind==0.8.1
 pyyaml==5.4.1
 redis==3.5.3
 redis-dump-load==1.1
-regex==2023.5.5
+regex==2022.10.31
 six==1.16.0

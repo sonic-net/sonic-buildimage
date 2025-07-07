@@ -23,6 +23,6 @@ libsaithrift-dev==0.9.4
 libthrift-0.13.0==0.13.0-6
 libyaml-0-2==0.2.1-1
 libyaml-dev==0.2.1-1
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 saiserver==0.9.4
 zlib1g-dev==1:1.2.11.dfsg-1+deb10u2

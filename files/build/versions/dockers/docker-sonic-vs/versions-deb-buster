@@ -106,7 +106,7 @@ libunwind8==1.2.1-10~deb10u1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang1==1.0.184-2
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.269-1
 logrotate==3.14.0-4
 make==4.2.1-1.2
 ndisc6==1.0.4-1

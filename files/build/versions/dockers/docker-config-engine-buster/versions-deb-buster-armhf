@@ -3,8 +3,8 @@ icu-devtools==63.1-6+deb10u3
 libglib2.0-0==2.58.3-2+deb10u4
 libicu-dev==63.1-6+deb10u3
 libicu63==63.1-6+deb10u3
-libxml2==2.9.4+dfsg1-7+deb10u6
-libxml2-dev==2.9.4+dfsg1-7+deb10u6
+libxml2==2.9.4+dfsg1-7+deb10u5
+libxml2-dev==2.9.4+dfsg1-7+deb10u5
 libxslt1-dev==1.1.32-2.2~deb10u2
 libxslt1.1==1.1.32-2.2~deb10u2
 pkg-config==0.29-6

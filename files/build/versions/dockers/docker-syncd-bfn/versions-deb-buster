@@ -18,6 +18,6 @@ libunwind-dev==1.2.1-10~deb10u1
 libunwind8==1.2.1-10~deb10u1
 libusb-1.0-0==2:1.0.22-2
 libusb-1.0-0-dev==2:1.0.22-2
-libxml2==2.9.4+dfsg1-7+deb10u6
-linux-libc-dev==4.19.282-1
+libxml2==2.9.4+dfsg1-7+deb10u5
+linux-libc-dev==4.19.269-1
 syncd==1.0.0
