@@ -615,6 +615,40 @@ def parse_dpg(dpg, hname):
             is_mirror = False
             is_mirror_v6 = False
             is_mirror_dscp = False
+            use_port_alias = True
+
+            # Walk through all interface names/alias to determine whether the input string is
+            # port name or alias.We need this logic because there can be duplicaitons in port alias
+            # and port names
+            # The input port name/alias can be either port_name or port_alias. A mix of name and alias is not accepted
+            port_name_count = 0
+            port_alias_count = 0
+            total_count = 0
+            for member in aclattach:
+                member = member.strip()
+                if member in pcs or \
+                    member in vlans or \
+                    member.lower().startswith('erspan') or \
+                    member.lower().startswith('egress_erspan') or \
+                    member.lower().startswith('erspan_dscp'):
+                    continue
+                total_count += 1
+                if member in port_alias_map:
+                    port_alias_count += 1
+                if member in port_names_map:
+                    port_name_count += 1
+            # All inputs are port alias
+            if port_alias_count == total_count:
+                use_port_alias = True
+            # All inputs are port name
+            elif port_name_count == total_count:
+                use_port_alias = False
+            # There are both port alias and port name, then port alias is preferred to keep the behavior not changed
+            else:
+                use_port_alias = True
+                # For CTRLPLANE ACL, both counters are 0
+                if (port_alias_count != 0) and (port_name_count != 0):
+                    print("Warning: The given port name for ACL " + aclname + " is inconsistent. It must be either port name or alias ", file=sys.stderr)
 
             # TODO: Ensure that acl_intfs will only ever contain front-panel interfaces (e.g.,
             # maybe we should explicity ignore management and loopback interfaces?) because we
@@ -632,11 +666,15 @@ def parse_dpg(dpg, hname):
                         acl_intfs.extend(vlans[member]['members'])
                     else:
                         acl_intfs.append(member)
-                elif member in port_alias_map:
+                elif use_port_alias and (member in port_alias_map):
                     acl_intfs.append(port_alias_map[member])
                     # Give a warning if trying to attach ACL to a LAG member interface, correct way is to attach ACL to the LAG interface
                     if port_alias_map[member] in intfs_inpc:
                         print("Warning: ACL " + aclname + " is attached to a LAG member interface " + port_alias_map[member] + ", instead of LAG interface", file=sys.stderr)
+                elif (not use_port_alias) and (member in port_names_map):
+                    acl_intfs.append(member)
+                    if member in intfs_inpc:
+                        print("Warning: ACL " + aclname + " is attached to a LAG member interface " + member + ", instead of LAG interface", file=sys.stderr)
                 elif member.lower().startswith('erspan') or member.lower().startswith('egress_erspan') or member.lower().startswith('erspan_dscp'):
                     if 'dscp' in member.lower():
                         is_mirror_dscp = True
@@ -1271,6 +1309,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             docker_routing_config_mode = child.text
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    
+    port_names_map.update(ports)
     port_alias_map.update(alias_map)
     port_alias_asic_map.update(alias_asic_map)
 
@@ -1824,6 +1864,7 @@ def parse_asic_meta_get_devices(root):
 
     return local_devices
 
+port_names_map = {}
 port_alias_map = {}
 port_alias_asic_map = {}
 
