@@ -37,6 +37,9 @@ class master_key_mgr:
             self._initialized = True
 
     def _load_registry(self):
+        """
+        Read cipher_pass.json file
+        """
         if not os.path.exists(CIPHER_PASS_FILE):
             return {}
         try:
@@ -47,6 +50,9 @@ class master_key_mgr:
             return {}
 
     def _save_registry(self, data):
+        """
+        Write cipher_pass.json file
+        """
         with open(CIPHER_PASS_FILE, 'w') as f:
             json.dump(data, f, indent=2)
         os.chmod(self._file_path, 0o640)
