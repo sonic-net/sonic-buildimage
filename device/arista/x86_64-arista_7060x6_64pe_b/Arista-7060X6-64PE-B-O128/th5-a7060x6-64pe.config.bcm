@@ -36,12 +36,13 @@ bcm_device:
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 1
-            sai_tunnel_support: 2
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 4096
             sai_mmu_custom_config: 1
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
@@ -1330,14 +1331,6 @@ device:
                 PORT_ID: 530
             :
                 PC_PHYS_PORT_ID: 509
-            ?
-                PORT_ID: 118
-            :
-                PC_PHYS_PORT_ID: 513
-            ?
-                PORT_ID: 254
-            :
-                PC_PHYS_PORT_ID: 514
 ...
 ---
 device:
@@ -1381,13 +1374,6 @@ device:
                 SPEED: 400000
                 NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN
-                MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: [118, 254]
-            :
-                ENABLE: 1
-                SPEED: 10000
-                NUM_LANES: 1
                 MAX_FRAME_SIZE: 9416
 ...
 ---
