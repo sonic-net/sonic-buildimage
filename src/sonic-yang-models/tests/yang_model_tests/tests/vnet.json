@@ -7,23 +7,23 @@
     },
     "VNET_INVALID_VALUE_TEST1": {
         "desc": "Invalid values in parameters.",
-        "eStr": [ "Invalid VRF name" ]
+        "eStr": "Invalid VRF name"
     },
     "VNET_INVALID_VALUE_TEST2": {
         "desc": "Invalid values in parameters.",
-        "eStr": [ "Invalid value" ]
+        "eStrKey": "Bounds"
     },
     "VNET_INVALID_VALUE_TEST3": {
         "desc": "Invalid values in parameters.",
-        "eStr": [ "does not satisfy the constraint" ]
+        "eStrKey": "Pattern"
     },
     "VNET_INVALID_VALUE_TEST4": {
         "desc": "Invalid values in parameters.",
-        "eStr": [ "does not satisfy the constraint" ]
+        "eStrKey": "Pattern"
     },
     "VNET_INVALID_VXLAN_VTEP": {
         "desc": "Missing Vxlan_TUNNEL configuration",
-        "eStr" : [ "points to a non-existing leaf" ]
+        "eStrKey" : "LeafRef"
     },
     "VNET_ROUTE_TUNNEL_MIN_TEST": {
         "desc": "Basic VNET route tunnel configuration with minimal required field - endpoint in VNET_ROUTE_TUNNEL_LIST table."
@@ -44,36 +44,36 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_ENDPOINT": {
         "desc": "VNET route tunnel configuration with invalid endpoint IP value (256.256.256.256) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Value \"256.256.256.256\" does not satisfy the constraint"
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MAC": {
         "desc": "VNET route tunnel configuration with invalid MAC address format (non-hexadecimal characters) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Value \"GG:HH:II:JJ:KK:LL\" does not satisfy the constraint \"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}\""
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_VNI": {
         "desc": "VNET route tunnel configuration with invalid VXLAN ID (exceeding max value of 16777215) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Value \"16777216\" does not satisfy the constraint \"1..16777215\""
+        "eStrKey": "Range"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_NAME_FORMAT": {
         "desc": "VNET route tunnel configuration with invalid name format (missing prefix) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Missing required element \"prefix\" in \"VNET_ROUTE_TUNNEL_LIST\""
+        "eStrKey": "ListKey"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_PREFIX": {
         "desc": "VNET route tunnel configuration with invalid prefix format (300.168.1.0/24) in name field.",
-        "eStr": "Value \"300.168.1.0/24\" does not satisfy the constraint \"((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2])))\" (range, length, or pattern)\""
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
         "desc": "VNET route tunnel configuration with missing mandatory attribute (endpoint) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStr": "Missing required element \"endpoint\" in \"VNET_ROUTE_TUNNEL_LIST\"."
+        "eStrKey": "Mandatory"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_NONEXISTENT_VNET": {
         "desc": "VNET route tunnel configuration referencing a non-existent VNET name, violating the must condition.",
-        "eStr": "Leafref \"/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name\" of value \"NonexistentVnet\" points to a non-existing leaf"
+        "eStrKey" : "LeafRef"
     }
 }

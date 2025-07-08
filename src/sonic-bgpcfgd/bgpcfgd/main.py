@@ -105,7 +105,6 @@ def do_work():
     for mgr in managers:
         runner.add_manager(mgr)
     runner.run()
-    thr.join()
 
 
 def main():

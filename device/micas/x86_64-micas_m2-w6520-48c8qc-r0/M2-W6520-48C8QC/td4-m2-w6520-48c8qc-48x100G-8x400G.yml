@@ -2,6 +2,20 @@
 bcm_device:
     0:
         global:
+            sai_tunnel_support: 1
+            riot_enable: 1
+            ctr_evict_enable: 0
+            sai_brcm_sonic_acl_enhancements: 1
+            sai_field_group_auto_prioritize: 1
+            sai_modify_hash_flexdigest: 1
+            sai_fast_convergence_support: 1
+            sai_port_queue_ecn_counter: 1
+            l2_table_default_view: 1
+            flexctr_action_reserved_ipmc_hitbit: 1
+            default_cpu_tx_queue: 7
+            max_vp_lags: 1024
+            multi_network_groups: 1
+            use_all_splithorizon_groups: 1
             bcm_tunnel_term_compatible_mode: 1
             vlan_flooding_l2mc_num_reserved: 0
             shared_block_mask_section: uc_bc
