@@ -249,3 +249,30 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
             call(interface, signal.SIGUSR2)
         ])
         mock_clear.assert_called_once_with(ANY, interface, dir, type)
+
+@pytest.mark.parametrize("direction, pkt_type, interface", [
+    (None, None, None),
+    ("TX", "DISCOVER", "Vlan1000"),
+    ("RX", "OFFER", None),
+])
+def test_clear_dhcp_relay_ipv4_vlan_counter(patch_import_module, direction, pkt_type, interface):
+    clear_dhcp_relay = patch_import_module
+    mock_counter = MagicMock()
+    clear_dhcp_relay.dhcprelay.DHCPv4_Counter.return_value = mock_counter
+    clear_dhcp_relay.clear_dhcp_relay_ipv4_vlan_counter(direction, pkt_type, interface)
+    mock_counter.clear_table.assert_called_once_with(direction, pkt_type, interface)
+
+def test_dhcp4relay_clear_vlan_counters_command(patch_import_module):
+    clear_dhcp_relay = patch_import_module
+    runner = CliRunner()
+    # Patch the actual clear function to verify call
+    with patch.object(clear_dhcp_relay, "clear_dhcp_relay_ipv4_vlan_counter") as mock_clear:
+        result = runner.invoke(clear_dhcp_relay.dhcp4relay_clear.commands['dhcp4relay-vlan-counters'], ['-d', 'TX', 'Vlan1000'])
+        assert result.exit_code == 0
+
+def test_register_adds_dhcp4relay_clear_vlan_counters(patch_import_module):
+    clear_dhcp_relay = patch_import_module
+    cli = MagicMock()
+    clear_dhcp_relay.register(cli)
+    # Check that dhcp4relay_clear_vlan_counters was registered as a command
+    cli.add_command.assert_any_call(clear_dhcp_relay.dhcp4relay_clear_vlan_counters)

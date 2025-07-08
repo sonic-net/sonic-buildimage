@@ -118,7 +118,7 @@ def clear_dhcp_relay_ipv6_counters(interface):
 def dhcp4relay_clear():
     pass
 
-@dhcp4relay_clear.command('dhcp4relay_vlan_counters')
+@dhcp4relay_clear.command('dhcp4relay-vlan-counters')
 @click.option('-d', '--direction', required=False, type=click.Choice(['TX', 'RX']), help="Specify TX(egress) or RX(ingress)")
 @click.option('-t', '--type', required=False, type=click.Choice(dhcprelay.dhcpv4_messages), help="Specify DHCP packet counter type")
 @click.argument("vlan_interface", required=False)

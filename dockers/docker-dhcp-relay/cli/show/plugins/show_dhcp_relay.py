@@ -585,7 +585,7 @@ def dhcp_relay_ipv4_destination():
 def dhcp_relay_ipv6_destination():
     get_dhcp_relay(DHCP_RELAY, DHCPV6_SERVERS, with_header=True)
 
-@click.group(cls=clicommon.AliasedGroup, name="dhcp4relay_counters")
+@click.group(cls=clicommon.AliasedGroup, name="dhcp4relay-counters")
 def dhcp4relay_counters():
     """Show DHCPv4 counter"""
     pass
