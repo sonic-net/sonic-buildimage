@@ -11,7 +11,7 @@
         "desc": "Load with valid Vlan"
     },
 
-    "NEIGH_MISSING_IP": {
+    "NEIGH_MISSING_IPV4": {
         "desc": "Load NEIGH missing IP address",
         "eStrKey": "ListKey"
     },
