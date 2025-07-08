@@ -520,8 +520,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 RUN eatmydata apt-get install -y golang golang-go
 # TODO(trixie): This needs to be updated with the symcrypt FIPS build
 #{%- if INCLUDE_FIPS == "y" %}
-#RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
-# && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+#RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+# && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
 # && eatmydata dpkg -i golang-go.deb golang-src.deb \
 # && ln -sf /usr/lib/go-1.19 /usr/local/go \
 # && rm golang-go.deb golang-src.deb
