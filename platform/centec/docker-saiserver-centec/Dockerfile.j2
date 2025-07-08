@@ -1,15 +1,18 @@
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update              \
- && apt-get -y install          \
-      libboost-atomic1.74.0     \
-      libqt5core5a              \
-      libqt5network5
+## Pre-install the fundamental packages
+RUN apt-get update            \
+ && apt-get -y install        \
+    gdb                       \
+    libboost-atomic1.74.0     \
+    libqt5core5a              \
+    libqt5network5
 
 COPY \
 {% for deb in docker_saiserver_centec_debs.split(' ') -%}
@@ -17,12 +20,16 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_saiserver_centec_debs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_saiserver_centec_debs.split(' ')) }}
+
+## TODO: add kmod into Depends
+RUN apt-get install -yf kmod
 
 COPY ["start.sh", "/usr/bin/"]
+COPY ["saiserver_start.sh", "/usr/bin/"]
+COPY ["files/syncd_init_common.sh", "/usr/bin/"]
+RUN chmod +x /usr/bin/saiserver_start.sh /usr/bin/syncd_init_common.sh
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
 ## Clean up
