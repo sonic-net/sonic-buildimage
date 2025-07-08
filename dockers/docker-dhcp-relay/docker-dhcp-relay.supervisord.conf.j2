@@ -84,6 +84,10 @@ dependent_startup_wait_for=rsyslogd:running
 {% include 'dhcp-relay.monitors.j2' %}
 {% endif %}
 {% endif %}
+{% else %}
+{% if 'has_sonic_dhcpv4_relay' in FEATURE['dhcp_relay'] and FEATURE['dhcp_relay']['has_sonic_dhcpv4_relay'] == 'True' %}
+{% include 'dhcpv4-sonic-relay.agents.j2' %}
+{% endif %}
 {% endif %}
 [program:dhcprelayd]
 command=/usr/local/bin/dhcprelayd
