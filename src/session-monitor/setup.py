@@ -19,7 +19,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    description="Package contains Python scripts for smartswitch-azs for SONiC.",
+    description="Package contains Python scripts for session-monitor for SONiC.",
     license="GNU General Public License v3",
         long_description=readme + '\n\n',
     scripts=[
