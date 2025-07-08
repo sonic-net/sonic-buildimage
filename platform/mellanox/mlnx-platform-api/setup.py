@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,8 @@ setup(
         'pytest-runner'
     ],
     install_requires= [
-        'inotify'
+        'inotify',
+        'filelock'
     ],
     tests_require = [
         'pytest',
