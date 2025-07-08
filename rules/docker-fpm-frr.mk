@@ -40,6 +40,7 @@ $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TSA:/usr/bin/TSA
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TSB:/usr/bin/TSB
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TSC:/usr/bin/TSC
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += TS:/usr/bin/TS
+$(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += platform_utils:/usr/bin/platform_utils
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += idf_isolation:/usr/bin/idf_isolation
 
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_FPM_FRR)
