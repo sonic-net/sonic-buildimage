@@ -75,10 +75,16 @@
 #define FPM_HEADER_SIZE 4
 
 /* Default SRv6 SID format values */
-DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN = 32;
-DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN = 16;
-DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN = 16;
-DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN = 0;
+#define DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN 32
+#define DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN 16
+#define DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN 16
+#define DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN 0
+
+/*
+ * Time in seconds that if the other end is not responding
+ * something terrible has gone wrong.  Let's fix that.
+ */
+#define DPLANE_FPM_NL_WEDGIE_TIME 15
 
 /**
  * Custom Netlink TLVs
@@ -162,6 +168,8 @@ enum custom_rtattr_srv6_localsid_action {
 
 static const char *prov_name = "dplane_fpm_sonic";
 
+static atomic_bool fpm_cleaning_up;
+
 struct fpm_nl_ctx {
 	/* data plane connection. */
 	int socket;
@@ -192,6 +200,7 @@ struct fpm_nl_ctx {
 	struct event *t_event;
 	struct event *t_nhg;
 	struct event *t_dequeue;
+	struct event *t_wedged;
 
 	/* zebra events. */
 	struct event *t_lspreset;
@@ -531,6 +540,16 @@ static void fpm_connect(struct event *t);
 
 static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 {
+	bool cleaning_p = false;
+
+	/* This is being called in the FPM pthread: ensure we don't deadlock
+	 * with similar code that may be run in the main pthread.
+	 */
+	if (!atomic_compare_exchange_strong_explicit(
+		    &fpm_cleaning_up, &cleaning_p, true, memory_order_seq_cst,
+		    memory_order_seq_cst))
+		return;
+
 	/* Cancel all zebra threads first. */
 	event_cancel_async(zrouter.master, &fnc->t_lspreset, NULL);
 	event_cancel_async(zrouter.master, &fnc->t_lspwalk, NULL);
@@ -558,6 +577,12 @@ static void fpm_reconnect(struct fpm_nl_ctx *fnc)
 	EVENT_OFF(fnc->t_read);
 	EVENT_OFF(fnc->t_write);
 
+	/* Reset the barrier value */
+	cleaning_p = true;
+	atomic_compare_exchange_strong_explicit(
+		&fpm_cleaning_up, &cleaning_p, false, memory_order_seq_cst,
+		memory_order_seq_cst);
+
 	/* FPM is disabled, don't attempt to connect. */
 	if (fnc->disabled)
 		return;
@@ -576,6 +601,7 @@ static void fpm_read(struct event *t)
 	struct zebra_dplane_ctx *ctx;
 	size_t available_bytes;
 	size_t hdr_available_bytes;
+	int ival;
 
 	/* Let's ignore the input at the moment. */
 	rv = stream_read_try(fnc->ibuf, fnc->socket,
@@ -667,14 +693,6 @@ static void fpm_read(struct event *t)
 		hdr_available_bytes = fpm.msg_len - FPM_MSG_HDR_LEN;
 		available_bytes -= hdr_available_bytes;
 
-		/* Sanity check: must be at least header size. */
-		if (hdr->nlmsg_len < sizeof(*hdr)) {
-			zlog_warn(
-				"%s: [seq=%u] invalid message length %u (< %zu)",
-				__func__, hdr->nlmsg_seq, hdr->nlmsg_len,
-				sizeof(*hdr));
-			continue;
-		}
 		if (hdr->nlmsg_len > fpm.msg_len) {
 			zlog_warn(
 				"%s: Received a inner header length of %u that is greater than the fpm total length of %u",
@@ -704,17 +722,36 @@ static void fpm_read(struct event *t)
 
 		switch (hdr->nlmsg_type) {
 		case RTM_NEWROUTE:
+			/* Sanity check: need at least route msg header size. */
+			if (hdr->nlmsg_len < sizeof(struct rtmsg)) {
+				zlog_warn("%s: [seq=%u] invalid message length %u (< %zu)",
+					  __func__, hdr->nlmsg_seq,
+					  hdr->nlmsg_len, sizeof(struct rtmsg));
+				break;
+			}
+
+			/* Parse the route data into a dplane ctx, then
+ 			 * enqueue it to zebra for processing.
+ 			 */
 			ctx = dplane_ctx_alloc();
 			dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_NOTIFY, NULL,
  					      NULL);
-			if (netlink_route_change_read_unicast_internal(
-				    hdr, 0, false, ctx) != 1) {
-				dplane_ctx_fini(&ctx);
-				stream_pulldown(fnc->ibuf);
+
+			if (netlink_route_notify_read_ctx(hdr, 0, ctx) >= 0) {
+				/* In the FPM encoding, the vrfid is present */
+				ival = dplane_ctx_get_table(ctx);
+				dplane_ctx_set_vrf(ctx, ival);
+				dplane_ctx_set_table(ctx,
+								ZEBRA_ROUTE_TABLE_UNKNOWN);
+	
+					dplane_provider_enqueue_to_zebra(ctx);
+			} else {
 				/*
 				 * Let's continue to read other messages
 				 * Even if we ignore this one.
 				 */
+				dplane_ctx_fini(&ctx);
+ 				stream_pulldown(fnc->ibuf);
 			}
 			break;
 		default:
@@ -2130,6 +2167,7 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+#define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
  * output buffer.
@@ -2140,7 +2178,7 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
  */
 static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 {
-	uint8_t nl_buf[NL_PKT_BUF_SIZE];
+	uint8_t nl_buf[DPLANE_FPM_NL_BUF_SIZE];
 	size_t nl_buf_len;
 	ssize_t rv;
 	uint64_t obytes, obytes_peak;
@@ -2168,8 +2206,6 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	}
 
 	nl_buf_len = 0;
-
-	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
 
 	switch (op) {
 	case DPLANE_OP_ROUTE_UPDATE:
@@ -2387,6 +2423,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	/* We must know if someday a message goes beyond 65KiB. */
 	assert((nl_buf_len + FPM_HEADER_SIZE) <= UINT16_MAX);
+
+	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
 
 	/* Check if we have enough buffer space. */
 	if (STREAM_WRITEABLE(fnc->obuf) < (nl_buf_len + FPM_HEADER_SIZE)) {
@@ -2771,6 +2809,18 @@ static void fpm_rmac_reset(struct event *t)
 			 &fnc->t_rmacwalk);
 }
 
+static void fpm_process_wedged(struct event *t)
+{
+	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
+
+	zlog_warn("%s: Connection unable to write to peer for over %u seconds, resetting",
+		  __func__, DPLANE_FPM_NL_WEDGIE_TIME);
+
+	atomic_fetch_add_explicit(&fnc->counters.connection_errors, 1,
+				  memory_order_relaxed);
+	FPM_RECONNECT(fnc);
+}
+
 static void fpm_process_queue(struct event *t)
 {
 	struct fpm_nl_ctx *fnc = EVENT_ARG(t);
@@ -2779,8 +2829,14 @@ static void fpm_process_queue(struct event *t)
 	uint64_t processed_contexts = 0;
 
 	while (true) {
+		size_t writeable_amount;
+
+		frr_with_mutex (&fnc->obuf_mutex) {
+			writeable_amount = STREAM_WRITEABLE(fnc->obuf);
+		}
+
 		/* No space available yet. */
-		if (STREAM_WRITEABLE(fnc->obuf) < NL_PKT_BUF_SIZE) {
+		if (writeable_amount < DPLANE_FPM_NL_BUF_SIZE) {
 			no_bufs = true;
 			break;
 		}
@@ -2813,9 +2869,17 @@ static void fpm_process_queue(struct event *t)
 				  processed_contexts, memory_order_relaxed);
 
 	/* Re-schedule if we ran out of buffer space */
-	if (no_bufs)
-		event_add_timer(fnc->fthread->master, fpm_process_queue,
-				 fnc, 0, &fnc->t_dequeue);
+	if (no_bufs) {
+		if (processed_contexts)
+			event_add_event(fnc->fthread->master, fpm_process_queue, fnc, 0,
+					&fnc->t_dequeue);
+		else
+			event_add_timer_msec(fnc->fthread->master, fpm_process_queue, fnc, 10,
+					     &fnc->t_dequeue);
+		event_add_timer(fnc->fthread->master, fpm_process_wedged, fnc,
+				DPLANE_FPM_NL_WEDGIE_TIME, &fnc->t_wedged);
+	} else
+		EVENT_OFF(fnc->t_wedged);
 
 	/*
 	 * Let the dataplane thread know if there are items in the
@@ -2823,7 +2887,7 @@ static void fpm_process_queue(struct event *t)
 	 * until the dataplane thread gets scheduled for new,
 	 * unrelated work.
 	 */
-	if (dplane_provider_out_ctx_queue_len(fnc->prov) > 0)
+	if (processed_contexts)
 		dplane_provider_work_ready();
 }
 
@@ -2899,8 +2963,8 @@ static int fpm_nl_start(struct zebra_dplane_provider *prov)
 	fnc = dplane_provider_get_data(prov);
 	fnc->fthread = frr_pthread_new(NULL, prov_name, prov_name);
 	assert(frr_pthread_run(fnc->fthread, NULL) == 0);
-	fnc->ibuf = stream_new(NL_PKT_BUF_SIZE);
-	fnc->obuf = stream_new(NL_PKT_BUF_SIZE * 128);
+	fnc->ibuf = stream_new(DPLANE_FPM_NL_BUF_SIZE);
+	fnc->obuf = stream_new(DPLANE_FPM_NL_BUF_SIZE * 128);
 	pthread_mutex_init(&fnc->obuf_mutex, NULL);
 	fnc->socket = -1;
 	fnc->disabled = true;
@@ -2916,6 +2980,16 @@ static int fpm_nl_start(struct zebra_dplane_provider *prov)
 
 static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 {
+	bool cleaning_p = false;
+
+	/* This is being called in the main pthread: ensure we don't deadlock
+	 * with similar code that may be run in the FPM pthread.
+	 */
+	if (!atomic_compare_exchange_strong_explicit(
+		    &fpm_cleaning_up, &cleaning_p, true, memory_order_seq_cst,
+		    memory_order_seq_cst))
+		return 0;
+
 	/* Disable all events and close socket. */
 	EVENT_OFF(fnc->t_lspreset);
 	EVENT_OFF(fnc->t_lspwalk);
@@ -2935,6 +3009,12 @@ static int fpm_nl_finish_early(struct fpm_nl_ctx *fnc)
 		close(fnc->socket);
 		fnc->socket = -1;
 	}
+
+	/* Reset the barrier value */
+	cleaning_p = true;
+	atomic_compare_exchange_strong_explicit(
+		&fpm_cleaning_up, &cleaning_p, false, memory_order_seq_cst,
+		memory_order_seq_cst);
 
 	return 0;
 }
@@ -3027,8 +3107,8 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 				      peak_queue, memory_order_relaxed);
 
 	if (cur_queue > 0)
-		event_add_timer(fnc->fthread->master, fpm_process_queue,
-				 fnc, 0, &fnc->t_dequeue);
+		event_add_event(fnc->fthread->master, fpm_process_queue, fnc, 0,
+				&fnc->t_dequeue);
 
 	/* Ensure dataplane thread is rescheduled if we hit the work limit */
 	if (counter >= limit)

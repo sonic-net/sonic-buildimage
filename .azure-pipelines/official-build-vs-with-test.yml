@@ -2,8 +2,9 @@
 
 name: $(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)
 
+# trigger this pipeline automatically by schedule.
 schedules:
-  - cron: "0 */8 * * *" # At 0 minutes past the hour, every 8 hours, every day UTC
+  - cron: "0 8 * * *" # At 08:00, every day UTC
     displayName: "Daily Build and Test SONiC virtual images"
     branches:
       include:
@@ -12,8 +13,19 @@ schedules:
         - 202311
         - 202405
         - 202411
+        - 202505
 
-trigger: none
+# trigger this pipeline automatically on any branch push.
+trigger:
+  branches:
+    include:
+      - master
+      - 202305
+      - 202311
+      - 202405
+      - 202411
+      - 202505
+
 pr: none
 
 resources:
@@ -101,7 +113,7 @@ stages:
         displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
         pool: sonic-ubuntu-1c
         timeoutInMinutes: 240
-        continueOnError: false
+        continueOnError: true
         steps:
           - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
             parameters:

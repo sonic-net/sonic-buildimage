@@ -100,6 +100,7 @@ USER_BDE := $(DEST_DIR)/$(USER_BDE_LOCAL)
 
 KNET_CB_LOCAL := linux-knet-cb.$(KOBJ)
 KNET_CB := $(DEST_DIR)/$(KNET_CB_LOCAL)
+
 export BUILD_BCM_GENL=1
 export BUILD_GENL_PACKET=0
 GENL_PACKET_LOCAL := genl-packet.$(KOBJ)
@@ -181,6 +182,7 @@ LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(BCM_GENL_LOCAL))
 all_targets +=$(LOCAL_TARGETS)
 endif
 endif
+
 
 ADD_TO_CFLAGS += -I$(SDK)/systems/linux/kernel/modules/include
 COND_KNET_LIBS = libuser.$(libext)

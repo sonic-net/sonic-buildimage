@@ -81,40 +81,27 @@ else
 CFGFLAGS += -DSYS_BE_PIO=0 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=0
 ENDIAN = LE_HOST=1
 endif
-# JIRA SONIC-69062
-CFGFLAGS += -Wp,-w 
+
+# Needed for a warning in src/soc/phy/fcmap/src/bfcmap88060_a0.c that can't be
+# fixed because of a Montreal2 FW dependency
+ifeq ($(LOCALDIR),src/soc/phy/fcmap/src)
+OPT_CFLAGS += -Wno-address-of-packed-member
+endif
+
 CFGFLAGS += -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS
 CFGFLAGS += -DPHYS_ADDRS_ARE_64BITS
 CFLAGS += -fno-aggressive-loop-optimizations -fno-strict-overflow
-OPT_CFLAGS += -Wno-error=maybe-uninitialized
-OPT_CFLAGS += -Wno-error=unused-function
-OPT_CFLAGS += -Wno-error=array-bounds
-OPT_CFLAGS += -Wno-error=format-overflow
 CFLAGS += -fgnu89-inline
-ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
-    OPT_CFLAGS += -Wno-stringop-overflow
-    OPT_CFLAGS += -Wno-stringop-truncation
-    OPT_CFLAGS += -Wno-error=restrict
-endif
-ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
-	OPT_CFLAGS += -Wno-address-of-packed-member
-endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
-	OPT_CFLAGS += -Wno-error=uninitialized
-	OPT_CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
 	CFLAGS += -flarge-source-files
-	OPT_CFLAGS += -Wno-error=address
-endif
-ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
-	OPT_CFLAGS += -Wno-error=enum-int-mismatch
 endif
 
 CFGFLAGS += -D$(ENDIAN) -DIPROC_CMICD
 CFGFLAGS += -DBCM_PLATFORM_STRING=\"IPROC_CMICD\"
-CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=16
+#CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=16
 
 ARCH = arm64
 KBUILD_VERBOSE = 1
