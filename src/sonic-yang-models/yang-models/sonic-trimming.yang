@@ -25,19 +25,31 @@ module sonic-trimming {
                 }
 
                 leaf dscp_value {
-                    description "DSCP value assigned to a packet after trimming";
-                    type uint8 {
-                        range "0..63" {
-                            error-message "Invalid DSCP value";
-                            error-app-tag dscp-invalid;
+                    description
+                        "DSCP value assigned to a packet after trimming.
+                        When set to from-tc, the tc_value is used for mapping to the DSCP";
+                    type union {
+                        type uint8 {
+                            range "0..63" {
+                                error-message "Invalid DSCP value";
+                                error-app-tag dscp-invalid;
+                            }
+                        }
+                        type string {
+                            pattern "from-tc";
                         }
                     }
+                }
+
+                leaf tc_value {
+                    description "TC value assigned to a packet after trimming";
+                    type uint8;
                 }
 
                 leaf queue_index {
                     description
                         "Queue index to use for transmission of a packet after trimming.
-                        When set to dynamic, the dscp_value is used for mapping to queue";
+                        When set to dynamic, the dscp_value is used for mapping to the queue";
                     type union {
                         type uint8;
                         type string {

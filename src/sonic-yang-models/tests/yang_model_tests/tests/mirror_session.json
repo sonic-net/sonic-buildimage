@@ -14,13 +14,16 @@
     "MIRROR_ERSPAN_ENTRY_WITH_VALID_DEC_VALUES_2": {
         "desc": "Configuring ERSPAN entry with valid decimal values."
     },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "desc": "Configuring ERSPAN entry with valid IPv6 source and destination IPs."
+    },
     "MIRROR_ERSPAN_ENTRY_WRONG_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid type",
         "eStrKey": "InvalidValue"
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
-        "eStrKey" : "Pattern"
+        "eStr" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_DST_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid dst_ip",
@@ -28,7 +31,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",
-        "eStrKey" : "Pattern"
+        "eStr" : "src_ip and dst_ip must have the same IP version."
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_SRC_IP_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid src_ip",

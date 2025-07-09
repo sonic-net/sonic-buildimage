@@ -542,6 +542,10 @@ write_platform_specific_cmdline() {
         cmdline_add logs_inram=on
         cmdline_add libata.force=2.00:noncq
     fi
+    if [ "$sid" = "LodogaPrime" ]; then
+        aboot_machine=arista_7050cx3_32c
+        cmdline_add logs_inram=on
+    fi
     if [ "$sid" = "Marysville" ]; then
         aboot_machine=arista_7050sx3_48yc8
         flash_size=7382
@@ -661,7 +665,7 @@ write_platform_specific_cmdline() {
         cmdline_add intel_idle.max_cstate=0
     fi
 
-    if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish"; then
+    if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish" "puffin"; then
         cmdline_add tsc=reliable
         cmdline_add pcie_ports=native
         cmdline_add rhash_entries=1
@@ -686,7 +690,7 @@ write_platform_specific_cmdline() {
         cmdline_add sdhci.append_quirks2=0x40
         read_system_eeprom
     fi
-    if in_array "$platform" "woodpecker" "skylark"; then
+    if in_array "$platform" "woodpecker" "puffin" "skylark"; then
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi

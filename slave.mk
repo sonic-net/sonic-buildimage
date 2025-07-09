@@ -158,11 +158,6 @@ export DEFAULT_CONTAINER_REGISTRY
 export MIRROR_URLS
 export MIRROR_SECURITY_URLS
 
-ifeq ($(SONIC_SMARTSWITCH),1)
-SMARTSWITCH = 1
-export SMARTSWITCH
-endif
-
 ifeq ($(SONIC_ENABLE_PFCWD_ON_START),y)
 ENABLE_PFCWD_ON_START = y
 endif
@@ -444,7 +439,6 @@ $(info "BUILD_LOG_TIMESTAMP"             : "$(BUILD_LOG_TIMESTAMP)")
 $(info "SONIC_IMAGE_VERSION"             : "$(SONIC_IMAGE_VERSION)")
 $(info "BLDENV"                          : "$(BLDENV)")
 $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
-$(info "SMARTSWITCH"                     : "$(SMARTSWITCH)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
 $(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
@@ -980,7 +974,7 @@ else
 		}
 endif
 		# clean up
-		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi
+		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
 		mv -f $($*_SRC_PATH)/dist/$* $(PYTHON_WHEELS_PATH) $(LOG)
 
@@ -1455,7 +1449,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
-	export smartswitch="$(SMARTSWITCH)"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
 	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
@@ -1586,12 +1579,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 	export installer_services="$(SERVICES)"
 
-	# Render the base image files templates
-	$(foreach docker, $($*_DOCKERS),\
-		$(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2), \
-			j2 -f env $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file) > $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(basename $(file))
-		)
-	)
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 
 	j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
