@@ -1,0 +1,11 @@
+!
+! template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/delete.conf.j2
+!
+no router bgp {{ CONFIG_DB__DEVICE_METADATA['localhost']['bgp_asn'] }} vrf {{ vrf }}
+!
+no route-map FROM_WLPARTNER_V4_VNET_{{ vrf }}
+!
+no ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }}
+!
+! end of template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/delete.conf.j2
+!

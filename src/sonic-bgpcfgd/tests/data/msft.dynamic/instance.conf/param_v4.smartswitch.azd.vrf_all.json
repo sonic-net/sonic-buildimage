@@ -9,14 +9,15 @@
         "Loopback1|55.55.55.55/32": {}
     },
     "bgp_session": {
-        "ip_range": "10.10.20.0/24,20.20.20.0/24",
+        "ip_range": "10.10.20.0/24",
         "name": "dyn_name_v4",
         "peer_asn": "11111",
         "src_address": "1.1.1.1"
     },
+    "vrf": "Vnet1",
     "constants": {
         "deployment_id_asn_map": {
-            "5": "51111"
+            "26": "51111"
         }
     }
 }

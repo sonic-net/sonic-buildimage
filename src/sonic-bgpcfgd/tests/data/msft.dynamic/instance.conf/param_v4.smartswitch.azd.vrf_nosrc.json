@@ -1,0 +1,22 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "deployment_id": "26"
+        }
+    },
+    "CONFIG_DB__LOOPBACK_INTERFACE": {
+        "Loopback1|55.55.55.55/32": {}
+    },
+    "bgp_session": {
+        "ip_range": "10.10.20.0/24",
+        "name": "dyn_name_v4",
+        "peer_asn": "11111"
+    },
+    "vrf": "Vnet1",
+    "constants": {
+        "deployment_id_asn_map": {
+            "26": "51111"
+        }
+    }
+}

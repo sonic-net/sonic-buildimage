@@ -2,7 +2,9 @@
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
             "type": "ToRRouter",
-            "deployment_id": "26"
+            "deployment_id": "26",
+            "bgp_asn": "11111"
         }
-    }
+    },
+    "vrf": "Vnet1"
 }

@@ -1,0 +1,8 @@
+!
+! template: bgpd/templates/msft.dynamic/delete.conf.j2
+!
+{% from "bgpd/templates/msft.dynamic/router.j2" import dynamic_routing with context %}
+{{ dynamic_routing("delete") }}
+!
+! end of template: bgpd/templates/msft.dynamic/delete.conf.j2
+!

@@ -1,0 +1,14 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "bgp_asn": "11111"
+        }
+    },
+    "bgp_session": {
+        "name": "dyn_name_v4",
+        "ip_range": "10.10.10.0/25,10.10.20.0/24"
+    },
+    "delete_ranges": ["10.10.10.0/24"],
+    "add_ranges": ["10.10.10.0/25"]
+}

@@ -1,0 +1,16 @@
+!
+! template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/policies.conf.j2
+!
+!
+ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }} description DEFAULT_WLP_LIST
+ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }} seq 5 permit 100.64.0.0/10 ge 16 le 16
+!
+{% for ip_range in bgp_session['ip_range'].split(',') %}
+ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }} seq {{ loop.index * 10 }} permit {{ ip_range }}
+{% endfor %}
+!
+route-map FROM_WLPARTNER_V4_VNET_{{ vrf }} permit 10
+  match ip address prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }}
+!
+! end of template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/policies.conf.j2
+!

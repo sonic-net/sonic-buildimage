@@ -1,0 +1,34 @@
+!
+! template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/instance.conf.j2
+!
+{% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
+!
+  neighbor {{ bgp_session['name'] }} peer-group
+  neighbor {{ bgp_session['name'] }} passive
+!
+{% if bgp_session['peer_asn'] is defined %}
+  neighbor {{ bgp_session['name'] }} remote-as {{ bgp_session['peer_asn'] }}
+{% else %}
+  neighbor {{ bgp_session['name'] }} remote-as {{ constants.deployment_id_asn_map[CONFIG_DB__DEVICE_METADATA['localhost']['deployment_id']] }}
+{% endif %}
+!
+{% for ip_range in bgp_session['ip_range'].split(',') %}
+  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+{% if bgp_session['src_address'] is defined %}
+  neighbor {{ bgp_session['name'] }} update-source {{ bgp_session['src_address'] | ip }}
+{% endif %}
+!
+  address-family ipv4 unicast
+    neighbor {{ bgp_session['name'] }} activate
+    neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
+    neighbor {{ bgp_session['name'] }} maximum-prefix 100
+    neighbor {{ bgp_session['name'] }} default-originate
+    neighbor {{ bgp_session['name'] }} route-map FROM_WLPARTNER_V4_VNET_{{ vrf }} in
+    neighbor {{ bgp_session['name'] }} route-map TO_WLPARTNER_V4 out
+    maximum-paths 64
+  exit-address-family
+!
+! end of template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/instance.conf.j2
+!

@@ -1,0 +1,10 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "bgp_asn": "11111",
+            "resource_type": "FPGASTP"
+        }
+    },
+    "neighbor_addr": "dyn_name"
+}

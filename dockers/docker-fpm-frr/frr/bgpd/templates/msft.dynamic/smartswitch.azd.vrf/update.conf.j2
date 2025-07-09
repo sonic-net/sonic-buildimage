@@ -1,0 +1,19 @@
+!
+! template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/update.conf.j2
+!
+{% for ip_range in delete_ranges %}
+  no bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+{% for ip_range in add_ranges %}
+  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+no ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }}
+!
+{% for ip_range in bgp_session['ip_range'].split(',') %}
+ip prefix-list IPV4_DOWNSTREAM_PREFIXES_VNET_{{ vrf }} seq {{ loop.index * 10 }} permit {{ ip_range }}
+{% endfor %}
+!
+! end of template: bgpd/templates/msft.dynamic/smartswitch.azd.vrf/update.conf.j2
+!

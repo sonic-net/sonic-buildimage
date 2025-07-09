@@ -129,6 +129,14 @@ def test_dynamic_instance():
     test_data = load_tests("dynamic", "instance.conf")
     run_tests("dynamic_instance", *test_data)
 
+def test_dynamic_delete():
+    test_data = load_tests("dynamic", "delete.conf")
+    run_tests("dynamic_delete", *test_data)
+
+def test_dynamic_update():
+    test_data = load_tests("dynamic", "update.conf")
+    run_tests("dynamic_update", *test_data)
+
 def test_monitors_policies():
     test_data = load_tests("monitors", "policies.conf")
     run_tests("monitors_policies", *test_data)

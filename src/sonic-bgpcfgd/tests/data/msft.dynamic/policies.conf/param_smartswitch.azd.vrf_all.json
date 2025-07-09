@@ -1,0 +1,15 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "deployment_id": "26"
+        }
+    },
+    "bgp_session": {
+        "ip_range": "10.10.20.0/24",
+        "name": "dyn_name_v4",
+        "peer_asn": "11111",
+        "src_address": "1.1.1.1"
+    },
+    "vrf": "Vnet1"
+}

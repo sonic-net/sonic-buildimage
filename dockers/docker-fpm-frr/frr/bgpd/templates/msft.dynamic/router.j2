@@ -3,8 +3,11 @@
 {% set deployment_id = CONFIG_DB__DEVICE_METADATA['localhost']['deployment_id'] %}
 {% set resource_type = CONFIG_DB__DEVICE_METADATA['localhost']['resource_type'] %}
 {% set path_template = "bgpd/templates/msft.dynamic/%s/" + template_name + ".conf.j2" %}
+{% set is_vrf_dynamic_peer = vrf != 'default' %}
 {% if device_type in ['ToRRouter', 'BackEndToRRouter'] %}
-{%     if deployment_id is defined and deployment_id == '26' %}
+{%     if deployment_id is defined and deployment_id == '26' and is_vrf_dynamic_peer %}
+{%         include path_template % "smartswitch.azd.vrf" %}
+{%     elif deployment_id is defined and deployment_id == '26' %}
 {%         include path_template % "tor.rotterdam" %}
 {%     elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%         include path_template % "tor.rotterdam" %}
