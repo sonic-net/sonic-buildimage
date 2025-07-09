@@ -193,6 +193,17 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
         }
     }
 
+    data['NTP'] = {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_sample_config(data):
