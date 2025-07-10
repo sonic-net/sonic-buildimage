@@ -17,7 +17,7 @@ logger () {
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
-  if [[ -z "$ARP_UPDATE_VARS" ]]; then
+  if [ $? -ne 0 ]; then
       logger -p error "arp_update_vars cannot be generated"
       sleep 300
       continue
