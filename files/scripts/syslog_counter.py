@@ -30,6 +30,8 @@ try:
     counters_db.connect('COUNTERS_DB')
 
     syslog_count = counters_db.get('COUNTERS_DB', 'SYSLOG_COUNTER', 'COUNT')
+    if not syslog_count:
+        syslog_count = 0
 except Exception as e:
     logging.exception("syslog counter plugin initialization error, exiting program")
     # rsyslog will restart plugin when exit with 1
