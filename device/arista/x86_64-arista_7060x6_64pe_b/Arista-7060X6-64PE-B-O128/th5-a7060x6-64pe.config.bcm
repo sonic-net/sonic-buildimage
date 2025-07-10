@@ -1331,14 +1331,6 @@ device:
                 PORT_ID: 530
             :
                 PC_PHYS_PORT_ID: 509
-            ?
-                PORT_ID: 118
-            :
-                PC_PHYS_PORT_ID: 513
-            ?
-                PORT_ID: 254
-            :
-                PC_PHYS_PORT_ID: 514
 ...
 ---
 device:
@@ -1382,13 +1374,6 @@ device:
                 SPEED: 400000
                 NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN
-                MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: [118, 254]
-            :
-                ENABLE: 1
-                SPEED: 10000
-                NUM_LANES: 1
                 MAX_FRAME_SIZE: 9416
 ...
 ---
