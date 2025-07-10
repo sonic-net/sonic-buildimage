@@ -1,13 +1,23 @@
-From 0d38f38299ba5109b564004409b23b1e0c206e4b Mon Sep 17 00:00:00 2001
+From 7e3abef81158d3a929de1e1fd93629dba3d4c817 Mon Sep 17 00:00:00 2001
 From: Mai Bui <maibui@microsoft.com>
 Date: Thu, 3 Jul 2025 03:48:41 +0000
-Subject: [PATCH] Update audisp-tacplus rules
+Subject: [PATCH] Update audisp tacplus rules
 
 Signed-off-by: Mai Bui <maibui@microsoft.com>
 ---
- audisp-tacplus.rules | 5 ++---
- 1 file changed, 2 insertions(+), 3 deletions(-)
+ 31-process_audit.rules | 2 ++
+ audisp-tacplus.rules   | 5 ++---
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+ create mode 100644 31-process_audit.rules
 
+diff --git a/31-process_audit.rules b/31-process_audit.rules
+new file mode 100644
+index 0000000..743d1b8
+--- /dev/null
++++ b/31-process_audit.rules
+@@ -0,0 +1,2 @@
++-a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus
++-a always,exit -F arch=b32 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus
 diff --git a/audisp-tacplus.rules b/audisp-tacplus.rules
 index 573638a..481ee83 100644
 --- a/audisp-tacplus.rules
