@@ -1,6 +1,7 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import ctypes
 import mmap
 import os
 from typing import Union
@@ -42,10 +43,15 @@ def get_resource_0_path(pci_address: str, root="") -> str:
 def write_32(pci_address: str, offset: int, val: int, root=""):
     file_path = get_resource_0_path(pci_address, root)
     with open(file_path, "r+b") as f:
+        page_size = mmap.PAGESIZE
+        aligned_offset = offset & ~(page_size - 1)
+        offset_in_page = offset - aligned_offset
         mm = mmap.mmap(
-            f.fileno(), length=os.path.getsize(file_path), access=mmap.ACCESS_WRITE
+            f.fileno(), length=page_size, offset=aligned_offset, access=mmap.ACCESS_WRITE
         )
-        mm[offset : offset + 4] = val.to_bytes(4, byteorder="little")
+        mm_buf = (ctypes.c_char * page_size).from_buffer(mm)
+        base_ptr = ctypes.cast(mm_buf, ctypes.POINTER(ctypes.c_uint32))
+        base_ptr[offset_in_page // 4] = ctypes.c_uint32(val).value
 
 
 def read_32(pci_address: str, offset: int, root="") -> int:
