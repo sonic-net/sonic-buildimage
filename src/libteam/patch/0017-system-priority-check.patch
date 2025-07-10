@@ -1,0 +1,13 @@
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index e4f92f0..4d08d60 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -621,6 +621,8 @@ static bool lacp_ports_aggregable(struct lacp_port *lacp_port1,
+ 	if (memcmp(lacp_port1->partner.system,
+ 		   lacp_port2->partner.system, ETH_ALEN))
+ 		return false;
++        if (lacp_port1->partner.system_priority != lacp_port2->partner.system_priority)
++                return false;
+ 	return true;
+ }
+ 
