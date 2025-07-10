@@ -12,7 +12,7 @@
         {
             "bmc":
             {
-                "valmap": { "1":"intake", "0":"exhaust" }
+                "valmap": { "1":"INTAKE", "0":"EXHAUST" }
             }
         },
         "psu_power_good":
