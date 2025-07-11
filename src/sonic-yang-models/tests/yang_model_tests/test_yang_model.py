@@ -274,9 +274,9 @@ class Test_yang_models:
             for test in self.tests:
                 test = test.strip()
                 if test in self.ExceptionTests:
-                    ret = ret + self.runExceptionTest(test);
+                    ret = ret + self.runExceptionTest(test)
                 elif test in self.SpecialTests:
-                    ret = ret + self.runSpecialTest(test);
+                    ret = ret + self.runSpecialTest(test)
                 else:
                     raise Exception("Unexpected Test")
         except Exception as e:
