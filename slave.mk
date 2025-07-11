@@ -229,6 +229,10 @@ ifeq ($(SONIC_INCLUDE_MACSEC),y)
 INCLUDE_MACSEC = y
 endif
 
+ifeq ($(SONIC_INCLUDE_STP),y)
+INCLUDE_STP = y
+endif
+
 ifneq ($(SONIC_INCLUDE_TEAMD),)
 override INCLUDE_TEAMD = $(SONIC_INCLUDE_TEAMD)
 endif
@@ -1465,7 +1469,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
 	export include_dash_ha="$(INCLUDE_DASH_HA)"
-	export include_stpd="$(INCLUDE_STP)"
+	export include_stp="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
