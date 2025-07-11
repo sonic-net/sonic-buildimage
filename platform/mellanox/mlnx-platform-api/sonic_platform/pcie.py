@@ -25,6 +25,7 @@
 import os
 import re
 from sonic_py_common import logger
+from device_data import DeviceDataManager, DpuInterfaceEnum
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
@@ -48,12 +49,12 @@ class Pcie(PcieUtil):
         return_confInfo = []
         for item_conf in self.confInfo:
             id_conf = item_conf["id"]
-            name_conf = item_conf["name"]
             dev_conf = item_conf["dev"]
             fn_conf = item_conf["fn"]
-            if name_conf == BULEFIELD_SOC_NAME or name_conf == BLUEFIELD_CONNECTX_NAME:
+            bus_conf = item_conf["bus"]
+            pcie_device_id = f"0000:{bus_conf}:{dev_conf}.{fn_conf}"
+            if pcie_device_id in self.dpu_pcie_devices:
                 # Special handling for Bluefield Devices
-                bus_conf = item_conf["bus"]
                 # Ideally even with BIOS updates, the PCI ID for bluefield devices should not change.
                 try:
                     # Connect to STATE_DB to check for detached devices
@@ -83,6 +84,22 @@ class Pcie(PcieUtil):
                 item_conf["result"] = "Failed"
             return_confInfo.append(item_conf)
         return return_confInfo
+
+    def get_dpu_pcie_devices(self):
+        dpu_count = DeviceDataManager.get_dpu_count()
+        if dpu_count == 0:
+            return []
+        dpu_pcie_devices = []
+        for dpu_id in range(dpu_count):
+            dpu_name = f"dpu{dpu_id}"
+            pci_dev_id = DeviceDataManager.get_dpu_interface(dpu_name, DpuInterfaceEnum.PCIE_INT.value)
+            rshim_pci_dev_id = DeviceDataManager.get_dpu_interface(dpu_name, DpuInterfaceEnum.RSHIM_PCIE_INT.value)
+            if not pci_dev_id or not rshim_pci_dev_id:
+                continue
+            dpu_pcie_devices.append(pci_dev_id)
+            dpu_pcie_devices.append(rshim_pci_dev_id)
+        return dpu_pcie_devices
+
 
     # Create
     def _create_device_id_to_bus_map(self):
@@ -117,5 +134,6 @@ class Pcie(PcieUtil):
     def __init__(self, platform_path):
         PcieUtil.__init__(self, platform_path)
         self._create_device_id_to_bus_map()
+        self.dpu_pcie_devices = self.get_dpu_pcie_devices()
         self.state_db = None
         self.logger = logger.Logger()

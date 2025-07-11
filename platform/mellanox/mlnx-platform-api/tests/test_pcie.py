@@ -40,9 +40,11 @@ class TestPcie:
 
     @mock.patch('sonic_platform.pcie.Pcie._create_device_id_to_bus_map', mock.MagicMock())
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
     def test_get_pcie_check(self):
         p = Pcie('')
         p._device_id_to_bus_map = {}
+        p.dpu_pcie_devices = []
         p.confInfo = [
             {
                 'id': '1f0b',
@@ -64,8 +66,10 @@ class TestPcie:
         assert info[0]['result'] == 'Passed'
 
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=['0000:02:00.0']))
     def test_get_pcie_check_bluefield_detaching(self):
         p = Pcie('')
+        p.dpu_pcie_devices = ['0000:02:00.0']
         p.confInfo = [
             {
                 'id': 'c2d5',  # BULEFIELD_SOC_ID
@@ -86,8 +90,10 @@ class TestPcie:
         mock_db_instance.hgetall.assert_called_with(expected_key)
 
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=['0000:03:00.0']))
     def test_get_pcie_check_bluefield_not_detaching(self):
         p = Pcie('')
+        p.dpu_pcie_devices = ['0000:03:00.0']
         p.confInfo = [
             {
                 'id': 'a2dc',  # BLUEFIELD_CONNECTX_ID
@@ -114,8 +120,10 @@ class TestPcie:
         assert info[0]['result'] == 'Passed'
 
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=['0000:02:00.0']))
     def test_get_pcie_check_bluefield_db_error(self):
         p = Pcie('')
+        p.dpu_pcie_devices = ['0000:02:00.0']
         p.confInfo = [
             {
                 'id': 'c2d5',  # BULEFIELD_SOC_ID
@@ -132,6 +140,43 @@ class TestPcie:
         info = p.get_pcie_check()
         assert info[0]['result'] == 'Failed'
 
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
+    def test_get_pcie_check_non_dpu_device(self):
+        p = Pcie('')
+        p.dpu_pcie_devices = []
+        p.confInfo = [
+            {
+                'id': '1f0b',
+                'name': 'Some other device',
+                'dev': '00',
+                'fn': '00'
+            }
+        ]
+        p._device_id_to_bus_map = {'1f0b': '01'}
+        p.check_pcie_sysfs = mock.MagicMock(return_value=True)
+        info = p.get_pcie_check()
+        assert len(info) == 1
+        assert info[0]['result'] == 'Passed'
+
+    @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
+    @mock.patch('sonic_platform.pcie.Pcie.get_dpu_pcie_devices', mock.MagicMock(return_value=[]))
+    def test_get_pcie_check_device_not_in_map(self):
+        p = Pcie('')
+        p.dpu_pcie_devices = []
+        p.confInfo = [
+            {
+                'id': '1f0b',
+                'name': 'Some other device',
+                'dev': '00',
+                'fn': '00'
+            }
+        ]
+        p._device_id_to_bus_map = {}
+        info = p.get_pcie_check()
+        assert len(info) == 1
+        assert info[0]['result'] == 'Failed'
+
     @mock.patch('sonic_platform.pcie.os.listdir')
     @mock.patch('sonic_platform.pcie.Pcie.load_config_file', mock.MagicMock())
     def test_create_device_id_to_bus_map(self, mock_dir):
@@ -143,3 +188,32 @@ class TestPcie:
         with mock.patch('sonic_platform.pcie.open', mock_os_open):
             p._create_device_id_to_bus_map()
             assert p._device_id_to_bus_map == {'23':'01'}
+
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_count')
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_interface')
+    def test_get_dpu_pcie_devices_no_dpu(self, mock_get_interface, mock_get_count):
+        p = Pcie('')
+        mock_get_count.return_value = 0
+        result = p.get_dpu_pcie_devices()
+        assert result == []
+        mock_get_interface.assert_not_called()
+
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_count')
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_interface')
+    def test_get_dpu_pcie_devices_with_dpu(self, mock_get_interface, mock_get_count):
+        p = Pcie('')
+        mock_get_count.return_value = 1
+        mock_get_interface.side_effect = ['0000:01:00.0', '0000:02:00.0']
+        result = p.get_dpu_pcie_devices()
+        assert result == ['0000:01:00.0', '0000:02:00.0']
+        assert mock_get_interface.call_count == 2
+
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_count')
+    @mock.patch('sonic_platform.pcie.DeviceDataManager.get_dpu_interface')
+    def test_get_dpu_pcie_devices_missing_interface(self, mock_get_interface, mock_get_count):
+        p = Pcie('')
+        mock_get_count.return_value = 1
+        mock_get_interface.side_effect = ['0000:01:00.0', None]  # Second interface is None
+        result = p.get_dpu_pcie_devices()
+        assert result == []
+        assert mock_get_interface.call_count == 2
