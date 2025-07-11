@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 .ONESHELL:
 SHELL = /bin/bash
 .SHELLFLAGS += -e
+DKMS_ROOT = /var/lib/dkms/
 
 $(addprefix $(DEST)/, $(BF_PLATFORM_MODULE)): $(DEST)/% :
 
@@ -29,9 +30,13 @@ $(addprefix $(DEST)/, $(BF_PLATFORM_MODULE)): $(DEST)/% :
 	mkdir -p drivers/
 	mkdir -p cfg/
 
+	# Note: Drivers are installed in DKMS_ROOT when the corresponding DKMS package is installed, no need to build again
 	$(foreach kernel_module, $(BF_PLATFORM_DRIVERS), \
-		cp $(PROJECT_ROOT)/$(FILES_PATH)/$(kernel_module) drivers/
+		cp $(DKMS_ROOT)/$(kernel_module)/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/$(kernel_module).ko drivers/
 	)
+
+	# Driver name for mlx-bootctl is different from the name in the recipe, so add a explicit rule
+	cp $(DKMS_ROOT)/mlx-bootctl/kernel-$(KVERSION)-$(CONFIGURED_ARCH)/module/mlxbf-bootctl.ko drivers/
 
 	export driver_targets="$(BF_PLATFORM_DRIVERS)"
 	export kversion="$(KVERSION)"
