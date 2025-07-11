@@ -1,0 +1,4 @@
+cx664d-n/scripts/* usr/bin
+cx664d-n/utils/* usr/local/bin
+cx664d-n/service/*.service lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx664d_n-r0
