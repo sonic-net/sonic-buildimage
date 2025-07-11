@@ -29,9 +29,11 @@ try:
     counters_db = swsscommon.SonicV2Connector()
     counters_db.connect('COUNTERS_DB')
 
-    syslog_count = counters_db.get('COUNTERS_DB', 'SYSLOG_COUNTER', 'COUNT')
-    if not syslog_count:
+    counter_value = counters_db.get('COUNTERS_DB', 'SYSLOG_COUNTER', 'COUNT')
+    if counter_value == None:
         syslog_count = 0
+    else:
+        syslog_count = int(counter_value)
 except Exception as e:
     logging.exception("syslog counter plugin initialization error, exiting program")
     # rsyslog will restart plugin when exit with 1
