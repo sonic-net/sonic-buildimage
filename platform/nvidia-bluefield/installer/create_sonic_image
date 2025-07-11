@@ -184,7 +184,7 @@ cat > scripts/initrd-install << EOF
 #!/bin/bash
 
 depmod -a $KERNEL_VERSION > /dev/null 2>&1
-insmod /mlx-bootctl.ko
+insmod /mlxbf-bootctl.ko
 insmod /sdhci-of-dwcmshc.ko
 insmod /sbsa_gwdt.ko
 /usr/sbin/watchdog
@@ -368,7 +368,7 @@ main() {
     VMLINUZ=$CDIR/$FILESYSTEM_ROOT/boot/vmlinuz-$KERNEL_VERSION
     MODULES_DIR=$CDIR/$FILESYSTEM_ROOT/lib/modules/$KERNEL_VERSION
     WATCHDOG=$MODULES_DIR/kernel/drivers/watchdog/sbsa_gwdt.ko
-    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlx-bootctl.ko
+    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-bootctl.ko
     TMFIFO_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-tmfifo.ko
     SDHCI_OF_DWCMSHC_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/sdhci-of-dwcmshc.ko
 
