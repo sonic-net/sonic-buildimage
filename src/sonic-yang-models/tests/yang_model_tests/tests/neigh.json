@@ -3,7 +3,15 @@
         "desc": "Load valid neighbors"
     },
 
-    "NEIGH_MISSING_IP": {
+    "NEIGH_VALID_PORT": {
+        "desc": "Load with valid port"
+    },
+
+    "NEIGH_VALID_VLAN": {
+        "desc": "Load with valid Vlan"
+    },
+
+    "NEIGH_MISSING_IPV4": {
         "desc": "Load NEIGH missing IP address",
         "eStrKey": "ListKey"
     },

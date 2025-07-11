@@ -14,10 +14,15 @@ module sonic-neigh {
 	import sonic-portchannel {
 		prefix lag;
 	}
+
 	// TODO: Uncomment the following lines when sonic-vlan.yang is available
 	// import sonic-vlan {
 	// 	prefix svlan;
 	// }
+
+	import sonic-port {
+		prefix sport;
+	}
 
 	organization "SONiC";
 	contact "SONiC";
@@ -47,6 +52,9 @@ module sonic-neigh {
 						// type leafref {
 						// 	path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
 						// }
+						type leafref {
+							path /sport:sonic-port/sport:PORT/sport:PORT_LIST/sport:name;
+						}
 					}
 				}
 
