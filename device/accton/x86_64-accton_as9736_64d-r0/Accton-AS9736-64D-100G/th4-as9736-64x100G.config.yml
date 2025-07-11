@@ -27,8 +27,9 @@ bcm_device:
             sai_tunnel_support: 2
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
-            sai_port_pmap_phy_lanes : 1
+            sai_port_pmap_phy_lanes : 0
             sai_disable_ports_when_sw_shutdown: 1
+            stat_custom_receive0_management_mode: 1
 ...
 ---
 bcm_device:
@@ -100,8 +101,6 @@ bcm_device:
       212: { dport_map_port: 62 }
       208: { dport_map_port: 63 }
       216: { dport_map_port: 64 }
-      152: { dport_map_port: 65 }
-      50: { dport_map_port: 66 }
 ...
 ---
 device:
@@ -1141,14 +1140,6 @@ device:
                 PORT_ID: 267
             :
                 PC_PHYS_PORT_ID: 253
-            ?
-                PORT_ID: 50
-            :
-                PC_PHYS_PORT_ID: 258
-            ?
-                PORT_ID: 152
-            :
-                PC_PHYS_PORT_ID: 257
 ...
 ---
 device:
@@ -1185,13 +1176,6 @@ device:
                 FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
                 LINK_TRAINING: 0
-            ?    # BCM56990 2x10g management port
-                PORT_ID: [50, 152]
-            :
-                ENABLE: 0
-                SPEED: 10000
-                NUM_LANES: 1
-                MAX_FRAME_SIZE: 9416
         SER_CONFIG:
             SER_ENABLE: 1
         PORT_CONFIG:
