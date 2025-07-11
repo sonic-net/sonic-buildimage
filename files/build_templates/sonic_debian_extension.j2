@@ -1176,14 +1176,14 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+{% if installer_python_debs.strip() -%}
 # Install FIPS python package will break apt-get purge command, so install after all purge command finish 
 if [ "$INCLUDE_FIPS" == y ]; then
-    {% if installer_python_debs.strip() -%}
     {% for deb in installer_python_debs.strip().split(' ') -%}
     install_deb_package {{deb}}
     {% endfor %}
-    {% endif %}
 fi
+{% endif %}
 
 
 {% if installer_debs.strip() -%}
