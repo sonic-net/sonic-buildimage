@@ -823,6 +823,12 @@ write_cmdline() {
     for cpath in "$image_path/kernel-cmdline" "$image_path/kernel-cmdline-append"; do
         if [ -f "$cpath" ]; then
             for field in $cmdline_allowlist; do
+               # Override the sonic_fips option in the image if the environment varible SONIC_FIPS definded
+               if [ -n "SONIC_FIPS" ] && [ "$field" == "sonic_fips" ]; then
+                   echo "sonic_fips=$SONIC_FIPS" | cmdline_append
+                   continue
+               fi
+
                cat "$cpath" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
             done
         fi
