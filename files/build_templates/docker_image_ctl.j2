@@ -690,7 +690,8 @@ start() {
         $SMARTSWITCH_MNT \
         -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
-        -v /dev/shm:/dev/shm:rw \{%- else %}
+        -v /dev/shm:/dev/shm:rw \
+{%- else %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
 {%- endif %}
