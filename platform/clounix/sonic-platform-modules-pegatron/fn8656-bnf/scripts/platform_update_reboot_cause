@@ -1,0 +1,24 @@
+#!/bin/bash
+rst_mode=$1
+function sys_cold_rst()
+{
+    #it is done to write CPLD register also
+    #CPLD-D 0x9 BIT3 0
+    echo -e '\xe' | dd of=/dev/port bs=1 seek=3321
+}
+
+function sys_warm_rst()
+{
+    echo -e '\x6' | dd of=/dev/port bs=1 seek=3321
+}
+
+
+case "$rst_mode" in
+cold)
+    sys_cold_rst
+    ;;
+warm)
+    sys_warm_rst
+    ;;
+esac
+
