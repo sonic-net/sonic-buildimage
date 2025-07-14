@@ -740,18 +740,7 @@ exit 101
 EOF
 sudo chmod a+x $FILESYSTEM_ROOT/usr/sbin/policy-rc.d
 
-if [ "$INCLUDE_FIPS" == y ]; then
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libatomic1
-    # The package openssh-client 9.2 is conflict with FIPS, the line below can be removed when the openssh-client version>=9.4
-    # The package will be reinstalled when isntalling the FIPS packages
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove openssh-client
-fi
-
-{% if installer_debs.strip() -%}
-{% for deb in installer_debs.strip().split(' ') -%}
-install_deb_package {{deb}}
-{% endfor %}
-{% endif %}
+install_deb_package {{installer_debs.strip()}}
 
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
@@ -761,7 +750,7 @@ install_deb_package {{deb}}
 # Check and install upgraded SONiC package again, if install failed, need manually check and fix SONiC package version issue
 PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
 PACKAGE_VERSION=$(dpkg-deb -f {{deb}} Version)
-INSTALLED_VERSION=$(dpkg-query --showformat='${Version}' --show $PACKAGE_NAME || true)
+INSTALLED_VERSION=$(sudo chroot $FILESYSTEM_ROOT dpkg-query --showformat='${Version}' --show $PACKAGE_NAME || true)
 if [ "$INSTALLED_VERSION" != "" ] && [ "$INSTALLED_VERSION" != "$PACKAGE_VERSION" ]; then
     install_deb_package {{deb}}
 fi
@@ -1205,9 +1194,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 {% if installer_python_debs.strip() -%}
 # Install FIPS python package will break apt-get purge command, so install after all purge command finish 
 if [ "$INCLUDE_FIPS" == y ]; then
-    {% for deb in installer_python_debs.strip().split(' ') -%}
-    install_deb_package {{deb}}
-    {% endfor %}
+    install_deb_package {{installer_python_debs}}
 fi
 {% endif %}
 
