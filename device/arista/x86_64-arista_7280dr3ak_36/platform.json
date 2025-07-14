@@ -88,6 +88,9 @@
                         "name": "psu1/1",
                         "status_led": {
                             "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
                         }
                     }
                 ]
@@ -99,6 +102,9 @@
                         "name": "psu2/1",
                         "status_led": {
                             "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
                         }
                     }
                 ]
@@ -106,28 +112,36 @@
         ],
         "thermals": [
             {
-                "name": "CPU"
+                "name": "CPU",
+                "controllable": false
             },
             {
-                "name": "CPU board"
+                "name": "CPU board",
+                "controllable": false
             },
             {
-                "name": "Back-panel"
+                "name": "Back-panel",
+                "controllable": false
             },
             {
-                "name": "JE0 Front Side"
+                "name": "JE0 Front Side",
+                "controllable": false
             },
             {
-                "name": "Air Inlet"
+                "name": "Air Inlet",
+                "controllable": false
             },
             {
-                "name": "Board Temp"
+                "name": "Board Temp",
+                "controllable": false
             },
             {
-                "name": "JE1_C Diode"
+                "name": "JE1_C Diode",
+                "controllable": false
             },
             {
-                "name": "JE0_C Diode"
+                "name": "JE0_C Diode",
+                "controllable": false
             }
         ],
         "sfps": [

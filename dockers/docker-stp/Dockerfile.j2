@@ -12,7 +12,7 @@ RUN apt-get update      && \
         libdbus-1-3        \
         libdaemon0         \
         libjansson4        \
-        libpython2.7       \
+        libpython3.11      \
         libjemalloc2        \
         ebtables
 
@@ -32,5 +32,6 @@ RUN apt-get clean -y      && \
 COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
+RUN chmod +x /usr/bin/start.sh
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
