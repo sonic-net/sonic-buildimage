@@ -268,6 +268,11 @@ override ENABLE_ASAN = n
 endif
 endif
 
+ifeq ($(BLDENV),trixie)
+$(warning FIPS is not yet supported on Trixie)
+override INCLUDE_FIPS = n
+endif
+
 include $(RULES_PATH)/functions
 
 ifeq ($(SONIC_USE_PDDF_FRAMEWORK),y)
@@ -390,13 +395,14 @@ endif
 export SONIC_ROUTING_STACK
 export FRR_USER_UID
 export FRR_USER_GID
-export INCLUDE_FIPS
-export ENABLE_FIPS
 
 ###############################################################################
 ## Build Options
 ###############################################################################
 export DEB_BUILD_OPTIONS = hardening=+all
+
+export INCLUDE_FIPS
+export ENABLE_FIPS
 
 ###############################################################################
 ## Dumping key config attributes associated to current building exercise
