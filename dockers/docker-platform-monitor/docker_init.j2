@@ -86,6 +86,29 @@ else
 fi
 
 {% if CONFIGURED_PLATFORM == "mellanox" %}
+
+# Dynamic sensors.conf setup: Copy sensors.conf from hw-management to SONiC platform directory
+# This allows pmon container to use the latest sensor configuration from hw-management
+HW_MGMT_SENSORS_CONF="/var/run/hw-management/config/lm_sensors_config"
+SONIC_SENSORS_CONF="/usr/share/sonic/platform/sensors.conf"
+SONIC_SPECIFIC_SENSORS_CONF="/usr/share/sonic/platform/sonic_specific_sensors.conf"
+if [ ! -e "$SONIC_SENSORS_CONF" ]; then
+    if [ -e "$HW_MGMT_SENSORS_CONF" ]; then
+        cp "$HW_MGMT_SENSORS_CONF" "$SONIC_SENSORS_CONF"
+        if [ ! -e "$SONIC_SENSORS_CONF" ]; then
+            echo "Error: Failed to copy sensors.conf file from hw-management, 'sensors' command will print raw sensors data"
+            break
+        fi
+        if [ -e "$SONIC_SPECIFIC_SENSORS_CONF" ]; then
+            if ! cat "$SONIC_SPECIFIC_SENSORS_CONF" >> "$SONIC_SENSORS_CONF"; then
+                echo "Error: Failed to append SONiC-specific sensors.conf"
+            fi
+        fi
+    else
+        echo "Error: sensors.conf file not found in hw-management"
+    fi
+fi
+
 SENSORS_CONF_PATH_GETTER="/usr/share/sonic/platform/get_sensors_conf_path"
 if [ -e $SENSORS_CONF_PATH_GETTER ]; then
     SENSORS_CONF_FILE=$($SENSORS_CONF_PATH_GETTER 2>&1)
