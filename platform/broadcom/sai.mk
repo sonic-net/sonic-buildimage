@@ -2,8 +2,8 @@ LIBSAIBCM_XGS_VERSION = 8.4.50.0
 LIBSAIBCM_DNX_VERSION = 9.2.12.1
 LIBSAIBCM_XGS_BRANCH_NAME = SAI_8.4.0_GA
 LIBSAIBCM_DNX_BRANCH_NAME = SAI_9.2.0.3
-LIBSAIBCM_XGS_URL_PREFIX = "https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/$(LIBSAIBCM_XGS_BRANCH_NAME)/$(LIBSAIBCM_XGS_VERSION)/xgs"
-LIBSAIBCM_DNX_URL_PREFIX = "https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/$(LIBSAIBCM_DNX_BRANCH_NAME)/$(LIBSAIBCM_DNX_VERSION)/dnx"
+LIBSAIBCM_XGS_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/sai-broadcom/$(LIBSAIBCM_XGS_BRANCH_NAME)/$(LIBSAIBCM_XGS_VERSION)/xgs"
+LIBSAIBCM_DNX_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/sai-broadcom/$(LIBSAIBCM_DNX_BRANCH_NAME)/$(LIBSAIBCM_DNX_VERSION)/dnx"
 
 BRCM_XGS_SAI = libsaibcm_$(LIBSAIBCM_XGS_VERSION)_amd64.deb
 $(BRCM_XGS_SAI)_URL = "$(LIBSAIBCM_XGS_URL_PREFIX)/$(BRCM_XGS_SAI)"
