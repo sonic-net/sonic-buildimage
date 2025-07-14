@@ -25,7 +25,7 @@
 import os
 import re
 from sonic_py_common import logger
-from device_data import DeviceDataManager, DpuInterfaceEnum
+from sonic_platform.device_data import DeviceDataManager, DpuInterfaceEnum
 
 try:
     from sonic_platform_base.sonic_pcie.pcie_common import PcieUtil
