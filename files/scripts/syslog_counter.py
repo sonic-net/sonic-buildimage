@@ -35,7 +35,7 @@ try:
     else:
         syslog_count = int(counter_value)
 except Exception as e:
-    logging.exception("syslog counter plugin initialization error, exiting program")
+    logging.exception("syslog counter plugin initialization error: {}, exiting program".format(e))
     # rsyslog will restart plugin when exit with 1
     sys.exit(1)
 
@@ -57,8 +57,8 @@ try:
         # Send the status code to rsyslog:
         print("OK", flush=True)
         line = sys.stdin.readline()
-except Exception:
-    logging.exception("syslog counter plugin unrecoverable error, exiting program")
+except Exception as e:
+    logging.exception("syslog counter plugin unrecoverable error: {}, exiting program".format(e))
     endedWithError = True
 
 logging.debug("syslog counter plugin exit")
