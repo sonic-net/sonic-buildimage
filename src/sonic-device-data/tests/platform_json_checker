@@ -8,7 +8,7 @@ import sys
 # Global variable
 PORT_ATTRIBUTES = ["index", "lanes", "breakout_modes"]
 ATTR_LEN = len(PORT_ATTRIBUTES)
-PORT_REG = "Ethernet(\d+)"
+PORT_REG = r"Ethernet(\d+)"
 PLATFORM_JSON = '*platform.json'
 INTF_KEY = "interfaces"
 CHASSIS_KEY = "chassis"
