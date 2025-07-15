@@ -406,7 +406,7 @@ class SonicYangPathMixin:
         token = token[idx:]
 
         # Use regex to extract our keys and values
-        key_value_pattern = "\[([^=]+)='([^']*)'\]"
+        key_value_pattern = r"\[([^=]+)='([^']*)'\]"
         matches = re.findall(key_value_pattern, token)
         kv = dict()
         for item in matches:
@@ -496,7 +496,7 @@ class SonicYangPathMixin:
             #   path: /VLAN/Vlan1000/dhcp_servers
             if configdb is None or len(leaf_list_tokens) == 1:
                 return [leaf_list_name]
-            leaf_list_pattern = "^[^\[]+(?:\[\.='([^']*)'\])?$"
+            leaf_list_pattern = r"^[^\[]+(?:\[\.='([^']*)'\])?$"
             leaf_list_regex = re.compile(leaf_list_pattern)
             match = leaf_list_regex.match(token)
             # leaf_list_name = match.group(1)
