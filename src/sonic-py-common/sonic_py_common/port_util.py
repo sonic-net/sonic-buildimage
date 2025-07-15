@@ -5,17 +5,17 @@ from swsscommon import swsscommon
 import re
 
 
-SONIC_ETHERNET_RE_PATTERN = "^Ethernet(\d+)$"
+SONIC_ETHERNET_RE_PATTERN = r"^Ethernet(\d+)$"
 """
 Ethernet-BP refers to BackPlane interfaces
 in multi-asic platform.
 """
-SONIC_ETHERNET_BP_RE_PATTERN = "^Ethernet-BP(\d+)$"
-SONIC_VLAN_RE_PATTERN = "^Vlan(\d+)$"
-SONIC_PORTCHANNEL_RE_PATTERN = "^PortChannel(\d+)$"
-SONIC_MGMT_PORT_RE_PATTERN = "^eth(\d+)$"
-SONIC_ETHERNET_IB_RE_PATTERN = "^Ethernet-IB(\d+)$"
-SONIC_ETHERNET_REC_RE_PATTERN = "^Ethernet-Rec(\d+)$"
+SONIC_ETHERNET_BP_RE_PATTERN = r"^Ethernet-BP(\d+)$"
+SONIC_VLAN_RE_PATTERN = r"^Vlan(\d+)$"
+SONIC_PORTCHANNEL_RE_PATTERN = r"^PortChannel(\d+)$"
+SONIC_MGMT_PORT_RE_PATTERN = r"^eth(\d+)$"
+SONIC_ETHERNET_IB_RE_PATTERN = r"^Ethernet-IB(\d+)$"
+SONIC_ETHERNET_REC_RE_PATTERN = r"^Ethernet-Rec(\d+)$"
 
 class BaseIdx:
     ethernet_base_idx = 1
