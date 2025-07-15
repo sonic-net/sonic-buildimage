@@ -39,7 +39,7 @@ class File:
         os.chown(self.path, st.st_uid, st.st_gid)
         os.utime(self.path, times=(st.st_atime, st.st_mtime))
 
-    @property
+    @property               
     def name(self):
         return os.path.basename(self.path)
 
@@ -251,3 +251,6 @@ def main(args):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
+
+
+#this is have edited
