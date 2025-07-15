@@ -49,6 +49,10 @@ write_default_zebra_config()
         echo "no fpm use-next-hop-groups" >> $FILE_NAME
         echo "fpm address 127.0.0.1" >> $FILE_NAME
     }
+
+    grep -q '^no zebra nexthop kernel enable' $FILE_NAME || {
+        echo "no zebra nexthop kernel enable" >> $FILE_NAME
+    }
 }
 
 if [[ ! -z "$NAMESPACE_ID" ]]; then
