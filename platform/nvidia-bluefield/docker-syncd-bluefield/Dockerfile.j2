@@ -56,7 +56,7 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
-RUN mkdir -p /etc/nv-bf/
-COPY sai-*.profile /etc/nv-bf/
+RUN mkdir -p /etc/mlnx/
+COPY sai-*.profile /etc/mlnx/
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
