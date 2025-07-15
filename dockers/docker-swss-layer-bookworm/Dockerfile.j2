@@ -16,6 +16,18 @@ RUN apt-get install iputils-ping
 {{ install_debian_packages(docker_swss_layer_bookworm_debs.split(' ')) }}
 {%- endif %}
 
+RUN apt-get update && apt-get install -y \
+    git cmake build-essential autoconf libtool pkg-config \
+    libcurl4-openssl-dev protobuf-compiler libprotobuf-dev \
+    libssl-dev zlib1g-dev
+
+WORKDIR /opt
+RUN git clone --recurse-submodules https://github.com/open-telemetry/opentelemetry-cpp && \
+    cd opentelemetry-cpp && \
+    mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc) && make install
+
 RUN apt-get clean -y      && \
     apt-get autoclean -y  && \
     apt-get autoremove -y && \
