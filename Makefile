@@ -2,10 +2,10 @@
 
 NOJESSIE ?= 1
 NOSTRETCH ?= 1
-NOBUSTER ?= 0
+NOBUSTER ?= 1
 NOBULLSEYE ?= 0
 NOBOOKWORM ?= 0
-NOTRIXIE ?= 1
+NOTRIXIE ?= 0
 
 override Q := @
 ifeq ($(QUIET),n)
