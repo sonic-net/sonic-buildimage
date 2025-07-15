@@ -53,6 +53,7 @@ try:
         current_time = time.time()
         if current_time - last_update_time >= 60:
             counters_db.set('COUNTERS_DB', 'SYSLOG_COUNTER', 'COUNT', syslog_count)
+            last_update_time = current_time
 
         # Send the status code to rsyslog:
         print("OK", flush=True)
