@@ -22,7 +22,7 @@ image_tag_noprefix=$image_tag
 image=`echo $image_tag | cut -f1 -d:`
 tag=`echo $image_tag | cut -f2 -d:`
 
-if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,all,* ]] || [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,docker,* ]]; then
+if [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,all,* ]] || [[ ",$SONIC_VERSION_CONTROL_COMPONENTS," == *,docker,* ]] && ls files/build/versions/dockers/ 2>/dev/null | grep -q $IMAGENAME; then
     # if docker image not in white list, exit
     if [[ "$image_tag" != */debian:* ]] && [[ "$image_tag" != debian:* ]] && [[ "$image_tag" != multiarch/debian-debootstrap:* ]];then
         exit 0
