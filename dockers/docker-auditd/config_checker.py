@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import json
-import time
 import subprocess
 import sys
 from sonic_py_common import logger as log
@@ -153,6 +152,4 @@ def main():
 
 
 if __name__ == "__main__":
-    while True:
-        main()
-        time.sleep(6000)
+    main()
