@@ -142,6 +142,12 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
+    data['NTP'] = {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+
     return data
 
 def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
@@ -150,6 +156,9 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     data['DEVICE_METADATA']['localhost']['type'] = 'SmartSwitchDPU'
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    if "SYSTEM_DEFAULTS" not in data:
+        data["SYSTEM_DEFAULTS"] = {}
 
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
@@ -166,6 +175,34 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
 
     crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
     crmconfig.update(dash_crm_thresholds)
+
+    if "pensando" in data['DEVICE_METADATA']['localhost']['hwsku'].lower():
+        data['SYSTEM_DEFAULTS'] = {
+            "polaris": {
+                "status": "enabled"
+            }
+        }
+
+    data["SYSTEM_DEFAULTS"]["software_bfd"] = {
+        "status": "enabled"
+    }
+
+    data['NTP_SERVER'] = {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    }
+
+    data['NTP'] = {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    }
 
     return data
 

@@ -44,11 +44,11 @@ parameters:
 - name: 'dists'
   type: object
   default:
+  - trixie
   - bookworm
   - bullseye
   - buster
   - stretch
-  - jessie
 - name: registry_url
   type: string
   default: sonicdev-microsoft.azurecr.io
@@ -61,14 +61,11 @@ stages:
   jobs:
   - ${{ each dist in parameters.dists }}:
     - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
-      - ${{ each arch in parameters.arches }}:
-        - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
-          parameters:
-            pool: sonicbld-1es
-            arch: ${{ arch }}
-            dist: ${{ dist }}
-            ${{ if ne(arch, 'amd64') }}:
-              march: _march_${{ arch }}
+      - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
+        parameters:
+          pool: sonicbld-1es
+          arch: amd64
+          dist: ${{ dist }}
 - stage: Build_native_arm
   dependsOn: []
   jobs:

@@ -1,2 +1,1 @@
-protobuf==5.29.3
-pygobject==3.42.2
+protobuf==6.31.1

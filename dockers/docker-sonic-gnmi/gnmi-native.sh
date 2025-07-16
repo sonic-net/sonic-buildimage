@@ -129,7 +129,11 @@ else
 fi
 
 USER_AUTH=$(extract_field "$GNMI" '.user_auth')
-if [ ! -z "$USER_AUTH" ]; then
+# If user_auth is not set, default to certs
+if [ -z $USER_AUTH ]; then
+    USER_AUTH="cert"
+fi
+if [  $USER_AUTH != "none" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
     if [ $USER_AUTH == "cert" ]; then

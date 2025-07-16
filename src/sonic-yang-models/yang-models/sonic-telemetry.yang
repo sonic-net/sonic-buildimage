@@ -88,7 +88,7 @@ module sonic-telemetry {
 
                 leaf user_auth {
                     type string {
-                        pattern 'password|jwt|cert';
+                        pattern 'password|jwt|cert|none';
                     }
                     description "Telemetry service user authorization type.";
                 }

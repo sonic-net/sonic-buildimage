@@ -1,0 +1,3234 @@
+From a95fd3e76fc1e056c53752963017a7fd75ed99b2 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 2 Apr 2025 13:20:18 +0200
+Subject: [PATCH 1/8] lib: add support for flavors in seg6 routes
+
+Until now, the 'show ipv6 route' was not showing up the flavors.
+
+> ip/ip -6 route add 2007::1 encap seg6local action End flavors psp dev dum1
+
+Before:
+> rt1# show ipv6 route
+> [..]
+> K>* 2007::1/128 [0/1024] is directly connected, dum1, seg6local End -, weight 1, 00:00:04
+
+After:
+> rt1# show ipv6 route
+> [..]
+> K>* 2007::1/128 [0/1024] is directly connected, dum1, seg6local End (PSP), weight 1, 00:00:04
+
+Note that the next-csid linux flavor will be handled separately.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ lib/srv6.c | 42 ++++++++++++++++++++++++++++++++++++------
+ lib/srv6.h |  3 +++
+ 2 files changed, 39 insertions(+), 6 deletions(-)
+
+diff --git a/lib/srv6.c b/lib/srv6.c
+index 4d820e2fcc15..e8a0d505df9a 100644
+--- a/lib/srv6.c
++++ b/lib/srv6.c
+@@ -116,35 +116,65 @@ void seg6local_context2json(const struct seg6local_context *ctx,
+ 	}
+ }
+ 
++static char *seg6local_flavors2str(char *str, size_t size,
++				   const struct seg6local_flavors_info *flv_info)
++{
++	size_t len = 0;
++	bool first = true;
++
++	if (!CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_PSP |
++							  ZEBRA_SEG6_LOCAL_FLV_OP_USP |
++							  ZEBRA_SEG6_LOCAL_FLV_OP_USD))
++		return str;
++
++	len += snprintf(str + len, size - len, " (");
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_PSP)) {
++		len += snprintf(str + len, size - len, "%sPSP", first ? "" : "/");
++		first = false;
++	}
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_USP)) {
++		len += snprintf(str + len, size - len, "%sUSP", first ? "" : "/");
++		first = false;
++	}
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_USD))
++		len += snprintf(str + len, size - len, "%sUSD", first ? "" : "/");
++
++	snprintf(str + len, size - len, ")");
++
++	return str;
++}
+ const char *seg6local_context2str(char *str, size_t size,
+ 				  const struct seg6local_context *ctx,
+ 				  uint32_t action)
+ {
+-	switch (action) {
++	char flavor[SRV6_FLAVORS_STRLEN], *p_flavor;
+ 
++	flavor[0] = '\0';
++	p_flavor = seg6local_flavors2str(flavor, sizeof(flavor), &ctx->flv);
++	switch (action) {
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END:
+-		snprintf(str, size, "-");
++		snprintf(str, size, "%s", p_flavor);
+ 		return str;
+ 
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+-		snprintfrr(str, size, "nh6 %pI6", &ctx->nh6);
++		snprintfrr(str, size, "nh6 %pI6%s", &ctx->nh6, p_flavor);
+ 		return str;
+ 
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+-		snprintfrr(str, size, "nh4 %pI4", &ctx->nh4);
++		snprintfrr(str, size, "nh4 %pI4%s", &ctx->nh4, p_flavor);
+ 		return str;
+ 
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+-		snprintf(str, size, "table %u", ctx->table);
++		snprintf(str, size, "table %u%s", ctx->table, p_flavor);
+ 		return str;
+ 
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+-		snprintfrr(str, size, "nh6 %pI6", &ctx->nh6);
++		snprintfrr(str, size, "nh6 %pI6%s", &ctx->nh6, p_flavor);
+ 		return str;
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
+diff --git a/lib/srv6.h b/lib/srv6.h
+index bd80253b55a3..708792fb288d 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -88,6 +88,9 @@ struct seg6_segs {
+ 	struct in6_addr segs[256];
+ };
+ 
++/* flavors psp, usd, usp, next-csid */
++#define SRV6_FLAVORS_STRLEN 50
++
+ struct seg6local_flavors_info {
+ 	/* Flavor operations */
+ 	uint32_t flv_ops;
+
+From 25056f31b6d9de4dc48676cfa28a931c051f1373 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Wed, 2 Apr 2025 15:14:50 +0200
+Subject: [PATCH 2/8] zebra: precise debug information about NHA_ENCAP
+ attribute
+
+Tell in the NHA_ENCAP attribute that it may also contain SRv6 SIDs.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ zebra/debug_nl.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/zebra/debug_nl.c b/zebra/debug_nl.c
+index 037d0b6237d2..8b0372b03cea 100644
+--- a/zebra/debug_nl.c
++++ b/zebra/debug_nl.c
+@@ -1409,8 +1409,8 @@ static void nlnh_dump(struct nhmsg *nhm, size_t msglen)
+ 		}
+ 		break;
+ 	case NHA_ENCAP:
+-		/* TODO: handle MPLS labels. */
+-		zlog_debug("      unparsed MPLS labels");
++		/* TODO: handle MPLS labels or SRv6 SIDs. */
++		zlog_debug("      unparsed MPLS labels or SRv6 SIDs");
+ 		break;
+ 	case NHA_GROUPS:
+ 		/* TODO: handle this message. */
+
+From a078e2e52e98da9362fc7fa267a7e8933139f8f8 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 11 Apr 2025 21:41:54 +0200
+Subject: [PATCH 3/8] lib: add flavors display in json attributes
+
+Add flavors display in json nexthop attributes.
+
+> # ip -6 route add 2007::1 encap seg6local action End flavors psp dev dum1
+> # vtysh -c "show ipv6 route json"
+> [..]
+> ,"2007::1/128":[{"prefix":"2007::1/128","prefixLen":128,"protocol":"kernel","vrfId":0,
+> "vrfName":"default","selected":true,"destSelected":true,"distance":0,"metric":1024,
+> "installed":true,"table":254,"internalStatus":16,"internalFlags":8,"internalNextHopNum":1,
+> "internalNextHopActiveNum":1,"nexthopGroupId":28,"installedNexthopGroupId":28,"uptime":"00:04:20",
+> "nexthops":[{"flags":3,"fib":true,"directlyConnected":true,"interfaceIndex":19,"interfaceName":"dum1",
+> "active":true,"weight":1,"seg6local":{"action":"End","sidStructure":{"blockLen":0,"nodeLen":0,"funcLen":0,"argLen":0}},
+> "seg6localContext":{"flavors":["psp"]}}]}]
+> [..]
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ lib/srv6.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/lib/srv6.c b/lib/srv6.c
+index e8a0d505df9a..4e973e3642be 100644
+--- a/lib/srv6.c
++++ b/lib/srv6.c
+@@ -71,6 +71,21 @@ int snprintf_seg6_segs(char *str,
+ 	return strlen(str);
+ }
+ 
++static void seg6local_flavors2json(json_object *json, const struct seg6local_flavors_info *flv_info)
++{
++	json_object *json_flavors;
++
++	json_flavors = json_object_new_array();
++	json_object_object_add(json, "flavors", json_flavors);
++
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_PSP))
++		json_array_string_add(json_flavors, "psp");
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_USP))
++		json_array_string_add(json_flavors, "usp");
++	if (CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_USD))
++		json_array_string_add(json_flavors, "usd");
++}
++
+ void srv6_sid_structure2json(const struct seg6local_context *ctx, json_object *json)
+ {
+ 	json_object_int_add(json, "blockLen", ctx->block_len);
+@@ -82,6 +97,7 @@ void srv6_sid_structure2json(const struct seg6local_context *ctx, json_object *j
+ void seg6local_context2json(const struct seg6local_context *ctx,
+ 			    uint32_t action, json_object *json)
+ {
++	seg6local_flavors2json(json, &ctx->flv);
+ 	switch (action) {
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END:
+ 		return;
+
+From 4f263d2208c2c378e618b2d0a7d88d15d66e1784 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Thu, 24 Apr 2025 15:55:45 +0200
+Subject: [PATCH 4/8] lib: add support for next-csid instruction display in
+ nexthops
+
+The next-csid term is only used by IETF; instead, the industry is using
+the uSID terminology defined in the linked document. Instead of
+displaying the next-csid instruction with the other flavors, replace the
+non microsid behavior with the associated microsid behavior. Example:
+- End becomes uN
+- End.X becomes uA
+- End.DT4 becomes uT4
+- ...
+
+> # ip -6 route add 2008::1 encap seg6local action End flavors next-csid,psp dev dum1
+> # show ipv6 route
+> [..]
+> K>* 2008::1/128 [0/1024] is directly connected, dum1, seg6local uN (PSP), weight 1, 00:00:05
+> [..]
+> # show ipv6 route json
+> [..]
+> ,"2008::1/128":[{"prefix":"2008::1/128","prefixLen":128,"protocol":"kernel","vrfId":0,
+> "vrfName":"default","selected":true,"destSelected":true,"distance":0,"metric":1024,"installed":true,
+> "table":254,"internalStatus":16,"internalFlags":8,"internalNextHopNum":1,"internalNextHopActiveNum":1,
+> "nexthopGroupId":30,"installedNexthopGroupId":30,"uptime":"00:01:12","nexthops":[{"flags":3,"fib":true,
+> "directlyConnected":true,"interfaceIndex":19,"interfaceName":"dum1","active":true,"weight":1,
+> "seg6local":{"action":"uN","sidStructure":{"blockLen":0,"nodeLen":0,"funcLen":0,"argLen":0}},
+> "seg6localContext":{"flavors":["psp"]}}]}]
+> [..]
+
+Link: https://datatracker.ietf.org/doc/html/draft-filsfils-spring-net-pgm-extension-srv6-usid
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ lib/nexthop.c | 13 ++++++++-----
+ lib/srv6.c    | 31 ++++++++++++++++++-------------
+ lib/srv6.h    | 12 ++++++++++++
+ 3 files changed, 38 insertions(+), 18 deletions(-)
+
+diff --git a/lib/nexthop.c b/lib/nexthop.c
+index c377b9cb0067..cc8327f2aa8d 100644
+--- a/lib/nexthop.c
++++ b/lib/nexthop.c
+@@ -1316,9 +1316,10 @@ void nexthop_json_helper(json_object *json_nexthop,
+ 	if (nexthop->nh_srv6) {
+ 		json_seg6local = json_object_new_object();
+ 		json_object_string_add(json_seg6local, "action",
+-				       seg6local_action2str(
+-					       nexthop->nh_srv6
+-						       ->seg6local_action));
++				       seg6local_action2str_with_next_csid(
++					       nexthop->nh_srv6->seg6local_action,
++					       seg6local_has_next_csid(
++						       &nexthop->nh_srv6->seg6local_ctx)));
+ 		json_seg6local_context = json_object_new_object();
+ 		json_object_object_add(json_nexthop, "seg6local",
+ 				       json_seg6local);
+@@ -1471,8 +1472,10 @@ void nexthop_vty_helper(struct vty *vty, const struct nexthop *nexthop,
+ 		if (nexthop->nh_srv6->seg6local_action !=
+ 		    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC)
+ 			vty_out(vty, ", seg6local %s %s",
+-				seg6local_action2str(
+-					nexthop->nh_srv6->seg6local_action),
++				seg6local_action2str_with_next_csid(nexthop->nh_srv6->seg6local_action,
++								    seg6local_has_next_csid(
++									    &nexthop->nh_srv6
++										     ->seg6local_ctx)),
+ 				buf);
+ 		if (nexthop->nh_srv6->seg6_segs &&
+ 		    IPV6_ADDR_CMP(&nexthop->nh_srv6->seg6_segs->seg[0],
+diff --git a/lib/srv6.c b/lib/srv6.c
+index 4e973e3642be..40e4e58ac4c7 100644
+--- a/lib/srv6.c
++++ b/lib/srv6.c
+@@ -16,31 +16,31 @@ DEFINE_MTYPE_STATIC(LIB, SRV6_LOCATOR_CHUNK, "SRV6 locator chunk");
+ DEFINE_MTYPE_STATIC(LIB, SRV6_SID_FORMAT, "SRv6 SID format");
+ DEFINE_MTYPE_STATIC(LIB, SRV6_SID_CTX, "SRv6 SID context");
+ 
+-const char *seg6local_action2str(uint32_t action)
++const char *seg6local_action2str_with_next_csid(uint32_t action, bool has_next_csid)
+ {
+ 	switch (action) {
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END:
+-		return "End";
++		return has_next_csid ? "uN" : "End";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+-		return "End.X";
++		return has_next_csid ? "uA" : "End.X";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+-		return "End.T";
++		return has_next_csid ? "uDT" : "End.T";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX2:
+-		return "End.DX2";
++		return has_next_csid ? "uDX2" : "End.DX2";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+-		return "End.DX6";
++		return has_next_csid ? "uDX6" : "End.DX6";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+-		return "End.DX4";
++		return has_next_csid ? "uDX4" : "End.DX4";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+-		return "End.DT6";
++		return has_next_csid ? "uDT6" : "End.DT6";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+-		return "End.DT4";
++		return has_next_csid ? "uDT4" : "End.DT4";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_B6:
+-		return "End.B6";
++		return has_next_csid ? "uB6" : "End.B6";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_B6_ENCAP:
+-		return "End.B6.Encap";
++		return has_next_csid ? "uB6.Encap" : "End.B6.Encap";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_BM:
+-		return "End.BM";
++		return has_next_csid ? "uBM" : "End.BM";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_S:
+ 		return "End.S";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+@@ -48,7 +48,7 @@ const char *seg6local_action2str(uint32_t action)
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+ 		return "End.AM";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+-		return "End.DT46";
++		return has_next_csid ? "uDT46" : "End.DT46";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+ 		return "unspec";
+ 	default:
+@@ -56,6 +56,11 @@ const char *seg6local_action2str(uint32_t action)
+ 	}
+ }
+ 
++const char *seg6local_action2str(uint32_t action)
++{
++	return seg6local_action2str_with_next_csid(action, false);
++}
++
+ int snprintf_seg6_segs(char *str,
+ 		size_t size, const struct seg6_segs *segs)
+ {
+diff --git a/lib/srv6.h b/lib/srv6.h
+index 708792fb288d..fd972e72163d 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -203,6 +203,16 @@ enum srv6_endpoint_behavior_codepoint {
+ 	SRV6_ENDPOINT_BEHAVIOR_OPAQUE           = 0xFFFF,
+ };
+ 
++/*
++ * Return true if next-csid behavior is used, false otherwise
++ */
++static inline bool seg6local_has_next_csid(const struct seg6local_context *ctx)
++{
++	const struct seg6local_flavors_info *flv_info = &ctx->flv;
++
++	return CHECK_SRV6_FLV_OP(flv_info->flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
++}
++
+ /*
+  * Convert SRv6 endpoint behavior codepoints to human-friendly string.
+  */
+@@ -395,6 +405,8 @@ static inline void *sid_copy(struct in6_addr *dst,
+ 	return memcpy(dst, src, sizeof(struct in6_addr));
+ }
+ 
++const char *seg6local_action2str_with_next_csid(uint32_t action, bool has_next_csid);
++
+ const char *
+ seg6local_action2str(uint32_t action);
+ 
+
+From f3b54050e7f33a35171ddc596eeaff81e63bf1ab Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 25 Apr 2025 15:36:49 +0200
+Subject: [PATCH 5/8] topotests: adapt isis_srv6_topo1 to uN notation
+
+The 'show ipv6 route' command now displays the seg6local action in uN
+notation when sids are micro SIDs. Propagate the changes in the test
+for End and End.X operations.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../isis_srv6_topo1/rt1/step1/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt1/step3/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt1/step5/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt1/step7/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt1/step9/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt2/step1/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step2/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step3/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step4/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step5/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step6/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step7/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step8/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt2/step9/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step1/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step2/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step3/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step4/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step5/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step6/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step7/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step8/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt3/step9/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step1/show_ipv6_route.ref    | 12 ++++++------
+ .../isis_srv6_topo1/rt4/step2/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step3/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step4/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step5/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step6/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step7/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step8/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt4/step9/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step1/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step2/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step3/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step4/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step5/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step6/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step7/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step8/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt5/step9/show_ipv6_route.ref    | 10 +++++-----
+ .../isis_srv6_topo1/rt6/step1/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step2/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step3/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step4/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step5/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step6/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step7/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step8/show_ipv6_route.ref    |  6 +++---
+ .../isis_srv6_topo1/rt6/step9/show_ipv6_route.ref    |  6 +++---
+ 50 files changed, 223 insertions(+), 223 deletions(-)
+
+diff --git a/tests/topotests/isis_srv6_topo1/rt1/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt1/step1/show_ipv6_route.ref
+index 2d30fc4d17e2..a1da9d8ae40d 100644
+--- a/tests/topotests/isis_srv6_topo1/rt1/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt1/step1/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt1/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt1/step3/show_ipv6_route.ref
+index 2d30fc4d17e2..a1da9d8ae40d 100644
+--- a/tests/topotests/isis_srv6_topo1/rt1/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt1/step3/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt1/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt1/step5/show_ipv6_route.ref
+index 2d30fc4d17e2..a1da9d8ae40d 100644
+--- a/tests/topotests/isis_srv6_topo1/rt1/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt1/step5/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt1/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt1/step7/show_ipv6_route.ref
+index 2d30fc4d17e2..a1da9d8ae40d 100644
+--- a/tests/topotests/isis_srv6_topo1/rt1/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt1/step7/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt1/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt1/step9/show_ipv6_route.ref
+index 2d30fc4d17e2..a1da9d8ae40d 100644
+--- a/tests/topotests/isis_srv6_topo1/rt1/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt1/step9/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step1/show_ipv6_route.ref
+index 150fa92241df..5780b73ab2b1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step1/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step2/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step2/show_ipv6_route.ref
+index f9c2d098cc60..b6188ea6bee5 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step2/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step2/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step3/show_ipv6_route.ref
+index 150fa92241df..5780b73ab2b1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step3/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step4/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step4/show_ipv6_route.ref
+index f9c2d098cc60..b6188ea6bee5 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step4/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step4/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step5/show_ipv6_route.ref
+index 150fa92241df..5780b73ab2b1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step5/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step6/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step6/show_ipv6_route.ref
+index f9c2d098cc60..b6188ea6bee5 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step6/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step6/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step7/show_ipv6_route.ref
+index 150fa92241df..5780b73ab2b1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step7/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step8/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step8/show_ipv6_route.ref
+index f9c2d098cc60..b6188ea6bee5 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step8/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step8/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt2/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt2/step9/show_ipv6_route.ref
+index 150fa92241df..5780b73ab2b1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt2/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt2/step9/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step1/show_ipv6_route.ref
+index fc0e5161c221..04912da1be0f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step1/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step2/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step2/show_ipv6_route.ref
+index a24d95e78ed7..142aeed0d21a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step2/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step2/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step3/show_ipv6_route.ref
+index fc0e5161c221..04912da1be0f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step3/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step4/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step4/show_ipv6_route.ref
+index a24d95e78ed7..142aeed0d21a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step4/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step4/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step5/show_ipv6_route.ref
+index fc0e5161c221..04912da1be0f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step5/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step6/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step6/show_ipv6_route.ref
+index a24d95e78ed7..142aeed0d21a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step6/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step6/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step7/show_ipv6_route.ref
+index fc0e5161c221..04912da1be0f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step7/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step8/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step8/show_ipv6_route.ref
+index a24d95e78ed7..142aeed0d21a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step8/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step8/show_ipv6_route.ref
+@@ -234,7 +234,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -255,7 +255,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -276,7 +276,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -297,7 +297,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -318,7 +318,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt3/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt3/step9/show_ipv6_route.ref
+index fc0e5161c221..04912da1be0f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt3/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt3/step9/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step1/show_ipv6_route.ref
+index 2878c24cc85d..a717b1fece1f 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step1/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,10 +337,10 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+     }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step2/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step2/show_ipv6_route.ref
+index bea54ba6b282..1199d3db249a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step2/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step2/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step3/show_ipv6_route.ref
+index 2878c24cc85d..da2fffb0b253 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step3/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step4/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step4/show_ipv6_route.ref
+index bea54ba6b282..1199d3db249a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step4/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step4/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step5/show_ipv6_route.ref
+index 2878c24cc85d..da2fffb0b253 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step5/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step6/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step6/show_ipv6_route.ref
+index bea54ba6b282..1199d3db249a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step6/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step6/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step7/show_ipv6_route.ref
+index 2878c24cc85d..da2fffb0b253 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step7/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step8/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step8/show_ipv6_route.ref
+index bea54ba6b282..1199d3db249a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step8/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step8/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt4/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt4/step9/show_ipv6_route.ref
+index 2878c24cc85d..da2fffb0b253 100644
+--- a/tests/topotests/isis_srv6_topo1/rt4/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt4/step9/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step1/show_ipv6_route.ref
+index d6ad4c2aad24..ddfb175da8a1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step1/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step2/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step2/show_ipv6_route.ref
+index c24527017709..7788d73c433a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step2/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step2/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step3/show_ipv6_route.ref
+index d6ad4c2aad24..ddfb175da8a1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step3/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step4/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step4/show_ipv6_route.ref
+index c24527017709..7788d73c433a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step4/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step4/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step5/show_ipv6_route.ref
+index d6ad4c2aad24..ddfb175da8a1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step5/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step6/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step6/show_ipv6_route.ref
+index c24527017709..7788d73c433a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step6/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step6/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step7/show_ipv6_route.ref
+index d6ad4c2aad24..ddfb175da8a1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step7/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step8/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step8/show_ipv6_route.ref
+index c24527017709..7788d73c433a 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step8/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step8/show_ipv6_route.ref
+@@ -228,7 +228,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -249,7 +249,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -270,7 +270,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -291,7 +291,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -312,7 +312,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt5/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt5/step9/show_ipv6_route.ref
+index d6ad4c2aad24..ddfb175da8a1 100644
+--- a/tests/topotests/isis_srv6_topo1/rt5/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt5/step9/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step1/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step1/show_ipv6_route.ref
+index 407e2d0f4cfe..41add1c0388b 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step1/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step1/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step2/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step2/show_ipv6_route.ref
+index 6c64bd7d1eec..dce69c0773ae 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step2/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step2/show_ipv6_route.ref
+@@ -192,7 +192,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -213,7 +213,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -234,7 +234,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step3/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step3/show_ipv6_route.ref
+index 407e2d0f4cfe..41add1c0388b 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step3/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step3/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step4/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step4/show_ipv6_route.ref
+index 6c64bd7d1eec..dce69c0773ae 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step4/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step4/show_ipv6_route.ref
+@@ -192,7 +192,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -213,7 +213,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -234,7 +234,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step5/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step5/show_ipv6_route.ref
+index 407e2d0f4cfe..41add1c0388b 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step5/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step5/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step6/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step6/show_ipv6_route.ref
+index 6c64bd7d1eec..dce69c0773ae 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step6/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step6/show_ipv6_route.ref
+@@ -192,7 +192,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -213,7 +213,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -234,7 +234,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step7/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step7/show_ipv6_route.ref
+index 407e2d0f4cfe..41add1c0388b 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step7/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step7/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step8/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step8/show_ipv6_route.ref
+index 6c64bd7d1eec..dce69c0773ae 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step8/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step8/show_ipv6_route.ref
+@@ -192,7 +192,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -213,7 +213,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -234,7 +234,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/isis_srv6_topo1/rt6/step9/show_ipv6_route.ref b/tests/topotests/isis_srv6_topo1/rt6/step9/show_ipv6_route.ref
+index 407e2d0f4cfe..41add1c0388b 100644
+--- a/tests/topotests/isis_srv6_topo1/rt6/step9/show_ipv6_route.ref
++++ b/tests/topotests/isis_srv6_topo1/rt6/step9/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+
+From abf2e50245d70adbc775f9a1df0990d6f7284ae5 Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 25 Apr 2025 15:42:26 +0200
+Subject: [PATCH 6/8] topotests: adapt srv6_sid_manager to uN notation
+
+The 'show ipv6 route' command now displays the seg6local action in uN
+notation when sids are micro SIDs. Propagate the changes in the test
+for End, End.X, and End.DT4 operations.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../topotests/srv6_sid_manager/rt1/show_ipv6_route.ref | 10 +++++-----
+ .../topotests/srv6_sid_manager/rt2/show_ipv6_route.ref | 10 +++++-----
+ .../topotests/srv6_sid_manager/rt3/show_ipv6_route.ref | 10 +++++-----
+ .../topotests/srv6_sid_manager/rt4/show_ipv6_route.ref | 10 +++++-----
+ .../topotests/srv6_sid_manager/rt5/show_ipv6_route.ref | 10 +++++-----
+ .../topotests/srv6_sid_manager/rt6/show_ipv6_route.ref | 10 +++++-----
+ 6 files changed, 30 insertions(+), 30 deletions(-)
+
+diff --git a/tests/topotests/srv6_sid_manager/rt1/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt1/show_ipv6_route.ref
+index cdbec3f2c11f..0e9248705a25 100644
+--- a/tests/topotests/srv6_sid_manager/rt1/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt1/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -239,7 +239,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -261,7 +261,7 @@
+           "interfaceName":"eth-sw1",
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -283,7 +283,7 @@
+           "interfaceName":"vrf10",
+           "active":true,
+           "seg6local":{
+-            "action":"End.DT6"
++            "action":"uDT6"
+           }
+         }
+       ]
+@@ -305,7 +305,7 @@
+           "interfaceName":"vrf20",
+           "active":true,
+           "seg6local":{
+-            "action":"End.DT6"
++            "action":"uDT6"
+           }
+         }
+       ]
+diff --git a/tests/topotests/srv6_sid_manager/rt2/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt2/show_ipv6_route.ref
+index fc0f1d3bccd2..29d8c014e707 100644
+--- a/tests/topotests/srv6_sid_manager/rt2/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt2/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/srv6_sid_manager/rt3/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt3/show_ipv6_route.ref
+index c590fcfdbc4a..81ee9c180c02 100644
+--- a/tests/topotests/srv6_sid_manager/rt3/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt3/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/srv6_sid_manager/rt4/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt4/show_ipv6_route.ref
+index 7b575f1888fb..e37deb545aa6 100644
+--- a/tests/topotests/srv6_sid_manager/rt4/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt4/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/srv6_sid_manager/rt5/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt5/show_ipv6_route.ref
+index a7b3262f8631..4730652131e9 100644
+--- a/tests/topotests/srv6_sid_manager/rt5/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt5/show_ipv6_route.ref
+@@ -253,7 +253,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -274,7 +274,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -295,7 +295,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -316,7 +316,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -337,7 +337,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+diff --git a/tests/topotests/srv6_sid_manager/rt6/show_ipv6_route.ref b/tests/topotests/srv6_sid_manager/rt6/show_ipv6_route.ref
+index d06354b8729a..3a8321ea07e6 100644
+--- a/tests/topotests/srv6_sid_manager/rt6/show_ipv6_route.ref
++++ b/tests/topotests/srv6_sid_manager/rt6/show_ipv6_route.ref
+@@ -217,7 +217,7 @@
+           "interfaceName":"sr0",
+           "active":true,
+           "seg6local":{
+-            "action":"End"
++            "action":"uN"
+           }
+         }
+       ]
+@@ -238,7 +238,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -259,7 +259,7 @@
+           "directlyConnected":true,
+           "active":true,
+           "seg6local":{
+-            "action":"End.X"
++            "action":"uA"
+           }
+         }
+       ]
+@@ -281,7 +281,7 @@
+           "interfaceName":"vrf10",
+           "active":true,
+           "seg6local":{
+-            "action":"End.DT6"
++            "action":"uDT6"
+           }
+         }
+       ]
+@@ -303,7 +303,7 @@
+           "interfaceName":"vrf20",
+           "active":true,
+           "seg6local":{
+-            "action":"End.DT6"
++            "action":"uDT6"
+           }
+         }
+       ]
+
+From 7413c3df20af1b86bae27de5fb589406943c17df Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 25 Apr 2025 16:08:07 +0200
+Subject: [PATCH 7/8] staticd: fix missing next-csid flavor for uDTx operations
+
+The uDT4/uDT6/uDT46 behaviors have not set the next-csid flavor when
+passing the seg6local route instruction to zebra.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ staticd/static_zebra.c | 48 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index cc09b428365f..a889907f8b8a 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -660,7 +660,23 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 		ctx.flv.lcnode_func_len = sid->locator->node_bits_length;
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
++		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
++		if (!vrf_is_enabled(vrf)) {
++			zlog_warn("Failed to install SID %pFX: VRF %s is inactive", &sid->addr,
++				  sid->attributes.vrf_name);
++			return;
++		}
++		ctx.table = vrf->data.l.table_id;
++		ifp = if_get_vrf_loopback(vrf->vrf_id);
++		if (!ifp) {
++			zlog_warn("Failed to install SID %pFX: failed to get loopback for vrf %s",
++				  &sid->addr, sid->attributes.vrf_name);
++			return;
++		}
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT6_USID:
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT6;
+ 		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
+ 		if (!vrf_is_enabled(vrf)) {
+@@ -677,7 +693,23 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 		}
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT4;
++		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
++		if (!vrf_is_enabled(vrf)) {
++			zlog_warn("Failed to install SID %pFX: VRF %s is inactive", &sid->addr,
++				  sid->attributes.vrf_name);
++			return;
++		}
++		ctx.table = vrf->data.l.table_id;
++		ifp = if_get_vrf_loopback(vrf->vrf_id);
++		if (!ifp) {
++			zlog_warn("Failed to install SID %pFX: failed to get loopback for vrf %s",
++				  &sid->addr, sid->attributes.vrf_name);
++			return;
++		}
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT4_USID:
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT4;
+ 		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
+ 		if (!vrf_is_enabled(vrf)) {
+@@ -694,7 +726,23 @@ void static_zebra_srv6_sid_install(struct static_srv6_sid *sid)
+ 		}
+ 		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46:
++		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
++		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
++		if (!vrf_is_enabled(vrf)) {
++			zlog_warn("Failed to install SID %pFX: VRF %s is inactive", &sid->addr,
++				  sid->attributes.vrf_name);
++			return;
++		}
++		ctx.table = vrf->data.l.table_id;
++		ifp = if_get_vrf_loopback(vrf->vrf_id);
++		if (!ifp) {
++			zlog_warn("Failed to install SID %pFX: failed to get loopback for vrf %s",
++				  &sid->addr, sid->attributes.vrf_name);
++			return;
++		}
++		break;
+ 	case SRV6_ENDPOINT_BEHAVIOR_END_DT46_USID:
++		SET_SRV6_FLV_OP(ctx.flv.flv_ops, ZEBRA_SEG6_LOCAL_FLV_OP_NEXT_CSID);
+ 		action = ZEBRA_SEG6_LOCAL_ACTION_END_DT46;
+ 		vrf = vrf_lookup_by_name(sid->attributes.vrf_name);
+ 		if (!vrf_is_enabled(vrf)) {
+
+From 9d4ad7fcdc392a492708af8913b8fb228111cf5a Mon Sep 17 00:00:00 2001
+From: Philippe Guibert <philippe.guibert@6wind.com>
+Date: Fri, 25 Apr 2025 16:11:41 +0200
+Subject: [PATCH 8/8] topotests: adapt static_srv6_sids to uN notation
+
+The 'show ipv6 route' command now displays the seg6local action in uN
+notation when sids are micro SIDs. Propagate the changes in the test
+for End, End.X, and End.DT[4/6/46] operations.
+
+Signed-off-by: Philippe Guibert <philippe.guibert@6wind.com>
+---
+ .../topotests/static_srv6_sids/expected_srv6_sids.json | 10 +++++-----
+ .../expected_srv6_sids_sid_delete_1.json               |  8 ++++----
+ .../expected_srv6_sids_sid_delete_2.json               |  6 +++---
+ .../expected_srv6_sids_sid_modify.json                 | 10 +++++-----
+ 4 files changed, 17 insertions(+), 17 deletions(-)
+
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids.json b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+index 1796c870a689..1cdf3cd1d69a 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids.json
+@@ -25,7 +25,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End",
++						"action": "uN",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -66,7 +66,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT4",
++						"action": "uDT4",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -107,7 +107,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT6",
++						"action": "uDT6",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -148,7 +148,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT46",
++						"action": "uDT46",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -189,7 +189,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.X"
++						"action": "uA"
+ 					},
+ 					"seg6localContext": {
+ 						"nh6": "2001::2"
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+index bd1f4bf87a74..573d8284da6e 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_1.json
+@@ -25,7 +25,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT4",
++						"action": "uDT4",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -66,7 +66,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT6",
++						"action": "uDT6",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -107,7 +107,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT46",
++						"action": "uDT46",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -148,7 +148,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.X"
++						"action": "uA"
+ 					},
+ 					"seg6localContext": {
+ 						"nh6": "2001::2"
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+index 2bd40cdb5c2c..02748ccd35e0 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_delete_2.json
+@@ -25,7 +25,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT4",
++						"action": "uDT4",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -66,7 +66,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT46",
++						"action": "uDT46",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -107,7 +107,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.X"
++						"action": "uA"
+ 					},
+ 					"seg6localContext": {
+ 						"nh6": "2001::2"
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
+index 070b7ade20a2..ec5efb5297f6 100644
+--- a/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_sid_modify.json
+@@ -25,7 +25,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End",
++						"action": "uN",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -66,7 +66,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT4",
++						"action": "uDT4",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -107,7 +107,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT46",
++						"action": "uDT46",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -148,7 +148,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.DT46",
++						"action": "uDT46",
+ 						"sidStructure": {
+ 							"blockLen": 32,
+ 							"nodeLen": 16,
+@@ -189,7 +189,7 @@
+ 					"active": true,
+ 					"weight": 1,
+ 					"seg6local": {
+-						"action": "End.X"
++						"action": "uA"
+ 					},
+ 					"seg6localContext": {
+ 						"nh6": "2001::2"

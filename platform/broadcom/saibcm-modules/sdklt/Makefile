@@ -57,12 +57,15 @@ KNETCB_BLDDIR := $(OUTPUT_DIR)/knetcb
 BCMGENL_BLDDIR := $(OUTPUT_DIR)/bcmgenl
 GENL_PACKET_BLDDIR := $(OUTPUT_DIR)/genl-packet
 EDK_BLDDIR := $(OUTPUT_DIR)/edk
-PTP_BLDDIR := $(OUTPUT_DIR)/ptpclock
+PTPCLOCK_BLDDIR := $(OUTPUT_DIR)/ptpclock
+ST_BLDDIR := $(OUTPUT_DIR)/st
 
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
 
-kmod: bde knet knetcb genl-packet bcmgenl edk ptpclock
+KMODS := bde knet knetcb genl-packet bcmgenl edk ptpclock st
+
+kmod: $(KMODS)
 
 bde:
 	$(MAKE) -C $(SDK)/linux/bde SDK=$(SDK) \
@@ -98,13 +101,20 @@ edk: bde
 		LKM_BLDDIR=$(EDK_BLDDIR) $(TARGET)
 	ln -sf $(EDK_BLDDIR)/*.ko $(OUTPUT_DIR)
 
-ptpclock: knet edk
+ptpclock: bde knet edk
 	$(MAKE) -C $(SDK)/linux/ptpclock SDK=$(SDK) \
-		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS+=$(KNET_BLDDIR)/Module.symvers \
 		KBUILD_EXTRA_SYMBOLS+=$(EDK_BLDDIR)/Module.symvers \
-		KBUILD_EXTRA_SYMBOLS+=$(BDE_BLDDIR)/Module.symvers \
-		LKM_BLDDIR=$(PTP_BLDDIR) $(TARGET)
-	ln -sf $(PTP_BLDDIR)/*.ko $(OUTPUT_DIR)
+		LKM_BLDDIR=$(PTPCLOCK_BLDDIR) $(TARGET)
+	ln -sf $(PTPCLOCK_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+st: bde
+	$(MAKE) -C $(SDK)/linux/st SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(ST_BLDDIR) $(TARGET)
+	ln -sf $(ST_BLDDIR)/*.ko $(OUTPUT_DIR)
+
 clean:
 	$(MAKE) kmod TARGET=$@
 	rm -f $(OUTPUT_DIR)/*.ko
@@ -113,4 +123,4 @@ distclean:
 	$(MAKE) kmod TARGET=$@
 	rm -rf $(OUTPUT_DIR)
 
-.PHONY: help kmod bde knet knetcb genl-packet bcmgenl edk ptpclock clean distclean
+.PHONY: help kmod clean distclean $(KMODS)

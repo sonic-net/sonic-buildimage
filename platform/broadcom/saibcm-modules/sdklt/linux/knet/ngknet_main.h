@@ -58,6 +58,9 @@
 #define DBG_RATE(_s)        do { if (debug & DBG_LVL_RATE) printk _s; } while (0)
 #define DBG_LINK(_s)        do { if (debug & DBG_LVL_LINK) printk _s; } while (0)
 
+/* Take over the control of SKB and send packet to network interface. */
+typedef void (*ngknet_pkt_recv_f)(struct net_device *ndev, struct sk_buff *skb);
+
 
 /* FIXME: SAI_FIXUP */
 #define SAI_FIXUP           1
@@ -133,6 +136,9 @@ struct ngknet_dev {
     /*! PTP Tx work */
     struct work_struct ptp_tx_work;
 
+    /*! NGKNET work queue for link process */
+    struct workqueue_struct *link_wq;
+
     /*! Flags */
     int flags;
     /*! NGKNET device is active */
@@ -154,6 +160,12 @@ struct ngknet_private {
 
     /*! Network interface */
     ngknet_netif_t netif;
+
+    /*! Packet receive callback */
+    ngknet_pkt_recv_f pkt_recv;
+
+    /*! Link work */
+    struct work_struct link_work;
 
     /*! Users of this network interface */
     int users;

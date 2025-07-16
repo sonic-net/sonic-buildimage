@@ -9,6 +9,7 @@ import sys
 import syslog
 import time
 from collections import defaultdict
+import traceback
 
 from swsscommon import swsscommon
 
@@ -31,6 +32,9 @@ CRITICAL_PROCESSES_FILE = '/etc/supervisor/critical_processes'
 # The FEATURE table in config db contains auto-restart field
 FEATURE_TABLE_NAME = 'FEATURE'
 
+# The HEARTBEAT table in config db contains heart beat config
+HEARTBEAT_TABLE_NAME = 'HEARTBEAT'
+
 # Value of parameter 'timeout' in select(...) method
 SELECT_TIMEOUT_SECS = 1.0
 
@@ -39,6 +43,9 @@ ALERTING_INTERVAL_SECS = 60
 
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "process-exited-unexpectedly"
+
+heartbeat_alert_interval_initialized = False
+heartbeat_alert_interval_mapping = defaultdict(dict)
 
 def get_group_and_process_list(process_file):
     """
@@ -113,6 +120,27 @@ def get_autorestart_state(container_name, use_unix_socket_path):
         sys.exit(4)
 
     return is_auto_restart
+
+def load_heartbeat_alert_interval(use_unix_socket_path):
+    config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=use_unix_socket_path)
+    config_db.connect()
+    heartbeat_table = config_db.get_table(HEARTBEAT_TABLE_NAME)
+    if heartbeat_table:
+        heartbeat_table_keys = heartbeat_table.keys()
+        for process in heartbeat_table_keys:
+            alert_interval = heartbeat_table[process].get('alert_interval')
+            if alert_interval:
+                heartbeat_alert_interval_mapping[process] = int(alert_interval) / 1000
+
+    heartbeat_alert_interval_initialized = True
+
+def get_heartbeat_alert_interval(process, use_unix_socket_path):
+    if not heartbeat_alert_interval_initialized:
+        load_heartbeat_alert_interval(use_unix_socket_path)
+    if process in heartbeat_alert_interval_mapping:
+        return heartbeat_alert_interval_mapping[process]
+
+    return ALERTING_INTERVAL_SECS
 
 def publish_events(events_handle, process_name, container_name):
     params = swsscommon.FieldValueMap()
@@ -211,9 +239,14 @@ def main(argv):
         for process in process_heart_beat_info.keys():
             epoch_time = time.time()
             elapsed_secs = epoch_time - process_heart_beat_info[process]["last_heart_beat"]
-            if elapsed_secs >= ALERTING_INTERVAL_SECS:
+            threshold = get_heartbeat_alert_interval(process, use_unix_socket_path)
+            if threshold > 0 and elapsed_secs >= threshold:
                 elapsed_mins = elapsed_secs // 60
                 generate_alerting_message(process, "stuck", elapsed_mins, syslog.LOG_WARNING)
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, "Exception: {}, trace: {}".format(e, traceback.format_exc()))
+        sys.exit(1)

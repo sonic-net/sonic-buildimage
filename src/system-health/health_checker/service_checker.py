@@ -99,6 +99,9 @@ class ServiceChecker(HealthChecker):
 
         container_list = []
         for container_name in feature_table.keys():
+            # skip frr_bmp since it's not container just bmp option used by bgpd
+            if container_name == "frr_bmp":
+                continue
             # slim image does not have telemetry container and corresponding docker image
             if container_name == "telemetry":
                 ret = check_docker_image("docker-sonic-telemetry")
@@ -131,7 +134,7 @@ class ServiceChecker(HealthChecker):
                     expected_running_containers.add(container_name)
                     container_feature_dict[container_name] = container_name
                     
-        if device_info.is_supervisor():
+        if device_info.is_supervisor() or device_info.is_disaggregated_chassis():
             expected_running_containers.add("database-chassis")
             container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict

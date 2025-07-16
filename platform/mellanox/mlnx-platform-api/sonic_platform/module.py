@@ -265,11 +265,6 @@ class DpuModule(ModuleBase):
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
-        self.DHCP_SERVER_HASH = f"DHCP_SERVER_IPV4_PORT|bridge-midplane|{self._name.lower()}"
-        self.DHCP_IP_ADDRESS_KEY = "ips@"
-        self.config_db = ConfigDBConnector(use_unix_socket_path=False)
-        self.config_db.connect()
-        self.midplane_ip = None
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
@@ -363,11 +358,11 @@ class DpuModule(ModuleBase):
             bool: True if the request has been issued successfully, False if not
         """
         if up:
-            if self.dpuctl_obj.dpu_power_on():
+            if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off()
+        return self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
 
     def get_type(self):
         """
@@ -452,9 +447,7 @@ class DpuModule(ModuleBase):
         Returns:
             A string, the IP-address of the module reachable over the midplane
         """
-        if not self.midplane_ip:
-            self.midplane_ip = self.config_db.get(self.CONFIG_DB_NAME, self.DHCP_SERVER_HASH, self.DHCP_IP_ADDRESS_KEY)
-        return self.midplane_ip
+        return f"169.254.200.{int(self.dpu_id) + 1}"
 
     def is_midplane_reachable(self):
         """
@@ -490,14 +483,13 @@ class DpuModule(ModuleBase):
         Retrieves the bus information.
 
         Returns:
-            Returns the PCI bus information in BDF format like "[DDDD:]BB:SS:F"
+            Returns the PCI bus information in list of BDF format
         """
-        if not self.bus_info:
-            # Cache the data to prevent multiple platform.json parsing
-            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.PCIE_INT.value)
-            # If we are unable to parse platform.json for midplane interface raise RunTimeError
-            if not self.bus_info:
-                raise RuntimeError(f"Unable to obtain bus info from platform.json for {self.get_name()}")
+        if self.bus_info:
+            return self.bus_info
+        bus_paths = self.dpuctl_obj.get_pci_dev_path()
+        # Convert full paths to BDF format
+        self.bus_info = [path.split('/')[-1] for path in bus_paths]
         return self.bus_info
 
     def pci_detach(self):
