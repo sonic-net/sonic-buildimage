@@ -72,6 +72,7 @@
   * [Restapi](#restapi)
   * [System Port](#system-port)
   * [Tacplus Server](#tacplus-server)
+  * [TC to DSCP map](#tc-to-dscp-map)
   * [TC to Priority group map](#tc-to-priority-group-map)
   * [TC to Queue map](#tc-to-queue-map)
   * [Telemetry](#telemetry)
@@ -2471,6 +2472,21 @@ and is listed in this table.
 }
 ```
 
+### TC to DSCP map
+
+```json
+{
+    "TC_TO_DSCP_MAP": {
+        "AZURE": {
+            "5": "10",
+            "6": "20"
+        }
+    }
+}
+```
+
+**Note:**
+* configuration is mandatory when packet trimming Asymmetric DSCP mode is used
 
 ### TC to Priority group map
 
@@ -2623,7 +2639,8 @@ and try sending it on a different queue to deliver a packet drop notification to
 
 ***TRIMMING***
 
-```
+Symmetric DSCP and static queue:
+```json
 {
     "SWITCH_TRIMMING": {
         "GLOBAL": {
@@ -2635,7 +2652,22 @@ and try sending it on a different queue to deliver a packet drop notification to
 }
 ```
 
+Asymmetric DSCP and dynamic queue:
+```json
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "from-tc",
+            "tc_value": "8",
+            "queue_index": "dynamic"
+        }
+    }
+}
+```
+
 **Note:**
+* when `dscp_value` is set to `from-tc`, the `tc_value` is used for mapping to DSCP
 * when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions

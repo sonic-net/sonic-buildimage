@@ -417,9 +417,9 @@ class PddfParse():
                 cmd = "echo {} > /sys/bus/i2c/devices/{}-00{:02x}/port_name".format(
                     dev['dev_info']['virt_parent'].lower(), int(dev['i2c']['topo_info']['parent_bus'], 0),
                     int(dev['i2c']['topo_info']['dev_addr'], 0))
-            ret = self.runcmd(cmd)
-            if ret != 0:
-                return create_ret.append(ret)
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
 
         return create_ret.append(ret)
 
