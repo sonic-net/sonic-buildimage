@@ -22,15 +22,42 @@
 
 ---
 bcm_device:
-  0:
-    global:
-      pktio_mode: 1
-      skip_protocol_default_entries: 1
-      uft_mode: 3
-      l3_alpm_template: 1
-      vlan_default_port: 3
-      max_vp_lags: 894
-      vlan_flooding_l2mc_num_reserved: 0
+    0:
+        global:
+            l2_table_default_view: 1
+            shared_block_mask_section: uc_bc
+            vlan_flooding_l2mc_num_reserved: 0
+            ctr_evict_enable: 0
+            uat_mode: 1
+            uft_mode: 4
+            sai_brcm_sonic_acl_enhancements: 1
+            sai_tunnel_support: 1
+            sai_l2pt_feature_support: 1
+            multi_network_groups: 1
+            sai_field_group_auto_prioritize: 1
+            pktio_mode: 1
+            sai_modify_hash_flexdigest: 1
+            sai_disable_internal_port_serdes: 1
+            sai_fast_convergence_support: 1
+            sai_create_dflt_trap: 1
+            bcm_tunnel_term_compatible_mode: 1
+            use_all_splithorizon_groups: 1
+            riot_enable: 1
+            sai_disable_ports_when_sw_shutdown: 1
+            ipmc_age_mode: 1
+            flexctr_action_reserved_ipmc_hitbit: 1
+            l3_alpm2_default_route_data_mode: 0
+            l3_reduced_route_max_ecmp_group_index: 2047
+            sai_switch_mac_tnl_term_enable: 1
+            sai_port_queue_ecn_counter: 1
+            default_cpu_tx_queue: 7
+            max_vp_lags: 1024
+            max_vp_lags_underlay: 64
+            sai_common_hash_crc: 1
+            sai_stats_support_mask: 0x20
+            pfc_deadlock_seq_control : 1
+            sai_cpu_mirror_queue: 28
+            sai_cpu_drop_mirror_queue: 29
 ...
 ---
 bcm_device:
