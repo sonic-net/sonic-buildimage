@@ -37,8 +37,6 @@ SYSFS_PCI_DEVICE_PATH = '/sys/bus/pci/devices/'
 # Constants from module_base.py
 PCIE_DETACH_INFO_TABLE = "PCIE_DETACH_INFO"
 PCIE_OPERATION_DETACHING = "detaching"
-BULEFIELD_SOC_NAME = "DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management Interface (rev 01)"
-BLUEFIELD_CONNECTX_NAME = "Ethernet controller: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller (rev 01)"
 
 
 class Pcie(PcieUtil):
