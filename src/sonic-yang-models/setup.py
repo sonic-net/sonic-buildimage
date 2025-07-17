@@ -128,6 +128,7 @@ yang_files = [
     'sonic-events-host.yang',
     'sonic-events-swss.yang',
     'sonic-events-syncd.yang',
+    'sonic-evpn.yang',
     'sonic-exp-fc-map.yang',
     'sonic-extension.yang',
     'sonic-fabric-monitor.yang',
