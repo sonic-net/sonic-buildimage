@@ -698,6 +698,11 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- endif %}
+{%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "syncd" %}
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
+{%- endif %}
+{%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
