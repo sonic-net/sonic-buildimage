@@ -58,8 +58,9 @@ class Component(ComponentBase):
         for cpld_name in CPLD_ADDR_MAPPING:
             try:
                 cpld_path = "{}{}{}".format(SYSFS_PATH, CPLD_ADDR_MAPPING[cpld_name], '/version')
-                cpld_version_raw= self._api_helper.read_txt_file(cpld_path)               
-                cpld_version[cpld_name] = "{}".format(int(cpld_version_raw,16))
+                cpld_version_raw= self._api_helper.read_txt_file(cpld_path)
+                str = hex(int(cpld_version_raw, 16))
+                cpld_version[cpld_name] = "{}".format(str[2:])
             except Exception as e:
                 print('Get exception when read cpld')
                 cpld_version[cpld_name] = 'None'

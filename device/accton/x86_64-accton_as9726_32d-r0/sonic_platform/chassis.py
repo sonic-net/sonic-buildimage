@@ -38,6 +38,7 @@ class Chassis(ChassisBase):
         self._api_helper = APIHelper()
         self.is_host = self._api_helper.is_host()
 
+        self.fan_dir = 1 # 1:AFI, 0:AFO
         self.config_data = {}
 
         self.__initialize_fan()
@@ -65,6 +66,14 @@ class Chassis(ChassisBase):
             self._fan_drawer_list.append(fandrawer)
             self._fan_list.extend(fandrawer._fan_list)
 
+        b2f_dir, f2b_dir = 0, 0
+        for fan in self._fan_list:
+            if fan.get_presence():
+                direction = fan.get_direction()
+                b2f_dir += direction == fan.FAN_DIRECTION_INTAKE
+                f2b_dir += direction == fan.FAN_DIRECTION_EXHAUST
+        self.fan_dir = b2f_dir >= f2b_dir # 1:AFI, 0:AFO
+
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
         for index in range(0, NUM_PSU):
@@ -74,7 +83,7 @@ class Chassis(ChassisBase):
     def __initialize_thermals(self):
         from sonic_platform.thermal import Thermal
         for index in range(0, NUM_THERMAL):
-            thermal = Thermal(index)
+            thermal = Thermal(thermal_index=index, fan_dir=self.fan_dir)
             self._thermal_list.append(thermal)
 
     def __initialize_eeprom(self):

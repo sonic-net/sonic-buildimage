@@ -44,6 +44,31 @@
 #define REFRESH_INTERVAL_MSEC (REFRESH_INTERVAL_SECOND * 1000)
 #define REFRESH_INTERVAL_HZ (REFRESH_INTERVAL_SECOND * HZ)
 
+/* STATUS WORD BIT MAP
+ *
+ * BIT 0(Low Byte): NONE OF THE ABOVE
+ * BIT 1(Low Byte): COMM, MEMORY, LOGIC EVENT
+ * BIT 2(Low Byte): TEMPERATURE FAULT OR WARNING
+ * BIT 3(Low Byte): VIN_UV_FAULT
+ * BIT 4(Low Byte): IOUT_OC_FAULT
+ * BIT 5(Low Byte): VOUT_OV_FAULT
+ * BIT 6(Low Byte): UNIT IS OFF
+ * BIT 7(Low Byte): UNIT WAS BUSY
+ *
+ * BIT 8(High Byte): UNKNOWN FAULT OR WARNING
+ * BIT 9(High Byte): OTHER
+ * BIT10(High Byte): FAN FAULT OR WARNING
+ * BIT11(High Byte): POWER_GOOD Negated
+ * BIT12(High Byte): MFR_SPECIFIC
+ * BIT13(High Byte): INPUT FAULT OR WARNING
+ * BIT14(High Byte): IOUT/POUT FAULT OR WARNING
+ * BIT15(High Byte): VOUT FAULT OR WARNING
+ */
+#define STATUS_WORD_CHECKER_INPUT (BIT(3) | BIT(6) | BIT(11) | BIT(13))
+#define STATUS_WORD_CHECKER_VOUT (BIT(5) | BIT(15) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_IOUT (BIT(4) | BIT(14) | STATUS_WORD_CHECKER_INPUT)
+#define STATUS_WORD_CHECKER_POUT (BIT(14) | STATUS_WORD_CHECKER_INPUT)
+
 #define EXIT_IF_POWER_FAILED(c) \
     do { \
         if (ym2651y_is_powergood(c) != 1) \
@@ -102,8 +127,8 @@ struct pmbus_register_value {
     u8   pmbus_revision; /* Register value */
     u8   mfr_serial[21]; /* Register value */
     u8   mfr_id[10];     /* Register value */
-    u8   mfr_model[16];  /* Register value */
-    u8   mfr_revsion[3]; /* Register value */
+    u8   mfr_model[18];  /* Register value */
+    u8   mfr_revsion[10]; /* Register value */
     u16  mfr_vin_min;    /* Register value */
     u16  mfr_vin_max;    /* Register value */
     u16  mfr_iin_max;    /* Register value */
@@ -113,6 +138,8 @@ struct pmbus_register_value {
     u16  mfr_vout_min;   /* Register value */
     u16  mfr_vout_max;   /* Register value */
 };
+
+typedef int (*range_checker_t)(u16 reg_val, struct pmbus_register_value*);
 
 /* Each client has this additional data
  */
@@ -212,8 +239,8 @@ static SENSOR_DEVICE_ATTR(psu_mfr_revision,    S_IRUGO, show_ascii, NULL, PSU_MF
 static SENSOR_DEVICE_ATTR(psu_mfr_serial,     S_IRUGO, show_ascii,  NULL, PSU_MFR_SERIAL);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_min,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MIN);
 static SENSOR_DEVICE_ATTR(psu_mfr_vin_max,    S_IRUGO, show_linear, NULL, PSU_MFR_VIN_MAX);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MIN);
-static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_VOUT_MAX);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_min,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MIN);
+static SENSOR_DEVICE_ATTR(psu_mfr_vout_max,   S_IRUGO, show_vout, NULL, PSU_MFR_VOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IIN_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_iout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_PIN_MAX);
@@ -341,6 +368,87 @@ static int two_complement_to_int(u16 data, u8 valid_bit, int mask)
     bool is_negative = valid_data >> (valid_bit - 1);
 
     return is_negative ? (-(((~valid_data) & mask) + 1)) : valid_data;
+}
+
+int pmbus_linear_format_to_int(u16 reg_val, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(reg_val >> 11, 5, 0x1f);
+    mantissa = two_complement_to_int(reg_val & 0x7ff, 11, 0x7ff);
+
+    return (exponent >= 0) ? ((mantissa << exponent) * multiplier) :
+                             ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int pmbus_vout_data_to_int(u16 reg_val, u8 vout_mode, int multiplier)
+{
+    int exponent, mantissa;
+
+    exponent = two_complement_to_int(vout_mode, 5, 0x1f);
+    mantissa = reg_val;
+
+    return (exponent > 0) ? ((mantissa << exponent) * multiplier) :
+                            ((mantissa * multiplier) / (1 << -exponent));
+}
+
+int vout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int vout = 0;
+    int vout_max = 0;
+    int vout_min = 0;
+
+    if ((data->vout_mode & 0xE0) == 0) { /* ULINEAR16 Format */
+        vout = pmbus_vout_data_to_int(reg_val, data->vout_mode, 1000);
+        vout_max = pmbus_vout_data_to_int(data->mfr_vout_max, data->vout_mode, 1000);
+        vout_min = pmbus_vout_data_to_int(data->mfr_vout_min, data->vout_mode, 1000);
+    }
+    else {
+        vout = pmbus_linear_format_to_int(reg_val, 1000);
+        vout_max = pmbus_linear_format_to_int(data->mfr_vout_max, 1000);
+        vout_min = pmbus_linear_format_to_int(data->mfr_vout_min, 1000);
+    }
+
+    return ((vout <= vout_max) && (vout >= vout_min)) ? 0 : -EINVAL;;
+}
+
+int iout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int iout = pmbus_linear_format_to_int(reg_val, 1000);
+    int iout_max = pmbus_linear_format_to_int(data->mfr_iout_max, 1000);
+
+    return ((iout > 0) && (iout <= iout_max)) ? 0 : -EINVAL;
+}
+
+int pout_range_checker(u16 reg_val, struct pmbus_register_value *data)
+{
+    int pout = pmbus_linear_format_to_int(reg_val, 1000);
+    int pout_max = pmbus_linear_format_to_int(data->mfr_pout_max, 1000);
+
+    return ((pout > 0) && (pout <= pout_max)) ? 0 : -EINVAL;
+}
+
+int enable_status_range_checker(struct pmbus_register_value *data)
+{
+    int i;
+    char *model_list[] = {
+        "YM-2651Y", "YM-1151D", "YM-1151E",
+        "YM-1401A", "YM-2401H", "YM-2651V",
+        "YM-2851F", "YM-2851J", "YM-1151F", "YPEB1200AM"
+    };
+
+    if (!data) {
+        return 0;
+    }
+
+    for (i = 0; i < ARRAY_SIZE(model_list); i++) {
+        if (strncmp(model_list[i], data->mfr_model+1, strlen(model_list[i])) != 0) {
+            continue;
+        }
+        return 1;
+    }
+
+    return 0;
 }
 
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da,
@@ -593,7 +701,9 @@ static ssize_t show_vout(struct device *dev, struct device_attribute *da,
     {
         return show_linear(dev, da, buf);
     }
-    else if (data->chip == YM2401 || data->chip==YM1401A) {
+    else if (data->chip == YM2401 || data->chip==YM1401A ||
+        (!strncmp("UPD1501SA-1190G", data->reg_val.mfr_model + 1, strlen("UPD1501SA-1190G"))) ||
+        (!strncmp("UPD1501SA-1290G", data->reg_val.mfr_model + 1, strlen("UPD1501SA-1290G")))) {
         return show_vout_by_mode(dev, da, buf); /*format: linear16*/
     }
     else {
@@ -711,7 +821,6 @@ static void ym2651y_remove(struct i2c_client *client)
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &ym2651y_group);
     kfree(data);
-
 }
 
 static const struct i2c_device_id ym2651y_id[] = {
@@ -797,6 +906,9 @@ struct reg_data_byte {
 struct reg_data_word {
     u8   reg;
     u16 *value;
+    u16  old_value;
+    u16  status_checker;
+    range_checker_t range_checker;
 };
 
 static char *get_fan_dir_by_model_name(struct i2c_client *client, char *ptr_model, char *fan_dir, int command)
@@ -809,7 +921,9 @@ static char *get_fan_dir_by_model_name(struct i2c_client *client, char *ptr_mode
     if ( (!strncmp("FSJ001", ptr_model+1, strlen("FSJ001"))) ||
          (!strncmp("FSJ004", ptr_model+1, strlen("FSJ004"))) ||
          (!strncmp("SPAACTN-01", ptr_model+1, strlen("SPAACTN-01"))) ||
-         (!strncmp("SPAACTN-02", ptr_model+1, strlen("SPAACTN-02"))) )
+         (!strncmp("SPAACTN-02", ptr_model+1, strlen("SPAACTN-02"))) ||
+         (!strncmp("UPD1501SA-1279G", ptr_model+1, strlen("UPD1501SA-1279G"))) ||
+         (!strncmp("UP1K21R-1085G", ptr_model+1, strlen("UP1K21R-1085G"))) )
     {
         /* Not add function: VALIDATE_POWERGOOD_AND_INTERVAL() because,
          * when these PSU modules power_good are fail,
@@ -838,11 +952,13 @@ static char *get_fan_dir_by_model_name(struct i2c_client *client, char *ptr_mode
             }
         }
     }
-    else if ( !strncmp("FSJ035", ptr_model+1, strlen("FSJ035"))) /*hard code: spec do not define*/
+    else if (!strncmp("FSJ035", ptr_model+1, strlen("FSJ035")) ||
+             !strncmp("UPD1501SA-1190G", ptr_model+1, strlen("UPD1501SA-1190G"))) /*hard code: spec do not define*/
     {
         memcpy(fan_dir, "F2B", 3);
     }
-    else if (!strncmp("FSJ036", ptr_model+1, strlen("FSJ036"))) /*hard code: spec do not define*/
+    else if (!strncmp("FSJ036", ptr_model+1, strlen("FSJ036")) ||
+	     !strncmp("UPD1501SA-1290G", ptr_model+1, strlen("UPD1501SA-1290G"))) /*hard code: spec do not define*/
     {
         memcpy(fan_dir, "B2F", 3);
     }
@@ -851,10 +967,10 @@ static char *get_fan_dir_by_model_name(struct i2c_client *client, char *ptr_mode
         ptr_fan = NULL;
     }
 
-    dev_dbg(&client->dev, "Model name is %s, get by read_word is (%s)\n", ptr_model+1, ptr_fan);
+    dev_dbg(&client->dev, "Model name is %s, get by read_word is (%s)\n", 
+            ptr_model+1, ptr_fan ? ptr_fan : "NULL");
     return ptr_fan;
 }
-
 static int ym2651y_update_device(struct i2c_client *client,
                                  struct pmbus_register_value *data)
 {
@@ -862,30 +978,35 @@ static int ym2651y_update_device(struct i2c_client *client,
     int i, status, length;
     u8 command, buf;
     u8 fan_dir[5] = {0};
+    int enable_checker = 0;
     struct reg_data_byte regs_byte[] = { {0x19, &data->capability},
         {0x20, &data->vout_mode},
         {0x7d, &data->over_temp},
         {0x81, &data->fan_fault},
         {0x98, &data->pmbus_revision}
     };
-    struct reg_data_word regs_word[] = { {0x79, &data->status_word},
-        {0x8b, &data->v_out},
-        {0x8c, &data->i_out},
-        {0x96, &data->p_out},
-        {0x8d, &(data->temp_input[0])},
-        {0x8e, &(data->temp_input[1])},
-        {0x8f, &(data->temp_input[2])},
-        {0x3b, &(data->fan_duty_cycle[0])},
-        {0x3c, &(data->fan_duty_cycle[1])},
-        {0x90, &data->fan_speed},
-        {0xa0, &data->mfr_vin_min},
-        {0xa1, &data->mfr_vin_max},
-        {0xa2, &data->mfr_iin_max},
-        {0xa3, &data->mfr_pin_max},
-        {0xa4, &data->mfr_vout_min},
-        {0xa5, &data->mfr_vout_max},
-        {0xa6, &data->mfr_iout_max},
-        {0xa7, &data->mfr_pout_max}
+    struct reg_data_word regs_word[] = {
+        /* The mfr_* and status_word should be read
+         * before reading the data with a status/range checker
+         */
+        {0x79, &data->status_word, 0, 0, NULL},
+        {0x8d, &(data->temp_input[0]), 0, 0, NULL},
+        {0x8e, &(data->temp_input[1]), 0, 0, NULL},
+        {0x8f, &(data->temp_input[2]), 0, 0, NULL},
+        {0x3b, &(data->fan_duty_cycle[0]), 0, 0, NULL},
+        {0x3c, &(data->fan_duty_cycle[1]), 0, 0, NULL},
+        {0x90, &data->fan_speed, 0, 0, NULL},
+        {0xa0, &data->mfr_vin_min, 0, 0, NULL},
+        {0xa1, &data->mfr_vin_max, 0, 0, NULL},
+        {0xa2, &data->mfr_iin_max, 0, 0, NULL},
+        {0xa3, &data->mfr_pin_max, 0, 0, NULL},
+        {0xa4, &data->mfr_vout_min, 0, 0, NULL},
+        {0xa5, &data->mfr_vout_max, 0, 0, NULL},
+        {0xa6, &data->mfr_iout_max, 0, 0, NULL},
+        {0xa7, &data->mfr_pout_max, 0, 0, NULL},
+        {0x8b, &data->v_out, driver_data->reg_val.v_out, STATUS_WORD_CHECKER_VOUT, vout_range_checker},
+        {0x8c, &data->i_out, driver_data->reg_val.i_out, STATUS_WORD_CHECKER_IOUT, iout_range_checker},
+        {0x96, &data->p_out, driver_data->reg_val.p_out, STATUS_WORD_CHECKER_POUT, pout_range_checker}
     };
 
     dev_dbg(&client->dev, "Starting ym2651 update\n");
@@ -907,7 +1028,25 @@ static int ym2651y_update_device(struct i2c_client *client,
         }
     }
 
+    /* Read mfr_model */
+    command = 0x9a;
+    length  = 1;
+    /* Read first byte to determine the length of data */
+    VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+    status = ym2651y_read_block(client, command, &buf, length);
+    if (status == 0 && buf != 0xFF) {
+        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
+        status = ym2651y_read_block(client, command, data->mfr_model, buf+1);
+        if (status == 0) {
+            if ((buf+1) >= (ARRAY_SIZE(data->mfr_model)-1))
+                data->mfr_model[ARRAY_SIZE(data->mfr_model)-1] = '\0';
+            else
+                data->mfr_model[buf+1] = '\0';
+        }
+    }
+
     /* Read word data */
+    enable_checker = enable_status_range_checker(data);
     for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
         VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
 
@@ -929,6 +1068,23 @@ static int ym2651y_update_device(struct i2c_client *client,
             goto exit;
         }
         else {
+            if ((enable_checker == 0) || (regs_word[i].status_checker == 0)) {
+                *(regs_word[i].value) = status;
+                continue;
+            }
+
+            /* Validate data range */
+            if (regs_word[i].range_checker &&
+                regs_word[i].range_checker(status, data) < 0) {
+                if (!(data->status_word & regs_word[i].status_checker)) {
+                    /* Drop the data because it is out of the
+                     * expected range and the status bit is not set.
+                     * Keep old_value instead.
+                     */
+                    *(regs_word[i].value) = regs_word[i].old_value;
+                    continue;
+                }
+            }
             *(regs_word[i].value) = status;
         }
     }
@@ -939,23 +1095,9 @@ static int ym2651y_update_device(struct i2c_client *client,
     status = ym2651y_read_block(client, command, data->mfr_id,
                                 ARRAY_SIZE(data->mfr_id)-1);
     if (status == 0)
-        data->mfr_id[ARRAY_SIZE(data->mfr_id)-1] = '\0';
-
-    /* Read mfr_model */
-    command = 0x9a;
-    length  = 1;
-    /* Read first byte to determine the length of data */
-    VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
-    status = ym2651y_read_block(client, command, &buf, length);
-    if (status == 0 && buf != 0xFF) {
-        VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
-        status = ym2651y_read_block(client, command, data->mfr_model, buf+1);
-        if (status == 0) {
-            if ((buf+1) >= (ARRAY_SIZE(data->mfr_model)-1))
-                data->mfr_model[ARRAY_SIZE(data->mfr_model)-1] = '\0';
-            else
-                data->mfr_model[buf+1] = '\0';
-        }
+    {
+        length = data->mfr_id[0];
+        data->mfr_id[length+1] = '\0';
     }
 
     /* Read fan_direction */
@@ -964,7 +1106,7 @@ static int ym2651y_update_device(struct i2c_client *client,
     fan_ptr = get_fan_dir_by_model_name(client, data->mfr_model, fan_dir, command);
     if( fan_ptr != NULL )
     {
-        snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
+        strncpy(data->fan_dir, fan_dir, ARRAY_SIZE(data->fan_dir)-1);
         data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
     }
     else
@@ -972,7 +1114,7 @@ static int ym2651y_update_device(struct i2c_client *client,
         VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
         status = ym2651y_read_block(client, command, fan_dir, ARRAY_SIZE(fan_dir)-1);
         if (status == 0) {
-            snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
+            strncpy(data->fan_dir, fan_dir+1, ARRAY_SIZE(data->fan_dir)-1);
             data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
         }
     }
@@ -1008,7 +1150,10 @@ static int ym2651y_update_device(struct i2c_client *client,
     status = ym2651y_read_block(client, command, data->mfr_revsion,
                                 ARRAY_SIZE(data->mfr_revsion)-1);
     if (status == 0)
-        data->mfr_revsion[ARRAY_SIZE(data->mfr_revsion)-1] = '\0';
+    {
+        length = data->mfr_revsion[0];
+        data->mfr_revsion[length+1] = '\0';
+    }
 
     return 1; /* Return 1 for valid data, 0 for invalid */
 
@@ -1104,7 +1249,7 @@ static void __exit ym2651y_exit(void)
 static int mfr_serial_supported(u8 chip)
 {
     int i = 0;
-    u8 supported_chips[] = {};
+    u8 supported_chips[] = {UMEC_UPD150SA, UMEC_UP1K21R};
 
     for (i = 0; i < ARRAY_SIZE(supported_chips); i++) {
         if (chip == supported_chips[i])
@@ -1120,4 +1265,3 @@ MODULE_LICENSE("GPL");
 
 module_init(ym2651y_init);
 module_exit(ym2651y_exit);
-

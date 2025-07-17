@@ -59,7 +59,7 @@ CPU_SYSFS_PATH = "/sys/devices/platform"
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
 
-    def __init__(self, thermal_index=0, is_psu=False, psu_index=0):
+    def __init__(self, thermal_index=0, is_psu=False, psu_index=0, fan_dir=1):
         self.index = thermal_index
         self.is_psu = is_psu
         self.psu_index = psu_index
@@ -157,6 +157,49 @@ class Thermal(ThermalBase):
                 LOW_CRIT_THRESHOLD: NOT_AVAILABLE
             }
         }
+
+        # The thermal policy configuration table is referenced from the accton_as9726_32d_monitor.py file
+        # and is used for different fan directions (airflow modes).
+        #
+        # The table is organized by fan_dir values (0 and 1), where:
+        # - fan_dir = 0: Front-to-back (F2B) airflow direction
+        # - fan_dir = 1: Back-to-front (B2F) airflow direction
+        #
+        # Each sensor is mapped to a tuple (HIGH_THRESHOLD, HIGH_CRIT_THRESHOLD) representing:
+        # - HIGH_THRESHOLD: The temperature at which a red alarm warning is triggered
+        # - HIGH_CRIT_THRESHOLD: The temperature at which a system shutdown is triggered
+        thermal_policy_config_table = {
+            0: {
+                THERMAL_NAME_LIST[0]: ('72.0', '77.0'),
+                THERMAL_NAME_LIST[1]: ('70.0', '75.0'),
+                THERMAL_NAME_LIST[2]: ('69.0', '74.0'),
+                THERMAL_NAME_LIST[3]: ('72.0', '77.0'),
+                THERMAL_NAME_LIST[4]: ('67.0', '72.0'),
+                THERMAL_NAME_LIST[5]: ('69.0', '74.0'),
+                THERMAL_NAME_LIST[6]: ('78.0', '83.0'),
+                THERMAL_NAME_LIST[7]: ('78.0', '83.0'),
+                THERMAL_NAME_LIST[8]: ('78.0', '83.0'),
+                THERMAL_NAME_LIST[9]: ('78.0', '83.0'),
+                THERMAL_NAME_LIST[10]: ('78.0', '83.0')
+            },
+            1: {
+                THERMAL_NAME_LIST[0]: ('62.9', '67.9'),
+                THERMAL_NAME_LIST[1]: ('56.9', '61.9'),
+                THERMAL_NAME_LIST[2]: ('53.9', '58.9'),
+                THERMAL_NAME_LIST[3]: ('46.8', '51.8'),
+                THERMAL_NAME_LIST[4]: ('58.9', '63.9'),
+                THERMAL_NAME_LIST[5]: ('53.5', '58.5'),
+                THERMAL_NAME_LIST[6]: ('57.0', '62.0'),
+                THERMAL_NAME_LIST[7]: ('57.0', '62.0'),
+                THERMAL_NAME_LIST[8]: ('57.0', '62.0'),
+                THERMAL_NAME_LIST[9]: ('57.0', '62.0'),
+                THERMAL_NAME_LIST[10]: ('57.0', '62.0')
+            }
+        }
+        for key, (ht, hct) in thermal_policy_config_table[fan_dir].items():
+            if key in self.default_threshold:
+                self.default_threshold[key][HIGH_THRESHOLD] = ht
+                self.default_threshold[key][HIGH_CRIT_THRESHOLD] = hct
 
         # Set hwmon path
         i2c_path = {

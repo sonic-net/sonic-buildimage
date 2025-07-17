@@ -25,7 +25,6 @@
 # ------------------------------------------------------------------
 
 try:
-    import subprocess
     import getopt
     import sys
     import logging
@@ -225,19 +224,6 @@ class switch(object):
 #LM75-1(0X4B)>=77
 #Transceiver >=77
 
-def run_command(cmd):
-    status = True
-    result = ""
-    try:
-        p = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        raw_data, err = p.communicate()
-        if err == '':
-            result = raw_data.strip()
-    except Exception:
-        status = False
-    return status, result
-
 def power_off_dut():
     global platform_chassis
     # Sync log buffer to disk
@@ -254,8 +240,8 @@ def power_off_dut():
 
     if fpga_version >= 9:
         # Power off dut & Power off cpu
-        cmd_str="i2cset -y -f 1 0x60 0x60 0x11 & i2cset -y -f 1 0x65 0x07 0x2c"
-        (status, output) = run_command(cmd_str)
+        cmd_str = ["/usr/local/bin/dut_shutdown.sh"]
+        (status, output) = getstatusoutput_noshell(cmd_str)
     else:
         cmd_str = ["i2cset", "-y", "-f", "1", "0x60", "0x60", "0x10"] # Power-cycle dut
         (status, output) = getstatusoutput_noshell(cmd_str)

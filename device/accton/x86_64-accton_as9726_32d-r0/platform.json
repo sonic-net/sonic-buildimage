@@ -1,10 +1,10 @@
 {
     "chassis": {
         "name": "9726-32D",
+        "thermal_manager":false,
         "status_led": {
             "controllable": false
         },
-	"thermal_manager":false,
         "components": [
             {
                 "name": "CPLD1"
@@ -28,72 +28,120 @@
         "fans": [
             {
                 "name": "FAN-1F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
 		        }
             },
             {
                 "name": "FAN-1R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-2F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-2R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-3F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-3R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-4F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-4R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-5F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-5R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-6F",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
             },
             {
                 "name": "FAN-6R",
+                "speed": {
+                    "controllable": true,
+                    "minimum": 32
+                },
                 "status_led": {
                     "controllable": false
                 }
@@ -102,19 +150,28 @@
         "fan_drawers":[
             {
                 "name": "FanTray1",
+                "max_consumed_power": false,
+                "num_fans" : 2,
                 "status_led": {
-		    "controllable": false
+		            "controllable": false
                 },
-		"num_fans" : 2,
-		"fans": [
+		        "fans": [
                     {
                         "name": "FAN-1F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-1R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -123,19 +180,28 @@
             },
             {
                 "name": "FanTray2",
+                "max_consumed_power": false,
+                "num_fans" : 2,
                 "status_led": {
-	             "controllable": false
+	               "controllable": false
                 },
-		"num_fans" : 2,
                 "fans": [
                     {
                         "name": "FAN-2F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-2R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -144,19 +210,28 @@
             },
             {
                 "name": "FanTray3",
+                "max_consumed_power": false,
+                "num_fans" : 2,
                 "status_led": {
                     "controllable": false
                 },
-                "num_fans" : 2,
                 "fans": [
                     {
                         "name": "FAN-3F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-3R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -165,19 +240,28 @@
             },
             {
                 "name": "FanTray4",
+                "max_consumed_power": false,
+                "num_fans" : 2,
                 "status_led": {
                     "controllable": false
                 },
-                "num_fans" : 2,
                 "fans": [
                     {
                         "name": "FAN-4F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-4R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -186,19 +270,28 @@
             },
             {
                 "name": "FanTray5",
-                "status_led": {
-		    "controllable": false
-                },
+                "max_consumed_power": false,
                 "num_fans" : 2,
+                "status_led": {
+		            "controllable": false
+                },
                 "fans": [
                     {
                         "name": "FAN-5F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-5R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -207,19 +300,28 @@
             },
             {
                 "name": "FanTray6",
+                "max_consumed_power": false,
+                "num_fans" : 2,
                 "status_led": {
                     "controllable": false
                 },
-                "num_fans" : 2,
                 "fans": [
                     {
                         "name": "FAN-6F",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
                     },
                     {
                         "name": "FAN-6R",
+                        "speed": {
+                            "controllable": true,
+                            "minimum": 32
+                        },
                         "status_led": {
                             "controllable": false
                         }
@@ -235,7 +337,13 @@
                 },
                 "fans": [
                     {
-                        "name": "PSU-1 FAN-1"
+                        "name": "PSU-1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
@@ -258,7 +366,13 @@
                 },
                 "fans": [
                     {
-                        "name": "PSU-2 FAN-1"
+                        "name": "PSU-2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
