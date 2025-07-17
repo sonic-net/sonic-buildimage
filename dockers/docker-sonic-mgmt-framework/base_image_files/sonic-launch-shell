@@ -1,0 +1,14 @@
+#!/bin/sh
+# Launch the "preferred" shell based on the groups that the user belongs to.
+# The preferred shell is either:
+#    /bin/bash:          If the user belongs to group "admin"
+#    /usr/bin/sonic-cli: Otherwise
+
+# Uncomment "set -x" for debugging
+#set -x
+
+if /usr/bin/id -Gn | tr " " "\n" | /bin/grep -qw "^admin$"; then
+    exec /bin/bash "$@"
+else
+    exec /usr/bin/sonic-cli
+fi
