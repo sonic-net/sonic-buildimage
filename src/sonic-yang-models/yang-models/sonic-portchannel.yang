@@ -28,6 +28,10 @@ module sonic-portchannel {
 
     description "PORTCHANNEL yang Module for SONiC OS";
 
+    revision 2025-06-24 {
+        description "Add LACP System MAC address";
+    }
+
     revision 2021-06-13 {
         description "Change min-links valid range from 1-128 to 1-1024";
     }
@@ -118,6 +122,11 @@ module sonic-portchannel {
                 leaf fast_rate {
                     description "Enable LACP fast rate";
                     type stypes:boolean_type;
+                }
+
+                leaf system_mac {
+                    description "LACP System MAC";
+                    type yang:mac-address;
                 }
 
             } /* end of list PORTCHANNEL_LIST */
