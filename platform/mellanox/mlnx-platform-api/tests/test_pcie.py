@@ -22,6 +22,7 @@ if sys.version_info.major == 3:
     from unittest import mock
 else:
     import mock
+from sonic_platform.pcie import Pcie
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
