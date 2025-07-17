@@ -1,0 +1,146 @@
+module sonic-evpn {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-evpn";
+    prefix sevpn;
+
+    import sonic-interface {
+        prefix sinterface;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC EVPN";
+
+    revision 2024-05-08 {
+        description
+            "First revision.";
+    }
+
+    revision 2024-06-14 {
+        description
+            "Add global EVPN Multihoming configuration.";
+    }
+
+    typedef esi-type {
+        type enumeration {
+            enum TYPE_0_OPERATOR_CONFIGURED {
+                value 0;
+                description "Type 0 ESI - Operator Configured";
+            }
+            enum TYPE_3_MAC_BASED {
+                value 3;
+                description "Type 3 ESI - MAC-Based ESI";
+            }
+        }
+    }
+
+    container sonic-evpn {
+
+        container EVPN_ETHERNET_SEGMENT {
+            description "CONFIG_DB EVPN_ETHERNET_SEGMENT Table";
+
+            list EVPN_ETHERNET_SEGMENT_LIST {
+
+                key "ifname";
+
+                /*
+                 * It's not possible to have a leafref pointing to two separate models
+                 * (INTERFACE and PORTCHANNEL), so a raw interface name is used instead.
+                 */
+                leaf ifname {
+                    type string {
+                        length 1..128;
+                    }
+                }
+
+                leaf esi {
+                    type string {
+                        /*
+                         * Valid ESIs include:
+                         * AUTO (Anything but Type 0)
+                         * 00:01:02:03:04:05:06:07:08:09 (Only Type 0)
+                         */
+                        pattern "AUTO|([a-fA-F0-9]{1,2}:){9}[a-fA-F0-9]{1,2}" {
+                            error-message "Provided ESI is not valid";
+                            error-app-tag esi-invalid;
+                        }
+                    }
+                }
+
+                leaf type {
+                    type esi-type;
+                }
+
+                leaf df_pref {
+                    type uint16 {
+                        range "1..65535" {
+                            error-message "DF Preference value out of range";
+                            error-app-tag df-pref-invalid;
+                        }
+                    }
+                    default 32767;
+                }
+
+                /*
+                 * 'AUTO' ESI is not allowed for Type 0 ESIs.
+                 * 'AUTO' ESI is mandatory for all other ESI types.
+                 */
+                must "(type = 'TYPE_0_OPERATOR_CONFIGURED' and esi != 'AUTO') or
+                      (type != 'TYPE_0_OPERATOR_CONFIGURED' and esi = 'AUTO')" {
+                    error-message "Invalid use of 'AUTO' with Type 0 ESI or a manual ESI w/ AUTO type";
+                    error-app-tag auto-esi-type-invalid;
+                }
+            }
+        }
+        container EVPN_MH_GLOBAL {
+            description "CONFIG_DB EVPN_MH_GLOBAL Table";
+
+            list EVPN_MH_GLOBAL_LIST {
+                key "default_key";
+
+                leaf default_key {
+                    type string {
+                        length 1..128;
+                    }
+                }
+
+                leaf startup_delay {
+                    type uint16 {
+                        range "0..3600" {
+                            error-message "Startup Delay value out of range";
+                            error-app-tag startup-delay-invalid;
+                        }
+                    }
+                    default 300;
+                }
+
+                leaf mac_holdtime {
+                    type uint32 {
+                        range "0..86400" {
+                            error-message "MAC Holdtime value out of range";
+                            error-app-tag mac-holdtime-invalid;
+                        }
+                    }
+                    default 1080;
+                }
+
+
+                leaf neigh_holdtime {
+                    type uint32 {
+                        range "0..86400" {
+                            error-message "Neighbor Holdtime value out of range";
+                            error-app-tag neigh-holdtime-invalid;
+                        }
+                    }
+                    default 1080;
+                }
+            }
+        }
+    }
+}
