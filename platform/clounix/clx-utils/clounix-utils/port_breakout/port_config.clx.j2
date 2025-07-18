@@ -1,0 +1,87 @@
+init start stage low-level
+
+{# port-map #}
+{%- for pm in port_map -%}
+init set port-map unit={{ pm.unit }} port={{ pm.clx_port }}  eth-macro={{ pm.macro }}  lane={{ pm.clx_lane }} max-speed={{pm.max_speed}}g active=true
+{% endfor -%}
+{# cpi port-map #}
+{%- for c_pm in cpi_port_map -%}
+{{ c_pm }}
+{% endfor %}
+
+init start stage task-rsrc
+init start stage module
+init start stage task
+
+{# lane-swap #}
+{%- for ls in lane_swap -%}
+phy set lane-swap unit={{ ls.unit }} portlist={{ ls.clx_port }} lane-cnt={{ ls.lane_cnt }} property=tx data=0x{{ls.data['tx'] | join('.')}}
+{% endfor %}
+{%- for ls in lane_swap -%}
+phy set lane-swap unit={{ ls.unit }} portlist={{ ls.clx_port }} lane-cnt={{ ls.lane_cnt }} property=rx data=0x{{ls.data['rx'] | join('.')}}
+{% endfor %}
+{# cpi lane-swap #}
+{%- for c_ls in cpi_lane_swap -%}
+{{ c_ls }}
+{% endfor %}
+
+{# polarity-rev #}
+{%- for pr in polarity_rev -%}
+phy set polarity-rev unit={{ pr.unit }} portlist={{ pr.clx_port }} lane-cnt={{ pr.lane_cnt }} property=tx data=0x{{pr.data['tx'] | join('.')}}
+{% endfor %}
+{%- for pr in polarity_rev -%}
+phy set polarity-rev unit={{ pr.unit }} portlist={{ pr.clx_port }} lane-cnt={{ pr.lane_cnt }} property=rx data=0x{{pr.data['rx'] | join('.')}}
+{% endfor %}
+{# cpi polarity-rev #}
+{%- for c_pr in cpi_polarity_rev -%}
+{{ c_pr }}
+{% endfor %}
+
+{# pre_emphasis #}
+{%- for pe in pre_emphasis -%}
+phy set pre-emphasis unit={{ pe.unit }} portlist={{ pe.clx_port }} lane-cnt={{ pe.lane_cnt }} property=c2 data=0x{{pe.data['c2'] | join('.')}}
+phy set pre-emphasis unit={{ pe.unit }} portlist={{ pe.clx_port }} lane-cnt={{ pe.lane_cnt }} property=cn1 data=0x{{pe.data['cn1'] | join('.')}}
+phy set pre-emphasis unit={{ pe.unit }} portlist={{ pe.clx_port }} lane-cnt={{ pe.lane_cnt }} property=c1 data=0x{{pe.data['c1'] | join('.')}}
+phy set pre-emphasis unit={{ pe.unit }} portlist={{ pe.clx_port }} lane-cnt={{ pe.lane_cnt }} property=c0 data=0x{{pe.data['c0'] | join('.')}}
+{% endfor %}
+{# cpi pre_emphasis #}
+{%- for c_pe in cpi_pre_emphasis -%}
+{{ c_pe }}
+{% endfor %}
+
+{# mdio #}
+{%- for m in port_mdio -%}
+phy set mdio unit={{ m.unit }} portlist={{ m.clx_port }}  devad={{ m.devad }} addr={{ m.addr }} data={{ m.value }}
+{% endfor %}
+
+{# port-speed #}
+{%- for ps in port_speed -%}
+port set property unit={{ ps.unit }} portlist={{ ps.clx_port }} speed={{ ps.speed }}g
+{% endfor %}
+
+{# port-medium-type #}
+{%- for pm in port_medium -%}
+port set property unit={{ pm.unit }} portlist={{ pm.clx_port }} medium-type={{pm.medium}}
+{% endfor %}
+
+{# cpi medium-type #}
+{%- for c_mt in cpi_medium_type -%}
+{{ c_mt }}
+{% endfor -%}
+{# cpi adver #}
+{%- for c_adver in cpi_adver -%}
+{{ c_adver }}
+{% endfor -%}
+{# cpi an #}
+{%- for c_an in cpi_an -%}
+{{ c_an }}
+{% endfor -%}
+{# cpi admin #}
+{%- for c_admin in cpi_admin -%}
+{{ c_admin }}
+{% endfor %}
+
+{# disable all ports #}
+{%- for pm in port_map -%}
+port set property unit={{pm.unit}} portlist={{pm.clx_port}} admin=disable
+{% endfor %}
