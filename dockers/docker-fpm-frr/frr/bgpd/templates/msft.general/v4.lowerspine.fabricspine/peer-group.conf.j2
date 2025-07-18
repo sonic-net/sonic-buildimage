@@ -4,7 +4,7 @@
   neighbor FABRICSPINE_V4 peer-group
   address-family ipv4 unicast
     neighbor FABRICSPINE_V4 activate
-    neighbor FABRICSPINE_V4 next-hop-self
+    neighbor FABRICSPINE_V4 next-hop-self force
     neighbor FABRICSPINE_V4 soft-reconfiguration inbound
     neighbor FABRICSPINE_V4 route-map FROM_FABRICSPINE_V4 in
     neighbor FABRICSPINE_V4 route-map TO_FABRICSPINE_V4 out

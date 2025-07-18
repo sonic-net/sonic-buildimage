@@ -9,6 +9,9 @@
             "type": "SpineRouter"
         }
     },
+    "CONFIG_DB__LOOPBACK_INTERFACE": {
+        "Loopback0|10.10.10.10/32": {}
+    },
     "constants": {
         "bgp": {
             "fabric_t2_community": "12345:12345"

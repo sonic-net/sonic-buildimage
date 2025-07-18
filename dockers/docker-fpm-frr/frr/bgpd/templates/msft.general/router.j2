@@ -144,7 +144,7 @@
 {%             elif neighbor_type == 'LeafRouter' %}
 {%                 include path_template % "v4.spine.leaf" %}
 {%             endif %}
-{%         else %}
+{%          else %}
 {%             if neighbor_type == 'UpperSpineRouter' %}
 {%                 include path_template % "v4.lowerspine.upperspine" %}
 {%             elif neighbor_type == 'FabricSpineRouter' %}
@@ -153,16 +153,24 @@
 {%                 include path_template % "v4.lowerspine.leaf" %}
 {%              endif %}
 {%         endif %}
+{%      elif device_type in ['LowerSpineRouter'] %}
+{%             if neighbor_type == 'UpperSpineRouter' %}
+{%                 include path_template % "v4.lowerspine.upperspine" %}
+{%             elif neighbor_type == 'FabricSpineRouter' %}
+{%                 include path_template % "v4.lowerspine.fabricspine" %}
+{%             elif neighbor_type == 'LeafRouter' %}
+{%                 include path_template % "v4.lowerspine.leaf" %}
+{%              endif %}
 {%     elif device_type in ['UpperSpineRouter'] %}
 {%          if neighbor_type == 'RegionalHub' %}
 {%                 include path_template % "v4.upperspine.rh" %}
 {%         elif neighbor_type == 'AZNGHub' %}
 {%                 include path_template % "v4.upperspine.ah" %}
-{%         elif neighbor_type == 'SpineRouter' %}
+{%         elif neighbor_type in ['LowerSpineRouter', 'SpineRouter'] %}
 {%                 include path_template % "v4.upperspine.lowerspine" %}
 {%         endif %}
 {%     elif device_type in ['FabricSpineRouter'] %}
-{%          if neighbor_type == 'SpineRouter' %}
+{%          if neighbor_type in ['LowerSpineRouter', 'SpineRouter'] %}
 {%                include path_template % "v4.fabricspine.lowerspine" %}
 {%         endif %}
 {%     elif device_type in ['VirtualMachine'] %}
@@ -310,16 +318,24 @@
 {%                 include path_template % "v6.lowerspine.leaf" %}
 {%              endif %}
 {%         endif %}
+{%     elif device_type in ['LowerSpineRouter'] %}
+{%              if neighbor_type == 'UpperSpineRouter' %}
+{%                 include path_template % "v6.lowerspine.upperspine" %}
+{%              elif neighbor_type == 'FabricSpineRouter' %}
+{%                 include path_template % "v6.lowerspine.fabricspine" %}
+{%              elif neighbor_type == 'LeafRouter' %}
+{%                 include path_template % "v6.lowerspine.leaf" %}
+{%              endif %}
 {%     elif device_type in ['UpperSpineRouter'] %}
 {%          if neighbor_type == 'RegionalHub' %}
 {%                 include path_template % "v6.upperspine.rh" %}
 {%         elif neighbor_type == 'AZNGHub' %}
 {%                 include path_template % "v6.upperspine.ah" %}
-{%         elif neighbor_type == 'SpineRouter' %}
+{%         elif neighbor_type in ['LowerSpineRouter', 'SpineRouter'] %}
 {%                 include path_template % "v6.upperspine.lowerspine" %}
 {%         endif %}
 {%     elif device_type in ['FabricSpineRouter'] %}
-{%          if neighbor_type == 'SpineRouter'%}
+{%          if neighbor_type in ['LowerSpineRouter', 'SpineRouter'] %}
 {%                include path_template % "v6.fabricspine.lowerspine" %}
 {%         endif %}
 {%     elif device_type in ['VirtualMachine'] %}

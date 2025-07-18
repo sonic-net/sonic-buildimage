@@ -3,8 +3,6 @@
 !
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
-  neighbor {{ neighbor_addr }} route-reflector-client 
-  neighbor {{ neighbor_addr }} next-hop-self force
   neighbor {{ neighbor_addr }} peer-group LOWERSPINE_V4
 !
 {% if need_to_set_timers %}
