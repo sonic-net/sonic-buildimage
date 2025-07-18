@@ -576,6 +576,9 @@ RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
 
+# For nvidia-bluefield sdk
+RUN pip3 install ctypeslib2 clang==14
+
 # For sonic config engine testing
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
 # enum34 causes Python 're' package to not work properly as it redefines an incompatible enum.py module
