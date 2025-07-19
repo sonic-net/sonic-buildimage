@@ -1,0 +1,4 @@
+cx732q-n/scripts/* usr/bin
+cx732q-n/utils/* usr/local/bin
+cx732q-n/service/*.service lib/systemd/system
+build/wheel/* usr/share/sonic/device/x86_64-asterfusion_cx732q_n-r0

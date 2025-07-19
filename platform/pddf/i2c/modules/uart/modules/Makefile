@@ -1,0 +1,1 @@
+obj-m := psu/ fan/ eeprom/ sys/ thermal/ payload/ 
