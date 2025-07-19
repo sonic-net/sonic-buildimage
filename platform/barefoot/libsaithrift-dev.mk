@@ -29,3 +29,8 @@ $(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER)))
 SAISERVER_DBG = saiserver$(SAITHRIFT_VER)-dbg_$(SAI_VER)_amd64.deb
 $(SAISERVER_DBG)_RDEPENDS += $(SAISERVER)
 $(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER_DBG)))
+
+# A workaround to fix the SAI header files not checkout issue
+# Once the SAI upgraded to the version that contains the patch, then the following change can be removed
+PATCH_DEPEND = $(shell cd $(SRC_PATH)/sonic-sairedis; QUILT_PATCHES=../sonic-sairedis.patch quilt push -a > /dev/null)
+$(eval $(echo $(PATCH_DEPEND)))
