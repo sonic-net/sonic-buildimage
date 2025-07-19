@@ -14,7 +14,7 @@ chrono = { workspace = true }
 enumset = { workspace = true }
 futures-util = { workspace = true }
 clap = { workspace = true }
-swss-common = { path = "../swss-common" }
+swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
