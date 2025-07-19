@@ -7,8 +7,8 @@ static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
 // Expected hash values
 static AUDITD_CONF_HASH: &str = "7cdbd1450570c7c12bdc67115b46d9ae778cbd76";
-static AUDITD_RULES_HASH_DEFAULT: &str = "99bf4b5a80ac2b8d03fa69d1b8e7f7b2a1423ba8";
-static AUDITD_RULES_HASH_NOKIA: &str = "6002dcd7ef2cbeabc7a60925bd603ebe901d58be";
+static AUDITD_RULES_HASH_DEFAULT: &str = "7fd1b946041fc35ed7ccbe28493a02caf0176406";
+static AUDITD_RULES_HASH_NOKIA: &str = "b52172968230e4098623f7f6c64aa2bfaec4967c";
 
 // Helper to run commands
 fn run_command(cmd: &str) -> Result<String, String> {
