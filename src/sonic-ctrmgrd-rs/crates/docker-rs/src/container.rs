@@ -14,8 +14,6 @@ pub enum Error {
     Docker(#[from] bollard::errors::Error),
     #[error("Unable to open file")]
     IO(#[from] std::io::Error),
-    #[error("Unable to get/set data to swsscommon")]
-    Swsscommon(#[from] swss_common::Exception),
     #[error("UTF-8 parsing error")]
     UTF8(#[from] std::str::Utf8Error),
 }

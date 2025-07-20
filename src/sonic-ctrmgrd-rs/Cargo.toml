@@ -71,8 +71,6 @@ chrono = "0.4"
 enumset = "1"
 bollard = { version = "0.17.1", features = ["chrono"] }
 uuid = { version = "1.15", features = ["v4"] }
-# Internal dependencies
-swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
 
 # Dev dependencies
 criterion = "0.5"
