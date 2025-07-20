@@ -22,7 +22,8 @@ RUN apt-get update &&       \
         pciutils            \
         # Needed for installing netifaces Python package
         build-essential     \
-        python3-dev
+        python3-dev         \
+        opentelemetry-cpp
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Fix for gcc/python/iputils-ping not found in arm docker
