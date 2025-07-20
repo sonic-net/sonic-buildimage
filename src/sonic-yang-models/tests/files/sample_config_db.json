@@ -2978,6 +2978,7 @@
         },
         "DASH_HA_GLOBAL_CONFIG": {
             "global": {
+                "vnet_name": "Vnet55",
                 "cp_data_channel_port": "11362",
                 "dp_channel_port": "11368",
                 "dp_channel_src_port_min": "49152",

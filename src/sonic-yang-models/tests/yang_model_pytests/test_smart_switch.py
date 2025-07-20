@@ -419,6 +419,7 @@ class TestSmartSwitch:
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
+                        "vnet_name": "Vnet55",
                         "cp_data_channel_port": 11234,
                         "dp_channel_port": 11235,
                         "dp_channel_src_port_min": 11236,
