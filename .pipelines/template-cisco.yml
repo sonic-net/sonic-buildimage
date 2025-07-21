@@ -48,7 +48,7 @@ jobs:
       displayName: 'Export cisco release version'
     - task: DownloadGitHubRelease@0
       inputs:
-        connection: cisco-connection
+        connection: cisco-connection-new
         userRepository: Cisco-8000-sonic/platform-cisco-8000
         defaultVersionType: specificTag
         version: $(cisco.ref)
