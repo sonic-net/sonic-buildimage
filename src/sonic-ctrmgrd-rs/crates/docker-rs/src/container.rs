@@ -22,7 +22,6 @@ impl<'a> Container<'a> {
     pub fn new(feature: &str) -> Container {
         Container {
             feature,
-            // db_connections: DbConnections::initialize_connection(),
         }
     }
 
