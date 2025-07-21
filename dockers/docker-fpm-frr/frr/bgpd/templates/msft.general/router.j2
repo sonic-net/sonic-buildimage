@@ -71,7 +71,7 @@
 {%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v4.mgmtspine.oob" %}
 {%         else %}
-{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'] %}
+{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'ConsoleServer'] %}
 {%                  set peer_group_type = 'DOWNSTREAM_V4' %}
 {%             else %}
 {%                  set peer_group_type = 'TIER1_V4' %}
@@ -174,7 +174,7 @@
 {%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v6.mgmtspine.oob" %}
 {%         else %}
-{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtAccessRouter'] %}
+{%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'ConsoleServer'] %}
 {%                  set peer_group_type = 'DOWNSTREAM_V6' %}
 {%             else %}
 {%                  set peer_group_type = 'TIER1_V6' %}

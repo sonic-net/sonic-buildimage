@@ -5,10 +5,7 @@ ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
 !
 bgp as-path access-list LOCALROUTES permit ^$
 !
-route-map TO_{{ peer_group_type }} permit 100
-  match ipv6 address prefix-list DEFAULT_IPV6
-!
-route-map TO_{{ peer_group_type }} deny 1000
+route-map TO_{{ peer_group_type }} permit 1000
 !
 route-map FROM_{{ peer_group_type }} permit 100
   set ipv6 next-hop prefer-global
