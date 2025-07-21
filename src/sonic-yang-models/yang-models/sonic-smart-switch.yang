@@ -282,7 +282,9 @@ module sonic-smart-switch {
                     type leafref {
                         path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
                     }
-                    length 1..255;
+                    must "string-length(.) >= 1 and string-length(.) <= 255" {
+                        error-message "vnet_name length must be between 1 and 255 characters";
+                    }
                 }
 
 				leaf cp_data_channel_port {
