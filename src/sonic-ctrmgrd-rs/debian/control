@@ -2,10 +2,10 @@ Source: sonic
 Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
 Section: net
 Priority: optional
-Build-Depends: dh-exec (>=0.3), debhelper (>= 12), autotools-dev, protobuf-compiler (>=3), libprotobuf-dev (>=3), libswsscommon-dev (>= 1)
+Build-Depends: dh-exec (>=0.3), debhelper (>= 12), autotools-dev
 Standards-Version: 1.0.0
 
 Package: sonic-ctrmgrd-rs
 Architecture: any
-Depends: ${shlibs:Depends}, libswsscommon (>= 1)
-Description: HA control plane services for SONiC project.
+Depends: ${shlibs:Depends}
+Description: Container management in Rust
