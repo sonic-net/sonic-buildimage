@@ -124,7 +124,9 @@ action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }
 {% endfor %}
 
 # update rsyslog counter
+{% if syslog_counter and syslog_counter == "true" %}
 action(type="omprog" binary="/usr/bin/syslog_counter.py" output="/var/log/syslog_counter.log" confirmMessages="on")
+{% endif%}
 
 #
 # Set the default permissions for all log files.
