@@ -1,0 +1,48 @@
+From b17c179664da7331a4669a1cf548e4e9c48a5477 Mon Sep 17 00:00:00 2001
+From: anlan_cs <vic.lan@pica8.com>
+Date: Wed, 10 May 2023 22:04:33 +0800
+Subject: [PATCH 06972/10000] bfdd: Fix malformed session with vrf
+
+With this configuration:
+
+```
+bfd
+ peer 33:33::66 local-address 33:33::88 vrf vrf8 interface enp1s0
+ exit
+ !
+exit
+```
+
+The bfd session can't be established with error:
+
+```
+bfdd[18663]: [YA0Q5-C0BPV] control-packet: wrong vrfid. [mhop:no peer:33:33::66 local:33:33::88 port:2 vrf:61]
+```
+
+The vrf check should use the carefully adjusted `vrfid`, which is
+based on globally/reliable interface.  We can't believe the
+`bvrf->vrf->vrf_id` because the `/proc/sys/net/ipv4/udp_l3mdev_accept`
+maybe is set "1" in VRF-lite backend even with security drawback.
+
+Just correct the vrf check.
+
+Signed-off-by: anlan_cs <vic.lan@pica8.com>
+---
+ bfdd/bfd_packet.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bfdd/bfd_packet.c b/bfdd/bfd_packet.c
+index 311ce4d37..ea7a1038a 100644
+--- a/bfdd/bfd_packet.c
++++ b/bfdd/bfd_packet.c
+@@ -878,7 +878,7 @@ void bfd_recv_cb(struct event *t)
+ 	/*
+ 	 * We may have a situation where received packet is on wrong vrf
+ 	 */
+-	if (bfd && bfd->vrf && bfd->vrf != bvrf->vrf) {
++	if (bfd && bfd->vrf && bfd->vrf->vrf_id != vrfid) {
+ 		cp_debug(is_mhop, &peer, &local, ifindex, vrfid,
+ 			 "wrong vrfid.");
+ 		return;
+-- 
+2.38.1
