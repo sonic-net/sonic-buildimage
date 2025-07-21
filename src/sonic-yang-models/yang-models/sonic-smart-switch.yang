@@ -17,6 +17,10 @@ module sonic-smart-switch {
 		prefix port;
 	}
 
+	import sonic-vnet {
+		prefix sonic-vnet;
+	}
+
 	organization
 		"SONiC";
 
