@@ -2392,6 +2392,14 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet55": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "8000",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
