@@ -573,7 +573,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
 # sonic-ctrmgrd-rs is required by container script
-install_deb_package $debs_path/sonic-ctrmgrd-rs_*.0.0_amd64.deb
+install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
 
 # container script for docker commands, which is required as
 # all docker commands are replaced with container commands.
