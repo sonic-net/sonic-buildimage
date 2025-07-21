@@ -2,13 +2,12 @@
 """
 syslog counter update plugin
 
-Usage with rsyslog:
+this plugin need load with omprog:
 action(type="omprog" binary="/usr/bin/syslog_counter.py" output="/var/log/syslog_counter.log" confirmMessages="on")
 
-More information:
+For more information:
 https://www.rsyslog.com/doc/configuration/modules/omprog.html
 """
-
 import sys
 import logging
 import threading
@@ -17,16 +16,7 @@ from swsscommon import swsscommon
 
 syslog_count = 0
 
-# initialize rsyslog plugin syslog, log message will write to the fine defined by output parameter
-logging.basicConfig(stream=sys.stderr,
-                    level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s %(message)s')
-
-logging.debug("syslog counter plugin start initialize")
-
-
 def update_counter_db():
-    # Background thread function to periodically update COUNTERS_DB with the current syslog count.
     global syslog_count
 
     try:
@@ -49,36 +39,39 @@ def update_counter_db():
 
         time.sleep(60)
 
-
 def main():
-    # Main thread function to read syslog messages from stdin and increment the counter.
     global syslog_count
-    ended_with_error = False
+
+    # initialize rsyslog plugin syslog, log message will write to the fine defined by output parameter
+    logging.basicConfig(stream=sys.stderr,
+                        level=logging.WARNING,
+                        format='%(asctime)s %(levelname)s %(message)s')
+
+    logging.debug("syslog counter plugin start initialize")
 
     # Start background thread
     update_thread = threading.Thread(target=update_counter_db, daemon=True)
     update_thread.start()
 
-    # Notify rsyslog that plugin is ready
+    # plugin initialzied, send OK to rsyslog
     print("OK", flush=True)
 
+    last_update_time = time.time()
     try:
         # receive syslog message from rsyslog and count
-        stdin_count = sum(1 for _ in sys.stdin)
-        while stdin_count > 0:
-            syslog_count += stdin_count
+        line = sys.stdin.readline()
+        while line:
+            syslog_count += 1
 
-            # Send the status code to rsyslog:
+            # Send the status code to rsyslog after every syslog
             print("OK", flush=True)
-            time.sleep(1)
-
-            stdin_count = sum(1 for _ in sys.stdin)
+            line = sys.stdin.readline()
     except Exception as e:
         logging.exception("syslog counter plugin unrecoverable error: {}, exiting program".format(e))
-        ended_with_error = True
+        sys.exit(1)
 
     logging.debug("Syslog counter plugin exiting.")
-    sys.exit(1 if ended_with_error else 0)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
