@@ -341,10 +341,14 @@ start() {
         rm -rf /tmp/cache
         MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
         if [ -f $MEDIA_SETTINGS ]; then
-            # Need to restart XCVRD on media_settings.json skus due to
-            # https://github.com/sonic-net/sonic-buildimage/issues/21902
-            debug "Restarting xcvrd service..."
-            /usr/bin/docker exec pmon supervisorctl restart xcvrd
+            if [ "$( docker inspect -f '{{.State.Running}}' pmon )" != "true" ]; then
+                debug "pmon not running so skip restarting xcvrd"
+            else
+                # Need to restart XCVRD on media_settings.json skus due to
+                # https://github.com/sonic-net/sonic-buildimage/issues/21902
+                debug "Restarting xcvrd service..."
+                /usr/bin/docker exec pmon supervisorctl restart xcvrd
+            fi
         fi
     fi
 
