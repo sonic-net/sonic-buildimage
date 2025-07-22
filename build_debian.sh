@@ -386,8 +386,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    nvme-cli                \
-    tpm2-tools
+    nvme-cli
 
 sudo cp files/initramfs-tools/pzstd $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/hooks/pzstd
