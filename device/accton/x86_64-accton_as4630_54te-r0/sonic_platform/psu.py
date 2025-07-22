@@ -139,8 +139,15 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings above
         """
+        status=self.get_status()
+        if status is None:
+            return  self.STATUS_LED_COLOR_OFF
 
-        return False  #Controlled by HW
+        return {
+            1: self.STATUS_LED_COLOR_GREEN,
+            0: self.STATUS_LED_COLOR_RED
+        }.get(status, self.STATUS_LED_COLOR_OFF)
+
 
     def get_temperature(self):
         """
@@ -226,3 +233,45 @@ class Psu(PsuBase):
             return int(val, 10) == 1
         else:
             return 0
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        model_path="{}{}".format(self.cpld_path, 'psu_model_name')
+        model=self._api_helper.read_txt_file(model_path)
+        if model is None:
+            return "N/A"
+
+        return model
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        serial_path="{}{}".format(self.cpld_path, 'psu_serial_number')
+        serial=self._api_helper.read_txt_file(serial_path)
+        if serial is None:
+            return "N/A"
+        return serial
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.index+1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True

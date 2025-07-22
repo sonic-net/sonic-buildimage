@@ -27,6 +27,13 @@ PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
 HOST_CHK_CMD = "docker > /dev/null 2>&1"
+SYSLED_FNODE = "/sys/class/leds/diag/brightness"
+SYSLED_MODES = {
+    "0" : "STATUS_LED_COLOR_OFF",
+    "1" : "STATUS_LED_COLOR_GREEN",
+    "2" : "STATUS_LED_COLOR_AMBER",
+    "5" : "STATUS_LED_COLOR_GREEN_BLINK"
+}
 
 
 class Chassis(ChassisBase):
@@ -55,12 +62,11 @@ class Chassis(ChassisBase):
         self.sfp_module_initialized = True
 
     def __initialize_fan(self):
-        from sonic_platform.fan import Fan
-        for fant_index in range(0, NUM_FAN_TRAY):
-            for fan_index in range(0, NUM_FAN):
-                fan = Fan(fant_index, fan_index)
-                self._fan_list.append(fan)
-
+        from sonic_platform.fan_drawer import FanDrawer
+        for fant_index in range(NUM_FAN_TRAY):
+            fandrawer = FanDrawer(fant_index)
+            self._fan_drawer_list.append(fandrawer)
+            self._fan_list.extend(fandrawer._fan_list)
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
         for index in range(0, NUM_PSU):
@@ -192,3 +198,39 @@ class Chassis(ChassisBase):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+
+    def initizalize_system_led(self):
+        return True
+
+    def get_status_led(self):
+        val = self._api_helper.read_txt_file(SYSLED_FNODE)
+        return SYSLED_MODES[val] if val in SYSLED_MODES else "UNKNOWN"
+
+    def set_status_led(self, color):
+        mode = None
+        for key, val in SYSLED_MODES.items():
+            if val == color:
+                mode = key
+                break
+        if mode is None:
+            return False
+        else:
+            return self._api_helper.write_txt_file(SYSLED_FNODE, mode)
