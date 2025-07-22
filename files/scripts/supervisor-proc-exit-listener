@@ -179,12 +179,11 @@ def main(argv):
         if len(file_descriptor_list) > 0:
             line = file_descriptor_list[0].readline()
             headers = childutils.get_headers(line)
-            try:
-                payload_length = int(headers['len'])
-                payload = sys.stdin.read(payload_length)
-            except Exception as e:
-                syslog.syslog(syslog.LOG_ERR, "Get invalid headers:'{}': {}".format(headers, e))
+            # Check if 'len' exists before using it
+            if 'len' not in headers:
+                syslog.syslog(syslog.LOG_ERR, "WARNING: Missing 'len' header in: {}".format(headers))
                 continue
+            payload = sys.stdin.read(int(headers['len']))
 
             # Handle the PROCESS_STATE_EXITED event
             if headers['eventname'] == 'PROCESS_STATE_EXITED':
