@@ -112,7 +112,7 @@ class PddfComponent(ComponentBase, DeviceBase):
         if version_cmd is None:
             return "Unknown"
 
-        result = subprocess.run(['/bin/bash', '-c', version_cmd], capture_output=True)
+        result = self.pddf_obj.get_cmd_output(version_cmd)
         if result.returncode != 0:
             return "Unknown"
 
@@ -141,8 +141,8 @@ class PddfComponent(ComponentBase, DeviceBase):
         if not os.path.exists(image_path):
             return False
 
-        result = subprocess.run(['/bin/bash', '-c', update_cmd.format(image_path)])
-        if result.returncode != 0:
+        result = self.pddf_obj.runcmd(update_cmd.format(image_path))
+        if result != 0:
             raise RuntimeError(f"Component firmware update failed")
 
         return True
@@ -272,7 +272,7 @@ class PddfComponent(ComponentBase, DeviceBase):
         if model_cmd is None:
             return "Unknown"
 
-        result = subprocess.run(['/bin/bash', '-c', model_cmd], capture_output=True)
+        result = self.pddf_obj.get_cmd_output(model_cmd)
         if result.returncode != 0:
             return "Unknown"
 
@@ -289,7 +289,7 @@ class PddfComponent(ComponentBase, DeviceBase):
         if serial_cmd is None:
             return "Unknown"
 
-        result = subprocess.run(['/bin/bash', '-c', serial_cmd], capture_output=True)
+        result = self.pddf_obj.get_cmd_output(serial_cmd)
         if result.returncode != 0:
             return "Unknown"
 
@@ -306,7 +306,7 @@ class PddfComponent(ComponentBase, DeviceBase):
         if revision_cmd is None:
             return "Unknown"
 
-        result = subprocess.run(['/bin/bash', '-c', revision_cmd], capture_output=True)
+        result = self.pddf_obj.get_cmd_output(revision_cmd)
         if result.returncode != 0:
             return "Unknown"
 

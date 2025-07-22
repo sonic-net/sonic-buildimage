@@ -55,6 +55,13 @@ class PddfApi():
             print("%s -- command failed" % cmd)
         return rc
 
+    def get_cmd_output(self, cmd):
+        result = subprocess.run(['/bin/bash', '-c', cmd], capture_output=True)
+        if result.returncode != 0:
+            print("%s -- command failed" % cmd)
+
+        return result
+
     def get_dev_idx(self, dev, ops):
         parent = dev['dev_info']['virt_parent']
         pdev = self.data[parent]
