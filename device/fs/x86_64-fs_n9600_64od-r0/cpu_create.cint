@@ -1,0 +1,127 @@
+cint_reset();
+
+int cint_field_group_create(int unit, bcm_field_group_t grp)
+{
+    int rv;
+
+    bcm_field_group_config_t group_config;
+
+    bcm_field_group_config_t_init(&group_config);
+    group_config.flags |= BCM_FIELD_GROUP_CREATE_WITH_ID;                     
+    group_config.group = grp;
+    group_config.mode = bcmFieldGroupModeAuto;
+    group_config.priority = 103;
+
+    BCM_FIELD_QSET_ADD(group_config.qset, bcmFieldQualifyStageIngress);
+    BCM_FIELD_QSET_ADD(group_config.qset, bcmFieldQualifyDstMac);
+    BCM_FIELD_QSET_ADD(group_config.qset, bcmFieldQualifyInPort);
+
+    BCM_FIELD_ASET_ADD(group_config.aset, bcmFieldActionCopyToCpu);
+    BCM_FIELD_ASET_ADD(group_config.aset, bcmFieldActionDrop);
+
+    rv = bcm_field_group_config_create(unit, &group_config);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_group_config_create failed, rv = %d\r\n", rv);
+        return -1;
+    }
+
+    bcm_field_group_dump(unit,grp);
+    
+    return 0;
+}
+
+int cint_field_entry_create1(int unit, bcm_field_group_t grp, bcm_field_entry_t entry, bcm_port_t port)
+{
+    int rv;
+    bcm_mac_t dst_mac = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    bcm_mac_t mac_mask = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    
+    rv = bcm_field_entry_create_id(unit, grp, entry);    
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_entry_create_id failed, rv = %d\r\n", rv);
+        return -1;
+    }
+
+    bcm_field_qualify_InPort(0, entry, port, 0xFFFFFFFF);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_qualify_InPort failed with err %s ,ret = %d\r\n", bcm_errmsg(rv), rv);
+        bcm_field_entry_destroy(unit, entry);
+        return rv;
+    }
+
+    rv =bcm_field_qualify_DstMac(unit, entry, dst_mac, mac_mask);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_qualify_DstMac failed,ret = %d\r\n", rv);
+        bcm_field_entry_destroy(unit, entry);
+        return -1;
+    }
+
+    rv = bcm_field_action_add(unit, entry, bcmFieldActionCopyToCpu, 1, 0);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_action_add failed, rv = %d \r\n", rv);
+        bcm_field_entry_destroy(unit, entry);
+        return -1;
+    }
+
+    rv = bcm_field_action_add(unit, entry, bcmFieldActionDrop, 1, 0);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_action_add failed, rv = %d \r\n", rv);
+        bcm_field_entry_destroy(unit, entry);
+        return -1;
+    }
+    
+    rv = bcm_field_entry_install(unit, entry);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_field_entry_install failed,ret = %d\r\n", rv);
+        bcm_field_entry_destroy(unit, entry);
+        return -1;
+    }  
+
+    printf("********************* BEGIN ****************************\r\n");
+    bcm_field_entry_dump(unit, entry);
+    printf("*********************** END ****************************\r\n");
+
+    return 0;
+}
+
+int set_up(int create)
+{
+    bcm_pbmp_t pbmp_all_front_panel;
+    int front_panel_port_count;
+    bcm_port_t port;
+    bcm_port_config_t config;
+    int rv;
+    bcm_field_entry_t entry = 2048;
+
+    bcm_port_config_t_init(&config);
+    rv = bcm_port_config_get(0, &config);
+    if (rv != BCM_E_NONE) {
+        printf("bcm_port_config_get failed with err %s ,ret = %d\r\n", bcm_errmsg(rv), rv);
+        return rv;
+    }
+
+    BCM_PBMP_CLEAR(pbmp_all_front_panel);
+    BCM_PBMP_ASSIGN(pbmp_all_front_panel, config.d3c);
+    BCM_PBMP_OR(pbmp_all_front_panel, config.xe);
+
+    if (create) {
+        cint_field_group_create(0,5);
+        BCM_PBMP_ITER(pbmp_all_front_panel, port)
+        {
+            cint_field_entry_create1(0, 5, entry, port);
+            entry++;
+        }
+    } else {
+        BCM_PBMP_ITER(pbmp_all_front_panel, port)
+        {
+            bcm_field_entry_destroy(0, entry);
+            entry++;
+        }
+        bcm_field_group_destroy(0, 5);
+    }
+
+    return 0;
+}
+
+int create=1;
+set_up( create );
