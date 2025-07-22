@@ -40,17 +40,9 @@ stages:
         jobGroups:
         - name: vs
 
-  - stage: Test
+  - stage: Test_round_1
     dependsOn: BuildVS
     condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
-    variables:
-    - group: SONiC-Elastictest
-    - name: inventory
-      value: veos_vtb
-    - name: testbed_file
-      value: vtestbed.yaml
-
-  - stage: Test_round_1
     variables:
     - group: SONiC-Elastictest
     - group: GIT_SECRETS
