@@ -193,7 +193,7 @@ def normailize_port_map_for_chassis(asic_name, port_map):
         if asic_name.lower() in k.lower():
             k = k.split('-')[0]
         new_port_map.update({k:v})
-    
+
     return new_port_map
 
 dns_dict = {
@@ -258,7 +258,7 @@ def parse_chassis_metadata(root,hname, lcname):
 
 def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, chassis_hwsku, num_voq, chassis_type, chassis_intf_map, voq_intf_attributes):
     """
-    This function iterates InterfaceMetadata for every port in the chassis and genetate the configuration for 
+    This function iterates InterfaceMetadata for every port in the chassis and genetate the configuration for
     systemport, chassis port alias and port default speeds.d.
 
     Args:
@@ -1012,7 +1012,7 @@ def parse_dpg(dpg, hname):
                         else:
                             prefix = prefix + "/32"
                     static_routes[prefix] = {'nexthop': ",".join(nexthop), 'ifname': ",".join(ifname), 'advertise': advertise}
-                    
+
             if port_nhipv4_map and port_nhipv6_map:
                 subnet_check_ip = list(port_nhipv4_map.values())[0]
                 for subnet_range in ip_intfs_map:
@@ -1649,9 +1649,9 @@ def parse_global_info(root):
             hostname = child.text
         if child.tag == str(docker_routing_config_mode_qn):
             docker_routing_config_mode = child.text
-            
+
     chassis_type, chassis_hostname  =  get_chassis_type_and_hostname(root, hostname)
-    return hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname 
+    return hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname
 
 def parse_asic_meta(meta, hname):
     sub_role = None
@@ -2132,14 +2132,14 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 linkmetas = parse_linkmeta(child, chassis_hostname)
 
     select_mmu_profiles(qos_profile, platform, hwsku)
-    
+
     # for chassis get the device type from chassis metadata not the asic or linecard type
     if chassis_hostname:
         device_type = devices.get(chassis_hostname, {}).get('type', None)
         card_type = [devices[key]['type'] for key in devices if key.lower() == hostname.lower()][0]
     else:
         device_type = [devices[key]['type'] for key in devices if key.lower() == hostname.lower()][0]
-        
+
     if asic_hostname is None:
         current_device = [devices[key] for key in devices if key.lower() == hostname.lower()][0]
     else:
@@ -2149,10 +2149,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             current_device = {}
 
     # on single asic linecards, parse_dpg() will not get the mmanagement interface information
-    # check here and get the linecard managment interface information 
+    # check here and get the linecard managment interface information
     if chassis_hostname and not mgmt_intf:
         mgmt_intf = parse_linecard_mgmt_ip(root, hostname)
-        
+
     results = {}
     results['DEVICE_METADATA'] = {'localhost': {
         'region': region,
@@ -2171,7 +2171,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if chassis_hostname:
         results['DEVICE_METADATA']['localhost']['chassis_hostname'] = chassis_hostname
-        
+
     if deployment_id is not None:
         results['DEVICE_METADATA']['localhost']['deployment_id'] = deployment_id
 
@@ -2224,10 +2224,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if len(system_defaults) > 0:
         results['SYSTEM_DEFAULTS'] = system_defaults
-   
+
     if asic_name is not None:
         results['DEVICE_METADATA']['localhost']['asic_name'] =  asic_name
-    
+
     # for single asic Voq Linecards the asic_name needs to populated to "Asic0"
     if switch_type == "voq" or chassis_type in [CHASSIS_CARD_VOQ]:
         if not is_multi_asic():
@@ -2384,9 +2384,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
        results['SYSTEM_PORT'] = sys_ports
 
     if chassis_port_alias:
-        slot_index = get_linecard_slot_index(hostname, chassis_linecards_info) 
+        slot_index = get_linecard_slot_index(hostname, chassis_linecards_info)
         for port in ports.keys():
-            # Try first to get Chassis port alias based on port bandwidth/configured speed and if exception use port default speed. 
+            # Try first to get Chassis port alias based on port bandwidth/configured speed and if exception use port default speed.
             try:
                 ports[port]['alias'] = chassis_port_alias.get(slot_index, {})[(port, port_speed_png[port])]
             except KeyError:
@@ -2758,10 +2758,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             'enabled' : 'yes' if current_device and current_device['type'] in console_device_types else 'no'
         }
     }
-
-    # Enable DHCP Server feature for specific device type
-    if current_device and current_device['type'] in dhcp_server_enabled_device_types:
-        results['DEVICE_METADATA']['localhost']['dhcp_server'] = 'enabled'
 
     # Disable unsupported counters on management devices
     if current_device and current_device['type'] in mgmt_device_types:

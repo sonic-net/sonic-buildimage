@@ -180,19 +180,6 @@ class TestCfgGenCaseInsensitive(TestCase):
             utils.to_dict(output.strip()),
             utils.to_dict("{'1': {'baud_rate': '9600', 'remote_device': 'managed_device', 'flow_control': 1}}"))
 
-    def test_minigraph_dhcp_server_feature(self):
-        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'dhcp_server\']"]
-        output = self.run_script(argument)
-        self.assertEqual(output.strip(), '')
-
-        try:
-            # For DHCP server enabled device type
-            output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (TOR_ROUTER, BMC_MGMT_TOR_ROUTER), self.sample_graph])
-            output = self.run_script(argument)
-            self.assertEqual(output.strip(), 'enabled')
-        finally:
-            output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (BMC_MGMT_TOR_ROUTER, TOR_ROUTER), self.sample_graph])
-
     def test_minigraph_deployment_id(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'deployment_id\']"]
         output = self.run_script(argument)
