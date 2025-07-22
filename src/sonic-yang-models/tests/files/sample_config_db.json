@@ -21,6 +21,12 @@
             "1.1.1.1": {},
             "fe80:1000:2000:3000::1": {}
         },
+        "DNS_OPTIONS": {
+            "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+            "ndots": "0",
+            "timeout": "1",
+            "attempts": "2"
+        },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
                "mode": "static",
@@ -378,7 +384,8 @@
         "SWITCH_TRIMMING": {
             "GLOBAL": {
                 "size": "128",
-                "dscp_value": "48",
+                "dscp_value": "from-tc",
+                "tc_value": "6",
                 "queue_index": "6"
             }
         },
@@ -1906,6 +1913,8 @@
         },
         "BGP_NEIGHBOR_AF": {
             "default|192.168.1.1|ipv4_unicast": {
+                "route_map_in": [ "map1" ],
+                "route_map_out": [ "map1" ]
             }
         },
         "BGP_PEER_GROUP": {
@@ -1914,6 +1923,8 @@
         },
         "BGP_PEER_GROUP_AF": {
             "default|PG1|ipv4_unicast": {
+                "route_map_in": [ "map1" ],
+                "route_map_out": [ "map1" ]
             }
         },
         "BGP_GLOBALS_LISTEN_PREFIX": {
@@ -2225,6 +2236,12 @@
             }
         },
 
+        "DEBUG_DROP_MONITOR": {
+            "CONFIG": {
+                "status": "disabled"
+            }
+        },
+
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",
@@ -2410,6 +2427,45 @@
             }
         },
 
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true",
+                "vlanid": "100"
+            }
+        },
+        "STP_VLAN_PORT": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "200",
+                "priority": "128",
+                "portfast": "false",
+                "uplink_fast": "false"
+            }
+        },
+        
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -2861,7 +2917,8 @@
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
             },
             "str-8102-t1-dpu1": {
                 "state": "down",
@@ -2873,7 +2930,62 @@
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
+            }
+        },
+        "REMOTE_DPU": {
+            "str-8103-t1-dpu0": {
+                "type": "typeA",
+                "pa_ipv4": "192.168.2.1",
+                "pa_ipv6": "2001:db8::30",
+                "npu_ipv4": "192.168.2.10",
+                "npu_ipv6": "2001:db8::40",
+                "dpu_id": "0",
+                "swbus_port": "23606"
+            },
+            "str-8103-t1-dpu1": {
+                "type": "typeB",
+                "pa_ipv4": "192.168.2.2",
+                "pa_ipv6": "2001:db8::50",
+                "npu_ipv4": "192.168.2.20",
+                "npu_ipv6": "2001:db8::60",
+                "dpu_id": "1",
+                "swbus_port": "23607"
+            }
+        },
+        "VDPU": {
+            "vdpu0": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu0"]
+            },
+            "vdpu1": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu1"]
+            },
+            "vdpu2": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu2"]
+            },
+            "vdpu3": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu3"]
+            }
+        },
+        "DASH_HA_GLOBAL_CONFIG": {
+            "global": {
+                "cp_data_channel_port": "11362",
+                "dp_channel_port": "11368",
+                "dp_channel_src_port_min": "49152",
+                "dp_channel_src_port_max": "53247",
+                "dp_channel_probe_interval_ms": "100",
+                "dp_channel_probe_fail_threshold": "3",
+                "dpu_bfd_probe_interval_in_ms": "100",
+                "dpu_bfd_probe_multiplier": "3"
             }
         },
 	"XCVRD_LOG": {
@@ -2937,7 +3049,11 @@
                 "alias": "BAD_DROPS",
                 "desc": "More port ingress drops",
                 "group": "BAD",
-                "type": "SWITCH_INGRESS_DROPS"
+                "type": "SWITCH_INGRESS_DROPS",
+                "drop_monitor_status": "disabled",
+                "drop_count_threshold": "10",
+                "incident_count_threshold": "2",
+                "window": "300"
             }
         },
         "DEBUG_COUNTER_DROP_REASON": {

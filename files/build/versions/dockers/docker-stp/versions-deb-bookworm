@@ -32,3 +32,4 @@ strace==6.1-0.1
 ucf==3.0043+nmu1
 vim==2:9.0.1378-2
 vim-runtime==2:9.0.1378-2
+libpython3.11==3.11.2-6+deb12u6

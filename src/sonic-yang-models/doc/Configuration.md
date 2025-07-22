@@ -26,6 +26,7 @@
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
   * [DEBUG_COUNTER and DEBUG_COUNTER_DROP_REASON](#debug_counter-and-debug_counter_drop_reason)
+  * [DEBUG_DROP_MONITOR](#debug_drop_monitor)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -71,6 +72,7 @@
   * [Restapi](#restapi)
   * [System Port](#system-port)
   * [Tacplus Server](#tacplus-server)
+  * [TC to DSCP map](#tc-to-dscp-map)
   * [TC to Priority group map](#tc-to-priority-group-map)
   * [TC to Queue map](#tc-to-queue-map)
   * [Telemetry](#telemetry)
@@ -96,6 +98,10 @@
   * [Static DNS](#static-dns)
   * [ASIC_SENSORS](#asic_sensors)  
   * [SRv6](#srv6)
+  * [DPU](#dpu-configuration)
+  * [REMOTE_DPU](#remote_dpu-configuration)
+  * [VDPU](#vdpu-configuration)
+  * [DASH HA Global Configuration](#dash-ha-global-configuration)
   * [Prefix List](#prefix-list)
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
@@ -987,19 +993,27 @@ DEBUG_COUNTER:
 ```
 ; DEBUG_COUNTER table
 
-key             = DEBUG_COUNTER_TABLE:name
-name            = string
-type            = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
-alias           = string (optional)
-description     = string (optional)
-group           = string (optional)
+key                      = DEBUG_COUNTER_TABLE:name
+name                     = string
+type                     = (SWITCH_INGRESS_DROPS|PORT_INGRESS_DROPS|SWITCH_EGRESS_DROPS|PORT_EGRESS_DROPS)
+alias                    = string (optional)
+description              = string (optional)
+group                    = string (optional)
+drop_monitor_status      = admin_mode (enabled/disabled, default disabled)
+drop_count_threshold     = uint64 (optional)
+incident_count_threshold = uint64 (optional)
+window                   = uint64 (optional)
 
 "DEBUG_COUNTER": {
     "DEBUG_4": {
         "alias": "BAD_DROPS",
         "desc": "More port ingress drops",
         "group": "BAD",
-        "type": "SWITCH_INGRESS_DROPS"
+        "type": "SWITCH_INGRESS_DROPS",
+        "drop_monitor_status": "disabled",
+        "drop_count_threshold": "10",
+        "incident_count_threshold": "2",
+        "window": "300"
     }
 }
 ```
@@ -1013,6 +1027,21 @@ reason  = a valid drop reason without the 'SAI_IN/OUT_DROP_REASON_' prefix (http
 "DEBUG_COUNTER_DROP_REASON": {
     "DEBUG_4|DIP_LINK_LOCAL": {},
     "DEBUG_4|SIP_LINK_LOCAL": {}
+}
+```
+
+### DEBUG_DROP_MONITOR
+Ingress and eggress port debug counter flows can be monitored for persistent drops using
+debug drop monitor feature. This table shows the status and configurations of the feature which can
+be modified via the CLI.
+
+```
+{
+    "DEBUG_DROP_MONITOR": {
+        "CONFIG": {
+            "status": "disabled",
+        }
+    }
 }
 ```
 
@@ -2443,6 +2472,21 @@ and is listed in this table.
 }
 ```
 
+### TC to DSCP map
+
+```json
+{
+    "TC_TO_DSCP_MAP": {
+        "AZURE": {
+            "5": "10",
+            "6": "20"
+        }
+    }
+}
+```
+
+**Note:**
+* configuration is mandatory when packet trimming Asymmetric DSCP mode is used
 
 ### TC to Priority group map
 
@@ -2595,7 +2639,8 @@ and try sending it on a different queue to deliver a packet drop notification to
 
 ***TRIMMING***
 
-```
+Symmetric DSCP and static queue:
+```json
 {
     "SWITCH_TRIMMING": {
         "GLOBAL": {
@@ -2607,7 +2652,22 @@ and try sending it on a different queue to deliver a packet drop notification to
 }
 ```
 
+Asymmetric DSCP and dynamic queue:
+```json
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "from-tc",
+            "tc_value": "8",
+            "queue_index": "dynamic"
+        }
+    }
+}
+```
+
 **Note:**
+* when `dscp_value` is set to `from-tc`, the `tc_value` is used for mapping to DSCP
 * when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions
@@ -3067,7 +3127,19 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 	"DNS_NAMESERVER": {
 		"1.1.1.1": {},
 		"fe80:1000:2000:3000::1": {}
-	},
+	}
+}
+```
+
+DNS configuration options can also be set when nameservers are defined:
+```json
+{
+    "DNS_OPTIONS": {
+        "search": [ "d1.example.com", "d2.example.com", "d3.example.com" ],
+        "ndots": 0,
+        "timeout": 1,
+        "attempts": 2
+    }
 }
 ```
 
@@ -3172,7 +3244,7 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 
 ### DPU Configuration
 
-The **DPU** table introduces the configuration for the DPUs(Data Processing Unit) information available on the platform.
+The **DPU** table introduces the configuration for the DPUs (Data Processing Unit) information available on the platform.
 
 ```json
 {
@@ -3206,15 +3278,142 @@ The **DPU** table introduces the configuration for the DPUs(Data Processing Unit
 ```
 
 **state**: Administrative status of the DPU (`up` or `down`).
+
 **local_port**: local port mapped to DPU port on the switch.
+
 **vip_ipv4**: VIP IPv4 address from minigraph.
+
 **vip_ipv6**: VIP IPv6 address from minigraph.
+
 **pa_ipv4**: PA IPv4 address from minigraph.
+
 **pa_ipv6**: PA IPv6 address from minigraph.
+
 **dpu_id**: Id of the DPU from minigraph.
+
 **vdpu_id**: ID of VDPUs from minigraph.
+
 **gnmi_port**: TCP listening port for gnmi service on DPU.
+
 **orchagent_zmq_port**: TCP listening port for ZMQ service on DPU orchagent.
+
+### REMOTE_DPU Configuration
+
+The **REMOTE_DPU** table introduces the configuration for the remote DPUs (Data Processing Unit) accessible on other machines.
+
+```json
+{
+    "REMOTE_DPU": {
+        "str-8103-t1-dpu0": {
+            "type": "typeA",
+            "pa_ipv4": "192.168.2.1",
+            "pa_ipv6": "2001:db8::30",
+            "npu_ipv4": "192.168.2.10",
+            "npu_ipv6": "2001:db8::40",
+            "dpu_id": "0",
+            "swbus_port": "23606"
+        },
+        "str-8103-t1-dpu1": {
+            "type": "typeB",
+            "pa_ipv4": "192.168.2.2",
+            "pa_ipv6": "2001:db8::50",
+            "npu_ipv4": "192.168.2.20",
+            "npu_ipv6": "2001:db8::60",
+            "dpu_id": "1",
+            "swbus_port": "23607"
+        }
+    }
+}
+```
+
+**type**: Type of the DPU.
+
+**pa_ipv4**: DPU IPv4 physical address.
+
+**pa_ipv6**: DPU IPv6 physical address.
+
+**npu_ipv4**: Loopback IPv4 address of remote NPU.
+
+**npu_ipv6**: Loopback IPv6 address of remote NPU.
+
+**dpu_id**: ID of the DPU from minigraph.
+
+**swbus_port**: TCP listening port for swbus service for this DPU. Must be 23606 + dpu_id.
+
+### VDPU Configuration
+
+The **VDPU** table introduces the configuration for the VDPUs (Virtual Data Processing Unit) information available on the platform.
+
+```json
+{
+    "VDPU": {
+        "vdpu0": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu0"]
+        },
+        "vdpu1": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu1"]
+        },
+        "vdpu2": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu2"]
+        },
+        "vdpu3": {
+            "profile": "",
+            "tier": "",
+            "main_dpu_ids": ["dpu3"]
+        }
+    }
+}
+```
+
+**profile**: VDPU profile. Currently unused, reserved for future use.
+
+**tier**: VDPU tier. Currently unused, reserved for future use.
+
+**main_dpu_ids**: Main DPUs involved in this VDPU.
+
+### DASH HA Global Configuration
+
+The **DASH_HA_GLOBAL_CONFIG** table introduces the configuration for the DASH High Availability global settings available on the platform.
+Like NTP global configuration, DASH HA global configuration must have one entry with the key "global".
+
+```json
+{
+    "DASH_HA_GLOBAL_CONFIG": {
+        "global": {
+            "cp_data_channel_port": "11362",
+            "dp_channel_port": "11368",
+            "dp_channel_src_port_min": "49152",
+            "dp_channel_src_port_max": "53247",
+            "dp_channel_probe_interval_ms": "100",
+            "dp_channel_probe_fail_threshold": "3",
+            "dpu_bfd_probe_interval_in_ms": "100",
+            "dpu_bfd_probe_multiplier": "3"
+        }
+    }
+}
+```
+
+**cp_data_channel_port**: Control plane data channel port, used for bulk sync.
+
+**dp_channel_port**: Destination port when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_src_port_min**: Minimum source port used when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_src_port_max**: Maximum source port used when tunneling packets via DPU-to-DPU data plane channel.
+
+**dp_channel_probe_interval_ms**: Interval in milliseconds for sending each DPU-to-DPU data path probe.
+
+**dp_channel_probe_fail_threshold**: Number of probe failures needed to consider data plane channel as dead.
+
+**dpu_bfd_probe_interval_in_ms**: Interval in milliseconds for DPU BFD probe.
+
+**dpu_bfd_probe_multiplier**: Number of DPU BFD probe failures before considering the probe as down.
 
 # For Developers
 

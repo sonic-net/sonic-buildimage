@@ -18,6 +18,8 @@ def
 {%-         set filename_postfix = 't0' %}
 {%-     elif 'leafrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't1' %}
+{%-     elif 'lowerspinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+{%-         set filename_postfix = 'lt2' %}
 {%-     elif 'spinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
     {%-     if 'lowerspinerouter' == switch_subrole.lower() %}
     {%-         set filename_postfix = 'lt2' %}
