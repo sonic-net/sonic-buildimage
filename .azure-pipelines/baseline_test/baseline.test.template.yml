@@ -1,0 +1,116 @@
+jobs:
+  # - job: GetPRID
+  #   pool: sonic-ubuntu-1c
+  #   steps:
+  #   - script: |
+  #       echo "Fetching latest sonic-mgmt PR ID..."
+  #       sudo apt-get update && sudo apt-get install -y jq
+  #       PR_ID=$(curl -s -H "Authorization: token $(GIT_API_TOKEN)" \
+  #         https://api.github.com/repos/sonic-net/sonic-mgmt/pulls \
+  #         | jq '.[0].number')
+  #       echo "Latest PR ID: $PR_ID"
+  #       echo "##vso[task.setvariable variable=SONIC_MGMT_LATEST_PR]$PR_ID"
+  #     displayName: Fetch Latest PR ID
+  #     env:
+  #       GIT_API_TOKEN: $(GIT_API_TOKEN)
+
+  - job: get_impacted_area
+    cancelTimeoutInMinutes: 10
+    displayName: "Get impacted area"
+    timeoutInMinutes: 240
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+      - template: .azure-pipelines/impacted_area_testing/get-impacted-area.yml@sonic-mgmt
+
+  - job: impacted_area_kvmtest
+    displayName: " "
+    cancelTimeoutInMinutes: 10
+    dependsOn: get_impacted_area
+    strategy:
+      matrix:
+        impacted-area-kvmtest-t0:
+          TESTBED_PREP_TOPOLOGY: t0
+          CHECKER: t0_checker
+          TOPOLOGY: t0
+          PREPARE_TIME: 30
+        impacted-area-kvmtest-t0-2vlans:
+          TESTBED_PREP_TOPOLOGY: t0-2vlans
+          CHECKER: t0-2vlans_checker
+          DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a "
+          TOPOLOGY: t0
+          PREPARE_TIME: 30
+        impacted-area-kvmtest-t1-lag:
+          TESTBED_PREP_TOPOLOGY: t1
+          CHECKER: t1_checker
+          TOPOLOGY: t1-lag
+          # 50 mins for preparing testbed, 30 mins for pre-test and post-test
+          PREPARE_TIME: 80
+        impacted-area-kvmtest-dualtor:
+          TESTBED_PREP_TOPOLOGY: dualtor
+          CHECKER: dualtor_checker
+          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+          TOPOLOGY: dualtor
+          # 30 mins for preparing testbed, 30 mins for pre-test and 20 mins for post-test
+          PREPARE_TIME: 80
+        impacted-area-kvmtest-multi-asic-t1:
+          TESTBED_PREP_TOPOLOGY: t1-multi-asic
+          CHECKER: t1-multi-asic_checker
+          TOPOLOGY: t1-8-lag
+          NUM_ASIC: 4
+          PREPARE_TIME: 30
+        impacted-area-kvmtest-t0-sonic:
+          TESTBED_PREP_TOPOLOGY: t0-sonic
+          CHECKER: t0-sonic_checker
+          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --disable_sai_validation "
+          TOPOLOGY: t0-64-32
+          PREPARE_TIME: 40
+          VM_TYPE: vsonic
+          SPECIFIC_PARAM: '[
+            {"name": "bgp/test_bgp_fact.py", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"},
+            {"name": "macsec", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"}
+            ]'
+        impacted-area-kvmtest-dpu:
+          TESTBED_PREP_TOPOLOGY: dpu
+          CHECKER: dpu_checker
+          TOPOLOGY: dpu
+          PREPARE_TIME: 30
+          SPECIFIC_PARAM: '[
+            {"name": "dash/test_dash_vnet.py", "param": "--skip_dataplane_checking"}
+            ]'
+    condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], variables['CHECKER'])
+    variables:
+      TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
+      NUM_ASIC: 1
+      VM_TYPE: ceos
+      COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+      DEPLOY_MG_EXTRA_PARAMS: ""
+      SPECIFIC_PARAM: "[]"
+    timeoutInMinutes: 300
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+      - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: $(TESTBED_PREP_TOPOLOGY)
+          BUILD_BRANCH: $(Build.SourceBranchName)
+          PREPARE_TIME: $(PREPARE_TIME)
+
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: $(TOPOLOGY)
+          SCRIPTS: $(SCRIPTS)
+          MIN_WORKER: $(INSTANCE_NUMBER)
+          MAX_WORKER: $(INSTANCE_NUMBER)
+          DEPLOY_MG_EXTRA_PARAMS: $(DEPLOY_MG_EXTRA_PARAMS)
+          COMMON_EXTRA_PARAMS: $(COMMON_EXTRA_PARAMS)
+          KVM_IMAGE_BRANCH: $(Build.SourceBranchName)
+          MGMT_BRANCH: $(Build.SourceBranchName)
+          BUILD_REASON: "BaselineTest"
+          RETRY_TIMES: "0"
+          STOP_ON_FAILURE: "False"
+          TEST_PLAN_NUM: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
+          NUM_ASIC: $(NUM_ASIC)
+          VM_TYPE: $(VM_TYPE)
+          SPECIFIC_PARAM: $(SPECIFIC_PARAM)
+          MAX_RUN_TEST_MINUTES: 240
