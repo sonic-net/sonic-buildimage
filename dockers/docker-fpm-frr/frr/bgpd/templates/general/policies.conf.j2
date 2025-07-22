@@ -119,20 +119,20 @@ route-map SELECTIVE_ROUTE_DOWNLOAD_V6 permit 1000
 route-map TAG_ANCHOR_COMMUNITY permit 10
   set community {{ constants.bgp.local_anchor_route_community }} {{ constants.bgp.anchor_route_community }} additive
 !
-route-map TO_BGP_PEER_V6 permit 30
+route-map TO_BGP_PEER_V6 permit 50
   match ipv6 address prefix-list ANCHOR_CONTRIBUTING_ROUTES
   set community {{ constants.bgp.anchor_contributing_route_community }} additive
   on-match next
 !
-route-map TO_BGP_PEER_V6 permit 40
+route-map TO_BGP_PEER_V6 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
 !
-route-map TO_BGP_PEER_V4 permit 30
-  match ipv6 address prefix-list ANCHOR_CONTRIBUTING_ROUTES
+route-map TO_BGP_PEER_V4 permit 50
+  match ip address prefix-list ANCHOR_CONTRIBUTING_ROUTES
   set community {{ constants.bgp.anchor_contributing_route_community }} additive
   on-match next
 !
-route-map TO_BGP_PEER_V4 permit 40
+route-map TO_BGP_PEER_V4 permit 60
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
 !
 {% endif %}
