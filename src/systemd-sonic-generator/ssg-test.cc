@@ -6,6 +6,7 @@
  * Copyright (c) 2021 by Cisco Systems, Inc.
  *------------------------------------------------------------------
  */
+#include <fstream>
 #include <mutex>
 #include <string>
 #include <sys/stat.h>
