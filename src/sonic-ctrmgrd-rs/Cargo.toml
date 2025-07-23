@@ -47,10 +47,6 @@ serde_with = "3.12"
 clap = { version = "4", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles"] }
 color-eyre = "0.6"
 
-# gRPC
-prost = "0.13"
-tonic = "0.12"
-
 # Utility
 contracts = "0.6"
 derivative = "2"
@@ -78,5 +74,4 @@ fakeit = "1.1"
 pretty_assertions = "1"
 
 # Build dependencies
-tonic-build = "0.12"
 vergen = { version = "8.2", features = [ "build", "git", "gitoxide", "cargo", "rustc", "si" ]}

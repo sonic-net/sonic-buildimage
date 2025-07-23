@@ -9,12 +9,6 @@ all: format lint build test
 release: format lint build-release test-release
 
 #
-# Install dependencies
-#
-install-deps:
-	sudo apt install -y protobuf-compiler libprotobuf-dev
-
-#
 # Format tasks
 #
 format:
