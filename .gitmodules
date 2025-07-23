@@ -120,8 +120,8 @@
   branch = 202411
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
-  branch = 202411
+	url = https://github.com/liuh-80/sonic-gnmi.git
+  branch = dev/liuh/multirole_202411_cp
 [submodule "src/sonic-bmp"]
 	path = src/sonic-bmp
 	url = https://github.com/sonic-net/sonic-bmp.git
