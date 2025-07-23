@@ -1,0 +1,20 @@
+{
+    "chassis": {
+        "M2-W6930-64QC": {
+            "component": {
+                "CPU_CPLD": { },
+                "CONNECT_CPLD": { },
+                "FAN_CPLDA": { },
+                "FAN_CPLDB": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "PORT_CPLDA": { },
+                "PORT_CPLDB": { },
+                "MAC_FPGA": { },
+                "PORT_FPGA": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+

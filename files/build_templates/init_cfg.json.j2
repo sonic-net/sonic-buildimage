@@ -24,8 +24,34 @@
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "enable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
+        },
+        "PORT": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "RIF": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PFCWD": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "BUFFER_POOL_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT_BUFFER_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
         }
     },
     "BGP_DEVICE_GLOBAL": {
@@ -38,7 +64,7 @@
 {%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
                    ("lldp", "enabled", true, "enabled"),
-                   ("pmon", "enabled", true, "enabled"),
+                   ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("snmp", "enabled", true, "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
@@ -71,7 +97,7 @@
 {%- for feature, state, delayed, autorestart in features %}
         "{{feature}}": {
             "state": "{{state}}",
-            "delayed" : {{delayed | lower()}},
+            "delayed" : "{{delayed}}",
 {%- if feature in ["lldp"] %}
             "has_global_scope": {% raw %}"{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}"{% endraw %},
             "has_per_asic_scope": {% raw %}"{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}"{% endraw %},

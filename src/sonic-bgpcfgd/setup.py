@@ -13,6 +13,7 @@ setuptools.setup(
             'bgpcfgd = bgpcfgd.main:main',
             'staticroutebfd = staticroutebfd.main:main',
             'bgpmon = bgpmon.bgpmon:main',
+            'bfdmon = bfdmon.bfdmon:main',
         ]
     },
     install_requires = [

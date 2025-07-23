@@ -13,6 +13,10 @@
 {% set lag_hash_offset_value = 10 %}
 {% elif "SpineRouter" in DEVICE_METADATA.localhost.type %}
 {% set hash_seed = 25 %}
+{% elif "FabricSpineRouter" in DEVICE_METADATA.localhost.type %}
+{% set hash_seed = 40 %}
+{% elif "UpperSpineRouter" in DEVICE_METADATA.localhost.type %}
+{% set hash_seed = 50 %}
 {% endif %}
 {% endif %}
 {% if DEVICE_METADATA.localhost.namespace_id %}
@@ -26,8 +30,10 @@
             "ecmp_hash_seed": "{{ hash_seed_value }}",
             "lag_hash_seed": "{{ hash_seed_value }}",
             "fdb_aging_time": "600",
+{% if not DEVICE_METADATA.localhost.switch_type or DEVICE_METADATA.localhost.switch_type != "chassis-packet" %}
             "ecmp_hash_offset": "{{ ecmp_hash_offset_value }}",
             "lag_hash_offset": "{{ lag_hash_offset_value }}",
+{% endif %}
 {% if DEVICE_METADATA.localhost.type and "LeafRouter" in DEVICE_METADATA.localhost.type %}
             "ordered_ecmp": "true"
 {% else %}

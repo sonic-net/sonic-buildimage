@@ -5,7 +5,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -71,7 +71,9 @@ ngbde_pio_cleanup(void)
 
     for (idx = 0; idx < num_swdev; idx++) {
         sd = ngbde_swdev_get(idx);
-        ngbde_pio_unmap(sd);
+        if (sd) {
+            ngbde_pio_unmap(sd);
+        }
     }
 }
 

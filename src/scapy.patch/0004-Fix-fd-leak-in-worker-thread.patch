@@ -1,0 +1,47 @@
+diff --git a/scapy/sendrecv.py b/scapy/sendrecv.py
+index f97fc415..dbcc372f 100644
+--- a/scapy/sendrecv.py
++++ b/scapy/sendrecv.py
+@@ -1111,17 +1111,19 @@ class AsyncSniffer(object):
+             # The _RL2 function resolves the L2socket of an iface
+             _RL2 = lambda i: L2socket or resolve_iface(i).l2listen()  # type: Callable[[_GlobInterfaceType], Callable[..., SuperSocket]]  # noqa: E501
+             if isinstance(iface, list):
+-                sniff_sockets.update(
+-                    (_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg),
+-                     ifname)
+-                    for ifname in iface
+-                )
++                for ifname in iface:
++                    try:
++                        sniff_sockets.update({_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg): ifname})
++                    except OSError:
++                        # Ignore OSError when opening the socket
++                        # The error can happen when the port goes down during the creation of the socket
++                        pass
+             elif isinstance(iface, dict):
+-                sniff_sockets.update(
+-                    (_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg),
+-                     iflabel)
+-                    for ifname, iflabel in six.iteritems(iface)
+-                )
++                for ifname, iflabel in six.iteritems(iface):
++                    try:
++                        sniff_sockets.update({_RL2(ifname)(type=ETH_P_ALL, iface=ifname, **karg): iflabel})
++                    except OSError:
++                        pass
+             else:
+                 iface = iface or conf.iface
+                 sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+@@ -1221,7 +1223,11 @@ class AsyncSniffer(object):
+         self.running = False
+         if opened_socket is None:
+             for s in sniff_sockets:
+-                s.close()
++                try:
++                    s.close()
++                except Exception:
++                    # Ignore exceptions to ensure all sockets are closed
++                    pass
+         elif close_pipe:
+             close_pipe.close()
+         self.results = session.toPacketList()

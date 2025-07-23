@@ -9,39 +9,41 @@ import utilities_common.cli as clicommon
 sys.path.append('../cli/show/plugins/')
 import show_dhcp_server
 
+BRIDGE_FDB_MAC = {
+    "10:70:fd:b6:13:03": "dpu0"
+}
 
-class TestShowDHCPServer(object):
+
+class TestShowDHCPServerLease(object):
     def test_plugin_registration(self):
         cli = mock.MagicMock()
         show_dhcp_server.register(cli)
 
-    @pytest.mark.parametrize("state", ["disabled", "enabled"])
-    def test_show_dhcp_server_feature_state_checking(self, mock_db, state):
-        runner = CliRunner()
-        db = clicommon.Db()
-        db.db = mock_db
-        mock_db.set("CONFIG_DB", "FEATURE|dhcp_server", "state", state)
-        result = runner.invoke(show_dhcp_server.dhcp_server, obj=db)
-        if state == "disabled":
-            assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-            assert "Feature dhcp_server is not enabled" in result.output
-        elif state == "enabled":
-            assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-            assert "Usage: dhcp_server [OPTIONS] COMMAND [ARGS]" in result.output
-        else:
-            assert False
+    @pytest.fixture(scope="class", autouse=True)
+    def mock_run_cmd_fixture(self):
+        def mock_run_command(cmd, return_cmd=False, shell=False):
+            splits = cmd.split("sudo bridge fdb show | grep ")
+            if len(splits) == 2 and splits[1] in BRIDGE_FDB_MAC:
+                return ("{} dev {} master bridge-midplane".format(splits[1], BRIDGE_FDB_MAC[splits[1]]), 0)
+            else:
+                return ("", 0)
+
+        with mock.patch("utilities_common.cli.run_command", side_effect=mock_run_command):
+            yield
 
     def test_show_dhcp_server_ipv4_lease_without_dhcpintf(self, mock_db):
         expected_stdout = """\
-+---------------------+-------------------+-------------+---------------------+---------------------+
-| Interface           | MAC Address       | IP          | Lease Start         | Lease End           |
-+=====================+===================+=============+=====================+=====================+
-| Vlan1000|Ethernet10 | 10:70:fd:b6:13:00 | 192.168.0.1 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
-+---------------------+-------------------+-------------+---------------------+---------------------+
-| Vlan1000|Ethernet11 | 10:70:fd:b6:13:01 | 192.168.0.2 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
-+---------------------+-------------------+-------------+---------------------+---------------------+
-| Vlan1001|<Unknown>  | 10:70:fd:b6:13:02 | 192.168.0.3 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
-+---------------------+-------------------+-------------+---------------------+---------------------+
++----------------------+-------------------+-------------+---------------------+---------------------+
+| Interface            | MAC Address       | IP          | Lease Start         | Lease End           |
++======================+===================+=============+=====================+=====================+
+| Vlan1000|Ethernet10  | 10:70:fd:b6:13:00 | 192.168.0.1 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
++----------------------+-------------------+-------------+---------------------+---------------------+
+| Vlan1000|Ethernet11  | 10:70:fd:b6:13:01 | 192.168.0.2 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
++----------------------+-------------------+-------------+---------------------+---------------------+
+| Vlan1001|<Unknown>   | 10:70:fd:b6:13:02 | 192.168.0.3 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
++----------------------+-------------------+-------------+---------------------+---------------------+
+| bridge-midplane|dpu0 | 10:70:fd:b6:13:03 | 192.168.0.4 | 2023-03-01 03:16:21 | 2023-03-01 03:31:21 |
++----------------------+-------------------+-------------+---------------------+---------------------+
 """
         runner = CliRunner()
         db = clicommon.Db()
@@ -81,6 +83,28 @@ class TestShowDHCPServer(object):
         result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["lease"], ["Vlan1001"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         assert result.stdout == expected_stdout
+
+
+class TestShowDHCPServer(object):
+    def test_plugin_registration(self):
+        cli = mock.MagicMock()
+        show_dhcp_server.register(cli)
+
+    @pytest.mark.parametrize("state", ["disabled", "enabled"])
+    def test_show_dhcp_server_feature_state_checking(self, mock_db, state):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        mock_db.set("CONFIG_DB", "FEATURE|dhcp_server", "state", state)
+        result = runner.invoke(show_dhcp_server.dhcp_server, obj=db)
+        if state == "disabled":
+            assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Feature dhcp_server is not enabled" in result.output
+        elif state == "enabled":
+            assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Usage: dhcp_server [OPTIONS] COMMAND [ARGS]" in result.output
+        else:
+            assert False
 
     def test_show_dhcp_server_ipv4_range_without_name(self, mock_db):
         expected_stdout = """\

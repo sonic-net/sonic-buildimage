@@ -1,13 +1,13 @@
 /*! \file bcmltd_variant.h
  *
- * \brief BCMLTD Variant initerfaces and definitions
+ * \brief BCMLTD Variant interfaces and definitions
  *
  * Logical table variant inclusion and exclusion support within the
  * BCMLTD can be specified as a combination of the following defines:
  *
  *     #define BCMLTD_CONFIG_INCLUDE_<CHIPNAME>_<REV>X_<VARIANT> [1|0]
  *           -- Include or exclude the specified variant
- *           Example: #define BCMLTD_CONFIG_INCLUDE_BCM56880_UTLTM    1
+ *     Example: #define BCMLTD_CONFIG_INCLUDE_BCM56880_A0_DNA_6_5_30_1_1    1
  *
  * The value of BCMLTD_CONFIG_INCLUDE_VARIANT_DEFAULT is used for any
  * variants which are left unspecified. Set this value to 1 or 0 to
@@ -36,7 +36,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -49,7 +49,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMLTD_VARIANT_H

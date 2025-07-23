@@ -1,33 +1,31 @@
 #
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
-#
 # $Id: Make.linux,v 1.18 Broadcom SDK $
-# $Copyright: (c) 2005 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 # 
 # Common make targets for Linux user and kernel builds included by top
 # level Linux makefiles
@@ -37,10 +35,6 @@
 # LINUX_MAKE_FLAGS
 #   Additional flags passed to Make
 #
-# LINUX_MAKE_USER
-#   Defined: user build
-#   Undefined: kernel build
-#
 # LINUX_MAKE_DIR
 #   Common makefile location, if it is not ../common
 #
@@ -48,35 +42,11 @@
 
 export DEST_DIR_SUFFIX :=$(subst $(realpath $(SDK))/systems,,$(realpath $(CURDIR)/$(dir ($(firstword $(MAKEFILE_LIST))))))
 
-ifeq (,$(kernel_version))
-kernel_version=2_4
-endif
+LINUX_MAKE_DIR ?= $(SDK)/systems/linux/user/common
 
-ifndef LINUX_MAKE_SHARED_LIB
-LINUX_MAKE_SHARED_LIB=0
-endif
-
-ifeq (,$(SHAREDLIBVER))
-SHAREDLIBVER=1
-endif
-
-ifndef LINUX_MAKE_DIR
-ifdef LINUX_MAKE_USER
-LINUX_MAKE_DIR := $(SDK)/systems/linux/user/common
-else
-LINUX_MAKE_DIR := $(SDK)/systems/linux/kernel/common
-endif
-endif
-
-ifdef LINUX_MAKE_USER
-  CMD = $(LINUX_MAKE_FLAGS) -C $(LINUX_MAKE_DIR) \
-        platform=$(platform) bldroot_suffix=/$(platform) kernel_version=$(kernel_version) \
-        LINUX_MAKE_SHARED_LIB=$(LINUX_MAKE_SHARED_LIB) SHAREDLIBVER=$(SHAREDLIBVER)
-else
-  export LINUX_MAKE_KERNEL := 1
-  CMD = $(LINUX_MAKE_FLAGS) -C $(LINUX_MAKE_DIR) \
-        platform=$(platform) kernel_version=$(kernel_version)
-endif
+CMD = $(LINUX_MAKE_FLAGS) -C $(LINUX_MAKE_DIR) \
+      platform=$(platform) kernel_version=$(kernel_version) \
+      bldroot_suffix=/$(platform)
 
 ifneq (,$(MIPS_TOOLS_DIR))
   CMD += MIPS_TOOLS_DIR=$(MIPS_TOOLS_DIR)

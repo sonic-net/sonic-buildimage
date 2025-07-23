@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +28,7 @@ include $(PLATFORM_PATH)/$(RECIPE_DIR)/sdk.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/platform-api.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/docker-syncd-bluefield.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/installer-image.mk
+include $(PLATFORM_PATH)/$(RECIPE_DIR)/component-versions.mk
 
 # Inject DPU sai into syncd
 $(SYNCD)_DEPENDS += $(DPU_SAI)
@@ -37,3 +39,4 @@ $(SYNCD)_RDEPENDS += $(DPU_SAI)
 
 # Inject mft into platform monitor
 $(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MFT)
+$(DOCKER_PLATFORM_MONITOR)_DEPENDS += $(MLXBF_BOOTCTL_DEB)

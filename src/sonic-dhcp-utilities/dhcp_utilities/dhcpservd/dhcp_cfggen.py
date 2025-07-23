@@ -107,7 +107,7 @@ class DhcpServCfgGenerator(object):
         Returns:
             Parsed obj, sample:
                 mid_plane = {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "address": "169.254.200.254/24"
                 }
                 dpus = {
@@ -229,11 +229,12 @@ class DhcpServCfgGenerator(object):
                         "id": MID_PLANE_BRIDGE_SUBNET_ID if smart_switch else dhcp_interface_name.replace("Vlan", ""),
                         "subnet": str(ipaddress.ip_network(dhcp_interface_ip, strict=False)),
                         "pools": pools,
-                        "gateway": dhcp_config["gateway"],
                         "server_id": dhcp_interface_ip.split("/")[0],
                         "lease_time": dhcp_config["lease_time"] if "lease_time" in dhcp_config else DEFAULT_LEASE_TIME,
                         "customized_options": curr_options
                     }
+                    if "gateway" in dhcp_config:
+                        subnet_obj["gateway"] = dhcp_config["gateway"]
                     subnets.append(subnet_obj)
         render_obj = {
             "subnets": subnets,

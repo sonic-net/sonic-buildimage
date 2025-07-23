@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_IOCTL_H
@@ -33,7 +33,7 @@
 #define NGKNET_MODULE_MAJOR     121
 
 /*! Must be updated if backward compatibility is broken */
-#define NGKNET_IOC_VERSION      2
+#define NGKNET_IOC_VERSION      4
 
 /*! Max number of input arguments */
 #define NGKNET_IOC_IARG_MAX     2

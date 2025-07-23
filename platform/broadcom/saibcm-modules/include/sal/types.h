@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: types.h,v 1.3 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: types.h,v 1.3 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  * File: 	types.h
  * Purpose: 	SAL type definitions
@@ -148,6 +146,8 @@ typedef union
 #define SAL_AXI_DEV_TYPE        0x00080 /* AXI device */
 #define SAL_EMMI_DEV_TYPE       0x10000 /* EMMI device */
 #define SAL_COMPOSITE_DEV_TYPE  0x20000 /* Composite device, composed of sub-devices with buses */
+#define SAL_USER_DEV_TYPE       0x40000 /* User implemented method of access to the device */
+#define SAL_SUB_DEV_TYPE        0x80000 /* A sub-device (with a bus) of a composite device */
 #define SAL_DEV_BUS_TYPE_MASK   0xf00ff /* Odd for historical reasons */
 
 /* Device types */

@@ -146,11 +146,6 @@
         </SubInterface>
       </SubInterfaces>
       <IPInterfaces>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>Eth1/1/47</AttachTo>
-          <Prefix>27.1.1.1/24</Prefix>
-        </IPInterface>
       </IPInterfaces>
       <DownstreamSummaries/>
       <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
@@ -206,11 +201,6 @@
       <PortChannelInterfaces>
       </PortChannelInterfaces>
       <IPInterfaces>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>Eth1/1/47</AttachTo>
-          <Prefix>27.1.1.1/24</Prefix>
-        </IPInterface>
         </IPInterfaces>
        <VlanInterfaces>
        </VlanInterfaces>
@@ -261,13 +251,6 @@
   </LinkMetadataDeclaration>
   <PngDec>
     <DeviceInterfaceLinks>
-      <DeviceLinkBase>
-        <ElementType>DeviceInterfaceLink</ElementType>
-        <EndDevice>IXIA-EBGP</EndDevice>
-        <EndPort>Ethernet1</EndPort>
-        <StartDevice>str2-8808-lc2-1</StartDevice>
-        <StartPort>Eth1/1/47</StartPort>
-      </DeviceLinkBase>
       <DeviceLinkBase i:type="DeviceInterfaceLink">
         <ElementType>DeviceInterfaceLink</ElementType>
         <Bandwidth>100000</Bandwidth>
@@ -402,20 +385,6 @@
     <DeviceInfo>
       <AutoNegotiation>true</AutoNegotiation>
       <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableAutoNegotiation>true</EnableAutoNegotiation>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>Ethernet1/1/47</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>47</PortName>
-          <Priority>0</Priority>
-          <Speed>100000</Speed>
-          <SonicName>Ethernet47</SonicName>
-        </a:EthernetInterface>
       </EthernetInterfaces>
       <FlowControl>true</FlowControl>
       <Height>0</Height>

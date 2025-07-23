@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: $
- * $Copyright: (c) 2014 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  */
 
@@ -39,6 +37,8 @@ typedef void (*shbde_log_func_t)(int level, const char *str, int param);
 #define SHBDE_ERR       0
 #define SHBDE_WARN      1
 #define SHBDE_DBG       2
+
+#define SHBDE_NUM_IPROC_SUBWIN  8
 
 /* iProc configuration (primarily used for PCI-AXI bridge) */
 typedef struct shbde_iproc_config_s {
@@ -52,6 +52,9 @@ typedef struct shbde_iproc_config_s {
     unsigned int mdio_base_addr;
     unsigned int pcie_phy_addr;
     unsigned int adjust_pcie_preemphasis;
+    unsigned int no_subwin_remap;
+    unsigned int subwin_valid;
+    unsigned int subwin_base[SHBDE_NUM_IPROC_SUBWIN];
 } shbde_iproc_config_t;
 
 /* Hardware abstraction functions */

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_RXTX_H
@@ -52,35 +52,6 @@ enum buf_mode {
 
     /*! MAX mode */
     PDMA_BUF_MODE_MAX
-};
-
-/*!
- * \brief Rx queue statistics.
- */
-struct rx_stats {
-    /*! Number of received packets */
-    uint64_t packets;
-
-    /*! Number of received bytes */
-    uint64_t bytes;
-
-    /*! Number of dropped packets */
-    uint64_t dropped;
-
-    /*! Number of errors */
-    uint64_t errors;
-
-    /*! Number of head errors */
-    uint64_t head_errors;
-
-    /*! Number of data errors */
-    uint64_t data_errors;
-
-    /*! Number of cell errors */
-    uint64_t cell_errors;
-
-    /*! Number of failed allocation */
-    uint64_t nomems;
 };
 
 /*!
@@ -133,7 +104,7 @@ struct pdma_rx_queue {
     int intr_coalescing;
 
     /*! Queue statistics */
-    struct rx_stats stats;
+    struct bcmcnet_rxq_stats stats;
 
     /*! Rx queue spin lock */
     sal_spinlock_t lock;
@@ -161,26 +132,6 @@ struct pdma_rx_queue {
 
     /*! Page order in PDMA_BUF_MODE_PAGE mode */
     uint32_t page_order;
-};
-
-/*!
- * \brief Tx queue statistics.
- */
-struct tx_stats {
-    /*! Number of sent packets */
-    uint64_t packets;
-
-    /*! Number of sent bytes */
-    uint64_t bytes;
-
-    /*! Number of dropped packets */
-    uint64_t dropped;
-
-    /*! Number of errors */
-    uint64_t errors;
-
-    /*! Number of suspends */
-    uint64_t xoffs;
 };
 
 /*!
@@ -233,7 +184,7 @@ struct pdma_tx_queue {
     int intr_coalescing;
 
     /*! Queue statistics */
-    struct tx_stats stats;
+    struct bcmcnet_txq_stats stats;
 
     /*! Tx queue spin lock */
     sal_spinlock_t lock;

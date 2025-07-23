@@ -179,6 +179,37 @@
             "sonic-vxlan:VXLAN_TUNNEL": {
                 "VXLAN_TUNNEL_LIST": [
                     {
+                        "name": "15CharsLongName",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "15CharsLongName",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "16777214"
+                    }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
                         "name": "30CharachterLongName1234567890",
                         "src_ip": "1.2.3.4"
                     }

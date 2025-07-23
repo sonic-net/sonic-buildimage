@@ -293,13 +293,13 @@
     "test_mid_plane_update": [
         {
             "table": [
-                ["GLOBAL", "SET", [["bridge", "bridge_midplane"], ["ip_prefix", "169.254.200.254/24"]]]
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane"], ["ip_prefix", "169.254.200.254/24"]]]
             ],
             "exp_res": true
         },
         {
             "table": [
-                ["GLOBAL", "SET", [["bridge", "bridge_midplane2"], ["ip_prefix", "169.254.200.254/24"]]]
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane2"], ["ip_prefix", "169.254.200.254/24"]]]
             ],
             "exp_res": false
         },

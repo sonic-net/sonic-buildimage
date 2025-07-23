@@ -150,9 +150,8 @@ static const test_data_t ldata[] = {
     },
 };
 
-
 void run_cap(void *zctx, bool &term, string &read_source,
-        int &cnt, bool &should_read_control)
+        int &cnt)
 {
     void *mock_cap = zmq_socket (zctx, ZMQ_SUB);
     string source;
@@ -165,17 +164,12 @@ void run_cap(void *zctx, bool &term, string &read_source,
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_SUBSCRIBE, "", 0));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_RCVTIMEO, &block_ms, sizeof (block_ms)));
 
-    if(should_read_control) {
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        EXPECT_NE(1, zmq_msg_recv(&msg, mock_cap, 0)); // Subscription message should be read by do_capture
-    }
 
     while(!term) {
         string source;
         internal_event_t ev_int;
-
-        if (0 == zmq_message_read(mock_cap, 0, source, ev_int)) {
+        int rc = zmq_message_read(mock_cap, 0, source, ev_int);
+        if (0 == rc && !ev_int.empty()) { // ignore control character empty event
             cnt = ++i;
         }
     }
@@ -228,7 +222,6 @@ void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst)
 TEST(eventd, proxy)
 {
     printf("Proxy TEST started\n");
-    bool should_read_control = false;
     bool term_sub = false;
     bool term_cap = false;
     string rd_csource, rd_source, wr_source("hello");
@@ -246,7 +239,7 @@ TEST(eventd, proxy)
     EXPECT_EQ(0, pxy->init());
 
     /* capture in a thread */
-    thread thrc(&run_cap, zctx, ref(term_cap), ref(rd_csource), ref(rd_cevts_sz), ref(should_read_control));
+    thread thrc(&run_cap, zctx, ref(term_cap), ref(rd_csource), ref(rd_cevts_sz));
 
     /* subscriber in a thread */
     thread thr(&run_sub, zctx, ref(term_sub), ref(rd_source), ref(rd_evts), ref(rd_evts_sz));
@@ -283,17 +276,9 @@ TEST(eventd, proxy)
 
     zmq_close(mock_pub);
 
-    /* Do control test */
-
-    should_read_control = true;
-
-    /* capture in a thread */
-    thread thrcc(&run_cap, zctx, ref(term_cap), ref(rd_csource), ref(rd_cevts_sz), ref(should_read_control));
-
     delete pxy;
     pxy = NULL;
 
-    thrcc.join();
     zmq_ctx_term(zctx);
 
     /* Provide time for async proxy removal to complete */

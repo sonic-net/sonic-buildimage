@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -161,10 +161,12 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
     int grp, que;
     uint32_t qi;
     int ip_if_hdr_endian = 0;
+    int pipe;
     CMIC_CMC_PKTDMA_CTRLr_t pktdma_ctrl;
     CMIC_CMC_PKTDMA_INTR_ENABLEr_t pktdma_intr_enable;
     CMIC_CMC_PKTDMA_INTR_CLRr_t pktdma_intr_clr;
     CMIC_TOP_CONFIGr_t cmic_config;
+    CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_t pktdma_rxbuf_thresh;
 
     CMIC_CMC_PKTDMA_INTR_ENABLEr_CLR(pktdma_intr_enable);
     CMIC_CMC_PKTDMA_INTR_ENABLEr_DESC_CONTROLLED_INTR_ENABLEf_SET(pktdma_intr_enable, 1);
@@ -180,7 +182,13 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
         grp = rxq->group_id;
         que = rxq->chan_id % CMICR_PDMA_CMC_CHAN;
         que_ctrl = ctrl->grp[grp].que_ctrl[que];
+        pipe = ctrl->grp[grp].pipe[que];
 
+        hw->hdls.reg_rd32(hw, CMICR_PDMA_RBUF_THRE(grp, que),
+                          &CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_GET(pktdma_rxbuf_thresh));
+        CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_ENABLEf_SET(pktdma_rxbuf_thresh, 1);
+        hw->hdls.reg_wr32(hw, CMICR_PDMA_RBUF_THRE(grp, que),
+                          CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_GET(pktdma_rxbuf_thresh));
         hw->hdls.reg_wr32(hw, CMICR_PDMA_INTR_CLR(grp, que),
                           CMIC_CMC_PKTDMA_INTR_CLRr_GET(pktdma_intr_clr));
         CMIC_CMC_PKTDMA_CTRLr_CLR(pktdma_ctrl);
@@ -198,6 +206,11 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
         }
         CMIC_CMC_PKTDMA_CTRLr_CONTIGUOUS_DESCRIPTORSf_SET(pktdma_ctrl, 1);
         CMIC_CMC_PKTDMA_CTRLr_DESC_DONE_INTR_MODEf_SET(pktdma_ctrl, 1);
+        if (pipe == 1) {
+            CMIC_CMC_PKTDMA_CTRLr_PIPE_MAPf_SET(pktdma_ctrl, 1);
+        } else if (pipe != 0) {
+            return SHR_E_CONFIG;
+        }
 
         hw->hdls.reg_wr32(hw, CMICR_PDMA_CTRL(grp, que),
                           CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
@@ -210,6 +223,7 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
         grp = txq->group_id;
         que = txq->chan_id % CMICR_PDMA_CMC_CHAN;
         que_ctrl = ctrl->grp[grp].que_ctrl[que];
+        pipe = ctrl->grp[grp].pipe[que];
 
         hw->hdls.reg_wr32(hw, CMICR_PDMA_INTR_CLR(grp, que),
                           CMIC_CMC_PKTDMA_INTR_CLRr_GET(pktdma_intr_clr));
@@ -231,6 +245,11 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
         CMIC_CMC_PKTDMA_CTRLr_CONTIGUOUS_DESCRIPTORSf_SET(pktdma_ctrl, 1);
         CMIC_CMC_PKTDMA_CTRLr_DESC_DONE_INTR_MODEf_SET(pktdma_ctrl, 1);
         CMIC_CMC_PKTDMA_CTRLr_DIRECTIONf_SET(pktdma_ctrl, 1);
+        if (pipe == 1) {
+            CMIC_CMC_PKTDMA_CTRLr_PIPE_MAPf_SET(pktdma_ctrl, 1);
+        } else if (pipe != 0) {
+            return SHR_E_CONFIG;
+        }
 
         hw->hdls.reg_wr32(hw, CMICR_PDMA_CTRL(grp, que),
                           CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
@@ -423,6 +442,26 @@ cmicr_pdma_chan_clear(struct pdma_hw *hw, int chan)
     MEMORY_BARRIER;
 
     return SHR_E_NONE;
+}
+
+/*!
+ * Check a channel
+ */
+static int
+cmicr_pdma_chan_check(struct pdma_hw *hw, int chan)
+{
+    CMIC_CMC_PKTDMA_STATr_t pktdma_stat;
+    int grp, que;
+
+    grp = chan / CMICR_PDMA_CMC_CHAN;
+    que = chan % CMICR_PDMA_CMC_CHAN;
+
+    MEMORY_BARRIER;
+
+    hw->hdls.reg_rd32(hw, CMICR_PDMA_STAT(grp, que),
+                      &CMIC_CMC_PKTDMA_STATr_GET(pktdma_stat));
+
+    return CMIC_CMC_PKTDMA_STATr_DESC_CONTROLLEDf_GET(pktdma_stat);
 }
 
 /*!
@@ -655,6 +694,7 @@ bcmcnet_cmicr_pdma_hw_hdls_init(struct pdma_hw *hw)
     hw->hdls.chan_setup = cmicr_pdma_chan_setup;
     hw->hdls.chan_goto = cmicr_pdma_chan_goto;
     hw->hdls.chan_clear = cmicr_pdma_chan_clear;
+    hw->hdls.chan_check = cmicr_pdma_chan_check;
     hw->hdls.chan_intr_num_get = cmicr_pdma_chan_intr_num_get;
     hw->hdls.chan_intr_enable = cmicr_pdma_chan_intr_enable;
     hw->hdls.chan_intr_disable = cmicr_pdma_chan_intr_disable;

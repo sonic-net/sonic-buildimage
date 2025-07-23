@@ -1,0 +1,189 @@
+#!/bin/bash
+
+# Function to display help message
+display_help() {
+    echo "Usage: sudo prefix-list <command> <PREFIX_TYPE> <NETWORK>"
+    echo ""
+    echo "Commands:"
+    echo "  add       Add a prefix with prefix type and network."
+    echo "            Requires: <PREFIX_TYPE>, <NETWORK>."
+    echo ""
+    echo "  remove    Remove a prefix with prefix type and network."
+    echo "            Requires: <PREFIX_TYPE>, <NETWORK>."
+    echo ""
+    echo "  status    Display current prefix lists."
+    echo "            No additional parameters required."
+    echo ""
+    echo "Arguments:"
+    echo "  <PREFIX_TYPE>  Type of prefix list. Allowed values: {$(printf "%s" "${supported_prefix_types[*]}" | tr ' ' '|')}."
+    echo "  <NETWORK>      Network in CIDR format."
+    echo ""
+    echo "Options:"
+    echo "  -h, --help    Display this help message."
+    exit 0
+}
+
+
+# Function to check if the user has root privileges
+check_root_privileges() {
+    if [ "$EUID" -ne 0 ] ; then
+        echo "Root privileges are needed for this operation." >&2
+        exit 1
+    fi
+}
+
+# Function to check if the device is supported device with type spine routers and subtype UpstreamLC
+check_spine_router() {
+    type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
+    subtype=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
+
+    # only supported on UpstreamLC or UpperSpineRouter
+    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]
+        exit 0
+    fi
+
+    echo "Operation is only supported on Upstream SpineRouter." >&2
+    exit 1
+}
+
+# Function to skip operation on chassis supervisor
+skip_chassis_supervisor() {
+    if [ -f /etc/sonic/chassisdb.conf ]; then
+        echo "Skipping Operation on chassis supervisor"
+        exit 0
+    fi
+}
+
+# Function to validate the operation and prefix type parameters
+validate_operation() {
+    local valid_operation=false
+    local valid_prefix_type=false
+
+    for operation in "${prefix_list_operations[@]}"; do
+        if [[ "$1" == "$operation" ]]; then
+            valid_operation=true
+            break
+        fi
+    done
+
+    if [ $valid_operation == false ]; then
+        echo "Invalid parameter $1, Operation not supported" >&2
+        echo ""
+        display_help
+        exit 1
+    fi
+
+    # Check if the prefix type is supported or not if the operation is not status
+    if [ "$1" == "status" ]; then
+        if [ -n "$2" ]; then
+            echo "No additional parameters required for status operation." >&2
+            echo ""
+            display_help
+            exit 1
+        fi
+    else
+        for prefix_type in "${supported_prefix_types[@]}"; do
+            if [[ "$2" == "$prefix_type" ]]; then
+                valid_prefix_type=true
+                break
+            fi
+        done
+
+        if [ $valid_prefix_type == false ]; then
+            echo "Invalid parameter $2, Prefix type not supported" >&2
+            echo ""
+            display_help
+            exit 1
+        fi
+    fi
+}
+
+# Function to handle prefix list operations for a specific ASIC
+handle_prefix_list_asic() {
+    local asic=$1
+    local operation=$2
+    local PREFIX_TYPE=$3
+    local network=$4
+    local namespace_prefix='asic'
+
+    if [ $operation == 'status' ] ; then
+        echo "BGP$asic: Current prefix lists:"
+        sonic-cfggen -d -v PREFIX_LIST -n $namespace_prefix$asic
+    else
+        if [ $operation == 'add' ]; then
+            local prefix_list_entry="{\"PREFIX_LIST\":{\"$PREFIX_TYPE|$network\":{}}}"
+            sonic-cfggen -a "$prefix_list_entry" -w -n $namespace_prefix$asic
+            logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
+            echo "BGP$asic: Added prefix list: $PREFIX_TYPE with network: $network"
+        elif [ $operation == 'remove' ]; then
+            sonic-db-cli -n $namespace_prefix$asic CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
+            echo "BGP$asic: Removed prefix list: $PREFIX_TYPE with network: $network"
+        fi
+    fi
+}
+
+# Function to handle prefix list operations for a single ASIC
+handle_prefix_list_single() {
+    local operation=$1
+    local PREFIX_TYPE=$2
+    local network=$3
+
+    if [ $operation == 'status' ] ; then
+        echo "Current prefix lists:"
+        sonic-cfggen -d -v PREFIX_LIST
+    else
+        if [ $operation == 'add' ]; then
+            local prefix_list_entry="{\"PREFIX_LIST\":{\"$PREFIX_TYPE|$network\":{}}}"
+            sonic-cfggen -a "$prefix_list_entry" -w
+            logger -t $operation -p user.info "Added prefix list: $PREFIX_TYPE with network: $network"
+            echo "Added prefix list: $PREFIX_TYPE with network: $network"
+        elif [ $operation == 'remove' ]; then
+            sonic-db-cli CONFIG_DB DEL "PREFIX_LIST|$PREFIX_TYPE|$network"
+            logger -t $operation -p user.info "Removed prefix list: $PREFIX_TYPE with network: $network"
+            echo "Removed prefix list: $PREFIX_TYPE with network: $network"
+        fi
+    fi
+}
+
+prefix_list_operations=("add" "remove" "status")
+supported_prefix_types=("ANCHOR_PREFIX")
+# Main script execution
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    display_help
+fi
+
+if [ "$1" != "status" ]; then
+    check_root_privileges
+fi
+check_spine_router
+skip_chassis_supervisor
+
+validate_operation $1 $2
+
+# Read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+
+# Parse the device specific asic conf file, if it exists
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+[ -f $ASIC_CONF ] && . $ASIC_CONF
+
+if [[ ($NUM_ASIC -gt 1) ]]; then
+    asic=0
+    while [ $asic -lt $NUM_ASIC ]
+    do
+        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n asic$asic`
+        if [ $sub_role == 'FrontEnd' ]; then
+            handle_prefix_list_asic $asic $1 $2 $3
+        fi
+        asic=$((asic+1))
+    done
+else
+        handle_prefix_list_single $1 $2 $3
+fi
+
+if [ $1 != 'status' ]; then
+    echo "Please execute 'sudo config save' to preserve prefix list after reboot or config reload"
+fi

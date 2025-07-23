@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+"""
+arp_update_checker
+
+This script is intended to be run by Monit. It will write an alerting message into
+syslog if it finds arp_update script stuck on ping command.
+Then it will attempt to restart arp_update script.
+
+The following is an example in Monit configuration file to show how Monit will run
+this script:
+
+check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
+    if status != 0 for 3 times within 3 cycles then alert repeat every 1 cycles
+"""
+
+import syslog
+import subprocess
+import sys
+
+TIMEOUT=5.0
+
+def log_info(message):
+    syslog.syslog(syslog.LOG_INFO, message)
+
+def log_warning(message):
+    syslog.syslog(syslog.LOG_WARNING, message)
+
+def log_error(message):
+    syslog.syslog(syslog.LOG_ERR, message)
+
+def is_process_running(process_name):
+    """Check if there is any running process that contains the given name."""
+    try:
+        # Use pgrep to check if the process is running
+        output = subprocess.check_output(["pgrep", "-f", process_name])
+        return bool(output.strip())
+    except subprocess.CalledProcessError:
+        return False
+
+def is_arp_update_stuck(timeout=TIMEOUT):
+    """Check if arp_update is stuck by looking for a ping command running longer than the specified timeout. (Default 1sec)"""
+    try:
+        arp_update_pid = subprocess.check_output(["pgrep", "-x", "arp_update"]).strip().decode('utf-8')
+        child_pids = subprocess.check_output(["pgrep", "-P", arp_update_pid]).strip().decode('utf-8').split()
+        for pid in child_pids:
+            (cmd, elapsed_time)=subprocess.check_output(["ps", "-p", "1550527", "-o", "comm=,etimes="]).strip().decode('utf-8').split()
+
+            if "ping" in cmd:
+                # Check if the elapsed time is greater than the timeout
+                if elapsed_time > timeout:
+                    return True
+        return False
+    except subprocess.CalledProcessError:
+        return False
+
+def restart_arp_update():
+    """Restart the arp_update process."""
+    try:
+        log_info("patching arp_update...")
+        sed_regex="s/ping6cmd=\"ping6/ping6cmd=\"timeout 0.2 ping6/"
+        subprocess.check_call(["docker", "exec", "swss", "sed", "-i", "-s", sed_regex, "/usr/bin/arp_update"])
+        # restart arp_update to make sure changes are in effect
+        subprocess.check_call(["docker", "exec", "swss", "supervisorctl", "restart", "arp_update"])
+        log_info("arp_update process restarted successfully.")
+    except subprocess.CalledProcessError as e:
+        log_error(f"Failed to restart arp_update process: {e}")
+        sys.exit(1)
+
+def main():
+    """
+    This function will check if arp_update script is stuck and restart the script if needed.
+    """
+    if is_process_running("arp_update"):
+        if is_arp_update_stuck():
+            log_warning("arp_update process is stuck. Restarting...")
+            restart_arp_update()
+            sys.exit(1)
+    else:
+        log_warning("arp_update process is not running.")
+
+if __name__ == "__main__":
+    main()

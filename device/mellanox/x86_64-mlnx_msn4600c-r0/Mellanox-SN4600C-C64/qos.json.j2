@@ -1,6 +1,7 @@
 {#
-    Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
-    Apache-2.0
+    SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+    Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    SPDX-License-Identifier: Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 #}
+
 
 {% if (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter') or
        ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') and
@@ -271,10 +273,27 @@
     },
 {%- endmacro %}
 {%- endif %}
-{%- macro generate_global_dscp_to_tc_map() %}
-{# This is an empty macro since the global DSCP_TO_TC map is not required #}
-{%- endmacro %}
 
 {% endif %}
+
+{%- macro generate_wred_profiles() %}
+    "WRED_PROFILE": {
+        "AZURE_LOSSLESS" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "10000000",
+            "green_min_threshold"    : "2000000",
+            "yellow_max_threshold"   : "10000000",
+            "yellow_min_threshold"   : "2000000",
+            "red_max_threshold"      : "10000000",
+            "red_min_threshold"      : "2000000",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        }
+    },
+{%- endmacro %}
 
 {%- include 'qos_config.j2' %}

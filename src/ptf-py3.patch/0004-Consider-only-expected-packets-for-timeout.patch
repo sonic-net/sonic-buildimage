@@ -1,0 +1,40 @@
+From f961a46cd8b3736a7ac8534fad774433b2a8ce6b Mon Sep 17 00:00:00 2001
+From: Vinod Kumar <vkjammala@arista.com>
+Date: Thu, 12 Dec 2024 11:04:21 +0000
+Subject: [PATCH] Consider only expected packets for timeout
+
+"count_matched_packets" method is getting stuck in a while loop as long
+as ptf server port receives any packet (Ex: in dualtor case, we do see
+continuous ICMP packets on ptf port). Fix is to consider only expected
+packets w.r.t timeout (similar to "count_matched_packets_all_ports" logic).
+---
+ src/ptf/testutils.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/ptf/testutils.py b/src/ptf/testutils.py
+index 46b926c..2402e8f 100755
+--- a/src/ptf/testutils.py
++++ b/src/ptf/testutils.py
+@@ -3636,14 +3636,19 @@ def count_matched_packets(test, exp_packet, port, device_number=0, timeout=None)
+             "%s() requires positive timeout value." % sys._getframe().f_code.co_name
+         )
+ 
++    last_matched_packet_time = time.time()
+     total_rcv_pkt_cnt = 0
+     while True:
++        if (time.time() - last_matched_packet_time) > timeout:
++            break
++
+         result = dp_poll(
+             test, device_number=device_number, port_number=port, timeout=timeout
+         )
+         if isinstance(result, test.dataplane.PollSuccess):
+             if ptf.dataplane.match_exp_pkt(exp_packet, result.packet):
+                 total_rcv_pkt_cnt += 1
++                last_matched_packet_time = time.time()
+         else:
+             break
+ 
+-- 
+2.43.5
+

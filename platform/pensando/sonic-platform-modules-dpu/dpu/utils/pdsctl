@@ -1,0 +1,24 @@
+#!/bin/bash
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+
+DPU_DOCKER_INFO_DIR=/host/dpu-docker-info
+
+# Function to display usage information
+function usage() {
+  echo "Usage: $0 <command>"
+}
+
+# Check if the first argument is empty or if it's help option
+if [ -z "$1" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  usage
+  exit 1
+fi
+
+# Function to execute command in Docker container
+function ExecPdsCmd() {
+    dpu_docker_name=$(<"$DPU_DOCKER_INFO_DIR/name")
+    docker exec "$dpu_docker_name" /nic/bin/pdsctl "$@"
+}
+
+# Call the function to execute the command in Docker container
+ExecPdsCmd "$@"

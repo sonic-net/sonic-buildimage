@@ -38,7 +38,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -51,7 +51,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -519,6 +519,7 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
 
         /* Move forward */
         if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
+            /* coverity[double_lock : FALSE] */
             sal_spinlock_lock(rxq->lock);
             if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
                 /* Descriptor cherry pick */
@@ -566,7 +567,8 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
         rxq->stats.bytes += len;
 
         /* Count the errors if any */
-        if (RX_DCB_ERRORf_GET(ring[curr])) {
+        if (RX_DCB_CELL_ERRORf_GET(ring[curr]) ||
+            RX_DCB_ECC_ERRORf_GET(ring[curr])) {
             rxq->stats.errors++;
         }
 
@@ -613,24 +615,26 @@ cmicr_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
         }
 
         /* Update the indicators */
-        if (!(rxq->state & PDMA_RX_BATCH_REFILL) && rxq->halt != curr) {
+        if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
             sal_spinlock_lock(rxq->lock);
-            if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
+            if (!(rxq->status & PDMA_RX_QUEUE_XOFF) && (rxq->halt != curr)) {
                 /* Descriptor cherry pick */
                 rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * curr;
                 hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
                 rxq->halt = curr;
             }
             curr = (curr + 1) % rxq->nb_desc;
+            rxq->curr = curr;
             sal_spinlock_unlock(rxq->lock);
         } else {
             curr = (curr + 1) % rxq->nb_desc;
+            rxq->curr = curr;
         }
-        rxq->curr = curr;
         done++;
 
         /* Restart DMA if in chain mode */
         if (dev->flags & PDMA_CHAIN_MODE) {
+            /* coverity[double_lock : FALSE] */
             sal_spinlock_lock(rxq->lock);
             if (curr == 0 && !(rxq->status & PDMA_RX_QUEUE_XOFF)) {
                 hw->hdls.chan_stop(hw, rxq->chan_id);
@@ -754,6 +758,7 @@ cmicr_pdma_tx_ring_clean(struct pdma_hw *hw, struct pdma_tx_queue *txq, int budg
 
     /* One more poll for chain done in chain mode */
     if (dev->flags & PDMA_CHAIN_MODE) {
+        /* coverity[double_lock : FALSE] */
         sal_spinlock_lock(txq->lock);
         if (dirt != txq->halt) {
             done = budget;
@@ -1100,6 +1105,8 @@ cmicr_pdma_rx_suspend(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
 static int
 cmicr_pdma_rx_resume(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
 {
+    volatile RX_DCB_t *ring = (volatile RX_DCB_t *)rxq->ring;
+
     sal_spinlock_lock(rxq->lock);
     if (!(rxq->status & PDMA_RX_QUEUE_XOFF)) {
         sal_spinlock_unlock(rxq->lock);
@@ -1108,8 +1115,9 @@ cmicr_pdma_rx_resume(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     if (rxq->state & PDMA_RX_BATCH_REFILL) {
         rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
-    } else if (rxq->halt == rxq->curr || (rxq->halt == rxq->nb_desc && rxq->curr == 0)) {
-        rxq->halt = (rxq->curr + 1) % rxq->nb_desc;
+    } else if ((rxq->halt == rxq->curr) &&
+               !RX_DCB_STATUS_GET(ring[(rxq->curr + 1) % rxq->nb_desc])) {
+        rxq->halt = (rxq->curr + rxq->nb_desc - 1) % rxq->nb_desc;
         rxq->halt_addr = rxq->ring_addr + sizeof(RX_DCB_t) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
     }

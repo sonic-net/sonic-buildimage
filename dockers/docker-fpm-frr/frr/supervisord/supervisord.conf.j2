@@ -25,18 +25,33 @@ priority=1
 autostart=false
 autorestart=unexpected
 startsecs=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1 -P 0
+priority=4
+autostart=false
+autorestart=true
+startsecs=0
 stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
 
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl -M snmp
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic -M snmp --asic-offload=notify_on_offload
 priority=4
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
@@ -46,70 +61,88 @@ priority=4
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 
 [program:staticd]
-command=/usr/lib/frr/staticd -A 127.0.0.1
+command=/usr/lib/frr/staticd -A 127.0.0.1 -P 0
 priority=4
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:bfdd]
-command=/usr/lib/frr/bfdd -A 127.0.0.1
+command=/usr/lib/frr/bfdd -A 127.0.0.1 -P 0
 priority=4
 stopsignal=KILL
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
-command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
+{% if FEATURE is defined and
+      (FEATURE.frr_bmp is defined and FEATURE.frr_bmp.state is defined and FEATURE.frr_bmp.state == "enabled") or
+      (FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled") %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
+{% else %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
+{% endif %}
 priority=5
 stopsignal=KILL
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:ospfd]
-command=/usr/lib/frr/ospfd -A 127.0.0.1 -M snmp
+command=/usr/lib/frr/ospfd -A 127.0.0.1 -P 0 -M snmp
 priority=5
 stopsignal=KILL
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 
 [program:pimd]
-command=/usr/lib/frr/pimd -A 127.0.0.1
+command=/usr/lib/frr/pimd -A 127.0.0.1 -P 0
 priority=5
 stopsignal=KILL
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
@@ -120,8 +153,10 @@ priority=6
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
@@ -136,8 +171,10 @@ priority=6
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
@@ -149,8 +186,10 @@ priority=6
 autostart=false
 autorestart=true
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
@@ -160,11 +199,24 @@ priority=6
 autostart=false
 autorestart=true
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
+{% endif %}
+
+{% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.software_bfd is defined and SYSTEM_DEFAULTS.software_bfd.status is defined and SYSTEM_DEFAULTS.software_bfd.status == "enabled" %}
+[program:bfdmon]
+command=/usr/local/bin/bfdmon
+priority=6
+autostart=true
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
 {% endif %}
 
 {% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
@@ -174,8 +226,10 @@ priority=6
 autostart=false
 autorestart=false
 startsecs=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 {% endif %}
@@ -188,8 +242,24 @@ autostart=false
 autorestart=false
 startsecs=0
 startretries=0
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1 -P 0
+priority=5
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
 stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
-dependent_startup_wait_for=bgpd:running
+dependent_startup_wait_for=zebra:running
 {% endif %}

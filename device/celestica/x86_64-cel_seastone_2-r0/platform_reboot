@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Set all LEDs to BMC's control
+ipmitool raw 0x3a 0x0f 0x02 0x01 &> /dev/null
+
+/usr/local/bin/seastone2_platform_shutdown.sh system

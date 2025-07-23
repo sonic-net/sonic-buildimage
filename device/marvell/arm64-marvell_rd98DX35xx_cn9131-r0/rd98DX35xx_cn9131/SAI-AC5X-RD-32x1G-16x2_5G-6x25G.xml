@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="SAI" sid="c310bbb1-ffca-4c99-9bae-f7d4caff5941">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="SAI" dsig="md5" sid="1ed4cd3c-ea04-44f4-8a20-4d1336284709">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -50,10 +50,20 @@
           <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>Feature-enable</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Feature Enabled/Disabled</SAIplt:description>
         <SAIplt:enum>
-          <SAIplt:name>IN_DROP_ANY</SAIplt:name>
-          <SAIplt:description>Router In Drop Counters track either TTL &amp; Hop Limit Exceeded or Route Black Hole Packets</SAIplt:description>
-          <SAIplt:value>2</SAIplt:value>
+          <SAIplt:name>Disabled</SAIplt:name>
+          <SAIplt:description>Disabled</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>Enabled</SAIplt:name>
+          <SAIplt:description>Enabled</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
       <SAIplt:typedef>
@@ -155,6 +165,26 @@
           <SAIplt:name>ASIC_Falcon</SAIplt:name>
           <SAIplt:description>FALCON</SAIplt:description>
           <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_AC5P</SAIplt:name>
+          <SAIplt:description>AC5P</SAIplt:description>
+          <SAIplt:value>3</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>boolean-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Boolean 32 bits , due to bing endian</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>false</SAIplt:name>
+          <SAIplt:description>False</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>true</SAIplt:name>
+          <SAIplt:description>True</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
     </SAIplt:typedefs>
@@ -442,14 +472,19 @@
       <SAIplt:max_tti SAIplt:type="uint32">1024</SAIplt:max_tti>
     </SAIplt:scalingAC5>
     <SAIplt:Counters>
-      <SAIplt:cnc-base-list>
-        <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
-      </SAIplt:cnc-base-list>
-      <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">IN_DROP_ANY</SAIplt:router-in-drop-counter>
+      <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
+      <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">ROUTE_BLACKHOLE</SAIplt:router-in-drop-counter>
+      <SAIplt:Queue-counter>
+        <SAIplt:queue-pass-drop-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-pass-drop-counter>
+        <SAIplt:queue-watermark-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-watermark-counter>
+      </SAIplt:Queue-counter>
     </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
     </SAIplt:Logging>
+    <SAIplt:Feature>
+      <SAIplt:PHY_Temperature SAIplt:type="Feature-enable">Disabled</SAIplt:PHY_Temperature>
+    </SAIplt:Feature>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">control-acl</SAIplt:feature>
       <SAIplt:feature-priority SAIplt:type="feature-priority-type">3</SAIplt:feature-priority>

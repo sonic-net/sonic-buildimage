@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <linux/kconfig.h>
@@ -45,15 +45,260 @@
 #include <linux/time.h>
 
 #include <lkm/ngknet_dev.h>
+#include <lkm/ngknet_kapi.h>
 #include <bcmcnet/bcmcnet_core.h>
 #include "ngknet_main.h"
 #include "ngknet_extra.h"
 #include "ngknet_callback.h"
+#include "ngknet_ptp.h"
 
 /*! Defalut Rx tick for Rx rate limit control. */
 #define NGKNET_EXTRA_RATE_LIMIT_DEFAULT_RX_TICK 10
 
+/*!
+ * SKB replicate mode when multiple filter hits, default to use skb_copy to be
+ * safe.
+ */
+#ifndef KNET_USE_SKB_CLONE
+#define KNET_USE_SKB_CLONE 0
+#endif
+#if KNET_USE_SKB_CLONE
+#define skb_replicate(_skb, _gfp) skb_clone(_skb, _gfp)
+#else
+#define skb_replicate(_skb, _gfp) skb_copy(_skb, _gfp)
+#endif
+
 static struct ngknet_rl_ctrl rl_ctrl;
+
+/*!
+ * The destination type NGKNET_FILTER_DEST_T_CB allows the user to
+ * perform advanced filtering and packet processing via a
+ * user-supplied filter callback function.
+ *
+ * The filter callback function is implemented in a separate Linux
+ * kernel module which is loaded on top of the KNET module, and the
+ * following APIs can be used to register the callback function with
+ * the KNET driver:
+ *
+ *   ngknet_filter_cb_register
+ *   (legacy API - only one callback possible per device)
+ *
+ *   ngknet_filter_cb_register_by_name
+ *   (supports multiple named callbacks per device)
+ *
+ *   ngknet_filter_cb_unregister
+ *   (unregisters a callback function)
+ *
+ * Notes:
+ *
+ * 1) The callbacks are done from interrupt context, so the user
+ *    should defer any advanced processing to a work queue.
+ *
+ * 2) The named callbacks take priority over unnamed (legacy)
+ *    callbacks if the filter priorities are the same.
+ *
+ * 3) Packet filters are processed in order of priority, and further
+ *    processing is stopped once a matching filter is encountered.  If
+ *    additional filters have the same priority as the first matching
+ *    filter, then all these filters will be processed as well,
+ *    i.e. if such a filter matches, the associated filter action will
+ *    be executed.
+ *
+ * 4) The sk_buff (skb) and ngknet_filter_t (filt) returned by the
+ *    callback function (filter_cb) determine the next steps of the
+ *    KNET driver:
+ *
+ *    A) If skb == NULL, the callback has taken ownership of the
+ *       packet and the callback function must ensure that the skb is
+ *       freed. The filt parameter is ignored by the KNET driver.
+ *
+ *    B) If skb != NULL, the packet will be redirected according to
+ *       the destination returned by the callback function (filt). If
+ *       filt is NULL or the destination is invalid, the packet is
+ *       dropped and skb will be freed.
+ *
+ * 5) When multiple filters are matched, the KNET driver will ensure
+ *    that each filter gets its own copy of the packet (skb),
+ *    i.e. from the filters' perspective, no special processing is
+ *    required.
+ */
+static inline int
+ngknet_filter_callback(struct ngknet_dev *dev, struct filt_ctrl *fc,
+                       struct sk_buff **skb, ngknet_filter_t **filt)
+{
+    struct ngknet_callback_desc *cbd = NGKNET_SKB_CB((*skb));
+    struct pkt_hdr *pkh = (struct pkt_hdr *)(*skb)->data;
+    ngknet_filter_cb_f filter_cb;
+
+    filter_cb = fc->filter_cb ? fc->filter_cb : dev->cbc->filter_cb;
+    if (!filter_cb) {
+        return SHR_E_UNAVAIL;
+    }
+
+    cbd->dinfo = &dev->dev_info;
+    cbd->pmd = (*skb)->data + PKT_HDR_SIZE;
+    cbd->pmd_len = pkh->meta_len;
+    cbd->pkt_len = pkh->data_len;
+    cbd->filt = *filt;
+    *skb = filter_cb(*skb, filt);
+    return SHR_E_NONE;
+}
+
+static inline bool
+ngknet_filter_match(struct ngknet_dev *dev, int chan_id,
+                    struct sk_buff *skb, ngknet_filter_t *filt)
+{
+    struct pkt_buf *pkb;
+    ngknet_filter_t scratch;
+    uint8_t *oob;
+    int idx, wsize;
+
+    if (!dev || !skb || !filt) {
+        return false;
+    }
+    if (filt->flags & NGKNET_FILTER_F_ANY_DATA) {
+        return true;
+    }
+    if (filt->flags & NGKNET_FILTER_F_MATCH_CHAN && filt->chan != chan_id) {
+        return false;
+    }
+
+    pkb = (struct pkt_buf *)skb->data;
+    oob = &pkb->data;
+
+    memcpy(&scratch.data.b[0],
+           &oob[filt->oob_data_offset], filt->oob_data_size);
+    memcpy(&scratch.data.b[filt->oob_data_size],
+           &pkb->data + pkb->pkh.meta_len + filt->pkt_data_offset,
+           filt->pkt_data_size);
+    wsize = NGKNET_BYTES2WORDS(filt->oob_data_size + filt->pkt_data_size);
+    for (idx = 0; idx < wsize; idx++) {
+        scratch.data.w[idx] &= filt->mask.w[idx];
+        if (scratch.data.w[idx] != filt->data.w[idx]) {
+            break;
+        }
+    }
+    if (idx == wsize) {
+        return true;
+    }
+    return false;
+}
+
+static inline int
+ngknet_filter_process(struct ngknet_dev *dev,
+                      struct sk_buff *skb, ngknet_filter_t *filt)
+{
+    struct ngknet_private *priv = NULL;
+    struct pkt_buf *pkb;
+    struct sk_buff *mirror_skb = NULL;
+    struct net_device *dest_ndev = NULL, *mirror_ndev = NULL;
+    unsigned long flags;
+    uint8_t *data = NULL;
+    uint16_t tpid;
+    int eth_offset = 0, cust_hdr_len = 0;
+
+    if (!dev) {
+        return SHR_E_INTERNAL;
+    }
+    if (!skb) {
+        /* SKB was consumed by callback */
+        return SHR_E_NONE;
+    }
+    if (!filt) {
+        return SHR_E_NO_HANDLER;
+    }
+
+    spin_lock_irqsave(&dev->lock, flags);
+
+    pkb = (struct pkt_buf *)skb->data;
+    switch (filt->dest_type) {
+    case NGKNET_FILTER_DEST_T_NETIF:
+        if (filt->dest_id == 0) {
+            dest_ndev = dev->net_dev;
+        } else {
+            dest_ndev = dev->vdev[filt->dest_id];
+        }
+        if (dest_ndev) {
+            skb->dev = dest_ndev;
+            if (filt->dest_proto) {
+                pkb->pkh.attrs |= PDMA_RX_SET_PROTO;
+                skb->protocol = filt->dest_proto;
+            }
+            priv = netdev_priv(dest_ndev);
+            priv->users++;
+        }
+        break;
+    case NGKNET_FILTER_DEST_T_VNET:
+        pkb->pkh.attrs |= PDMA_RX_TO_VNET;
+        break;
+    case NGKNET_FILTER_DEST_T_NULL:
+    default:
+        break;
+    }
+
+    spin_unlock_irqrestore(&dev->lock, flags);
+
+    if (!dest_ndev) {
+        return SHR_E_NO_HANDLER;
+    }
+
+    /* PTP Rx Pre processing */
+    if (priv->hwts_rx_filter) {
+        ngknet_ptp_rx_pre_process(dest_ndev, skb, &cust_hdr_len);
+    }
+
+    if (filt->flags & NGKNET_FILTER_F_STRIP_TAG) {
+        pkb->pkh.attrs |= PDMA_RX_STRIP_TAG;
+        eth_offset = PKT_HDR_SIZE + pkb->pkh.meta_len + cust_hdr_len;
+        data = skb->data + eth_offset;
+        tpid = data[12] << 8 | data[13];
+        if (tpid == ETH_P_8021Q || tpid == ETH_P_8021AD) {
+            pkb->pkh.data_len -= VLAN_HLEN;
+            memmove(skb->data + VLAN_HLEN, skb->data, eth_offset + 2 * ETH_ALEN);
+            skb_pull(skb, VLAN_HLEN);
+        }
+    }
+
+    if (dev->cbc->rx_cb) {
+        NGKNET_SKB_CB(skb)->filt = filt;
+    }
+
+    if (filt->mirror_type == NGKNET_FILTER_DEST_T_NETIF) {
+        spin_lock_irqsave(&dev->lock, flags);
+        if (filt->mirror_id == 0) {
+            mirror_ndev = dev->net_dev;
+        } else {
+            mirror_ndev = dev->vdev[filt->mirror_id];
+        }
+        if (mirror_ndev) {
+            mirror_skb = pskb_copy(skb, GFP_ATOMIC);
+            if (mirror_skb) {
+                mirror_skb->dev = mirror_ndev;
+                if (filt->mirror_proto) {
+                    pkb->pkh.attrs |= PDMA_RX_SET_PROTO;
+                    mirror_skb->protocol = filt->mirror_proto;
+                }
+                priv = netdev_priv(mirror_ndev);
+                priv->users++;
+
+                if (dev->cbc->rx_cb) {
+                    NGKNET_SKB_CB(mirror_skb)->filt = filt;
+                }
+            }
+        }
+        spin_unlock_irqrestore(&dev->lock, flags);
+    }
+
+    /* Receive packet */
+    priv->pkt_recv(dest_ndev, skb);
+
+    /* Receive mirrored packet */
+    if (mirror_ndev && mirror_skb) {
+        priv->pkt_recv(mirror_ndev, mirror_skb);
+    }
+
+    return SHR_E_NONE;
+}
 
 int
 ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
@@ -61,6 +306,7 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
     struct filt_ctrl *fc = NULL;
     struct list_head *list = NULL;
     ngknet_filter_t *filt = NULL;
+    filter_cb_t *filter_cb;
     unsigned long flags;
     int num, id, done = 0;
 
@@ -81,6 +327,11 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
         return SHR_E_UNAVAIL;
     }
 
+    fc = kzalloc(sizeof(*fc), GFP_KERNEL);
+    if (!fc) {
+        return SHR_E_MEMORY;
+    }
+
     spin_lock_irqsave(&dev->lock, flags);
 
     num = (long)dev->fc[0];
@@ -91,13 +342,8 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
     }
     if (id > NUM_FILTER_MAX) {
         spin_unlock_irqrestore(&dev->lock, flags);
+        kfree(fc);
         return SHR_E_RESOURCE;
-    }
-
-    fc = kzalloc(sizeof(*fc), GFP_KERNEL);
-    if (!fc) {
-        spin_unlock_irqrestore(&dev->lock, flags);
-        return SHR_E_MEMORY;
     }
 
     dev->fc[id] = fc;
@@ -106,6 +352,19 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
 
     memcpy(&fc->filt, filter, sizeof(fc->filt));
     fc->filt.id = id;
+
+    /* Check for filter-specific callback */
+    if (filter->dest_type == NGKNET_FILTER_DEST_T_CB &&
+        filter->desc[0] != '\0') {
+        list_for_each(list, &dev->cbc->filter_cb_list) {
+            filter_cb = list_entry(list, filter_cb_t, list);
+            if (strncmp(filter->desc, filter_cb->desc,
+                        strlen(filter_cb->desc)) == 0) {
+                fc->filter_cb = filter_cb->cb;
+                break;
+            }
+        }
+    }
 
     list_for_each(list, &dev->filt_list) {
         filt = &((struct filt_ctrl *)list)->filt;
@@ -248,22 +507,18 @@ ngknet_filter_get_next(struct ngknet_dev *dev, ngknet_filter_t *filter)
 }
 
 int
-ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb, struct net_device **ndev,
-                     struct net_device **mndev, struct sk_buff **mskb)
+ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb)
 {
-    struct pkt_buf *pkb = (struct pkt_buf *)skb->data;
-    struct net_device *dest_ndev = NULL, *mirror_ndev = NULL;
-    struct sk_buff *mirror_skb = NULL;
+    struct sk_buff *fskb = NULL;
+    struct net_device *dest_ndev = NULL;
     struct ngknet_private *priv = NULL;
     struct filt_ctrl *fc = NULL;
-    struct list_head *list = NULL;
-    ngknet_filter_t scratch, *filt = NULL, *filt_cb = NULL;
-    uint8_t *oob = &pkb->data, *data = NULL;
-    uint16_t tpid;
+    struct list_head *list = NULL, *next_list = NULL;
+    ngknet_filter_t *filt = NULL, *next_filt = NULL;
+    struct pkt_buf *pkb = (struct pkt_buf *)skb->data;
     unsigned long flags;
-    int wsize;
-    int chan_id;
-    int rv, idx, match = 0,match_cb = 0;
+    int rv, chan_id;
+    uint32_t next_filter_match = 0, same_pri_idx;
 
     rv = bcmcnet_pdma_dev_queue_to_chan(&dev->pdma_dev, pkb->pkh.queue_id,
                                         PDMA_Q_RX, &chan_id);
@@ -278,153 +533,67 @@ ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb, struct net_dev
         skb->dev = dest_ndev;
         priv = netdev_priv(dest_ndev);
         priv->users++;
-        *ndev = dest_ndev;
         spin_unlock_irqrestore(&dev->lock, flags);
+        priv->pkt_recv(dest_ndev, skb);
         return SHR_E_NONE;
     }
 
     if (list_empty(&dev->filt_list)) {
         spin_unlock_irqrestore(&dev->lock, flags);
-        return SHR_E_NONE;
+        return SHR_E_NO_HANDLER;
     }
 
+    rv = SHR_E_NO_HANDLER;
     list_for_each(list, &dev->filt_list) {
         fc = (struct filt_ctrl *)list;
         filt = &fc->filt;
-        if (filt->flags & NGKNET_FILTER_F_ANY_DATA) {
-            match = 1;
-            break;
-        }
-        if (filt->flags & NGKNET_FILTER_F_MATCH_CHAN && filt->chan != chan_id) {
-            continue;
-        }
-        memcpy(&scratch.data.b[0],
-               &oob[filt->oob_data_offset], filt->oob_data_size);
-        memcpy(&scratch.data.b[filt->oob_data_size],
-               &pkb->data + pkb->pkh.meta_len + filt->pkt_data_offset,
-               filt->pkt_data_size);
-        wsize = NGKNET_BYTES2WORDS(filt->oob_data_size + filt->pkt_data_size);
-        for (idx = 0; idx < wsize; idx++) {
-            scratch.data.w[idx] &= filt->mask.w[idx];
-            if (scratch.data.w[idx] != filt->data.w[idx]) {
-                break;
-            }
-        }
-        if (idx == wsize) {
-            if (NGKNET_FILTER_DEST_T_CB == filt->dest_type) {
-                match_cb = 1;
-                filt_cb = filt;
+        if (next_filter_match || ngknet_filter_match(dev, chan_id, skb, filt)) {
+            if (next_filter_match && --next_filter_match > 0) {
+                /* Same priority, but not matching */
                 continue;
             }
-            match = 1;
-            break;
-        }
-    }
-
-    if (match) {
-        fc->hits++;
-        if (filt->dest_type == NGKNET_FILTER_DEST_T_CB) {
-            struct ngknet_callback_desc *cbd = NGKNET_SKB_CB(skb);
-            struct pkt_hdr *pkh = (struct pkt_hdr *)skb->data;
-            if (!dev->cbc->filter_cb) {
-                spin_unlock_irqrestore(&dev->lock, flags);
-                return SHR_E_UNAVAIL;
-            }
-            cbd->dinfo = &dev->dev_info;
-            cbd->pmd = skb->data + PKT_HDR_SIZE;
-            cbd->pmd_len = pkh->meta_len;
-            cbd->pkt_len = pkh->data_len;
-            cbd->filt = filt;
-            skb = dev->cbc->filter_cb(skb, &filt);
-            if (!skb || !filt) {
-                spin_unlock_irqrestore(&dev->lock, flags);
-                return SHR_E_UNAVAIL;
-            }
-        }
-        switch (filt->dest_type) {
-        case NGKNET_FILTER_DEST_T_NETIF:
-            if (filt->dest_id == 0) {
-                dest_ndev = dev->net_dev;
-            } else {
-                dest_ndev = dev->vdev[filt->dest_id];
-            }
-            if (dest_ndev) {
-                skb->dev = dest_ndev;
-                if (filt->dest_proto) {
-                    pkb->pkh.attrs |= PDMA_RX_SET_PROTO;
-                    skb->protocol = filt->dest_proto;
+            fc->hits++;
+            fskb = skb;
+            next_list = list->next;
+            same_pri_idx = 0;
+            /* Look for matching filters with same priority */
+            while (next_list != &dev->filt_list) {
+                next_filt = &((struct filt_ctrl *)next_list)->filt;
+                if (next_filt->priority != filt->priority) {
+                    break;
                 }
-                priv = netdev_priv(dest_ndev);
-                priv->users++;
+                same_pri_idx++;
+                if (ngknet_filter_match(dev, chan_id, skb, next_filt)) {
+                    /* Found another matching filter with same priority */
+                    fskb = skb_replicate(skb, GFP_ATOMIC);
+                    next_filter_match = same_pri_idx;
+                    break;
+                }
+                next_list = next_list->next;
             }
-            break;
-        case NGKNET_FILTER_DEST_T_VNET:
-            pkb->pkh.attrs |= PDMA_RX_TO_VNET;
+
             spin_unlock_irqrestore(&dev->lock, flags);
-            return SHR_E_NO_HANDLER;
-        case NGKNET_FILTER_DEST_T_NULL:
-        default:
-            spin_unlock_irqrestore(&dev->lock, flags);
-            return SHR_E_UNAVAIL;
+
+            if (filt->dest_type == NGKNET_FILTER_DEST_T_CB) {
+                (void)ngknet_filter_callback(dev, fc, &fskb, &filt);
+            }
+
+            rv = ngknet_filter_process(dev, fskb, filt);
+            if (SHR_FAILURE(rv) && fskb != skb) {
+                dev_kfree_skb_any(fskb);
+            }
+
+            spin_lock_irqsave(&dev->lock, flags);
+
+            if (!next_filter_match) {
+                break;
+            }
         }
     }
 
     spin_unlock_irqrestore(&dev->lock, flags);
 
-    if (!dest_ndev) {
-        return SHR_E_NONE;
-    } else {
-        *ndev = dest_ndev;
-    }
-
-    if (filt->flags & NGKNET_FILTER_F_STRIP_TAG) {
-        pkb->pkh.attrs |= PDMA_RX_STRIP_TAG;
-        data = skb->data + PKT_HDR_SIZE + pkb->pkh.meta_len;
-        tpid = data[12] << 8 | data[13];
-        if (tpid == ETH_P_8021Q || tpid == ETH_P_8021AD) {
-            pkb->pkh.data_len -= VLAN_HLEN;
-            memmove(skb->data + VLAN_HLEN, skb->data,
-                    PKT_HDR_SIZE + pkb->pkh.meta_len + 2 * ETH_ALEN);
-            skb_pull(skb, VLAN_HLEN);
-        }
-    }
-
-    if (dev->cbc->rx_cb) {
-        NGKNET_SKB_CB(skb)->filt = filt;
-        /* Add callback filter if matched */
-        if (priv) {
-            priv->filt_cb = match_cb? filt_cb : NULL;
-        }
-    }
-
-    if (filt->mirror_type == NGKNET_FILTER_DEST_T_NETIF) {
-        spin_lock_irqsave(&dev->lock, flags);
-        if (filt->mirror_id == 0) {
-            mirror_ndev = dev->net_dev;
-        } else {
-            mirror_ndev = dev->vdev[filt->mirror_id];
-        }
-        if (mirror_ndev) {
-            mirror_skb = pskb_copy(skb, GFP_ATOMIC);
-            if (mirror_skb) {
-                mirror_skb->dev = mirror_ndev;
-                if (filt->mirror_proto) {
-                    pkb->pkh.attrs |= PDMA_RX_SET_PROTO;
-                    mirror_skb->protocol = filt->mirror_proto;
-                }
-                if (dev->cbc->rx_cb) {
-                    NGKNET_SKB_CB(mirror_skb)->filt = filt;
-                }
-                priv = netdev_priv(mirror_ndev);
-                priv->users++;
-                *mndev = mirror_ndev;
-                *mskb = mirror_skb;
-            }
-        }
-        spin_unlock_irqrestore(&dev->lock, flags);
-    }
-
-    return SHR_E_NONE;
+    return rv;
 }
 
 static void
