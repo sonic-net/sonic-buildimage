@@ -16,18 +16,6 @@
                 ]
             }
         },
-        "sonic-interface:sonic-interface": {
-            "sonic-interface:INTERFACE": {
-                "INTERFACE_LIST": [
-                    {
-                        "name": "Ethernet10"
-                    },
-                    {
-                        "name": "Ethernet11"
-                    }
-                ]
-            }
-        },
         "sonic-evpn:sonic-evpn": {
             "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
                 "EVPN_ETHERNET_SEGMENT_LIST": [
@@ -40,6 +28,45 @@
                     {
                         "ifname": "Ethernet11",
                         "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_PORTCHANNEL_VALID_TEST": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "mode": "routed"
+                    },
+                    {
+                        "name": "PortChannel0002",
+                        "admin_status": "up",
+                        "min_links": "2",
+                        "mtu": "9100",
+                        "mode": "trunk"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "PortChannel0001",
+                        "esi": "AUTO",
+                        "type": "TYPE_3_MAC_BASED",
+                        "df_pref": 5000
+                    },
+                    {
+                        "ifname": "PortChannel0002",
+                        "esi": "00:01:02:03:04:05:06:07:08:AA",
                         "type": "TYPE_0_OPERATOR_CONFIGURED"
                     }
                 ]
@@ -322,6 +349,56 @@
                         "startup_delay": 1800,
                         "mac_holdtime": 1000,
                         "neigh_holdtime": 86401
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_IFNAME_NOT_EXISTS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet10",
+                        "lanes": "1,2,3,4",
+                        "speed": 10000
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "Ethernet99",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
+                    }
+                ]
+            }
+        }
+    },
+    "EVPN_INVALID_PORTCHANNEL_NOT_EXISTS": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "mode": "routed"
+                    }
+                ]
+            }
+        },
+        "sonic-evpn:sonic-evpn": {
+            "sonic-evpn:EVPN_ETHERNET_SEGMENT": {
+                "EVPN_ETHERNET_SEGMENT_LIST": [
+                    {
+                        "ifname": "PortChannel0099",
+                        "esi": "00:01:02:03:04:05:06:07:08:FF",
+                        "type": "TYPE_0_OPERATOR_CONFIGURED"
                     }
                 ]
             }

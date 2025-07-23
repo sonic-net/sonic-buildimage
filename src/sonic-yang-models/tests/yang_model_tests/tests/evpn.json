@@ -2,6 +2,9 @@
     "EVPN_ES_VALID_TEST": {
         "desc": "Valid EVPN Ethernet Segment Configuration"
     },
+    "EVPN_PORTCHANNEL_VALID_TEST": {
+        "desc": "Valid EVPN Ethernet Segment Configuration with PortChannel interfaces"
+    },
     "EVPN_INVALID_AUTO_W_ESI_0": {
         "desc": "Invalid Type 0 ES Configuration w/ AUTO ESI",
         "eStr": "Invalid use of 'AUTO' with Type 0 ESI or a manual ESI w/ AUTO type in not empty"
@@ -40,5 +43,15 @@
     "EVPN_INVALID_NEIGH_HOLDTIME": {
         "desc": "Global Neighbor Holdtime value out of range",
         "eStr": "Neighbor Holdtime value out of range"
+    },
+    "EVPN_INVALID_IFNAME_NOT_EXISTS": {
+        "desc": "Invalid ifname that doesn't exist in PORT table",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["Ethernet99"]
+    },
+    "EVPN_INVALID_PORTCHANNEL_NOT_EXISTS": {
+        "desc": "Invalid ifname that doesn't exist in PORTCHANNEL table",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["PortChannel0099"]
     }
 }
