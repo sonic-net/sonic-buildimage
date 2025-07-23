@@ -151,6 +151,7 @@
         "fan_drawers":[
             {
                 "name": "FanTray1",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -181,6 +182,7 @@
             },
             {
                 "name": "FanTray2",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -210,6 +212,7 @@
             },
             {
                 "name": "FanTray3",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -239,6 +242,7 @@
             },
             {
                 "name": "FanTray4",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -268,6 +272,7 @@
             },
             {
                 "name": "FanTray5",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -297,6 +302,7 @@
             },
             {
                 "name": "FanTray6",
+                "max_consumed_power": false,
                 "status_led": {
                     "controllable": false
                 },
@@ -334,7 +340,13 @@
                 },
                 "fans": [
                     {
-                        "name": "PSU-1 FAN-1"
+                        "name": "PSU-1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
@@ -354,7 +366,13 @@
                 },
                 "fans": [
                     {
-                        "name": "PSU-2 FAN-1"
+                        "name": "PSU-2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ],
                 "thermals": [
@@ -374,7 +392,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "MB_RightCenter_temp(0x49)",
@@ -382,7 +400,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "MB_LeftCenter_temp(0x4a)",
@@ -390,7 +408,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "CB_temp(0x4b)",
@@ -398,7 +416,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "OCXO_temp(0x4c)",
@@ -406,7 +424,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "FB_1_temp(0x4e)",
@@ -414,7 +432,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "FB_2_temp(0x4f)",
@@ -422,11 +440,11 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": true
+                "high-crit-threshold": false
             },
             {
                 "name": "CPU_Package_temp",
-                "controllable": true,
+                "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
@@ -434,7 +452,7 @@
             },
             {
                 "name": "CPU_Core_0_temp",
-                "controllable": true,
+                "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
@@ -442,7 +460,7 @@
             },
             {
                 "name": "CPU_Core_1_temp",
-                "controllable": true,
+                "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
@@ -450,7 +468,7 @@
             },
             {
                 "name": "CPU_Core_2_temp",
-                "controllable": true,
+                "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
@@ -458,14 +476,13 @@
             },
             {
                 "name": "CPU_Core_3_temp",
-                "controllable": true,
+                "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
                 "high-crit-threshold": true
             }
         ],
-
         "sfps": [
             {
                 "name": "Ethernet0"
@@ -562,12 +579,6 @@
             },
             {
                 "name": "Ethernet248"
-            },
-            {
-                "name": "Ethernet256"
-            },
-            {
-                "name": "Ethernet257"
             }
         ]
     },
@@ -985,22 +996,6 @@
                 "1x100G[40G](4)": ["Eth32(Port32)"],
                 "2x50G(4)": ["Eth32/1(Port32)", "Eth32/2(Port32)"],
                 "4x25G[10G](4)": ["Eth32/1(Port32)", "Eth32/2(Port32)", "Eth32/3(Port32)", "Eth32/4(Port32)"]
-            }
-        },
-
-        "Ethernet256": {
-            "index": "33",
-            "lanes": "257",
-            "breakout_modes": {
-                "1x10G[1G]": ["Eth33(Port33)"]
-            }
-        },
-
-        "Ethernet257": {
-            "index": "34",
-            "lanes": "258",
-            "breakout_modes": {
-                "1x10G[1G]": ["Eth34(Port34)"]
             }
         }
     }

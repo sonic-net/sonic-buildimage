@@ -4,7 +4,7 @@
         "num_psus":2,
         "num_fantrays":6,
         "num_fans_pertray":2,
-        "num_ports":34,
+        "num_ports": 32,
         "num_temps": 12,
         "pddf_dev_types":
         {
