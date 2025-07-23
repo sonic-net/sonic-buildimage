@@ -1,0 +1,6086 @@
+diff --git a/examples/team_manual_control.c b/examples/team_manual_control.c
+index 0966718..a2b0091 100644
+--- a/examples/team_manual_control.c
++++ b/examples/team_manual_control.c
+@@ -157,6 +157,7 @@ static int cmd_set(struct team_handle *th, int argc, char **argv)
+ int main(int argc, char **argv)
+ {
+ 	struct team_handle *th;
++	struct team_netlink *tnl;
+ 	int err;
+ 	char *ifname = NULL;
+ 	uint32_t ifindex;
+@@ -186,7 +187,13 @@ int main(int argc, char **argv)
+ 		usage();
+ 	}
+ 
+-	th = team_alloc();
++	tnl = team_netlink_alloc();
++	if (!tnl) {
++                fprintf(stderr, "Team netlink alloc failed.\n");
++                return 1;
++        }
++
++	th = team_alloc(tnl);
+ 	if (!th) {
+ 		fprintf(stderr, "Team alloc failed.\n");
+ 		return 1;
+@@ -216,5 +223,6 @@ int main(int argc, char **argv)
+ 	}
+ 
+ 	team_free(th);
++	team_netlink_free(tnl);
+ 	return 0;
+ }
+diff --git a/examples/team_monitor.c b/examples/team_monitor.c
+index 36bd1e6..044a274 100644
+--- a/examples/team_monitor.c
++++ b/examples/team_monitor.c
+@@ -48,7 +48,7 @@ static void do_main_loop(struct team_handle *th)
+ 	int tfd;
+ 
+ 	FD_ZERO(&rfds);
+-	tfd = team_get_event_fd(th);
++	tfd = team_get_event_fd(th, NULL);
+ 	FD_SET(tfd, &rfds);
+ 	fdmax = tfd + 1;
+ 
+@@ -61,7 +61,7 @@ static void do_main_loop(struct team_handle *th)
+ 			perror("select()");
+ 		}
+ 		if (FD_ISSET(tfd, &rfds_tmp))
+-			team_handle_events(th);
++			team_handle_events(th, NULL);
+ 	}
+ }
+ 
+@@ -112,6 +112,7 @@ static struct team_change_handler option_change_handler = {
+ int main(int argc, char *argv[])
+ {
+ 	struct team_handle *th;
++	struct team_netlink *tnl;
+ 	int err;
+ 	char *ifname;
+ 	uint32_t ifindex;
+@@ -121,7 +122,13 @@ int main(int argc, char *argv[])
+ 		return 1;
+ 	}
+ 
+-	th = team_alloc();
++	tnl = team_netlink_alloc();
++	if (!tnl) {
++                fprintf(stderr, "team netlink alloc failed.\n");
++                return 1;
++        }
++
++	th = team_alloc(tnl);
+ 	if (!th) {
+ 		fprintf(stderr, "team alloc failed.\n");
+ 		return 1;
+@@ -165,6 +172,7 @@ err_option_change_register:
+ err_port_change_register:
+ err_team_init:
+ 	team_free(th);
++	team_netlink_free(tnl);
+ 
+ 	return err;
+ }
+diff --git a/include/team.h b/include/team.h
+index b31c8d8..32d552e 100644
+--- a/include/team.h
++++ b/include/team.h
+@@ -36,21 +36,27 @@ extern "C" {
+  */
+ struct team_handle;
+ 
+-struct team_handle *team_alloc(void);
++struct team_netlink;
++struct team_netlink *team_netlink_alloc(void);
++struct team_handle *team_alloc(struct team_netlink *tnl);
+ int team_create(struct team_handle *th, const char *team_name);
+ int team_recreate(struct team_handle *th, const char *team_name);
+ int team_destroy(struct team_handle *th);
++int team_netlink_init(struct team_netlink *tnl);
+ int team_init(struct team_handle *th, uint32_t ifindex);
++void team_netlink_free(struct team_netlink *tnl);
+ void team_free(struct team_handle *th);
+ int team_refresh(struct team_handle *th);
++void team_set_lookup_th_fn(struct team_netlink *tnl,
++                            struct team_handle *(*lookup_th)(uint32_t ifindex));
+ void team_set_log_fn(struct team_handle *th,
+ 		     void (*log_fn)(struct team_handle *th, int priority,
+ 				    const char *file, int line, const char *fn,
+ 				    const char *format, va_list args));
+ int team_get_log_priority(struct team_handle *th);
+ void team_set_log_priority(struct team_handle *th, int priority);
+-int team_get_event_fd(struct team_handle *th);
+-int team_handle_events(struct team_handle *th);
++int team_get_event_fd(struct team_handle *th, struct team_netlink *tnl);
++int team_handle_events(struct team_handle *th, struct team_netlink *tnl);
+ int team_check_events(struct team_handle *th);
+ int team_get_mode_name(struct team_handle *th, char **mode_name);
+ int team_set_mode_name(struct team_handle *th, const char *mode_name);
+diff --git a/libteam/Makefile.am b/libteam/Makefile.am
+index 39fec87..d87b2da 100644
+--- a/libteam/Makefile.am
++++ b/libteam/Makefile.am
+@@ -6,7 +6,7 @@ AM_CFLAGS = -fvisibility=hidden -ffunction-sections -fdata-sections
+ AM_LDFLAGS = -Wl,--gc-sections -Wl,--as-needed
+ 
+ lib_LTLIBRARIES = libteam.la
+-libteam_la_SOURCES = libteam.c ports.c options.c ifinfo.c stringify.c
++libteam_la_SOURCES = libteam.c team_netlink.c ports.c options.c ifinfo.c stringify.c
+ libteam_la_CFLAGS= $(AM_CFLAGS) $(LIBNL_CFLAGS) -I${top_srcdir}/include -D_GNU_SOURCE
+ libteam_la_LIBADD= $(LIBNL_LIBS)
+ libteam_la_LDFLAGS = $(AM_LDFLAGS) -version-info @LIBTEAM_CURRENT@:@LIBTEAM_REVISION@:@LIBTEAM_AGE@
+@@ -14,4 +14,4 @@ libteam_la_LDFLAGS = $(AM_LDFLAGS) -version-info @LIBTEAM_CURRENT@:@LIBTEAM_REVI
+ pkgconfigdir = $(libdir)/pkgconfig
+ pkgconfig_DATA = libteam.pc
+ 
+-EXTRA_DIST = team_private.h nl_updates.h
++EXTRA_DIST = team_private.h team_netlink.h nl_updates.h
+diff --git a/libteam/ifinfo.c b/libteam/ifinfo.c
+index e48193e..a974935 100644
+--- a/libteam/ifinfo.c
++++ b/libteam/ifinfo.c
+@@ -266,7 +266,7 @@ static void obj_input_newlink(struct nl_object *obj, void *arg, bool event)
+ 		return;
+ 
+ 	if (event) {
+-		err = rtnl_link_get_kernel(th->nl_cli.sock, ifindex, NULL, &link);
++		err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, ifindex, NULL, &link);
+ 		if (err)
+ 			return;
+ 	}
+@@ -307,7 +307,7 @@ static void event_handler_obj_input_dellink(struct nl_object *obj, void *arg)
+ 	 * is not actually removed. For example in case of bridge port removal.
+ 	 * So better to check actual state before taking actions
+ 	 */
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, ifindex, NULL, &link);
+ 	if (!err) {
+ 		rtnl_link_put(link);
+ 		return;
+@@ -380,13 +380,13 @@ int get_ifinfo_list(struct team_handle *th)
+ 
+ 	while (retry) {
+ 		retry = 0;
+-		ret = nl_send_simple(th->nl_cli.sock, RTM_GETLINK, NLM_F_DUMP,
++		ret = nl_send_simple(th->tnl->nl_cli.sock, RTM_GETLINK, NLM_F_DUMP,
+ 				     &rt_hdr, sizeof(rt_hdr));
+ 		if (ret < 0) {
+ 			err(th, "get_ifinfo_list: nl_send_simple failed");
+ 			return -nl2syserr(ret);
+ 		}
+-		orig_cb = nl_socket_get_cb(th->nl_cli.sock);
++		orig_cb = nl_socket_get_cb(th->tnl->nl_cli.sock);
+ 		cb = nl_cb_clone(orig_cb);
+ 		nl_cb_put(orig_cb);
+ 		if (!cb) {
+@@ -396,10 +396,10 @@ int get_ifinfo_list(struct team_handle *th)
+ 
+ 		nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, valid_handler, th);
+ 
+-		ret = nl_recvmsgs(th->nl_cli.sock, cb);
++		ret = nl_recvmsgs(th->tnl->nl_cli.sock, cb);
+ 		nl_cb_put(cb);
+ 		if (ret < 0) {
+-			err(th, "get_ifinfo_list: nl_recvmsgs failed");
++			err(th, "get_ifinfo_list: nl_recvmsgs failed %s err %d", nl_geterror(ret), ret);
+ 			if (ret != -NLE_DUMP_INTR)
+ 				return -nl2syserr(ret);
+ 			retry = 1;
+@@ -459,6 +459,7 @@ int ifinfo_link_with_port(struct team_handle *th, uint32_t ifindex,
+ 		return -ENOENT;
+ 	if (ifinfo->linked)
+ 		return -EBUSY;
++	team_ifindex2ifname(th, ifindex, ifinfo->ifname, IFNAMSIZ);
+ 	ifinfo->port = port;
+ 	ifinfo->linked = true;
+ 	if (p_ifinfo)
+diff --git a/libteam/libteam.c b/libteam/libteam.c
+index 2f430f4..4998c1a 100644
+--- a/libteam/libteam.c
++++ b/libteam/libteam.c
+@@ -155,15 +155,15 @@ int send_and_recv(struct team_handle *th, struct nl_msg *msg,
+ 	struct nl_cb *cb;
+ 	struct nl_cb *orig_cb;
+ 	bool acked;
+-	unsigned int seq = th->nl_sock_seq++;
++	unsigned int seq = th->tnl->nl_sock_seq++;
+ 	int err;
+ 
+-	ret = nl_send_auto(th->nl_sock, msg);
++	ret = nl_send_auto(th->tnl->nl_sock, msg);
+ 	nlmsg_free(msg);
+ 	if (ret < 0)
+ 		return -nl2syserr(ret);
+ 
+-	orig_cb = nl_socket_get_cb(th->nl_sock);
++	orig_cb = nl_socket_get_cb(th->tnl->nl_sock);
+ 	cb = nl_cb_clone(orig_cb);
+ 	nl_cb_put(orig_cb);
+ 	if (!cb)
+@@ -186,8 +186,9 @@ int send_and_recv(struct team_handle *th, struct nl_msg *msg,
+ 
+ 	acked = false;
+ 	while (!acked) {
+-		ret = nl_recvmsgs(th->nl_sock, cb);
++		ret = nl_recvmsgs(th->tnl->nl_sock, cb);
+ 		if (ret) {
++			err(th, "send_and_recv: nl_recvmsgs failed %s err %d", nl_geterror(ret), ret);
+ 			err = -nl2syserr(ret);
+ 			goto put_cb;
+ 		}
+@@ -345,7 +346,7 @@ void team_change_handler_unregister(struct team_handle *th,
+  * SECTION: Context functions
+  */
+ 
+-static int event_handler(struct nl_msg *msg, void *arg)
++int event_handler(struct nl_msg *msg, void *arg)
+ {
+ 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+ 
+@@ -358,13 +359,11 @@ static int event_handler(struct nl_msg *msg, void *arg)
+ 	return NL_SKIP;
+ }
+ 
+-static int cli_event_handler(struct nl_msg *msg, void *arg)
++int cli_event_handler(struct nl_msg *msg, void *arg)
+ {
+ 	return ifinfo_event_handler(msg, arg);
+ }
+ 
+-static int team_init_event_fd(struct team_handle *th);
+-
+ /**
+  * @details Allocates library context, sockets, initializes rtnl
+  *	    netlink connection.
+@@ -372,7 +371,7 @@ static int team_init_event_fd(struct team_handle *th);
+  * @return New libteam library context.
+  **/
+ TEAM_EXPORT
+-struct team_handle *team_alloc(void)
++struct team_handle *team_alloc(struct team_netlink *tnl)
+ {
+ 	struct team_handle *th;
+ 	const char *env;
+@@ -404,42 +403,10 @@ struct team_handle *team_alloc(void)
+ 	if (err)
+ 		goto err_option_list_alloc;
+ 
+-	th->nl_sock = nl_socket_alloc();
+-	if (!th->nl_sock)
+-		goto err_sk_alloc;
+-
+-	th->nl_sock_event = nl_socket_alloc();
+-	if (!th->nl_sock_event)
+-		goto err_sk_event_alloc;
+-
+-	th->nl_cli.sock_event = nl_cli_alloc_socket();
+-	if (!th->nl_cli.sock_event)
+-		goto err_cli_sk_event_alloc;
+-
+-	th->nl_cli.sock = nl_cli_alloc_socket();
+-	if (!th->nl_cli.sock)
+-		goto err_cli_sk_alloc;
+-	err = nl_cli_connect(th->nl_cli.sock, NETLINK_ROUTE);
+-	if (err)
+-		goto err_cli_connect;
++	th->tnl = tnl;
+ 
+ 	return th;
+ 
+-err_cli_connect:
+-	nl_socket_free(th->nl_cli.sock);
+-
+-err_cli_sk_alloc:
+-	nl_socket_free(th->nl_cli.sock_event);
+-
+-err_cli_sk_event_alloc:
+-	nl_socket_free(th->nl_sock_event);
+-
+-err_sk_event_alloc:
+-	nl_socket_free(th->nl_sock);
+-
+-err_sk_alloc:
+-	option_list_free(th);
+-
+ err_option_list_alloc:
+ 	port_list_free(th);
+ 
+@@ -468,7 +435,7 @@ static int do_create(struct team_handle *th, const char *team_name, bool recreat
+ 		rtnl_link_set_name(link, team_name);
+ 
+ 		if (recreate && team_ifname2ifindex(th, team_name)) {
+-			err = rtnl_link_delete(th->nl_cli.sock, link);
++			err = rtnl_link_delete(th->tnl->nl_cli.sock, link);
+ 			if (err)
+ 				goto errout;
+ 		}
+@@ -478,7 +445,7 @@ static int do_create(struct team_handle *th, const char *team_name, bool recreat
+ 	if (err)
+ 		goto errout;
+ 
+-	err = rtnl_link_add(th->nl_cli.sock, link, NLM_F_CREATE | NLM_F_EXCL);
++	err = rtnl_link_add(th->tnl->nl_cli.sock, link, NLM_F_CREATE | NLM_F_EXCL);
+ 
+ errout:
+ 	rtnl_link_put(link);
+@@ -535,26 +502,11 @@ int team_destroy(struct team_handle *th)
+ 	if (!link)
+ 		return -ENOMEM;
+ 	rtnl_link_set_ifindex(link, th->ifindex);
+-	err = rtnl_link_delete(th->nl_cli.sock, link);
++	err = rtnl_link_delete(th->tnl->nl_cli.sock, link);
+ 	rtnl_link_put(link);
+ 	return -nl2syserr(err);
+ }
+ 
+-/* \cond HIDDEN_SYMBOLS */
+-#ifndef SOL_NETLINK
+-#define SOL_NETLINK 270
+-#endif
+-
+-#ifndef NETLINK_BROADCAST_SEND_ERROR
+-#define NETLINK_BROADCAST_SEND_ERROR    0x4
+-#endif
+-/* \endcond */
+-
+-/* libnl uses default 32k socket receive buffer size,
+- * which can get too small. Use 960k for all sockets.
+- */
+-#define NETLINK_RCVBUF 983040
+-
+ /**
+  * @param th		libteam library context
+  * @param ifindex	team device interface index
+@@ -579,89 +531,91 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ 	}
+ 	th->ifindex = ifindex;
+ 
+-	th->nl_sock_seq = time(NULL);
+-	err = genl_connect(th->nl_sock);
+-	if (err) {
+-		err(th, "Failed to connect to netlink sock.");
+-		return -nl2syserr(err);
+-	}
+-
+-	err = genl_connect(th->nl_sock_event);
+-	if (err) {
+-		err(th, "Failed to connect to netlink event sock.");
+-		return -nl2syserr(err);
+-	}
+-
+-	val = NETLINK_BROADCAST_SEND_ERROR;
+-	err = setsockopt(nl_socket_get_fd(th->nl_sock_event), SOL_NETLINK,
+-			 NETLINK_BROADCAST_ERROR, &val, sizeof(val));
+-	if (err) {
+-		err(th, "Failed set NETLINK_BROADCAST_ERROR on netlink event sock.");
+-		return -errno;
+-	}
+-
+-	env = getenv("TEAM_EVENT_BUFSIZE");
+-	if (env) {
+-		eventbufsize = strtol(env, NULL, 10);
+-		/* ignore other errors, libnl forces minimum 32k and
+-		 * too large values are truncated to system rmem_max
+-		 */
+-		if (eventbufsize < 0)
+-			eventbufsize = 0;
+-	} else {
+-		eventbufsize = NETLINK_RCVBUF;
+-	}
+-
+-	err = nl_socket_set_buffer_size(th->nl_sock, eventbufsize, 0);
+-	if (err) {
+-		err(th, "Failed to set buffer size of netlink sock.");
+-		return -nl2syserr(err);
+-	}
+-	err = nl_socket_set_buffer_size(th->nl_sock_event, eventbufsize, 0);
+-	if (err) {
+-		err(th, "Failed to set buffer size of netlink event sock.");
+-		return -nl2syserr(err);
+-	}
+-
+-	th->family = genl_ctrl_resolve(th->nl_sock, TEAM_GENL_NAME);
+-	if (th->family < 0) {
+-		err(th, "Failed to resolve netlink family.");
+-		return -nl2syserr(th->family);
+-	}
+-
+-	grp_id = genl_ctrl_resolve_grp(th->nl_sock, TEAM_GENL_NAME,
+-				       TEAM_GENL_CHANGE_EVENT_MC_GRP_NAME);
+-	if (grp_id < 0) {
+-		err(th, "Failed to resolve netlink multicast groups.");
+-		return -nl2syserr(grp_id);
+-	}
+-
+-	err = nl_socket_add_membership(th->nl_sock_event, grp_id);
+-	if (err < 0) {
+-		err(th, "Failed to add netlink membership.");
+-		return -nl2syserr(err);
+-	}
+-
+-	nl_socket_disable_seq_check(th->nl_sock_event);
+-	nl_socket_modify_cb(th->nl_sock_event, NL_CB_VALID, NL_CB_CUSTOM,
+-			    event_handler, th);
+-
+-	nl_socket_disable_seq_check(th->nl_cli.sock_event);
+-	nl_socket_modify_cb(th->nl_cli.sock_event, NL_CB_VALID,
+-			    NL_CB_CUSTOM, cli_event_handler, th);
+-	nl_cli_connect(th->nl_cli.sock_event, NETLINK_ROUTE);
+-	nl_socket_set_nonblocking(th->nl_cli.sock_event);
+-
+-	err = nl_socket_set_buffer_size(th->nl_cli.sock_event, eventbufsize, 0);
+-	if (err) {
+-		err(th, "Failed to set cli event socket buffer size.");
+-		return err;
+-	}
+-
+-	err = nl_socket_add_membership(th->nl_cli.sock_event, RTNLGRP_LINK);
+-	if (err < 0) {
+-		err(th, "Failed to add netlink membership.");
+-		return -nl2syserr(err);
++	if (th->tnl->global_tnl == false) {
++	        th->tnl->nl_sock_seq = time(NULL);
++	        err = genl_connect(th->tnl->nl_sock);
++	        if (err) {
++		        err(th, "Failed to connect to netlink sock.");
++		        return -nl2syserr(err);
++	        }
++
++	        err = genl_connect(th->tnl->nl_sock_event);
++	        if (err) {
++		        err(th, "Failed to connect to netlink event sock.");
++		        return -nl2syserr(err);
++	        }
++
++	        val = NETLINK_BROADCAST_SEND_ERROR;
++	        err = setsockopt(nl_socket_get_fd(th->tnl->nl_sock_event), SOL_NETLINK,
++			         NETLINK_BROADCAST_ERROR, &val, sizeof(val));
++	        if (err) {
++		        err(th, "Failed set NETLINK_BROADCAST_ERROR on netlink event sock.");
++		        return -errno;
++	        }
++
++	        env = getenv("TEAM_EVENT_BUFSIZE");
++	        if (env) {
++		        eventbufsize = strtol(env, NULL, 10);
++		        /* ignore other errors, libnl forces minimum 32k and
++		         * too large values are truncated to system rmem_max
++		         */
++		        if (eventbufsize < 0)
++			         eventbufsize = 0;
++	        } else {
++		        eventbufsize = NETLINK_RCVBUF;
++	        }
++
++	        err = nl_socket_set_buffer_size(th->tnl->nl_sock, eventbufsize, 0);
++	        if (err) {
++		        err(th, "Failed to set buffer size of netlink sock.");
++		        return -nl2syserr(err);
++	        }
++	        err = nl_socket_set_buffer_size(th->tnl->nl_sock_event, eventbufsize, 0);
++	        if (err) {
++		        err(th, "Failed to set buffer size of netlink event sock.");
++		        return -nl2syserr(err);
++	        }
++
++	        th->tnl->family = genl_ctrl_resolve(th->tnl->nl_sock, TEAM_GENL_NAME);
++	        if (th->tnl->family < 0) {
++		        err(th, "Failed to resolve netlink family.");
++		        return -nl2syserr(th->tnl->family);
++	        }
++	        grp_id = genl_ctrl_resolve_grp(th->tnl->nl_sock, TEAM_GENL_NAME,
++				               TEAM_GENL_CHANGE_EVENT_MC_GRP_NAME);
++	        if (grp_id < 0) {
++		        err(th, "Failed to resolve netlink multicast groups.");
++		        return -nl2syserr(grp_id);
++	        }
++
++                syslog(LOG_INFO,"*********grup_id*******:%d",grp_id);
++	        err = nl_socket_add_membership(th->tnl->nl_sock_event, grp_id);
++	        if (err < 0) {
++		        err(th, "Failed to add netlink membership.");
++		        return -nl2syserr(err);
++	        }
++
++	        nl_socket_disable_seq_check(th->tnl->nl_sock_event);
++	        nl_socket_modify_cb(th->tnl->nl_sock_event, NL_CB_VALID, NL_CB_CUSTOM,
++			            event_handler, th);
++
++	        nl_socket_disable_seq_check(th->tnl->nl_cli.sock_event);
++	        nl_socket_modify_cb(th->tnl->nl_cli.sock_event, NL_CB_VALID,
++			            NL_CB_CUSTOM, cli_event_handler, th);
++	        nl_cli_connect(th->tnl->nl_cli.sock_event, NETLINK_ROUTE);
++	        nl_socket_set_nonblocking(th->tnl->nl_cli.sock_event);
++
++	        err = nl_socket_set_buffer_size(th->tnl->nl_cli.sock_event, eventbufsize, 0);
++	        if (err) {
++		        err(th, "Failed to set cli event socket buffer size.");
++		        return err;
++	        }
++
++	        err = nl_socket_add_membership(th->tnl->nl_cli.sock_event, RTNLGRP_LINK);
++	        if (err < 0) {
++		        err(th, "Failed to add netlink membership.");
++		        return -nl2syserr(err);
++	        }
+ 	}
+ 
+ 	err = ifinfo_list_init(th);
+@@ -688,10 +642,12 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ 		return err;
+ 	}
+ 
+-	err = team_init_event_fd(th);
+-	if (err) {
+-		err(th, "Failed to init event fd.");
+-		return err;
++        if (th->tnl->global_tnl == false) {
++	        err = team_init_event_fd(th->tnl);
++	        if (err) {
++		        err(th, "Failed to init event fd.");
++		        return err;
++	        }
+ 	}
+ 
+ 	return 0;
+@@ -705,14 +661,9 @@ int team_init(struct team_handle *th, uint32_t ifindex)
+ TEAM_EXPORT
+ void team_free(struct team_handle *th)
+ {
+-	close(th->event_fd);
+ 	ifinfo_list_free(th);
+ 	port_list_free(th);
+ 	option_list_free(th);
+-	nl_socket_free(th->nl_cli.sock);
+-	nl_socket_free(th->nl_cli.sock_event);
+-	nl_socket_free(th->nl_sock_event);
+-	nl_socket_free(th->nl_sock);
+ 	free(th);
+ }
+ 
+@@ -791,16 +742,16 @@ void team_set_log_priority(struct team_handle *th, int priority)
+ 	th->log_priority = priority;
+ }
+ 
+-static int get_cli_sock_event_fd(struct team_handle *th)
++static int get_cli_sock_event_fd(struct team_netlink *tnl)
+ {
+-	return nl_socket_get_fd(th->nl_cli.sock_event);
++	return nl_socket_get_fd(tnl->nl_cli.sock_event);
+ }
+ 
+-static int cli_sock_event_handler(struct team_handle *th)
++static int cli_sock_event_handler(struct team_handle *th, struct team_netlink *tnl)
+ {
+ 	int err;
+ 
+-	err = nl_recvmsgs_default(th->nl_cli.sock_event);
++	err = nl_recvmsgs_default(tnl->nl_cli.sock_event);
+ 	err = -nl2syserr(err);
+ 
+ 	/* libnl thinks ENOBUFS and ENOMEM are same. Hope it was ENOBUFS. */
+@@ -809,38 +760,46 @@ static int cli_sock_event_handler(struct team_handle *th)
+ 		/* There's no way to know what events were lost and no
+ 		 * way to get them again. Refresh all.
+ 		 */
+-		err = get_ifinfo_list(th);
++		if (th != NULL)
++		    err = get_ifinfo_list(th);
+ 	}
+ 
+ 	if (err)
+ 		return err;
+ 
+-	return check_call_change_handlers(th, TEAM_IFINFO_CHANGE);
++	if (th != NULL)
++	        return check_call_change_handlers(th, TEAM_IFINFO_CHANGE);
++	else
++		return 0;
+ }
+ 
+-static int get_sock_event_fd(struct team_handle *th)
++static int get_sock_event_fd(struct team_netlink *tnl)
+ {
+-	return nl_socket_get_fd(th->nl_sock_event);
++	return nl_socket_get_fd(tnl->nl_sock_event);
+ }
+ 
+-static int sock_event_handler(struct team_handle *th)
++static int sock_event_handler(struct team_handle *th, struct team_netlink *tnl)
+ {
+ 	int ret;
+ 
+-	ret = nl_recvmsgs_default(th->nl_sock_event);
++	ret = nl_recvmsgs_default(tnl->nl_sock_event);
+ 	if (ret)
+ 		return -nl2syserr(ret);
+ 
+-	th->msg_recv_started = false;
+-	return check_call_change_handlers(th, TEAM_PORT_CHANGE |
++	if (th != NULL) {
++	        th->msg_recv_started = false;
++	        return check_call_change_handlers(th, TEAM_PORT_CHANGE |
+ 					      TEAM_OPTION_CHANGE |
+ 					      TEAM_IFINFO_CHANGE);
++	}
++	else
++		return 0;
+ }
+ 
+ /* \cond HIDDEN_SYMBOLS */
+ struct team_eventfd {
+-	int (*get_fd)(struct team_handle *th);
+-	int (*event_handler)(struct team_handle *th);
++	int (*get_fd)(struct team_netlink *tnl);
++	int (*event_handler)(struct team_handle *th, struct team_netlink *tnl);
+ };
+ /* \endcond */
+ 
+@@ -899,7 +858,7 @@ TEAM_EXPORT
+ int team_get_eventfd_fd(struct team_handle *th,
+ 			const struct team_eventfd *eventfd)
+ {
+-	return team_get_event_fd(th);
++	return team_get_event_fd(th, NULL);
+ }
+ 
+ /**
+@@ -917,10 +876,10 @@ TEAM_EXPORT
+ int team_call_eventfd_handler(struct team_handle *th,
+ 			      const struct team_eventfd *eventfd)
+ {
+-	return team_handle_events(th);
++	return team_handle_events(th, th->tnl);
+ }
+ 
+-static int team_init_event_fd(struct team_handle *th)
++int team_init_event_fd(struct team_netlink *tnl)
+ {
+ 	int efd;
+ 	int i;
+@@ -931,7 +890,7 @@ static int team_init_event_fd(struct team_handle *th)
+ 	if (efd == -1)
+ 		return -errno;
+ 	for (i = 0; i < TEAM_EVENT_FDS_COUNT; i++) {
+-		int fd = team_eventfds[i].get_fd(th);
++		int fd = team_eventfds[i].get_fd(tnl);
+ 
+ 		event.data.fd = fd;
+ 		event.events = EPOLLIN;
+@@ -941,7 +900,7 @@ static int team_init_event_fd(struct team_handle *th)
+ 			goto close_efd;
+ 		}
+ 	}
+-	th->event_fd = efd;
++	tnl->event_fd = efd;
+ 	return 0;
+ 
+ close_efd:
+@@ -957,9 +916,11 @@ close_efd:
+  * @return fd.
+  **/
+ TEAM_EXPORT
+-int team_get_event_fd(struct team_handle *th)
++int team_get_event_fd(struct team_handle *th, struct team_netlink *tnl)
+ {
+-	return th->event_fd;
++	if ((th && th->tnl))
++	        return th->tnl->event_fd;
++	return tnl->event_fd;
+ }
+ 
+ /**
+@@ -970,7 +931,7 @@ int team_get_event_fd(struct team_handle *th)
+  * @return Zero on success or negative number in case of an error.
+  **/
+ TEAM_EXPORT
+-int team_handle_events(struct team_handle *th)
++int team_handle_events(struct team_handle *th, struct team_netlink *tnl)
+ {
+ 	struct epoll_event events[TEAM_EVENT_FDS_COUNT];
+ 	int nfds;
+@@ -978,17 +939,21 @@ int team_handle_events(struct team_handle *th)
+ 	int i;
+ 	int err;
+ 
+-	nfds = epoll_wait(th->event_fd, events, TEAM_EVENT_FDS_COUNT, -1);
+-	if (nfds == -1)
++	if ((tnl == NULL) && (th != NULL))
++		tnl = th->tnl;
++
++	nfds = epoll_wait(tnl->event_fd, events, TEAM_EVENT_FDS_COUNT, -1);
++	if (nfds == -1) {
+ 		return -errno;
++	}
+ 
+ 	/* Go over list of event fds and handle them sequentially */
+ 	for (i = 0; i < TEAM_EVENT_FDS_COUNT; i++) {
+ 		const struct team_eventfd *eventfd = &team_eventfds[i];
+ 
+ 		for (n = 0; n < nfds; n++) {
+-			if (events[n].data.fd == eventfd->get_fd(th)) {
+-				err = eventfd->event_handler(th);
++			if (events[n].data.fd == eventfd->get_fd(tnl)) {
++				err = eventfd->event_handler(th, tnl);
+ 				if (err)
+ 					return err;
+ 			}
+@@ -1012,7 +977,7 @@ int team_check_events(struct team_handle *th)
+ 	fd_set rfds;
+ 	int fdmax;
+ 	struct timeval tv;
+-	int fd = team_get_event_fd(th);
++	int fd = team_get_event_fd(th, NULL);
+ 	int ret;
+ 
+ 	memset(&tv, 0, sizeof(tv));
+@@ -1022,7 +987,7 @@ int team_check_events(struct team_handle *th)
+ 	ret = select(fdmax, &rfds, NULL, NULL, &tv);
+ 	if (ret == -1)
+ 		return -errno;
+-	return team_handle_events(th);
++	return team_handle_events(th, th->tnl);
+ }
+ 
+ /**
+@@ -1513,7 +1478,7 @@ uint32_t team_ifname2ifindex(struct team_handle *th, const char *ifname)
+ 	uint32_t ifindex;
+ 	int err;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, 0, ifname, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, 0, ifname, &link);
+ 	if (err)
+ 		return 0;
+ 	ifindex = rtnl_link_get_ifindex(link);
+@@ -1538,7 +1503,7 @@ char *team_ifindex2ifname(struct team_handle *th, uint32_t ifindex,
+ 	struct rtnl_link *link;
+ 	int err;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, ifindex, NULL, &link);
+ 	if (err)
+ 		return NULL;
+ 	mystrlcpy(ifname, rtnl_link_get_name(link), maxlen);
+@@ -1559,7 +1524,7 @@ int team_port_add(struct team_handle *th, uint32_t port_ifindex)
+ {
+ 	int err;
+ 
+-	err = rtnl_link_enslave_ifindex(th->nl_cli.sock, th->ifindex,
++	err = rtnl_link_enslave_ifindex(th->tnl->nl_cli.sock, th->ifindex,
+ 					port_ifindex);
+ 	return -nl2syserr(err);
+ }
+@@ -1579,7 +1544,7 @@ bool team_is_our_port(struct team_handle *th, uint32_t port_ifindex)
+ 	int err;
+ 	bool ret;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, port_ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, port_ifindex, NULL, &link);
+ 	if (err)
+ 		return false;
+ 	ret = rtnl_link_get_master(link) == th->ifindex;
+@@ -1600,7 +1565,7 @@ int team_port_remove(struct team_handle *th, uint32_t port_ifindex)
+ {
+ 	int err;
+ 
+-	err = rtnl_link_release_ifindex(th->nl_cli.sock, port_ifindex);
++	err = rtnl_link_release_ifindex(th->tnl->nl_cli.sock, port_ifindex);
+ 	return -nl2syserr(err);
+ }
+ 
+@@ -1626,7 +1591,7 @@ int team_carrier_set(struct team_handle *th, bool carrier_up)
+ 	rtnl_link_set_ifindex(link, th->ifindex);
+ 	rtnl_link_set_carrier(link, carrier_up ? 1 : 0);
+ 
+-	err = rtnl_link_change(th->nl_cli.sock, link, link, 0);
++	err = rtnl_link_change(th->tnl->nl_cli.sock, link, link, 0);
+ 	err = -nl2syserr(err);
+ 
+ 	rtnl_link_put(link);
+@@ -1656,7 +1621,7 @@ int team_carrier_get(struct team_handle *th, bool *carrier_up)
+ 	int carrier;
+ 	int err;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, th->ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, th->ifindex, NULL, &link);
+ 	if (err)
+ 		return -nl2syserr(err);
+ 
+@@ -1702,7 +1667,7 @@ int team_hwaddr_set(struct team_handle *th, uint32_t ifindex,
+ 	rtnl_link_set_ifindex(link, ifindex);
+ 	rtnl_link_set_addr(link, nl_addr);
+ 
+-	err = rtnl_link_change(th->nl_cli.sock, link, link, 0);
++	err = rtnl_link_change(th->tnl->nl_cli.sock, link, link, 0);
+ 	err = -nl2syserr(err);
+ 
+ 	nl_addr_put(nl_addr);
+@@ -1731,7 +1696,7 @@ int team_hwaddr_get(struct team_handle *th, uint32_t ifindex,
+ 	int err;
+ 	struct nl_addr *nl_addr;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, ifindex, NULL, &link);
+ 	if (err)
+ 		return -nl2syserr(err);
+ 	nl_addr = rtnl_link_get_addr(link);
+@@ -1768,7 +1733,7 @@ int team_hwaddr_len_get(struct team_handle *th, uint32_t ifindex)
+ 	int err;
+ 	struct nl_addr *nl_addr;
+ 
+-	err = rtnl_link_get_kernel(th->nl_cli.sock, ifindex, NULL, &link);
++	err = rtnl_link_get_kernel(th->tnl->nl_cli.sock, ifindex, NULL, &link);
+ 	if (err)
+ 		return -nl2syserr(err);
+ 	nl_addr = rtnl_link_get_addr(link);
+diff --git a/libteam/options.c b/libteam/options.c
+index 71cc99e..327141a 100644
+--- a/libteam/options.c
++++ b/libteam/options.c
+@@ -356,7 +356,7 @@ static int get_options(struct team_handle *th)
+ 	if (!msg)
+ 		return -ENOMEM;
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, th->nl_sock_seq, th->family, 0, 0,
++	genlmsg_put(msg, NL_AUTO_PID, th->tnl->nl_sock_seq, th->tnl->family, 0, 0,
+ 			 TEAM_CMD_OPTIONS_GET, 0);
+ 	NLA_PUT_U32(msg, TEAM_ATTR_TEAM_IFINDEX, th->ifindex);
+ 
+@@ -731,7 +731,7 @@ static int set_option_value(struct team_handle *th, struct team_option *option,
+ 	if (!msg)
+ 		return -ENOMEM;
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, th->nl_sock_seq, th->family, 0, 0,
++	genlmsg_put(msg, NL_AUTO_PID, th->tnl->nl_sock_seq, th->tnl->family, 0, 0,
+ 		    TEAM_CMD_OPTIONS_SET, 0);
+ 	NLA_PUT_U32(msg, TEAM_ATTR_TEAM_IFINDEX, th->ifindex);
+ 	option_list = nla_nest_start(msg, TEAM_ATTR_LIST_OPTION);
+diff --git a/libteam/ports.c b/libteam/ports.c
+index 1f9e9e0..5c5fb53 100644
+--- a/libteam/ports.c
++++ b/libteam/ports.c
+@@ -196,7 +196,7 @@ static int get_port_list(struct team_handle *th)
+ 	if (!msg)
+ 		return -ENOMEM;
+ 
+-	genlmsg_put(msg, NL_AUTO_PID, th->nl_sock_seq, th->family, 0, 0,
++	genlmsg_put(msg, NL_AUTO_PID, th->tnl->nl_sock_seq, th->tnl->family, 0, 0,
+ 			 TEAM_CMD_PORT_LIST_GET, 0);
+ 	NLA_PUT_U32(msg, TEAM_ATTR_TEAM_IFINDEX, th->ifindex);
+ 
+diff --git a/libteam/team_netlink.c b/libteam/team_netlink.c
+new file mode 100644
+index 0000000..b7a9aa1
+--- /dev/null
++++ b/libteam/team_netlink.c
+@@ -0,0 +1,329 @@
++/*
++ *   libteam.c - Network team device driver library
++ *   Copyright (C) 2011-2015 Jiri Pirko <jiri@resnulli.us>
++ *
++ *   This library is free software; you can redistribute it and/or
++ *   modify it under the terms of the GNU Lesser General Public
++ *   License as published by the Free Software Foundation; either
++ *   version 2.1 of the License, or (at your option) any later version.
++ *
++ *   This library is distributed in the hope that it will be useful,
++ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *   Lesser General Public License for more details.
++ *
++ *   You should have received a copy of the GNU Lesser General Public
++ *   License along with this library; if not, write to the Free Software
++ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <stdint.h>
++#include <stdbool.h>
++#include <stdlib.h>
++#include <stdarg.h>
++#include <unistd.h>
++#include <syslog.h>
++#include <sys/select.h>
++#include <sys/epoll.h>
++#include <time.h>
++#include <netlink/netlink.h>
++#include <netlink/genl/genl.h>
++#include <netlink/genl/ctrl.h>
++#include <netlink/cli/utils.h>
++#include <netlink/cli/link.h>
++#include <linux/if_team.h>
++#include <linux/types.h>
++#include <linux/filter.h>
++#include <team.h>
++#include <private/list.h>
++#include <private/misc.h>
++#include "team_private.h"
++#include "team_netlink.h"
++/**
++ * SECTION: Common netlink functions
++ */
++
++static void common_event_handler_obj(struct nl_object *obj, void *arg)
++{
++        struct link_data *ld = (struct link_data *) arg;
++        struct rtnl_link *link = (struct rtnl_link *) obj;
++
++        ld->ifindex = rtnl_link_get_ifindex(link);
++        ld->master_ifindex = rtnl_link_get_master(link);
++
++        return;
++}
++
++static int common_event_handler(struct nl_msg *msg, void *arg)
++{
++        struct nlmsghdr *nlh = nlmsg_hdr(msg);
++        struct team_netlink *tnl = arg;
++        struct team_handle *th = NULL;
++        struct nlattr *attrs[TEAM_ATTR_MAX + 1];
++        uint32_t team_ifindex = 0;
++
++        genlmsg_parse(nlh, 0, attrs, TEAM_ATTR_MAX, NULL);
++        if (attrs[TEAM_ATTR_TEAM_IFINDEX])
++                team_ifindex = nla_get_u32(attrs[TEAM_ATTR_TEAM_IFINDEX]);
++
++        if (team_ifindex) {
++                th = tnl->lookup_th(team_ifindex);
++	        }
++
++        if (th == NULL) {
++                return NL_SKIP;
++        }
++
++        event_handler(msg, th);
++
++        th->msg_recv_started = false;
++        check_call_change_handlers(th, TEAM_PORT_CHANGE |
++                                       TEAM_OPTION_CHANGE |
++                                       TEAM_IFINFO_CHANGE);
++        return NL_SKIP;
++}
++
++static int common_cli_event_handler(struct nl_msg *msg, void *arg)
++{
++        struct team_netlink *tnl = arg;
++        struct team_handle *th = NULL;
++        struct link_data ld;
++        int err;
++
++        err = nl_msg_parse(msg, &common_event_handler_obj, &ld);
++        if (err < 0) {
++            return NL_STOP;
++        }
++
++        th = tnl->lookup_th(ld.ifindex);
++        if (th == NULL) {
++                th = tnl->lookup_th(ld.master_ifindex);
++                if (th == NULL)
++                        return NL_STOP;
++        }
++
++        cli_event_handler(msg, th);
++
++        check_call_change_handlers(th, TEAM_IFINFO_CHANGE);
++
++        return NL_STOP;
++}
++
++//static int team_netlink_init_event_fd(struct team_netlink *tnl);
++
++/**
++ * @details Allocates  sockets, initializes rtnl
++ *          netlink connection.
++ *
++ * @return New team netlink.
++ **/
++TEAM_EXPORT
++struct team_netlink *team_netlink_alloc(void)
++{
++        struct team_netlink *tnl;
++        int err;
++
++        tnl = myzalloc(sizeof(struct team_netlink));
++        if (!tnl)
++                return NULL;
++
++        tnl->nl_sock = nl_socket_alloc();
++        if (!tnl->nl_sock)
++                goto err_sk_alloc;
++
++        tnl->nl_sock_event = nl_socket_alloc();
++        if (!tnl->nl_sock_event)
++                goto err_sk_event_alloc;
++
++        tnl->nl_cli.sock_event = nl_cli_alloc_socket();
++        if (!tnl->nl_cli.sock_event)
++                goto err_cli_sk_event_alloc;
++
++	tnl->nl_cli.sock = nl_cli_alloc_socket();
++        if (!tnl->nl_cli.sock)
++                goto err_cli_sk_alloc;
++        err = nl_cli_connect(tnl->nl_cli.sock, NETLINK_ROUTE);
++        if (err)
++                goto err_cli_connect;
++
++        return tnl;
++
++err_cli_connect:
++        nl_socket_free(tnl->nl_cli.sock);
++
++err_cli_sk_alloc:
++        nl_socket_free(tnl->nl_cli.sock_event);
++
++err_cli_sk_event_alloc:
++        nl_socket_free(tnl->nl_sock_event);
++
++err_sk_event_alloc:
++        nl_socket_free(tnl->nl_sock);
++
++err_sk_alloc:
++        free(tnl);
++
++        return NULL;
++}
++
++/**
++ * @param tnl            libteam netlink
++ *
++ * @details Sets up team generic netlink connection.
++ *
++ * @return Zero on success or negative number in case of an error.
++ **/
++TEAM_EXPORT
++int team_netlink_init(struct team_netlink *tnl)
++{
++        int err;
++        int grp_id;
++        int val;
++        int eventbufsize;
++        const char *env;
++
++        tnl->nl_sock_seq = time(NULL);
++        err = genl_connect(tnl->nl_sock);
++        if (err) {
++                return -nl2syserr(err);
++        }
++
++        err = genl_connect(tnl->nl_sock_event);
++        if (err) {
++                return -nl2syserr(err);
++        }
++
++        val = NETLINK_BROADCAST_SEND_ERROR;
++        err = setsockopt(nl_socket_get_fd(tnl->nl_sock_event), SOL_NETLINK,
++                         NETLINK_BROADCAST_ERROR, &val, sizeof(val));
++	        if (err) {
++                return -errno;
++        }
++
++        env = getenv("TEAM_EVENT_BUFSIZE");
++        if (env) {
++                eventbufsize = strtol(env, NULL, 10);
++                /* ignore other errors, libnl forces minimum 32k and
++                 * too large values are truncated to system rmem_max
++                 */
++                if (eventbufsize < 0)
++                        eventbufsize = 0;
++        } else {
++                eventbufsize = NETLINK_RCVBUF;
++        }
++
++        err = nl_socket_set_buffer_size(tnl->nl_sock, eventbufsize, 0);
++        if (err) {
++                return -nl2syserr(err);
++        }
++        err = nl_socket_set_buffer_size(tnl->nl_sock_event, eventbufsize, 0);
++        if (err) {
++                return -nl2syserr(err);
++        }
++
++        tnl->family = genl_ctrl_resolve(tnl->nl_sock, TEAM_GENL_NAME);
++        if (tnl->family < 0) {
++                return -nl2syserr(tnl->family);
++        }
++        grp_id = genl_ctrl_resolve_grp(tnl->nl_sock, TEAM_GENL_NAME,
++                                       TEAM_GENL_CHANGE_EVENT_MC_GRP_NAME);
++	        if (grp_id < 0) {
++                return -nl2syserr(grp_id);
++        }
++
++        syslog(LOG_INFO,"*********grup_id*******:%d",grp_id);
++        err = nl_socket_add_membership(tnl->nl_sock_event, grp_id);
++        if (err < 0) {
++                return -nl2syserr(err);
++        }
++
++        nl_socket_disable_seq_check(tnl->nl_sock_event);
++        nl_socket_modify_cb(tnl->nl_sock_event, NL_CB_VALID, NL_CB_CUSTOM,
++                            common_event_handler, tnl);
++
++        nl_socket_disable_seq_check(tnl->nl_cli.sock_event);
++        nl_socket_modify_cb(tnl->nl_cli.sock_event, NL_CB_VALID,
++                            NL_CB_CUSTOM, common_cli_event_handler, tnl);
++        nl_cli_connect(tnl->nl_cli.sock_event, NETLINK_ROUTE);
++        nl_socket_set_nonblocking(tnl->nl_cli.sock_event);
++
++        err = nl_socket_set_buffer_size(tnl->nl_cli.sock_event, eventbufsize, 0);
++        if (err) {
++                return err;
++        }
++
++        err = nl_socket_add_membership(tnl->nl_cli.sock_event, RTNLGRP_LINK);
++        if (err < 0) {
++                return -nl2syserr(err);
++        }
++
++        err = team_init_event_fd(tnl);
++        if (err) {
++                return err;
++        }
++
++        tnl->global_tnl = true;
++
++        return 0;
++}
++
++/**
++ * @param tnl            team netlink
++ *
++ * @details Do netlink cleanup.
++ **/
++TEAM_EXPORT
++void team_netlink_free(struct team_netlink *tnl)
++{
++        close(tnl->event_fd);
++        nl_socket_free(tnl->nl_cli.sock);
++        nl_socket_free(tnl->nl_cli.sock_event);
++        nl_socket_free(tnl->nl_sock_event);
++        nl_socket_free(tnl->nl_sock);
++        free(tnl);
++}
++
++/**
++ * @param tnl          team_netlink
++ * @param lookup_th    function to be called for retrieving the
++ *                     libteam library context from user's side.
++ *
++ * @details Retrieving the libteam library context from
++ *           the user's side by ifindex
++ *
++ **/
++TEAM_EXPORT
++void team_set_lookup_th_fn(struct team_netlink *tnl,
++                            struct team_handle *(*lookup_th)(uint32_t ifindex))
++{
++        tnl->lookup_th = lookup_th;
++}
++
++/*static int team_netlink_init_event_fd(struct team_netlink *tnl)
++{
++        int efd;
++        int i;
++        struct epoll_event event;
++        int err;
++
++        efd = epoll_create1(0);
++        if (efd == -1)
++                return -errno;
++        for (i = 0; i < TEAM_EVENT_FDS_COUNT; i++) {
++                int fd = team_eventfds[i].get_fd(tnl);
++
++                event.data.fd = fd;
++                event.events = EPOLLIN;
++                err = epoll_ctl(efd, EPOLL_CTL_ADD, fd, &event);
++                if (err == -1) {
++                        err = -errno;
++                        goto close_efd;
++                }
++        }
++        tnl->event_fd = efd;
++        return 0;
++
++close_efd:
++        close(efd);
++        return err;
++}*/
+diff --git a/libteam/team_netlink.h b/libteam/team_netlink.h
+new file mode 100644
+index 0000000..0c7cf73
+--- /dev/null
++++ b/libteam/team_netlink.h
+@@ -0,0 +1,58 @@
++/*
++ *   team-private.h - Network team device driver library private header
++ *   Copyright (C) 2011-2015 Jiri Pirko <jiri@resnulli.us>
++ *
++ *   This library is free software; you can redistribute it and/or
++ *   modify it under the terms of the GNU Lesser General Public
++ *   License as published by the Free Software Foundation; either
++ *   version 2.1 of the License, or (at your option) any later version.
++ *
++ *   This library is distributed in the hope that it will be useful,
++ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *   Lesser General Public License for more details.
++ *
++ *   You should have received a copy of the GNU Lesser General Public
++ *   License along with this library; if not, write to the Free Software
++ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#ifndef _TEAM_NETLINK_H_
++#define _TEAM_NETLINK_H_
++
++#include <stdarg.h>
++#include <syslog.h>
++#include <netlink/netlink.h>
++#include <team.h>
++#include <private/list.h>
++
++#include "config.h"
++
++/**
++ * SECTION: team_netlink
++ * @short_description: common netlink
++ */
++
++struct team_netlink {
++        int                     event_fd;
++        struct nl_sock *        nl_sock;
++        unsigned int            nl_sock_seq;
++        struct nl_sock *        nl_sock_event;
++        struct {
++                struct nl_sock *        sock;
++                struct nl_sock *        sock_event;
++        } nl_cli;
++        int                     family;
++        bool                    global_tnl;
++        struct team_handle *(*lookup_th)(uint32_t ifindex);
++};
++
++/**
++ * SECTION: link data's
++ * @short_description: ifindex, master_ifindex of link structure
++ */
++struct link_data {
++       uint32_t ifindex;
++        uint32_t master_ifindex;
++};
++#endif /* _TEAM_PRIVATE_H_ */
+diff --git a/libteam/team_private.h b/libteam/team_private.h
+index a5eb0be..f748276 100644
+--- a/libteam/team_private.h
++++ b/libteam/team_private.h
+@@ -25,23 +25,35 @@
+ #include <netlink/netlink.h>
+ #include <team.h>
+ #include <private/list.h>
++#include <team_netlink.h>
+ 
+ #include "config.h"
+ 
+ #define TEAM_EXPORT __attribute__ ((visibility("default")))
+ 
++
++/* \cond HIDDEN_SYMBOLS */
++#ifndef SOL_NETLINK
++#define SOL_NETLINK 270
++#endif
++
++#ifndef NETLINK_BROADCAST_SEND_ERROR
++#define NETLINK_BROADCAST_SEND_ERROR    0x4
++#endif
++/* \endcond */
++
++/* libnl uses default 32k socket receive buffer size,
++ * which can get too small. Use 3MB for all sockets.
++ */
++#define NETLINK_RCVBUF 3145728
++
+ /**
+  * SECTION: team_handler
+  * @short_description: libteam context
+  */
+ 
+ struct team_handle {
+-	int			event_fd;
+-	struct nl_sock *	nl_sock;
+-	unsigned int		nl_sock_seq;
+-	struct nl_sock *	nl_sock_event;
+ 	bool			msg_recv_started;
+-	int			family;
+ 	uint32_t		ifindex;
+ 	struct team_ifinfo *	ifinfo;
+ 	struct list_item	port_list;
+@@ -51,14 +63,11 @@ struct team_handle {
+ 		struct list_item		list;
+ 		team_change_type_mask_t		pending_type_mask;
+ 	} change_handler;
+-	struct {
+-		struct nl_sock *	sock;
+-		struct nl_sock *	sock_event;
+-	} nl_cli;
+ 	void (*log_fn)(struct team_handle *th, int priority,
+ 		       const char *file, int line, const char *fn,
+ 		       const char *format, va_list args);
+ 	int log_priority;
++	struct team_netlink *tnl;
+ };
+ 
+ /**
+@@ -101,6 +110,9 @@ team_log_null(struct team_handle *th, const char *format, ...) {}
+  * @short_description: prototypes for internal functions
+  */
+ 
++int team_init_event_fd(struct team_netlink *tnl);
++int event_handler(struct nl_msg *msg, void *arg);
++int cli_event_handler(struct nl_msg *msg, void *arg);
+ int get_port_list_handler(struct nl_msg *msg, void *arg);
+ int port_list_alloc(struct team_handle *th);
+ int port_list_init(struct team_handle *th);
+diff --git a/libteamdctl/cli_usock.c b/libteamdctl/cli_usock.c
+index d3fbdba..653c1b5 100644
+--- a/libteamdctl/cli_usock.c
++++ b/libteamdctl/cli_usock.c
+@@ -164,8 +164,15 @@ static int cli_usock_method_call(struct teamdctl *tdc, const char *method_name,
+ 	int err;
+ 
+ 	/* dbg(tdc, "usock: Calling method \"%s\"", method_name); */
+-	err= myasprintf(&msg, "%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
++        if(tdc->team_name) {
++                err= myasprintf(&msg, "%s\n%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
++                                          method_name, tdc->team_name);
++	}
++        else {
++                err= myasprintf(&msg, "%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
+ 					  method_name);
++	}
++
+ 	if (err)
+ 		return err;
+ 	while (*fmt) {
+@@ -228,12 +235,16 @@ static int cli_usock_init(struct teamdctl *tdc, const char *team_name,
+ {
+ 	struct cli_usock_priv *cli_usock = priv;
+ 	struct sockaddr_un addr;
+-	int err;
++	int err, ret;
+ 
+ 	memset(&addr, 0, sizeof(addr));
+ 	addr.sun_family = AF_UNIX;
+-	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
+-				 team_name);
++	ret = teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
++				 team_name, FALSE);
++	if(ret)
++		tdc->team_name = team_name;
++	else
++		tdc->team_name = NULL;
+ 
+ 	cli_usock->sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+ 	if (cli_usock->sock == -1) {
+diff --git a/libteamdctl/teamdctl_private.h b/libteamdctl/teamdctl_private.h
+index 641255c..885ff8f 100644
+--- a/libteamdctl/teamdctl_private.h
++++ b/libteamdctl/teamdctl_private.h
+@@ -45,6 +45,7 @@ struct teamdctl {
+ 	const struct teamdctl_cli *cli;
+ 	void *cli_priv;
+ 	struct list_item reply_cache_list;
++	const char * team_name;
+ };
+ 
+ struct teamdctl_reply_cache_item {
+diff --git a/teamd/Makefile.am b/teamd/Makefile.am
+index 904d76c..d43eb6c 100644
+--- a/teamd/Makefile.am
++++ b/teamd/Makefile.am
+@@ -11,7 +11,7 @@ teamd_CFLAGS= $(LIBDAEMON_CFLAGS) $(JANSSON_CFLAGS) $(DBUS_CFLAGS) -I${top_srcdi
+ teamd_LDADD = $(top_builddir)/libteam/libteam.la $(LIBDAEMON_LIBS) $(JANSSON_LIBS) $(DBUS_LIBS) $(ZMQ_LIBS)
+ 
+ bin_PROGRAMS=teamd
+-teamd_SOURCES=teamd.c teamd_common.c teamd_json.c teamd_config.c teamd_state.c \
++teamd_SOURCES = teamd.c teamd_common.c teamd_json.c teamd_config.c teamd_state.c \
+ 	      teamd_workq.c teamd_events.c teamd_per_port.c \
+ 	      teamd_option_watch.c teamd_ifinfo_watch.c teamd_lw_ethtool.c \
+ 	      teamd_lw_psr.c teamd_lw_arp_ping.c teamd_lw_nsna_ping.c \
+@@ -19,7 +19,8 @@ teamd_SOURCES=teamd.c teamd_common.c teamd_json.c teamd_config.c teamd_state.c \
+ 	      teamd_zmq.c teamd_usock.c teamd_phys_port_check.c \
+ 	      teamd_bpf_chef.c teamd_hash_func.c teamd_balancer.c \
+ 	      teamd_runner_basic_ones.c teamd_runner_activebackup.c \
+-	      teamd_runner_loadbalance.c teamd_runner_lacp.c
++	      teamd_runner_loadbalance.c teamd_runner_lacp.c teamd_timer.c \
++		  teamd_utldll.c teamd_utlhash.c 
+ 
+ EXTRA_DIST = example_configs dbus redhat teamd.conf.in
+ 
+@@ -27,4 +28,4 @@ noinst_HEADERS = teamd.h teamd_workq.h teamd_bpf_chef.h teamd_ctl.h \
+ 		 teamd_json.h teamd_dbus.h teamd_zmq.h teamd_usock.h \
+ 		 teamd_dbus_common.h teamd_usock_common.h teamd_config.h \
+ 		 teamd_state.h teamd_phys_port_check.h teamd_link_watch.h \
+-		 teamd_zmq_common.h
++		 teamd_zmq_common.h teamd_timer.h teamd_utldll.h teamd_utlhash.h 
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+index 5220ae2..3deba2d 100644
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -51,6 +51,14 @@
+ #include "teamd_dbus.h"
+ #include "teamd_zmq.h"
+ #include "teamd_phys_port_check.h"
++#include "teamd_timer.h"
++
++
++#define TEAMD_HASH_TABLE_SIZE 		128
++#define TEAMD_1SEC_TIMER_CB_NAME 	"teamd_1sec_timer"
++#define TEAMD_100MS_TIMER_CB_NAME 	"teamd_100ms_timer"
++
++struct global_context *global_ctx = NULL;
+ 
+ enum teamd_exit_code {
+ 	TEAMD_EXIT_SUCCESS,
+@@ -90,6 +98,95 @@ static void libteam_log_daemon(struct team_handle *th, int priority,
+ 	daemon_logv(priority, format, args);
+ }
+ 
++// DJB2 hash function - simple and fast
++size_t djb2_hash(const char* str, size_t range) {
++	if (!str) return 0;
++	
++	unsigned int hash = 5381;
++	int c;
++	
++	while ((c = *str++)) {
++		hash = ((hash << 5) + hash) + c; // hash * 33 + c
++	}
++	
++	return hash % range;
++}
++
++size_t team_devname_hash(void * entry, size_t range) {
++	struct teamd_context *ctx = (struct teamd_context *)entry;
++	return djb2_hash(ctx->team_devname, range);
++}
++
++bool team_devname_key_eq(void *entry, void *key) {
++	struct teamd_context *ctx = (struct teamd_context *)entry;
++	char *str = (char *)key;
++	return strcmp(ctx->team_devname, str) == 0;
++}
++
++// Simple modulo hash
++size_t modulo_hash(void * entry, size_t range) {
++	struct teamd_context *ctx = (struct teamd_context *)entry;
++	int key = ctx->ifindex;
++	if (range == 0) return 0;
++	// Handle negative numbers by converting to positive
++	unsigned int positive_key = (unsigned int)(key < 0 ? -key : key);
++	return positive_key % range;
++}
++
++size_t team_ifindex_hash(void * entry, size_t range) {
++	return modulo_hash(entry, range);
++}
++
++bool team_ifindex_key_eq(void *entry, void *key) {
++	struct teamd_context *ctx = (struct teamd_context *)entry;
++	int *ifindex = (int *)key;
++	return ctx->ifindex == *ifindex;
++}
++
++struct team_handle *libteam_lookup_th(uint32_t ifindex)
++{
++	struct teamd_context *ctx;
++
++	ctx = team_dev_get_node_by_ifindex(ifindex);
++
++	if (ctx != NULL)
++		return ctx->th;
++
++	return NULL;
++}
++
++uint32_t team_dev_add_to_db(struct teamd_context *ctx) {
++	/* Should we check if entry is already inserted ? */
++	hash_table_insert(&global_ctx->ht_team_devname, ctx);
++	hash_table_insert(&global_ctx->ht_team_ifindex, ctx);
++
++	return 0;
++}
++
++void team_dev_del_from_db(struct teamd_context *ctx) {
++	teamd_log_dbg(ctx, "Deletion for device %s : %d", ctx->team_devname, ctx->ifindex);
++	hash_table_remove(&global_ctx->ht_team_devname, ctx);
++	hash_table_remove(&global_ctx->ht_team_ifindex, ctx);
++	teamd_config_free(ctx);
++	teamd_context_fini(ctx);
++}
++
++struct teamd_context *team_dev_get_node_by_name(const char* team_devname) {
++	struct teamd_context *ctx = hash_table_find(&global_ctx->ht_team_devname, (void *)team_devname);
++	if (ctx) {
++		return ctx;
++	}
++	return NULL;
++}
++
++struct teamd_context *team_dev_get_node_by_ifindex(uint32_t ifindex) {
++	struct teamd_context *ctx = hash_table_find(&global_ctx->ht_team_ifindex, &ifindex);
++	if (ctx) {
++		return ctx;
++	}
++	return NULL;
++}
++
+ static char **__g_pid_file;
+ 
+ static void print_help(const struct teamd_context *ctx) {
+@@ -120,7 +217,7 @@ static void print_help(const struct teamd_context *ctx) {
+             "    -u --usock-disable       Disable UNIX domain socket interface\n"
+             "    -w --warm-start          Warm-start startup mode\n"
+             "    -L --lacp-directory      Directory for saving lacp pdu dumps\n",
+-            ctx->argv0);
++            ctx->g_ctx->argv0);
+ 	printf("Available runners: ");
+ 	for (i = 0; i < TEAMD_RUNNER_LIST_SIZE; i++) {
+ 		if (i != 0)
+@@ -163,19 +260,19 @@ static int parse_command_line(struct teamd_context *ctx,
+ 
+ 		switch(opt) {
+ 		case 'h':
+-			ctx->cmd = DAEMON_CMD_HELP;
++			ctx->g_ctx->cmd = DAEMON_CMD_HELP;
+ 			break;
+ 		case 'd':
+-			ctx->daemonize = true;
++			ctx->g_ctx->daemonize = true;
+ 			break;
+ 		case 'k':
+-			ctx->cmd = DAEMON_CMD_KILL;
++			ctx->g_ctx->cmd = DAEMON_CMD_KILL;
+ 			break;
+ 		case 'e':
+-			ctx->cmd = DAEMON_CMD_CHECK;
++			ctx->g_ctx->cmd = DAEMON_CMD_CHECK;
+ 			break;
+ 		case 'v':
+-			ctx->cmd = DAEMON_CMD_VERSION;
++			ctx->g_ctx->cmd = DAEMON_CMD_VERSION;
+ 			break;
+ 		case 'f':
+ 			free(ctx->config_file);
+@@ -191,15 +288,15 @@ static int parse_command_line(struct teamd_context *ctx,
+ 			ctx->config_text = strdup(optarg);
+ 			break;
+ 		case 'p':
+-			free(ctx->pid_file);
+-			ctx->pid_file = strdup(optarg);
++			free(ctx->g_ctx->pid_file);
++			ctx->g_ctx->pid_file = strdup(optarg);
+ 			break;
+ 		case 'g':
+-			ctx->debug++;
++			ctx->g_ctx->debug++;
+ 			break;
+ 		case 'l':
+-			free(ctx->log_output);
+-			ctx->log_output = strdup(optarg);
++			free(ctx->g_ctx->log_output);
++			ctx->g_ctx->log_output = strdup(optarg);
+ 			break;
+ 		case 'r':
+ 			ctx->force_recreate = true;
+@@ -211,8 +308,10 @@ static int parse_command_line(struct teamd_context *ctx,
+ 			ctx->no_quit_destroy = true;
+ 			break;
+ 		case 't':
+-			free(ctx->team_devname);
+-			ctx->team_devname = strdup(optarg);
++			free(ctx->g_ctx->process_name);
++			ctx->g_ctx->process_name = strdup(optarg);
++			if (strncmp(ctx->g_ctx->process_name, "teamd-unified", sizeof("teamd-unified")) == 0)
++				ctx->g_ctx->unified_mode = true;
+ 			break;
+ 		case 'n':
+ 			ctx->init_no_ports = true;
+@@ -222,7 +321,7 @@ static int parse_command_line(struct teamd_context *ctx,
+ 			fprintf(stderr, "D-Bus support is not compiled-in\n");
+ 			return -1;
+ #else
+-			ctx->dbus.enabled = true;
++			ctx->g_ctx->dbus.enabled = true;
+ #endif
+ 			break;
+ 		case 'Z':
+@@ -230,25 +329,25 @@ static int parse_command_line(struct teamd_context *ctx,
+ 			fprintf(stderr, "ZeroMQ support is not compiled-in\n");
+ 			return -1;
+ #else
+-			ctx->zmq.enabled = true;
+-			ctx->zmq.addr = optarg;
++			ctx->g_ctx->zmq.enabled = true;
++			ctx->g_ctx->zmq.addr = optarg;
+ #endif
+ 			break;
+ 		case 'U':
+-			ctx->usock.enabled = true;
++			ctx->g_ctx->usock.enabled = true;
+ 			break;
+ 		case 'u':
+-			ctx->usock.enabled = false;
++			ctx->g_ctx->usock.enabled = false;
+ 			break;
+ 		case 'w':
+-			ctx->warm_start_mode = true;
++			ctx->g_ctx->warm_start_mode = true;
+ 			break;
+ 		case 'L':
+-			ctx->lacp_directory = strdup(optarg);
+-			if (access(ctx->lacp_directory, R_OK | W_OK | X_OK) != 0) {
+-				fprintf(stderr, "Can't write to the lacp directory '%s': %s\n", ctx->lacp_directory, strerror(errno));
+-				free(ctx->lacp_directory);
+-				ctx->lacp_directory = NULL;
++			ctx->g_ctx->lacp_directory = strdup(optarg);
++			if (access(ctx->g_ctx->lacp_directory, R_OK | W_OK | X_OK) != 0) {
++				fprintf(stderr, "Can't write to the lacp directory '%s': %s\n", ctx->g_ctx->lacp_directory, strerror(errno));
++				free(ctx->g_ctx->lacp_directory);
++				ctx->g_ctx->lacp_directory = NULL;
+ 			}
+ 			break;
+ 		default:
+@@ -256,9 +355,9 @@ static int parse_command_line(struct teamd_context *ctx,
+ 		}
+ 	}
+ 
+-	if (ctx->warm_start_mode && !ctx->lacp_directory) {
++	if (ctx->g_ctx->warm_start_mode && !ctx->g_ctx->lacp_directory) {
+ 		fprintf(stderr, "Can't enable warm-start mode without lacp-directory specified\n");
+-		ctx->warm_start_mode = false;
++		ctx->g_ctx->warm_start_mode = false;
+ 	}
+ 
+ 	if (optind < argc) {
+@@ -330,7 +429,7 @@ static void teamd_run_loop_set_fds(struct list_item *lcb_list,
+ }
+ 
+ static int teamd_run_loop_do_callbacks(struct list_item *lcb_list, fd_set *fds,
+-				       struct teamd_context *ctx)
++				       struct global_context *g_ctx)
+ {
+ 	struct teamd_loop_callback *lcb;
+ 	struct teamd_loop_callback *tmp;
+@@ -352,11 +451,11 @@ static int teamd_run_loop_do_callbacks(struct list_item *lcb_list, fd_set *fds,
+ 				if (err)
+ 					return err;
+ 			}
+-			err = lcb->func(ctx, events, lcb->priv);
++			err = lcb->func(g_ctx, events, lcb->priv);
+ 			if (err) {
+ 				teamd_log_warn("Loop callback failed with: %s",
+ 					       strerror(-err));
+-				teamd_log_dbg(ctx, "Failed loop callback: %s, %p",
++				teamd_log_info("Failed loop callback: %s, %p",
+ 					      lcb->name, lcb->priv);
+ 			}
+ 		}
+@@ -364,7 +463,7 @@ static int teamd_run_loop_do_callbacks(struct list_item *lcb_list, fd_set *fds,
+ 	return 0;
+ }
+ 
+-static int teamd_flush_ports(struct teamd_context *ctx)
++int teamd_flush_ports(struct teamd_context *ctx)
+ {
+ 	if (!ctx->no_quit_destroy)
+ 		return teamd_port_remove_all(ctx);
+@@ -373,15 +472,18 @@ static int teamd_flush_ports(struct teamd_context *ctx)
+ 	return 0;
+ }
+ 
+-static int teamd_run_loop_run(struct teamd_context *ctx)
++static int teamd_run_loop_run(struct global_context *g_ctx)
+ {
+ 	int err;
+-	int ctrl_fd = ctx->run_loop.ctrl_pipe_r;
++	int ctrl_fd = g_ctx->run_loop.ctrl_pipe_r;
+ 	fd_set fds[3];
+ 	int fdmax;
+ 	char ctrl_byte;
+ 	int i;
+ 	bool quit_in_progress = false;
++	bool all_ports_removed = true;
++	struct teamd_context *ctx = NULL;
++	DLLNode *iter;
+ 
+ 	/*
+ 	 * To process all things correctly during cleanup, on quit command
+@@ -390,15 +492,25 @@ static int teamd_run_loop_run(struct teamd_context *ctx)
+ 	 */
+ 
+ 	while (true) {
+-		if (quit_in_progress && !teamd_has_ports(ctx))
+-			return ctx->run_loop.err;
++		HASH_TABLE_FOREACH_ALL(&g_ctx->ht_team_devname, bkt, iter) {
++			ctx = DLL_ENTRY(iter, struct teamd_context, node_team_devname);
++			if (teamd_has_ports(ctx)) {
++				all_ports_removed = false;
++				break;
++			}
++			else
++                all_ports_removed = true;
++		}
++
++		if (quit_in_progress && all_ports_removed)
++			return g_ctx->run_loop.err;
+ 
+ 		for (i = 0; i < 3; i++)
+ 			FD_ZERO(&fds[i]);
+ 		FD_SET(ctrl_fd, &fds[0]);
+ 		fdmax = ctrl_fd + 1;
+ 
+-		teamd_run_loop_set_fds(&ctx->run_loop.callback_list,
++		teamd_run_loop_set_fds(&g_ctx->run_loop.callback_list,
+ 				       fds, &fdmax);
+ 
+ 		while (select(fdmax, &fds[0], &fds[1], &fds[2], NULL) < 0) {
+@@ -419,16 +531,22 @@ static int teamd_run_loop_run(struct teamd_context *ctx)
+ 					if (quit_in_progress)
+ 						return -EBUSY;
+ 					if (ctrl_byte == 'w' || ctrl_byte == 'f') {
+-						ctx->keep_ports = true;
+-						ctx->no_quit_destroy = true;
+-						teamd_refresh_ports(ctx);
+-						if (ctrl_byte == 'w')
+-							teamd_ports_flush_data(ctx);
++						HASH_TABLE_FOREACH_ALL(&g_ctx->ht_team_devname, bkt, iter)  {
++							ctx = DLL_ENTRY(iter, struct teamd_context, node_team_devname);
++							ctx->keep_ports = true;
++							ctx->no_quit_destroy = true;
++							teamd_refresh_ports(ctx);
++							if (ctrl_byte == 'w')
++								teamd_ports_flush_data(ctx);
++						}
+ 					}
+ 
+-					err = teamd_flush_ports(ctx);
+-					if (err)
+-						return err;
++					HASH_TABLE_FOREACH_ALL(&g_ctx->ht_team_devname, bkt, iter) {
++						ctx = DLL_ENTRY(iter, struct teamd_context, node_team_devname);
++						err = teamd_flush_ports(ctx);
++						if (err)
++							return err;
++					}
+ 					quit_in_progress = true;
+ 					continue;
+ 				case 'r':
+@@ -442,43 +560,43 @@ static int teamd_run_loop_run(struct teamd_context *ctx)
+ 			}
+ 		}
+ 
+-		err = teamd_run_loop_do_callbacks(&ctx->run_loop.callback_list,
+-						  fds, ctx);
++		err = teamd_run_loop_do_callbacks(&g_ctx->run_loop.callback_list,
++						  fds, g_ctx);
+ 		if (err)
+ 			return err;
+ 	}
+ 	return 0;
+ }
+ 
+-static void teamd_run_loop_sent_ctrl_byte(struct teamd_context *ctx,
++static void teamd_run_loop_sent_ctrl_byte(struct global_context *g_ctx,
+ 					  const char ctrl_byte)
+ {
+ 	int err;
+ 
+ retry:
+-	err = write(ctx->run_loop.ctrl_pipe_w, &ctrl_byte, 1);
++	err = write(g_ctx->run_loop.ctrl_pipe_w, &ctrl_byte, 1);
+ 	if (err == -1 && errno == EINTR)
+ 		goto retry;
+ }
+ 
+-void teamd_run_loop_quit(struct teamd_context *ctx, int err)
++void teamd_run_loop_quit(struct global_context *g_ctx, int err)
+ {
+-	ctx->run_loop.err = err;
+-	teamd_run_loop_sent_ctrl_byte(ctx, 'q');
++	g_ctx->run_loop.err = err;
++	teamd_run_loop_sent_ctrl_byte(g_ctx, 'q');
+ }
+ 
+-static void teamd_run_loop_quit_a_boot(struct teamd_context *ctx, char type, int err)
++static void teamd_run_loop_quit_a_boot(struct global_context *g_ctx, char type, int err)
+ {
+-	ctx->run_loop.err = err;
+-	teamd_run_loop_sent_ctrl_byte(ctx, type);
++	g_ctx->run_loop.err = err;
++	teamd_run_loop_sent_ctrl_byte(g_ctx, type);
+ }
+ 
+-void teamd_run_loop_restart(struct teamd_context *ctx)
++void teamd_run_loop_restart(struct global_context *g_ctx)
+ {
+-	teamd_run_loop_sent_ctrl_byte(ctx, 'r');
++	teamd_run_loop_sent_ctrl_byte(g_ctx, 'r');
+ }
+ 
+-static struct teamd_loop_callback *__get_lcb(struct teamd_context *ctx,
++static struct teamd_loop_callback *__get_lcb(struct global_context *g_ctx,
+ 					     const char *cb_name, void *priv,
+ 					     struct teamd_loop_callback *last)
+ {
+@@ -486,7 +604,7 @@ static struct teamd_loop_callback *__get_lcb(struct teamd_context *ctx,
+ 	bool last_found;
+ 
+ 	last_found = last == NULL ? true: false;
+-	list_for_each_node_entry(lcb, &ctx->run_loop.callback_list, list) {
++	list_for_each_node_entry(lcb, &g_ctx->run_loop.callback_list, list) {
+ 		if (!last_found) {
+ 			if (lcb == last)
+ 				last_found = true;
+@@ -501,32 +619,32 @@ static struct teamd_loop_callback *__get_lcb(struct teamd_context *ctx,
+ 	return NULL;
+ }
+ 
+-static struct teamd_loop_callback *get_lcb(struct teamd_context *ctx,
++static struct teamd_loop_callback *get_lcb(struct global_context *g_ctx,
+ 					   const char *cb_name, void *priv)
+ {
+-	return __get_lcb(ctx, cb_name, priv, NULL);
++	return __get_lcb(g_ctx, cb_name, priv, NULL);
+ }
+ 
+-static struct teamd_loop_callback *get_lcb_multi(struct teamd_context *ctx,
++static struct teamd_loop_callback *get_lcb_multi(struct global_context *g_ctx,
+ 						 const char *cb_name,
+ 						 void *priv,
+ 						 struct teamd_loop_callback *last)
+ {
+-	return __get_lcb(ctx, cb_name, priv, last);
++	return __get_lcb(g_ctx, cb_name, priv, last);
+ }
+ 
+-#define for_each_lcb_multi_match(lcb, ctx, cb_name, priv)		\
+-	for (lcb = get_lcb_multi(ctx, cb_name, priv, NULL); lcb;	\
+-	     lcb = get_lcb_multi(ctx, cb_name, priv, lcb))
++#define for_each_lcb_multi_match(lcb, g_ctx, cb_name, priv)		\
++	for (lcb = get_lcb_multi(g_ctx, cb_name, priv, NULL); lcb;	\
++	     lcb = get_lcb_multi(g_ctx, cb_name, priv, lcb))
+ 
+-#define for_each_lcb_multi_match_safe(lcb, tmp, ctx, cb_name, priv)	\
+-	for (lcb = get_lcb_multi(ctx, cb_name, priv, NULL),		\
+-	     tmp = get_lcb_multi(ctx, cb_name, priv, lcb);		\
++#define for_each_lcb_multi_match_safe(lcb, tmp, g_ctx, cb_name, priv)	\
++	for (lcb = get_lcb_multi(g_ctx, cb_name, priv, NULL),		\
++	     tmp = get_lcb_multi(g_ctx, cb_name, priv, lcb);		\
+ 	     lcb;							\
+ 	     lcb = tmp,							\
+-	     tmp = get_lcb_multi(ctx, cb_name, priv, lcb))
++	     tmp = get_lcb_multi(g_ctx, cb_name, priv, lcb))
+ 
+-static int __teamd_loop_callback_fd_add(struct teamd_context *ctx,
++static int __teamd_loop_callback_fd_add(struct global_context *g_ctx,
+ 					const char *cb_name, void *priv,
+ 					teamd_loop_callback_func_t func,
+ 					int fd, int fd_event, bool tail)
+@@ -536,7 +654,7 @@ static int __teamd_loop_callback_fd_add(struct teamd_context *ctx,
+ 
+ 	if (!cb_name || !priv)
+ 		return -EINVAL;
+-	if (get_lcb(ctx, cb_name, priv)) {
++	if (get_lcb(g_ctx, cb_name, priv)) {
+ 		teamd_log_err("Callback named \"%s\" is already registered.",
+ 			      cb_name);
+ 		return -EEXIST;
+@@ -556,10 +674,10 @@ static int __teamd_loop_callback_fd_add(struct teamd_context *ctx,
+ 	lcb->fd = fd;
+ 	lcb->fd_event = fd_event & TEAMD_LOOP_FD_EVENT_MASK;
+ 	if (tail)
+-		list_add_tail(&ctx->run_loop.callback_list, &lcb->list);
++		list_add_tail(&g_ctx->run_loop.callback_list, &lcb->list);
+ 	else
+-		list_add(&ctx->run_loop.callback_list, &lcb->list);
+-	teamd_log_dbg(ctx, "Added loop callback: %s, %p", lcb->name, lcb->priv);
++		list_add(&g_ctx->run_loop.callback_list, &lcb->list);
++	//teamd_log_dbg(ctx, "Added loop callback: %s, %p", lcb->name, lcb->priv);
+ 	return 0;
+ 
+ lcb_free:
+@@ -567,21 +685,21 @@ lcb_free:
+ 	return err;
+ }
+ 
+-int teamd_loop_callback_fd_add(struct teamd_context *ctx,
++int teamd_loop_callback_fd_add(struct global_context *g_ctx,
+ 			       const char *cb_name, void *priv,
+ 			       teamd_loop_callback_func_t func,
+ 			       int fd, int fd_event)
+ {
+-	return __teamd_loop_callback_fd_add(ctx, cb_name, priv, func,
++	return __teamd_loop_callback_fd_add(g_ctx, cb_name, priv, func,
+ 					    fd, fd_event, false);
+ }
+ 
+-int teamd_loop_callback_fd_add_tail(struct teamd_context *ctx,
++int teamd_loop_callback_fd_add_tail(struct global_context *g_ctx,
+ 				    const char *cb_name, void *priv,
+ 				    teamd_loop_callback_func_t func,
+ 				    int fd, int fd_event)
+ {
+-	return __teamd_loop_callback_fd_add(ctx, cb_name, priv, func,
++	return __teamd_loop_callback_fd_add(g_ctx, cb_name, priv, func,
+ 					    fd, fd_event, true);
+ }
+ 
+@@ -625,13 +743,13 @@ int teamd_loop_callback_timer_add_set(struct teamd_context *ctx,
+ 			return err;
+ 		}
+ 	}
+-	err = teamd_loop_callback_fd_add(ctx, cb_name, priv, func, fd,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, cb_name, priv, func, fd,
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+ 	if (err) {
+ 		close(fd);
+ 		return err;
+ 	}
+-	get_lcb(ctx, cb_name, priv)->is_period = true;
++	get_lcb(ctx->g_ctx, cb_name, priv)->is_period = true;
+ 	return 0;
+ }
+ 
+@@ -653,7 +771,7 @@ int teamd_loop_callback_timer_set(struct teamd_context *ctx,
+ 
+ 	if (!cb_name || !priv)
+ 		return -EINVAL;
+-	lcb = get_lcb(ctx, cb_name, priv);
++	lcb = get_lcb(ctx->g_ctx, cb_name, priv);
+ 	if (!lcb) {
+ 		teamd_log_err("Callback named \"%s\" not found.", cb_name);
+ 		return -ENOENT;
+@@ -665,62 +783,62 @@ int teamd_loop_callback_timer_set(struct teamd_context *ctx,
+ 	return __timerfd_reset(lcb->fd, interval, initial);
+ }
+ 
+-void teamd_loop_callback_del(struct teamd_context *ctx, const char *cb_name,
++void teamd_loop_callback_del(struct global_context *g_ctx, const char *cb_name,
+ 			     void *priv)
+ {
+ 	struct teamd_loop_callback *lcb;
+ 	struct teamd_loop_callback *tmp;
+ 	bool found = false;
+ 
+-	for_each_lcb_multi_match_safe(lcb, tmp, ctx, cb_name, priv) {
++	for_each_lcb_multi_match_safe(lcb, tmp, g_ctx, cb_name, priv) {
+ 		list_del(&lcb->list);
+ 		if (lcb->is_period)
+ 			close(lcb->fd);
+-		teamd_log_dbg(ctx, "Removed loop callback: %s, %p",
++		teamd_log_info("Removed loop callback: %s, %p",
+ 			      lcb->name, lcb->priv);
+ 		free(lcb->name);
+ 		free(lcb);
+ 		found = true;
+ 	}
+ 	if (found)
+-		teamd_run_loop_restart(ctx);
++		teamd_run_loop_restart(g_ctx);
+ 	else
+-		teamd_log_dbg(ctx, "Callback named \"%s\" not found.", cb_name);
++		teamd_log_info("Callback named \"%s\" not found.", cb_name);
+ }
+ 
+-int teamd_loop_callback_enable(struct teamd_context *ctx, const char *cb_name,
++int teamd_loop_callback_enable(struct global_context *g_ctx, const char *cb_name,
+ 			       void *priv)
+ {
+ 	struct teamd_loop_callback *lcb;
+ 	bool found = false;
+ 
+-	for_each_lcb_multi_match(lcb, ctx, cb_name, priv) {
++	for_each_lcb_multi_match(lcb, g_ctx, cb_name, priv) {
+ 		lcb->enabled = true;
+ 		found = true;
+ 	}
+ 	if (!found)
+ 		return -ENOENT;
+-	teamd_run_loop_restart(ctx);
++	teamd_run_loop_restart(g_ctx);
+ 	return 0;
+ }
+ 
+-int teamd_loop_callback_disable(struct teamd_context *ctx, const char *cb_name,
++int teamd_loop_callback_disable(struct global_context *g_ctx, const char *cb_name,
+ 				void *priv)
+ {
+ 	struct teamd_loop_callback *lcb;
+ 	bool found = false;
+ 
+-	for_each_lcb_multi_match(lcb, ctx, cb_name, priv) {
++	for_each_lcb_multi_match(lcb, g_ctx, cb_name, priv) {
+ 		lcb->enabled = false;
+ 		found = true;
+ 	}
+ 	if (!found)
+ 		return -ENOENT;
+-	teamd_run_loop_restart(ctx);
++	teamd_run_loop_restart(g_ctx);
+ 	return 0;
+ }
+ 
+-static int callback_daemon_signal(struct teamd_context *ctx, int events,
++static int callback_daemon_signal(struct global_context *g_ctx, int events,
+ 				  void *priv)
+ {
+ 	int sig;
+@@ -737,42 +855,45 @@ static int callback_daemon_signal(struct teamd_context *ctx, int events,
+ 	case SIGQUIT:
+ 	case SIGTERM:
+ 		teamd_log_warn("Got SIGINT, SIGQUIT or SIGTERM.");
+-		teamd_run_loop_quit(ctx, 0);
++		teamd_run_loop_quit(g_ctx, 0);
+ 		break;
+ 	case SIGUSR1:
+ 		teamd_log_warn("Got SIGUSR1.");
+-		teamd_run_loop_quit_a_boot(ctx, 'w', 0);
++		teamd_run_loop_quit_a_boot(g_ctx, 'w', 0);
+ 		break;
+ 	case SIGUSR2:
+ 		teamd_log_warn("Got SIGUSR2.");
+-		teamd_run_loop_quit_a_boot(ctx, 'f', 0);
++		teamd_run_loop_quit_a_boot(g_ctx, 'f', 0);
+ 		break;
+ 	}
+ 	return 0;
+ }
+ 
+-static int callback_libteam_event(struct teamd_context *ctx, int events,
++static int callback_libteam_event(struct global_context *g_ctx, int events,
+ 				  void *priv)
+ {
+-	return team_handle_events(ctx->th);
++	struct team_netlink *tnl = priv;
++
++	return team_handle_events(NULL, tnl);
+ }
+ 
+ #define DAEMON_CB_NAME "daemon"
+ #define LIBTEAM_EVENTS_CB_NAME "libteam_events"
+ 
+-static int teamd_run_loop_init(struct teamd_context *ctx)
++static int teamd_run_loop_init(struct global_context *global_ctx)
+ {
+ 	int fds[2];
+ 	int err;
+ 
+-	list_init(&ctx->run_loop.callback_list);
++	list_init(&global_ctx->run_loop.callback_list);
+ 	err = pipe(fds);
+ 	if (err)
+ 		return -errno;
+-	ctx->run_loop.ctrl_pipe_r = fds[0];
+-	ctx->run_loop.ctrl_pipe_w = fds[1];
+ 
+-	err = teamd_loop_callback_fd_add(ctx, DAEMON_CB_NAME, ctx,
++	global_ctx->run_loop.ctrl_pipe_r = fds[0];
++	global_ctx->run_loop.ctrl_pipe_w = fds[1];
++
++	err = teamd_loop_callback_fd_add(global_ctx, DAEMON_CB_NAME, global_ctx,
+ 					 callback_daemon_signal,
+ 					 daemon_signal_fd(),
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+@@ -781,35 +902,20 @@ static int teamd_run_loop_init(struct teamd_context *ctx)
+ 		goto close_pipe;
+ 	}
+ 
+-	err = teamd_loop_callback_fd_add(ctx, LIBTEAM_EVENTS_CB_NAME, ctx,
+-					 callback_libteam_event,
+-					 team_get_event_fd(ctx->th),
+-					 TEAMD_LOOP_FD_EVENT_READ);
+-	if (err) {
+-		teamd_log_err("Failed to add libteam event loop callback");
+-		goto del_daemon_callback;
+-	}
+-
+-	teamd_loop_callback_enable(ctx, DAEMON_CB_NAME, ctx);
+-	teamd_loop_callback_enable(ctx, LIBTEAM_EVENTS_CB_NAME, ctx);
++	teamd_loop_callback_enable(global_ctx, DAEMON_CB_NAME, global_ctx);
+ 
+ 	return 0;
+ 
+-del_daemon_callback:
+-	teamd_loop_callback_del(ctx, DAEMON_CB_NAME, ctx);
+-
+ close_pipe:
+-	close(ctx->run_loop.ctrl_pipe_r);
+-	close(ctx->run_loop.ctrl_pipe_w);
+ 	return err;
+ }
+ 
+-static void teamd_run_loop_fini(struct teamd_context *ctx)
++static void teamd_run_loop_fini(struct global_context *g_ctx)
+ {
+-	teamd_loop_callback_del(ctx, LIBTEAM_EVENTS_CB_NAME, NULL);
+-	teamd_loop_callback_del(ctx, DAEMON_CB_NAME, ctx);
+-	close(ctx->run_loop.ctrl_pipe_r);
+-	close(ctx->run_loop.ctrl_pipe_w);
++	teamd_loop_callback_del(g_ctx, LIBTEAM_EVENTS_CB_NAME, NULL);
++	teamd_loop_callback_del(g_ctx, DAEMON_CB_NAME, g_ctx);
++	close(g_ctx->run_loop.ctrl_pipe_r);
++	close(g_ctx->run_loop.ctrl_pipe_w);
+ }
+ 
+ static int parse_hwaddr(const char *hwaddr_str, char **phwaddr,
+@@ -1231,7 +1337,7 @@ static int teamd_register_debug_handler(struct teamd_context *ctx)
+ 
+ static int teamd_register_default_handlers(struct teamd_context *ctx)
+ {
+-	if (!ctx->debug)
++	if (!ctx->g_ctx->debug)
+ 		return 0;
+ 	return teamd_register_debug_handler(ctx);
+ }
+@@ -1243,7 +1349,7 @@ static void teamd_unregister_debug_handler(struct teamd_context *ctx)
+ 
+ static void teamd_unregister_default_handlers(struct teamd_context *ctx)
+ {
+-	if (!ctx->debug)
++	if (!ctx->g_ctx->debug)
+ 		return;
+ 	teamd_unregister_debug_handler(ctx);
+ }
+@@ -1252,35 +1358,36 @@ int teamd_change_debug_level(struct teamd_context *ctx, unsigned int new_debug)
+ {
+ 	int err = 0;
+ 
+-	if (!ctx->debug && new_debug) {
++	if (!ctx->g_ctx->debug && new_debug) {
+ 		daemon_set_verbosity(LOG_DEBUG);
+ 		err = teamd_register_debug_handler(ctx);
+ 	}
+-	if (ctx->debug && !new_debug) {
++	if (ctx->g_ctx->debug && !new_debug) {
+ 		daemon_set_verbosity(LOG_WARNING);
+ 		teamd_unregister_debug_handler(ctx);
+ 	}
+ 	if (err)
+ 		return err;
+-	ctx->debug = new_debug;
++	ctx->g_ctx->debug = new_debug;
+ 	return 0;
+ }
+ 
+-static int teamd_init(struct teamd_context *ctx)
++int teamd_init(struct teamd_context *ctx)
+ {
+ 	int err;
+ 
+-	ctx->th = team_alloc();
++	ctx->th = team_alloc(ctx->g_ctx->tnl);
+ 	if (!ctx->th) {
+ 		teamd_log_err("Team alloc failed.");
+ 		return -ENOMEM;
+ 	}
+-	if (ctx->debug)
++	if (ctx->g_ctx->debug)
+ 		team_set_log_priority(ctx->th, LOG_DEBUG);
+ 
+ 	team_set_log_fn(ctx->th, libteam_log_daemon);
+ 
+ 	ctx->ifindex = team_ifname2ifindex(ctx->th, ctx->team_devname);
++
+ 	if (ctx->ifindex && ctx->take_over)
+ 		goto skip_create;
+ 
+@@ -1299,8 +1406,24 @@ static int teamd_init(struct teamd_context *ctx)
+ 		err = -ENODEV;
+ 		goto team_destroy;
+ 	}
++
+ skip_create:
+ 
++	err = team_dev_add_to_db(ctx);
++	if (err) {
++		teamd_log_err("Hash table insertion failed for %s", ctx->team_devname);
++		goto team_destroy;
++	}
++
++	if (!ctx->g_ctx->is_tnl_initiated) {
++		err = team_netlink_init(global_ctx->tnl);
++		if (err) {
++			teamd_log_err("Failed to initiate netlink");
++			goto team_destroy;
++		}
++		ctx->g_ctx->is_tnl_initiated = true;
++	}
++
+ 	err = team_init(ctx->th, ctx->ifindex);
+ 	if (err) {
+ 		teamd_log_err("Team init failed.");
+@@ -1317,22 +1440,25 @@ skip_create:
+ 		goto team_destroy;
+ 	}
+ 
+-	err = teamd_run_loop_init(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to init run loop.");
+-		goto team_destroy;
+-	}
++	if (ctx->g_ctx->is_first_team) {
++		err = teamd_loop_callback_fd_add(ctx->g_ctx, LIBTEAM_EVENTS_CB_NAME, ctx->g_ctx->tnl,
++					 callback_libteam_event,
++					 team_get_event_fd(NULL, ctx->g_ctx->tnl),
++					 TEAMD_LOOP_FD_EVENT_READ);
++		if (err) {
++			teamd_log_err("Failed to add libteam event loop callback");
++			goto team_destroy;
++		}
+ 
+-	err = teamd_workq_init(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to init workq.");
+-		goto run_loop_fini;
++		teamd_loop_callback_enable(ctx->g_ctx, LIBTEAM_EVENTS_CB_NAME, ctx->g_ctx->tnl);
++		ctx->g_ctx->is_first_team = false;
++		teamd_log_info("loopback enabled for : %s", ctx->team_devname);
+ 	}
+ 
+ 	err = teamd_register_default_handlers(ctx);
+ 	if (err) {
+ 		teamd_log_err("Failed to register debug event handlers.");
+-		goto workq_fini;
++		goto team_destroy;
+ 	}
+ 
+ 	err = teamd_events_init(ctx);
+@@ -1401,54 +1527,23 @@ skip_create:
+ 		goto state_basics_fini;
+ 	}
+ 
+-	err = teamd_usock_init(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to init unix domain socket.");
+-		goto phys_port_check_fini;
+-	}
+-
+-	err = teamd_dbus_init(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to init dbus.");
+-		goto usock_fini;
+-	}
+-
+-	err = teamd_zmq_init(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to init zmq.");
+-		goto dbus_fini;
+-	}
+-
+ 	ctx->pre_add_ports = true;
+ 	err = team_refresh(ctx->th);
+ 	if (err) {
+ 		teamd_log_err("Team refresh failed.");
+-		goto zmq_fini;
++		goto phys_port_check_fini;
+ 	}
+ 
+ 	err = teamd_add_ports(ctx);
+ 	if (err) {
+ 		teamd_log_err("Failed to add ports.");
+-		goto zmq_fini;
++		goto phys_port_check_fini;
+ 	}
+ 
+-	/*
+-	 * Expose name as the last thing so watchers like systemd
+-	 * knows we are here and all ready.
+-	 */
+-	err = teamd_dbus_expose_name(ctx);
+-	if (err) {
+-		teamd_log_err("Failed to expose dbus name.");
+-		goto zmq_fini;
+-	}
+ 
++	
+ 	return 0;
+-zmq_fini:
+-	teamd_zmq_fini(ctx);
+-dbus_fini:
+-	teamd_dbus_fini(ctx);
+-usock_fini:
+-	teamd_usock_fini(ctx);
++
+ phys_port_check_fini:
+ 	teamd_phys_port_check_fini(ctx);
+ state_basics_fini:
+@@ -1471,10 +1566,6 @@ events_fini:
+ 	teamd_events_fini(ctx);
+ team_unreg_debug_handlers:
+ 	teamd_unregister_default_handlers(ctx);
+-workq_fini:
+-	teamd_workq_fini(ctx);
+-run_loop_fini:
+-	teamd_run_loop_fini(ctx);
+ team_destroy:
+ 	if (!ctx->take_over)
+ 		team_destroy(ctx->th);
+@@ -1483,11 +1574,8 @@ team_free:
+ 	return err;
+ }
+ 
+-static void teamd_fini(struct teamd_context *ctx)
++void teamd_fini(struct teamd_context *ctx)
+ {
+-	teamd_zmq_fini(ctx);
+-	teamd_dbus_fini(ctx);
+-	teamd_usock_fini(ctx);
+ 	teamd_phys_port_check_fini(ctx);
+ 	teamd_state_basics_fini(ctx);
+ 	teamd_runner_fini(ctx);
+@@ -1496,19 +1584,89 @@ static void teamd_fini(struct teamd_context *ctx)
+ 	teamd_state_fini(ctx);
+ 	teamd_ifinfo_watch_fini(ctx);
+ 	teamd_option_watch_fini(ctx);
++	teamd_port_watch_fini(ctx);
+ 	teamd_events_fini(ctx);
+ 	teamd_unregister_default_handlers(ctx);
+-	teamd_workq_fini(ctx);
+-	teamd_run_loop_fini(ctx);
+ 	if (!ctx->no_quit_destroy)
+ 		team_destroy(ctx->th);
+ 	team_free(ctx->th);
+ }
+ 
++void teamd_timer_fini(struct global_context *g_ctx)
++{
++	teamd_loop_callback_del(g_ctx, TEAMD_1SEC_TIMER_CB_NAME, g_ctx);
++	teamd_loop_callback_del(g_ctx, TEAMD_100MS_TIMER_CB_NAME, g_ctx);
++	tmr_cleanup();
++}
++
++int tmr_advance_wheel_1sec(struct global_context *g_ctx, int data, void *priv)
++{
++	tmr_advance_wheel(TIMER_TYPE_SEC);
++	return 0;
++}
++
++int tmr_advance_wheel_100ms(struct global_context *g_ctx, int data, void *priv)
++{
++	tmr_advance_wheel(TIMER_TYPE_MS);
++	return 0;
++}
++
++int _teamd_timer_init(struct global_context *g_ctx, tmr_type_t tmr_type, const char *cb_name)
++{
++	int err;
++	int timer_fd;
++
++	timer_fd = tmr_create_fd(tmr_type);
++	if (timer_fd == -1) {
++		tmr_cleanup();
++		return -1;
++	}
++
++	err = teamd_loop_callback_fd_add(global_ctx, cb_name, global_ctx, 
++				tmr_type == TIMER_TYPE_SEC ? tmr_advance_wheel_1sec : tmr_advance_wheel_100ms, timer_fd, TEAMD_LOOP_FD_EVENT_READ);
++	if (err) {
++		tmr_cleanup();
++		return err;
++	}
++	teamd_log_info("Wheel timer initialization done timer_fd %d\n", timer_fd);
++
++	get_lcb(global_ctx, cb_name, global_ctx)->is_period = true;
++	teamd_loop_callback_enable(global_ctx, cb_name, global_ctx);
++
++	return 0;
++}
++
++int teamd_timer_init(struct global_context *g_ctx)
++{
++	int err;
++	
++	teamd_log_info("Wheel timer initialization starting\n");
++	if (tmr_init() != 0) {
++		teamd_log_err("Failed to initialize timer library\n");
++		return -1;
++	}
++
++	err = _teamd_timer_init(g_ctx, TIMER_TYPE_SEC, TEAMD_1SEC_TIMER_CB_NAME);
++	if (err) {
++		teamd_log_err("Failed to init 1sec timer.");
++		return err;
++	}
++
++	err = _teamd_timer_init(g_ctx, TIMER_TYPE_MS, TEAMD_100MS_TIMER_CB_NAME);
++	if (err) {
++		teamd_log_err("Failed to init 100ms timer.");
++		return err;
++	}
++
++	return 0;
++}
++
+ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ {
+ 	pid_t pid;
+ 	int err = 0;
++	struct teamd_context *l_ctx = NULL;
++	DLLNode *iter;
+ 
+ 	if (getuid() == 0)
+ 		teamd_log_warn("This program is not intended to be run as root.");
+@@ -1531,7 +1689,7 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ 		return -EEXIST;
+ 	}
+ 
+-	if (ctx->daemonize) {
++	if (ctx->g_ctx->daemonize) {
+ 		daemon_retval_init();
+ 
+ 		pid = daemon_fork();
+@@ -1557,13 +1715,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ 	/* Child */
+ 	}
+ 
+-	ctx->log_output = ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
+-	if (ctx->log_output) {
+-		if (strcmp(ctx->log_output, "stdout") == 0)
++	ctx->g_ctx->log_output = ctx->g_ctx->log_output ? : getenv("TEAM_LOG_OUTPUT");
++	if (ctx->g_ctx->log_output) {
++		if (strcmp(ctx->g_ctx->log_output, "stdout") == 0)
+ 			daemon_log_use = DAEMON_LOG_STDOUT;
+-		else if (strcmp(ctx->log_output, "stderr") == 0)
++		else if (strcmp(ctx->g_ctx->log_output, "stderr") == 0)
+ 			daemon_log_use = DAEMON_LOG_STDERR;
+-		else if (strcmp(ctx->log_output, "syslog") == 0)
++		else if (strcmp(ctx->g_ctx->log_output, "syslog") == 0)
+ 			daemon_log_use = DAEMON_LOG_SYSLOG;
+ 	}
+ 
+@@ -1586,27 +1744,104 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ 		goto pid_file_remove;
+ 	}
+ 
+-	err = teamd_init(ctx);
+-	if (err) {
+-		teamd_log_err("teamd_init() failed.");
+-		daemon_retval_send(-err);
++	global_ctx->tnl = team_netlink_alloc();
++	if (!global_ctx->tnl) {
++		teamd_log_err("Failed alloc netlink");
+ 		goto signal_done;
+ 	}
++
++	team_set_lookup_th_fn(global_ctx->tnl, libteam_lookup_th);
++
++	err = teamd_run_loop_init(global_ctx);
++	if (err) {
++		teamd_log_err("Failed to init run loop.");
++		goto netlink_free;
++	}
++
++	err = teamd_usock_init(global_ctx);
++	if (err) {
++		teamd_log_err("Failed to init unix domain socket.");
++		goto run_loop_fini;
++	}
++
++	err = teamd_timer_init(global_ctx);
++	if (err) {
++		teamd_log_err("Failed to init global timer.");
++		goto usock_fini;
++	}
++
++	err = teamd_workq_init(global_ctx);
++	if (err) {
++		teamd_log_err("Failed to init workq.");
++		goto timer_fini;
++	}
++
++
++	if (global_ctx->unified_mode == false) {
++		err = teamd_init(ctx);
++		if (err) {
++			teamd_log_err("teamd_init() failed.");
++			daemon_retval_send(-err);
++			goto workq_fini;
++		}
++
++		err = teamd_dbus_init(ctx);
++		if (err) {
++			teamd_log_err("Failed to init dbus.");
++			goto delete_db;
++		}
++
++		err = teamd_zmq_init(ctx);
++		if (err) {
++			teamd_log_err("Failed to init zmq.");
++			goto dbus_fini;
++		}
++
++	/*
++	 * Expose name as the last thing so watchers like systemd
++	 * knows we are here and all ready.
++	 */
++		err = teamd_dbus_expose_name(ctx);
++		if (err) {
++			teamd_log_err("Failed to expose dbus name.");
++			goto zmq_fini;
++		}
++	}
++
+ 	*p_ret = TEAMD_EXIT_RUNTIME_FAILURE;
+ 
+ 	daemon_retval_send(0);
+ 
+ 	teamd_log_info(PACKAGE_VERSION" successfully started.");
+ 
+-	err = teamd_run_loop_run(ctx);
++	err = teamd_run_loop_run(global_ctx);
+ 
+ 	teamd_log_info("Exiting...");
+ 
+-	teamd_fini(ctx);
+-
++zmq_fini:
++if (!global_ctx->unified_mode)
++	teamd_zmq_fini(ctx);
++dbus_fini:
++if (!global_ctx->unified_mode)
++	teamd_dbus_fini(ctx);
++delete_db:
++	HASH_TABLE_FOREACH_ALL(&global_ctx->ht_team_devname, bkt, iter) {
++		l_ctx = DLL_ENTRY(iter, struct teamd_context, node_team_devname);
++		teamd_log_info("Deletion for device : %s", l_ctx->team_devname);
++		teamd_fini(l_ctx);
++	}
++workq_fini:
++	teamd_workq_fini(global_ctx);
++timer_fini:
++	teamd_timer_fini(global_ctx);
++usock_fini:
++	teamd_usock_fini(global_ctx);
++run_loop_fini:
++	teamd_run_loop_fini(global_ctx);
++netlink_free:
++	team_netlink_free(global_ctx->tnl);
+ signal_done:
+ 	daemon_signal_done();
+-
+ pid_file_remove:
+ 	daemon_pid_file_remove();
+ 
+@@ -1676,11 +1911,6 @@ static int teamd_get_devname(struct teamd_context *ctx, bool generate_enabled)
+ skip_set:
+ 	teamd_log_dbg(ctx, "Using team device \"%s\".", ctx->team_devname);
+ 
+-	err = asprintf(&ctx->ident, "%s_%s", ctx->argv0, ctx->team_devname);
+-	if (err == -1) {
+-		teamd_log_err("Failed allocate memory for identification string.");
+-		return -ENOMEM;
+-	}
+ 	return 0;
+ }
+ 
+@@ -1689,30 +1919,72 @@ static int teamd_set_default_pid_file(struct teamd_context *ctx)
+ 	int err;
+ 
+ 	/* Generate PID filename only if it was not set on command line */
+-	if (ctx->pid_file)
++	if (ctx->g_ctx->pid_file)
+ 		return 0;
+ 
+-	err = asprintf(&ctx->pid_file, TEAMD_RUN_DIR"%s.pid", ctx->team_devname);
++	err = asprintf(&ctx->g_ctx->pid_file, TEAMD_RUN_DIR"%s.pid", ctx->g_ctx->process_name);
+ 	if (err == -1) {
+ 		teamd_log_err("Failed allocate memory for PID file string.");
+ 		return -ENOMEM;
+ 	}
++
+ 	return 0;
+ }
+ 
+-static void teamd_init_debug_level(struct teamd_context *ctx)
++void teamd_init_debug_level(struct teamd_context *ctx)
+ {
+ 	int err;
+ 	int tmp;
+ 
+ 	err = teamd_config_int_get(ctx, &tmp, "$.debug_level");
+-	if (err || tmp <= ctx->debug)
++	if (err || tmp <= ctx->g_ctx->debug)
+ 		return;
+-	ctx->debug = tmp;
++	ctx->g_ctx->debug = tmp;
+ 	daemon_set_verbosity(LOG_DEBUG);
+ }
+ 
+-static int teamd_context_init(struct teamd_context **pctx)
++static int teamd_global_context_init(struct global_context **pctx)
++{
++	struct global_context *g_ctx;
++
++	g_ctx = myzalloc(sizeof(*g_ctx));
++	if (!g_ctx)
++		return -ENOMEM;
++	*pctx = g_ctx;
++	__g_pid_file = &g_ctx->pid_file;
++
++	/* Enable usock by default */
++	g_ctx->usock.enabled = true;
++	g_ctx->is_first_team = true;
++	g_ctx->is_tnl_initiated = false;
++		
++	if (!hash_table_init(&global_ctx->ht_team_devname, TEAMD_HASH_TABLE_SIZE, offsetof(struct teamd_context, node_team_devname), team_devname_hash, team_devname_key_eq)) 
++	{
++		fprintf(stderr, "ht_team_devname hash table create failed\n");
++		return 1;
++	}
++
++	if (!hash_table_init(&global_ctx->ht_team_ifindex, TEAMD_HASH_TABLE_SIZE, offsetof(struct teamd_context, node_team_ifindex), team_ifindex_hash, team_ifindex_key_eq)) 
++	{
++		fprintf(stderr, "ht_team_ifindex hash table create failed\n");
++		return 1;
++	}
++
++	return 0;
++}
++
++static void teamd_global_context_fini(struct global_context *g_ctx)
++{
++	hash_table_destroy(&g_ctx->ht_team_devname);
++	hash_table_destroy(&g_ctx->ht_team_ifindex);
++	free(g_ctx->ident);
++	free(g_ctx->process_name);
++	free(g_ctx->lacp_directory);
++	free(g_ctx->pid_file);
++	free(g_ctx);
++}
++
++int teamd_context_init(struct teamd_context **pctx)
+ {
+ 	struct teamd_context *ctx;
+ 
+@@ -1720,21 +1992,18 @@ static int teamd_context_init(struct teamd_context **pctx)
+ 	if (!ctx)
+ 		return -ENOMEM;
+ 	*pctx = ctx;
+-	__g_pid_file = &ctx->pid_file;
+ 
+-	/* Enable usock by default */
+-	ctx->usock.enabled = true;
+ 	return 0;
+ }
+ 
+-static void teamd_context_fini(struct teamd_context *ctx)
++void teamd_context_fini(struct teamd_context *ctx)
+ {
+-	free(ctx->ident);
+-	free(ctx->team_devname);
+-	free(ctx->config_text);
+-	free(ctx->config_file);
+-	free(ctx->pid_file);
+-	free(ctx);
++	if (ctx) {
++		free(ctx->team_devname);
++		free(ctx->config_text);
++		free(ctx->config_file);
++		free(ctx);
++	}
+ }
+ 
+ 
+@@ -1831,7 +2100,9 @@ int main(int argc, char **argv)
+ {
+ 	enum teamd_exit_code ret = TEAMD_EXIT_FAILURE;
+ 	int err;
+-	struct teamd_context *ctx;
++	struct teamd_context *ctx = NULL;
++	struct teamd_context *l_ctx = NULL;
++	DLLNode *iter;
+ 
+ 	err = teamd_make_rundir();
+ 	if (err)
+@@ -1841,25 +2112,32 @@ int main(int argc, char **argv)
+ 	if (err)
+ 		return ret;
+ 
++	err = teamd_global_context_init(&global_ctx);
++	if (err) {
++		fprintf(stderr, "Failed to init daemon context\n");
++		return ret;
++	}
++
+ 	err = teamd_context_init(&ctx);
+ 	if (err) {
+ 		fprintf(stderr, "Failed to init daemon context\n");
+ 		return ret;
+ 	}
++	ctx->g_ctx = global_ctx;
+ 
+ 	err = parse_command_line(ctx, argc, argv);
+ 	if (err)
+ 		goto context_fini;
+ 
+-	ctx->argv0 = daemon_ident_from_argv0(argv[0]);
++	global_ctx->argv0 = daemon_ident_from_argv0(argv[0]);
+ 
+-	switch (ctx->cmd) {
++	switch (global_ctx->cmd) {
+ 	case DAEMON_CMD_HELP:
+ 		print_help(ctx);
+ 		ret = TEAMD_EXIT_SUCCESS;
+ 		goto context_fini;
+ 	case DAEMON_CMD_VERSION:
+-		printf("%s "PACKAGE_VERSION"\n", ctx->argv0);
++		printf("%s "PACKAGE_VERSION"\n", global_ctx->argv0);
+ 		ret = TEAMD_EXIT_SUCCESS;
+ 		goto context_fini;
+ 	case DAEMON_CMD_KILL:
+@@ -1868,10 +2146,10 @@ int main(int argc, char **argv)
+ 		break;
+ 	}
+ 
+-	if (ctx->debug)
++	if (global_ctx->debug)
+ 		daemon_set_verbosity(LOG_DEBUG);
+ 
+-	daemon_log_ident = ctx->argv0;
++	daemon_log_ident = global_ctx->argv0;
+ 
+ 	err = teamd_config_load(ctx);
+ 	if (err) {
+@@ -1881,22 +2159,31 @@ int main(int argc, char **argv)
+ 
+ 	teamd_init_debug_level(ctx);
+ 
+-	err = teamd_get_devname(ctx, ctx->cmd == DAEMON_CMD_RUN);
+-	if (err)
+-		goto config_free;
++	if (!global_ctx->unified_mode) {
++		err = teamd_get_devname(ctx, global_ctx->cmd == DAEMON_CMD_RUN);
++		if (err)
++			goto config_free;
++	}
++
++	err = asprintf(&global_ctx->ident, "%s_%s", global_ctx->argv0, global_ctx->process_name);
++	if (err == -1) {
++		teamd_log_err("Failed allocate memory for identification string.");
++		return -ENOMEM;
++	}
+ 
+ 	err = teamd_set_default_pid_file(ctx);
+ 	if (err)
+ 		goto config_free;
+ 
+-	daemon_log_ident = ctx->ident;
++	daemon_log_ident = global_ctx->ident;
+ 	daemon_pid_file_proc = teamd_pid_file_proc;
+ 
+ 	teamd_log_dbg(ctx, "Using PID file \"%s\"", daemon_pid_file_proc());
++
+ 	if (ctx->config_file)
+ 		teamd_log_dbg(ctx, "Using config file \"%s\"", ctx->config_file);
+ 
+-	switch (ctx->cmd) {
++	switch (global_ctx->cmd) {
+ 	case DAEMON_CMD_HELP:
+ 	case DAEMON_CMD_VERSION:
+ 		break;
+@@ -1925,9 +2212,19 @@ int main(int argc, char **argv)
+ 		break;
+ 	}
+ 
++	if (global_ctx->unified_mode) {
++                HASH_TABLE_FOREACH_ALL(&global_ctx->ht_team_devname, bkt, iter) {
++                        l_ctx = DLL_ENTRY(iter, struct teamd_context, node_team_devname);
++                        teamd_log_info("Deletion for device : %s", l_ctx->team_devname);
++                        teamd_config_free(l_ctx);
++                        teamd_context_fini(l_ctx);
++		}
++        }
++
+ config_free:
+ 	teamd_config_free(ctx);
+ context_fini:
+ 	teamd_context_fini(ctx);
++	teamd_global_context_fini(global_ctx);
+ 	return ret;
+ }
+diff --git a/teamd/teamd.h b/teamd/teamd.h
+index d1d0f7f..b023660 100644
+--- a/teamd/teamd.h
++++ b/teamd/teamd.h
+@@ -33,10 +33,13 @@
+ #include <jansson.h>
+ #include <linux/filter.h>
+ #include <linux/if_packet.h>
++#include <linux/if.h>
+ #include <team.h>
+ #include <private/list.h>
+ 
+ #include "config.h"
++#include "teamd_utldll.h"
++#include "teamd_utlhash.h"
+ 
+ #ifdef ENABLE_DBUS
+ #include <dbus/dbus.h>
+@@ -51,7 +54,7 @@
+ #define teamd_log_info(args...) daemon_log(LOG_INFO, ##args)
+ 
+ #define teamd_log_dbgx(ctx, val, args...)	\
+-	({ if (val <= ctx->debug) daemon_log(LOG_DEBUG, ##args); })
++	({ if (val <= ctx->g_ctx->debug) daemon_log(LOG_DEBUG, ##args); })
+ 
+ #define teamd_log_dbg(ctx, args...) teamd_log_dbgx(ctx, 1, ##args)
+ 
+@@ -94,11 +97,65 @@ enum teamd_command {
+ 
+ struct teamd_runner;
+ struct teamd_context;
++extern struct global_context *global_ctx;
++
++struct global_context {
++	bool                            daemonize;
++	enum teamd_command              cmd;
++        char *                          pid_file;
++        unsigned int                    debug;
++        char *                          log_output;
++        char *                          ident;
++        char *                          argv0;
++	char *                          process_name;
++	bool                            is_first_team;
++	bool                            is_tnl_initiated;
++	bool                            unified_mode;
++        bool                            warm_start_mode;
++        char *                          lacp_directory;
++        struct {
++                struct list_item                callback_list;
++                int                             ctrl_pipe_r;
++                int                             ctrl_pipe_w;
++                int                             err;
++        } run_loop;
++	struct {
++                struct list_item        work_list;
++                int                     pipe_r;
++                int                     pipe_w;
++        } workq;
++
++#ifdef ENABLE_DBUS
++        struct {
++                bool                    enabled;
++                DBusConnection *        con;
++        } dbus;
++#endif
++
++#ifdef ENABLE_ZMQ
++        struct {
++                bool                    enabled;
++                void *                  context;
++                void *                  sock;
++                char *                  addr;
++        } zmq;
++#endif
++
++        struct {
++                bool                    enabled;
++                int                     sock;
++                struct sockaddr_un      addr;
++                struct list_item        acc_conn_list;
++        } usock;
++	struct team_netlink *tnl;
++
++	HashTable ht_team_devname;
++	HashTable ht_team_ifindex;
++
++};
+ 
+ struct teamd_context {
+-	enum teamd_command		cmd;
+-	bool				daemonize;
+-	unsigned int			debug;
++	struct global_context *g_ctx;
+ 	char *				log_output;
+ 	bool				force_recreate;
+ 	bool				take_over;
+@@ -108,10 +165,7 @@ struct teamd_context {
+ 	char *				config_file;
+ 	char *				config_text;
+ 	json_t *			config_json;
+-	char *				pid_file;
+ 	char *				team_devname;
+-	char *				ident;
+-	char *				argv0;
+ 	struct team_handle *		th;
+ 	const struct teamd_runner *	runner;
+ 	void *				runner_priv;
+@@ -126,40 +180,9 @@ struct teamd_context {
+ 	char *				hwaddr;
+ 	uint32_t			hwaddr_len;
+ 	bool				hwaddr_explicit;
+-	bool				warm_start_mode;
+ 	bool				keep_ports;
+-	char *				lacp_directory;
+-	struct {
+-		struct list_item		callback_list;
+-		int				ctrl_pipe_r;
+-		int				ctrl_pipe_w;
+-		int				err;
+-	} run_loop;
+-#ifdef ENABLE_DBUS
+-	struct {
+-		bool			enabled;
+-		DBusConnection *	con;
+-	} dbus;
+-#endif
+-#ifdef ENABLE_ZMQ
+-	struct {
+-		bool			enabled;
+-		void *			context;
+-		void *			sock;
+-		char *			addr;
+-	} zmq;
+-#endif
+-	struct {
+-		bool			enabled;
+-		int			sock;
+-		struct sockaddr_un	addr;
+-		struct list_item	acc_conn_list;
+-	} usock;
+-	struct {
+-		struct list_item	work_list;
+-		int			pipe_r;
+-		int			pipe_w;
+-	} workq;
++        DLLNode node_team_devname;
++        DLLNode node_team_ifindex;
+ };
+ 
+ struct teamd_port {
+@@ -207,8 +230,21 @@ struct teamd_event_watch_ops {
+ 	char *option_changed_match_name;
+ };
+ 
++
++uint32_t team_dev_add_to_db(struct teamd_context *ctx);
++void team_dev_del_from_db(struct teamd_context *ctx);
++struct teamd_context *team_dev_get_node_by_name(const char* team_devname);
++struct teamd_context *team_dev_get_node_by_ifindex(uint32_t ifindex);
++bool team_ifindex_key_eq(void *entry, void *key);
++bool team_devname_key_eq(void *entry, void *key);
++size_t team_devname_hash(void * entry, size_t range);
++size_t team_ifindex_hash(void * entry, size_t range);
++
++void teamd_context_fini(struct teamd_context *ctx);
++int teamd_context_init(struct teamd_context **pctx);
+ void teamd_refresh_ports(struct teamd_context *ctx);
+ void teamd_ports_flush_data(struct teamd_context *ctx);
++int teamd_flush_ports(struct teamd_context *ctx);
+ int teamd_event_port_added(struct teamd_context *ctx,
+ 			   struct teamd_port *tdport);
+ void teamd_event_port_removing(struct teamd_context *ctx,
+@@ -246,14 +282,14 @@ void teamd_event_watch_unregister(struct teamd_context *ctx,
+ 					 TEAMD_LOOP_FD_EVENT_WRITE | \
+ 					 TEAMD_LOOP_FD_EVENT_EXCEPTION)
+ 
+-typedef int (*teamd_loop_callback_func_t)(struct teamd_context *ctx,
++typedef int (*teamd_loop_callback_func_t)(struct global_context *g_ctx,
+ 					  int events, void *priv);
+ 
+-int teamd_loop_callback_fd_add(struct teamd_context *ctx,
++int teamd_loop_callback_fd_add(struct global_context *g_ctx,
+ 			       const char *cb_name, void *priv,
+ 			       teamd_loop_callback_func_t func,
+ 			       int fd, int fd_event);
+-int teamd_loop_callback_fd_add_tail(struct teamd_context *ctx,
++int teamd_loop_callback_fd_add_tail(struct global_context *g_ctx,
+ 				    const char *cb_name, void *priv,
+ 				    teamd_loop_callback_func_t func,
+ 				    int fd, int fd_event);
+@@ -269,16 +305,20 @@ int teamd_loop_callback_timer_set(struct teamd_context *ctx,
+ 				  const char *cb_name, void *priv,
+ 				  struct timespec *interval,
+ 				  struct timespec *initial);
+-void teamd_loop_callback_del(struct teamd_context *ctx, const char *cb_name,
++void teamd_loop_callback_del(struct global_context *g_ctx, const char *cb_name,
+ 			     void *priv);
+-int teamd_loop_callback_enable(struct teamd_context *ctx, const char *cb_name,
++int teamd_loop_callback_enable(struct global_context *g_ctx, const char *cb_name,
+ 			       void *priv);
+-int teamd_loop_callback_disable(struct teamd_context *ctx, const char *cb_name,
++int teamd_loop_callback_disable(struct global_context *g_ctx, const char *cb_name,
+ 				void *priv);
+-void teamd_run_loop_quit(struct teamd_context *ctx, int err);
+-void teamd_run_loop_restart(struct teamd_context *ctx);
++void teamd_run_loop_quit(struct global_context *g_ctx, int err);
++void teamd_run_loop_restart(struct global_context *g_ctx);
+ 
+ int teamd_change_debug_level(struct teamd_context *ctx, unsigned int new_debug);
++void teamd_init_debug_level(struct teamd_context *ctx);
++int teamd_init(struct teamd_context *ctx);
++void teamd_fini(struct teamd_context *ctx);
++
+ 
+ /* Runner structures */
+ extern const struct teamd_runner teamd_runner_broadcast;
+diff --git a/teamd/teamd_config.c b/teamd/teamd_config.c
+index 610ad5f..d2b6eef 100644
+--- a/teamd/teamd_config.c
++++ b/teamd/teamd_config.c
+@@ -58,7 +58,8 @@ int teamd_config_load(struct teamd_context *ctx)
+ 
+ void teamd_config_free(struct teamd_context *ctx)
+ {
+-	json_decref(ctx->config_json);
++	if (ctx)
++		json_decref(ctx->config_json);
+ }
+ 
+ int teamd_config_dump(struct teamd_context *ctx, char **p_config_dump)
+diff --git a/teamd/teamd_ctl.c b/teamd/teamd_ctl.c
+index b30b273..98b6133 100644
+--- a/teamd/teamd_ctl.c
++++ b/teamd/teamd_ctl.c
+@@ -30,18 +30,34 @@
+ #include "teamd_state.h"
+ #include "teamd_ctl.h"
+ 
+-static int teamd_ctl_method_port_config_update(struct teamd_context *ctx,
++static int teamd_ctl_method_port_config_update(struct global_context *g_ctx,
+ 					       const struct teamd_ctl_method_ops *ops,
+ 					       void *ops_priv)
+ {
+ 	const char *port_devname;
++	const char *team_devname;
+ 	const char *port_config;
+ 	uint32_t ifindex;
+ 	int err;
++	struct teamd_context *ctx;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "sss",&team_devname, &port_devname , &port_config);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++		err = ops->get_args(ops_priv, "ss", &port_devname, &port_config);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ConfigUpdateFail", "team_devname structure not found.");
+ 
+-	err = ops->get_args(ops_priv, "ss", &port_devname, &port_config);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
+ 	teamd_log_dbgx(ctx, 2, "port_devname \"%s\", port_config \"%s\"",
+ 		       port_devname, port_config);
+ 
+@@ -59,7 +75,7 @@ static int teamd_ctl_method_port_config_update(struct teamd_context *ctx,
+ 	return ops->reply_succ(ops_priv, NULL);
+ }
+ 
+-static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
++static int teamd_ctl_method_port_config_dump(struct global_context *g_ctx,
+ 					     const struct teamd_ctl_method_ops *ops,
+ 					     void *ops_priv)
+ {
+@@ -67,10 +83,25 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
+ 	uint32_t ifindex;
+ 	char *cfg;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++		err = ops->get_args(ops_priv, "s", &port_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ConfigDumpFail", "team_devname structure not found.");
+ 
+-	err = ops->get_args(ops_priv, "s", &port_devname);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
+ 	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
+ 
+ 	ifindex = team_ifname2ifindex(ctx->th, port_devname);
+@@ -89,16 +120,97 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
+ 	return err;
+ }
+ 
+-static int teamd_ctl_method_port_add(struct teamd_context *ctx,
++static int teamd_ctl_method_portchannel_add(struct global_context *g_ctx,
++                                            const struct teamd_ctl_method_ops *ops,
++                                            void *ops_priv)
++{
++	const char *team_devname;
++	const char *json_str;
++	int err;
++	struct teamd_context *ctx;
++
++	err = ops->get_args(ops_priv, "ss", &team_devname, &json_str);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Expected port name and JSON config.");
++
++	err = teamd_context_init(&ctx);
++	if (err) {
++		teamd_log_err("Failed to init teamd context");
++		return ops->reply_err(ops_priv, "InvalidArgs", "teamd_context_init failed");
++	}
++
++	ctx->g_ctx = g_ctx;
++	free(ctx->config_text);
++	ctx->config_text = strdup(json_str);
++
++	free(ctx->team_devname);
++	ctx->team_devname = strdup(team_devname);
++	ctx->force_recreate = true;
++
++	err = teamd_config_load(ctx);
++	if (err) {
++		teamd_log_err("Failed to load config.");
++		teamd_context_fini(ctx);
++		return ops->reply_err(ops_priv, "InvalidArgs" , "teamd_config_load failed");
++	}
++
++	err = teamd_init(ctx);
++	if (err) {
++		teamd_log_err("teamd_init() failed.");
++		return ops->reply_err(ops_priv, "InvalidArgs" , "teamd initialization failed");
++	}
++
++	return ops->reply_succ(ops_priv, NULL);
++}
++
++static int teamd_ctl_method_portchannel_remove(struct global_context *g_ctx,
++                                            const struct teamd_ctl_method_ops *ops,
++                                            void *ops_priv)
++{
++	const char *team_devname;
++	int err;
++	struct teamd_context *ctx;
++
++	err = ops->get_args(ops_priv, "s", &team_devname);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Expected port name and JSON config.");
++
++	ctx = team_dev_get_node_by_name(team_devname);
++	if (!ctx) {
++		return ops->reply_err(ops_priv, "NotFound", "No context found for team_devname.");
++	}
++
++	teamd_flush_ports(ctx);
++	teamd_fini(ctx);
++	team_dev_del_from_db(ctx);
++
++	return ops->reply_succ(ops_priv, NULL);
++}
++
++static int teamd_ctl_method_port_add(struct global_context *g_ctx,
+ 				     const struct teamd_ctl_method_ops *ops,
+ 				     void *ops_priv)
+ {
+ 	const char *port_devname;
++	const char *team_devname;
++        struct teamd_context *ctx;
+ 	int err;
+ 
+-	err = ops->get_args(ops_priv, "s", &port_devname);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++		err = ops->get_args(ops_priv, "s", &port_devname);
++			if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "PortAddFail", "team_devname structure not found.");
++
+ 	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
+ 
+ 	err = teamd_port_add_ifname(ctx, port_devname);
+@@ -118,16 +230,30 @@ static int teamd_ctl_method_port_add(struct teamd_context *ctx,
+ 	return ops->reply_succ(ops_priv, NULL);
+ }
+ 
+-static int teamd_ctl_method_port_remove(struct teamd_context *ctx,
++static int teamd_ctl_method_port_remove(struct global_context *g_ctx,
+ 					const struct teamd_ctl_method_ops *ops,
+ 					void *ops_priv)
+ {
+ 	const char *port_devname;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++		err = ops->get_args(ops_priv, "s", &port_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "PortRemoveFail", "team_devname structure not found.");
+ 
+-	err = ops->get_args(ops_priv, "s", &port_devname);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
+ 	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
+ 
+ 	err = teamd_port_remove_ifname(ctx, port_devname);
+@@ -142,12 +268,27 @@ static int teamd_ctl_method_port_remove(struct teamd_context *ctx,
+ 	return ops->reply_succ(ops_priv, NULL);
+ }
+ 
+-static int teamd_ctl_method_config_dump(struct teamd_context *ctx,
++static int teamd_ctl_method_config_dump(struct global_context *g_ctx,
+ 					const struct teamd_ctl_method_ops *ops,
+ 					void *ops_priv)
+ {
+ 	char *cfg;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "s",&team_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ConfigDumpFail", "team_devname structure not found.");
+ 
+ 	err = teamd_config_dump(ctx, &cfg);
+ 	if (err) {
+@@ -159,12 +300,27 @@ static int teamd_ctl_method_config_dump(struct teamd_context *ctx,
+ 	return err;
+ }
+ 
+-static int teamd_ctl_method_config_dump_actual(struct teamd_context *ctx,
++static int teamd_ctl_method_config_dump_actual(struct global_context *g_ctx,
+ 					       const struct teamd_ctl_method_ops *ops,
+ 					       void *ops_priv)
+ {
+ 	char *cfg;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "s",&team_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ConfigDumpActualFail", "team_devname structure not found.");
+ 
+ 	err = teamd_config_actual_dump(ctx, &cfg);
+ 	if (err) {
+@@ -176,12 +332,27 @@ static int teamd_ctl_method_config_dump_actual(struct teamd_context *ctx,
+ 	return err;
+ }
+ 
+-static int teamd_ctl_method_state_dump(struct teamd_context *ctx,
++static int teamd_ctl_method_state_dump(struct global_context *g_ctx,
+ 				       const struct teamd_ctl_method_ops *ops,
+ 				       void *ops_priv)
+ {
+ 	char *state;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "s",&team_devname);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "StateDumpFail", "team_devname structure not found.");
+ 
+ 	err = teamd_state_dump(ctx, &state);
+ 	if (err) {
+@@ -193,17 +364,32 @@ static int teamd_ctl_method_state_dump(struct teamd_context *ctx,
+ 	return err;
+ }
+ 
+-static int teamd_ctl_method_state_item_value_get(struct teamd_context *ctx,
++static int teamd_ctl_method_state_item_value_get(struct global_context *g_ctx,
+ 						 const struct teamd_ctl_method_ops *ops,
+ 						 void *ops_priv)
+ {
+ 	const char *item_path;
+ 	char *value;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "ss",&team_devname, &item_path);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++	} else {
++		err = ops->get_args(ops_priv, "s", &item_path);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ItemValueGetFail", "team_devname structure not found.");
+ 
+-	err = ops->get_args(ops_priv, "s", &item_path);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
+ 	teamd_log_dbgx(ctx, 2, "item_path \"%s\"", item_path);
+ 
+ 	err = teamd_state_item_value_get(ctx, item_path, &value);
+@@ -219,17 +405,33 @@ static int teamd_ctl_method_state_item_value_get(struct teamd_context *ctx,
+ 	return err;
+ }
+ 
+-static int teamd_ctl_method_state_item_value_set(struct teamd_context *ctx,
++static int teamd_ctl_method_state_item_value_set(struct global_context *g_ctx,
+ 						 const struct teamd_ctl_method_ops *ops,
+ 						 void *ops_priv)
+ {
+ 	const char *item_path;
+ 	const char *value;
+ 	int err;
++	struct teamd_context *ctx;
++	const char *team_devname;
++
++	if (g_ctx->unified_mode) {
++		err = ops->get_args(ops_priv, "sss",&team_devname, &item_path, &value);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++		ctx = team_dev_get_node_by_name(team_devname);
++
++	} else {
++		err = ops->get_args(ops_priv, "ss", &item_path, &value);
++		if (err)
++			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++		ctx = team_dev_get_node_by_name(g_ctx->process_name);
++	}
++
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ItemValueSetFail", "team_devname structure not found.");
+ 
+-	err = ops->get_args(ops_priv, "ss", &item_path, &value);
+-	if (err)
+-		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
+ 	teamd_log_dbgx(ctx, 2, "item_path \"%s\", value \"%s\"",
+ 		       item_path, value);
+ 
+@@ -247,7 +449,7 @@ static int teamd_ctl_method_state_item_value_set(struct teamd_context *ctx,
+ 	return ops->reply_succ(ops_priv, NULL);
+ }
+ 
+-typedef int (*teamd_ctl_method_func_t)(struct teamd_context *ctx,
++typedef int (*teamd_ctl_method_func_t)(struct global_context *g_ctx,
+ 				       const struct teamd_ctl_method_ops *ops,
+ 				       void *ops_priv);
+ struct teamd_ctl_method {
+@@ -301,6 +503,14 @@ static const struct teamd_ctl_method teamd_ctl_method_list[] = {
+ 		.func = teamd_ctl_method_state_item_value_set,
+ 
+ 	},
++	{
++		.name = "PortChannelAdd",
++		.func = teamd_ctl_method_portchannel_add,
++	},
++	{
++		.name = "PortChannelRemove",
++		.func = teamd_ctl_method_portchannel_remove,
++	},
+ };
+ 
+ #define TEAMD_CTL_METHOD_LIST_SIZE ARRAY_SIZE(teamd_ctl_method_list)
+@@ -324,7 +534,7 @@ bool teamd_ctl_method_exists(const char *method_name)
+ 	return get_func_by_name(method_name);
+ }
+ 
+-int teamd_ctl_method_call(struct teamd_context *ctx, const char *method_name,
++int teamd_ctl_method_call(struct global_context *g_ctx, const char *method_name,
+ 			  const struct teamd_ctl_method_ops *ops,
+ 			  void *ops_priv)
+ {
+@@ -336,5 +546,5 @@ int teamd_ctl_method_call(struct teamd_context *ctx, const char *method_name,
+ 			      method_name);
+ 		return -EINVAL;
+ 	}
+-	return func(ctx, ops, ops_priv);
++	return func(g_ctx, ops, ops_priv);
+ }
+diff --git a/teamd/teamd_ctl.h b/teamd/teamd_ctl.h
+index dd7604c..466644f 100644
+--- a/teamd/teamd_ctl.h
++++ b/teamd/teamd_ctl.h
+@@ -28,7 +28,7 @@ struct teamd_ctl_method_ops {
+ };
+ 
+ bool teamd_ctl_method_exists(const char *method_name);
+-int teamd_ctl_method_call(struct teamd_context *ctx, const char *method_name,
++int teamd_ctl_method_call(struct global_context *g_ctx, const char *method_name,
+ 			  const struct teamd_ctl_method_ops *ops,
+ 			  void *ops_priv);
+ 
+diff --git a/teamd/teamd_dbus.c b/teamd/teamd_dbus.c
+index 5e7ea69..3c1bf02 100644
+--- a/teamd/teamd_dbus.c
++++ b/teamd/teamd_dbus.c
+@@ -191,7 +191,7 @@ static DBusHandlerResult message_handler(DBusConnection *con,
+ 
+ 		dbus_ops_priv.reply = NULL;
+ 		dbus_ops_priv.message = message;
+-		teamd_ctl_method_call(ctx, method, &teamd_dbus_ctl_method_ops,
++		teamd_ctl_method_call(ctx->g_ctx, method, &teamd_dbus_ctl_method_ops,
+ 				      &dbus_ops_priv);
+ 		reply = dbus_ops_priv.reply;
+ 	}
+@@ -215,7 +215,7 @@ static const DBusObjectPathVTable vtable = {
+ 
+ static int teamd_dbus_iface_init(struct teamd_context *ctx)
+ {
+-	if (dbus_connection_register_object_path(ctx->dbus.con,
++	if (dbus_connection_register_object_path(ctx->g_ctx->dbus.con,
+ 						 TEAMD_DBUS_PATH, &vtable,
+ 						 ctx) == FALSE) {
+ 		teamd_log_err("dbus: Could not set up message handler");
+@@ -226,7 +226,7 @@ static int teamd_dbus_iface_init(struct teamd_context *ctx)
+ 
+ static void teamd_dbus_iface_fini(struct teamd_context *ctx)
+ {
+-	dbus_connection_unregister_object_path(ctx->dbus.con,
++	dbus_connection_unregister_object_path(ctx->g_ctx->dbus.con,
+ 					       TEAMD_DBUS_PATH);
+ }
+ 
+@@ -236,14 +236,14 @@ static int teamd_dbus_con_init(struct teamd_context *ctx)
+ 	int err = 0;
+ 
+ 	dbus_error_init(&error);
+-	ctx->dbus.con = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+-	if (!ctx->dbus.con) {
++	ctx->g_ctx->dbus.con = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
++	if (!ctx->g_ctx->dbus.con) {
+ 		teamd_log_err("dbus: Could not acquire the system bus: %s - %s",
+ 			      error.name, error.message);
+ 		err = -EINVAL;
+ 		goto free_err;
+ 	}
+-	dbus_connection_set_exit_on_disconnect(ctx->dbus.con, FALSE);
++	dbus_connection_set_exit_on_disconnect(ctx->g_ctx->dbus.con, FALSE);
+ free_err:
+ 	dbus_error_free(&error);
+ 	return err;
+@@ -251,21 +251,21 @@ free_err:
+ 
+ static void teamd_dbus_con_fini(struct teamd_context *ctx)
+ {
+-	dbus_connection_unref(ctx->dbus.con);
++	dbus_connection_unref(ctx->g_ctx->dbus.con);
+ }
+ 
+-static int callback_watch(struct teamd_context *ctx, int events, void *priv)
++static int callback_watch(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	DBusWatch *watch = priv;
+ 
+-	dbus_connection_ref(ctx->dbus.con);
++	dbus_connection_ref(g_ctx->dbus.con);
+ 	if (events & TEAMD_LOOP_FD_EVENT_READ)
+ 		dbus_watch_handle(watch, DBUS_WATCH_READABLE);
+ 	if (events & TEAMD_LOOP_FD_EVENT_WRITE)
+ 		dbus_watch_handle(watch, DBUS_WATCH_WRITABLE);
+ 	if (events & TEAMD_LOOP_FD_EVENT_EXCEPTION)
+ 		dbus_watch_handle(watch, DBUS_WATCH_ERROR);
+-	dbus_connection_unref(ctx->dbus.con);
++	dbus_connection_unref(g_ctx->dbus.con);
+ 	return 0;
+ }
+ 
+@@ -287,12 +287,12 @@ static dbus_bool_t add_watch(DBusWatch *watch, void *priv)
+ 	if (flags & DBUS_WATCH_WRITABLE)
+ 		fd_events |= TEAMD_LOOP_FD_EVENT_WRITE;
+ 
+-	err = teamd_loop_callback_fd_add(ctx, WATCH_CB_NAME, watch,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, WATCH_CB_NAME, watch,
+ 					 callback_watch, fd, fd_events);
+ 	if (err)
+ 		return FALSE;
+ 	if (dbus_watch_get_enabled(watch))
+-		teamd_loop_callback_enable(ctx, WATCH_CB_NAME, watch);
++		teamd_loop_callback_enable(ctx->g_ctx, WATCH_CB_NAME, watch);
+ 	return TRUE;
+ }
+ 
+@@ -300,7 +300,7 @@ static void remove_watch(DBusWatch *watch, void *priv)
+ {
+ 	struct teamd_context *ctx = priv;
+ 
+-	teamd_loop_callback_del(ctx, WATCH_CB_NAME, watch);
++	teamd_loop_callback_del(ctx->g_ctx, WATCH_CB_NAME, watch);
+ }
+ 
+ static void toggle_watch(DBusWatch *watch, void *priv)
+@@ -308,12 +308,12 @@ static void toggle_watch(DBusWatch *watch, void *priv)
+ 	struct teamd_context *ctx = priv;
+ 
+ 	if (dbus_watch_get_enabled(watch))
+-		teamd_loop_callback_enable(ctx, WATCH_CB_NAME, watch);
++		teamd_loop_callback_enable(ctx->g_ctx, WATCH_CB_NAME, watch);
+ 	else
+-		teamd_loop_callback_disable(ctx, WATCH_CB_NAME, watch);
++		teamd_loop_callback_disable(ctx->g_ctx, WATCH_CB_NAME, watch);
+ }
+ 
+-static int callback_timeout(struct teamd_context *ctx, int events, void *priv)
++static int callback_timeout(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	DBusTimeout *timeout = priv;
+ 
+@@ -335,7 +335,7 @@ static dbus_bool_t add_timeout(DBusTimeout *timeout, void *priv)
+ 	if (err)
+ 		return FALSE;
+ 	if (dbus_timeout_get_enabled(timeout))
+-		teamd_loop_callback_enable(ctx, TIMEOUT_CB_NAME, timeout);
++		teamd_loop_callback_enable(ctx->g_ctx, TIMEOUT_CB_NAME, timeout);
+ 	return TRUE;
+ }
+ 
+@@ -343,7 +343,7 @@ static void remove_timeout(DBusTimeout *timeout, void *priv)
+ {
+ 	struct teamd_context *ctx = priv;
+ 
+-	teamd_loop_callback_del(ctx, TIMEOUT_CB_NAME, timeout);
++	teamd_loop_callback_del(ctx->g_ctx, TIMEOUT_CB_NAME, timeout);
+ }
+ 
+ static void toggle_timeout(DBusTimeout *timeout, void *priv)
+@@ -351,16 +351,16 @@ static void toggle_timeout(DBusTimeout *timeout, void *priv)
+ 	struct teamd_context *ctx = priv;
+ 
+ 	if (dbus_timeout_get_enabled(timeout))
+-		teamd_loop_callback_enable(ctx, TIMEOUT_CB_NAME, timeout);
++		teamd_loop_callback_enable(ctx->g_ctx, TIMEOUT_CB_NAME, timeout);
+ 	else
+-		teamd_loop_callback_disable(ctx, TIMEOUT_CB_NAME, timeout);
++		teamd_loop_callback_disable(ctx->g_ctx, TIMEOUT_CB_NAME, timeout);
+ }
+ 
+ static void wakeup_main(void *priv)
+ {
+ 	struct teamd_context *ctx = priv;
+ 
+-	teamd_run_loop_restart(ctx);
++	teamd_run_loop_restart(ctx->g_ctx);
+ }
+ 
+ struct dispatch_priv {
+@@ -369,7 +369,7 @@ struct dispatch_priv {
+ 	struct teamd_context *ctx;
+ };
+ 
+-static int callback_dispatch(struct teamd_context *ctx, int events, void *priv)
++static int callback_dispatch(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	struct dispatch_priv *dp = priv;
+ 	char byte;
+@@ -382,7 +382,7 @@ static int callback_dispatch(struct teamd_context *ctx, int events, void *priv)
+ 			return -errno;
+ 		}
+ 	} else {
+-		while (dbus_connection_dispatch(ctx->dbus.con) ==
++		while (dbus_connection_dispatch(g_ctx->dbus.con) ==
+ 			DBUS_DISPATCH_DATA_REMAINS);
+ 	}
+ 	return 0;
+@@ -428,10 +428,10 @@ static int dispatch_init(struct dispatch_priv **pdp, struct teamd_context *ctx)
+ 	dp->fd_w = fds[1];
+ 	dp->ctx = ctx;
+ 
+-	err = teamd_loop_callback_fd_add(ctx, DISPATCH_CB_NAME, dp,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, DISPATCH_CB_NAME, dp,
+ 					 callback_dispatch,
+ 					 dp->fd_r, TEAMD_LOOP_FD_EVENT_READ);
+-	teamd_loop_callback_enable(ctx, DISPATCH_CB_NAME, dp);
++	teamd_loop_callback_enable(ctx->g_ctx, DISPATCH_CB_NAME, dp);
+ 	if (err)
+ 		goto close_pipe;
+ 	*pdp = dp;
+@@ -448,7 +448,7 @@ static void dispatch_exit(void *priv)
+ {
+ 	struct dispatch_priv *dp = priv;
+ 
+-	teamd_loop_callback_del(dp->ctx, DISPATCH_CB_NAME, dp);
++	teamd_loop_callback_del(dp->ctx->g_ctx, DISPATCH_CB_NAME, dp);
+ 	close(dp->fd_w);
+ 	close(dp->fd_r);
+ 	free(dp);
+@@ -464,23 +464,23 @@ static int teamd_dbus_mainloop_init(struct teamd_context *ctx)
+ 		teamd_log_err("dbus: failed to init dispatch.");
+ 		return err;
+ 	}
+-	dbus_connection_set_dispatch_status_function(ctx->dbus.con,
++	dbus_connection_set_dispatch_status_function(ctx->g_ctx->dbus.con,
+ 						     dispatch_status,
+ 						     dp, dispatch_exit);
+-	if (dbus_connection_set_watch_functions(ctx->dbus.con, add_watch,
++	if (dbus_connection_set_watch_functions(ctx->g_ctx->dbus.con, add_watch,
+ 						remove_watch, toggle_watch,
+ 						ctx, NULL) == FALSE) {
+ 		teamd_log_err("dbus: failed to init watch functions.");
+ 		return -EINVAL;
+ 	}
+-	if (dbus_connection_set_timeout_functions(ctx->dbus.con, add_timeout,
++	if (dbus_connection_set_timeout_functions(ctx->g_ctx->dbus.con, add_timeout,
+ 						  remove_timeout,
+ 						  toggle_timeout,
+ 						  ctx, NULL) == FALSE) {
+ 		teamd_log_err("dbus: failed to init timeout functions.");
+ 		return -EINVAL;
+ 	}
+-	dbus_connection_set_wakeup_main_function(ctx->dbus.con, wakeup_main,
++	dbus_connection_set_wakeup_main_function(ctx->g_ctx->dbus.con, wakeup_main,
+ 						 ctx, NULL);
+ 	/* Do initial dispatch for early messages */
+ 	wakeup_dispatch(dp);
+@@ -492,7 +492,7 @@ int teamd_dbus_init(struct teamd_context *ctx)
+ 	int err;
+ 	char *id;
+ 
+-	if (!ctx->dbus.enabled)
++	if (!ctx->g_ctx->dbus.enabled)
+ 		return 0;
+ 	err = teamd_dbus_con_init(ctx);
+ 	if (err)
+@@ -503,9 +503,9 @@ int teamd_dbus_init(struct teamd_context *ctx)
+ 	err = teamd_dbus_mainloop_init(ctx);
+ 	if (err)
+ 		goto iface_fini;
+-	id = dbus_connection_get_server_id(ctx->dbus.con),
++	id = dbus_connection_get_server_id(ctx->g_ctx->dbus.con),
+ 	teamd_log_dbg(ctx, "dbus: connected to %s with name %s", id,
+-		      dbus_bus_get_unique_name(ctx->dbus.con));
++		      dbus_bus_get_unique_name(ctx->g_ctx->dbus.con));
+ 	dbus_free(id);
+ 	return 0;
+ iface_fini:
+@@ -517,7 +517,7 @@ con_fini:
+ 
+ void teamd_dbus_fini(struct teamd_context *ctx)
+ {
+-	if (!ctx->dbus.enabled)
++	if (!ctx->g_ctx->dbus.enabled)
+ 		return;
+ 	teamd_dbus_iface_fini(ctx);
+ 	teamd_dbus_con_fini(ctx);
+@@ -529,7 +529,7 @@ int teamd_dbus_expose_name(struct teamd_context *ctx)
+ 	int err;
+ 	char *service_name;
+ 
+-	if (!ctx->dbus.enabled)
++	if (!ctx->g_ctx->dbus.enabled)
+ 		return 0;
+ 
+ 	err = asprintf(&service_name, TEAMD_DBUS_SERVICE ".%s",
+@@ -538,7 +538,7 @@ int teamd_dbus_expose_name(struct teamd_context *ctx)
+ 		return -errno;
+ 
+ 	dbus_error_init(&error);
+-	err = dbus_bus_request_name(ctx->dbus.con, service_name, 0,
++	err = dbus_bus_request_name(ctx->g_ctx->dbus.con, service_name, 0,
+ 				    &error);
+ 	if (err == DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+ 		teamd_log_dbg(ctx, "dbus: have name %s", service_name);
+diff --git a/teamd/teamd_ifinfo_watch.c b/teamd/teamd_ifinfo_watch.c
+index 6a19532..4c0b745 100644
+--- a/teamd/teamd_ifinfo_watch.c
++++ b/teamd/teamd_ifinfo_watch.c
+@@ -39,7 +39,8 @@ static int ifinfo_change_handler_func(struct team_handle *th, void *priv,
+ 		if (ctx->ifinfo == ifinfo) {
+ 			if (team_is_ifinfo_removed(ifinfo)) {
+ 				teamd_log_warn("Team device removal detected.");
+-				teamd_run_loop_quit(ctx, 0);
++				if (!ctx->g_ctx->unified_mode)
++				        teamd_run_loop_quit(ctx->g_ctx, 0);
+ 			}
+ 			if (team_is_ifinfo_admin_state_changed(ifinfo)) {
+ 				err = teamd_event_ifinfo_admin_state_changed(ctx, ifinfo);
+diff --git a/teamd/teamd_link_watch.h b/teamd/teamd_link_watch.h
+index ea7ef87..f340bc7 100644
+--- a/teamd/teamd_link_watch.h
++++ b/teamd/teamd_link_watch.h
+@@ -2,6 +2,7 @@
+ #define _TEAMD_LINK_WATCH_H_
+ 
+ #include "teamd_state.h"
++#include "teamd_timer.h"
+ 
+ struct teamd_link_watch {
+ 	const char *name;
+@@ -41,6 +42,7 @@ struct lw_psr_port_priv {
+ 	int sock;
+ 	unsigned int missed;
+ 	bool reply_received;
++	tmr_node_t *periodic_timer;
+ };
+ 
+ int __set_sockaddr(struct sockaddr *sa, socklen_t sa_len, sa_family_t family,
+diff --git a/teamd/teamd_lw_ethtool.c b/teamd/teamd_lw_ethtool.c
+index b44656e..4be1d1a 100644
+--- a/teamd/teamd_lw_ethtool.c
++++ b/teamd/teamd_lw_ethtool.c
+@@ -22,7 +22,7 @@
+ #include "teamd.h"
+ #include "teamd_link_watch.h"
+ #include "teamd_config.h"
+-
++#include "teamd_timer.h"
+ /*
+  * Ethtool link watch
+  */
+@@ -31,6 +31,7 @@ struct lw_ethtool_port_priv {
+ 	struct lw_common_port_priv common; /* must be first */
+ 	struct timespec delay_up;
+ 	struct timespec delay_down;
++	tmr_node_t *delay_timer;
+ };
+ 
+ static struct lw_ethtool_port_priv *
+@@ -59,7 +60,8 @@ static int lw_ethtool_event_watch_port_changed(struct teamd_context *ctx,
+ 	 * Link changed for sure, so if there is some delay in progress,
+ 	 * cancel it before proceeding.
+ 	 */
+-	teamd_loop_callback_disable(ctx, LW_ETHTOOL_DELAY_CB_NAME, priv);
++	tmr_disable_timer(ethtool_ppriv->delay_timer);
++
+ 	link_up = team_is_port_link_up(tdport->team_port);
+ 	if (!teamd_link_watch_link_up_differs(common_ppriv, link_up))
+ 		return 0;
+@@ -74,13 +76,12 @@ static int lw_ethtool_event_watch_port_changed(struct teamd_context *ctx,
+ 		delay = &ethtool_ppriv->delay_down;
+ 	}
+ 
+-	err = teamd_loop_callback_timer_set(ctx, LW_ETHTOOL_DELAY_CB_NAME,
+-					    priv, NULL, delay);
++	err = tmr_set_timer(ethtool_ppriv->delay_timer, timespec_to_ms(delay));
+ 	if (err) {
+ 		teamd_log_err("Failed to set delay timer.");
+ 		return err;
+ 	}
+-	teamd_loop_callback_enable(ctx, LW_ETHTOOL_DELAY_CB_NAME, priv);
++	tmr_enable_timer(ethtool_ppriv->delay_timer);
+ 	return 0;
+ 
+ nodelay:
+@@ -88,8 +89,7 @@ nodelay:
+ 					      link_up);
+ }
+ 
+-static int lw_ethtool_callback_delay(struct teamd_context *ctx, int events,
+-				     void *priv)
++static int lw_ethtool_callback_delay(void *priv)
+ {
+ 	struct lw_common_port_priv *common_ppriv = priv;
+ 	struct teamd_port *tdport;
+@@ -97,7 +97,7 @@ static int lw_ethtool_callback_delay(struct teamd_context *ctx, int events,
+ 
+ 	tdport = common_ppriv->tdport;
+ 	link_up = team_is_port_link_up(tdport->team_port);
+-	return teamd_link_watch_check_link_up(ctx, tdport, common_ppriv,
++	return teamd_link_watch_check_link_up(common_ppriv->ctx, tdport, common_ppriv,
+ 					      link_up);
+ }
+ 
+@@ -139,18 +139,20 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+ 				 void *priv, void *creator_priv)
+ {
+ 	int err;
++	struct lw_ethtool_port_priv *ethtool_ppriv = priv;
+ 
+ 	err = lw_ethtool_load_options(ctx, tdport, priv);
+ 	if (err) {
+ 		teamd_log_err("Failed to load options.");
+ 		return err;
+ 	}
+-	err = teamd_loop_callback_timer_add(ctx, LW_ETHTOOL_DELAY_CB_NAME,
+-					    priv, lw_ethtool_callback_delay);
+-	if (err) {
+-		teamd_log_err("Failed add delay callback timer");
+-		return err;
++
++	ethtool_ppriv->delay_timer = tmr_create_timer(priv, lw_ethtool_callback_delay, TRUE, TIMER_TYPE_MS);
++	if (!ethtool_ppriv->delay_timer) {
++		teamd_log_err("Failed to create delay callback timer");
++		return -ENOMEM;
+ 	}
++	
+ 	err = teamd_event_watch_register(ctx, &lw_ethtool_port_watch_ops, priv);
+ 	if (err) {
+ 		teamd_log_err("Failed to register event watch.");
+@@ -159,7 +161,7 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+ 	return 0;
+ 
+ delay_callback_del:
+-	teamd_loop_callback_del(ctx, LW_ETHTOOL_DELAY_CB_NAME, priv);
++	tmr_delete_timer(&ethtool_ppriv->delay_timer);
+ 	return err;
+ }
+ 
+@@ -167,8 +169,10 @@ static void lw_ethtool_port_removed(struct teamd_context *ctx,
+ 				    struct teamd_port *tdport,
+ 				    void *priv, void *creator_priv)
+ {
++	struct lw_ethtool_port_priv *ethtool_ppriv = priv;
++
+ 	teamd_event_watch_unregister(ctx, &lw_ethtool_port_watch_ops, priv);
+-	teamd_loop_callback_del(ctx, LW_ETHTOOL_DELAY_CB_NAME, priv);
++	tmr_delete_timer(&ethtool_ppriv->delay_timer);
+ }
+ 
+ static int lw_ethtool_state_delay_up_get(struct teamd_context *ctx,
+diff --git a/teamd/teamd_lw_psr.c b/teamd/teamd_lw_psr.c
+index b0a41f4..09b7c4f 100644
+--- a/teamd/teamd_lw_psr.c
++++ b/teamd/teamd_lw_psr.c
+@@ -32,7 +32,7 @@ static const struct timespec lw_psr_default_init_wait = { 0, 1 };
+ #define LW_PSR_DEFAULT_MISSED_MAX 3
+ 
+ #define LW_PERIODIC_CB_NAME "lw_periodic"
+-static int lw_psr_callback_periodic(struct teamd_context *ctx, int events, void *priv)
++static int lw_psr_callback_periodic(void *priv)
+ {
+ 	struct lw_common_port_priv *common_ppriv = priv;
+ 	struct lw_psr_port_priv *psr_ppriv = priv;
+@@ -46,13 +46,13 @@ static int lw_psr_callback_periodic(struct teamd_context *ctx, int events, void
+ 	} else {
+ 		psr_ppriv->missed++;
+ 		if (psr_ppriv->missed > psr_ppriv->missed_max && link_up) {
+-			teamd_log_dbg(ctx, "%s: Missed %u replies (max %u).",
++			teamd_log_dbg(common_ppriv->ctx, "%s: Missed %u replies (max %u).",
+ 				      tdport->ifname, psr_ppriv->missed,
+ 				      psr_ppriv->missed_max);
+ 			link_up = false;
+ 		}
+ 	}
+-	err = teamd_link_watch_check_link_up(ctx, tdport,
++	err = teamd_link_watch_check_link_up(common_ppriv->ctx, tdport,
+ 					     common_ppriv, link_up);
+ 	if (err)
+ 		return err;
+@@ -62,7 +62,7 @@ static int lw_psr_callback_periodic(struct teamd_context *ctx, int events, void
+ }
+ 
+ #define LW_SOCKET_CB_NAME "lw_socket"
+-static int lw_psr_callback_socket(struct teamd_context *ctx, int events, void *priv)
++static int lw_psr_callback_socket(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	struct lw_psr_port_priv *psr_ppriv = priv;
+ 
+@@ -143,7 +143,7 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+ 		return err;
+ 	}
+ 
+-	err = teamd_loop_callback_fd_add(ctx, LW_SOCKET_CB_NAME, psr_ppriv,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, LW_SOCKET_CB_NAME, psr_ppriv,
+ 					 lw_psr_callback_socket,
+ 					 psr_ppriv->sock,
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+@@ -152,13 +152,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+ 		goto close_sock;
+ 	}
+ 
+-	err = teamd_loop_callback_timer_add_set(ctx, LW_PERIODIC_CB_NAME,
+-						psr_ppriv,
+-						lw_psr_callback_periodic,
+-						&psr_ppriv->interval,
+-						&psr_ppriv->init_wait);
++	psr_ppriv->periodic_timer = tmr_create_timer(psr_ppriv, lw_psr_callback_periodic, TRUE, TIMER_TYPE_MS);
++	if (!psr_ppriv->periodic_timer) {
++		teamd_log_err("Failed to create periodic callback timer");
++		return -ENOMEM;
++	}
++	err = tmr_set_timer(psr_ppriv->periodic_timer, timespec_to_ms(&psr_ppriv->interval));
+ 	if (err) {
+-		teamd_log_err("Failed add callback timer");
++		teamd_log_err("Failed to set periodic callback timer");
+ 		goto socket_callback_del;
+ 	}
+ 
+@@ -169,14 +170,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+ 		goto periodic_callback_del;
+ 	}
+ 
+-	teamd_loop_callback_enable(ctx, LW_SOCKET_CB_NAME, psr_ppriv);
+-	teamd_loop_callback_enable(ctx, LW_PERIODIC_CB_NAME, psr_ppriv);
++	teamd_loop_callback_enable(ctx->g_ctx, LW_SOCKET_CB_NAME, psr_ppriv);
++	tmr_enable_timer(psr_ppriv->periodic_timer);
+ 	return 0;
+ 
+ periodic_callback_del:
+-	teamd_loop_callback_del(ctx, LW_PERIODIC_CB_NAME, psr_ppriv);
++	tmr_delete_timer(&psr_ppriv->periodic_timer);
+ socket_callback_del:
+-	teamd_loop_callback_del(ctx, LW_SOCKET_CB_NAME, psr_ppriv);
++	teamd_loop_callback_del(ctx->g_ctx, LW_SOCKET_CB_NAME, psr_ppriv);
+ close_sock:
+ 	psr_ppriv->ops->sock_close(psr_ppriv);
+ 	return err;
+@@ -187,8 +188,8 @@ void lw_psr_port_removed(struct teamd_context *ctx, struct teamd_port *tdport,
+ {
+ 	struct lw_psr_port_priv *psr_ppriv = priv;
+ 
+-	teamd_loop_callback_del(ctx, LW_PERIODIC_CB_NAME, psr_ppriv);
+-	teamd_loop_callback_del(ctx, LW_SOCKET_CB_NAME, psr_ppriv);
++	tmr_delete_timer(&psr_ppriv->periodic_timer);
++	teamd_loop_callback_del(ctx->g_ctx, LW_SOCKET_CB_NAME, psr_ppriv);
+ 	psr_ppriv->ops->sock_close(psr_ppriv);
+ }
+ 
+diff --git a/teamd/teamd_lw_tipc.c b/teamd/teamd_lw_tipc.c
+index e5b51ce..e2a7fad 100644
+--- a/teamd/teamd_lw_tipc.c
++++ b/teamd/teamd_lw_tipc.c
+@@ -127,7 +127,7 @@ static int lw_tipc_filter_events(struct lw_tipc_port_priv *tipc_ppriv,
+ 	return strcmp(bearer, tipc_ppriv->bearer);
+ }
+ 
+-static int lw_tipc_callback_socket(struct teamd_context *ctx, int events, void *priv)
++static int lw_tipc_callback_socket(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	int err;
+ 	struct lw_tipc_port_priv *tipc_ppriv = priv;
+@@ -149,11 +149,11 @@ static int lw_tipc_callback_socket(struct teamd_context *ctx, int events, void *
+ 	if (lw_tipc_filter_events(tipc_ppriv, &lnr))
+ 		return 0;
+ 	if (event.event == htonl(TIPC_PUBLISHED))
+-		return lw_tipc_link_state_change(ctx, &lnr, tipc_ppriv, true);
++		return lw_tipc_link_state_change(tipc_ppriv->common.ctx, &lnr, tipc_ppriv, true);
+ 	else if (event.event == htonl(TIPC_WITHDRAWN))
+-		return lw_tipc_link_state_change(ctx, &lnr, tipc_ppriv, false);
++		return lw_tipc_link_state_change(tipc_ppriv->common.ctx, &lnr, tipc_ppriv, false);
+ tipc_cb_err:
+-	teamd_log_dbg(ctx, "tipc: link state event error");
++	teamd_log_dbg(tipc_ppriv->common.ctx, "tipc: link state event error");
+ 	return -EINVAL;
+ }
+ 
+@@ -180,7 +180,7 @@ static int lw_tipc_topsrv_subscribe(struct teamd_context *ctx, struct lw_tipc_po
+ 		return -errno;
+ 	}
+ 
+-	err = teamd_loop_callback_fd_add(ctx, LW_TIPC_TOPSRV_SOCKET, priv,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, LW_TIPC_TOPSRV_SOCKET, priv,
+ 				 lw_tipc_callback_socket,
+ 				 priv->topsrv_sock,
+ 				 TEAMD_LOOP_FD_EVENT_READ);
+@@ -189,7 +189,7 @@ static int lw_tipc_topsrv_subscribe(struct teamd_context *ctx, struct lw_tipc_po
+ 		err = -errno;
+ 		goto close_sock;
+ 	}
+-	teamd_loop_callback_enable(ctx, LW_TIPC_TOPSRV_SOCKET, priv);
++	teamd_loop_callback_enable(ctx->g_ctx, LW_TIPC_TOPSRV_SOCKET, priv);
+ 	err = connect(priv->topsrv_sock, (struct sockaddr *) &sa_topsrv, sizeof(sa_topsrv));
+ 	if (err < 0) {
+ 		teamd_log_err("Failed to connect to TIPC topology server");
+@@ -235,7 +235,7 @@ static void lw_tipc_port_removed(struct teamd_context *ctx,
+ 	struct tipc_link *link;
+ 
+ 	teamd_log_dbg(ctx, "tipc port removed\n");
+-	teamd_loop_callback_del(ctx, LW_TIPC_TOPSRV_SOCKET, priv);
++	teamd_loop_callback_del(ctx->g_ctx, LW_TIPC_TOPSRV_SOCKET, priv);
+ 	close(tipc_ppriv->topsrv_sock);
+ 	while (!LIST_EMPTY(&tipc_ppriv->links)) {
+ 		link = LIST_FIRST(&tipc_ppriv->links);
+diff --git a/teamd/teamd_runner_activebackup.c b/teamd/teamd_runner_activebackup.c
+index 35b39a3..e5e89d5 100644
+--- a/teamd/teamd_runner_activebackup.c
++++ b/teamd/teamd_runner_activebackup.c
+@@ -50,6 +50,7 @@ struct ab_hwaddr_policy {
+ };
+ 
+ struct ab {
++	struct teamd_context *ctx;
+ 	uint32_t active_ifindex;
+ 	char active_orig_hwaddr[MAX_ADDR_LEN];
+ 	const struct ab_hwaddr_policy *hwaddr_policy;
+@@ -348,7 +349,7 @@ static int ab_change_active_port(struct teamd_context *ctx, struct ab *ab,
+ 	if (err) {
+ 		if (TEAMD_ENOENT(err))
+ 			/* Queue another best port selection */
+-			teamd_workq_schedule_work(ctx, &ab->link_watch_handler_workq);
++			teamd_workq_schedule_work(ctx->g_ctx, &ab->link_watch_handler_workq);
+ 		else
+ 			return err;
+ 	}
+@@ -416,12 +417,14 @@ static int ab_link_watch_handler(struct teamd_context *ctx, struct ab *ab)
+ 	return 0;
+ }
+ 
+-static int ab_link_watch_handler_work(struct teamd_context *ctx,
++static int ab_link_watch_handler_work(struct global_context *g_ctx,
+ 				      struct teamd_workq *workq)
+ {
+ 	struct ab *ab;
++	struct teamd_context *ctx;
+ 
+ 	ab = get_container(workq, struct ab, link_watch_handler_workq);
++	ctx = ab->ctx;
+ 	return ab_link_watch_handler(ctx, ab);
+ }
+ 
+@@ -580,7 +583,7 @@ struct ab_active_port_set_info {
+ 	uint32_t ifindex;
+ };
+ 
+-static int ab_active_port_set_work(struct teamd_context *ctx,
++static int ab_active_port_set_work(struct global_context *g_ctx,
+ 				   struct teamd_workq *workq)
+ {
+ 	struct ab_active_port_set_info *info;
+@@ -588,9 +591,11 @@ static int ab_active_port_set_work(struct teamd_context *ctx,
+ 	uint32_t ifindex;
+ 	struct teamd_port *tdport;
+ 	struct teamd_port *active_tdport;
++	struct teamd_context *ctx;
+ 
+ 	info = get_container(workq, struct ab_active_port_set_info, workq);
+ 	ab = info->ab;
++	ctx = ab->ctx;
+ 	ifindex = info->ifindex;
+ 	free(info);
+ 	tdport = teamd_get_port(ctx, ifindex);
+@@ -618,7 +623,7 @@ static int ab_state_active_port_set(struct teamd_context *ctx,
+ 	teamd_workq_init_work(&info->workq, ab_active_port_set_work);
+ 	info->ab = ab;
+ 	info->ifindex = tdport->ifindex;
+-	teamd_workq_schedule_work(ctx, &info->workq);
++	teamd_workq_schedule_work(ctx->g_ctx, &info->workq);
+ 	return 0;
+ }
+ 
+@@ -671,6 +676,8 @@ static int ab_init(struct teamd_context *ctx, void *priv)
+ 		teamd_log_err("Failed to register state value group.");
+ 		goto event_watch_unregister;
+ 	}
++
++	ab->ctx = ctx;
+ 	teamd_workq_init_work(&ab->link_watch_handler_workq,
+ 			      ab_link_watch_handler_work);
+ 	return 0;
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index a3be384..b98b376 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -37,6 +37,7 @@
+ #include "teamd_config.h"
+ #include "teamd_state.h"
+ #include "teamd_workq.h"
++#include "teamd_timer.h"
+ 
+ /*
+  * Packet format for LACPDU described in
+@@ -218,6 +219,7 @@ struct lacp {
+ 		struct wr_tdport_state *state;
+ 	} wr;
+ 	struct teamd_balancer *tb;
++	tmr_node_t * lacp_retry_count_timer;
+ };
+ 
+ enum lacp_port_state {
+@@ -263,11 +265,13 @@ struct lacp_port {
+ 		bool sticky;
+ #define		LACP_PORT_CFG_DFLT_STICKY false
+ 	} cfg;
++	tmr_node_t * lacp_periodic_timer;
++	tmr_node_t * lacp_timeout_timer;
+ };
+ 
+ static void generate_path(struct teamd_context *ctx, char path[PATH_MAX], const char* filename)
+ {
+-	strcpy(path, ctx->lacp_directory);
++	strcpy(path, ctx->g_ctx->lacp_directory);
+ 	/* Add trailing slash if we don't have one in the filename */
+ 	if (path[strlen(path) - 1] != '/')
+ 		strcat(path, "/");
+@@ -315,7 +319,7 @@ static void stop_wr_mode(struct lacp *lacp) {
+ 
+ 	teamd_log_info("WR-mode. Stopping WR start mode");
+ 
+-	lacp->ctx->warm_start_mode = false;
++	lacp->ctx->g_ctx->warm_start_mode = false;
+ 	lacp->warm_start_mode_timer = 0;
+ 
+ 	remove_file(lacp->ctx, lacp->ctx->team_devname);
+@@ -785,7 +789,7 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 	int ports_enabled;
+ 	int err;
+ 
+-	if (lacp->ctx->warm_start_mode) {
++	if (lacp->ctx->g_ctx->warm_start_mode) {
+ 		teamd_log_dbg(lacp->ctx, "WR-mode. function lacp_update_carrier()");
+ 	}
+ 
+@@ -799,7 +803,7 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		if (state)
+ 			++ports_enabled;
+ 
+-		if (lacp->ctx->warm_start_mode) {
++		if (lacp->ctx->g_ctx->warm_start_mode) {
+ 			int found;
+ 			struct lacp_port* lacp_port;
+ 			bool linkup;
+@@ -832,7 +836,7 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		}
+ 	}
+ 
+-	if (lacp->ctx->warm_start_mode) {
++	if (lacp->ctx->g_ctx->warm_start_mode) {
+ 		int i;
+ 		bool has_all_ports_added = true;
+ 		for (i = 0; i < lacp->wr.nr_of_tdports; ++i)
+@@ -845,7 +849,7 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		}
+ 	}
+ 
+-	if (lacp->ctx->warm_start_mode) {
++	if (lacp->ctx->g_ctx->warm_start_mode) {
+ 		if (lacp->warm_start_mode_timer == 0) {
+ 			lacp->warm_start_mode_timer = time(NULL) + LACP_WARM_START_CARRIER_TIMEOUT;
+ 		} else if (time(NULL) >= lacp->warm_start_mode_timer) {
+@@ -861,7 +865,7 @@ static int lacp_update_carrier(struct lacp *lacp)
+ 		return lacp_set_carrier(lacp, true);
+ 	}
+ 
+-	if (lacp->ctx->warm_start_mode) {
++	if (lacp->ctx->g_ctx->warm_start_mode) {
+ 		teamd_log_info("WR-mode. lacp_update_carrier(): Keep LAG interface up because of WR start mode");
+ 		return lacp_set_carrier(lacp, true);
+ 	}
+@@ -1187,6 +1191,7 @@ static int slow_addr_del(struct lacp_port *lacp_port)
+ #define LACP_TIMEOUT_CB_NAME "lacp_timeout"
+ #define LACP_RETRY_COUNT_TIMEOUT_CB_NAME "lacp_retry_count_timeout"
+ 
++
+ static int lacp_port_timeout_set(struct lacp_port *lacp_port, bool fast_forced)
+ {
+ 	int err;
+@@ -1197,9 +1202,7 @@ static int lacp_port_timeout_set(struct lacp_port *lacp_port, bool fast_forced)
+ 					LACP_PERIODIC_SHORT: LACP_PERIODIC_LONG;
+ 	ms *= lacp_port->partner_retry_count;
+ 	ms_to_timespec(&ts, ms);
+-	err = teamd_loop_callback_timer_set(lacp_port->ctx,
+-					    LACP_TIMEOUT_CB_NAME,
+-					    lacp_port, NULL, &ts);
++	err = tmr_set_timer(lacp_port->lacp_timeout_timer, ms/1000);
+ 	if (err) {
+ 		teamd_log_err("Failed to set timeout timer.");
+ 		return err;
+@@ -1219,13 +1222,12 @@ static int lacp_port_periodic_set(struct lacp_port *lacp_port)
+ 		      lacp_port->tdport->ifname, fast_on ? "fast": "slow");
+ 	ms = fast_on ? LACP_PERIODIC_SHORT: LACP_PERIODIC_LONG;
+ 	ms_to_timespec(&ts, ms);
+-	err = teamd_loop_callback_timer_set(lacp_port->ctx,
+-					    LACP_PERIODIC_CB_NAME,
+-					    lacp_port, &ts, NULL);
++	err = tmr_set_timer(lacp_port->lacp_periodic_timer, ms/1000);
+ 	if (err) {
+ 		teamd_log_err("Failed to set periodic timer.");
+ 		return err;
+ 	}
++	
+ 	return 0;
+ }
+ 
+@@ -1238,11 +1240,13 @@ static bool lacp_port_should_be_active(struct lacp_port *lacp_port)
+ static void lacp_port_periodic_cb_change_enabled(struct lacp_port *lacp_port)
+ {
+ 	if (lacp_port_should_be_active(lacp_port) && lacp_port->periodic_on)
+-		teamd_loop_callback_enable(lacp_port->ctx,
+-					   LACP_PERIODIC_CB_NAME, lacp_port);
++	{
++		tmr_enable_timer(lacp_port->lacp_periodic_timer);
++	}
+ 	else
+-		teamd_loop_callback_disable(lacp_port->ctx,
+-					    LACP_PERIODIC_CB_NAME, lacp_port);
++	{
++		tmr_disable_timer(lacp_port->lacp_periodic_timer);
++	}
+ }
+ 
+ static void lacp_port_periodic_on(struct lacp_port *lacp_port)
+@@ -1352,8 +1356,7 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 	case PORT_STATE_CURRENT:
+ 		break;
+ 	case PORT_STATE_EXPIRED:
+-		teamd_loop_callback_enable(lacp_port->ctx,
+-					   LACP_PERIODIC_CB_NAME, lacp_port);
++		tmr_enable_timer(lacp_port->lacp_periodic_timer);
+ 		/*
+ 		 * This is a transient state; the LACP_Timeout settings allow
+ 		 * the Actor to transmit LACPDUs rapidly in an attempt to
+@@ -1366,15 +1369,12 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 			return err;
+ 		lacp_port->lacp->cfg.retry_count = LACP_CFG_DFLT_RETRY_COUNT;
+ 		lacp_port->last_received_lacpdu_version = 0x01;
+-		teamd_loop_callback_disable(lacp_port->ctx,
+-					    LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp_port->lacp);
++		tmr_disable_timer(lacp_port->lacp->lacp_retry_count_timer);
+ 		lacp_port_timeout_set(lacp_port, true);
+-		teamd_loop_callback_enable(lacp_port->ctx,
+-					   LACP_TIMEOUT_CB_NAME, lacp_port);
++		tmr_enable_timer(lacp_port->lacp_timeout_timer);
+ 		break;
+ 	case PORT_STATE_DEFAULTED:
+-		teamd_loop_callback_disable(lacp_port->ctx,
+-					    LACP_TIMEOUT_CB_NAME, lacp_port);
++		tmr_disable_timer(lacp_port->lacp_timeout_timer);
+ 		memset(&lacp_port->partner, 0, sizeof(lacp_port->partner));
+ 		lacp_port->partner.state |= INFO_STATE_LACP_TIMEOUT;
+ 		err = lacp_port_partner_update(lacp_port);
+@@ -1603,8 +1603,7 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ 	if (err)
+ 		return err;
+ 
+-	teamd_loop_callback_enable(lacp_port->ctx,
+-				   LACP_TIMEOUT_CB_NAME, lacp_port);
++	tmr_enable_timer(lacp_port->lacp_timeout_timer);
+ 	return 0;
+ }
+ 
+@@ -1628,7 +1627,7 @@ static int lacpdu_recv(struct lacp_port *lacp_port)
+ 		return 0;
+ 
+ 	/* if the lacpdu wasn't read yet, don't process received pdu */
+-	if (lacp_port->ctx->warm_start_mode) {
++	if (lacp_port->ctx->g_ctx->warm_start_mode) {
+ 		int found;
+ 
+ 		found = find_wr_info(lacp_port);
+@@ -1643,8 +1642,7 @@ static int lacpdu_recv(struct lacp_port *lacp_port)
+ 	return lacpdu_process(lacp_port, &lacpdu);
+ }
+ 
+-static int lacp_callback_timeout(struct teamd_context *ctx, int events,
+-				 void *priv)
++static int lacp_callback_timeout(void *priv)
+ {
+ 	struct lacp_port *lacp_port = priv;
+ 	int err = 0;
+@@ -1664,21 +1662,18 @@ static int lacp_callback_timeout(struct teamd_context *ctx, int events,
+ 	return err;
+ }
+ 
+-static int lacp_callback_retry_count_timeout(struct teamd_context *ctx, int events,
+-				 void *priv)
++static int lacp_callback_retry_count_timeout(void *priv)
+ {
+ 	struct lacp *lacp = priv;
+ 
+-	teamd_log_dbg(ctx, "Retry count being reset to %u",
++	teamd_log_dbg(lacp->ctx, "Retry count being reset to %u",
+ 		       LACP_CFG_DFLT_RETRY_COUNT);
+     lacp->cfg.retry_count = LACP_CFG_DFLT_RETRY_COUNT;
+-	teamd_loop_callback_disable(ctx,
+-					LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
++	tmr_disable_timer(lacp->lacp_retry_count_timer);
+     return 0;
+ }
+ 
+-static int lacp_callback_periodic(struct teamd_context *ctx, int events,
+-				  void *priv)
++static int lacp_callback_periodic(void *priv)
+ {
+ 	struct lacp_port *lacp_port = priv;
+ 
+@@ -1686,7 +1681,8 @@ static int lacp_callback_periodic(struct teamd_context *ctx, int events,
+ 	return lacpdu_send(lacp_port);
+ }
+ 
+-static int lacp_callback_socket(struct teamd_context *ctx, int events,
++
++static int lacp_callback_socket(struct global_context *g_ctx, int events,
+ 				void *priv)
+ {
+ 	struct lacp_port *lacp_port = priv;
+@@ -1784,7 +1780,7 @@ static int lacp_port_added(struct teamd_context *ctx,
+ 	if (err)
+ 		goto close_sock;
+ 
+-	err = teamd_loop_callback_fd_add(ctx, LACP_SOCKET_CB_NAME, lacp_port,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, LACP_SOCKET_CB_NAME, lacp_port,
+ 					 lacp_callback_socket,
+ 					 lacp_port->sock,
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+@@ -1793,19 +1789,18 @@ static int lacp_port_added(struct teamd_context *ctx,
+ 		goto slow_addr_del;
+ 	}
+ 
+-	err = teamd_loop_callback_timer_add(ctx, LACP_PERIODIC_CB_NAME,
+-					    lacp_port, lacp_callback_periodic);
+-	if (err) {
+-		teamd_log_err("Failed add periodic callback timer");
++	lacp_port->lacp_periodic_timer = tmr_create_timer(lacp_port, lacp_callback_periodic, TRUE, TIMER_TYPE_SEC);
++	if (lacp_port->lacp_periodic_timer == NULL) {
++		teamd_log_err("Failed to add periodic callback timer");
+ 		goto socket_callback_del;
+ 	}
++
+ 	err = lacp_port_periodic_set(lacp_port);
+ 	if (err)
+ 		goto periodic_callback_del;
+ 
+-	err = teamd_loop_callback_timer_add(ctx, LACP_TIMEOUT_CB_NAME,
+-					    lacp_port, lacp_callback_timeout);
+-	if (err) {
++	lacp_port->lacp_timeout_timer = tmr_create_timer(lacp_port, lacp_callback_timeout, TRUE, TIMER_TYPE_SEC);
++	if (lacp_port->lacp_timeout_timer == NULL) {
+ 		teamd_log_err("Failed add timeout callback timer");
+ 		goto periodic_callback_del;
+ 	}
+@@ -1832,15 +1827,15 @@ static int lacp_port_added(struct teamd_context *ctx,
+ 	lacp_port_actor_init(lacp_port);
+ 	lacp_port_link_update(lacp_port);
+ 
+-	teamd_loop_callback_enable(ctx, LACP_SOCKET_CB_NAME, lacp_port);
++	teamd_loop_callback_enable(ctx->g_ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ 	return 0;
+ 
+ timeout_callback_del:
+-	teamd_loop_callback_del(ctx, LACP_TIMEOUT_CB_NAME, lacp_port);
++	tmr_delete_timer(&lacp_port->lacp_timeout_timer);
+ periodic_callback_del:
+-	teamd_loop_callback_del(ctx, LACP_PERIODIC_CB_NAME, lacp_port);
++	tmr_delete_timer(&lacp_port->lacp_periodic_timer);
+ socket_callback_del:
+-	teamd_loop_callback_del(ctx, LACP_SOCKET_CB_NAME, lacp_port);
++	teamd_loop_callback_del(ctx->g_ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ slow_addr_del:
+ 	slow_addr_del(lacp_port);
+ close_sock:
+@@ -1861,9 +1856,10 @@ static void lacp_port_removed(struct teamd_context *ctx,
+ 		   which sends EXPIRED LACP PDU update */
+ 		lacp_port_set_state(lacp_port, PORT_STATE_DISABLED);
+ 	}
+-	teamd_loop_callback_del(ctx, LACP_TIMEOUT_CB_NAME, lacp_port);
+-	teamd_loop_callback_del(ctx, LACP_PERIODIC_CB_NAME, lacp_port);
+-	teamd_loop_callback_del(ctx, LACP_SOCKET_CB_NAME, lacp_port);
++	tmr_delete_timer(&lacp_port->lacp_timeout_timer);
++	tmr_delete_timer(&lacp_port->lacp_periodic_timer);
++
++	teamd_loop_callback_del(ctx->g_ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ 	slow_addr_del(lacp_port);
+ 	close(lacp_port->sock);
+ }
+@@ -1958,7 +1954,7 @@ static void lacp_event_watch_port_removing(struct teamd_context *ctx,
+ 	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
+ 
+ 	/* Ensure that no incoming LACPDU is going to be processed. */
+-	teamd_loop_callback_disable(ctx, LACP_SOCKET_CB_NAME, lacp_port);
++	teamd_loop_callback_disable(ctx->g_ctx, LACP_SOCKET_CB_NAME, lacp_port);
+ 	lacp_port_set_state(lacp_port, PORT_STATE_DISABLED);
+ }
+ 
+@@ -2007,7 +2003,7 @@ static void lacp_event_watch_port_flush_data(struct teamd_context *ctx, struct t
+ 	}
+ 
+ 	struct lacp_port *lacp_port = lacp_port_get(lacp, tdport);
+-	if (lacp_port->lacpdu_saved && lacp_port->ctx->lacp_directory) {
++	if (lacp_port->lacpdu_saved && lacp_port->ctx->g_ctx->lacp_directory) {
+ 		char filename[PATH_MAX];
+ 		generate_path(lacp_port->ctx, filename, lacp_port->tdport->ifname);
+ 		FILE *fp = fopen(filename, "wb");
+@@ -2018,7 +2014,7 @@ static void lacp_event_watch_port_flush_data(struct teamd_context *ctx, struct t
+ 			teamd_log_err("WR-mode. Can't open file %s for writing %s", filename, strerror(errno));
+ 		}
+ 	} else {
+-		if (lacp_port->ctx->lacp_directory == NULL)
++		if (lacp_port->ctx->g_ctx->lacp_directory == NULL)
+ 			teamd_log_err("WR-mode. Can't dump received lacp pdu for port %s. "
+ 				      "LACP directory wasn't configured", lacp_port->tdport->ifname);
+ 	}
+@@ -2042,7 +2038,7 @@ static int lacp_carrier_init(struct teamd_context *ctx, struct lacp *lacp)
+ 
+ 	lacp->carrier_up = false;
+ 
+-	if (ctx->warm_start_mode) {
++	if (ctx->g_ctx->warm_start_mode) {
+ 		teamd_log_dbg(ctx, "WR-mode. function lacp_carrier_init()");
+ 
+ 		/* Disable WR start mode if LAG interface was down */
+@@ -2052,7 +2048,7 @@ static int lacp_carrier_init(struct teamd_context *ctx, struct lacp *lacp)
+ 			stop_wr_mode(lacp);
+ 			teamd_log_info("WR-mode. Starting in normal mode. The LAG interface was down before restart");
+ 		}
+-		ctx->warm_start_mode = lacp->wr.carrier_up;
++		ctx->g_ctx->warm_start_mode = lacp->wr.carrier_up;
+ 		lacp->carrier_up = lacp->wr.carrier_up;
+ 		lacp->warm_start_mode_timer = 0;
+ 	}
+@@ -2147,15 +2143,17 @@ struct lacp_state_enable_retry_count_info {
+ 	bool enable_retry_count;
+ };
+ 
+-static int lacp_state_enable_retry_count_work(struct teamd_context *ctx,
++static int lacp_state_enable_retry_count_work(struct global_context *g_ctx,
+ 					    struct teamd_workq *workq)
+ {
+ 	struct lacp_state_enable_retry_count_info *info;
+ 	struct lacp *lacp;
+ 	struct teamd_port *tdport;
++	struct teamd_context *ctx;
+ 
+ 	info = get_container(workq, struct lacp_state_enable_retry_count_info, workq);
+ 	lacp = info->lacp;
++	ctx = lacp->ctx;
+ 	if (info->enable_retry_count == lacp->cfg.enable_retry_count)
+ 		return 0;
+ 	lacp->cfg.enable_retry_count = info->enable_retry_count;
+@@ -2167,9 +2165,7 @@ static int lacp_state_enable_retry_count_work(struct teamd_context *ctx,
+ 
+     // Reset all retry counts to the default value
+ 	lacp->cfg.retry_count = LACP_CFG_DFLT_RETRY_COUNT;
+-	teamd_loop_callback_disable(ctx,
+-					LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
+-
++	tmr_disable_timer(lacp->lacp_retry_count_timer);
+ 	teamd_for_each_tdport(tdport, lacp->ctx) {
+ 		struct lacp_port* lacp_port;
+ 
+@@ -2197,7 +2193,7 @@ static int lacp_state_enable_retry_count_set(struct teamd_context *ctx,
+ 	teamd_workq_init_work(&info->workq, lacp_state_enable_retry_count_work);
+ 	info->lacp = lacp;
+ 	info->enable_retry_count = gsc->data.bool_val;
+-	teamd_workq_schedule_work(ctx, &info->workq);
++	teamd_workq_schedule_work(ctx->g_ctx, &info->workq);
+ 	return 0;
+ }
+ 
+@@ -2217,7 +2213,7 @@ struct lacp_state_retry_count_info {
+ 	uint8_t retry_count;
+ };
+ 
+-static int lacp_state_retry_count_work(struct teamd_context *ctx,
++static int lacp_state_retry_count_work(struct global_context *g_ctx,
+ 					    struct teamd_workq *workq)
+ {
+ 	struct lacp_state_retry_count_info *info;
+@@ -2226,9 +2222,11 @@ static int lacp_state_retry_count_work(struct teamd_context *ctx,
+ 	int ms;
+ 	struct timespec ts;
+ 	int err;
++	struct teamd_context *ctx;
+ 
+ 	info = get_container(workq, struct lacp_state_retry_count_info, workq);
+ 	lacp = info->lacp;
++	ctx = lacp->ctx;
+ 	if (info->retry_count == lacp->cfg.retry_count)
+ 		return 0;
+ 	teamd_log_dbg(ctx, "Retry count manually changed from %u to %u",
+@@ -2238,20 +2236,16 @@ static int lacp_state_retry_count_work(struct teamd_context *ctx,
+ 	if (lacp->cfg.retry_count != LACP_CFG_DFLT_RETRY_COUNT) {
+ 		ms = lacp->cfg.retry_count * 3 * 60 * 1000;
+ 		ms_to_timespec(&ts, ms);
+-		err = teamd_loop_callback_timer_set(lacp->ctx,
+-				LACP_RETRY_COUNT_TIMEOUT_CB_NAME,
+-				lacp, NULL, &ts);
++		err = tmr_set_timer(lacp->lacp_retry_count_timer, ms/1000);
+ 		if (err) {
+ 			teamd_log_err("Failed to set retry count timeout timer.");
+ 			// Switch back to default now
+ 			lacp->cfg.retry_count = LACP_CFG_DFLT_RETRY_COUNT;
+ 			return err;
+ 		}
+-		teamd_loop_callback_enable(ctx,
+-				LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
++		tmr_enable_timer(lacp->lacp_retry_count_timer);
+ 	} else {
+-		teamd_loop_callback_disable(ctx,
+-				LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
++		tmr_disable_timer(lacp->lacp_retry_count_timer);
+ 	}
+ 
+ 	teamd_for_each_tdport(tdport, lacp->ctx) {
+@@ -2287,7 +2281,7 @@ static int lacp_state_retry_count_set(struct teamd_context *ctx,
+ 	teamd_workq_init_work(&info->workq, lacp_state_retry_count_work);
+ 	info->lacp = lacp;
+ 	info->retry_count = gsc->data.int_val;
+-	teamd_workq_schedule_work(ctx, &info->workq);
++	teamd_workq_schedule_work(ctx->g_ctx, &info->workq);
+ 	return 0;
+ }
+ 
+@@ -2561,16 +2555,18 @@ struct lacp_port_selected_set_info {
+ 	uint32_t ifindex;
+ };
+ 
+-static int lacp_port_aggregator_select_work(struct teamd_context *ctx,
++static int lacp_port_aggregator_select_work(struct global_context *g_ctx,
+ 					    struct teamd_workq *workq)
+ {
+ 	struct lacp_port_selected_set_info *info;
+ 	struct teamd_port *tdport;
+ 	struct lacp *lacp;
+ 	struct lacp_port *lacp_port;
++	struct teamd_context *ctx;
+ 
+ 	info = get_container(workq, struct lacp_port_selected_set_info, workq);
+ 	lacp = info->lacp;
++	ctx = lacp->ctx;
+ 	tdport = teamd_get_port(ctx, info->ifindex);
+ 	free(info);
+ 	if (!tdport)
+@@ -2599,7 +2595,7 @@ static int lacp_port_state_aggregator_selected_set(struct teamd_context *ctx,
+ 	teamd_workq_init_work(&info->workq, lacp_port_aggregator_select_work);
+ 	info->lacp = lacp;
+ 	info->ifindex = gsc->info.tdport->ifindex;
+-	teamd_workq_schedule_work(ctx, &info->workq);
++	teamd_workq_schedule_work(ctx->g_ctx, &info->workq);
+ 	return 0;
+ }
+ 
+@@ -2715,7 +2711,7 @@ static int lacp_init(struct teamd_context *ctx, void *priv)
+ 	}
+ 
+ 	lacp->ctx = ctx;
+-	if (ctx->warm_start_mode) {
++	if (ctx->g_ctx->warm_start_mode) {
+ 		err = lacp_state_load(ctx, lacp);
+ 		if (err)
+ 			stop_wr_mode(lacp);
+@@ -2749,10 +2745,10 @@ static int lacp_init(struct teamd_context *ctx, void *priv)
+ 		teamd_log_err("Failed to register state groups.");
+ 		goto balancer_fini;
+ 	}
+-	err = teamd_loop_callback_timer_add(ctx, LACP_RETRY_COUNT_TIMEOUT_CB_NAME,
+-					    lacp, lacp_callback_retry_count_timeout);
+-	if (err) {
+-		teamd_log_err("Failed to add retry count timeout callback timer");
++
++	lacp->lacp_retry_count_timer = tmr_create_timer(lacp, lacp_callback_retry_count_timeout, TRUE, TIMER_TYPE_SEC);
++	if (lacp->lacp_retry_count_timer == NULL) {
++		teamd_log_err("Failed to add LACP retry count timeout callback timer");
+ 		goto balancer_fini;
+ 	}
+ 	return 0;
+@@ -2768,9 +2764,9 @@ static void lacp_fini(struct teamd_context *ctx, void *priv)
+ {
+ 	struct lacp *lacp = priv;
+ 
+-	if (ctx->lacp_directory)
++	if (ctx->g_ctx->lacp_directory)
+ 		lacp_state_save(ctx, lacp);
+-	teamd_loop_callback_del(ctx, LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp);
++	tmr_delete_timer(&lacp->lacp_retry_count_timer);
+ 	teamd_state_val_unregister(ctx, &lacp_state_vg, lacp);
+ 	teamd_balancer_fini(lacp->tb);
+ 	teamd_event_watch_unregister(ctx, &lacp_event_watch_ops, lacp);
+diff --git a/teamd/teamd_state.c b/teamd/teamd_state.c
+index 0714880..52ead2e 100644
+--- a/teamd/teamd_state.c
++++ b/teamd/teamd_state.c
+@@ -625,7 +625,7 @@ static int setup_state_dbus_enabled_get(struct teamd_context *ctx,
+ 					void *priv)
+ {
+ #ifdef ENABLE_DBUS
+-	gsc->data.bool_val = ctx->dbus.enabled;
++	gsc->data.bool_val = ctx->g_ctx->dbus.enabled;
+ #else
+ 	gsc->data.bool_val = false;
+ #endif
+@@ -637,7 +637,7 @@ static int setup_state_zmq_enabled_get(struct teamd_context *ctx,
+ 					void *priv)
+ {
+ #ifdef ENABLE_ZMQ
+-	gsc->data.bool_val = ctx->zmq.enabled;
++	gsc->data.bool_val = ctx->g_ctx->zmq.enabled;
+ #else
+ 	gsc->data.bool_val = false;
+ #endif
+@@ -648,7 +648,7 @@ static int setup_state_debug_level_get(struct teamd_context *ctx,
+ 				       struct team_state_gsc *gsc,
+ 				       void *priv)
+ {
+-	gsc->data.int_val = ctx->debug;
++	gsc->data.int_val = ctx->g_ctx->debug;
+ 	return 0;
+ }
+ 
+@@ -665,7 +665,7 @@ static int setup_state_daemonized_get(struct teamd_context *ctx,
+ 				      struct team_state_gsc *gsc,
+ 				      void *priv)
+ {
+-	gsc->data.bool_val = ctx->daemonize;
++	gsc->data.bool_val = ctx->g_ctx->daemonize;
+ 	return 0;
+ }
+ 
+@@ -681,7 +681,7 @@ static int setup_state_pid_file_get(struct teamd_context *ctx,
+ 				    struct team_state_gsc *gsc,
+ 				    void *priv)
+ {
+-	gsc->data.str_val.ptr = ctx->pid_file ? ctx->pid_file : "";
++	gsc->data.str_val.ptr = ctx->g_ctx->pid_file ? ctx->g_ctx->pid_file : "";
+ 	return 0;
+ }
+ 
+diff --git a/teamd/teamd_timer.c b/teamd/teamd_timer.c
+new file mode 100644
+index 0000000..6abee07
+--- /dev/null
++++ b/teamd/teamd_timer.c
+@@ -0,0 +1,407 @@
++#include "teamd_timer.h"
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <sys/timerfd.h>
++#include <string.h>
++#include <time.h>
++
++int timer_debug = 0;
++static struct tmr_global_data g_tmr_data[TIMER_TYPE_MAX];
++
++/**
++ * Get monotonic time in seconds (immune to system time changes)
++ */
++static time_t get_monotonic_time(tmr_type_t tmr_type) {
++    struct timespec ts;
++    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
++        timer_log_err("[TMR] clock_gettime(CLOCK_MONOTONIC) failed");
++        return 0;
++    }
++    return (tmr_type == TIMER_TYPE_MS) ? (ts.tv_sec * 1000 + ts.tv_nsec / 1000000) : ts.tv_sec;
++}
++
++/**
++ * Calculate which slot in the timer wheel for a given delay
++ * @param delay Delay in secs or ms
++ * @return Slot index in timer wheel
++ */
++static int calculate_wheel_slot(tmr_node_t* node, int delay) {
++
++    if (delay <= 0) delay = 1;
++    /* For 100ms timer, since delay is in ms, we need to convert it to slot index */
++    if (node->tmr_type == TIMER_TYPE_MS) delay = delay / 100;
++    return (g_tmr_data[node->tmr_type].current_wheel_position + delay) % g_tmr_data[node->tmr_type].wheel_size;
++}
++
++/**
++ * Insert timer node into the appropriate wheel slot - O(1) operation
++ * @param node Timer node to insert
++ * @param delay Delay in secs or ms
++ */
++static void insert_timer_node_wheel(tmr_node_t* node, int delay) {
++    int slot = calculate_wheel_slot(node, delay);
++    node->wheel_slot = slot;
++    // Insert at head of the doubly linked list for this slot
++    if (g_tmr_data[node->tmr_type].timer_wheel[slot]) {
++        g_tmr_data[node->tmr_type].timer_wheel[slot]->prev = node;
++    }
++    node->next = g_tmr_data[node->tmr_type].timer_wheel[slot];
++    node->prev = NULL;
++    g_tmr_data[node->tmr_type].timer_wheel[slot] = node;
++    
++    timer_log_info("[TMR] Inserted timer %p into slot %d (delay: %d%s, expire time: %ld)\n", 
++           node, slot, delay, node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec", node->expire_time);
++}
++
++/**
++ * Remove node from timer wheel - O(1) operation
++ */
++static void remove_timer_node_wheel(tmr_node_t* node) {
++    int slot = node->wheel_slot;
++    
++    if (slot < 0 || slot >= g_tmr_data[node->tmr_type].wheel_size) {
++        timer_log_err("[TMR] Timer %p Invalid wheel slot %d\n", node, slot);
++        return;
++    }
++    
++    // FIX: Verify node is actually in the expected slot
++    tmr_node_t* current = g_tmr_data[node->tmr_type].timer_wheel[slot];
++    bool found = false;
++    while (current) {
++        if (current == node) {
++            found = true;
++            break;
++        }
++        current = current->next;
++    }
++    
++    if (!found) {
++        timer_log_warn("[TMR] Timer %p not found in expected slot %d\n", node, slot);
++        return;
++    }
++
++    if (node->prev) {
++        node->prev->next = node->next;
++    } else {
++        // Node is head of the list for this slot
++        g_tmr_data[node->tmr_type].timer_wheel[slot] = node->next;
++    }
++    
++    if (node->next) {
++        node->next->prev = node->prev;
++    }
++    
++    // Clear pointers for safety
++    node->prev = NULL;
++    node->next = NULL;
++    node->wheel_slot = -1;
++    timer_log_info("[TMR] Removed timer %p from slot %d\n", node, slot);
++}
++
++// Exported API functions
++int _tmr_init(tmr_type_t tmr_type, int wheel_size) {
++    if (g_tmr_data[tmr_type].is_initialized) {
++        timer_log_warn("[TMR] Timer type %s system already initialized\n", tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++        return 0;
++    }
++    g_tmr_data[tmr_type].wheel_size = wheel_size;
++    g_tmr_data[tmr_type].current_wheel_position = 0;
++    g_tmr_data[tmr_type].is_initialized = 1;
++    g_tmr_data[tmr_type].timer_fd = -1;
++    g_tmr_data[tmr_type].timer_wheel = malloc(wheel_size * sizeof(tmr_node_t*));
++    if (!g_tmr_data[tmr_type].timer_wheel) {
++        timer_log_err("[TMR] Failed to allocate timer wheel for timer type %s\n", tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++        return -1;
++    }
++
++    // Initialize all wheel slots to NULL
++    for (int i = 0; i < wheel_size; i++) {
++        g_tmr_data[tmr_type].timer_wheel[i] = NULL;
++    }
++
++    timer_log_info("[TMR] Timer wheel system initialized wheel start time %ld wheel size: %d)\n", \
++            get_monotonic_time(tmr_type), wheel_size);
++    return 0;
++}
++
++int tmr_init(void) {
++    _tmr_init(TIMER_TYPE_SEC, TMR_WHEEL_SIZE_SECS);
++    _tmr_init(TIMER_TYPE_MS, TMR_WHEEL_SIZE_MS);
++    return 0;
++}
++
++void _tmr_cleanup(tmr_type_t tmr_type) {
++    if (!g_tmr_data[tmr_type].is_initialized) {
++        return;
++    }
++    
++    timer_log_info("[TMR] Cleaning up timer wheel...\n");
++    int cleaned_count = 0;
++    int wheel_size = g_tmr_data[tmr_type].wheel_size;
++    
++    for (int i = 0; i < wheel_size; i++) {
++        tmr_node_t* current = g_tmr_data[tmr_type].timer_wheel[i];
++        while (current) {
++            tmr_node_t* next = current->next;
++            free(current);
++            cleaned_count++;
++            current = next;
++        }
++        g_tmr_data[tmr_type].timer_wheel[i] = NULL;
++    }
++    free(g_tmr_data[tmr_type].timer_wheel);
++    if(g_tmr_data[tmr_type].timer_fd != -1)
++    {
++        close(g_tmr_data[tmr_type].timer_fd);
++        g_tmr_data[tmr_type].timer_fd = -1;
++    }
++    g_tmr_data[tmr_type].is_initialized = 0;
++    timer_log_info("[TMR] Cleaned up %d timer nodes\n", cleaned_count);
++}
++
++void tmr_cleanup(void) {
++    _tmr_cleanup(TIMER_TYPE_MS);
++    _tmr_cleanup(TIMER_TYPE_SEC);
++}
++
++int tmr_create_fd(tmr_type_t tmr_type) {
++    int timer_fd;
++    struct itimerspec timer_spec;
++    
++    timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
++    if (timer_fd == -1) {
++        timer_log_err("[TMR] timerfd_create failed");
++        return -1;
++    }
++    
++    // Set 1-second repeating timer using MONOTONIC clock
++    timer_spec.it_value.tv_sec = (tmr_type == TIMER_TYPE_MS) ? 0 : 1;
++    timer_spec.it_value.tv_nsec = (tmr_type == TIMER_TYPE_MS) ? 100000000 : 0;
++    timer_spec.it_interval.tv_sec = (tmr_type == TIMER_TYPE_MS) ? 0 : 1;  // Repeat every 1 second
++    timer_spec.it_interval.tv_nsec = (tmr_type == TIMER_TYPE_MS) ? 100000000 : 0;
++    
++    if (timerfd_settime(timer_fd, 0, &timer_spec, NULL) == -1) {
++        timer_log_err("[TMR] timerfd_settime failed");
++        close(timer_fd);
++        return -1;
++    }
++    
++    timer_log_info("[TMR] Created %s MONOTONIC timer FD: %d\n", tmr_type == TIMER_TYPE_MS ? "ms" : "sec", timer_fd);
++    g_tmr_data[tmr_type].timer_fd = timer_fd;
++    return timer_fd;
++}
++
++tmr_node_t* tmr_create_timer(void* user_data, tmr_callback_t callback, bool periodic, tmr_type_t tmr_type) {
++    if (!g_tmr_data[tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer system not initialized\n");
++        return NULL;
++    }
++
++    if (!user_data || !callback) {
++        timer_log_err("[TMR] Invalid parameters: user_data=%p, callback=%p\n", user_data, callback);
++        return NULL;
++    }
++
++    tmr_node_t* node = malloc(sizeof(tmr_node_t));
++    if (!node) {
++        timer_log_err("[TMR] Failed to allocate timer node\n");
++        return NULL;
++    }
++
++    node->user_data = user_data;
++    node->callback = callback;
++    node->expire_time = 0;
++    node->wheel_slot = -1;
++    node->prev = NULL;
++    node->next = NULL;
++    node->periodic = periodic;
++    node->interval = 0;
++    node->enabled = false;
++    node->tmr_type = tmr_type;
++
++    timer_log_info("[TMR] Created timer %p %s\n", node, (periodic) ? "periodic" : "one-shot");
++    return node;
++}
++
++int tmr_set_timer(tmr_node_t* node, int delay) {
++    if (!g_tmr_data[node->tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer system not initialized\n");
++        return -1;
++    }
++    
++    if (delay <= 0) {
++        timer_log_err("[TMR] Invalid delay %d\n", delay);
++        return -1;
++    }
++
++    if(node->enabled) {
++        // Remove from current slot
++        if (node->wheel_slot != -1)
++            remove_timer_node_wheel(node);
++        // Use monotonic time for expiration - immune to system time changes
++        node->expire_time = get_monotonic_time(node->tmr_type) + delay;
++        // Re-insert in correct slot
++        insert_timer_node_wheel(node, delay);
++    }
++
++    node->interval = delay;
++    timer_log_info("[TMR] Set timer %p with %d%s delay\n", node, delay, node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++    return 0;
++}
++
++int tmr_enable_timer(tmr_node_t* node) {
++    if (!node) {
++        timer_log_err("[TMR] Timer node is NULL\n");
++        return -1;
++    }
++
++    if (!g_tmr_data[node->tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer type %s system not initialized\n", node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++        return -1;
++    }
++
++    if (node->interval <= 0) {
++        timer_log_err("[TMR] Timer %p has no interval set (call tmr_set_timer first)\n", node);
++        return -1;
++    }
++
++    if(node->enabled == false) {
++        node->enabled = true;
++        // Use monotonic time for expiration - immune to system time changes
++        node->expire_time = get_monotonic_time(node->tmr_type) + node->interval;
++        insert_timer_node_wheel(node, node->interval);
++        timer_log_info("[TMR] Enabled timer %p with %d%s delay (monotonic expire: %ld)\n", 
++           node, node->interval, node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec", node->expire_time);
++    } else {
++        timer_log_info("[TMR] Timer %p is already enabled\n", node);
++    }
++
++    return 0;
++}
++
++int tmr_disable_timer(tmr_node_t* node) {
++    if (!node) {
++        timer_log_err("[TMR] Timer node is NULL\n");
++        return -1;
++    }
++
++    if (!g_tmr_data[node->tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer type %s system not initialized\n", node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++        return -1;
++    }
++
++    if(node->enabled == false) {
++        timer_log_err("[TMR] Timer %p is already disabled\n", node);
++        return -1;
++    }
++    node->enabled = false;
++    // Remove from timer wheel
++    if (node->wheel_slot != -1)
++        remove_timer_node_wheel(node);
++
++    timer_log_info("[TMR] Disabled timer %p\n", node);
++    return 0;
++}
++
++int tmr_delete_timer(tmr_node_t ** node) {
++    if (*node == NULL) {
++        timer_log_err("[TMR] Timer node is NULL\n");
++        return -1;
++    }
++
++    if (!g_tmr_data[(*node)->tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer system not initialized\n");
++        return -1;
++    }
++    
++    timer_log_info("[TMR] Deleting timer %p\n", *node);
++    // Remove from wheel if currently scheduled
++    if ((*node)->wheel_slot != -1) {
++        remove_timer_node_wheel(*node);
++    }   
++    free(*node);
++    *node = NULL;
++    
++    return 0;
++}
++
++int tmr_reschedule_timer(tmr_node_t* node, int delay) {
++    if (!g_tmr_data[node->tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer system not initialized\n");
++        return -1;
++    }
++    
++    if (!node) {
++        timer_log_err("[TMR] Invalid timer node\n");
++        return -1;
++    }
++    
++    if (delay <= 0) {
++        timer_log_err("[TMR] Invalid delay %d (must be greater than 0)\n", delay);
++        return -1;
++    }
++    
++    timer_log_info("[TMR] Rescheduling timer %p from slot %d with %d%s delay\n", 
++           node, node->wheel_slot, delay, node->tmr_type == TIMER_TYPE_MS ? "ms" : "sec");
++    
++    // Update expiration time using monotonic clock
++    node->expire_time = get_monotonic_time(node->tmr_type) + delay;
++    
++    // Remove from current slot
++    remove_timer_node_wheel(node);
++    
++    // Re-insert in correct slot
++    insert_timer_node_wheel(node, delay);
++    
++    timer_log_info("[TMR] Timer %p rescheduled successfully (new monotonic expire: %ld)\n", 
++           node, node->expire_time);
++    return 0;
++}
++
++int tmr_advance_wheel(tmr_type_t tmr_type) {
++    if (!g_tmr_data[tmr_type].is_initialized) {
++        timer_log_err("[TMR] Timer system not initialized\n");
++        return -1;
++    }
++    
++    time_t current_monotonic_time = get_monotonic_time(tmr_type);
++    int delay_adjustment = (tmr_type == TIMER_TYPE_MS) ? 100 : 1;
++    
++    timer_log_dbg("[TMR] Advancing wheel for %s timer from slot %d to slot %d (monotonic time: %ld)\n", 
++           tmr_type == TIMER_TYPE_MS ? "ms" : "sec", g_tmr_data[tmr_type].current_wheel_position, (g_tmr_data[tmr_type].current_wheel_position + 1) % g_tmr_data[tmr_type].wheel_size,
++           current_monotonic_time);
++    
++    // Move to next slot
++    g_tmr_data[tmr_type].current_wheel_position = (g_tmr_data[tmr_type].current_wheel_position + 1) % g_tmr_data[tmr_type].wheel_size;
++    
++    // Process all timers in current slot
++    tmr_node_t* current = g_tmr_data[tmr_type].timer_wheel[g_tmr_data[tmr_type].current_wheel_position];
++    while (current) {
++        tmr_node_t* next = current->next;  // Save next before processing
++
++        if (current->enabled && ((current_monotonic_time+delay_adjustment) >= current->expire_time)) {
++            timer_log_dbg("[TMR] %s timer processing expired timer %p in slot %d (monotonic: %ld >= %ld)\n", 
++                   tmr_type == TIMER_TYPE_MS ? "ms" : "sec", current, g_tmr_data[tmr_type].current_wheel_position, current_monotonic_time, current->expire_time);
++            
++            // Call user's callback function
++            if (current->callback) 
++                current->callback(current->user_data);      
++
++            // Callback can disable the timer, so check if it is still enabled
++            if (current->periodic && current->enabled)
++                tmr_reschedule_timer(current, current->interval);
++            else if (current->periodic == false)
++                tmr_disable_timer(current);
++        
++        } else {
++            timer_log_info("[TMR] %s timer %p in slot %d not yet expired (monotonic: %ld < %ld)\n",
++                   tmr_type == TIMER_TYPE_MS ? "ms" : "sec", current, g_tmr_data[tmr_type].current_wheel_position, current_monotonic_time, current->expire_time);
++        }
++        
++        current = next;
++    }
++    
++    return 0;
++}
++
+diff --git a/teamd/teamd_timer.h b/teamd/teamd_timer.h
+new file mode 100644
+index 0000000..1450bb2
+--- /dev/null
++++ b/teamd/teamd_timer.h
+@@ -0,0 +1,128 @@
++#ifndef TIMER_H
++#define TIMER_H
++
++#include <time.h>
++#include <stdint.h>
++#include <stdbool.h>
++#include <assert.h>
++#include "teamd.h"
++
++#define timer_log_dbg(args...)	\
++	({ if (timer_debug&0x2) teamd_log_info(args); })
++#define timer_log_info(args...)	\
++	({ if (timer_debug) teamd_log_info(args); })
++#define timer_log_warn(args...)	\
++	({ if (timer_debug) teamd_log_warn(args); })
++#define timer_log_err(args...)	\
++	({ if (timer_debug) teamd_log_err(args); })
++
++// Timer wheel configuration
++#define TMR_WHEEL_SIZE_SECS 120  //120 seconds wheel (0-119)
++#define TMR_WHEEL_SIZE_MS 20  //20 milliseconds wheel (0-19)
++
++typedef enum tmr_type {
++    TIMER_TYPE_SEC,
++    TIMER_TYPE_MS,
++    TIMER_TYPE_MAX
++}tmr_type_t;
++
++// Forward declarations
++typedef struct tmr_node tmr_node_t;
++typedef int (*tmr_callback_t)(void* data);
++
++struct tmr_global_data {
++    tmr_node_t** timer_wheel;
++    int wheel_size;
++    int current_wheel_position;
++    int is_initialized;
++    int timer_fd;
++};
++
++// Timer node structure (opaque to users)
++struct tmr_node {
++    void* user_data;           // Pointer to user's data structure
++    tmr_callback_t callback;   // Callback function to process expired timer
++    time_t expire_time;        // Absolute expiration time
++    int wheel_slot;            // Which slot in the timer wheel
++    tmr_node_t* prev;          // Previous node in the same slot
++    tmr_node_t* next;          // Next node in the same slot
++    bool enabled;              // Timer enabled flag
++    bool periodic;             // Timer periodic flag
++    int interval;              // Timer interval
++    tmr_type_t tmr_type;          // 0: second timer, 1: millisecond timer
++};
++
++// Timer library API functions (exported with tmr_ prefix)
++
++/**
++ * Initialize the timer wheel system
++ * @return 0 on success, -1 on error
++ */
++int tmr_init(void);
++
++void _tmr_cleanup(tmr_type_t tmr_type);
++
++/**
++ * Cleanup and shutdown the timer wheel system
++ */
++void tmr_cleanup(void);
++
++/**
++ * Create a timer file descriptor with 1-second interval
++ * @return Timer file descriptor on success, -1 on error
++ */
++int tmr_create_fd(tmr_type_t tmr_type);
++
++/**
++ * Create a timer node
++ * @param user_data Pointer to user's data structure
++ * @param callback Function to call when timer expires
++ * @return Timer node pointer on success, NULL on error
++ */
++tmr_node_t* tmr_create_timer(void* user_data, tmr_callback_t callback, bool periodic, tmr_type_t tmr_type);
++
++/**
++ * Set a timer node
++ * @param node Timer node to set
++ * @param delay Delay in seconds or ms
++ * @return Timer node pointer on success, NULL on error
++ */
++int tmr_set_timer(tmr_node_t* node, int delay);
++
++/**
++ * Enable a timer node
++ * @param node Timer node to enable
++ * @return Timer node pointer on success, NULL on error
++ */
++int tmr_enable_timer(tmr_node_t* node);
++
++/**
++ * Disable a timer node
++ * @param node Timer node to disable
++ * @return Timer node pointer on success, NULL on error
++ */
++int tmr_disable_timer(tmr_node_t* node);
++
++/**
++ * Delete a timer node
++ * @param node Timer node to delete
++ * @return 0 on success, -1 on error
++ */
++int tmr_delete_timer(tmr_node_t ** node);
++
++/**
++ * Reschedule an existing timer with new delay
++ * @param node Timer node to reschedule
++ * @param delay New delay in seconds or ms
++ * @return 0 on success, -1 on error
++ */
++int tmr_reschedule_timer(tmr_node_t* node, int delay);
++
++/**
++ * Advance timer wheel by one second and process expired timers
++ * Called when timer FD becomes readable
++ * @return Number of timers processed
++ */
++int tmr_advance_wheel(tmr_type_t tmr_type);
++
++#endif // TIMER_H
+diff --git a/teamd/teamd_usock.c b/teamd/teamd_usock.c
+index 1adfdf8..4171c89 100644
+--- a/teamd/teamd_usock.c
++++ b/teamd/teamd_usock.c
+@@ -163,7 +163,7 @@ static const struct teamd_ctl_method_ops teamd_usock_ctl_method_ops = {
+ 	.reply_succ = usock_op_reply_succ,
+ };
+ 
+-static int process_rcv_msg(struct teamd_context *ctx, int sock, char *rcv_msg)
++static int process_rcv_msg(struct global_context *g_ctx, int sock, char *rcv_msg)
+ {
+ 	struct usock_ops_priv usock_ops_priv;
+ 	char *str;
+@@ -171,37 +171,35 @@ static int process_rcv_msg(struct teamd_context *ctx, int sock, char *rcv_msg)
+ 
+ 	str = teamd_usock_msg_getline(&rest);
+ 	if (!str) {
+-		teamd_log_dbg(ctx, "usock: Incomplete message.");
++		teamd_log_err("usock: Incomplete message.");
+ 		return 0;
+ 	}
+ 	if (strcmp(TEAMD_USOCK_REQUEST_PREFIX, str)) {
+-		teamd_log_dbg(ctx, "usock: Unsupported message type.");
++		teamd_log_err("usock: Unsupported message type.");
+ 		return 0;
+ 	}
+ 
+ 	str = teamd_usock_msg_getline(&rest);
+ 	if (!str) {
+-		teamd_log_dbg(ctx, "usock: Incomplete message.");
++		teamd_log_err("usock: Incomplete message.");
+ 		return 0;
+ 	}
+ 	if (!teamd_ctl_method_exists(str)) {
+-		teamd_log_dbg(ctx, "usock: Unknown method \"%s\".", str);
++		teamd_log_err("usock: Unknown method \"%s\".", str);
+ 		return 0;
+ 	}
+ 
+ 	usock_ops_priv.sock = sock;
+ 	usock_ops_priv.rcv_msg_args = rest;
+ 
+-	teamd_log_dbg(ctx, "usock: calling method \"%s\"", str);
+-
+-	return teamd_ctl_method_call(ctx, str, &teamd_usock_ctl_method_ops,
++	return teamd_ctl_method_call(g_ctx, str, &teamd_usock_ctl_method_ops,
+ 				     &usock_ops_priv);
+ }
+ 
+-static void acc_conn_destroy(struct teamd_context *ctx,
++static void acc_conn_destroy(struct global_context *g_ctx,
+ 			     struct usock_acc_conn *acc_conn);
+ 
+-static int callback_usock_acc_conn(struct teamd_context *ctx, int events,
++static int callback_usock_acc_conn(struct global_context *g_ctx, int events,
+ 				   void *priv)
+ {
+ 	struct usock_acc_conn *acc_conn = priv;
+@@ -210,20 +208,20 @@ static int callback_usock_acc_conn(struct teamd_context *ctx, int events,
+ 
+ 	err = teamd_usock_recv_msg(acc_conn->sock, &msg);
+ 	if (err == -EPIPE || err == -ECONNRESET) {
+-		acc_conn_destroy(ctx, acc_conn);
++		acc_conn_destroy(g_ctx, acc_conn);
+ 		return 0;
+ 	} else if (err) {
+ 		teamd_log_err("usock: Failed to receive data from connection.");
+ 		return err;
+ 	}
+-	err = process_rcv_msg(ctx, acc_conn->sock, msg);
++	err = process_rcv_msg(g_ctx, acc_conn->sock, msg);
+ 	free(msg);
+ 	return err;
+ }
+ 
+ #define USOCK_ACC_CONN_CB_NAME "usock_acc_conn"
+ 
+-static int acc_conn_create(struct teamd_context *ctx, int sock)
++static int acc_conn_create(struct global_context *g_ctx, int sock)
+ {
+ 	struct usock_acc_conn *acc_conn;
+ 	int err;
+@@ -234,14 +232,14 @@ static int acc_conn_create(struct teamd_context *ctx, int sock)
+ 		return -ENOMEM;
+ 	}
+ 	acc_conn->sock = sock;
+-	err = teamd_loop_callback_fd_add(ctx, USOCK_ACC_CONN_CB_NAME, acc_conn,
++	err = teamd_loop_callback_fd_add(g_ctx, USOCK_ACC_CONN_CB_NAME, acc_conn,
+ 					 callback_usock_acc_conn,
+ 					 acc_conn->sock,
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+ 	if (err)
+ 		goto free_acc_conn;
+-	teamd_loop_callback_enable(ctx, USOCK_ACC_CONN_CB_NAME, acc_conn);
+-	list_add(&ctx->usock.acc_conn_list, &acc_conn->list);
++	teamd_loop_callback_enable(g_ctx, USOCK_ACC_CONN_CB_NAME, acc_conn);
++	list_add(&g_ctx->usock.acc_conn_list, &acc_conn->list);
+ 	return 0;
+ 
+ free_acc_conn:
+@@ -249,27 +247,27 @@ free_acc_conn:
+ 	return err;
+ }
+ 
+-static void acc_conn_destroy(struct teamd_context *ctx,
++static void acc_conn_destroy(struct global_context *g_ctx,
+ 			     struct usock_acc_conn *acc_conn)
+ {
+ 
+-	teamd_loop_callback_del(ctx, USOCK_ACC_CONN_CB_NAME, acc_conn);
++	teamd_loop_callback_del(g_ctx, USOCK_ACC_CONN_CB_NAME, acc_conn);
+ 	close(acc_conn->sock);
+ 	list_del(&acc_conn->list);
+ 	free(acc_conn);
+ }
+ 
+-static void acc_conn_destroy_all(struct teamd_context *ctx)
++static void acc_conn_destroy_all(struct global_context *g_ctx)
+ {
+ 	struct usock_acc_conn *acc_conn;
+ 	struct usock_acc_conn *tmp;
+ 
+ 	list_for_each_node_entry_safe(acc_conn, tmp,
+-				      &ctx->usock.acc_conn_list, list)
+-		acc_conn_destroy(ctx, acc_conn);
++				      &g_ctx->usock.acc_conn_list, list)
++		acc_conn_destroy(g_ctx, acc_conn);
+ }
+ 
+-static int callback_usock(struct teamd_context *ctx, int events, void *priv)
++static int callback_usock(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	struct sockaddr_un addr;
+ 	socklen_t alen;
+@@ -277,12 +275,12 @@ static int callback_usock(struct teamd_context *ctx, int events, void *priv)
+ 	int err;
+ 
+ 	alen = sizeof(addr);
+-	sock = accept(ctx->usock.sock, &addr, &alen);
++	sock = accept(g_ctx->usock.sock, &addr, &alen);
+ 	if (sock == -1) {
+ 		teamd_log_err("usock: Failed to accept connection.");
+ 		return -errno;
+ 	}
+-	err = acc_conn_create(ctx, sock);
++	err = acc_conn_create(g_ctx, sock);
+ 	if (err) {
+ 		close(sock);
+ 		return err;
+@@ -292,7 +290,7 @@ static int callback_usock(struct teamd_context *ctx, int events, void *priv)
+ 
+ #define USOCK_MAX_CLIENT_COUNT 10
+ 
+-static int teamd_usock_sock_open(struct teamd_context *ctx)
++static int teamd_usock_sock_open(struct global_context *g_ctx)
+ {
+ 	struct sockaddr_un addr;
+ 	int sock;
+@@ -313,9 +311,9 @@ static int teamd_usock_sock_open(struct teamd_context *ctx)
+ 
+ 	addr.sun_family = AF_UNIX;
+ 	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
+-				 ctx->team_devname);
++				 g_ctx->process_name, TRUE);
+ 
+-	teamd_log_dbg(ctx, "usock: Using sockpath \"%s\"", addr.sun_path);
++	teamd_log_info("usock: Using sockpath \"%s\"", addr.sun_path);
+ 	err = unlink(addr.sun_path);
+ 	if (err == -1 && errno != ENOENT) {
+ 		teamd_log_err("usock: Failed to remove socket file.");
+@@ -332,8 +330,8 @@ static int teamd_usock_sock_open(struct teamd_context *ctx)
+ 	}
+ 	listen(sock, USOCK_MAX_CLIENT_COUNT);
+ 
+-	ctx->usock.sock = sock;
+-	ctx->usock.addr = addr;
++	g_ctx->usock.sock = sock;
++	g_ctx->usock.addr = addr;
+ 	return 0;
+ 
+ close_sock:
+@@ -341,41 +339,41 @@ close_sock:
+ 	return err;
+ }
+ 
+-static void teamd_usock_sock_close(struct teamd_context *ctx)
++static void teamd_usock_sock_close(struct global_context *g_ctx)
+ {
+-	close(ctx->usock.sock);
+-	unlink(ctx->usock.addr.sun_path);
++	close(g_ctx->usock.sock);
++	unlink(g_ctx->usock.addr.sun_path);
+ }
+ 
+ #define USOCK_CB_NAME "usock"
+ 
+-int teamd_usock_init(struct teamd_context *ctx)
++int teamd_usock_init(struct global_context *g_ctx)
+ {
+ 	int err;
+ 
+-	if (!ctx->usock.enabled)
++	if (!g_ctx->usock.enabled)
+ 		return 0;
+-	list_init(&ctx->usock.acc_conn_list);
+-	err = teamd_usock_sock_open(ctx);
++	list_init(&g_ctx->usock.acc_conn_list);
++	err = teamd_usock_sock_open(g_ctx);
+ 	if (err)
+ 		return err;
+-	err = teamd_loop_callback_fd_add(ctx, USOCK_CB_NAME, ctx,
+-					 callback_usock, ctx->usock.sock,
++	err = teamd_loop_callback_fd_add(g_ctx, USOCK_CB_NAME, g_ctx,
++					 callback_usock, g_ctx->usock.sock,
+ 					 TEAMD_LOOP_FD_EVENT_READ);
+ 	if (err)
+ 		goto sock_close;
+-	teamd_loop_callback_enable(ctx, USOCK_CB_NAME, ctx);
++	teamd_loop_callback_enable(g_ctx, USOCK_CB_NAME, g_ctx);
+ 	return 0;
+ sock_close:
+-	teamd_usock_sock_close(ctx);
++	teamd_usock_sock_close(g_ctx);
+ 	return err;
+ }
+ 
+-void teamd_usock_fini(struct teamd_context *ctx)
++void teamd_usock_fini(struct global_context *g_ctx)
+ {
+-	if (!ctx->usock.enabled)
++	if (!g_ctx->usock.enabled)
+ 		return;
+-	acc_conn_destroy_all(ctx);
+-	teamd_loop_callback_del(ctx, USOCK_CB_NAME, ctx);
+-	teamd_usock_sock_close(ctx);
++	acc_conn_destroy_all(g_ctx);
++	teamd_loop_callback_del(g_ctx, USOCK_CB_NAME, g_ctx);
++	teamd_usock_sock_close(g_ctx);
+ }
+diff --git a/teamd/teamd_usock.h b/teamd/teamd_usock.h
+index 85d6beb..1990f9a 100644
+--- a/teamd/teamd_usock.h
++++ b/teamd/teamd_usock.h
+@@ -20,7 +20,7 @@
+ #ifndef _TEAMD_USOCK_H_
+ #define _TEAMD_USOCK_H_
+ 
+-int teamd_usock_init(struct teamd_context *ctx);
+-void teamd_usock_fini(struct teamd_context *ctx);
++int teamd_usock_init(struct global_context *g_ctx);
++void teamd_usock_fini(struct global_context *g_ctx);
+ 
+ #endif /* _TEAMD_USOCK_H_ */
+diff --git a/teamd/teamd_usock_common.h b/teamd/teamd_usock_common.h
+index 0790d0b..dee94ad 100644
+--- a/teamd/teamd_usock_common.h
++++ b/teamd/teamd_usock_common.h
+@@ -31,10 +31,24 @@
+ #define TEAMD_USOCK_REPLY_ERR_PREFIX	"REPLY_ERROR"
+ #define TEAMD_USOCK_REPLY_SUCC_PREFIX	"REPLY_SUCCESS"
+ 
+-static inline void teamd_usock_get_sockpath(char *sockpath, size_t sockpath_len,
+-					    const char *team_devname)
++
++static inline int teamd_usock_get_sockpath(char *sockpath, size_t sockpath_len,
++					    const char *team_devname, bool server)
+ {
+ 	snprintf(sockpath, sockpath_len, TEAMD_RUN_DIR"%s.sock", team_devname);
++	if(server)
++	{
++		return 0;
++	}
++	else
++	{
++		if(access(sockpath, F_OK) == 0)
++		{
++			return 0;
++		}
++		snprintf(sockpath, sockpath_len, TEAMD_RUN_DIR"teamd-unified.sock");
++		return 1;
++	}
+ }
+ 
+ static inline int teamd_usock_recv_msg(int sock, char **p_str)
+diff --git a/teamd/teamd_utldll.c b/teamd/teamd_utldll.c
+new file mode 100644
+index 0000000..c26c962
+--- /dev/null
++++ b/teamd/teamd_utldll.c
+@@ -0,0 +1,95 @@
++#include "teamd_utldll.h"
++
++void dll_init(DLLHeader *hdr, size_t offset) {
++    hdr->head = hdr->tail = NULL;
++    hdr->count = 0;
++    hdr->offset = offset;
++}
++
++void dll_insert_front(DLLHeader *hdr, void *entry) {
++    DLLNode *node = (DLLNode *)((char *)entry + hdr->offset);
++    node->prev = NULL;
++    node->next = hdr->head;
++
++    if (hdr->head)
++        hdr->head->prev = node;
++    else
++        hdr->tail = node;
++
++    hdr->head = node;
++    hdr->count++;
++}
++
++void dll_insert_end(DLLHeader *hdr, void *entry) {
++    DLLNode *node = (DLLNode *)((char *)entry + hdr->offset);
++    node->next = NULL;
++    node->prev = hdr->tail;
++
++    if (hdr->tail)
++        hdr->tail->next = node;
++    else
++        hdr->head = node;
++
++    hdr->tail = node;
++    hdr->count++;
++}
++
++void dll_remove(DLLHeader *hdr, void *entry) {
++    DLLNode *node = (DLLNode *)((char *)entry + hdr->offset);
++
++    if (node->prev)
++        node->prev->next = node->next;
++    else
++        hdr->head = node->next;
++
++    if (node->next)
++        node->next->prev = node->prev;
++    else
++        hdr->tail = node->prev;
++
++    hdr->count--;
++}
++
++void* dll_pop_front(DLLHeader *hdr) {
++    if (!hdr->head)
++        return NULL;
++
++    DLLNode *node = hdr->head;
++    hdr->head = node->next;
++
++    if (hdr->head)
++        hdr->head->prev = NULL;
++    else
++        hdr->tail = NULL;
++
++    hdr->count--;
++    return (void *)((char *)node - hdr->offset);
++}
++
++void* dll_pop_end(DLLHeader *hdr) {
++    if (!hdr->tail)
++        return NULL;
++
++    DLLNode *node = hdr->tail;
++    hdr->tail = node->prev;
++
++    if (hdr->tail)
++        hdr->tail->next = NULL;
++    else
++        hdr->head = NULL;
++
++    hdr->count--;
++    return (void *)((char *)node - hdr->offset);
++}
++
++void* dll_find(DLLHeader *hdr, bool (*cmp)(void *entry, void *arg), void *arg) {
++    DLLNode *node = hdr->head;
++    while (node) {
++        void *entry = (char *)node - hdr->offset;
++        if (cmp(entry, arg))
++            return entry;
++        node = node->next;
++    }
++    return NULL;
++}
++
+diff --git a/teamd/teamd_utldll.h b/teamd/teamd_utldll.h
+new file mode 100644
+index 0000000..9ee318c
+--- /dev/null
++++ b/teamd/teamd_utldll.h
+@@ -0,0 +1,49 @@
++#ifndef __UTLDLL_H__
++#define __UTLDLL_H__
++
++#include <stddef.h>
++#include <stdbool.h>
++
++typedef struct DLLNode {
++    struct DLLNode *prev;
++    struct DLLNode *next;
++} DLLNode;
++
++typedef struct {
++    DLLNode *head;
++    DLLNode *tail;
++    size_t count;
++    size_t offset;
++} DLLHeader;
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++void dll_init(DLLHeader *hdr, size_t offset);
++void dll_insert_front(DLLHeader *hdr, void *entry);
++void dll_insert_end(DLLHeader *hdr, void *entry);
++void dll_remove(DLLHeader *hdr, void *entry);
++void* dll_pop_front(DLLHeader *hdr);
++void* dll_pop_end(DLLHeader *hdr);
++void* dll_find(DLLHeader *hdr, bool (*cmp)(void *entry, void *arg), void *arg);
++
++#define DLL_COUNT(hdr)     ((hdr)->count)
++#define DLL_FIRST(hdr)     ((hdr)->head)
++#define DLL_LAST(hdr)      ((hdr)->tail)
++
++#define DLL_ENTRY(node, type, member) \
++    ((type *)((char *)(node) - offsetof(type, member)))
++
++#define DLL_FOREACH(hdr, iter) \
++    for ((iter) = (hdr)->head; (iter) != NULL; (iter) = (iter)->next)
++
++#define DLL_FOREACH_REVERSE(hdr, iter) \
++    for ((iter) = (hdr)->tail; (iter) != NULL; (iter) = (iter)->prev)
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif // __UTLDLL_H__
++
+diff --git a/teamd/teamd_utlhash.c b/teamd/teamd_utlhash.c
+new file mode 100644
+index 0000000..af84d27
+--- /dev/null
++++ b/teamd/teamd_utlhash.c
+@@ -0,0 +1,51 @@
++#include <stdlib.h>
++#include "teamd_utlhash.h"
++#include "teamd.h"
++
++bool hash_table_init(HashTable *ht, size_t bucket_count, size_t offset,
++                     size_t (*hash_func)(void *, size_t),
++                     bool (*key_eq_func)(void *, void *)) {
++    ht->buckets = (DLLHeader *)calloc(bucket_count, sizeof(DLLHeader));
++    if (!ht->buckets)
++        return false;
++
++    ht->bucket_count = bucket_count;
++    ht->offset = offset;
++    ht->hash_func = hash_func;
++    ht->key_eq_func = key_eq_func;
++
++    for (size_t i = 0; i < bucket_count; i++)
++        dll_init(&ht->buckets[i], offset);
++
++    return true;
++}
++
++void hash_table_insert(HashTable *ht, void *entry) {
++    size_t index = ht->hash_func(entry, ht->bucket_count);
++    teamd_log_info("Inserting entry %p into bucket %zu", entry, index);
++    dll_insert_end(&ht->buckets[index], entry);
++}
++
++void* hash_table_find(HashTable *ht, void *key) {
++    for (size_t i = 0; i < ht->bucket_count; i++) {
++        DLLNode *node;
++        DLL_FOREACH(&ht->buckets[i], node) {
++            void *entry = (char *)node - ht->offset;
++            if (ht->key_eq_func(entry, key))
++                return entry;
++        }
++    }
++    return NULL;
++}
++
++void hash_table_remove(HashTable *ht, void *entry) {
++    size_t index = ht->hash_func(entry, ht->bucket_count);
++    dll_remove(&ht->buckets[index], entry);
++}
++
++void hash_table_destroy(HashTable *ht) {
++    free(ht->buckets);
++    ht->buckets = NULL;
++    ht->bucket_count = 0;
++}
++
+diff --git a/teamd/teamd_utlhash.h b/teamd/teamd_utlhash.h
+new file mode 100644
+index 0000000..cd13e78
+--- /dev/null
++++ b/teamd/teamd_utlhash.h
+@@ -0,0 +1,41 @@
++#ifndef __UTLHASH_H__
++#define __UTLHASH_H__
++
++#include <stddef.h>
++#include <stdbool.h>
++#include "teamd_utldll.h"
++
++typedef struct {
++    DLLHeader *buckets;
++    size_t bucket_count;
++    size_t offset;
++    size_t (*hash_func)(void *entry, size_t bucket_count);
++    bool (*key_eq_func)(void *entry, void *key);
++} HashTable;
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++bool hash_table_init(HashTable *ht, size_t bucket_count, size_t offset,
++                     size_t (*hash_func)(void *, size_t),
++                     bool (*key_eq_func)(void *, void *));
++
++void hash_table_insert(HashTable *ht, void *entry);
++void* hash_table_find(HashTable *ht, void *key);
++void hash_table_remove(HashTable *ht, void *entry);
++void hash_table_destroy(HashTable *ht);
++
++#define HASH_TABLE_BUCKET_COUNT(ht) ((ht)->bucket_count)
++
++// Iterate all entries in all buckets
++#define HASH_TABLE_FOREACH_ALL(ht, bkt, iter) \
++    for (size_t bkt = 0; bkt < (ht)->bucket_count; bkt++) \
++        for ((iter) = (ht)->buckets[bkt].head; (iter) != NULL; (iter) = (iter)->next)
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif // __UTLHASH_H__
++
+diff --git a/teamd/teamd_workq.c b/teamd/teamd_workq.c
+index 96635ca..df8a870 100644
+--- a/teamd/teamd_workq.c
++++ b/teamd/teamd_workq.c
+@@ -27,7 +27,7 @@
+ 
+ #define WORKQ_CB_NAME "workq"
+ 
+-static int teamd_workq_callback_socket(struct teamd_context *ctx, int events,
++static int teamd_workq_callback_socket(struct global_context *g_ctx, int events,
+ 				       void *priv)
+ {
+ 	struct teamd_workq *workq;
+@@ -37,7 +37,7 @@ static int teamd_workq_callback_socket(struct teamd_context *ctx, int events,
+ 	int err;
+ 
+ again:
+-	ret = read(ctx->workq.pipe_r, bytes, sizeof(bytes));
++	ret = read(g_ctx->workq.pipe_r, bytes, sizeof(bytes));
+ 	if (ret == -1) {
+ 		if (errno == EINTR)
+ 			goto again;
+@@ -45,33 +45,33 @@ again:
+ 			return -errno;
+ 	}
+ 
+-	teamd_loop_callback_disable(ctx, WORKQ_CB_NAME, ctx);
++	teamd_loop_callback_disable(g_ctx, WORKQ_CB_NAME, g_ctx);
+ 
+-	list_for_each_node_entry_safe(workq, tmp, &ctx->workq.work_list, list) {
++	list_for_each_node_entry_safe(workq, tmp, &g_ctx->workq.work_list, list) {
+ 		list_del(&workq->list);
+ 		list_init(&workq->list);
+-		err = workq->func(ctx, workq);
++		err = workq->func(g_ctx, workq);
+ 		if (err)
+ 			return err;
+ 	}
+ 	return 0;
+ }
+ 
+-int teamd_workq_init(struct teamd_context *ctx)
++int teamd_workq_init(struct global_context *g_ctx)
+ {
+ 	int fds[2];
+ 	int err;
+ 
+-	list_init(&ctx->workq.work_list);
++	list_init(&g_ctx->workq.work_list);
+ 	err = pipe2(fds, O_NONBLOCK);
+ 	if (err)
+ 		return -errno;
+-	ctx->workq.pipe_r = fds[0];
+-	ctx->workq.pipe_w = fds[1];
++	g_ctx->workq.pipe_r = fds[0];
++	g_ctx->workq.pipe_w = fds[1];
+ 
+-	err = teamd_loop_callback_fd_add_tail(ctx, WORKQ_CB_NAME, ctx,
++	err = teamd_loop_callback_fd_add_tail(g_ctx, WORKQ_CB_NAME, g_ctx,
+ 					      teamd_workq_callback_socket,
+-					      ctx->workq.pipe_r,
++					      g_ctx->workq.pipe_r,
+ 					      TEAMD_LOOP_FD_EVENT_READ);
+ 	if (err) {
+ 		teamd_log_err("Failed add workq callback.");
+@@ -80,44 +80,44 @@ int teamd_workq_init(struct teamd_context *ctx)
+ 	return 0;
+ 
+ close_pipe:
+-	close(ctx->workq.pipe_r);
+-	close(ctx->workq.pipe_w);
++	close(g_ctx->workq.pipe_r);
++	close(g_ctx->workq.pipe_w);
+ 	return 0;
+ }
+ 
+-void teamd_workq_fini(struct teamd_context *ctx)
++void teamd_workq_fini(struct global_context *g_ctx)
+ {
+ 	struct teamd_workq *workq;
+ 	struct teamd_workq *tmp;
+ 
+-	teamd_loop_callback_del(ctx, WORKQ_CB_NAME, ctx);
+-	close(ctx->workq.pipe_r);
+-	close(ctx->workq.pipe_w);
+-	list_for_each_node_entry_safe(workq, tmp, &ctx->workq.work_list, list) {
++	teamd_loop_callback_del(g_ctx, WORKQ_CB_NAME, g_ctx);
++	close(g_ctx->workq.pipe_r);
++	close(g_ctx->workq.pipe_w);
++	list_for_each_node_entry_safe(workq, tmp, &g_ctx->workq.work_list, list) {
+ 		list_del(&workq->list);
+ 		list_init(&workq->list);
+ 	}
+ }
+ 
+-static void teamd_workq_set_for_process(struct teamd_context *ctx)
++static void teamd_workq_set_for_process(struct global_context *g_ctx)
+ {
+ 	int err;
+ 	const char byte = 0;
+ 
+ retry:
+-	err = write(ctx->workq.pipe_w, &byte, 1);
++	err = write(g_ctx->workq.pipe_w, &byte, 1);
+ 	if (err == -1 && errno == EINTR)
+ 		goto retry;
+-	teamd_loop_callback_enable(ctx, WORKQ_CB_NAME, ctx);
++	teamd_loop_callback_enable(g_ctx, WORKQ_CB_NAME, g_ctx);
+ }
+ 
+-void teamd_workq_schedule_work(struct teamd_context *ctx,
++void teamd_workq_schedule_work(struct global_context *g_ctx,
+ 			       struct teamd_workq *workq)
+ {
+ 	if (!list_empty(&workq->list))
+ 		return;
+-	list_add_tail(&ctx->workq.work_list, &workq->list);
+-	teamd_workq_set_for_process(ctx);
++	list_add_tail(&g_ctx->workq.work_list, &workq->list);
++	teamd_workq_set_for_process(g_ctx);
+ }
+ 
+ void teamd_workq_init_work(struct teamd_workq *workq, teamd_workq_func_t func)
+diff --git a/teamd/teamd_workq.h b/teamd/teamd_workq.h
+index cbc2c5f..e2835df 100644
+--- a/teamd/teamd_workq.h
++++ b/teamd/teamd_workq.h
+@@ -23,16 +23,16 @@
+ #include "teamd.h"
+ 
+ struct teamd_workq;
+-typedef int (*teamd_workq_func_t)(struct teamd_context *ctx,
++typedef int (*teamd_workq_func_t)(struct global_context *g_ctx,
+ 				  struct teamd_workq *workq);
+ struct teamd_workq {
+ 	struct list_item list;
+ 	teamd_workq_func_t func;
+ };
+ 
+-int teamd_workq_init(struct teamd_context *ctx);
+-void teamd_workq_fini(struct teamd_context *ctx);
+-void teamd_workq_schedule_work(struct teamd_context *ctx,
++int teamd_workq_init(struct global_context *g_ctx);
++void teamd_workq_fini(struct global_context *g_ctx);
++void teamd_workq_schedule_work(struct global_context *g_ctx,
+ 			       struct teamd_workq *workq);
+ void teamd_workq_init_work(struct teamd_workq *workq, teamd_workq_func_t func);
+ 
+diff --git a/teamd/teamd_zmq.c b/teamd/teamd_zmq.c
+index 3f3c2f6..7c7a67c 100644
+--- a/teamd/teamd_zmq.c
++++ b/teamd/teamd_zmq.c
+@@ -156,22 +156,23 @@ static int process_rcv_msg(struct teamd_context *ctx, char *rcv_msg)
+ 		return 0;
+ 	}
+ 
+-	zmq_ops_priv.sock = ctx->zmq.sock;
++	zmq_ops_priv.sock = ctx->g_ctx->zmq.sock;
+ 	zmq_ops_priv.rcv_msg_args = rest;
+ 
+ 	teamd_log_dbg(ctx, "zmq: calling method \"%s\"", str);
+ 
+-	return teamd_ctl_method_call(ctx, str, &teamd_zmq_ctl_method_ops,
++	return teamd_ctl_method_call(ctx->g_ctx, str, &teamd_zmq_ctl_method_ops,
+ 				     &zmq_ops_priv);
+ }
+ 
+-static int callback_zmq(struct teamd_context *ctx, int events, void *priv)
++static int callback_zmq(struct global_context *g_ctx, int events, void *priv)
+ {
+ 	int err = 0;
+ 	int poolmask;
+ 	size_t poolmask_size = sizeof(poolmask);
++	struct teamd_context *ctx = priv;
+ 
+-	err = zmq_getsockopt(ctx->zmq.sock, ZMQ_EVENTS, &poolmask,
++	err = zmq_getsockopt(g_ctx->zmq.sock, ZMQ_EVENTS, &poolmask,
+ 			     &poolmask_size);
+ 	if (err == -1)
+ 		return -errno;
+@@ -180,7 +181,7 @@ static int callback_zmq(struct teamd_context *ctx, int events, void *priv)
+ 		zmq_msg_t msg;
+ 
+ 		zmq_msg_init(&msg);
+-		if (zmq_msg_recv(&msg, ctx->zmq.sock, 0) == -1) {
++		if (zmq_msg_recv(&msg, g_ctx->zmq.sock, 0) == -1) {
+ 			zmq_msg_close(&msg);
+ 			return -errno;
+ 		}
+@@ -192,7 +193,7 @@ static int callback_zmq(struct teamd_context *ctx, int events, void *priv)
+ 		if (err == -1)
+ 			break;
+ 
+-		err = zmq_getsockopt(ctx->zmq.sock, ZMQ_EVENTS, &poolmask,
++		err = zmq_getsockopt(g_ctx->zmq.sock, ZMQ_EVENTS, &poolmask,
+ 				     &poolmask_size);
+ 		if (err == -1)
+ 			return -errno;
+@@ -221,8 +222,8 @@ static int teamd_zmq_sock_open(struct teamd_context *ctx)
+ 		return -errno;
+ 	}
+ 
+-	if (ctx->zmq.addr) {
+-		addr = ctx->zmq.addr;
++	if (ctx->g_ctx->zmq.addr) {
++		addr = ctx->g_ctx->zmq.addr;
+ 	} else {
+ 		err = teamd_config_string_get(ctx, &addr, "$.runner.addr");
+ 		if (err) {
+@@ -238,8 +239,8 @@ static int teamd_zmq_sock_open(struct teamd_context *ctx)
+ 		goto close_sock;
+ 	}
+ 
+-	ctx->zmq.context = context;
+-	ctx->zmq.sock = sock;
++	ctx->g_ctx->zmq.context = context;
++	ctx->g_ctx->zmq.sock = sock;
+ 	return 0;
+ 
+ close_sock:
+@@ -250,8 +251,8 @@ close_sock:
+ 
+ static void teamd_zmq_sock_close(struct teamd_context *ctx)
+ {
+-	zmq_close(ctx->zmq.sock);
+-	zmq_ctx_destroy(ctx->zmq.context);
++	zmq_close(ctx->g_ctx->zmq.sock);
++	zmq_ctx_destroy(ctx->g_ctx->zmq.context);
+ }
+ 
+ #define ZMQ_CB_NAME "zmq"
+@@ -262,7 +263,7 @@ int teamd_zmq_init(struct teamd_context *ctx)
+ 	int fd;
+ 	size_t fd_size;
+ 
+-	if (!ctx->zmq.enabled)
++	if (!ctx->g_ctx->zmq.enabled)
+ 		return 0;
+ 	err = teamd_zmq_sock_open(ctx);
+ 	if (err)
+@@ -270,13 +271,13 @@ int teamd_zmq_init(struct teamd_context *ctx)
+ 
+ 
+ 	fd_size = sizeof(fd);
+-	zmq_getsockopt(ctx->zmq.sock, ZMQ_FD, &fd, &fd_size);
++	zmq_getsockopt(ctx->g_ctx->zmq.sock, ZMQ_FD, &fd, &fd_size);
+ 
+-	err = teamd_loop_callback_fd_add(ctx, ZMQ_CB_NAME, ctx, callback_zmq,
++	err = teamd_loop_callback_fd_add(ctx->g_ctx, ZMQ_CB_NAME, ctx, callback_zmq,
+ 					 fd, TEAMD_LOOP_FD_EVENT_READ);
+ 	if (err)
+ 		goto sock_close;
+-	teamd_loop_callback_enable(ctx, ZMQ_CB_NAME, ctx);
++	teamd_loop_callback_enable(ctx->g_ctx, ZMQ_CB_NAME, ctx);
+ 	return 0;
+ sock_close:
+ 	teamd_zmq_sock_close(ctx);
+@@ -285,9 +286,9 @@ sock_close:
+ 
+ void teamd_zmq_fini(struct teamd_context *ctx)
+ {
+-	if (!ctx->zmq.enabled)
++	if (!ctx->g_ctx->zmq.enabled)
+ 		return;
+-	teamd_loop_callback_del(ctx, ZMQ_CB_NAME, ctx);
++	teamd_loop_callback_del(ctx->g_ctx, ZMQ_CB_NAME, ctx);
+ 	teamd_zmq_sock_close(ctx);
+ }
+ 
+diff --git a/utils/teamnl.c b/utils/teamnl.c
+index c53345d..62f7aa6 100644
+--- a/utils/teamnl.c
++++ b/utils/teamnl.c
+@@ -186,7 +186,7 @@ static int run_main_loop(struct team_handle *th)
+ 	FD_SET(sfd, &rfds);
+ 	fdmax = sfd;
+ 
+-	tfd = team_get_event_fd(th);
++	tfd = team_get_event_fd(th, NULL);
+ 	FD_SET(tfd, &rfds);
+ 	if (tfd > fdmax)
+ 		fdmax = tfd;
+@@ -224,7 +224,7 @@ static int run_main_loop(struct team_handle *th)
+ 
+ 		}
+ 		if (FD_ISSET(tfd, &rfds_tmp)) {
+-			err = team_handle_events(th);
++			err = team_handle_events(th, NULL);
+ 			if (err) {
+ 				fprintf(stderr, "Team handle events failed\n");
+ 				return err;
+@@ -483,10 +483,17 @@ static int call_cmd(char *team_devname, char *cmd_name,
+ 		    struct cmd_ctx *cmd_ctx, run_cmd_t run_cmd)
+ {
+ 	struct team_handle *th;
++	struct team_netlink *tnl;
+ 	uint32_t ifindex;
+ 	int err;
+ 
+-	th = team_alloc();
++	tnl = team_netlink_alloc();
++	if (!tnl) {
++		fprintf(stderr, "Team netlink alloc failed.\n");
++                return -ENOMEM;
++        }
++
++	th = team_alloc(tnl);
+ 	if (!th) {
+ 		fprintf(stderr, "Team alloc failed.\n");
+ 		return -ENOMEM;
+@@ -512,6 +519,7 @@ static int call_cmd(char *team_devname, char *cmd_name,
+ 	err = run_cmd(cmd_name, th, cmd_ctx);
+ 
+ team_free:
++	team_netlink_free(tnl);
+ 	team_free(th);
+ 	return err;
+ }
