@@ -4,8 +4,12 @@ module sonic-evpn {
     namespace "http://github.com/sonic-net/sonic-evpn";
     prefix sevpn;
 
-    import sonic-interface {
-        prefix sinterface;
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
     }
 
     organization
@@ -49,13 +53,14 @@ module sonic-evpn {
 
                 key "ifname";
 
-                /*
-                 * It's not possible to have a leafref pointing to two separate models
-                 * (INTERFACE and PORTCHANNEL), so a raw interface name is used instead.
-                 */
                 leaf ifname {
-                    type string {
-                        length 1..128;
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
                     }
                 }
 
