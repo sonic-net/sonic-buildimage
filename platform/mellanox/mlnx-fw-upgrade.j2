@@ -229,6 +229,13 @@ function WaitForDevice() {
     local SPC_MST_DEV
     local QUERY_RC=""
 
+    LogInfo "Restarting MST device"
+    /usr/bin/mst restart --with_i2cdev
+    ERROR_CODE="$?"
+    if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+        ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
+    fi
+
     while : ; do
         SPC_MST_DEV=$(GetSPCMstDevice)
         ${QUERY_XML} -d ${SPC_MST_DEV} -o ${QUERY_FILE}
