@@ -1,0 +1,33 @@
+From bbe3646519822410212159850436cdc7499e6fdf Mon Sep 17 00:00:00 2001
+From: Abhishek Dosi <abdosi@microsoft.com>
+Date: Thu, 24 Jul 2025 01:51:14 +0000
+Subject: [PATCH] zebra: Fix crash on macvlan link down/up
+
+Signed-off-by: Abhishek Dosi <abdosi@microsoft.com>
+---
+ zebra/zebra_vxlan.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/zebra/zebra_vxlan.c b/zebra/zebra_vxlan.c
+index c6ff5089c..bafd40456 100644
+--- a/zebra/zebra_vxlan.c
++++ b/zebra/zebra_vxlan.c
+@@ -4783,6 +4783,15 @@ void zebra_vxlan_macvlan_up(struct interface *ifp)
+ 	zif = ifp->info;
+ 	assert(zif);
+ 	link_ifp = zif->link;
++	if (!link_ifp) {
++		if (IS_ZEBRA_DEBUG_VXLAN)
++			zlog_debug(
++				"macvlan parent link is not found. Parent index %d ifp %s",
++				zif->link_ifindex,
++				ifindex2ifname(zif->link_ifindex,
++					       ifp->vrf->vrf_id));
++		return;
++	}
+ 	link_zif = link_ifp->info;
+ 	assert(link_zif);
+ 
+-- 
+2.25.1
+
