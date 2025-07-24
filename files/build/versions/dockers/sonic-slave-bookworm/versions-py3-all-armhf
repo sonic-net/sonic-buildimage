@@ -1,2 +1,2 @@
-protobuf==4.25.6
-psutil==6.1.1
+protobuf==4.25.8
+psutil==7.0.0

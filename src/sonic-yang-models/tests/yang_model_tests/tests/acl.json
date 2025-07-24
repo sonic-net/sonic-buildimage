@@ -181,5 +181,26 @@
     },
     "ACL_RULE_WITH_TUNNEL_TERMINATION": {
         "desc": "ACL Rule with Tunnel Termination"
+    },
+    "ACL_TABLE_INNERSRCMACREWRITE_TABLE": {
+        "desc": "ACL_TABLE Validate type INNERSRCMACREWRITE."
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_INNER_SRC_MAC_REWRITE_ACTION": {
+        "desc": "Configure INNERSRCMACREWRITE ACL TABLE with invalid rewrite action",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_INNER_SRC_MAC_REWRITE_ACTION_INVALID_MAC": {
+        "desc": "Configure INNERSRCMACREWRITE ACL TABLE with invalid MAC address format",
+        "eStrKey": "Pattern"
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_TUNNEL_VNI": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with invalid VNI ID",
+        "eStrKey": "Range"
+    },
+    "ACL_RULE_WITH_TUNNEL_VNI":{
+        "desc": "Configure a ACL rule with VNI ID"
+    },
+    "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
+        "desc": "Configure INNERSRCMACREWRITE ACL with no inner src IP"
     }
 }

@@ -278,7 +278,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 	debhelper \
         autotools-dev \
         libbsd-dev \
-        pkg-config \
+        pkgconf \
         check \
 # For mpdecimal
         docutils-common \
@@ -358,6 +358,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libevent-dev \
 # For libyang
         swig \
+        pkgconf \
+        tcl-expect \
+# xxhash on buster is too old for libyang3, causes build issues, skip
+#       libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
 # For build dtb
         device-tree-compiler \
 # For sonic-mgmt-framework
@@ -416,7 +422,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libdbus-1-dev \
         libgirepository1.0-dev \
         libsystemd-dev \
-        pkg-config \
+        pkgconf \
 # For sonic-swss-common build
         libhiredis-dev \
 # For audisp-tacplus
@@ -551,9 +557,6 @@ RUN pip3 install MarkupSafe==2.0.1
 RUN pip3 install Jinja2==3.0.3
 
 # For sonic-mgmt-framework
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-RUN pip2 install "PyYAML==5.4.1" --no-build-isolation
-RUN pip3 install "PyYAML==5.4.1" --no-build-isolation
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN pip2 install "lxml==4.9.1"
@@ -650,7 +653,7 @@ RUN eatmydata apt-get install -y nodejs
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN eatmydata apt-get install -y rsync dh-python
 
-RUN eatmydata apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
+RUN eatmydata apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkgconf:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
 
 RUN eatmydata apt-get install -y -t buster-backports \
         libbpf-dev:$arch

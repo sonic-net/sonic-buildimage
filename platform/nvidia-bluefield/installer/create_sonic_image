@@ -42,7 +42,7 @@ GRUB_CFG="" # Common Grub Config
 BF2_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x01000000 earlycon=pl011,0x01800000"
 BF2_GRUB_CFG="$BF2_BOOT_ARGS isolcpus=1-7 nohz_full=1-7 rcu_nocbs=1-7"
 BF3_BOOT_ARGS="console=ttyAMA1 console=hvc0 console=ttyAMA0 earlycon=pl011,0x13010000"
-BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-13 nohz_full=1-13 rcu_nocbs=1-13"
+BF3_GRUB_CFG="$BF3_BOOT_ARGS isolcpus=1-10 nohz_full=1-10 rcu_nocbs=1-10"
 
 usage() {
 cat << EOF
@@ -184,7 +184,7 @@ cat > scripts/initrd-install << EOF
 #!/bin/bash
 
 depmod -a $KERNEL_VERSION > /dev/null 2>&1
-insmod /mlx-bootctl.ko
+insmod /mlxbf-bootctl.ko
 insmod /sdhci-of-dwcmshc.ko
 insmod /sbsa_gwdt.ko
 /usr/sbin/watchdog
@@ -292,15 +292,8 @@ create_bfb_image() {
         copy_bin $tool
     done
 
-    kernel_mft=$(dpkg -l | grep kernel-mft-dkms-modules | awk '/^ii/ {print $2}')
-    if [[ $kernel_mft == "" ]]; then
-        echo "ERROR: kernel-mft-dkms-modules package is not installed"
-        exit 1
-    fi
-
     for tool in `dpkg -L mft` \
             `dpkg -L mft-oem` \
-            `dpkg -L $kernel_mft` \
             `dpkg -L xmlstarlet | grep -v share`
     do
         if [ -d $tool ]; then
@@ -375,7 +368,7 @@ main() {
     VMLINUZ=$CDIR/$FILESYSTEM_ROOT/boot/vmlinuz-$KERNEL_VERSION
     MODULES_DIR=$CDIR/$FILESYSTEM_ROOT/lib/modules/$KERNEL_VERSION
     WATCHDOG=$MODULES_DIR/kernel/drivers/watchdog/sbsa_gwdt.ko
-    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlx-bootctl.ko
+    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-bootctl.ko
     TMFIFO_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-tmfifo.ko
     SDHCI_OF_DWCMSHC_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/sdhci-of-dwcmshc.ko
 

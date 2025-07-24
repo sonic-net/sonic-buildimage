@@ -4,7 +4,7 @@ async-timeout==4.0.3
 atomicwrites==1.1.5
 attrs==18.2.0
 babel==2.6.0
-bitarray==3.0.0
+bitarray==3.4.2
 blkinfo==0.2.0
 certifi==2018.8.24
 chardet==3.0.4
@@ -26,7 +26,7 @@ jinja2==3.0.3
 keyring==17.1.1
 keyrings.alt==3.1.1
 lxml==4.9.1
-m2crypto==0.43.0
+m2crypto==0.45.1
 mako==1.0.7
 markdown==3.0.1
 markupsafe==2.0.1
@@ -44,14 +44,14 @@ pexpect==4.8.0
 pillow==9.4.0
 pip==24.0
 pluggy==0.8.0
-psutil==6.1.1
+psutil==7.0.0
 ptyprocess==0.7.0
 py==1.7.0
 pyang==2.4.0
 pyangbind==0.8.1
 pycrypto==2.6.1
 pycurl==7.43.0.2
-pyfakefs==5.7.4
+pyfakefs==5.9.0
 pygments==2.3.1
 pygobject==3.30.4
 pympler==0.8
@@ -65,7 +65,6 @@ python-debian==0.1.35
 python-magic==0.4.16
 pytz==2019.1
 pyxdg==0.25
-pyyaml==5.4.1
 redis==5.0.8
 regex==2024.4.16
 requests==2.21.0

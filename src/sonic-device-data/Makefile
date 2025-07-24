@@ -21,12 +21,19 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	mkdir ./device
 	cp -r -L ../../../device/*/* ./device/
 
+	if [ "$(CONFIGURED_PLATFORM)" = "mellanox" ]; then \
+		for sai_profile in `find device/ -name sai.profile | grep simx`; do \
+			echo SAI_KEY_IS_SIMX=1 >> $$sai_profile; \
+		done; \
+	fi;
+
 	# Create hwsku for virtual switch
 	for d in `find -L ../../../device -maxdepth 3 -mindepth 3 -type d | grep -vE "(plugins|led-code|sonic_platform)"`; do \
 		# check if hwsku dir exists, if yes, then continue
 		if [ -d device/x86_64-kvm_x86_64-r0/$$(basename $$d) ]; then \
 			cp ./sai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai.profile; \
 			cp ./sai_mlnx.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai_mlnx.profile; \
+			cp ./sai_vpp.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai_vpp.profile; \
 			cp ./pai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/pai.profile; \
 			cp ./fabriclanemap_vs.ini device/x86_64-kvm_x86_64-r0/$$(basename $$d)/fabriclanemap.ini; \
 			continue; \
@@ -37,6 +44,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		fi; \
 		cp ./sai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai.profile; \
 		cp ./sai_mlnx.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai_mlnx.profile; \
+		cp ./sai_vpp.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/sai_vpp.profile; \
 		cp ./pai.vs_profile device/x86_64-kvm_x86_64-r0/$$(basename $$d)/pai.profile; \
 		cp ./fabriclanemap_vs.ini device/x86_64-kvm_x86_64-r0/$$(basename $$d)/fabriclanemap.ini; \
 		if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/port_config.ini ]; then \

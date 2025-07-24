@@ -1,6 +1,6 @@
 module sonic-smart-switch {
 
-    yang-version 1.1;
+	yang-version 1.1;
 
 	namespace "http://github.com/sonic-net/sonic-smart-switch";
 	prefix smart-switch;
@@ -31,6 +31,14 @@ module sonic-smart-switch {
 
 	revision 2025-01-11 {
 		description "Add new container DPU_PORT";
+	}
+
+	revision 2025-03-19 {
+		description "Modify DPU_PORT to DPU and add new fields";
+	}
+
+	revision 2025-03-31 {
+		description "Add REMOTE_DPU, VDPU, and DASH_HA_GLOBAL_CONFIG containers";
 	}
 
 	container sonic-smart-switch {
@@ -85,23 +93,28 @@ module sonic-smart-switch {
 		}
 		/* end of container DPUS */
 
-		container DPU_PORT {
-			description "DPU_PORTs part of config_db.json";
+		container DPU {
+			description "DPUs part of config_db.json";
 
-			list DPU_PORT_LIST {
-				description "Name of the DPU port";
-				key "PORT_NAME";
+			list DPU_LIST {
+				key "dpu_name";
 
-				leaf PORT_NAME {
-					description "Name of the DPU port";
+				leaf dpu_name {
+					description "Name of the DPU";
 					type string {
-						pattern "[a-zA-Z]+[0-9]+";
+						pattern "[a-zA-Z0-9-]+[0-9]";
+						length 1..255;
 					}
 				}
 
 				leaf state {
 					description "Admin state of DPU device";
 					type stypes:admin_status;
+				}
+
+				leaf local_port {
+					description "DPU Physical port name on the switch";
+					type stypes:interface_name;
 				}
 
 				leaf vip_ipv4 {
@@ -123,19 +136,181 @@ module sonic-smart-switch {
 					description "PA IPv6 address from minigraph";
 					type inet:ipv6-address;
 				}
+				
+				leaf dpu_id {
+					description "ID of the DPU from minigraph";
+					type string {
+						pattern [0-7];
+					}
+				}
 
 				leaf vdpu_id {
-					description "ID of VDPUs from minigraph";
-					type string;
+					description "guid of VDPU from minigraph";
+					type string {
+						length 1..255;
+					}
 				}
 
 				leaf gnmi_port {
-					description "Port gNMI runs on.";
+					description "TCP listening port for gnmi service on DPU";
+					type inet:port-number;
+				}
+
+				leaf orchagent_zmq_port {
+					description "TCP listening port for ZMQ service on DPU orchagent";
+					type inet:port-number;
+				}
+
+				leaf swbus_port {
+					description "TCP listening port for swbus service for this DPU.";
 					type inet:port-number;
 				}
 			}
 		}
-		/* end of container DPU_PORT */
+		/* end of container DPU */
+
+		container REMOTE_DPU {
+			description "REMOTE_DPU part of config_db.json";
+
+			list REMOTE_DPU_LIST {
+				key "dpu_name";
+
+				leaf dpu_name {
+					description "Name of the dpu";
+					type string {
+						pattern "[a-zA-Z0-9-]+[0-9]+";
+						length 1..255;
+					}
+				}
+
+				leaf type {
+					description "Type of dpu";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf pa_ipv4 {
+					description "DPU ipv4 physical address";
+					type inet:ipv4-address;
+				}
+
+				leaf pa_ipv6 {
+					description "DPU ipv6 physical address";
+					type inet:ipv6-address;
+				}
+
+				leaf npu_ipv4 {
+					description "Loopback ipv4 of remote NPU";
+					type inet:ipv4-address;
+				}
+
+				leaf npu_ipv6 {
+					description "Loopback ipv6 of remote NPU";
+					type inet:ipv6-address;
+				}
+
+				leaf dpu_id {
+					description "ID of the DPU from minigraph";
+					type string {
+						pattern [0-7];
+					}
+				}
+
+				leaf swbus_port {
+					description "TCP listening port for swbus service for this DPU.";
+					type inet:port-number;
+				}
+			}
+		}
+		/* end of container REMOTE_DPU */
+
+		container VDPU {
+			description "VDPU part of config_db.json";
+
+			list VDPU_LIST {
+				key vdpu_id;
+
+				leaf vdpu_id {
+					description "guid of the VDPU";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf profile {
+					description "VDPU profile. Currently unused, reserved for future use.";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf tier {
+					description "VDPU tier. Currently unused, reserved for future use.";
+					type string {
+						length 1..255;
+					}
+				}
+
+				leaf-list main_dpu_ids {
+					description "Main DPUs involved in this VDPU";
+					type string {
+						pattern "[a-zA-Z0-9-]+[0-9]+";
+						length 1..255;
+					}
+				}
+			}
+		}
+		/* end of container VDPU */
+
+		container DASH_HA_GLOBAL_CONFIG {
+
+			container global {
+
+				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
+
+				leaf cp_data_channel_port {
+					description "Control plane data channel port, used for bulk sync";
+					type inet:port-number;
+				}
+
+				leaf dp_channel_port {
+					description "Destination port when tunneling packets via DPU-to-DPU data plane channel";
+					type inet:port-number;
+				}
+
+				leaf dp_channel_src_port_min {
+					description "Minimum source port used when tunneling packets via DPU-to-DPU data plane channel";
+					type inet:port-number;
+				}
+
+				leaf dp_channel_src_port_max {
+					description "Maximum source port used when tunneling packets via DPU-to-DPU data plane channel";
+					type inet:port-number;
+				}
+
+				leaf dp_channel_probe_interval_ms {
+					description "Interval in milliseconds for sending each DPU-to-DPU data path probe";
+					type uint32;
+				}
+
+				leaf dp_channel_probe_fail_threshold {
+					description "Number of probe failures needed to consider data plane channel as dead";
+					type uint32;
+				}
+
+				leaf dpu_bfd_probe_interval_in_ms {
+					description "Interval in milliseconds for DPU BFD probe";
+					type uint32;
+				}
+
+				leaf dpu_bfd_probe_multiplier {
+					description "Number of DPU BFD probe failures before considering the probe as down";
+					type uint32;
+				}
+			}
+		}
+		/* end of container DASH_HA_GLOBAL_CONFIG */
 	}
 	/* end of container sonic-smart-switch */
 }

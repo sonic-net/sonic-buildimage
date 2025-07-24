@@ -68,8 +68,11 @@ def test_set():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -79,13 +82,13 @@ def test_del_for_appl(mocked_log_debug):
         def __init__(self, cache=dict()):
             self.cache = cache
             self.CONFIG_DB = "CONFIG_DB"
-    
+
         def get(self, db, key, field):
             if key in self.cache:
                 if field in self.cache[key]["value"]:
                     return self.cache[key]["value"][field]
             return None  # return nil
-    
+
     mgr = constructor()
 
     set_del_test(
@@ -102,8 +105,11 @@ def test_del_for_appl(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -164,8 +170,11 @@ def test_del_for_appl(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     cfg_db_cache = {
@@ -189,8 +198,11 @@ def test_del_for_appl(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
@@ -210,8 +222,11 @@ def test_del_for_appl(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -228,8 +243,11 @@ def test_del_for_appl(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
@@ -250,8 +268,11 @@ def test_set_nhportchannel():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -265,8 +286,11 @@ def test_set_nhportchannel():
             "router bgp 65100",
             " address-family ipv4",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
@@ -288,8 +312,11 @@ def test_set_several_nhportchannels():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -313,8 +340,11 @@ def test_set_nhvrf():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -338,8 +368,11 @@ def test_set_blackhole():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -363,8 +396,11 @@ def test_set_vrf():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -388,8 +424,11 @@ def test_set_ipv6():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -414,8 +453,11 @@ def test_set_nh_only():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -440,8 +482,11 @@ def test_set_ifname_only():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -467,8 +512,11 @@ def test_set_with_empty_ifname():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -494,8 +542,11 @@ def test_set_with_empty_nh():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -521,8 +572,11 @@ def test_set_del():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     set_del_test(
@@ -537,8 +591,11 @@ def test_set_del():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
@@ -562,8 +619,11 @@ def test_set_del():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -589,8 +649,11 @@ def test_set_same_route():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     set_del_test(
@@ -636,8 +699,11 @@ def test_set_add_del_nh():
             "router bgp 65100 vrf vrfRED",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     set_del_test(
@@ -694,8 +760,11 @@ def test_set_add_del_nh_ethernet():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     set_del_test(
@@ -749,8 +818,11 @@ def test_set_no_action(mocked_log_debug):
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -810,8 +882,11 @@ def test_set_invalid_blackhole(mocked_log_err):
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     mocked_log_err.assert_called_with("Mandatory attribute not found for nexthop")
@@ -887,8 +962,11 @@ def test_set_del_bgp_asn_change():
         "router bgp 65100 vrf vrfRED",
         " address-family ipv4",
         "  redistribute static route-map STATIC_ROUTE_FILTER",
+        " exit-address-family",
         " address-family ipv6",
-        "  redistribute static route-map STATIC_ROUTE_FILTER"
+        "  redistribute static route-map STATIC_ROUTE_FILTER",
+        " exit-address-family",
+        "exit"
     ]
     def push_list(cmds):
         set_del_test.push_list_called = True
@@ -923,8 +1001,11 @@ def test_set_tag_enable():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -944,8 +1025,11 @@ def test_set_tag_disable():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -965,8 +1049,11 @@ def test_set_tag_change():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -1000,8 +1087,11 @@ def test_set_bfd_false():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 
@@ -1015,8 +1105,11 @@ def test_set_bfd_false():
             "router bgp 65100",
             " address-family ipv4",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
             "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit",
             "no route-map STATIC_ROUTE_FILTER"
         ]
     )
@@ -1038,8 +1131,11 @@ def test_set_bfd_true():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
     #do nothing for adding smae route second time
@@ -1083,8 +1179,11 @@ def test_set_bfd_true():
             "router bgp 65100",
             " address-family ipv4",
             "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
             " address-family ipv6",
-            "  redistribute static route-map STATIC_ROUTE_FILTER"
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " exit-address-family",
+            "exit"
         ]
     )
 

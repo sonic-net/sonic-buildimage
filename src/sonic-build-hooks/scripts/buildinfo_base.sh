@@ -29,7 +29,7 @@ else
 	PKG_CACHE_PATH=/sonic/target/vcache/${IMAGENAME}
 fi
 PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
-mkdir -p ${PKG_CACHE_PATH}
+[ -d ${PKG_CACHE_PATH} ] || $SUDO mkdir -p ${PKG_CACHE_PATH}
 
 . ${BUILDINFO_PATH}/scripts/utils.sh
 
@@ -256,7 +256,7 @@ download_packages()
         if [ $result -eq 0 ]; then
             break
         fi
-        log_err "Try $i: $REAL_COMMAND failed to get: ${parameters[@]}. Retry.."
+        log_err "Try $i: $REAL_COMMAND failed to get: ${parameters[*]}. Retry.."
     done
 
     # Return if there is any error

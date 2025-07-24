@@ -114,25 +114,27 @@ def get_memory_usage(container_id):
     Args:
         container_id: A string indicates the full ID of a container.
     Returns:
-        memory_usage_in_bytes: A string indicates memory usage (Bytes) of a container.
+        A string indicates memory usage (Bytes) of a container.
     """
-    memory_usage_in_bytes = ""
-
     validate_container_id(container_id)
 
     docker_memory_usage_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.usage_in_bytes"
-    if not os.path.exists(docker_memory_usage_file_path):
-        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND.format(docker_memory_usage_file_path, container_id))
-        sys.exit(INTERNAL_ERROR)
 
-    try:
-        with open(docker_memory_usage_file_path, 'r') as file:
-            memory_usage_in_bytes = file.read().strip()
-    except IOError as err:
-        syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_MEMORY_USAGE_NOT_FOUND.format(container_id))
-        sys.exit(INTERNAL_ERROR)
+    for attempt in range(3):
+        try:
+            with open(docker_memory_usage_file_path, 'r') as file:
+                return file.read().strip()
+        except FileNotFoundError:
+            if attempt < 2:
+                time.sleep(0.1)  # retry after short delay
+            else:
+                break
+        except IOError:
+            syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_MEMORY_USAGE_NOT_FOUND.format(container_id))
+            sys.exit(INTERNAL_ERROR)
 
-    return memory_usage_in_bytes
+    syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND.format(docker_memory_usage_file_path, container_id))
+    sys.exit(INTERNAL_ERROR)
 
 def get_inactive_cache_usage(container_id):
     """Reads the container's cache usage from the field 'total_inactive_file' in control
