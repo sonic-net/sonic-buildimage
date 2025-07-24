@@ -21,9 +21,7 @@ RUN apt-get update \
     cmake               \
     libnanomsg5         \
     libnanomsg-dev      \
-    libthrift-0.17.0    \
-    libnl-3-dev         \
-    libnl-genl-3-dev
+    libthrift-0.17.0
 
 {% if docker_syncd_centec_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies
