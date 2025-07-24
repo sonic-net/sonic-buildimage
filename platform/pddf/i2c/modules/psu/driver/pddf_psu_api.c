@@ -46,25 +46,25 @@ void get_psu_duplicate_sysfs(int idx, char *str)
     switch (idx)
     {
         case PSU_V_OUT:
-            strcpy(str, "in3_input");
+            strscpy(str, "in3_input", ATTR_NAME_LEN);
             break;
         case PSU_I_OUT:
-            strcpy(str, "curr2_input");
+            strscpy(str, "curr2_input", ATTR_NAME_LEN);
             break;
         case PSU_P_OUT:
-            strcpy(str, "power2_input");
+            strscpy(str, "power2_input", ATTR_NAME_LEN);
             break;
         case PSU_FAN1_SPEED:
-            strcpy(str, "fan1_input");
+            strscpy(str, "fan1_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP1_INPUT:
-            strcpy(str, "temp1_input");
+            strscpy(str, "temp1_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP2_INPUT:
-            strcpy(str, "temp2_input");
+            strscpy(str, "temp2_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP3_INPUT:
-            strcpy(str, "temp3_input");
+            strscpy(str, "temp3_input", ATTR_NAME_LEN);
             break;
         default:
             break;
