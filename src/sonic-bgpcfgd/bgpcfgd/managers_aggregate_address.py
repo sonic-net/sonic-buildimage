@@ -45,32 +45,33 @@ class AggregateAddressMgr(Manager):
         bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
         addresses = self.get_addresses_from_state_db(bbr_required_only=True)
         if bbr_status == BGP_BBR_STATUS_ENABLED:
-            log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses " % bbr_status, addresses)
+            log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
             for address in addresses:
                 if self.address_set_handler(address[0], address[1]):
-                    self.set_state_db(address[0], address[1], ADDRESS_ACTIVE_STATE)
+                    self.set_address_state(address[0], address[1], ADDRESS_ACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED:
-            log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses " % bbr_status, addresses)
+            log_info("AggregateAddressMgr::BBR state changed to %s with bbr_required addresses %s" % (bbr_status, addresses))
             for address in addresses:
                 if self.address_del_handler(address[0], address[1]):
-                    self.set_state_db(address[0], address[1], ADDRESS_INACTIVE_STATE)
+                    self.set_address_state(address[0], address[1], ADDRESS_INACTIVE_STATE)
         else:
-            log_info("AggregateAddressMgr::BBR state changed to unknown with bbr_required addresses " % bbr_status, addresses)
+            log_info("AggregateAddressMgr::BBR state changed to unknown with bbr_required addresses %s" % addresses)
 
     def set_handler(self, key, data):
+        data = dict(data)
         bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
         if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED):
             log_info("AggregateAddressMgr::BBR state is unknown. Skip the address")
-            self.set_state_db(key, data, ADDRESS_INACTIVE_STATE)
+            self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED and data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING:
             log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address")
-            self.set_state_db(key, data, ADDRESS_INACTIVE_STATE)
+            self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
             if self.address_set_handler(key, data):
-                self.set_state_db(key, data, ADDRESS_ACTIVE_STATE)
+                self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
                 log_info("AggregateAddressMgr::set address %s failed" % key)
-                self.set_state_db(key, data, ADDRESS_INACTIVE_STATE)
+                self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
     def address_set_handler(self, key, data):
@@ -114,14 +115,14 @@ class AggregateAddressMgr(Manager):
         return True
 
     def del_handler(self, key):
-        address_state = self.get_data_from_state_db(key)
+        address_state = self.get_address_from_state_db(key)
         if self.address_del_handler(key, address_state):
             log_info("AggregateAddressMgr::delete address %s success" % key)
-            self.del_state_db(key)
+            self.del_address_state(key)
         return True
 
     def address_del_handler(self, key, data):
-        bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        bgp_asn = self.directory.get_slot(CONFIG_DB_NAME, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         prefix = key2prefix(key)
         is_v4 = '.' in prefix
         cmd_list = []
@@ -161,25 +162,12 @@ class AggregateAddressMgr(Manager):
     def get_addresses_from_state_db(self, bbr_required_only=False):
         addresses = []
         for key in self.address_table.getKeys():
-            bbr_required = self.address_table.hget(key, BBR_REQUIRED_KEY)
-            if not bbr_required_only or bbr_required == COMMON_TRUE_STRING:
-                data = {}
-                _as_set = self.address_table.hget(key, AS_SET_KEY)
-                if _as_set:
-                    data[AS_SET_KEY] = _as_set
-                _summary_only = self.address_table.hget(key, SUMMARY_ONLY_KEY)
-                if _summary_only:
-                    data[SUMMARY_ONLY_KEY] = _summary_only
-                _agg_addr_prefix_list = self.address_table.hget(key, AGGREGATE_ADDRESS_PREFIX_LIST_KEY)
-                if _agg_addr_prefix_list:
-                    data[AGGREGATE_ADDRESS_PREFIX_LIST_KEY] = _agg_addr_prefix_list
-                _con_addr_prefix_list = self.address_table.hget(key, CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY)
-                if _con_addr_prefix_list:
-                    data[CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY] = _con_addr_prefix_list
+            data = self.address_table.get(key)
+            if not bbr_required_only or data[BBR_REQUIRED_KEY] == COMMON_TRUE_STRING:
                 addresses.append((key, data))
         return addresses
 
-    def get_data_from_state_db(self, key):
+    def get_address_from_state_db(self, key):
         resp = self.address_table.get(key)
         if not resp[0]:
             log_err("AggregateAddressMgr::Failed to get data from state db for key %s" % key)
@@ -188,19 +176,19 @@ class AggregateAddressMgr(Manager):
         return data
 
     def remove_all_state_of_address(self):
-        for address in self.address_table.getKeys():
+        for address in list(self.address_table.getKeys()):
             self.address_table.delete(address)
         log_info("AggregateAddressMgr::All the state of aggregate address is removed")
         return True
 
-    def set_state_db(self, key, data, address_state):
+    def set_address_state(self, key, data, address_state):
         self.address_table.hset(key, BBR_REQUIRED_KEY, data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING))
         self.address_table.hset(key, AGGREGATE_ADDRESS_PREFIX_LIST_KEY, data.get(AGGREGATE_ADDRESS_PREFIX_LIST_KEY, ""))
         self.address_table.hset(key, CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY, data.get(CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY, ""))
         self.address_table.hset(key, ADDRESS_STATE_KEY, address_state)
         log_info("AggregateAddressMgr::State of aggregate address %s is set with bbr_required %s and state %s " % (key, data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING), address_state))
 
-    def del_state_db(self, key):
+    def del_address_state(self, key):
         self.address_table.delete(key)
         log_info("AggregateAddressMgr::State of aggregate address %s is removed" % key)
 
