@@ -168,10 +168,10 @@ DPDK_VER = $(call get_sdk_package_version_full,"dpdk")
 
 DPDK = mlnx-dpdk_${DPDK_VER}_${CONFIGURED_ARCH}.deb
 $(DPDK)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/dpdk
-$(DPDK)_RDEPENDS = $(IB_VERBS_PROV) $(IB_VERBS) $(IB_VERBS_DEV)
+$(DPDK)_RDEPENDS = $(IB_VERBS) $(IB_VERBS_PROV) $(IB_VERBS_DEV)
 
 DPDK_DEV = mlnx-dpdk-dev_${DPDK_VER}_${CONFIGURED_ARCH}.deb
-$(DPDK)_DEPENDS = $(RDMA_CORE) $(IB_VERBS_PROV) $(IB_VERBS) $(IB_VERBS_DEV)
+$(DPDK)_DEPENDS = $(RDMA_CORE) $(IB_VERBS) $(IB_VERBS_PROV) $(IB_VERBS_DEV)
 $(DPDK_DEV)_RDEPENDS = $(DPDK)
 
 $(eval $(call add_derived_package,$(DPDK),$(DPDK_DEV)))
