@@ -4,8 +4,6 @@
   neighbor LOWERSPINE_V6 peer-group
   address-family ipv6 unicast
     neighbor LOWERSPINE_V6 activate
-    neighbor LOWERSPINE_V6 route-reflector-client 
-    neighbor LOWERSPINE_V6 next-hop-self force
     neighbor LOWERSPINE_V6 soft-reconfiguration inbound
     neighbor LOWERSPINE_V6 route-map FROM_LOWERSPINE_V6 in
     neighbor LOWERSPINE_V6 route-map TO_LOWERSPINE_V6 out
