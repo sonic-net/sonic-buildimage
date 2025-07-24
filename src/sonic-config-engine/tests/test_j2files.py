@@ -896,8 +896,8 @@ class TestJ2Files(TestCase):
             pattern = r'^action.*Device="eth0".*'
             for line in file:
                 assert not bool(re.match(pattern, line.strip())), "eth0 is not allowed in Mgfx device"
-        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog.conf'),
-                                  self.output_file))
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog.conf')
+        self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
     def test_rsyslog_conf_docker0_ip(self):
         if utils.PYvX_DIR != 'py3':
@@ -912,8 +912,8 @@ class TestJ2Files(TestCase):
 
         argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
-                                               'rsyslog_with_docker0.conf'), self.output_file))
+        expected = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'rsyslog_with_docker0.conf')
+        self.assertTrue(utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file))
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
