@@ -39,9 +39,9 @@ bcm_device:
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 2
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
             l3_alpm_large_vrf_mode: 1
-            l3_ecmp_member_secondary_mem_size: 4096
+            l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
             stat_custom_receive0_management_mode: 1
 ---
