@@ -14,6 +14,10 @@ jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
     ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
       timeoutInMinutes: 840
+    ${{ if eq(parameters.NAME, 'cisco-8000') }}:
+      condition: ne(variables.SKIP_CISCO, 'y')
+    ${{ else }}:
+      condition: ne(variables.SKIP_CISCOSS, 'y')
     pool:
       type: linux
       isCustom: true
@@ -80,7 +84,7 @@ jobs:
           # The <sai-ver> may contain several values in one build, the part is skipped when publishing to storage
           # See https://github.com/Cisco-8000-sonic/sdk/blob/master/azure-pipelines.yml
           # The $PACKAGE_URL is only accessible for AZP
-          PACKAGE_URL=https://sonicstorage.blob.core.windows.net/packages
+          PACKAGE_URL=https://packages.trafficmanager.net/public
           version=$(echo $package | awk -F_ '{print $(NF-1)}' | cut -d- -f1,2,4,5)
           package_url="$PACKAGE_URL/sai/ciscosai/master/$version/$package"
           echo "Override package $package from $package_url"
