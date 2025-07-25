@@ -1,6 +1,0 @@
-cffi==1.16.0
-nnpy==1.4.2
-ptf==0.10.0
-pycparser==2.23
-scapy==2.5.0
-thrift==0.17.0
