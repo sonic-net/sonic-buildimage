@@ -181,7 +181,7 @@ def main(argv):
             headers = childutils.get_headers(line)
             # Check if 'len' exists before using it
             if 'len' not in headers:
-                syslog.syslog(syslog.LOG_ERR, "WARNING: Missing 'len' header in: {}".format(headers))
+                syslog.syslog(syslog.LOG_WARNING, "Missing 'len' in headers: {}, line: {}".format(headers, line))
                 continue
             payload = sys.stdin.read(int(headers['len']))
 
