@@ -18,6 +18,8 @@ def
 {%-         set filename_postfix = 't0' %}
 {%-     elif 'leafrouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
 {%-         set filename_postfix = 't1' %}
+{%-     elif 'lowerspinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
+{%-         set filename_postfix = 'lt2' %}
 {%-     elif 'spinerouter' in switch_role.lower() and 'mgmt' not in switch_role.lower()%}
     {%-     if 'lowerspinerouter' == switch_subrole.lower() %}
     {%-         set filename_postfix = 'lt2' %}
@@ -58,6 +60,7 @@ def
             'torrouter_server'       : '5m',
             'leafrouter_torrouter'   : '40m',
             'upperspinerouter_spinerouter' : '50m',
+            'upperspinerouter_lowerspinerouter' : '50m',
             'spinerouter_leafrouter' : '300m',
             'regionalhub_upperspinerouter': '80000m',
             'regionalhub_spinerouter': '80000m',

@@ -40,7 +40,7 @@ class TestThermalManager:
             # Host mgmt mode, no DPUs are used for init
             mgr = ThermalManager()
             mgr.initialize()
-            mock_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'])
+            mock_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'], update_asic=False)
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
             # Not initialized if no DPUs and not in host mgmt mode

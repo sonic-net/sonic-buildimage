@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import time
 import subprocess
 import sys
 from sonic_py_common import logger as log
@@ -18,8 +19,8 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "default": "3042c67383dccff079755c5f3daa2820e2ca392a",
-        "nokia": "fffb00199104c493d04a621b257c579c48d77225"
+        "default": "7fd1b946041fc35ed7ccbe28493a02caf0176406",
+        "nokia": "b52172968230e4098623f7f6c64aa2bfaec4967c"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
@@ -93,7 +94,7 @@ def is_auditd_service_configured():
 
 def check_rules_syntax():
     logger.log_info("Checking auditd rules syntax...")
-    rc, out = run_command("auditctl -R /etc/audit/audit.rules")
+    rc, out = run_command("nsenter --target 1 --pid --mount --uts --ipc --net auditctl -R /etc/audit/audit.rules")
     if rc != 0:
         logger.log_error("auditctl -R failed: {}".format(out))
         return False
@@ -152,4 +153,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        time.sleep(900)

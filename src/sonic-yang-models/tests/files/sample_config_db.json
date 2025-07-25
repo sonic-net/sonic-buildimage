@@ -384,7 +384,8 @@
         "SWITCH_TRIMMING": {
             "GLOBAL": {
                 "size": "128",
-                "dscp_value": "48",
+                "dscp_value": "from-tc",
+                "tc_value": "6",
                 "queue_index": "6"
             }
         },
@@ -2426,6 +2427,45 @@
             }
         },
 
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true",
+                "vlanid": "100"
+            }
+        },
+        "STP_VLAN_PORT": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "200",
+                "priority": "128",
+                "portfast": "false",
+                "uplink_fast": "false"
+            }
+        },
+        
 
         "MCLAG_DOMAIN": {
             "123": {

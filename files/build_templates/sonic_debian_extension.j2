@@ -443,6 +443,7 @@ echo "system-health.service" | sudo tee -a $GENERATED_SERVICE_FILE
 # Copy logrotate.d configuration files
 sudo cp -f $IMAGE_CONFIGS/logrotate/logrotate.d/* $FILESYSTEM_ROOT/etc/logrotate.d/
 sudo cp $IMAGE_CONFIGS/logrotate/rsyslog.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+sudo cp $IMAGE_CONFIGS/logrotate/on_demand_archived_log_clean_up.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/logrotate/logrotate-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/logrotate/logrotate-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/logrotate.timer.d
@@ -463,6 +464,11 @@ sudo cp $IMAGE_CONFIGS/copp/copp-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD
 sudo cp $IMAGE_CONFIGS/copp/copp-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/copp/copp_cfg.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 echo "copp-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
+sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.py $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/dhcp_dos_logger.py
+echo "dhcp_dos_logger.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy dhcp client configuration template and create an initial configuration
 sudo cp files/dhcp/dhclient.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
@@ -571,6 +577,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 # kubelet service is controlled by ctrmgrd daemon.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
+# sonic-ctrmgrd-rs is required by container script
+install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
+
 # container script for docker commands, which is required as
 # all docker commands are replaced with container commands.
 # So just copy that file only.
