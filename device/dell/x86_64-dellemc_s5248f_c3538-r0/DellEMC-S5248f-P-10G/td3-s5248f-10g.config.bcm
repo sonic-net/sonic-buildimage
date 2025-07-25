@@ -2,6 +2,7 @@ sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 os=unix
 dpp_clock_ratio=2:3
 oversubscribe_mode=1
+oversubscribe_mixed_sister_25_50_enable=1
 core_clock_frequency=1525
 l2xmsg_mode=1
 pbmp_oversubscribe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
