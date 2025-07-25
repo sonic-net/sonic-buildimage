@@ -139,14 +139,6 @@ echo ">>> Sleeping 5"
 sleep 5
 
 if [ ! -f /tmp/xbooted ]; then
-    if [ ${SYS_MODE,,} != "xbm" ]; then
-        if [ -d $XPLT_UTL ]; then
-            echo ">>> Configure xcvrs"
-            cd $XPLT_UTL/xcvrs && ./config.py -m 2
-        else
-            echo "ERROR: No $XPLT_UTL found!"
-        fi
-    fi
     touch /tmp/xbooted
 fi
 
