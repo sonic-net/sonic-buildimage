@@ -47,7 +47,7 @@ PSU_DATA psu_data = {0};
 PDDF_DATA_ATTR(psu_idx, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.idx, NULL);
 PDDF_DATA_ATTR(psu_fans, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_fans, NULL);
 PDDF_DATA_ATTR(psu_thermals, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.num_psu_thermals, NULL);
-PDDF_DATA_ATTR(psu_temp_high_thresh_bitmap, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_temp_high_thresh_bitmap, NULL);
+PDDF_DATA_ATTR(psu_temp_high_thresh_bitmap, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_temp_high_thresh_bitmap, NULL);
 
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.aname, NULL);
