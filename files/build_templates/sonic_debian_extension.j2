@@ -1114,13 +1114,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
 sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
-# Install rshim script
-sudo install -m 755 platform/mellanox/rshim/files/rshim.sh $FILESYSTEM_ROOT/usr/bin/rshim.sh
-
-# Install rshim services
-sudo cp platform/mellanox/rshim/files/rshim@.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-sudo cp platform/mellanox/rshim/files/rshim-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-
 # Install dpuctl script and config file
 sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpuctl.sh $FILESYSTEM_ROOT/usr/bin/dpuctl.sh
 sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpu.conf $FILESYSTEM_ROOT_ETC/mlnx/
