@@ -12,7 +12,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-RUN apt-get update
+RUN apt-get update && \
+    apt-get install -y python3-dev && \
+    apt-get install -y build-essential && \
+    apt-get install -y swig
 
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -21,6 +24,22 @@ RUN apt-get update
 # Install locally-built Debian packages and implicitly install their dependencies
 {{ install_debian_packages(docker_sonic_gnmi_debs.split(' ')) }}
 {%- endif %}
+
+{% if docker_sonic_gnmi_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_sonic_gnmi_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_sonic_gnmi_whls.split(' ')) }}
+{% endif %}
+
+RUN apt-get remove -y swig && \
+    apt-get remove -y build-essential && \
+    apt-get remove -y python3-dev && \
+    apt-get clean -y      && \
+    apt-get autoclean -   && \
+    apt-get autoremove -y && \
+    rm -rf /debs
 
 COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
