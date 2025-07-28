@@ -1,6 +1,7 @@
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME, BGP_BBR_TABLE_NAME
+import pytest
 from swsscommon import swsscommon
 from unittest.mock import MagicMock, patch
 
@@ -56,9 +57,8 @@ def constructor(mock_table, bbr_status):
 def set_del_test(mgr, op, args, expected_cmds=None):
     set_del_test.push_list_called = False
     def push_list(cmds):
-        import pdb; pdb.set_trace() 
         set_del_test.push_list_called = True
-        assert cmds in expected_cmds
+        assert cmds == expected_cmds
         return True
     mgr.cfg_mgr.push_list = push_list
 
@@ -75,57 +75,54 @@ def set_del_test(mgr, op, args, expected_cmds=None):
         assert not set_del_test.push_list_called, "cfg_mgr.push_list was called"
 
 
-def test_set_with_bbr_required():
-    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
-    prefix = '192.168.0.0/24'
-    bbr_required = 'true'
+@pytest.mark.parametrize("aggregate_prefix", ["192.168.1.1", "2ff::1/64"])
+@pytest.mark.parametrize("bbr_status", [BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED])
+@pytest.mark.parametrize("bbr_required", ["true", "false"])
+@pytest.mark.parametrize("summary_only", ["true", "false"])
+@pytest.mark.parametrize("as_set", ["true", "false"])
+@pytest.mark.parametrize("aggregate_address_prefix_list", ["", "aggregate_PL"])
+@pytest.mark.parametrize("contributing_address_prefix_list", ["", "contributing_PL"])
+def test_set_with_parameters_combination(
+    aggregate_prefix,
+    bbr_status,
+    bbr_required,
+    summary_only,
+    as_set,
+    aggregate_address_prefix_list,
+    contributing_address_prefix_list
+):
+    mgr = constructor(bbr_status=bbr_status)
     attr = (
         ('bbr-required', bbr_required),
-        ('summary-only', 'false')
+        ('summary-only', summary_only),
+        ('as-set', as_set),
+        ('aggregate-address-prefix-list', aggregate_address_prefix_list),
+        ('contributing-address-prefix-list', contributing_address_prefix_list)
     )
+    expecting_active_state = True if bbr_required == 'false' or bbr_status == BGP_BBR_STATUS_ENABLED else False
     expected_state = {
-        'aggregate-address-prefix-list': '',
-        'contributing-address-prefix-list': '',
-        'state': 'inactive',
+        'aggregate-address-prefix-list': aggregate_address_prefix_list,
+        'contributing-address-prefix-list': contributing_address_prefix_list,
+        'state': 'active' if expecting_active_state else 'inactive',
         'bbr-required': bbr_required
     }
-    set_del_test(
-        mgr,
-        "SET",
-        (prefix, attr)
-    )
-    assert [prefix] == mgr.address_table.getKeys()
-    data = mgr.address_table.get(prefix)
-    assert data == expected_state
-
-
-def test_set_without_bbr_required():
-    mgr = constructor(bbr_status=BGP_BBR_STATUS_DISABLED)
-    prefix = '192.168.0.1/24'
-    bbr_required = 'false'
-    attr = (
-        ('bbr-required', bbr_required),
-        ('summary-only', 'false')
-    )
-    expected_state = {
-        'aggregate-address-prefix-list': '',
-        'contributing-address-prefix-list': '',
-        'state': 'active',
-        'bbr-required': bbr_required
-    }
-    expected_cmds = [[
+    except_cmds = [
         'router bgp 65001',
-        'address-family ipv4',
-        'aggregate-address 192.168.0.1/24 ',
+        'address-family ' + ('ipv4' if '.' in aggregate_prefix else 'ipv6'),
+        'aggregate-address ' + aggregate_prefix + (' summary-only' if summary_only == 'true' else '') + (' as-set' if as_set == 'true' else ''),
         'exit-address-family',
         'exit'
-    ]]
+    ]
+    if aggregate_address_prefix_list:
+        except_cmds.append(('ip' if '.' in aggregate_prefix else 'ipv6') + ' prefix-list %s permit %s' % (aggregate_address_prefix_list, aggregate_prefix))
+    if contributing_address_prefix_list:
+        except_cmds.append(('ip' if '.' in aggregate_prefix else 'ipv6') + ' prefix-list %s permit %s' % (contributing_address_prefix_list, aggregate_prefix) + " le" + (" 32" if '.' in aggregate_prefix else " 128"))
     set_del_test(
         mgr,
         "SET",
-        (prefix, attr),
-        expected_cmds
+        (aggregate_prefix, attr),
+        except_cmds if expecting_active_state else None
     )
-    assert [prefix] == mgr.address_table.getKeys()
-    data = mgr.address_table.get(prefix)
+    assert [aggregate_prefix] == mgr.address_table.getKeys()
+    data = mgr.address_table.get(aggregate_prefix)
     assert data == expected_state

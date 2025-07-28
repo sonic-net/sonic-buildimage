@@ -203,7 +203,7 @@ def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_o
     ret_cmds.append("router bgp %s" % asn)
     ret_cmds.append("address-family ipv4" if is_v4 else "address-family ipv6")
     agg_cmd = "no " if is_remove else ""
-    agg_cmd += "aggregate-address %s " % prefix
+    agg_cmd += "aggregate-address %s" % prefix
     if not is_remove and summary_only == COMMON_TRUE_STRING:
         agg_cmd += " %s" % SUMMARY_ONLY_KEY
     if not is_remove and as_set == COMMON_TRUE_STRING:
@@ -216,11 +216,11 @@ def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_o
 
 def generate_prefix_list_commands(prefix_list_name, prefix, is_v4, is_con, is_remove):
     ret_cmds = []
-    prefix_list_cmd = "no " if is_remove else ""
-    prefix_list_cmd += "ip " if is_v4 else "ipv6 "
-    prefix_list_cmd += " prefix-list %s " % prefix_list_name
-    prefix_list_cmd += " permit %s " % prefix
+    prefix_list_cmd = "no" if is_remove else ""
+    prefix_list_cmd += "ip" if is_v4 else "ipv6"
+    prefix_list_cmd += " prefix-list %s" % prefix_list_name
+    prefix_list_cmd += " permit %s" % prefix
     if is_con:
-        prefix_list_cmd += " le " + " 32" if is_v4 else " 128"
+        prefix_list_cmd += " le" + (" 32" if is_v4 else " 128")
     ret_cmds.append(prefix_list_cmd)
     return ret_cmds
