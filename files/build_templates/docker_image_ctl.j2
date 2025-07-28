@@ -767,7 +767,7 @@ start() {
 
 wait() {
     {%- if docker_container_name == "database" %}
-    docker wait $DOCKERNAME
+    /usr/bin/docker-rs wait $DOCKERNAME
     {%- else %}
     /usr/local/bin/container wait $DOCKERNAME
     {%- endif %}
