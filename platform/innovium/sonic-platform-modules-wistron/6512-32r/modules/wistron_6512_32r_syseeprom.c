@@ -43,8 +43,8 @@ static ssize_t set_syseeprom(struct device *dev, struct device_attribute *da, co
 	unsigned int val;
 
 	mutex_lock(&data->lock);
-	memset(data->eeprom, 0xFF, EEPROM_DATA_SIZE);
-	memset(str, 0x0, 3);
+	memzero_explicit(data->eeprom, EEPROM_DATA_SIZE);
+	memzero_explicit(str, sizeof(str));
 
 	if (strlen(buf) >= EEPROM_DATA_SIZE) {
 		for (i = 0; i < strlen(buf) ; i++) {

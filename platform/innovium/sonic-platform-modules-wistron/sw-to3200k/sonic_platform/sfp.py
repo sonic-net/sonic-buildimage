@@ -11,8 +11,11 @@ try:
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_InterfaceId
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_Dom
     from sonic_platform_base.sonic_sfp.sffbase import sffbase
+    from sonic_platform_base.sonic_sfp.sff8024 import type_abbrv_name
+    from sonic_platform_base.sonic_sfp.sff8024 import type_of_media_interface
     from sonic_py_common.logger import Logger
     import sys
+    import time
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -277,6 +280,7 @@ class Sfp(SfpBase):
         # Init index
         self.index = sfp_index
         self.port_num = self.index + 1
+        self.abbrv = None
 
         # Init eeprom path
         eeprom_low_path = '/sys/bus/i2c/devices/0-00{}/eeprom_low'
@@ -284,15 +288,25 @@ class Sfp(SfpBase):
         eeprom_1_path = '/sys/bus/i2c/devices/0-00{}/eeprom_pg1'
         eeprom_2_path = '/sys/bus/i2c/devices/0-00{}/eeprom_pg2'
         eeprom_3_path = '/sys/bus/i2c/devices/0-00{}/eeprom_pg3'
+        eeprom_4_path = '/sys/bus/i2c/devices/0-00{}/eeprom_pg4'
         eeprom_11_path = '/sys/bus/i2c/devices/0-00{}/eeprom_pg11'
         name_path = '/sys/bus/i2c/devices/0-00{}/port_name'
+        power_mode_path = '/sys/bus/i2c/devices/0-00{}/power_mode'
+        grid_path = '/sys/bus/i2c/devices/0-00{}/grid'
+        freq_path = '/sys/bus/i2c/devices/0-00{}/freq'
+        outp_path = '/sys/bus/i2c/devices/0-00{}/output_power'
         self.port_to_eeprom_low_mapping = {}
         self.port_to_eeprom_0_mapping = {}
         self.port_to_eeprom_1_mapping = {}
         self.port_to_eeprom_2_mapping = {}
         self.port_to_eeprom_3_mapping = {}
+        self.port_to_eeprom_4_mapping = {}
         self.port_to_eeprom_11_mapping = {}
         self.port_to_name_mapping = {}
+        self.port_to_power_mode_mapping = {}
+        self.port_to_grid_mapping = {}
+        self.port_to_freq_mapping = {}
+        self.port_to_outp_mapping = {}
         for x in range(self.PORT_START, self.PORT_END + 1):
             p_num = x - 1 if self.PORT_START == 1 else x
             self.port_to_eeprom_low_mapping[p_num] = eeprom_low_path.format(self.port_to_i2c_mapping[p_num])
@@ -300,8 +314,13 @@ class Sfp(SfpBase):
             self.port_to_eeprom_1_mapping[p_num] = eeprom_1_path.format(self.port_to_i2c_mapping[p_num])
             self.port_to_eeprom_2_mapping[p_num] = eeprom_2_path.format(self.port_to_i2c_mapping[p_num])
             self.port_to_eeprom_3_mapping[p_num] = eeprom_3_path.format(self.port_to_i2c_mapping[p_num])
+            self.port_to_eeprom_4_mapping[p_num] = eeprom_4_path.format(self.port_to_i2c_mapping[p_num])
             self.port_to_eeprom_11_mapping[p_num] = eeprom_11_path.format(self.port_to_i2c_mapping[p_num])
             self.port_to_name_mapping[p_num] = name_path.format(self.port_to_i2c_mapping[p_num])
+            self.port_to_power_mode_mapping[p_num] = power_mode_path.format(self.port_to_i2c_mapping[p_num])
+            self.port_to_grid_mapping[p_num] = grid_path.format(self.port_to_i2c_mapping[p_num])
+            self.port_to_freq_mapping[p_num] = freq_path.format(self.port_to_i2c_mapping[p_num])
+            self.port_to_outp_mapping[p_num] = outp_path.format(self.port_to_i2c_mapping[p_num])
 
         self._detect_sfp_type(sfp_type)
         self._dom_capability_detect()
@@ -328,7 +347,7 @@ class Sfp(SfpBase):
         except IOError:
             return False
         logger.log_info("debug:port_ %s sfp presence is %s" % (str(self.index), str(presence)))
-        return presence
+        return True if presence == 1 else False
 
     def _read_eeprom_specific_bytes(self, offset, num_bytes, page = 0):
         sysfsfile_eeprom = None
@@ -350,7 +369,9 @@ class Sfp(SfpBase):
         elif page == 3 :
             sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_3_mapping[self.index]
             offset = offset - 128
-
+        elif page == 4 :
+            sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_4_mapping[self.index]
+            offset = offset - 128
         elif page == 11 :
             sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_11_mapping[self.index]
             offset = offset - 128
@@ -383,8 +404,10 @@ class Sfp(SfpBase):
         if eeprom_raw:
             if eeprom_raw[0] in QSFP_TYPE_CODE_LIST:
                 self.sfp_type = QSFP_TYPE
+                self.abbrv = type_abbrv_name[eeprom_raw[0]]
             elif eeprom_raw[0] in QSFP_DD_TYPE_CODE_LIST:
                 self.sfp_type = QSFP_DD_TYPE
+                self.abbrv = type_abbrv_name[eeprom_raw[0]]
             else:
                 # we don't regonize this identifier value, treat the xSFP module as the default type
                 self.sfp_type = sfp_type
@@ -395,6 +418,7 @@ class Sfp(SfpBase):
             # eeprom_raw being None indicates the module is not present.
             # in this case we treat it as the default type according to the SKU
             self.sfp_type = sfp_type
+            self.abbrv = type_abbrv_name['18']
 
     def _dom_capability_detect(self):
 
@@ -426,7 +450,7 @@ class Sfp(SfpBase):
             if qsfp_dom_capability_raw is not None:
                 qsfp_version_compliance_raw = self._read_eeprom_specific_bytes(QSFP_VERSION_COMPLIANCE_OFFSET, QSFP_VERSION_COMPLIANCE_WIDTH)
                 qsfp_version_compliance = int(qsfp_version_compliance_raw[0], 16)
-                dom_capability = sfpi_obj.parse_qsfp_dom_capability(qsfp_dom_capability_raw, 0)
+                dom_capability = sfpi_obj.parse_dom_capability(qsfp_dom_capability_raw, 0)
                 if qsfp_version_compliance >= 0x08:
                     self.dom_temp_supported = dom_capability['data']['Temp_support']['value'] == 'On'
                     self.dom_volt_supported = dom_capability['data']['Voltage_support']['value'] == 'On'
@@ -462,11 +486,13 @@ class Sfp(SfpBase):
 
             self.dom_temp_supported = True
             self.dom_volt_supported = True
+            self.dom_rx_tx_power_bias_supported = False
+            self.dom_tx_bias_power_supported = True
 
             # two types of QSFP-DD cable types supported: Copper and Optical.
             qsfp_dom_capability_raw = self._read_eeprom_specific_bytes(QSFP_DD_FLAT_MEM['offset'], QSFP_DD_FLAT_MEM['width'], QSFP_DD_FLAT_MEM['page'])
             if qsfp_dom_capability_raw is not None:
-                dom_capability = sfpi_obj.parse_qsfp_dom_capability(qsfp_dom_capability_raw, 0)
+                dom_capability = sfpi_obj.parse_dom_capability(qsfp_dom_capability_raw, 0)
                 if dom_capability['data']['Flat_MEM']['value'] == 'Off':
 
                     ext_dd = ext_qsfp_dd()
@@ -474,8 +500,8 @@ class Sfp(SfpBase):
                     mon_sup_data = ext_dd.parse_mon_capability(mon_sup_raw, 0)
 
                     self.dom_thresholds_supported = mon_sup_data['data']['Tx_power_support']['value'] == 'On'
-                    self.dom_rx_power_supported = mon_sup_data['data']['Tx_power_support']['value'] == 'On'
-                    self.dom_tx_power_supported = mon_sup_data['data']['Rx_power_support']['value'] == 'On'
+                    self.dom_rx_power_supported = mon_sup_data['data']['Rx_power_support']['value'] == 'On'
+                    self.dom_tx_power_supported = mon_sup_data['data']['Tx_power_support']['value'] == 'On'
                     self.dom_tx_bias_supported = mon_sup_data['data']['Tx_bias_support']['value'] == 'On'
                     #self.dom_temp_supported = mon_sup_data['data']['Temp_support']['value'] == 'On'
                     #self.dom_volt_supported = mon_sup_data['data']['Voltage_support']['value'] == 'On'
@@ -490,7 +516,7 @@ class Sfp(SfpBase):
 
     def _convert_string_to_num(self, value_str):
         if "-inf" in value_str:
-            return 'N/A'
+            return '-inf'
         elif "Unknown" in value_str:
             return 'N/A'
         elif 'dBm' in value_str:
@@ -534,8 +560,19 @@ class Sfp(SfpBase):
         application_advertisement  |1*255VCHAR     |supported applications advertisement
         ================================================================================
         """
+        self.reinit()
+        info_dict_keys = [
+        'type', 'hardware_rev', 'serial', 'manufacturer',
+        'model', 'connector', 'encoding', 'ext_identifier',
+        'ext_rateselect_compliance', 'cable_type', 'cable_length',
+        'nominal_bit_rate', 'specification_compliance', 'vendor_date',
+        'vendor_oui', 'application_advertisement', 'type_abbrv_name']
+
         transceiver_info_dict = {}
         compliance_code_dict = {}
+        transceiver_info_dict = dict.fromkeys(info_dict_keys, "NA")
+        transceiver_info_dict["specification_compliance"] = '{}'
+        transceiver_info_dict['type_abbrv_name'] = self.abbrv
 
         #QSFP
         if self.sfp_type == QSFP_TYPE:
@@ -684,6 +721,7 @@ class Sfp(SfpBase):
                 if sfp_media_type_dict is None:
                     return None
 
+                transceiver_info_dict['specification_compliance'] = type_of_media_interface[sfp_media_type_raw[0]]
                 host_media_list = ""
                 sfp_application_type_first_list = self._read_eeprom_specific_bytes((XCVR_FIRST_APPLICATION_LIST_OFFSET_QSFP_DD), XCVR_FIRST_APPLICATION_LIST_WIDTH_QSFP_DD)
                 possible_application_count = 8
@@ -711,7 +749,6 @@ class Sfp(SfpBase):
             transceiver_info_dict['encoding'] = "Not supported for CMIS cables"
             transceiver_info_dict['ext_identifier'] = str(sfp_ext_identifier_data['data']['Extended Identifier']['value'])
             transceiver_info_dict['ext_rateselect_compliance'] = "Not supported for CMIS cables"
-            transceiver_info_dict['specification_compliance'] = "Not supported for CMIS cables"
             transceiver_info_dict['cable_type'] = "Length Cable Assembly(m)"
             transceiver_info_dict['cable_length'] = str(sfp_cable_len_data['data']['Length Cable Assembly(m)']['value'])
             transceiver_info_dict['nominal_bit_rate'] = "Not supported for CMIS cables"
@@ -748,6 +785,7 @@ class Sfp(SfpBase):
         TX power                   |INT            |TX output power in mW
         ========================================================================
         """
+        self.reinit()
         transceiver_dom_info_dict = {}
 
         dom_info_dict_keys = ['temperature',    'voltage',
@@ -844,7 +882,7 @@ class Sfp(SfpBase):
 
                 dom_data_raw = self._read_eeprom_specific_bytes(QSFP_DD_CHANNL_MON['offset'], QSFP_DD_CHANNL_MON['width'], QSFP_DD_CHANNL_MON['page'])
                 dom_channel_monitor_data =  sfpd_obj.parse_channel_monitor_params(dom_data_raw, 0)
-                if self.dom_rx_power_supported:
+                if self.dom_tx_power_supported:
                     transceiver_dom_info_dict['tx1power'] = dom_channel_monitor_data['data']['TX1Power']['value']
                     transceiver_dom_info_dict['tx2power'] = dom_channel_monitor_data['data']['TX2Power']['value']
                     transceiver_dom_info_dict['tx3power'] = dom_channel_monitor_data['data']['TX3Power']['value']
@@ -907,6 +945,7 @@ class Sfp(SfpBase):
         txbiaslowwarning           |FLOAT          |Low Warning Threshold value of tx Bias Current in mA.
         ========================================================================
         """
+        self.reinit()
         transceiver_dom_threshold_info_dict = {}
 
         dom_info_dict_keys = ['temphighalarm',    'temphighwarning',
@@ -1031,6 +1070,7 @@ class Sfp(SfpBase):
             A Boolean, True if SFP has RX LOS, False if not.
             Note : RX LOS status is latched until a call to get_rx_los or a reset.
         """
+        self.reinit()
         if not self.dom_supported:
             return None
 
@@ -1052,7 +1092,7 @@ class Sfp(SfpBase):
             if self.dom_rx_tx_power_bias_supported: #not implement
                 dom_channel_monitor_raw = self._read_eeprom_specific_bytes(QSFP_DD_CHANNL_RX_LOS_STATUS['offset'], QSFP_DD_CHANNL_RX_LOS_STATUS['width'], QSFP_DD_CHANNL_RX_LOS_STATUS['page'])
                 if dom_channel_monitor_raw is not None:
-                    rx_los_data = int(dom_channel_monitor_raw[0], 8)
+                    rx_los_data = int(dom_channel_monitor_raw[0], 16)
                     rx_los_list.append(rx_los_data & 0x01 != 0)
                     rx_los_list.append(rx_los_data & 0x02 != 0)
                     rx_los_list.append(rx_los_data & 0x04 != 0)
@@ -1072,6 +1112,7 @@ class Sfp(SfpBase):
             A Boolean, True if SFP has TX fault, False if not
             Note : TX fault status is lached until a call to get_tx_fault or a reset.
         """
+        self.reinit()
         if not self.dom_supported:
             return None
 
@@ -1104,6 +1145,7 @@ class Sfp(SfpBase):
         for SFP, the TX Disable State and Soft TX Disable Select is ORed as the tx_disable status returned
                  These two bits are bit 7 & 6 in byte 110 page a2 respectively
         """
+        self.reinit()
         if not self.dom_supported:
             return None
 
@@ -1174,6 +1216,7 @@ class Sfp(SfpBase):
         Returns:
             An integer number of current temperature in Celsius
         """
+        self.reinit()
         if not self.dom_supported:
             return None
         #QSFP
@@ -1218,6 +1261,7 @@ class Sfp(SfpBase):
         Returns:
             An integer number of supply voltage in mV
         """
+        self.reinit()
         if not self.dom_supported:
             return None
 
@@ -1263,6 +1307,7 @@ class Sfp(SfpBase):
             for channel 0 to channel 4.
             Ex. ['110.09', '111.12', '108.21', '112.09']
         """
+        self.reinit()
         tx_bias_list = []
 
         #QSFP
@@ -1289,7 +1334,7 @@ class Sfp(SfpBase):
                 if sfpd_obj is None:
                     return None
 
-                if dom_tx_bias_power_supported:
+                if self.dom_tx_bias_power_supported:
                     dom_tx_bias_raw = self._read_eeprom_specific_bytes(QSFP_DD_TX_BIAS['offset'], QSFP_DD_TX_BIAS['width'], QSFP_DD_TX_BIAS['page'])
                     if dom_tx_bias_raw is not None:
                         dom_tx_bias_data = sfpd_obj.parse_dom_tx_bias(dom_tx_bias_raw, 0)
@@ -1313,6 +1358,7 @@ class Sfp(SfpBase):
             power in mW for channel 0 to channel 4.
             Ex. ['1.77', '1.71', '1.68', '1.70']
         """
+        self.reinit()
         rx_power_list = []
 
         #QSFP
@@ -1368,6 +1414,7 @@ class Sfp(SfpBase):
             for channel 0 to channel 4.
             Ex. ['1.86', '1.86', '1.86', '1.86']
         """
+        self.reinit()
         tx_power_list = []
 
         #QSFP
@@ -1458,8 +1505,13 @@ class Sfp(SfpBase):
         Returns:
             A boolean, True if lpmode is set successfully, False if not
         """
-        # SFP doesn't support this feature
-        return False
+        if not self.get_presence():
+            return False
+
+        self.set_power_override(True, True if lpmode is True else False)
+
+        return True
+
 
     def set_power_override(self, power_override, power_set):
         """
@@ -1478,8 +1530,111 @@ class Sfp(SfpBase):
             A boolean, True if power-override and power_set are set successfully,
             False if not
         """
-        # SFP doesn't support this feature
-        return False
+        if not self.get_presence():
+            return False
+        self.reinit()
+        if self.sfp_type == QSFP_TYPE:
+            try:
+                power_override_bit = (1 << 0) if power_override else 0
+                power_set_bit      = (1 << 1) if power_set else (1 << 3)
+
+                # Write to eeprom
+                with open(self.port_to_power_mode_mapping[self.index], "w") as fd:
+                    fd.write(str((power_override_bit | power_set_bit)))
+                    time.sleep(0.01)
+                    fd.close()
+            except Exception as e:
+                print ('Error: unable to open file: ', str(e))
+                fd.close()
+                return False
+            return True
+        elif self.sfp_type == QSFP_DD_TYPE:
+            try:
+                power_override_bit = (1 << 6)
+                power_set_bit      = (1 << 4) if power_set else (0 << 4)
+
+                # Write to eeprom
+                with open(self.port_to_power_mode_mapping[self.index], "w") as fd:
+                    fd.write(str((power_override_bit | power_set_bit)))
+                    time.sleep(0.01)
+                    fd.close()
+            except Exception as e:
+                print ('Error: unable to open file: ', str(e))
+                fd.close()
+                return False
+            return True
+
+    def read_eeprom(self, offset, num_bytes):
+        """
+        read eeprom specfic bytes beginning from a random offset with size as num_bytes
+
+        Args:
+             offset :
+                     Integer, the offset from which the read transaction will start
+             num_bytes:
+                     Integer, the number of bytes to be read
+
+        Returns:
+            bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
+            None, if the read_eeprom fails
+        """
+        if not self.get_presence():
+            return False
+        self.reinit()
+        if self.sfp_type == QSFP_DD_TYPE:
+            #offset check
+            if offset < 256:
+                return bytearray([int(x, 16) for x in self._read_eeprom_specific_bytes(offset, num_bytes)])
+            elif offset >= (0x4 * 128 + 128) and offset < (0x5 * 128 + 128):
+                return bytearray([int(x, 16) for x in self._read_eeprom_specific_bytes(offset - (0x4 * 128), num_bytes, 4)])
+            else:
+                return None
+        else:
+            return None
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        """
+        write eeprom specfic bytes beginning from a random offset with size as num_bytes
+        and write_buffer as the required bytes
+
+        Args:
+             offset :
+                     Integer, the offset from which the read transaction will start
+             num_bytes:
+                     Integer, the number of bytes to be written
+             write_buffer:
+                     bytearray, raw bytes buffer which is to be written beginning at the offset
+
+        Returns:
+            a Boolean, true if the write succeeded and false if it did not succeed.
+        """
+        if not self.get_presence():
+            return False
+        self.reinit()
+        if self.sfp_type == QSFP_DD_TYPE:
+            #offset check
+            if offset == (0x12 * 128 + 128):
+                # Write to eeprom
+                with open(self.port_to_grid_mapping[self.index], "w") as fd:
+                    fd.write(str((int(str(write_buffer.hex()), 16))))
+                    time.sleep(0.01)
+                    fd.close()
+            elif offset == (0x12 * 128 + 136):
+                # Write to eeprom
+                with open(self.port_to_freq_mapping[self.index], "w") as fd:
+                    fd.write(str((int(str(write_buffer.hex()), 16))))
+                    time.sleep(0.01)
+                    fd.close()
+            elif offset == (0x12 * 128 + 200):
+                # Write to eeprom
+                with open(self.port_to_outp_mapping[self.index], "w") as fd:
+                    fd.write(str((int(str(write_buffer.hex()), 16))))
+                    time.sleep(0.01)
+                    fd.close()
+            else:
+                return False
+        else:
+            return False
 
     def get_name(self):
         """
@@ -1513,3 +1668,40 @@ class Sfp(SfpBase):
         transceiver_dom_info_dict = self.get_transceiver_info()
         return transceiver_dom_info_dict.get("serial", "N/A")
 
+    def get_status(self):
+        """
+        Retrieves the operational status of the device
+        Returns:
+            A boolean value, True if device is operating properly, False if not
+        """
+        return self.get_presence() and not self.get_reset_status()
+
+    def get_position_in_parent(self):
+        """
+        Returns:
+            Temp return 0
+        """
+        return 0
+
+    def is_replaceable(self):
+        """
+        Retrieves if replaceable
+        Returns:
+            A boolean value, True if replaceable
+        """
+        return True
+
+    def get_error_description(self):
+        """
+        Get error description
+
+        Args:
+            error_code: The error code returned by _get_error_code
+
+        Returns:
+            The error description
+        """
+        if self.get_presence():
+            return self.SFP_STATUS_OK
+        else:
+            return self.SFP_STATUS_UNPLUGGED

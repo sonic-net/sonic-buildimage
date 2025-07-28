@@ -1,0 +1,13 @@
+[Unit]
+Description=Wistron 6512-32R watchdog
+After=pmon.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/sonic-ipmi-watchdog-kick
+ExecStop=/usr/bin/ipmitool mc watchdog off
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+[Install]
+WantedBy=multi-user.target

@@ -22,12 +22,20 @@ class Psu(PsuBase):
                       "/sys/bus/i2c/devices/0-005a"]
 
     def __init__(self, psu_index):
+        self._fan_list = []
         self.PSU_TEMP_MAX = 85 * 1000
         self.PSU_OUTPUT_POWER_MAX = 1300 * 1000
         self.PSU_OUTPUT_VOLTAGE_MIN = 11400
         self.PSU_OUTPUT_VOLTAGE_MAX = 12600
         self.index = psu_index
         PsuBase.__init__(self)
+        self.__initialize_fan()
+
+    def __initialize_fan(self):
+        from sonic_platform.fan import Fan
+        for fan_index in range(0, 1):
+                fan = Fan(fan_index, 0, is_psu_fan=True, psu_index=self.index)
+                self._fan_list.append(fan)
 
     def __read_txt_file(self, file_path):
         try:
@@ -38,15 +46,14 @@ class Psu(PsuBase):
             pass
         return ""
 
-    def get_fan(self):
+    def get_fan(self, index):
         """
         Retrieves object representing the fan module contained in this PSU
         Returns:
             An object dervied from FanBase representing the fan module
             contained in this PSU
         """
-        # Hardware not supported
-        return False
+        return self._fan_list[index]
 
     def get_powergood_status(self):
         """
@@ -84,7 +91,7 @@ class Psu(PsuBase):
             bool: True if PSU is present, False if not
         """
         attr_file ='psu_present'
-        attr_path = self.SYSFS_PSU_DIR[self.index-1] +'/' + attr_file
+        attr_path = self.SYSFS_PSU_DIR[self.index] +'/' + attr_file
         status = 0
         try:
             with open(attr_path, 'r') as psu_prs:
@@ -101,7 +108,7 @@ class Psu(PsuBase):
             A boolean value, True if device is operating properly, False if not
         """
         attr_file = 'psu_power_good'
-        attr_path = self.SYSFS_PSU_DIR[self.index-1] +'/' + attr_file
+        attr_path = self.SYSFS_PSU_DIR[self.index] +'/' + attr_file
         status = 0
         try:
             with open(attr_path, 'r') as power_status:
@@ -120,13 +127,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_model_name'
-                attr_path = self.SYSFS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.SYSFS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
                 return str(val)
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_serial(self):
         """
@@ -137,13 +142,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_serial_number'
-                attr_path = self.SYSFS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.SYSFS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
                 return str(val)
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_voltage(self):
         """
@@ -154,13 +157,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_v_out'
-                attr_path = self.STATUS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.STATUS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
-                return int(val)
+                return float(val) / 1000.0
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_current(self):
         """
@@ -171,13 +172,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_i_out'
-                attr_path = self.STATUS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.STATUS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
-                return int(val)
+                return float(val) / 1000.0
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_power(self):
         """
@@ -188,13 +187,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_p_out'
-                attr_path = self.STATUS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.STATUS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
-                return int(val)
+                return float(val) / 1000000.0
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_status_led(self):
         """
@@ -221,13 +218,11 @@ class Psu(PsuBase):
         try:
             if self.get_presence():
                 attr_file = 'psu_temp1_input'
-                attr_path = self.STATUS_PSU_DIR[self.index-1] +'/' + attr_file
+                attr_path = self.STATUS_PSU_DIR[self.index] +'/' + attr_file
                 val = self.__read_txt_file(attr_path)
-                return int(val)
+                return float(val) / 1000.0
         except Exception as e:
-            logger.error(str(e))
-
-        return None
+            return None
 
     def get_temperature_high_threshold(self):
         """
@@ -272,7 +267,42 @@ class Psu(PsuBase):
         Returns:
             integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
         """
-        return -1
+        return self.index + 1
 
     def is_replaceable(self):
         return True
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+        Returns:
+            string: Revision value of device
+        """
+        try:
+            if self.get_presence():
+                attr_file = 'psu_mfr_revision'
+                attr_path = self.STATUS_PSU_DIR[self.index] +'/' + attr_file
+                with open(attr_path, 'r') as revision:
+                    val = revision.read()
+                return val.strip()
+        except IOError:
+            return None
+
+    def get_num_fans(self):
+        """
+        Retrieves the number of fan modules available on this PSU
+
+        Returns:
+            An integer, the number of fan modules available on this PSU
+        """
+        return len(self._fan_list)
+
+    def get_all_fans(self):
+        """
+        Retrieves all fan modules available on this PSU
+
+        Returns:
+            A list of objects derived from FanBase representing all fan
+            modules available on this PSU
+        """
+        return self._fan_list
