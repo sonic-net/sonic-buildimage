@@ -42,7 +42,6 @@ RUN apt-get remove -y build-essential     \
 
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["lease_update.sh", "/etc/kea/"]

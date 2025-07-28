@@ -1,7 +1,7 @@
 import copy
 import os
 import sys
-import docker
+import pytest
 from unittest import mock
 from imp import load_source
 from swsscommon import swsscommon
@@ -24,23 +24,36 @@ from supervisor_proc_exit_listener import *
 
 
 # Patch the builtin open function
+mock_files = ["/etc/supervisor/critical_processes", "/etc/supervisor/watchdog_processes"]
 builtin_open = open  # save the unpatched version
-
 def mock_open(*args, **kwargs):
-    if args[0] == "/etc/supervisor/critical_processes":
-        return builtin_open(os.path.join(test_path, "etc/supervisor/critical_processes"), *args[1:], **kwargs)
+    if args[0] in mock_files:
+        return builtin_open(os.path.join(test_path, args[0][1:]), *args[1:], **kwargs)
     # unpatched version for every other path
     return builtin_open(*args, **kwargs)
 
 
+# Patch the os.path.exists function
+builtin_exists = os.path.exists  # save the unpatched version
+def mock_exists(path):
+    if path in mock_files:
+        return True
+    # unpatched version for every other path
+    return builtin_exists(path)
+
+
 # Patch the stdin
 buildin_stdin = sys.stdin
-
 sys.stdin = open(os.path.join(test_path, "dev/stdin"))
 
 # @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
 # @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @mock.patch("builtins.open", mock_open)
+@mock.patch("os.path.exists", mock_exists)
 @patch('swsscommon.swsscommon.ConfigDBConnector')
 def test_main(mock_config_db):
+    with pytest.raises(SystemExit) as excinfo:
+        rc = main([])
+    assert excinfo.value.code == 1
+
     main(["--container-name", "snmp"])
