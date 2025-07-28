@@ -339,6 +339,17 @@ start() {
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
+        MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
+        if [ -f $MEDIA_SETTINGS ]; then
+            if [ "$( docker inspect -f '{{.State.Running}}' pmon )" != "true" ]; then
+                debug "pmon not running so skip restarting xcvrd"
+            else
+                # Need to restart XCVRD on media_settings.json skus due to
+                # https://github.com/sonic-net/sonic-buildimage/issues/21902
+                debug "Restarting xcvrd service..."
+                /usr/bin/docker exec pmon supervisorctl restart xcvrd
+            fi
+        fi
     fi
 
     # On supervisor card, skip starting asic related services here. In wait(),
