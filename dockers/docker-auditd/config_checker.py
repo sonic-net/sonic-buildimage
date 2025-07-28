@@ -94,7 +94,7 @@ def is_auditd_service_configured():
 
 def check_rules_syntax():
     logger.log_info("Checking auditd rules syntax...")
-    rc, out = run_command("auditctl -R /etc/audit/audit.rules")
+    rc, out = run_command("nsenter --target 1 --pid --mount --uts --ipc --net auditctl -R /etc/audit/audit.rules")
     if rc != 0:
         logger.log_error("auditctl -R failed: {}".format(out))
         return False
