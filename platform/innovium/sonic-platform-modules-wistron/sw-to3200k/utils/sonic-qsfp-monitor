@@ -10,7 +10,11 @@ port_1_8_reset=0
 port_9_16_reset=0
 port_17_24_reset=0
 port_25_32_reset=0
-
+port_init=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_mode=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_grid=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_freq=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+port_pre_outp=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
 result=0
 
 #$1=dev_addr, $2=reg, $3=val
@@ -125,6 +129,7 @@ bmc_qsfp_eeprom_read()
     local eeprom_pg2
     local eeprom_pg3
     local eeprom_pg11
+    local eeprom_pg12
 
     port=`expr $port - 1`
     i2cmux_dev=0
@@ -140,6 +145,19 @@ bmc_qsfp_eeprom_read()
     bmc_read 0x50 0 128
     if [ $? -eq 1 ];then
         eeprom_low=$result
+		sfp_type=$(echo $eeprom_low | awk '{printf $1}')
+		sfp_type=$( printf "%d" 0x$sfp_type )
+
+		pwr_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/power_mode"
+		pwr_mode=$(cat $pwr_path | awk '{printf $1}')
+		if [ $pwr_mode -ne ${port_pre_mode[$port]} ]; then
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 26 $pwr_mode
+			elif [ $sfp_type -eq 17 ];then
+				bmc_write 0x50 93 $pwr_mode
+			fi
+			port_pre_mode[$port]=$pwr_mode
+		fi
     else
         bmc_write $i2cmux_dev 0x00 0x0
         return 1
@@ -184,7 +202,19 @@ bmc_qsfp_eeprom_read()
         return 1
     fi
 
-    #QSFP-DD page11
+	if [ ${port_init[$port]} -eq 0 ]; then
+		#QSFP-DD page4
+		bmc_write 0x50 0x7f 0x04
+		bmc_read 0x50 128 128
+		if [ $? -eq 1 ];then
+			eeprom_pg4=$result
+		else
+			bmc_write $i2cmux_dev 0x00 0x0
+			return 1
+		fi
+	fi
+
+    #QSFP-DD page11h
     bmc_write 0x50 0x7f 0x11
     bmc_read 0x50 128 128
     if [ $? -eq 1 ];then
@@ -194,8 +224,96 @@ bmc_qsfp_eeprom_read()
         return 1
     fi
 
-    sfp_type=$(echo $eeprom_low | awk '{printf $1}')
-    sfp_type=$( printf "%d" 0x$sfp_type )
+    #QSFP-DD page12h
+	if [ ${port_init[$port]} -eq 0 ]; then
+		bmc_write 0x50 0x7f 0x12
+		bmc_read 0x50 128 128
+		if [ $? -eq 1 ];then
+			eeprom_pg12=$result
+		else
+			bmc_write $i2cmux_dev 0x00 0x0
+			return 1
+		fi
+	fi
+
+	if [ ${port_init[$port]} -eq 1 ]; then
+		grid_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/grid"
+		grid_val=$(cat $grid_path | awk '{printf $1}')
+		if [ $grid_val -ne ${port_pre_grid[$port]} ]; then
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 0x7f 0x12
+				ipmitool raw 0x06 0x52 0x05 0xa0 0 0x80 $grid_val 1>>/dev/null 2>>/dev/null
+				port_pre_grid[$port]=$grid_val
+			fi
+		else
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 0x7f 0x12
+				grid=$(ipmitool raw 0x06 0x52 0x05 0xa0 1 0x80)
+				grid=$(echo $grid | awk '{printf $1}')
+				if [ $grid != "" ];then
+					grid=$( printf "%d" 0x$grid )
+					echo $grid > $grid_path
+				fi
+			fi
+		fi
+		outp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/output_power"
+		outp_val=$(cat $outp_path | awk '{printf $1}')
+		if [ $outp_val -ne ${port_pre_outp[$port]} ]; then
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 0x7f 0x12
+				outp_b1=$(echo $(((outp_val & 0xff00) >> 8)))
+				outp_b2=$(echo $((outp_val & 0xff)))
+				ipmitool raw 0x06 0x52 0x05 0xa0 0 0xc8 $outp_b1 $outp_b2 1>>/dev/null 2>>/dev/null
+				port_pre_outp[$port]=$outp_val
+			fi
+		else
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 0x7f 0x12
+				outp=$(ipmitool raw 0x06 0x52 0x05 0xa0 2 0xc8)
+				outp_h=$(echo $outp | awk '{printf $1}')
+				outp_l=$(echo $outp | awk '{printf $2}')
+				if [ $outp != "" ];then
+					outp_h=$( printf "%d" 0x$outp_h )
+					outp_l=$( printf "%d" 0x$outp_l )
+					outp=$((outp_h << 8 | out_p_l))
+					echo $outp > $outp_path
+				fi
+			fi
+		fi
+		freq_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/freq"
+		freq_val=$(cat $freq_path | awk '{printf $1}')
+		if [ $freq_val -ne ${port_pre_freq[$port]} ]; then
+			if [ $sfp_type -eq 24 ];then
+				#workaround for turn on/off lpmode in setting laser freq
+				bmc_write 0x50 0x7f 0x0
+				sleep 0.1
+				bmc_write 0x50 26 0x50
+				freq_b1=$(echo $(((freq_val & 0xff00) >> 8)))
+				freq_b2=$(echo $((freq_val & 0xff)))
+				bmc_write 0x50 0x7f 0x12
+				sleep 0.1
+				ipmitool raw 0x06 0x52 0x05 0xa0 0 0x88 $freq_b1 $freq_b2 1>>/dev/null 2>>/dev/null
+				sleep 0.1
+				bmc_write 0x50 0x7f 0x0
+				sleep 0.1
+				bmc_write 0x50 26 0x40
+				port_pre_freq[$port]=$freq_val
+			fi
+		else
+			if [ $sfp_type -eq 24 ];then
+				bmc_write 0x50 0x7f 0x12
+				freq=$(ipmitool raw 0x06 0x52 0x05 0xa0 2 0x88)
+				freq_h=$(echo $freq | awk '{printf $1}')
+				freq_l=$(echo $freq | awk '{printf $2}')
+				if [ $freq != "" ];then
+					freq_h=$( printf "%d" 0x$freq_h )
+					freq_l=$( printf "%d" 0x$freq_l )
+					freq=$((freq_h << 8 | out_p_l))
+					echo $freq > $freq_path
+				fi
+			fi
+		fi
+	fi
 
     #get temperature
     temp=$(echo $eeprom_low | awk '{printf $15}')
@@ -236,7 +354,13 @@ bmc_qsfp_eeprom_read()
     eeprom_pg1=$(echo $eeprom_pg1 | sed 's/[[:space:]]//g')
     eeprom_pg2=$(echo $eeprom_pg2 | sed 's/[[:space:]]//g')
     eeprom_pg3=$(echo $eeprom_pg3 | sed 's/[[:space:]]//g')
+	if [ ${port_init[$port]} -eq 0 ]; then
+		eeprom_pg4=$(echo $eeprom_pg4 | sed 's/[[:space:]]//g')
+	fi
     eeprom_pg11=$(echo $eeprom_pg11 | sed 's/[[:space:]]//g')
+	if [ ${port_init[$port]} -eq 0 ]; then
+		eeprom_pg12=$(echo $eeprom_pg12 | sed 's/[[:space:]]//g')
+	fi
 
     if [ $debug_flag -eq 0 ];then
         eeprom_low_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_low"
@@ -254,9 +378,19 @@ bmc_qsfp_eeprom_read()
         eeprom_pg3_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg3"
         eeprom_pg3=$(echo $eeprom_pg3 | sed -e 's/ //g')
         echo $eeprom_pg3 > $eeprom_pg3_path
+		if [ ${port_init[$port]} -eq 0 ]; then
+			eeprom_pg4_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg4"
+			eeprom_pg4=$(echo $eeprom_pg4 | sed -e 's/ //g')
+			echo $eeprom_pg4 > $eeprom_pg4_path
+		fi
         eeprom_pg11_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg11"
         eeprom_pg11=$(echo $eeprom_pg11 | sed -e 's/ //g')
         echo $eeprom_pg11 > $eeprom_pg11_path
+		if [ ${port_init[$port]} -eq 0 ]; then
+			eeprom_pg12_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg12"
+			eeprom_pg12=$(echo $eeprom_pg12 | sed -e 's/ //g')
+			echo $eeprom_pg12 > $eeprom_pg12_path
+		fi
     else
         printf "\nPort %d EEPROM:" $1
         printf "\nLow--------------------------------------------\n"
@@ -319,6 +453,20 @@ bmc_qsfp_eeprom_read()
             fi
         done
         printf "\n-----------------------------------------------\n"
+		if [ ${port_init[$port]} -eq 0 ]; then
+			printf "Page4------------------------------------------\n"
+			for i in $(seq 1 128);
+			do
+				printf "%s " ${eeprom_pg4:0:2}
+				eeprom_pg3=$(echo $eeprom_pg4 | sed 's/^..//')
+
+				val=`expr $i % 16`
+				if [ $val -eq 0 ];then
+					printf "\n"
+				fi
+			done
+			printf "\n-----------------------------------------------\n"
+		fi
         printf "Page11-----------------------------------------\n"
         for i in $(seq 1 128);
         do
@@ -331,8 +479,21 @@ bmc_qsfp_eeprom_read()
             fi
         done
         printf "\n-----------------------------------------------\n"
+        printf "Page12-----------------------------------------\n"
+        for i in $(seq 1 128);
+        do
+            printf "%s " ${eeprom_pg12:0:2}
+            eeprom_pg12=$(echo $eeprom_pg12 | sed 's/^..//')
+
+            val=`expr $i % 16`
+            if [ $val -eq 0 ];then
+                printf "\n"
+            fi
+        done
+        printf "\n-----------------------------------------------\n"
     fi
 
+    port_init[$port]=1
     bmc_write $i2cmux_dev 0x00 0x0
     return 0
 }
@@ -352,6 +513,18 @@ bmc_qsfp_eeprom_clear()
     echo "" > $eeprom_pg3_path
     eeprom_pg11_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg11"
     echo "" > $eeprom_pg11_path
+    eeprom_pg4_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg4"
+    echo "" > $eeprom_pg4_path
+    eeprom_pg12_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/eeprom_pg12"
+    echo "" > $eeprom_pg12_path
+    pwr_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/power_mode"
+    echo 0 > $pwr_path
+    grid_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/grid"
+    echo 0 > $grid_path
+    freq_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/freq"
+    echo 0 > $freq_path
+	outp_path="/sys/bus/i2c/devices/0-00"${port_map[$1]}"/output_power"
+    echo 0 > $outp_path
 }
 
 QSFP_monitor()
@@ -385,6 +558,11 @@ QSFP_monitor()
                     fi
                 else
                     echo 0 > $cpld_path"module_present_"$i
+					port_init[$((i - 1))]=0
+					port_pre_mode[$((i - 1))]=0
+					port_pre_freq[$((i - 1))]=0
+					port_pre_outp[$((i - 1))]=0
+					port_pre_grid[$((i - 1))]=0
                     bmc_qsfp_eeprom_clear $i
                 fi
             done

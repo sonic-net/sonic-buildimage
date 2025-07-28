@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import subprocess
+from shlex import split
+from collections import namedtuple
+from functools import reduce
 
 
 try:
@@ -15,8 +18,9 @@ CPLD_ADDR_MAPPING = {
     "FAN_CPLD" : "0-0066"
 }
 
+proc_output = namedtuple('proc_output', 'stdout stderr')
 SYSFS_PATH = "/sys/bus/i2c/devices/"
-GET_BMC_VER_CMD= "ipmitool mc info | grep 'Firmware Revision' | awk '{printf $4}'"
+#GET_BMC_VER_CMD= "ipmitool mc info | grep 'Firmware Revision' | awk '{printf $4}'"
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
 COMPONENT_LIST= [
    ("BIOS", "Basic Input/Output System"),
@@ -36,6 +40,28 @@ class Component(ComponentBase):
         ComponentBase.__init__(self)
         self.index = component_index
         self.name = self.get_name()
+
+    def pipeline(self, starter_command, *commands):
+        if not commands:
+            try:
+                starter_command, *commands = starter_command.split('|')
+            except AttributeError:
+                pass
+        starter_command = self._parse(starter_command)
+        starter = subprocess.Popen(starter_command, stdout=subprocess.PIPE)
+        last_proc = reduce(self._create_pipe, map(self._parse, commands), starter)
+        return proc_output(*last_proc.communicate())
+
+    def _create_pipe(self, previous, command):
+        proc = subprocess.Popen(command, stdin=previous.stdout, stdout=subprocess.PIPE)
+        previous.stdout.close()
+        return proc
+
+    def _parse(self, cmd):
+        try:
+            return split(cmd)
+        except Exception:
+            return cmd
 
     def __read_txt_file(self, file_path):
         try:
@@ -57,8 +83,8 @@ class Component(ComponentBase):
 
     def __get_bmc_version(self):
         try:
-            p = subprocess.Popen(GET_BMC_VER_CMD, shell=True, stdout=subprocess.PIPE)
-            out, err = p.communicate()
+            #GET_BMC_VER_CMD
+            out, err = self.pipeline("ipmitool mc info", "grep 'Firmware Revision'", "awk '{printf $4}'")
             return out.decode().rstrip('\n')
         except Exception as e:
             print('Get exception when read bmc')

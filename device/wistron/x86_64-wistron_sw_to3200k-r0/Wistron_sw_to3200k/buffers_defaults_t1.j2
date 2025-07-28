@@ -1,4 +1,4 @@
-{# Default values which will be used if no actual configura available #}
+{# Default values which will be used if no actual configuration available #}
 {% set default_cable = '40m' %}
 
 {# Port configuration to cable length look-up table #}
@@ -76,7 +76,7 @@
     },
     "BUFFER_POOL": {
         "ingress_lossless_pool": {
-            "size": "47218432",
+            "size": "51691264",
             "type": "ingress",
             "mode": "dynamic",
             "xoff": "17708800"
@@ -88,14 +88,15 @@
             "xoff": "0"
         },
         "egress_lossless_pool": {
-            "size": "66092800",
-            "type": "egress"
+            "size": "70565632",
+            "type": "egress",
+            "mode": "static"
         }
     },
     "BUFFER_PROFILE": {
         "ingress_lossless_profile": {
             "pool":"ingress_lossless_pool",
-            "xoff":"38816",
+            "xoff":"135520",
             "size":"1518",
             "dynamic_th":"1",
             "xon_offset":"9408"
@@ -103,12 +104,12 @@
         "egress_lossless_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "static_th":"9497600"
+            "static_th":"10243072"
         },
         "ingress_lossy_profile": {
             "pool":"lossy_pool",
             "size":"0",
-            "static_th":"9497600"
+            "static_th":"10243072"
         },
         "egress_lossy_profile": {
             "pool":"lossy_pool",
