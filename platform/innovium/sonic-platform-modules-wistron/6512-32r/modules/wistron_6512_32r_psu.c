@@ -21,6 +21,7 @@ static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
 #define MFR_VENDOR_NAME_LENGTH	16
 #define MFR_MODEL_NAME_LENGTH	16
 #define MFR_SERIAL_NUM_LENGTH	32
+#define MFR_REV_LENGTH	10
 
 /* Each client has this additional data */
 struct wistron_psu_data {
@@ -33,13 +34,15 @@ struct wistron_psu_data {
 	int              v_out;
 	int              i_in;
 	int              i_out;
-	int              p_in;
-	int              p_out;
+	long             p_in;
+	long             p_out;
 	int              temp_input;
+	int              pwm;
 	int              fault;
 	u8               mfr_id[MFR_VENDOR_NAME_LENGTH];
 	u8               mfr_model[MFR_MODEL_NAME_LENGTH];
 	u8               mfr_serial[MFR_SERIAL_NUM_LENGTH];
+	u8               mfr_rev[MFR_REV_LENGTH];
 };
 
 enum psu_index {
@@ -57,10 +60,12 @@ enum wistron_psu_sysfs_attributes {
 	PSU_P_IN,
 	PSU_P_OUT,
 	PSU_TEMP1_INPUT,
+	PSU_PWM,
 	PSU_FAULT,
 	PSU_MFR_ID,
 	PSU_MFR_MODEL,
 	PSU_MFR_SERIAL,
+	PSU_MFR_REV,
 };
 
 /* sysfs attributes for hwmon */
@@ -73,10 +78,12 @@ static SENSOR_DEVICE_ATTR(curr2_input,   S_IWUSR | S_IRUGO, get_value,  set_valu
 static SENSOR_DEVICE_ATTR(power1_input,  S_IWUSR | S_IRUGO, get_value,  set_value, PSU_P_IN);
 static SENSOR_DEVICE_ATTR(power2_input,  S_IWUSR | S_IRUGO, get_value,  set_value, PSU_P_OUT);
 static SENSOR_DEVICE_ATTR(temp1_input,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(pwm,   S_IWUSR | S_IRUGO, get_value,  set_value, PSU_PWM);
 static SENSOR_DEVICE_ATTR(fault,		 S_IWUSR | S_IRUGO, get_value,  set_value, PSU_FAULT);
 static SENSOR_DEVICE_ATTR(vendor,        S_IWUSR | S_IRUGO, get_value,  set_value, PSU_MFR_ID);
 static SENSOR_DEVICE_ATTR(model,     	 S_IWUSR | S_IRUGO, get_value,  set_value, PSU_MFR_MODEL);
 static SENSOR_DEVICE_ATTR(sn,   		 S_IWUSR | S_IRUGO, get_value,  set_value, PSU_MFR_SERIAL);
+static SENSOR_DEVICE_ATTR(rev,   		 S_IWUSR | S_IRUGO, get_value,  set_value, PSU_MFR_REV);
 
 
 static struct attribute *wistron_psu_attributes[] = {
@@ -89,10 +96,12 @@ static struct attribute *wistron_psu_attributes[] = {
 	&sensor_dev_attr_power1_input.dev_attr.attr,
 	&sensor_dev_attr_power2_input.dev_attr.attr,
 	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_pwm.dev_attr.attr,
 	&sensor_dev_attr_fault.dev_attr.attr,
 	&sensor_dev_attr_vendor.dev_attr.attr,
 	&sensor_dev_attr_model.dev_attr.attr,
 	&sensor_dev_attr_sn.dev_attr.attr,
+	&sensor_dev_attr_rev.dev_attr.attr,
 	NULL
 };
 
@@ -162,13 +171,16 @@ static ssize_t get_value(struct device *dev, struct device_attribute *da, char *
 			ret_count = sprintf(buf, "%d", data->i_out);
 			break;
 		case PSU_P_IN:
-			ret_count = sprintf(buf, "%d", data->p_in);
+			ret_count = sprintf(buf, "%ld", data->p_in);
 			break;
 		case PSU_P_OUT:
-			ret_count = sprintf(buf, "%d", data->p_out);
+			ret_count = sprintf(buf, "%ld", data->p_out);
 			break;
 		case PSU_TEMP1_INPUT:
 			ret_count = sprintf(buf, "%d", data->temp_input);
+			break;
+		case PSU_PWM:
+			ret_count = sprintf(buf, "%d", data->pwm);
 			break;
 		case PSU_FAULT:
 			ret_count = sprintf(buf, "%d", data->fault);
@@ -181,6 +193,9 @@ static ssize_t get_value(struct device *dev, struct device_attribute *da, char *
 			break;
 		case PSU_MFR_SERIAL:
 			ret_count = sprintf(buf, "%s", data->mfr_serial);
+			break;
+		case PSU_MFR_REV:
+			ret_count = sprintf(buf, "%s", data->mfr_rev);
 			break;
 		default:
 			break;
@@ -222,17 +237,22 @@ static ssize_t set_value(struct device *dev, struct device_attribute *da, const 
 				goto exit_err;
 			break;
 		case PSU_P_IN:
-			error = kstrtoint(buf, 10, &data->p_in);
+			error = kstrtol(buf, 10, &data->p_in);
 			if (error)
 				goto exit_err;
 			break;
 		case PSU_P_OUT:
-			error = kstrtoint(buf, 10, &data->p_out);
+			error = kstrtol(buf, 10, &data->p_out);
 			if (error)
 				goto exit_err;
 			break;
 		case PSU_TEMP1_INPUT:
 			error = kstrtoint(buf, 10, &data->temp_input);
+			if (error)
+				goto exit_err;
+			break;
+		case PSU_PWM:
+			error = kstrtoint(buf, 10, &data->pwm);
 			if (error)
 				goto exit_err;
 			break;
@@ -242,16 +262,20 @@ static ssize_t set_value(struct device *dev, struct device_attribute *da, const 
 				goto exit_err;
 			break;
 		case PSU_MFR_ID:
-			memset(&data->mfr_id, 0x0, sizeof(data->mfr_id));
+			memzero_explicit(&data->mfr_id, sizeof(data->mfr_id));
 			strncpy(data->mfr_id, buf, sizeof(data->mfr_id) - 1);
 			break;
 		case PSU_MFR_MODEL:
-			memset(&data->mfr_model, 0x0, sizeof(data->mfr_model));
+			memzero_explicit(&data->mfr_model, sizeof(data->mfr_model));
 			strncpy(data->mfr_model, buf, sizeof(data->mfr_model) - 1);
 			break;
 		case PSU_MFR_SERIAL:
-			memset(&data->mfr_serial, 0x0, sizeof(data->mfr_serial));
+			memzero_explicit(&data->mfr_serial, sizeof(data->mfr_serial));
 			strncpy(data->mfr_serial, buf, sizeof(data->mfr_serial) - 1);
+			break;
+		case PSU_MFR_REV:
+			memzero_explicit(&data->mfr_rev, sizeof(data->mfr_rev));
+			strncpy(data->mfr_rev, buf, sizeof(data->mfr_rev) - 1);
 			break;
 		default:
 			break;

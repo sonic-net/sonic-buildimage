@@ -1,11 +1,11 @@
 [Unit]
-Description=Wistron 6512-32R Platform Monitoring service
+Description=Wistron 6512-32R Platform firmware version service
 After=platform-modules-6512-32r.service
 DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/platform_sync
+ExecStart=/usr/local/bin/platform_firmware_version
 RemainAfterExit=yes
 
 [Install]
