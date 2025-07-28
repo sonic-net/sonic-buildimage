@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sonic-bluefield-packages/bin
 
 # Place here URL where SDK sources exist
 SDK_SOURCE_BASE_URL =
-SDK_VERSION = 25.4-RC3
+SDK_VERSION = 25.7-RC3
 
 SDK_COLLECTX_URL = https://linux.mellanox.com/public/repo/doca/1.5.2/debian12/aarch64/
 
@@ -78,21 +78,19 @@ $(OFED_KERNEL_DKMS)_DEPENDS = $(OFED_KERNEL_UTILS)
 
 OFED_KERNEL = mlnx-ofed-kernel-modules-$(KVERSION)_$(OFED_KERNEL_VER_SHORT)_$(BUILD_ARCH).deb
 $(OFED_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
-$(OFED_KERNEL)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
+$(OFED_KERNEL)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON) $(OFED_KERNEL_DKMS)
 
 ifeq ($(SDK_FROM_SRC), y)
-$(OFED_KERNEL)_DEPENDS += $(OFED_KERNEL_DKMS)
-
 $(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_UTILS)))
 $(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_DKMS)))
 else
-SDK_ONLINE_TARGETS += $(OFED_KERNEL_UTILS)
+SDK_ONLINE_TARGETS += $(OFED_KERNEL_UTILS) $(OFED_KERNEL_DKMS)
 endif
 
 export OFED_VER_SHORT OFED_VER_FULL OFED_KERNEL OFED_KERNEL_UTILS OFED_KERNEL_VER_FULL MLNX_TOOLS OFED_KERNEL_DKMS
 
-SDK_DEBS += $(OFED_KERNEL) $(MLNX_TOOLS) $(OFED_KERNEL_UTILS)
-SDK_SRC_TARGETS += $(OFED_KERNEL) $(MLNX_TOOLS)
+SDK_DEBS += $(MLNX_TOOLS) $(OFED_KERNEL_UTILS)
+SDK_SRC_TARGETS += $(MLNX_TOOLS)
 
 # MLNX iproute2
 MLNX_IPROUTE2_VER = $(call get_sdk_package_version_full,"mlnx-iproute2")
@@ -153,8 +151,8 @@ export RDMA_CORE_DERIVED_DEBS
 SDK_SRC_TARGETS += $(RDMA_CORE)
 
 ifeq ($(SDK_FROM_SRC), y)
-$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS)))
+$(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_PROV)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_VERBS_DEV)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD)))
 $(eval $(call add_derived_package,$(RDMA_CORE),$(IB_UMAD_DEV)))
@@ -170,10 +168,10 @@ DPDK_VER = $(call get_sdk_package_version_full,"dpdk")
 
 DPDK = mlnx-dpdk_${DPDK_VER}_${CONFIGURED_ARCH}.deb
 $(DPDK)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/dpdk
-$(DPDK)_RDEPENDS = $(IB_VERBS_PROV) $(IB_VERBS) $(IB_VERBS_DEV)
+$(DPDK)_RDEPENDS = $(IB_VERBS) $(IB_VERBS_PROV) $(IB_VERBS_DEV)
 
 DPDK_DEV = mlnx-dpdk-dev_${DPDK_VER}_${CONFIGURED_ARCH}.deb
-$(DPDK)_DEPENDS = $(RDMA_CORE) $(IB_VERBS_PROV) $(IB_VERBS) $(IB_VERBS_DEV)
+$(DPDK)_DEPENDS = $(RDMA_CORE) $(IB_VERBS) $(IB_VERBS_PROV) $(IB_VERBS_DEV)
 $(DPDK_DEV)_RDEPENDS = $(DPDK)
 
 $(eval $(call add_derived_package,$(DPDK),$(DPDK_DEV)))
@@ -223,8 +221,8 @@ DOCA_DEB_VERSION = $(DOCA_VERSION)-1
 
 DOCA_COMMON = doca-sdk-common_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_COMMON)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/doca
-$(DOCA_COMMON)_RDEPENDS = $(DPDK) $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(LIBGRPC_DEV)
-$(DOCA_COMMON)_DEPENDS = $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(DPDK_DEV) $(LIBGRPC_DEV)
+$(DOCA_COMMON)_RDEPENDS = $(DPDK) $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(LIBGRPC_DEV) $(LIB_NV_HWS)
+$(DOCA_COMMON)_DEPENDS = $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(DPDK_DEV) $(LIBGRPC_DEV) $(LIB_NV_HWS_DEV)
 DOCA_COMMON_DEV = libdoca-sdk-common-dev_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_COMMON_DEV)_DEPENDS = $(DOCA_COMMON)
 
@@ -245,14 +243,14 @@ DOCA_DEV_DEBS += $(DOCA_ARGP_DEV)
 DOCA_DPDK_BRIDGE = doca-sdk-dpdk-bridge_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_DPDK_BRIDGE)_DEPENDS += $(DOCA_COMMON)
 DOCA_DPDK_BRIDGE_DEV = libdoca-sdk-dpdk-bridge-dev_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
-$(DOCA_DPDK_BRIDGE_DEV)_DEPENDS = $(DOCA_DPDK_BRIDGE)
+$(DOCA_DPDK_BRIDGE_DEV)_DEPENDS = $(DOCA_DPDK_BRIDGE) $(DOCA_COMMON_DEV)
 
 DOCA_DEBS += $(DOCA_DPDK_BRIDGE)
 DOCA_DEV_DEBS += $(DOCA_DPDK_BRIDGE_DEV)
 export DOCA_DPDK_BRIDGE DOCA_DPDK_BRIDGE_DEV
 
 DOCA_FLOW = doca-sdk-flow_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
-$(DOCA_FLOW)_DEPENDS += $(DOCA_COMMON)
+$(DOCA_FLOW)_DEPENDS += $(DOCA_COMMON) $(DOCA_DPDK_BRIDGE)
 DOCA_FLOW_DEV = libdoca-sdk-flow-dev_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_FLOW_DEV)_DEPENDS = $(DOCA_FLOW) $(DOCA_DPDK_BRIDGE_DEV)
 
@@ -275,6 +273,27 @@ $(eval $(call add_derived_package,$(DOCA_COMMON),$(DOCA_FLOW_DEV)))
 else
 SONIC_ONLINE_DEBS += $(DOCA_DEBS) $(DOCA_DEV_DEBS)
 endif
+
+# hw-steering packages, needed for doca-flow runtime
+NV_HWS_VERSION = $(call get_sdk_package_version_full,"nv_hws")
+
+LIB_NV_HWS = libnvhws1_${NV_HWS_VERSION}_${CONFIGURED_ARCH}.deb
+$(LIB_NV_HWS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/nv_hws
+$(LIB_NV_HWS)_DEPENDS = $(IB_VERBS_DEV)
+
+LIB_NV_HWS_DEV = libnvhws-dev_${NV_HWS_VERSION}_${CONFIGURED_ARCH}.deb
+$(LIB_NV_HWS_DEV)_DEPENDS = $(LIB_NV_HWS)
+
+ifeq ($(SDK_FROM_SRC), y)
+$(eval $(call add_derived_package,$(LIB_NV_HWS),$(LIB_NV_HWS_DEV)))
+else
+SONIC_ONLINE_DEBS += $(LIB_NV_HWS) $(LIB_NV_HWS_DEV)
+endif
+
+SDK_SRC_TARGETS += $(LIB_NV_HWS)
+SDK_DEBS += $(LIB_NV_HWS) $(LIB_NV_HWS_DEV)
+
+export LIB_NV_HWS LIB_NV_HWS_DEV
 
 # SDN Appliance
 
@@ -300,7 +319,10 @@ $(eval $(foreach deb,$(SDK_SRC_TARGETS) $(SDK_ONLINE_TARGETS) $(SDK_DEBS),$(call
 SONIC_ONLINE_DEBS += $(SDK_SRC_TARGETS) $(SDK_ONLINE_TARGETS)
 endif
 
-SDK_PACKAGES = $(OFED_KERNEL) $(OFED_KERNEL_UTILS) $(MLNX_IPROUTE2) $(SDK_ONLINE_TARGETS) $(SDK_SRC_TARGETS)
+# Always build the platform modules, don't save the deb file to artifactory
+SONIC_MAKE_DEBS += $(OFED_KERNEL)
+
+SDK_PACKAGES = $(OFED_KERNEL_UTILS) $(MLNX_IPROUTE2) $(SDK_ONLINE_TARGETS) $(SDK_SRC_TARGETS)
 
 sdk-packages: $(addprefix $(DEBS_PATH)/, $(SDK_PACKAGES))
 

@@ -369,3 +369,66 @@ class TestSmartSwitch:
             }
         }
         yang_model.load_data(data, error_message)
+
+    @pytest.mark.parametrize(
+        "dpu_id, swbus_port, error_message", [
+            (0, 23606, None),
+            (1, 23607, None),
+            (7, 23613, None)]
+        )
+    def test_remote_dpu_swbus_port(self, yang_model, dpu_id, swbus_port, error_message):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:REMOTE_DPU": {
+                    "REMOTE_DPU_LIST": [
+                        {
+                            "dpu_name": f"str-8102-t1-dpu{dpu_id}",
+                            "type": "xyz",
+                            "pa_ipv4": "192.168.1.4",
+                            "pa_ipv6": "2001:db8::4",
+                            "npu_ipv4": "192.168.1.5",
+                            "npu_ipv6": "2001:db8::5",
+                            "dpu_id": dpu_id,
+                            "swbus_port": swbus_port,
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data, error_message)
+
+    def test_vdpu(self, yang_model):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:VDPU": {
+                    "VDPU_LIST": [
+                        {
+                            "vdpu_id": "vdpu0",
+                            "profile": "none",
+                            "tier": "none",
+                            "main_dpu_ids": ["str-8102-t1-dpu0"]
+                        }
+                    ]
+                }
+            }
+        }
+        yang_model.load_data(data)
+
+    def test_dash_ha_global_config(self, yang_model):
+        data = {
+            "sonic-smart-switch:sonic-smart-switch": {
+                "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
+                    "global": {
+                        "cp_data_channel_port": 11234,
+                        "dp_channel_port": 11235,
+                        "dp_channel_src_port_min": 11236,
+                        "dp_channel_src_port_max": 11237,
+                        "dp_channel_probe_interval_ms": 500,
+                        "dp_channel_probe_fail_threshold": 3,
+                        "dpu_bfd_probe_interval_in_ms": 500,
+                        "dpu_bfd_probe_multiplier": 3
+                    }
+                }
+            }
+        }
+        yang_model.load_data(data)

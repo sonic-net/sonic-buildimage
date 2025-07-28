@@ -1730,6 +1730,12 @@
 #define DNXC_A2_REV_ID          0x0003
 #define DNXC_B0_REV_ID          0x0011
 #define DNXC_B1_REV_ID          0x0012
+#define DNXC_B2_REV_ID          0x0013
+#define DNXC_C0_REV_ID          0x0021
+#define DNXC_C1_REV_ID          0x0022
+#define DNXC_C2_REV_ID          0x0023
+#define DNXC_D0_REV_ID          0x0031
+#define DNXC_D1_REV_ID          0x0032
 #define DNXC_DEVID_FAMILY_MASK  0xfff0
 #define BCM88790_DEVICE_ID      0x8790
 #define BCM88790_A0_REV_ID      DNXC_A0_REV_ID
@@ -1748,7 +1754,7 @@
 #define BCM8879C_DEVICE_ID      0x879C
 #define BCM8879D_DEVICE_ID      0x879D
 #define BCM8879E_DEVICE_ID      0x879E
-#define BCM8879F_DEVICE_ID      0x879F
+#define BCM8879F_DEVICE_ID      0x879F  
 #ifdef BCM_DNXF3_SUPPORT
 #define RAMON2_DEVICE_ID      0x8910
 #define BCM8891F_DEVICE_ID      0x891F
@@ -2051,8 +2057,10 @@
 #define Q3D_DEVICE_ID           0x8870
 #ifdef BCM_Q3A_SUPPORT
 #define Q3A_DEVICE_ID           0x8490
-#define Q3U_DEVICE_ID           0x8400
-#define Q3N_DEVICE_ID           0x8405
+#define Q3U_DEVICE_ID           0x84A0
+#define Q3N_DEVICE_ID           0x84A5
+#define Q3U_ORIG_DEVICE_ID      0x8400
+#define Q3N_ORIG_DEVICE_ID      0x8405
 #endif
 #endif
 #define Q2A_DEVICE_ID           0x8480
@@ -2194,7 +2202,7 @@
 
 #define PLX9056_DEVICE_ID       0x9056 /* needed for DNX_TEST_BOARD */
 
-/* Trident4 X11c*/
+/* Trident4 X11c */
 #define BCM56890_DEVICE_ID 0xb890
 #define BCM56890_A0_REV_ID 0x0001
 #define BCM56891_DEVICE_ID 0xb891
@@ -2206,15 +2214,18 @@
 #define BCM56896_DEVICE_ID 0xb896
 #define BCM56896_A0_REV_ID 0x0001
 
-/* Trident4 X7*/
+/* Trident4 X7 */
 #define BCM56690_DEVICE_ID 0xb690
 #define BCM56690_A0_REV_ID 0x0001
 #define BCM56692_DEVICE_ID 0xb692
 #define BCM56692_A0_REV_ID 0x0001
 
-/* Trident5 X12*/
+/* Trident5 X12 */
 #define BCM78800_DEVICE_ID 0xf800
 #define BCM78800_A0_REV_ID 0x0001
+/* Trident5 X12 8Tbps */
+#define BCM78808_DEVICE_ID 0xf808
+#define BCM78808_A0_REV_ID 0x0001
 
 /* Trident4 */
 #define BCM56880_DEVICE_ID 0xb880
@@ -2300,16 +2311,18 @@
 /* Tomahawk5 */
 #define BCM78900_DEVICE_ID 0xf900
 #define BCM78900_B0_REV_ID 0x0011
-
 #define BCM78902_DEVICE_ID 0xf902
 #define BCM78902_B0_REV_ID 0x0011
-
 #define BCM78903_DEVICE_ID 0xf903
 #define BCM78903_B0_REV_ID 0x0011
 
 /* Tomahawk5+ */
 #define BCM78905_DEVICE_ID 0xf905
 #define BCM78905_A0_REV_ID 0x0001
+
+/* Tomahawk5-512 */
+#define BCM78907_DEVICE_ID 0xf907
+#define BCM78907_A0_REV_ID 0x0001
 
 /* Firelight2 */
 #define BCM56080_DEVICE_ID 0xb080

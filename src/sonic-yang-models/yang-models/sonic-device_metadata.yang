@@ -99,8 +99,8 @@ module sonic-device_metadata {
 
                 leaf type {
                     type string {
-                        length 1..255;                        
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|SpineRouter|UpperSpineRouter|FabricSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
+                        length 1..255;
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|MgmtLeafRouter|MgmtSpineRouter|MgmtAccessRouter|SpineRouter|UpperSpineRouter|FabricSpineRouter|LowerSpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|SmartSwitchDPU|not-provisioned";
                     }
                 }
 
@@ -194,7 +194,7 @@ module sonic-device_metadata {
 
                 leaf switch_type {
                     type string {
-                        pattern "chassis-packet|fabric|npu|voq|dpu";
+                        pattern "chassis-packet|fabric|npu|voq|dpu|dummy-sup";
                     }
                     description "Type of switch. Default is NPU, on a VOQ switch voq is used for a regular
                                  switching device while fabric is used for a fabric device.
@@ -300,13 +300,13 @@ module sonic-device_metadata {
                     description "Set source of anchor route";
                 }
 
-                leaf orch_dash_zmq_enabled {
+                leaf orch_northbond_dash_zmq_enabled {
                     type boolean;
                     description "Enable ZMQ feature on APPL_DB DASH tables.";
                     default "true";
                 }
 
-                leaf orch_route_zmq_enabled {
+                leaf orch_northbond_route_zmq_enabled {
                     type boolean;
                     description "Enable ZMQ feature on APPL_DB ROUTE tables.";
                     default "false";
