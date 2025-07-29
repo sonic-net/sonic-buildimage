@@ -498,6 +498,9 @@ EOF
 sudo sed -i 's/^#ListenAddress 0.0.0.0/ListenAddress 0.0.0.0/' $FILESYSTEM_ROOT/etc/ssh/sshd_config
 sudo sed -i 's/^#ListenAddress ::/ListenAddress ::/' $FILESYSTEM_ROOT/etc/ssh/sshd_config
 
+# Use libpam_systemd, since that's now needed for limiting login sessions
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-systemd
+
 ## Config rsyslog
 sudo augtool -r $FILESYSTEM_ROOT --autosave "
 rm /files/lib/systemd/system/rsyslog.service/Service/ExecStart/arguments
