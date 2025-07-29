@@ -178,10 +178,6 @@ def main(argv):
         file_descriptor_list = select.select([sys.stdin], [], [], SELECT_TIMEOUT_SECS)[0]
         if len(file_descriptor_list) > 0:
             line = file_descriptor_list[0].readline()
-            if not line:
-                # If no line is read, it means stdin is closed, exit the loop
-                syslog.syslog(syslog.LOG_NOTICE, "No input received from stdin. Exiting...")
-                break
             headers = childutils.get_headers(line)
             # Check if 'len' exists before using it
             if 'len' not in headers:
