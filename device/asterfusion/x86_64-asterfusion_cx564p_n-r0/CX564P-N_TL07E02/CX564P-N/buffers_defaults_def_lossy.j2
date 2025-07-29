@@ -1,0 +1,38 @@
+{% set port_names_list = [] %}
+{% for port in PORT %}
+    {%- if port_names_list.append(port) %}{% endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+{
+    "BUFFER_POOL": {
+        "lossy_pool": {
+            "size": "56985600",
+            "type": "egress",
+            "mode": "dynamic",
+            "xoff": "0"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"[BUFFER_POOL|lossy_pool]",
+            "size":"0",
+            "static_th":"9497600"
+        },
+        "egress_lossy_profile": {
+            "pool":"[BUFFER_POOL|lossy_pool]",
+            "size":"1518",
+            "dynamic_th":"2"
+        }
+    },
+    "BUFFER_PG": {
+        "{{ port_names }}|0-7": {
+            "profile" : "[BUFFER_PROFILE|ingress_lossy_profile]"
+        }
+    },
+    "BUFFER_QUEUE": {
+            "{{ port_names }}|0-7": {
+            "profile" : "[BUFFER_PROFILE|egress_lossy_profile]"
+        }
+    }
+}
