@@ -76,6 +76,8 @@ typedef struct PSU_DATA
 {
     int idx;    // psu index
     int num_psu_fans;
+    int num_psu_thermals;
+    u32 psu_temp_high_thresh_bitmap;
     PSU_DATA_ATTR psu_attr;
     int len;             // no of valid attributes for this psu client
     PSU_DATA_ATTR psu_attrs[MAX_PSU_ATTRS]; 
@@ -85,6 +87,14 @@ typedef struct PSU_PDATA
 {
     int idx;                    // psu index
     int num_psu_fans;      // num of fans supported by the PSU
+    int num_psu_thermals; // num of thermals supported by the PSU
+    /*
+     * Bitmap of supported thermal thresholds
+     * Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+     * A bit value of 1 means the sensor supports high threshold.
+     * Needed as some PSUs may not support high threshold for all thermal sensors.
+     */
+    u32 psu_temp_high_thresh_bitmap;
     int len;             // no of valid attributes for this psu client
     PSU_DATA_ATTR *psu_attrs; 
 }PSU_PDATA;

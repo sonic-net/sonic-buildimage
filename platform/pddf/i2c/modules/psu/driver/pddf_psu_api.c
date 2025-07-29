@@ -48,19 +48,25 @@ void get_psu_duplicate_sysfs(int idx, char *str)
     switch (idx)
     {
         case PSU_V_OUT:
-            strcpy(str, "in3_input");
+            strscpy(str, "in3_input", ATTR_NAME_LEN);
             break;
         case PSU_I_OUT:
-            strcpy(str, "curr2_input");
+            strscpy(str, "curr2_input", ATTR_NAME_LEN);
             break;
         case PSU_P_OUT:
-            strcpy(str, "power2_input");
+            strscpy(str, "power2_input", ATTR_NAME_LEN);
             break;
         case PSU_FAN1_SPEED:
-            strcpy(str, "fan1_input");
+            strscpy(str, "fan1_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP1_INPUT:
-            strcpy(str, "temp1_input");
+            strscpy(str, "temp1_input", ATTR_NAME_LEN);
+            break;
+        case PSU_TEMP2_INPUT:
+            strscpy(str, "temp2_input", ATTR_NAME_LEN);
+            break;
+        case PSU_TEMP3_INPUT:
+            strscpy(str, "temp3_input", ATTR_NAME_LEN);
             break;
         default:
             break;
@@ -382,6 +388,10 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
             break;
         case PSU_TEMP1_INPUT:
         case PSU_TEMP1_HIGH_THRESHOLD:
+        case PSU_TEMP2_INPUT:
+        case PSU_TEMP2_HIGH_THRESHOLD:
+        case PSU_TEMP3_INPUT:
+        case PSU_TEMP3_HIGH_THRESHOLD:
             multiplier = 1000;
             return sprintf(buf, "%ld\n", get_real_world_value(client, usr_data, sysfs_attr_info, "linear11", multiplier));
             break;
