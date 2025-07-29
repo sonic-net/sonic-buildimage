@@ -39,8 +39,8 @@ parameters:
   - marvell-prestera-armhf
   - cisco-8000
   - cisco-8000-smartswitch
-#  - nvidia-bluefield
-#  - pensando
+  - nvidia-bluefield
+  - pensando
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
   default: 400
@@ -56,116 +56,117 @@ stages:
     CACHE: SONIC_DPKG_CACHE_METHOD=rcache
     JOBS: ${{ parameters.jobFilters }}
 
-- stage: Test
-  dependsOn: BuildVS
-  condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(dependencies.BuildVS.outputs['vs.skipstep.githubPR'], 'true'))
-  variables:
-    - group: SONiC-Elastictest
-    - name: inventory
-      value: veos_vtb
-    - name: testbed_file
-      value: vtestbed.yaml
-    - name: BUILD_BRANCH
-      value: internal
+- ${{ if containsValue(parameters.jobFilters, 'vs') }}:
+  - stage: Test
+    dependsOn: BuildVS
+    condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(dependencies.BuildVS.outputs['vs.skipstep.githubPR'], 'true'))
+    variables:
+      - group: SONiC-Elastictest
+      - name: inventory
+        value: veos_vtb
+      - name: testbed_file
+        value: vtestbed.yaml
+      - name: BUILD_BRANCH
+        value: internal
 
-  # For every test job:
-  # continueOnError: false means it's a required test job and will block merge if it fails
-  # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
+    # For every test job:
+    # continueOnError: false means it's a required test job and will block merge if it fails
+    # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
-  # For PR test job:
-  # If the current branch is not internal, please reference the remote template by appending @acs-buildimage.
-  # For example, "- template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage"
+    # For PR test job:
+    # If the current branch is not internal, please reference the remote template by appending @acs-buildimage.
+    # For example, "- template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage"
 
-  jobs:
-  - job: t0_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t0 by Elastictest"
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
+    jobs:
+    - job: t0_elastictest
+      pool: sonic-ubuntu-1c
+      displayName: "kvmtest-t0 by Elastictest"
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
+        - template: elastictest_template/run-test-elastictest-template.yaml
+          parameters:
+            TOPOLOGY: t0
+            MIN_WORKER: $(T0_INSTANCE_NUM)
+            MAX_WORKER: $(T0_INSTANCE_NUM)
+            MGMT_BRANCH: $(BUILD_BRANCH)
+            STOP_ON_FAILURE: False
+            EXPECTED_RESULT: "SUCCESS"
+
+    - job: t1_lag_elastictest
+      pool: sonic-ubuntu-1c
+      displayName: "kvmtest-t1-lag by Elastictest"
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
+        - template: elastictest_template/run-test-elastictest-template.yaml
+          parameters:
+            TOPOLOGY: t1-lag
+            MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
+            MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
+            MGMT_BRANCH: $(BUILD_BRANCH)
+            STOP_ON_FAILURE: False
+            EXPECTED_RESULT: "SUCCESS"
+
+    - job: sonic_t0_elastictest
+      displayName: "kvmtest-t0-sonic by Elastictest"
+      pool: sonic-ubuntu-1c
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
+        - template: elastictest_template/run-test-elastictest-template.yaml
+          parameters:
+            TOPOLOGY: t0-64-32
+            MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+            MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+            TEST_SET: t0-sonic
+            MGMT_BRANCH: $(BUILD_BRANCH)
+            COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
+            VM_TYPE: vsonic
+            STOP_ON_FAILURE: False
+            EXPECTED_RESULT: "SUCCESS"
+
+    - job: t0_2vlans_elastictest
+      pool: sonic-ubuntu-1c
+      displayName: "kvmtest-t0-2vlans by Elastictest"
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
       - template: elastictest_template/run-test-elastictest-template.yaml
         parameters:
           TOPOLOGY: t0
-          MIN_WORKER: $(T0_INSTANCE_NUM)
-          MAX_WORKER: $(T0_INSTANCE_NUM)
+          TEST_SET: t0-2vlans
+          MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
+          MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
           MGMT_BRANCH: $(BUILD_BRANCH)
+          DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
 
-  - job: t1_lag_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
-      - template: elastictest_template/run-test-elastictest-template.yaml
-        parameters:
-          TOPOLOGY: t1-lag
-          MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
-          MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          STOP_ON_FAILURE: False
-          EXPECTED_RESULT: "SUCCESS"
+    - job: dualtor_elastictest
+      pool: sonic-ubuntu-1c
+      displayName: "kvmtest-dualtor-t0 by Elastictest"
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
+        - template: elastictest_template/run-test-elastictest-template.yaml
+          parameters:
+            TOPOLOGY: dualtor
+            MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+            MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+            MGMT_BRANCH: $(BUILD_BRANCH)
+            COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+            STOP_ON_FAILURE: False
+            EXPECTED_RESULT: "SUCCESS"
 
-  - job: sonic_t0_elastictest
-    displayName: "kvmtest-t0-sonic by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
-      - template: elastictest_template/run-test-elastictest-template.yaml
-        parameters:
-          TOPOLOGY: t0-64-32
-          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          TEST_SET: t0-sonic
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
-          VM_TYPE: vsonic
-          STOP_ON_FAILURE: False
-          EXPECTED_RESULT: "SUCCESS"
-
-  - job: t0_2vlans_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t0-2vlans by Elastictest"
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
-    - template: elastictest_template/run-test-elastictest-template.yaml
-      parameters:
-        TOPOLOGY: t0
-        TEST_SET: t0-2vlans
-        MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MGMT_BRANCH: $(BUILD_BRANCH)
-        DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
-        STOP_ON_FAILURE: False
-        EXPECTED_RESULT: "SUCCESS"
-
-  - job: dualtor_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
-      - template: elastictest_template/run-test-elastictest-template.yaml
-        parameters:
-          TOPOLOGY: dualtor
-          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
-          STOP_ON_FAILURE: False
-          EXPECTED_RESULT: "SUCCESS"
-
-  - job: multi_asic_elastictest
-    displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    steps:
-      - template: elastictest_template/run-test-elastictest-template.yaml
-        parameters:
-          TOPOLOGY: t1-8-lag
-          TEST_SET: multi-asic-t1-lag
-          MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          NUM_ASIC: 4
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          STOP_ON_FAILURE: False
-          EXPECTED_RESULT: "SUCCESS"
+    - job: multi_asic_elastictest
+      displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
+      pool: sonic-ubuntu-1c
+      timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+      steps:
+        - template: elastictest_template/run-test-elastictest-template.yaml
+          parameters:
+            TOPOLOGY: t1-8-lag
+            TEST_SET: multi-asic-t1-lag
+            MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+            MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+            NUM_ASIC: 4
+            MGMT_BRANCH: $(BUILD_BRANCH)
+            STOP_ON_FAILURE: False
+            EXPECTED_RESULT: "SUCCESS"
 

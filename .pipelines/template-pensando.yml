@@ -17,7 +17,7 @@ jobs:
     pool:
       type: linux
       isCustom: true
-      name: sonic-arm64
+      name: sonicms1ES-arm64
     variables:
       TERM: ''
       ob_artifactBaseName: sonic-buildimage.${{ parameters.NAME }}

@@ -13,18 +13,23 @@ steps:
 
       # Install Azure cli
       curl -sL https://aka.ms/InstallAzureCLIDeb | sed 's/apt-get/apt-get -o DPkg::Lock::Timeout=600 -o DPkg::Lock::Tries=3/' | sudo bash
-      az login --identity --client-id a9a0b0f2-cd25-4abf-b3a2-2ef735a27c89
-      # Install Azcopy
-      if dpkg --print-architecture | grep amd64; then
-        wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
+      arch=$(docker run --rm publicmirror.azurecr.io/debian:bookworm dpkg --print-architecture)
+      if echo $arch | grep arm64; then
+        echo "arm64 don't need azcopy"
       else
-        wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
+        az login --identity --client-id a9a0b0f2-cd25-4abf-b3a2-2ef735a27c89
+        # Install Azcopy
+        if echo $arch | grep amd64; then
+          wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
+        else
+          wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
+        fi
+        sudo chmod a+x azcopy
+        sudo mv -f azcopy /usr/local/bin/
+        azcopy  --version
+        export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
+        azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
       fi
-      sudo chmod a+x azcopy
-      sudo mv -f azcopy /usr/local/bin/
-      azcopy  --version
-      export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
-      azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
 
       # Init /data
       if ! mountpoint /data;then
@@ -41,7 +46,7 @@ steps:
       # Upgrade jinja2 to use j2 in Makefile.work
       sudo pip3 install --upgrade jinja2
       sudo apt-get install -y nfs-common unzip wget
-      if dpkg --print-architecture | grep amd64; then
+      if echo $arch | grep amd64; then
         sudo apt-get install -y aznfs
       fi
       
@@ -59,7 +64,7 @@ steps:
 
       # Mount nfs
       if ! mount | grep 'on /nfs'; then
-        if dpkg --print-architecture | grep amd64; then
+        if echo $arch | grep amd64; then
           sudo mkdir /nfs -p
           sudo mount -t aznfs intnfs.file.core.windows.net:/intnfs/nfs /nfs -o vers=4,minorversion=1,sec=sys,nconnect=4
           sudo chown nobody /nfs
