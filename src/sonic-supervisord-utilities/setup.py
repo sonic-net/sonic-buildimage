@@ -6,6 +6,7 @@ from packaging import version
 # sonic_dependencies, version requirement only supports '>='
 sonic_dependencies = [
     # 'sonic-swss-common'
+    'sonic-py-common'
 ]
 
 dependencies = [

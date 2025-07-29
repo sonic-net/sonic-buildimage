@@ -52,18 +52,39 @@ class TimeMocker:
         return return_time
 
 
-@mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})
+stdin_content = ''
+with builtin_open(os.path.join(test_path, "dev/stdin")) as f:
+    stdin_content = f.read()
+
+
+def mock_stdin_context():
+    r, w = os.pipe()
+    os.write(w, stdin_content.encode())
+    os.close(w)
+    return os.fdopen(r)
+
+
+@mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic", "NAMESPACE_ID": "0"})
 @mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_swss(mock_time):
+def test_main_swss_no_container(mock_time):
     mock_time.side_effect = TimeMocker()
-    with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
-        with mock.patch('sys.stdin', stdin_file):
+    with mock_stdin_context() as stdin_mock:
+        with mock.patch('sys.stdin', stdin_mock):
             with pytest.raises(SystemExit) as excinfo:
                 main([])
             assert excinfo.value.code == 1
 
+
+@mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})
+@mock.patch('supervisor_proc_exit_listener.time.time')
+@mock.patch("builtins.open", mock_open)
+@mock.patch("os.path.exists", mock_exists)
+def test_main_swss_success(mock_time):
+    mock_time.side_effect = TimeMocker()
+    with mock_stdin_context() as stdin_mock:
+        with mock.patch('sys.stdin', stdin_mock):
             main(["--container-name", "swss", "--use-unix-socket-path"])
 
 
@@ -73,6 +94,6 @@ def test_main_swss(mock_time):
 @mock.patch("os.path.exists", mock_exists)
 def test_main_snmp(mock_time):
     mock_time.side_effect = TimeMocker()
-    with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
-        with mock.patch('sys.stdin', stdin_file):
+    with mock_stdin_context() as stdin_mock:
+        with mock.patch('sys.stdin', stdin_mock):
             main(["--container-name", "snmp"])
