@@ -130,7 +130,7 @@ class chassisbase(object):
                                 continue
                         s3ip_conf = item.copy()
                         s3ip_conf["sensor_dir"] = sensor_dir
-                        obj = temp_s3ip(s3ip_conf)
+                        obj = temp_s3ip(s3ip_conf, "TEMP" + str(index))
                         tmp_list.append(obj)
             except Exception:
                 pass
@@ -194,7 +194,7 @@ class chassisbase(object):
                                 continue
                         s3ip_conf = item.copy()
                         s3ip_conf["sensor_dir"] = sensor_dir
-                        dcdc_obj = dcdc(s3ip_conf = s3ip_conf)
+                        dcdc_obj = dcdc(s3ip_conf = s3ip_conf, id = "DCDC" + str(index))
                         tmp_list.append(dcdc_obj)
             except Exception:
                 pass

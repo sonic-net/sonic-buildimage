@@ -25,9 +25,6 @@
 #define INDIRECT_OP_WRITE          (0x2)
 #define INDIRECT_OP_READ           (0x3)
 
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 typedef enum {
     WB_DEV_SPIN_LOCK_MODE = 1,
     WB_DEV_MUTEX_MODE = 2,
@@ -124,6 +121,7 @@ static int wb_logic_reg_read(struct indirect_dev_info *indirect_dev, uint32_t po
     pfunc = (device_func_read)indirect_dev->read_intf_addr;
     return pfunc(indirect_dev->logic_dev_name, pos, val, size);
 }
+
 
 static int indirect_addressing_read(struct indirect_dev_info *indirect_dev, uint8_t *buf, uint32_t address, uint32_t rd_data_width)
 {
@@ -377,7 +375,7 @@ static ssize_t indirect_dev_read_user(struct file *file, char __user *buf, size_
 {
     int ret;
 
-    DEBUG_VERBOSE("indirect_dev_read_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("indirect_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = indirect_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -394,8 +392,7 @@ static ssize_t indirect_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 }
 
 static ssize_t indirect_dev_write(struct file *file, const char __user *buf,
-                    size_t count, loff_t *offset, int flag)
-
+                   size_t count, loff_t *offset, int flag)
 {
     u8 val[MAX_RW_LEN];
     int write_len;
@@ -443,7 +440,7 @@ static ssize_t indirect_dev_write(struct file *file, const char __user *buf,
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Devfs]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, indirect_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, indirect_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(indirect_dev->log_node), (uint32_t)*offset, val, count);
     }
@@ -463,7 +460,7 @@ static ssize_t indirect_dev_write_user(struct file *file, const char __user *buf
 {
     int ret;
 
-    DEBUG_VERBOSE("indirect_dev_write_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("indirect_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = indirect_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -510,6 +507,8 @@ static loff_t indirect_dev_llseek(struct file *file, loff_t offset, int origin)
         if (((file->f_pos + offset) > indirect_dev->indirect_len) || ((file->f_pos + offset) < 0)) {
             DEBUG_ERROR("SEEK_CUR out of range, f_ops:%lld, offset:%lld.\n",
                  file->f_pos, offset);
+            ret = -EINVAL;
+            break;
         }
         file->f_pos += offset;
         ret = file->f_pos;
@@ -644,7 +643,7 @@ int indirect_device_func_write(const char *path, uint32_t offset, uint8_t *buf, 
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Symbol]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, indirect_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, indirect_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(indirect_dev->log_node), offset, buf, count);
     }
@@ -878,7 +877,7 @@ static ssize_t file_cache_rd_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", indirect_dev->file_cache_rd);
+    return snprintf(buf, PAGE_SIZE, "%u\n", indirect_dev->file_cache_rd);
 }
 
 static ssize_t file_cache_rd_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)

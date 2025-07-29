@@ -121,3 +121,34 @@ int dfd_get_sysfs_decode(unsigned int main_dev_id, unsigned int minor_dev_id,
     DBG_DEBUG(DBG_VERBOSE, "value[0x%x] convert to sysfs value[0x%x]\n", value, *sysfs_value);
     return DFD_RV_OK;
 }
+
+dfd_sysfs_get_data_func dfd_get_sysfs_value_func(dfd_sysfs_func_map_t *func_map, unsigned int type, unsigned int max_len)
+{
+    if (type >= max_len || (func_map == NULL)) {
+        DBG_DEBUG(DBG_ERROR, "Invalid type: %d (max: %d), func_map = %p\n", type, max_len - 1, func_map);
+        return NULL;
+    }
+
+    if (func_map[type].get_func == NULL) {
+        DBG_DEBUG(DBG_ERROR, "get_func not implemented\n");
+        return NULL;
+    }
+
+    return func_map[type].get_func;
+}
+
+dfd_sysfs_set_data_func dfd_set_sysfs_value_func(dfd_sysfs_func_map_t *func_map, unsigned int type, unsigned int max_len)
+{
+    if (type >= max_len || (func_map == NULL)) {
+        DBG_DEBUG(DBG_ERROR, "Invalid type: %d (max: %d), func_map = %p\n", type, max_len - 1, func_map);
+        return NULL;
+    }
+
+    if (func_map[type].set_func == NULL) {
+        DBG_DEBUG(DBG_ERROR, "set_func not implemented\n");
+        return NULL;
+    }
+
+    return func_map[type].set_func;
+}
+

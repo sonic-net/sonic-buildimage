@@ -9,15 +9,21 @@ import syslog
 import math
 import click
 import fcntl
-from ruijieconfig import *
-
-SIGNAL_RECORD_DEBUG_FILE = "/etc/signal_record/.debug_flag"
-SIGNAL_RECORD_DEBUG = 1
-SIGNAL_RECORD_ERROR = 2
-debuglevel = 0
+import logging
+from platform_config import *
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
+DEBUG_FILE = "/etc/signal_record/.debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "signal_monitor_debug.log"
+logger = setup_logger(LOG_FILE)
+
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
@@ -34,31 +40,25 @@ class AliasedGroup(click.Group):
 
 
 def signal_debug(s):
-    if SIGNAL_RECORD_DEBUG & debuglevel:
-        syslog.openlog("SIGNAL_MONITOR_DEBUG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def signal_error(s):
-    if SIGNAL_RECORD_ERROR & debuglevel:
-        syslog.openlog("SIGNAL_MONITOR_ERROR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def signal_syslog_warning(s):
     syslog.openlog("SIGNAL_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def signal_syslog_info(s):
     syslog.openlog("SIGNAL_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def signal_syslog_error(s):
     syslog.openlog("SIGNAL_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def debug_init():
     global debuglevel
@@ -716,7 +716,6 @@ def start():
     ApplicationInstance()
 
     signal_syslog_info("%SIGNAL_MONITOR-6-INFO: signal monitor start")
-    debug_init()
 
     obj_list = []
     for item in KEY_SIGNAL_CONF["device"]:  # instantiation
@@ -737,4 +736,5 @@ def start():
 
 
 if __name__ == '__main__':
+    debug_init()
     main()

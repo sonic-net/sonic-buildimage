@@ -101,8 +101,10 @@ static int vr_common_probe(struct platform_device *pdev)
     adapter = i2c_get_adapter(wb_vr_common_dev->i2c_bus);
     if (!adapter) {
         dev_err(&pdev->dev, "Failed to get I2C adapter for bus %d\n", wb_vr_common_dev->i2c_bus);
+        wb_vr_common_dev->adap = NULL;
         return -ENODEV;
     }
+    wb_vr_common_dev->adap = adapter;
 
 	client = i2c_new_dummy_device(adapter, wb_vr_common_dev->i2c_addr);
 	if (IS_ERR(client)) {
@@ -183,15 +185,45 @@ put_adapter:
 static int vr_common_remove(struct platform_device *pdev)
 {
     wb_vr_common_t *wb_vr_common_dev;
+    int i2c_bus, i2c_addr;
+    struct i2c_adapter *adap;
 
     wb_vr_common_dev = platform_get_drvdata(pdev);
-    if ((wb_vr_common_dev != NULL) && (wb_vr_common_dev->client != NULL)) {
-        i2c_unregister_device(wb_vr_common_dev->client);
+    if (wb_vr_common_dev == NULL) {
+        dev_warn(&pdev->dev, "wb_vr_common_dev is NULL, exit\n");
+        return 0;
+    }
+
+    i2c_bus = wb_vr_common_dev->i2c_bus;
+    i2c_addr = wb_vr_common_dev->i2c_addr;
+    WB_VR_COMMON_VERBOSE("Enter vr_common_remove, i2c_bus: %d, i2c addr: 0x%02x\n", i2c_bus, i2c_addr);
+
+    adap = i2c_get_adapter(i2c_bus);
+    if (adap == NULL) {
+        dev_warn(&pdev->dev, "i2c adapter-%d is NULL, skip to unregister i2c client: %d-%04x\n", i2c_bus, i2c_bus, i2c_addr);
+        goto exit;
+    }
+    if (adap != wb_vr_common_dev->adap) {
+        dev_warn(&pdev->dev, "i2c adapter-%d address changed, origin addr: %p, new addr: %p, skip to unregister i2c client: %d-%04x\n",
+            i2c_bus, wb_vr_common_dev->adap, adap, i2c_bus, i2c_addr);
+        goto exit_i2c_put;
+    }
+
+    if (wb_vr_common_dev->client != NULL) {
+        WB_VR_COMMON_VERBOSE("Starting unregister i2c client: %d-%04x\n", i2c_bus, i2c_addr);
+        if (device_is_registered(&wb_vr_common_dev->client->dev)) {
+            i2c_unregister_device(wb_vr_common_dev->client);
+            dev_info(&pdev->dev, "Unregister i2c client: %d-%04x success\n", i2c_bus, i2c_addr);
+        } else {
+            dev_warn(&pdev->dev, "i2c client: %d-%04x already unregister\n", i2c_bus,i2c_addr);
+        }
         wb_vr_common_dev->client = NULL;
     }
+exit_i2c_put:
+    i2c_put_adapter(adap);
+exit:
+    wb_vr_common_dev->adap = NULL;
     platform_set_drvdata(pdev, NULL);
-    dev_info(&pdev->dev, "Remove vr common success.\n");
-
     return 0;
 }
 

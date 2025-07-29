@@ -3,14 +3,22 @@
 import time
 import syslog
 import click
+import os
+import logging
 from platform_util import *
 from platform_config import REBOOT_CTRL_PARAM
 
-
-REBOOTCTLDEBUG = 0
+DEBUG_FILE = "/etc/.reboot_ctrl_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "reboot_ctrl_debug.log"
+logger = setup_logger(LOG_FILE)
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
 
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
@@ -31,26 +39,13 @@ def rebootctrlwarning(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("REBOOTCTRL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_WARNING, s)
-
-
-def rebootctrlcritical(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("REBOOTCTRL", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_CRIT, s)
-
+    logger.warning(s)
 
 def rebootctrlerror(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("REBOOTCTRL", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def rebootctrldebug(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if REBOOTCTLDEBUG == 1:
-        syslog.openlog("REBOOTCTRL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 class RebootCtrl():
     def __init__(self):
@@ -167,4 +162,5 @@ def reset(option):
 
 
 if __name__ == '__main__':
+    debug_init()
     main()

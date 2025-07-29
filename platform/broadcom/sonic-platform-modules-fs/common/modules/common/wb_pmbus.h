@@ -563,6 +563,7 @@ pmbus_dev_info_t pmbus_dev_infos[] = {
     {.device_name = "wb_xdpe12284", .chip_name = "XDPE12284C", .device_id = {0x79, 0x02}, .dev_id_len = 2},
     {.device_name = "wb_xdpe132g5c_pmbus", .chip_name = "XDPE132G5C", .device_id = {0x76}, .dev_id_len = 1},
     {.device_name = "wb_xdpe132g5c_pmbus", .chip_name = "XDPE132G5D", .device_id = {0x7c}, .dev_id_len = 1},
+    {.device_name = "wb_xdpe1a2g5b_pmbus", .chip_name = "XDPE1A2G5B", .device_id = {0x01, 0x9e}, .dev_id_len = 2},
     /* The driver does not support RAA228248, using RAA228228 instead.  */
     {.device_name = "wb_raa228228", .chip_name = "RAA228248", .device_id = {0x00, 0xbc, 0xd2, 0x49}, .dev_id_len = 4},
     /* The old manual ID is 0x49d26e00, and the new manual ID is 0x49d28100. */

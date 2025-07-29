@@ -9,6 +9,7 @@ SUB_BUILD_DIR = $(PWD)/build
 DIR_KERNEL_SRC = $(PWD)/modules
 SCRIPT_DIR = $(PWD)/script
 SCRIPT_BSP_DIR = $(PWD)/script_bsp
+SERVICE_DIR = $(PWD)/service
 SERVICE_BSP_DIR = $(PWD)/service_bsp
 BLACK_DRIVER_CONF_DIR = $(PWD)/modprobe_conf
 
@@ -42,7 +43,7 @@ install:
 	cp -r $(SCRIPT_DIR)/*  $(INSTALL_SCRIPT_DIR)
 	rm -rf $(INSTALL_SCRIPT_DIR)/arch_x86
 	cp -r $(SCRIPT_BSP_DIR)/*  $(INSTALL_SCRIPT_DIR)
-
+	cp -r $(SERVICE_DIR)/*  $(INSTALL_SERVICE_DIR)
 	cp -r $(SERVICE_BSP_DIR)/*  $(INSTALL_SERVICE_DIR)
 	@if [ -d $(INSTALL_SCRIPT_DIR) ]; then chmod +x $(INSTALL_SCRIPT_DIR)/* ;fi
 	@if [ ! -d ${INSTALL_BLACK_DRIVER} ]; then mkdir -p ${INSTALL_BLACK_DRIVER} ;fi

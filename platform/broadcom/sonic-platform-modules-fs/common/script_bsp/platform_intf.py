@@ -3,8 +3,11 @@ import os
 import syslog
 import glob
 import importlib.machinery
-from platform_util import getplatform_name, dev_file_read, dev_file_write, write_sysfs, read_sysfs
-
+import logging
+import functools
+from platform_util import dev_file_read, dev_file_write, write_sysfs, read_sysfs, setup_logger, BSP_COMMON_LOG_DIR
+from platform_util import get_mgmt_version
+from wbutil.baseutil import get_platform_info
 
 __all__ = [
     "platform_reg_read",
@@ -30,36 +33,47 @@ OPTOE_PATH = "/sys/bus/i2c/devices/%d-0050/"
 OPTOE_DEV_CLASS = "dev_class"
 OPTOE_EEPROM = "eeprom"
 
-
-PLATFORM_INTF_DEBUG_FILE = "/etc/.platform_intf_debug_flag"
-
+DEBUG_FILE = "/etc/.platform_intf_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "platform_intf_debug.log"
+logger = setup_logger(LOG_FILE)
 
 CONFIG_FILE_LIST = [
     "/usr/local/bin/",
     "/usr/local/lib/*/dist-packages/config/"
 ]
 
-
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def platform_intf_debug(s):
-    if os.path.exists(PLATFORM_INTF_DEBUG_FILE):
-        syslog.openlog("PLATFORM_INTF_DEBUG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def platform_intf_error(s):
-    if os.path.exists(PLATFORM_INTF_DEBUG_FILE):
-        syslog.openlog("PLATFORM_INTF_ERROR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
+    logger.error(s)
 
+def auto_debug_init(cls):
+    for attr_name, attr in cls.__dict__.items():
+        if callable(attr):
+            @functools.wraps(attr)
+            def wrapper(self, *args, __attr=attr, **kwargs):
+                debug_init()
+                return __attr(self, *args, **kwargs)
+            setattr(cls, attr_name, wrapper)
+    return cls
 
+@auto_debug_init
 class IntfPlatform:
     CONFIG_NAME = 'PLATFORM_INTF_OPTOE'
     __port_optoe_dict = {}
 
     def __init__(self):
         real_path = None
-        platform_name = (getplatform_name()).replace("-", "_")
+        status, platform_name = get_platform_info()
+        if status is False:
+            raise Exception("get_platform_info error, msg: %s" % platform_name)
         for configfile_path in CONFIG_FILE_LIST:
             if "/*/" in configfile_path:
                 filepath = glob.glob(configfile_path)
@@ -453,8 +467,4 @@ def platform_sfp_write(port_id, offset, val_list):
 # @info: mgmt firmware version if read success, otherwise the detail error message
 ###########################################
 def platform_get_mgmt_version():
-    #startGenerate_mgmt_version()
-    if not os.path.exists(MGMT_VERSION_PATH):
-        return False, "mgmt_version_path not exist"
-
-    return read_sysfs(MGMT_VERSION_PATH)
+    return get_mgmt_version()

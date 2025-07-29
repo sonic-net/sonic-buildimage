@@ -295,7 +295,7 @@ class Fan(FanBase):
             string: Vendor name of fan
         """
         if not self.is_psu_fan:
-            return "WB"
+            return "Ruijie"
         return 'N/A'
 
     def get_revision(self):
@@ -309,57 +309,3 @@ class Fan(FanBase):
             self.fan_dict_update()
             return self.fan_dict["HW"]
         return 'N/A'
-
-
-    def is_under_speed(self):
-        """
-        Calculates if the fan speed is under the tolerated low speed threshold
-
-        Default calculation requires get_speed_tolerance to be implemented, and checks
-        if the current fan speed (expressed as a percentage) is lower than <get_speed_tolerance>
-        percent below the target fan speed (expressed as a percentage)
-
-        Returns:
-            A boolean, True if fan speed is under the low threshold, False if not
-        """
-        speed = self.get_speed()
-        target_speed = self.get_target_speed()
-        tolerance = self.get_speed_tolerance()
-
-        if speed is None or target_speed is None or tolerance is None:
-            return False
-
-        for param, value in (('speed', speed), ('target speed', target_speed), ('speed tolerance', tolerance)):
-            if not isinstance(value, int):
-                raise TypeError(f'Fan {param} is not an integer value: {param}={value}')
-            if value < 0 or value > 100:
-                raise ValueError(f'Fan {param} is not a valid percentage value: {param}={value}')
-
-        return speed * 100 < target_speed * (100 - tolerance)
-
-    def is_over_speed(self):
-        """
-        Calculates if the fan speed is over the tolerated high speed threshold
-
-        Default calculation requires get_speed_tolerance to be implemented, and checks
-        if the current fan speed (expressed as a percentage) is higher than <get_speed_tolerance>
-        percent above the target fan speed (expressed as a percentage)
-
-        Returns:
-            A boolean, True if fan speed is over the high threshold, False if not
-        """
-        speed = self.get_speed()
-        target_speed = self.get_target_speed()
-        tolerance = self.get_speed_tolerance()
-
-        if speed is None or target_speed is None or tolerance is None:
-            return False
-
-        for param, value in (('speed', speed), ('target speed', target_speed), ('speed tolerance', tolerance)):
-            if not isinstance(value, int):
-                raise TypeError(f'Fan {param} is not an integer value: {param}={value}')
-            if value < 0 or value > 100:
-                raise ValueError(f'Fan {param} is not a valid percentage value: {param}={value}')
-
-        return speed * 100 > target_speed * (100 + tolerance)
-

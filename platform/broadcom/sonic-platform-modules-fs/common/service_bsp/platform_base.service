@@ -1,0 +1,14 @@
+[Unit]
+Description= Global Initialize platform base.
+After=local-fs.target
+Before=platform_driver.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_base.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

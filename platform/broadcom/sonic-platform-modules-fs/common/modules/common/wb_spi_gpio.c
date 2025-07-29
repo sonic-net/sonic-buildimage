@@ -388,17 +388,13 @@ static int spi_gpio_probe_dt(struct platform_device *pdev)
 	ret = of_property_read_u32(np, "num-chipselects", &tmp);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "num-chipselects property not found\n");
-		goto error_free;
+		return ret;
 	}
 
 	pdata->num_chipselect = tmp;
 	pdev->dev.platform_data = pdata;
 
 	return 1;
-
-error_free:
-	devm_kfree(&pdev->dev, pdata);
-	return ret;
 }
 #else
 static inline int spi_gpio_probe_dt(struct platform_device *pdev)
@@ -438,8 +434,10 @@ static int spi_gpio_probe(struct platform_device *pdev)
 				pdata->num_chipselect,
 				sizeof(*spi_gpio->cs_gpios),
 				GFP_KERNEL);
-	if (!spi_gpio->cs_gpios)
-		return -ENOMEM;
+	if (!spi_gpio->cs_gpios) {
+		status = -ENOMEM;
+		goto err_free_master;
+	}
 
 	platform_set_drvdata(pdev, spi_gpio);
 
@@ -452,8 +450,9 @@ static int spi_gpio_probe(struct platform_device *pdev)
 
 	status = spi_gpio_request(&pdev->dev, spi_gpio,
 				  pdata->num_chipselect, &master_flags);
-	if (status)
-		return status;
+	if (status) {
+		goto err_free_master;
+	}
 
 	master->bits_per_word_mask = SPI_BPW_RANGE_MASK(1, 32);
 	master->mode_bits = SPI_3WIRE | SPI_CPHA | SPI_CPOL | SPI_CS_HIGH;
@@ -489,6 +488,10 @@ static int spi_gpio_probe(struct platform_device *pdev)
 	if (status)
 		spi_master_put(master);
 
+	return status;
+
+err_free_master:
+	spi_master_put(master);
 	return status;
 }
 

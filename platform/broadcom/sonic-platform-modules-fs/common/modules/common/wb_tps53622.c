@@ -283,6 +283,7 @@ static void tps53679_remove(struct i2c_client *client)
     return;
 }
 
+
 static const struct i2c_device_id tps53679_id[] = {
     {"wb_tps53647", tps53647},
     {"wb_tps53667", tps53667},

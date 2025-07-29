@@ -358,29 +358,3 @@ class Psu(PsuBase):
             An object dervied from ThermalBase representing the specified thermal
         """
         return False
-    def get_psu_power_warning_suppress_threshold(self):
-        """
-        Retrieve the warning suppress threshold of the power on this PSU
-        The value can be volatile, so the caller should call the API each time it is used.
-    
-        Returns:
-            A float number, the warning suppress threshold of the PSU in watts.
-        """
-        self.psu_power_dict_update()
-        value = self.psu_power_dict["Outputs"]["Power"]["HighAlarm"]
-        if value is None:
-            return None
-        return round(float(value), 1)
-    def get_psu_power_critical_threshold(self):
-        """
-        Retrieve the critical threshold of the power on this PSU
-        The value can be volatile, so the caller should call the API each time it is used.
-    
-        Returns:
-            A float number, the critical threshold of the PSU in watts.
-        """
-        self.psu_power_dict_update()
-        value = self.psu_power_dict["Outputs"]["Power"]["HighAlarm"]
-        if value is None:
-            return None
-        return round(float(value), 1)

@@ -5,7 +5,7 @@
 #include <linux/compiler.h>
 
 struct phydev_user_info {
-    int phy_index;    /* Indicates which phydev to operate on*/
+    int phy_index;    /* Indicates which phydev to operate on */
     u32 regnum;       /* Register address */
     u32 regval;       /* Register value */
 };
@@ -15,7 +15,7 @@ struct phydev_user_info {
 #define CMD_PHY_WRITE                       _IOR('P', 2, struct phydev_user_info)
 
 struct mdio_dev_user_info {
-    int mdio_index;    /* Indicates which mdio dev to operate */
+    int mdio_index;    /* Indicates which mdio dev to operate on */
     int phyaddr;       /* phy device address */
     u32 regnum;        /* Register address */
     u32 regval;        /* Register value */

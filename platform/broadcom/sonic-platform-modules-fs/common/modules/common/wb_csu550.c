@@ -39,12 +39,31 @@ static const struct i2c_device_id pmbus_id[];
 #define BLACKBOX_START_REG_DC        (0xDC)
 #define BLACKBOX_START_REG_E4        (0xE4)
 #define BLACKBOX_BLOCK_READ_SIZE     (238)
+#define BLACKBOX_BLOCK_READ_SIZE_243 (243)
 #define BLACKBOX_EVENT_SIZE          (5)
+#define BLACKBOX_SYSTEM_TRACKING_DATA_SIZE          (48)    /*sizeof struct blackbox_t remove part3*/
 
 /* blackbox type2 */
 #define BLACKBOX_CONFIG_REG          (0xE4)
 #define BLACKBOX_REAL_TIME_DATA_PAGE (0xFF)
 #define BLACKBOX_MFR_PAGE_NUM        (5)
+
+/* blackbox type3 */
+#define WRITE_PROTECT                (0x10)
+#define MFR_BLACKBOX_OFFSET          (0xD2)
+#define MFR_READ_BLACKBOX_DATA       (0xD0)
+#define WRITE_PROTECT_ON_VAL         (0x80)
+#define WRITE_PROTECT_OFF_VAL        (0x00)
+#define POWER_ON_TIME_SCALE          (10000)
+#define TEMP_CONVERSION_FACTOR       (1000)
+#define VOLTAGE_CONVERSION_FACTOR    (1000)
+#define CURRENT_CONVERSION_FACTOR    (1000)
+#define RUNTIME_THRESHOLD            (65535)
+#define MS_TO_S                      (1000)
+#define MV_TO_V                      (1000)
+#define MA_TO_A                      (1000)
+#define PERCENTAGE_COEFFICIENT       (100)
+#define NOT_SUPPORT                  (-999)
 
 /* blackbox clear */
 #define BLACKBOX_CLEAR_REG_E0        (0xE0)
@@ -64,12 +83,15 @@ typedef enum {
     BLACKBOX_DC_BR238 = 1, /* Block read 238 bytes from the 0xdc register, using parsing method 1 */
     BLACKBOX_E4_BR238,     /* Block read 238 bytes from the 0xe4 register, using parsing method 1 */
     BLACKBOX_E4_RW,        /* First configure the 0xe4 register, then read the black box information, using parsing method 2 */
+    BLACKBOX_DC_BR243,     /* Block read 243 bytes from the 0xdc register, using parsing method 1 */
+    BLACKBOX_D2_OFFSET,    /* First configure the 0xd2 register set black box offset, then read the black box information, using parsing method 3 */
 } blackbox_type_t;
 
 typedef enum {
-    BLACKBOX_CLEAR_E0 = 1,   /* send 0xE0 to clear blackbox info */
-    BLACKBOX_CLEAR_E7_TYPE1, /* write 0xCEBB to 0xE7*/
-    BLACKBOX_CLEAR_E7_TYPE2, /* write 0xBBCE to 0xE7*/
+    BLACKBOX_CLEAR_NOT_SUPPORT = 0, /* not support clear black box */
+    BLACKBOX_CLEAR_E0 = 1,          /* send 0xE0 to clear blackbox info */
+    BLACKBOX_CLEAR_E7_TYPE1,        /* write 0xCEBB to 0xE7*/
+    BLACKBOX_CLEAR_E7_TYPE2,        /* write 0xBBCE to 0xE7*/
 } blackbox_clear_type_t;
 
 typedef enum {
@@ -78,12 +100,132 @@ typedef enum {
     BLACKBOX_SET_TIME_DD = 2,           /* Set system time to reg 0xDD */
 } blackbox_set_time_type_t;
 
+typedef enum {
+    STATE_IDLE = 0,
+    STATE_PREBIAS = 1,
+    STATE_RAMPUP = 2,
+    STATE_REGULATE = 3,
+    STATE_END = 4,
+} blackbox_firmware_state_t;
+
+const char* firmware_state_strings[STATE_END] = {
+    "IDLE",
+    "PREBIAS",
+    "RAMPUP",
+    "REGULATE"
+};
+
+typedef enum {
+    FAULT_TYPE_RESERVED_HW_NO_FAULT = 0,
+    FAULT_TYPE_VOUT_OV_FAULT,
+    FAULT_TYPE_VOUT_OV_WARN,
+    FAULT_TYPE_VOUT_UV_FAULT,
+    FAULT_TYPE_VOUT_UV_WARN,
+    FAULT_TYPE_VIN_OV_FAULT,
+    FAULT_TYPE_VIN_OV_WARN,
+    FAULT_TYPE_VIN_UV_FAULT,
+    FAULT_TYPE_VIN_UV_WARN,
+    FAULT_TYPE_IOUT_OC_FAULT,
+    FAULT_TYPE_IOUT_OC_LV_FAULT,
+    FAULT_TYPE_IOUT_OC_WARN,
+    FAULT_TYPE_IOUT_UC_FAULT,
+    FAULT_TYPE_MFR_IOUT_OC_FAST,
+    FAULT_TYPE_IIN_OC_FAULT,
+    FAULT_TYPE_IIN_OC_WARN,
+    FAULT_TYPE_OT_FAULT,
+    FAULT_TYPE_OT_WARN,
+    FAULT_TYPE_UT_FAULT,
+    FAULT_TYPE_UT_WARN,
+    FAULT_TYPE_IN_POWER_LIMITING_MODE,
+    FAULT_TYPE_CURRENT_SHARE_FAULT,
+    FAULT_TYPE_VOUT_MAX_MIN_WARN,
+    FAULT_TYPE_SYNC_FAULT ,
+    FAULT_TYPE_HW_SPARE1,
+    FAULT_TYPE_HW_SPARE2,
+    FAULT_TYPE_HW_SPARE3,
+    FAULT_TYPE_HW_SPARE4,
+    FAULT_TYPE_HW_SPARE5,
+    FAULT_TYPE_HW_SPARE6,
+    FAULT_TYPE_HW_SPARE7,
+    FAULT_TYPE_END_OF_HW_FAULT_TYPES,
+    FAULT_TYPE_RESERVED_FW_NO_FAULT,    /* FW FAULT BIT 00, NO FAULT */
+    FAULT_TYPE_COMMON_SHUTDOWN,
+    FAULT_TYPE_TON_MAX_FAULT,
+    FAULT_TYPE_TOFF_MAX_WARN,
+    FAULT_TYPE_PIN_OP_WARN,
+    FAULT_TYPE_POUT_OP_WARN,
+    FAULT_TYPE_VIN_INSUFFICIENT,
+    FAULT_TYPE_FW_SPARE1,
+    FAULT_TYPE_FW_OCP_FAULT,
+    FAULT_TYPE_FW_VIN_UVP_FAULT,
+    FAULT_TYPE_FW_SPARE4,
+    FAULT_TYPE_FW_SPARE5,
+    FAULT_TYPE_FW_SPARE6,
+    FAULT_TYPE_FW_SPARE7,
+    FAULT_TYPE_END,
+} blackbox_fault_type_t;
+
+const char* fault_type_strings[FAULT_TYPE_END] = {
+    "NO_FAULT",
+    "VOUT_OV_FAULT",
+    "VOUT_OV_WARN",
+    "VOUT_UV_FAULT",
+    "VOUT_UV_WARN",
+    "VIN_OV_FAULT",
+    "VIN_OV_WARN",
+    "VIN_UV_FAULT",
+    "VIN_UV_WARN",
+    "IOUT_OC_FAULT",
+    "IOUT_OC_LV_FAULT",
+    "IOUT_OC_WARN",
+    "IOUT_UC_FAULT",
+    "MFR_IOUT_OC_FAST",
+    "IIN_OC_FAULT",
+    "IIN_OC_WARN",
+    "OT_FAULT",
+    "OT_WARN",
+    "UT_FAULT",
+    "UT_WARN",
+    "IN_POWER_LIMITING_MODE",
+    "CURRENT_SHARE_FAULT",
+    "VOUT_MAX_MIN_WARN",
+    "SYNC_FAULT",
+    "HW_SPARE1",
+    "HW_SPARE2",
+    "HW_SPARE3",
+    "HW_SPARE4",
+    "HW_SPARE5",
+    "HW_SPARE6",
+    "HW_SPARE7",
+    "END_OF_HW_FAULT_TYPES",
+    "NO_FAULT_FW",
+    "COMMON_SHUTDOWN",
+    "TON_MAX_FAULT",
+    "TOFF_MAX_WARN",
+    "PIN_OP_WARN",
+    "POUT_OP_WARN",
+    "VIN_INSUFFICIENT",
+    "FW_SPARE1",
+    "FW_OCP_FAULT",
+    "FW_VIN_UVP_FAULT",
+    "FW_SPARE4",
+    "FW_SPARE5",
+    "FW_SPARE6",
+    "FW_SPARE7",
+};
+
 typedef struct {
     char psu_model[DEV_NAME_LEN];
     blackbox_type_t blackbox_type;
     blackbox_clear_type_t blackbox_clear_type;
     blackbox_set_time_type_t set_time_type;
     int blackbox_record_num;
+    pmbus_info_t *blackbox_info;
+    int blackbox_info_size;
+    pmbus_info_t *pmbus_info;
+    int pmbus_info_size;
+    pmbus_info_t *dfx_info;
+    int dfx_info_size;
 } psu_info_t;
 
 typedef struct {
@@ -99,6 +241,12 @@ typedef struct {
     struct i2c_client *client;
     struct delayed_work dwork_set_time;     /* The delay queue is used for set psu time */
     uint32_t delayed_work_time;             /* dwork_set_time queue delay time */
+    pmbus_info_t *blackbox_info;
+    int blackbox_info_size;
+    pmbus_info_t *pmbus_info;
+    int pmbus_info_size;
+    pmbus_info_t *dfx_info;
+    int dfx_info_size;
 } csu550_info_t;
 #define to_csu550_data(_info) container_of(_info, csu550_info_t, info)
 
@@ -120,8 +268,28 @@ typedef struct blackbox_event_s {
     uint8_t read_fan_speed_1[2];
     uint8_t read_pin[2];
     uint8_t read_vout[2];
-    uint8_t unknown[5];
+    uint8_t event_counters[5];
+    uint8_t status_other;                           /* only used in blackbox type1 length 243*/
 } blackbox_event_t;
+
+typedef struct blackbox_event_type3_s {
+    uint8_t reserved0;
+    uint8_t status_mfr;
+    uint8_t firmware_state[2];
+    uint8_t fault_type[2];
+    uint8_t fault_count[2];
+    uint8_t run_time_from_turn_on_to_off[3];
+    uint8_t last_pmbus_command;
+    uint8_t temperature_when_off[2];
+    uint8_t status_word[2];
+    uint8_t vin_when_off[2];
+    uint8_t vin_1ms_before_off[2];
+    uint8_t iout_when_off[2];
+    uint8_t iout_1ms_before_off[2];
+    uint8_t duty_when_off[2];
+    uint8_t vout_when_off[2];
+    uint8_t reserved2[3];
+} blackbox_event_type3_t;
 
 typedef struct blackbox_s {
     /* Part 1 */
@@ -173,47 +341,9 @@ static const struct proc_ops __fops = {                                         
     .proc_read = seq_read,                                                                        \
     .proc_lseek = seq_lseek,                                                                      \
     .proc_release = psu_proc_release,                                                             \
-}                                                                                                 \
+}
 
-static const psu_info_t psu_infos[] = {
-    {.psu_model = "CSU550AP-3",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS550N2C",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DPS-550AB-39",    .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DPS-550AB-40",    .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS550N2RC",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "FSP550-21FH",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "FSP800-20FL",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "CSU800AP-3",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS800N2C",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS800N2WA",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DPS-800AB-48",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DPS-1300AB-6",    .blackbox_type = BLACKBOX_E4_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_E6},
-    {.psu_model = "GW-CRPS1300D",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS1300N2",   .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "CRPS1300N2",      .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPSD1300",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E0, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "CRPS1300D3R",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "DPS-1300AB-11",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS1300D2WA", .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "DPS-1300-AB",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "AP-CA1300F12B1",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE2, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "DPS-1600AB-53",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS1600D2",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "U1A-D1600-J",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DLG2000BM12F10",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "CRPS2000D2",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "GW-CRPS2000DWA",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "DPST-2030AB",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "AP-CA2000F12B1",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE2, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
-    {.psu_model = "DLG2700AN12C11",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "ECDL270012G",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "CRPS2700D2",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "DLK3000AN12C31",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "ECDL3000123",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-    {.psu_model = "CRPS3000CL",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
-};
-
-static pmbus_info_t dfx_infos[] = {
+static pmbus_info_t default_dfx_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_BYTE", .pmbus_reg = PMBUS_STATUS_BYTE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_VOUT", .pmbus_reg = PMBUS_STATUS_VOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
@@ -235,7 +365,25 @@ static pmbus_info_t dfx_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_PIN", .pmbus_reg = PMBUS_READ_PIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
 };
 
-static pmbus_info_t pmbus_infos[] = {
+static pmbus_info_t delta_q54sn120a1rnph_dfx_infos[] = {
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_BYTE", .pmbus_reg = PMBUS_STATUS_BYTE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_VOUT", .pmbus_reg = PMBUS_STATUS_VOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_IOUT", .pmbus_reg = PMBUS_STATUS_IOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_INPUT", .pmbus_reg = PMBUS_STATUS_INPUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_TEMP", .pmbus_reg = PMBUS_STATUS_TEMPERATURE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_CML", .pmbus_reg = PMBUS_STATUS_CML, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_MFR_SPEC", .pmbus_reg = PMBUS_STATUS_MFR_SPECIFIC, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_VIN", .pmbus_reg = PMBUS_READ_VIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_IIN", .pmbus_reg = PMBUS_READ_IIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_VOUT", .pmbus_reg = PMBUS_READ_VOUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_IOUT", .pmbus_reg = PMBUS_READ_IOUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_TEMP1", .pmbus_reg = PMBUS_READ_TEMPERATURE_1, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_POUT", .pmbus_reg = PMBUS_READ_POUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "READ_PIN", .pmbus_reg = PMBUS_READ_PIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+};
+
+static pmbus_info_t default_pmbus_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_ID", .pmbus_reg = PMBUS_MFR_ID, .width = BLOCK_DATA, .data_type = STRING_DATA},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_MODEL", .pmbus_reg = PMBUS_MFR_MODEL, .width = BLOCK_DATA, .data_type = STRING_DATA},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_REVISION", .pmbus_reg = PMBUS_MFR_REVISION, .width = BLOCK_DATA, .data_type = STRING_DATA},
@@ -250,7 +398,21 @@ static pmbus_info_t pmbus_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_FAN", .pmbus_reg = PMBUS_STATUS_FAN_12, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
 };
 
-static pmbus_info_t blackbox_infos[] = {
+static pmbus_info_t no_fan_pmbus_infos[] = {
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_ID", .pmbus_reg = PMBUS_MFR_ID, .width = BLOCK_DATA, .data_type = STRING_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_MODEL", .pmbus_reg = PMBUS_MFR_MODEL, .width = BLOCK_DATA, .data_type = STRING_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_REVISION", .pmbus_reg = PMBUS_MFR_REVISION, .width = BLOCK_DATA, .data_type = STRING_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_DATE", .pmbus_reg = PMBUS_MFR_DATE, .width = BLOCK_DATA, .data_type = STRING_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_SERIAL", .pmbus_reg = PMBUS_MFR_SERIAL, .width = BLOCK_DATA, .data_type = STRING_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_VOUT", .pmbus_reg = PMBUS_STATUS_VOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_IOUT", .pmbus_reg = PMBUS_STATUS_IOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_INPUT", .pmbus_reg = PMBUS_STATUS_INPUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_TEMP", .pmbus_reg = PMBUS_STATUS_TEMPERATURE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_CML", .pmbus_reg = PMBUS_STATUS_CML, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+};
+
+static pmbus_info_t default_blackbox_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_VOUT", .pmbus_reg = PMBUS_STATUS_VOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_IOUT", .pmbus_reg = PMBUS_STATUS_IOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
@@ -273,6 +435,114 @@ static pmbus_info_t blackbox_infos[] = {
     {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_POS_TOTAL", .pmbus_reg = PMBUS_MFR_POS_TOTAL, .width = WIDTH_4BYTE, .data_type = LE_DATA, .unit = "s"},
     {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_POS_LAST", .pmbus_reg = PMBUS_MFR_POS_LAST, .width = WIDTH_4BYTE, .data_type = LE_DATA, .unit = "s"},
 };
+
+static pmbus_info_t gw_crps1300d_blackbox_infos[] = {
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_VOUT", .pmbus_reg = PMBUS_STATUS_VOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_IOUT", .pmbus_reg = PMBUS_STATUS_IOUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_INPUT", .pmbus_reg = PMBUS_STATUS_INPUT, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_TEMP", .pmbus_reg = PMBUS_STATUS_TEMPERATURE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_CML", .pmbus_reg = PMBUS_STATUS_CML, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_MFR_SPEC", .pmbus_reg = PMBUS_STATUS_MFR_SPECIFIC, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "STATUS_FAN", .pmbus_reg = PMBUS_STATUS_FAN_12, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "IN_VOLT", .pmbus_reg = PMBUS_READ_VIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "IN_CURR", .pmbus_reg = PMBUS_READ_IIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "OUT_VOLT", .pmbus_reg = PMBUS_READ_VOUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "OUT_CURR", .pmbus_reg = PMBUS_READ_IOUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "TEMP1", .pmbus_reg = PMBUS_READ_TEMPERATURE_1, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "TEMP2", .pmbus_reg = PMBUS_READ_TEMPERATURE_2, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "TEMP3", .pmbus_reg = PMBUS_READ_TEMPERATURE_3, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "FAN_SPEED", .pmbus_reg = PMBUS_READ_FAN_SPEED_1, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "IN_POWER", .pmbus_reg = PMBUS_READ_POUT, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "OUT_POWER", .pmbus_reg = PMBUS_READ_PIN, .width = WORD_DATA, .data_type = SENSOR_DATA},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_POS_TOTAL", .pmbus_reg = PMBUS_MFR_POS_TOTAL, .width = WIDTH_4BYTE, .data_type = LE_DATA, .unit = "s"},
+    {.page_mask = GENMASK(0, 0), .pmbus_name = "MFR_POS_LAST", .pmbus_reg = PMBUS_MFR_POS_LAST, .width = WIDTH_4BYTE, .data_type = LE_DATA, .unit = "s"},
+};
+
+static const psu_info_t psu_infos[] = {
+    {.psu_model = "CSU550AP-3",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS550N2C",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DPS-550AB-39",    .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DPS-550AB-40",    .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS550N2RC",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "FSP550-21FH",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "FSP800-20FL",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "CSU800AP-3",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS800N2C",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS800N2WA",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DPS-800AB-48",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DPS-1300AB-6",    .blackbox_type = BLACKBOX_E4_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_E6},
+    {.psu_model = "GW-CRPS1300D",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD, .blackbox_info = gw_crps1300d_blackbox_infos, .blackbox_info_size = ARRAY_SIZE(gw_crps1300d_blackbox_infos)},
+    {.psu_model = "GW-CRPS1300N2",   .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "CRPS1300N2",      .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPSD1300",    .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E0, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT, .blackbox_info = gw_crps1300d_blackbox_infos, .blackbox_info_size = ARRAY_SIZE(gw_crps1300d_blackbox_infos)},
+    {.psu_model = "CRPS1300D3R",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 5, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT, .blackbox_info = gw_crps1300d_blackbox_infos, .blackbox_info_size = ARRAY_SIZE(gw_crps1300d_blackbox_infos)},
+    {.psu_model = "DPS-1300AB-11",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS1300D2WA", .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "DPS-1300-AB",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "AP-CA1300F12B1",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE2, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "DPS-1600AB-53",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS1600D2",   .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "U1A-D1600-J",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DLG2000BM12F10",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "CRPS2000D2",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "GW-CRPS2000DWA",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "DPST-2030AB",     .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE1, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "AP-CA2000F12B1",  .blackbox_type = BLACKBOX_E4_RW,    .blackbox_clear_type = BLACKBOX_CLEAR_E7_TYPE2, .blackbox_record_num = 15, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT},
+    {.psu_model = "DLG2700AN12C11",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "ECDL270012G",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "CRPS2700D2",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "DLK3000AN12C31",  .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "ECDL3000123",     .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "CRPS3000CL",      .blackbox_type = BLACKBOX_DC_BR238, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "ECD26020050",     .blackbox_type = BLACKBOX_DC_BR243, .blackbox_clear_type = BLACKBOX_CLEAR_E0, .set_time_type = BLACKBOX_SET_TIME_DD},
+    {.psu_model = "Q54SN120A1RNPH",  .blackbox_type = BLACKBOX_D2_OFFSET, .blackbox_clear_type = BLACKBOX_CLEAR_NOT_SUPPORT, .set_time_type = BLACKBOX_SET_TIME_NOT_SUPPORT, .pmbus_info = no_fan_pmbus_infos, .pmbus_info_size = ARRAY_SIZE(no_fan_pmbus_infos), .dfx_info = delta_q54sn120a1rnph_dfx_infos, .dfx_info_size = ARRAY_SIZE(delta_q54sn120a1rnph_dfx_infos)},
+};
+
+/* Helper: get trimmed substring boundaries */
+static void get_trim_bounds(const char *s, const char **start, size_t *len)
+{
+    const char *end;
+
+    *start = s;
+    while (**start && isspace(**start)) {
+        (*start)++;
+    }
+
+    end = s + strlen(s) - 1;
+    while (end > *start && isspace(*end)) {
+        end--;
+    }
+
+    *len = end >= *start ? (size_t)(end - *start + 1) : 0;
+}
+
+/**
+ * trim_and_compare - Compare two strings ignoring leading/trailing whitespace
+ * @s1: first null-terminated string
+ * @s2: second null-terminated string
+ *
+ * Return 0 if equal, non-zero otherwise.
+ * Does not modify original strings.
+ */
+static int trim_and_compare(const char *s1, const char *s2)
+{
+    const char *start1, *start2;
+    size_t len1, len2;
+
+    if (!s1 || !s2) {
+        return -EINVAL;
+    }
+
+    get_trim_bounds(s1, &start1, &len1);
+    get_trim_bounds(s2, &start2, &len2);
+
+    if (len1 != len2) {
+        return 1;
+    }
+
+    return strncmp(start1, start2, len1);
+}
 
 static int csu550_transfer_read(struct i2c_client *client, u8 *buf, u8 regaddr, size_t count)
 {
@@ -342,7 +612,7 @@ static int csu550_info_init(struct i2c_client *client, csu550_info_t *csu550_inf
     snprintf(csu550_info->psu_model, sizeof(csu550_info->psu_model), "%s", block_data);
     match_flag = 0;
     for (i = 0; i < ARRAY_SIZE(psu_infos); i++) {
-        if (strncmp(block_data, psu_infos[i].psu_model, strlen(psu_infos[i].psu_model)) == 0) {
+        if (trim_and_compare(block_data, psu_infos[i].psu_model) == 0) {
             DEBUG_VERBOSE("Match psu model: %s, blackbox_type: %d\n", block_data, psu_infos[i].blackbox_type);
             match_flag = 1;
             csu550_info->blackbox_type = psu_infos[i].blackbox_type;
@@ -352,6 +622,28 @@ static int csu550_info_init(struct i2c_client *client, csu550_info_t *csu550_inf
                 csu550_info->blackbox_record_num = BLACKBOX_MFR_PAGE_NUM;
             }
             csu550_info->set_time_type = psu_infos[i].set_time_type;
+            if (psu_infos[i].blackbox_info == NULL) {
+                csu550_info->blackbox_info = default_blackbox_infos;
+                csu550_info->blackbox_info_size = ARRAY_SIZE(default_blackbox_infos);
+            } else {
+                csu550_info->blackbox_info = psu_infos[i].blackbox_info;
+                csu550_info->blackbox_info_size = psu_infos[i].blackbox_info_size;
+            }
+            if (psu_infos[i].pmbus_info == NULL) {
+                csu550_info->pmbus_info = default_pmbus_infos;
+                csu550_info->pmbus_info_size = ARRAY_SIZE(default_pmbus_infos);
+            } else {
+                csu550_info->pmbus_info = psu_infos[i].pmbus_info;
+                csu550_info->pmbus_info_size = psu_infos[i].pmbus_info_size;
+            }
+            if (psu_infos[i].dfx_info == NULL) {
+                csu550_info->dfx_info = default_dfx_infos;
+                csu550_info->dfx_info_size = ARRAY_SIZE(default_dfx_infos);
+            } else {
+                csu550_info->dfx_info = psu_infos[i].dfx_info;
+                csu550_info->dfx_info_size = psu_infos[i].dfx_info_size;
+            }
+
             break;
         }
     }
@@ -361,7 +653,7 @@ static int csu550_info_init(struct i2c_client *client, csu550_info_t *csu550_inf
         return -EOPNOTSUPP;
     }
 
-    if (csu550_info->blackbox_type == BLACKBOX_DC_BR238) {
+    if (csu550_info->blackbox_type == BLACKBOX_DC_BR238 || csu550_info->blackbox_type == BLACKBOX_DC_BR243) {
         csu550_info->blackbox_reg = BLACKBOX_START_REG_DC;
     } else {
         csu550_info->blackbox_reg = BLACKBOX_START_REG_E4;
@@ -572,9 +864,10 @@ static ssize_t sysfs_set_psu_time(struct device *dev, struct device_attribute *d
 static int get_psu_blackbox_type1_info(struct pmbus_data *data, struct i2c_client *client,
                csu550_info_t *csu550_info, char *buf, int buf_len)
 {
-    int i, ret, reg, reg_val;
+    int i, ret, reg, reg_val, read_size;
     int index, offset = 0;
     u8 block_buffer[MAX_RW_LEN];
+    u8 *block_buffer_p = block_buffer;
     blackbox_t blackbox;
     u32 time_total, ac_power_cycle, pson_power_cycle;
     struct tm tm;
@@ -583,11 +876,17 @@ static int get_psu_blackbox_type1_info(struct pmbus_data *data, struct i2c_clien
 
     if (csu550_info->blackbox_type == BLACKBOX_DC_BR238) {
         reg = BLACKBOX_START_REG_DC;
+        read_size = BLACKBOX_BLOCK_READ_SIZE;
+    } else if (csu550_info->blackbox_type == BLACKBOX_DC_BR243) {
+        reg = BLACKBOX_START_REG_DC;
+        read_size = BLACKBOX_BLOCK_READ_SIZE_243;
     } else {
         reg = BLACKBOX_START_REG_E4;
+        read_size = BLACKBOX_BLOCK_READ_SIZE;
     }
+
     mem_clear(block_buffer, sizeof(block_buffer));
-    ret = csu550_transfer_read(client, block_buffer, reg, BLACKBOX_BLOCK_READ_SIZE);
+    ret = csu550_transfer_read(client, block_buffer, reg, read_size);
     if (ret < 0) {
         DEBUG_ERROR("Failed to get %s blackbox info, reg: 0x%02x, ret: %d\n",
             csu550_info->psu_model, reg, ret);
@@ -595,7 +894,19 @@ static int get_psu_blackbox_type1_info(struct pmbus_data *data, struct i2c_clien
     }
 
     mem_clear(&blackbox, sizeof(blackbox));
-    memcpy(&blackbox, block_buffer, BLACKBOX_BLOCK_READ_SIZE);
+    memcpy(&blackbox, block_buffer_p, BLACKBOX_SYSTEM_TRACKING_DATA_SIZE);
+    block_buffer_p += BLACKBOX_SYSTEM_TRACKING_DATA_SIZE;
+    for (index = 0; index < BLACKBOX_EVENT_SIZE; index++) {
+        /* The one byte subtracted is the space occupied by status_other. Treat it specially in the next if */
+        memcpy(&(blackbox.event[index]), block_buffer_p, sizeof(blackbox_event_t) - sizeof(uint8_t));
+        block_buffer_p += (sizeof(blackbox_event_t) - sizeof(uint8_t));
+
+        /* deal segment of status_other */
+        if (csu550_info->blackbox_type == BLACKBOX_DC_BR243) {
+            memcpy(&(blackbox.event[index].status_other), block_buffer_p, sizeof(uint8_t));
+            block_buffer_p += sizeof(uint8_t);
+        }
+    }
 
     time_total = blackbox.present_total_psu_on_time[2] << 16|
                  blackbox.present_total_psu_on_time[1] << 8 |
@@ -744,11 +1055,32 @@ static int get_psu_blackbox_type1_info(struct pmbus_data *data, struct i2c_clien
         } else {
             offset += ret;
         }
+
+        /* event counters*/
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "INPUT_UV_DOWN_CNTS", (uint8_t)(blackbox.event[index].event_counters[0] & 0x0F));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "THERMAL_DOWN_CNTS", (uint8_t)((blackbox.event[index].event_counters[0] >> 4) & 0x0F));
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "OUTPUT_OC_OP_DOWN_CNTS", (uint8_t)(blackbox.event[index].event_counters[1] & 0x0F));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "GENE_FAIL_DOWN_CNTS", (uint8_t)((blackbox.event[index].event_counters[1] >> 4) & 0x0F));
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "FAN_FAIL_DOWN_CNTS", (uint8_t)(blackbox.event[index].event_counters[2] & 0x0F));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "OUTPUT_OV_DOWN_CNTS", (uint8_t)((blackbox.event[index].event_counters[2] >> 4) & 0x0F));
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "INPUT_V_WARN_CNTS", (uint8_t)(blackbox.event[index].event_counters[3] & 0x0F));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "THERMAL_WARN_CNTS", (uint8_t)((blackbox.event[index].event_counters[3] >> 4) & 0x0F));
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "OUTPUT_C_P_WARN_CNTS", (uint8_t)(blackbox.event[index].event_counters[4] & 0x0F));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %d\n", "FAN_SLOW_WARN_CNTS", (uint8_t)((blackbox.event[index].event_counters[4] >> 4) & 0x0F));
+
+        if (csu550_info->blackbox_type == BLACKBOX_DC_BR243) {
+            /* status other */
+            offset += scnprintf(buf + offset, buf_len - offset, "%-15s (0x7F) : 0x%02X\n", "STATUS_OTHER", blackbox.event[index].status_other);
+        }
     }
     offset += scnprintf(buf + offset, buf_len - offset, "----------------------------------------------\n");
     offset += scnprintf(buf + offset, buf_len - offset, "Blackbox information raw data:\n");
     offset += scnprintf(buf + offset, buf_len - offset, "----------------------------------------------\n");
-    for (i = 0; i < BLACKBOX_BLOCK_READ_SIZE; i++) {
+    for (i = 0; i < read_size; i++) {
         offset += scnprintf(buf + offset, buf_len - offset, "%02X ", block_buffer[i]);
     }
     buf[offset] = '\n';
@@ -756,10 +1088,15 @@ static int get_psu_blackbox_type1_info(struct pmbus_data *data, struct i2c_clien
 }
 
 static int get_psu_blackbox_type2_info(struct pmbus_data *data, struct i2c_client *client,
-               csu550_info_t *csu550_info, char *buf, int buf_len, pmbus_info_t *blackbox_array, int a_size)
+               csu550_info_t *csu550_info, char *buf, int buf_len)
 {
     int ret, tmp_value;
     int mfr_page, offset = 0;
+    pmbus_info_t *blackbox_array;
+    int a_size;
+
+    blackbox_array = csu550_info->blackbox_info;
+    a_size = csu550_info->blackbox_info_size;
 
     offset += scnprintf(buf + offset, buf_len - offset, "%-23s: PSU (Bus:%d Addr:0x%x)\n", "Blackbox Information",
         client->adapter->nr, client->addr);
@@ -797,32 +1134,427 @@ static int get_psu_blackbox_type2_info(struct pmbus_data *data, struct i2c_clien
     return strlen(buf);
 }
 
+static int psu_blackbox_type3_write_protect_op(struct i2c_client *client, int cmd)
+{
+    int ret;
+
+    if (!client) {
+        DEBUG_ERROR("Invalid I2C client pointer.\n");
+        return -EINVAL;
+    }
+
+    ret = wb_pmbus_write_byte_data(client, 0, WRITE_PROTECT, cmd);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: Failed to set WRITE_PROTECT, set value: 0x%02x, ret: %d\n",
+                    client->adapter->nr, client->addr, cmd, ret);
+        return ret;
+    }
+
+    return ret;
+}
+
+static int psu_blackbox_type3_get_record_num(struct i2c_client *client)
+{
+    int ret;
+    int i, attempts;
+
+    if (!client) {
+        DEBUG_ERROR("Invalid I2C client pointer.\n");
+        return -EINVAL;
+    }
+
+    /* The first time was dirty data, read twice for confirm data is latest */
+    attempts= 2;
+    for (i = 0; i < attempts; i++) {
+        ret = wb_pmbus_read_word_data(client, 0, 0xff, MFR_BLACKBOX_OFFSET);
+        if (ret < 0) {
+            DEBUG_ERROR("%d-%04x: Failed to read MFR_BLACKBOX_OFFSET, ret: %d\n",
+                client->adapter->nr, client->addr, ret);
+            return ret;
+        }
+    }
+
+    return ret;
+}
+
+static int psu_blackbox_type3_read_blackbox_event(struct i2c_client *client, u16 index,
+    blackbox_event_type3_t *event)
+{
+    int ret;
+    int i, attempts;
+    u8 block_buffer[MAX_RW_LEN];
+
+    if (!client || !event) {
+        DEBUG_ERROR("Invalid parameter.\n");
+        return -EINVAL;
+    }
+
+    /* write blackbox index for read */
+    ret = wb_pmbus_write_word_data(client, 0, MFR_BLACKBOX_OFFSET, index);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: Failed to set MFR_BLACKBOX_OFFSET, set value: 0x%04x, ret: %d\n",
+                    client->adapter->nr, client->addr, index, ret);
+        return ret;
+    }
+
+    /* The first time was dirty data, read twice for confirm data is latest */
+    attempts= 2;
+    for (i = 0; i < attempts; i++) {
+        mem_clear(block_buffer, sizeof(block_buffer));
+        ret = wb_pmbus_read_block_data(client, 0, MFR_READ_BLACKBOX_DATA, block_buffer);
+        if(ret  < 0) {
+            DEBUG_ERROR("%d-%04x: Failed to read MFR_READ_BLACKBOX_DATA, ret: %d\n",
+                client->adapter->nr, client->addr, ret);
+            return ret;
+        }
+    }
+
+    /* Copy data to event structure */
+    if (ret < sizeof(blackbox_event_type3_t)) {
+        DEBUG_ERROR("%d-%04x: Read data length %d less than expected %zu\n",
+                    client->adapter->nr, client->addr, ret, sizeof(*event));
+        return -EIO;
+    }
+    memcpy(event, block_buffer, sizeof(blackbox_event_type3_t));
+
+    return 0;
+}
+
+static int get_psu_blackbox_type3_raw_data_op(struct i2c_client *client, csu550_info_t *csu550_info,
+    char *buf, int buf_len)
+{
+    int i, ret;
+    int offset = 0;
+    int index, record_num;
+    blackbox_event_type3_t blackbox_event;
+    u8 *event_bytes;
+
+    if (!client || !csu550_info || !buf || buf_len <= 0) {
+        DEBUG_ERROR("Invalid parameter.\n");
+        return -EINVAL;
+    }
+
+    offset += scnprintf(buf + offset, buf_len - offset, "%-23s: PSU (Bus:%d Addr:0x%x)\n",
+        "Blackbox information raw data", client->adapter->nr, client->addr);
+    offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %s\n", "PSU Model", csu550_info->psu_model);
+
+    /* get blackbox record number */
+    record_num = psu_blackbox_type3_get_record_num(client);
+    if (record_num < 0) {
+        return record_num;
+    }
+
+    offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %u\n", "Event Number", record_num);
+    for (index = 0; index < record_num; index++) {
+        ret = psu_blackbox_type3_read_blackbox_event(client, index, &blackbox_event);
+        if (ret < 0) {
+            return ret;
+        }
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %s\n", "----------------------", "-----------------------");
+        offset += scnprintf(buf + offset, buf_len - offset, "%-23s: [%d]\n", "Event", (index + 1));
+        event_bytes = (u8 *)&blackbox_event;
+        for (i = 0; i < sizeof(blackbox_event_type3_t); i++) {
+            offset += scnprintf(buf + offset, buf_len - offset, "%02X ", event_bytes[i]);
+        }
+        offset += scnprintf(buf + offset, buf_len - offset, "\n");
+    }
+
+    return strlen(buf);
+}
+
+static int get_psu_blackbox_type3_raw_data(struct i2c_client *client, csu550_info_t *csu550_info,
+    char *buf, int buf_len)
+{
+    int ret, len;
+
+    /* write protect off */
+    ret = psu_blackbox_type3_write_protect_op(client, WRITE_PROTECT_OFF_VAL);
+    if (ret < 0) {
+        return ret;
+    }
+
+    len = get_psu_blackbox_type3_raw_data_op(client, csu550_info, buf, buf_len);
+
+    /* write protect on */
+    (void)psu_blackbox_type3_write_protect_op(client, WRITE_PROTECT_ON_VAL);
+
+    return len;
+}
+
+static int blackbox_type3_temp_convert(u8 data0, u8 data1)
+{
+    int tmp1, tmp3;
+    s64 tmp2;
+    int value = NOT_SUPPORT;
+    u32 divisor;
+
+    if ((data0 & 0x80) > 0) {
+        tmp1 = 32 - ((data0 & 0xf8) >> 3);
+        tmp2 = (1ULL  << tmp1) * TEMP_CONVERSION_FACTOR;
+    } else {
+        tmp1 =  ((data0 & 0xf8) >> 3);
+        divisor = (1U << tmp1);
+        if (divisor == 0) {
+            DEBUG_ERROR("TEMP divisor is zero (tmp1: %d, data0: 0x%02x)\n", tmp1, data0);
+            return NOT_SUPPORT;
+        }
+        tmp2 = div_s64((s64)1 * TEMP_CONVERSION_FACTOR, divisor);
+    }
+
+    if (data0 & 0x4) {
+        tmp3 = 0 - (1024 - ((data0 & 0x7) - 4) * 256 + data1);
+    } else {
+        tmp3 = (data0 & 0x7) * 256 + data1;
+    }
+
+    if (tmp2 == 0) {
+        DEBUG_ERROR("TEMP divisor is zero (tmp2: %lld, data0: 0x%02x)\n", tmp2, data0);
+        return NOT_SUPPORT;
+    }
+    value = div_s64((s64)tmp3 * TEMP_CONVERSION_FACTOR, tmp2);
+
+    return value;
+}
+
+static int blackbox_type3_vol_in_convert(u8 data0, u8 data1)
+{
+    int tmp1;
+    s64 tmp2;
+    int value = NOT_SUPPORT;
+    u32 divisor;
+
+    if ((data0 & 0x80) > 0) {
+        tmp1 = 32 - ((data0 & 0xf8) >> 3);
+        tmp2 = (1ULL << tmp1) * VOLTAGE_CONVERSION_FACTOR;
+    } else {
+        tmp1 =  ((data0 & 0xf8) >> 3);
+        divisor = (1U << tmp1);
+        if (divisor == 0) {
+            DEBUG_ERROR("VOL_IN divisor is zero (tmp1: %d, data0: 0x%02x)\n", tmp1, data0);
+            return NOT_SUPPORT;
+        }
+        tmp2 = div_s64((s64)1 * VOLTAGE_CONVERSION_FACTOR, divisor);
+    }
+
+    if (tmp2 == 0) {
+        DEBUG_ERROR("VOL_IN divisor is zero (tmp2: %lld, data0: 0x%02x)\n", tmp2, data0);
+        return NOT_SUPPORT;
+    }
+    value = div_s64((s64)((data0 & 0x7) * 256 + data1) * VOLTAGE_CONVERSION_FACTOR * MV_TO_V, tmp2);
+
+    return value;
+}
+
+static int blackbox_type3_vol_out_convert(u8 data0, u8 data1)
+{
+    int value;
+    value = (data0 * 256 + data1) * MV_TO_V / (1 << 12);
+    return value;
+}
+
+static int blackbox_type3_curr_out_convert(u8 data0, u8 data1)
+{
+    int tmp1;
+    s64 tmp2;
+    int value = NOT_SUPPORT;
+    u32 divisor;
+
+    if ((data0 & 0x80) > 0) {
+        tmp1 = 32 - ((data0 & 0xf8) >> 3);
+        tmp2 = (1ULL << tmp1) * CURRENT_CONVERSION_FACTOR;
+    } else {
+        tmp1 =  ((data0 & 0xf8) >> 3);
+        divisor = (1U << tmp1);
+        if (divisor == 0) {
+            DEBUG_ERROR("CURR_OUT divisor is zero (tmp1: %d, data0: 0x%02x)\n", tmp1, data0);
+            return NOT_SUPPORT;
+        }
+        tmp2 = div_s64((s64)1 * CURRENT_CONVERSION_FACTOR, divisor);
+    }
+
+    if (tmp2 == 0) {
+        DEBUG_ERROR("CURR_OUT divisor is zero (tmp2: %lld, data0: 0x%02x)\n", tmp2, data0);
+        return NOT_SUPPORT;
+    }
+    value = div_s64((s64)((data0 & 0x7) * 256 + data1) * CURRENT_CONVERSION_FACTOR * MA_TO_A, tmp2);
+
+    return value;
+}
+
+static int get_psu_blackbox_type3_info_op(struct i2c_client *client, csu550_info_t *csu550_info,
+    char *buf, int buf_len)
+{
+    int ret;
+    int offset = 0;
+    int index, record_num;
+    blackbox_event_type3_t blackbox_event;
+    u16 firmware_state, fault_type, fault_count;
+    u32 run_time_from_turn_on_to_off;
+    s64 power_on_time, power_on_time_s;
+    s32 power_on_time_ms;
+    int temperature, vin_when_off, vin_1ms_before_off, iout_when_off, iout_1ms_before_off, duty, vout_when_off;
+    const char *state_string, *fault_string;
+
+    if (!client || !csu550_info || !buf || buf_len <= 0) {
+        DEBUG_ERROR("Invalid parameter.\n");
+        return -EINVAL;
+    }
+
+    memset(buf, 0, buf_len);
+
+    offset += scnprintf(buf + offset, buf_len - offset, "%-23s: PSU (Bus:%d Addr:0x%x)\n", "Blackbox Information",
+        client->adapter->nr, client->addr);
+    offset += scnprintf(buf + offset, buf_len - offset, "%-23s: %s\n", "PSU Model", csu550_info->psu_model);
+
+    record_num = psu_blackbox_type3_get_record_num(client);
+    if (record_num < 0) {
+        return record_num;
+    }
+
+    offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %u\n", "Event Number", record_num);
+    for (index = 0; index < record_num; index++) {
+        ret = psu_blackbox_type3_read_blackbox_event(client, index, &blackbox_event);
+        if (ret < 0) {
+            return ret;
+        }
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %s\n", "-----------------------", "-----------------------");
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: [%d]\n\n", "Event", (index + 1));
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: 0x%x\n", "STATUS_MFR", blackbox_event.status_mfr);
+
+        firmware_state = ((u16)blackbox_event.firmware_state[0] << 8) | blackbox_event.firmware_state[1];
+        if (firmware_state >= STATE_END) {
+            state_string = "UNKNOWN";
+        } else {
+            state_string = firmware_state_strings[firmware_state];
+        }
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %s\n", "FIRMWARE_STATE", state_string);
+
+        fault_type = ((u16)blackbox_event.fault_type[0] << 8) | blackbox_event.fault_type[1];
+        if (fault_type >=  FAULT_TYPE_END) {
+            fault_string = "UNKNOWN";
+        } else {
+            fault_string = fault_type_strings[fault_type];
+        }
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %s\n", "FAULT_TYPE", fault_string);
+
+        fault_count = ((u16)blackbox_event.fault_count[0] << 8) | blackbox_event.fault_count[1];
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d\n", "FAULT_COUNT", fault_count);
+
+        run_time_from_turn_on_to_off = ((u32)blackbox_event.run_time_from_turn_on_to_off[0] << 16) +
+                                        ((u32)blackbox_event.run_time_from_turn_on_to_off[1] << 8) +
+                                        (u32)blackbox_event.run_time_from_turn_on_to_off[2];
+
+        if (run_time_from_turn_on_to_off < RUNTIME_THRESHOLD) {
+            /* ms */
+            power_on_time = div_s64((s64)run_time_from_turn_on_to_off * MS_TO_S, POWER_ON_TIME_SCALE);
+        } else {
+            /* ms */
+            power_on_time = (s64)(run_time_from_turn_on_to_off - RUNTIME_THRESHOLD) * MS_TO_S +
+                            div_s64((s64)RUNTIME_THRESHOLD * MS_TO_S, POWER_ON_TIME_SCALE);
+        }
+        power_on_time_s = div_s64_rem(power_on_time, MS_TO_S, &power_on_time_ms);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %lld.%03ds\n", "POWER_ON_TIME",
+                    power_on_time_s, power_on_time_ms);
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: 0x%x\n", "LAST_PMBUS_COMMAND",
+            blackbox_event.last_pmbus_command);
+
+        temperature = blackbox_type3_temp_convert(blackbox_event.temperature_when_off[0],
+                        blackbox_event.temperature_when_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d C\n", "TEMPERATURE(when off)", temperature);
+
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: 0x%x\n", "STATUS_WORD",
+                    ((u16)blackbox_event.status_word[0] << 8) | (blackbox_event.status_word[1]));
+
+        vin_when_off = blackbox_type3_vol_in_convert(blackbox_event.vin_when_off[0],
+                        blackbox_event.vin_when_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%03d V\n", "IN_VOLT(when off)",
+                    vin_when_off / MV_TO_V, vin_when_off % MV_TO_V);
+
+        vin_1ms_before_off = blackbox_type3_vol_in_convert(blackbox_event.vin_1ms_before_off[0],
+                                blackbox_event.vin_1ms_before_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%03d V\n", "IN_VOLT(1ms before off)",
+                    vin_1ms_before_off / MV_TO_V, vin_1ms_before_off % MV_TO_V);
+
+        iout_when_off = blackbox_type3_curr_out_convert(blackbox_event.iout_when_off[0],
+                        blackbox_event.iout_when_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%03d A\n", "OUT_CURR(when off)",
+                    iout_when_off / MA_TO_A, iout_when_off % MA_TO_A);
+
+        iout_1ms_before_off = blackbox_type3_curr_out_convert(blackbox_event.iout_1ms_before_off[0],
+                                blackbox_event.iout_1ms_before_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%03d A\n", "OUT_CURR(1ms before off)",
+            iout_1ms_before_off / MA_TO_A, iout_1ms_before_off % MA_TO_A);
+
+        /* Expand by 100 times and retain 2 decimal places */
+        duty = (((u16)blackbox_event.duty_when_off[0] << 8) | (blackbox_event.duty_when_off[1])) * 100 *
+                 PERCENTAGE_COEFFICIENT / 65536;
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%02d%%\n", "DUTY(when off)",
+                    duty / 100, duty % 100);
+
+        vout_when_off = blackbox_type3_vol_out_convert(blackbox_event.vout_when_off[0],
+                            blackbox_event.vout_when_off[1]);
+        offset += scnprintf(buf + offset, buf_len - offset, "%-24s: %d.%03d V\n", "OUT_VOLT(when off)",
+                    vout_when_off / MV_TO_V, vout_when_off % MV_TO_V);
+    }
+
+    buf[offset] = '\n';
+    return strlen(buf);
+}
+
+static int get_psu_blackbox_type3_info(struct i2c_client *client, csu550_info_t *csu550_info,
+    char *buf, int buf_len)
+{
+    int ret, len;
+
+    /* write protect off */
+    ret = psu_blackbox_type3_write_protect_op(client, WRITE_PROTECT_OFF_VAL);
+    if (ret < 0) {
+        return ret;
+    }
+
+    len = get_psu_blackbox_type3_info_op(client, csu550_info, buf, buf_len);
+
+    /* write protect on */
+    (void)psu_blackbox_type3_write_protect_op(client, WRITE_PROTECT_ON_VAL);
+
+    return len;
+}
+
 static int get_psu_blackbox_rawdata(struct pmbus_data *data, struct i2c_client *client,
                csu550_info_t *csu550_info, char *buf, int buf_len)
 {
-    int ret, i, offset = 0;
+    int ret, i, offset = 0, read_size;
     u8 block_buffer[MAX_RW_LEN];
 
     DEBUG_VERBOSE("get blackbox info, type: %d, blackbox_reg: 0x%x\n",
         csu550_info->blackbox_type, csu550_info->blackbox_reg);
     mem_clear(block_buffer, sizeof(block_buffer));
 
+    mem_clear(buf, buf_len);
     switch(csu550_info->blackbox_type) {
     case BLACKBOX_DC_BR238:
     case BLACKBOX_E4_BR238:
-        ret = csu550_transfer_read(client, block_buffer, csu550_info->blackbox_reg, BLACKBOX_BLOCK_READ_SIZE);
+    case BLACKBOX_DC_BR243:
+        read_size = (csu550_info->blackbox_type == BLACKBOX_DC_BR243) ? BLACKBOX_BLOCK_READ_SIZE_243 : BLACKBOX_BLOCK_READ_SIZE;
+        ret = csu550_transfer_read(client, block_buffer, csu550_info->blackbox_reg, read_size);
         if (ret < 0) {
             DEBUG_ERROR("Failed to get %s blackbox info, reg: 0x%02x, ret: %d\n",
                 csu550_info->psu_model, csu550_info->blackbox_reg, ret);
             return ret;
         }
-        for (i = 0; i < BLACKBOX_BLOCK_READ_SIZE; i++) {
+        for (i = 0; i < read_size; i++) {
             offset += scnprintf(buf + offset, buf_len - offset, "%02X ", block_buffer[i]);
         }
         buf[offset] = '\n';
         break;
     case BLACKBOX_E4_RW:
-        ret = get_psu_blackbox_type2_info(data, client, csu550_info, buf, buf_len, blackbox_infos, ARRAY_SIZE(blackbox_infos));
+        ret = get_psu_blackbox_type2_info(data, client, csu550_info, buf, buf_len);
+        break;
+    case BLACKBOX_D2_OFFSET:
+        ret = get_psu_blackbox_type3_raw_data(client, csu550_info, buf, buf_len);
         break;
     default:
         ret = -EOPNOTSUPP;
@@ -840,10 +1572,14 @@ static int get_psu_blackbox_info(struct pmbus_data *data, struct i2c_client *cli
     switch(csu550_info->blackbox_type) {
     case BLACKBOX_DC_BR238:
     case BLACKBOX_E4_BR238:
+    case BLACKBOX_DC_BR243:
         ret = get_psu_blackbox_type1_info(data, client, csu550_info, buf, buf_len);
         break;
     case BLACKBOX_E4_RW:
-        ret = get_psu_blackbox_type2_info(data, client, csu550_info, buf, buf_len, blackbox_infos, ARRAY_SIZE(blackbox_infos));
+        ret = get_psu_blackbox_type2_info(data, client, csu550_info, buf, buf_len);
+        break;
+    case BLACKBOX_D2_OFFSET:
+        ret = get_psu_blackbox_type3_info(client, csu550_info, buf, buf_len);
         break;
     default:
         ret = -EOPNOTSUPP;
@@ -857,6 +1593,7 @@ static ssize_t show_csu550_pmbus_info(struct device *dev, struct device_attribut
 {
     int offset = 0;
     struct i2c_client *client = to_i2c_client(dev);
+    csu550_info_t *csu550_info = to_csu550_data(wb_pmbus_get_driver_info(client));
     struct pmbus_data *data;
     ssize_t buf_len;
     int ret;
@@ -868,7 +1605,7 @@ static ssize_t show_csu550_pmbus_info(struct device *dev, struct device_attribut
     offset += scnprintf(buf + offset, PAGE_SIZE - offset, "%-23s: PSU (Bus:%d Addr:0x%x)\n", "PSU Information",
         client->adapter->nr, client->addr);
     offset += scnprintf(buf + offset, PAGE_SIZE - offset, "%-23s: %s\n", "----------------------", "-----------------------");
-    ret = get_pmbus_info(client, buf + offset, PAGE_SIZE - offset, 0, pmbus_infos, ARRAY_SIZE(pmbus_infos));
+    ret = get_pmbus_info(client, buf + offset, PAGE_SIZE - offset, 0, csu550_info->pmbus_info, csu550_info->pmbus_info_size);
     if (ret < 0) {
         DEBUG_ERROR("%d-%04x: Failed to get psu pmbus information, ret: %d\n",
             client->adapter->nr, client->addr, ret);
@@ -1270,7 +2007,7 @@ static void dfx_info_show(struct i2c_client *client)
         return;
     }
     psu_data_len = sizeof(csu550_info->psu_data);
-    ret = get_pmbus_info(client, csu550_info->psu_data, psu_data_len, 0, dfx_infos, ARRAY_SIZE(dfx_infos));
+    ret = get_pmbus_info(client, csu550_info->psu_data, psu_data_len, 0, csu550_info->dfx_info, csu550_info->dfx_info_size);
     if (ret < 0) {
         DEBUG_ERROR("%d-%04x: Failed to get psu dfx information, ret: %d\n",
             client->adapter->nr, client->addr, ret);
@@ -1300,7 +2037,7 @@ static int psu_proc_data_show(struct seq_file *s, void *v)
 
     DEBUG_VERBOSE("%d-%04x: Enter psu_proc_data_show\n",
         client->adapter->nr, client->addr);
-    DEBUG_VERBOSE("seq_file->size: %zu, seq_file->from: %lu, seq_file->count: %zu\n",
+    DEBUG_VERBOSE("seq_file->size: %zu, seq_file->from: %zu, seq_file->count: %zu\n",
         s->size, s->from, s->count);
     DEBUG_VERBOSE("seq_file->index: %lld, seq_file->read_pos: %lld\n",
         s->index, s->read_pos);
@@ -1564,11 +2301,6 @@ static int pmbus_probe(struct i2c_client *client)
     if (ret) {
         dev_info(&client->dev, "csu550 pmbus probe error %d\n", ret);
         return ret;
-    } else {
-        /* Create a delay queue to perform power timing after 5 seconds. */
-        csu550_info->delayed_work_time = HALF_HOUR_TO_SECOND;
-        INIT_DELAYED_WORK(&csu550_info->dwork_set_time, csu550_dwork_set_psu_time);
-        schedule_delayed_work(&csu550_info->dwork_set_time, HZ * 5);
     }
 
     ret = sysfs_create_group(&client->dev.kobj, &csu550_sysfs_group);
@@ -1585,6 +2317,11 @@ static int pmbus_probe(struct i2c_client *client)
         wb_pmbus_do_remove(client);
         return ret;
     }
+
+    /* Create a delay queue to perform power timing after 5 seconds. */
+    csu550_info->delayed_work_time = HALF_HOUR_TO_SECOND;
+    INIT_DELAYED_WORK(&csu550_info->dwork_set_time, csu550_dwork_set_psu_time);
+    schedule_delayed_work(&csu550_info->dwork_set_time, HZ * 5);
 
     return ret;
 }
@@ -1619,9 +2356,10 @@ static void pmbus_remove(struct i2c_client *client)
     remove_psu_procfs(csu550_info);
     sysfs_remove_group(&client->dev.kobj, &csu550_sysfs_group);
     ret = wb_pmbus_do_remove(client);
-    if (ret != 0) {
-        DEBUG_ERROR("csu550 fail remove pmbus ,ret = %d\n", ret);
+    if (ret != 0){
+        DEBUG_ERROR("fail remove pmbus %d\n", ret);
     }
+    return;
 }
 
 /*

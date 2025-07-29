@@ -45,6 +45,10 @@ static int dfd_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
     struct irq_data *irqdata;
 
     irqdata = irq_get_irq_data(dev_info->irq);
+    if (irqdata == NULL) {
+        DEBUG_VERBOSE("irqdata null, irq:%ld\n", dev_info->irq);
+        return -EPERM;
+    }
 
     if (irqd_irq_disabled(irqdata) == !irq_on) {
         DEBUG_VERBOSE("irq already disable");

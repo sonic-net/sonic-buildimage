@@ -6,13 +6,13 @@ import traceback
 import operator
 import click
 import os
+import logging
 from platform_config import SLOT_MONITOR_PARAM
-from platform_util import io_rd, io_wr, wbi2cget, wbi2cset
+from platform_util import io_rd, io_wr, wbi2cget, wbi2cset, setup_logger, BSP_COMMON_LOG_DIR
 
-
-SLOTMONITORDEBUG = 0
-SLOTMONITOR_DEBUG_FILE = "/etc/.slotmonitor_debug_flag"
-
+DEBUG_FILE = "/etc/.slotmonitor_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "slot_monitor_debug.log"
+logger = setup_logger(LOG_FILE)
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
 
@@ -33,42 +33,38 @@ class AliasedGroup(click.Group):
 
 
 def debug_init():
-    global SLOTMONITORDEBUG
-    if os.path.exists(SLOTMONITOR_DEBUG_FILE):
-        SLOTMONITORDEBUG = 1
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        SLOTMONITORDEBUG = 0
+        logger.setLevel(logging.INFO)
 
 
 def slotwarninglog(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("SLOTMONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def slotcriticallog(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("SLOTMONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_CRIT, s)
-
+    logger.critical(s)
 
 def sloterror(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("SLOTMONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def slotinfo(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("SLOTMONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def slotdebuglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if SLOTMONITORDEBUG == 1:
-        syslog.openlog("SLOTMONITOR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
 
 class SlotMonitor():
@@ -231,7 +227,7 @@ def run(interval, slotMonitor):
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 def main():
     '''slot monitor operator'''
-
+    debug_init()
 
 @main.command()
 def start():

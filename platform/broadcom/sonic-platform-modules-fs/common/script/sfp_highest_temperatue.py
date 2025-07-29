@@ -16,6 +16,7 @@ debuglevel = 0
 # For TH5 CPO only 
 cpo_temperature_oe_file = "/etc/sonic/highest_oe_temp"
 cpo_temperature_rlm_file = "/etc/sonic/highest_rlm_temp"
+cpo_onie_platform = "x86_64-micas_m2-w6940-128x1-fr4-r0"
 
 def sfp_temp_debug(s):
     if SFP_TEMP_RECORD_DEBUG & debuglevel:
@@ -180,6 +181,16 @@ def get_cpo_highest_temperature_rlm():
 
     return highest_temperature
 
+def is_th5_cpo():
+    cmd = "cat /host/machine.conf | grep onie_platform"
+    ret, output = subprocess.getstatusoutput(cmd)
+    if ret != 0:
+        sfp_temp_error("cmd: %s execution fail, output: %s" % (cmd, output))
+    if output.split("=")[1] == cpo_onie_platform:
+        return True
+
+    return False
+
 def debug_init():
     global debuglevel
 
@@ -192,16 +203,36 @@ def debug_init():
 
 
 def main():
-    while True:
-        debug_init()
-        temperature = 0
-        try:
-            temperature = get_sfp_highest_temperature()
-            write_sfp_highest_temperature(temperature, sfp_temperature_file)
-        except Exception as e:
-            sfp_temp_error("get/write sfp temperature error, msg:%s" % str(e))
-            write_sfp_highest_temperature(-9999000, sfp_temperature_file)
-        time.sleep(5)
+    if is_th5_cpo():
+        while True:
+            debug_init()
+            temperature_oe = 0
+            try:
+                temperature_oe = get_cpo_highest_temperature_oe()
+                write_sfp_highest_temperature(temperature_oe, cpo_temperature_oe_file)
+            except Exception as e:
+                sfp_temp_error("get/write sfp temperature error, msg:%s" % str(e))
+                write_sfp_highest_temperature(-99999000, cpo_temperature_oe_file)
+            temperature_rlm = 0
+            try:
+                temperature_rlm = get_cpo_highest_temperature_rlm()
+                write_sfp_highest_temperature(temperature_rlm, cpo_temperature_rlm_file)
+            except Exception as e:
+                sfp_temp_error("get/write sfp temperature error, msg:%s" % str(e))
+                write_sfp_highest_temperature(-99999000, cpo_temperature_rlm_file)
+            time.sleep(5)
+    else:
+        while True:
+            debug_init()
+            temperature = 0
+            try:
+                temperature = get_sfp_highest_temperature()
+                write_sfp_highest_temperature(temperature, sfp_temperature_file)
+            except Exception as e:
+                sfp_temp_error("get/write sfp temperature error, msg:%s" % str(e))
+                write_sfp_highest_temperature(-9999000, sfp_temperature_file)
+            time.sleep(5)
+
 
 if __name__ == '__main__':
     main()

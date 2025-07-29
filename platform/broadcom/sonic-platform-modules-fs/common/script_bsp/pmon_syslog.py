@@ -8,32 +8,35 @@ import time
 import syslog
 import traceback
 import glob
-from platform_config import PMON_SYSLOG_STATUS
+import logging
+from platform_util import *
+from platform_config import *
 from time import monotonic as _time
 
 PMON_SYSLOG_FILE ="/tmp/.pmon_syslog_factest_mode_en"
-PMON_DEBUG_FILE = "/etc/.pmon_syslog_debug_flag"
-debuglevel = 0
-PMONERROR = 1
-PMONDEBUG = 2
+DEBUG_FILE = "/etc/.pmon_syslog_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "pmon_syslog_debug.log"
+logger = setup_logger(LOG_FILE)
 
+STATUS_OK_LIST = [1]
+PSU_STATUS_OK_LIST = [1, 2]
+
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def pmon_debug(s):
-    if PMONDEBUG & debuglevel:
-        syslog.openlog("PMON_SYSLOG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def pmon_error(s):
-    if PMONERROR & debuglevel:
-        syslog.openlog("PMON_SYSLOG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def dev_syslog(s):
     syslog.openlog("PMON_SYSLOG", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_NOTICE, s)
-
+    logger.error(s)
 
 # status
 STATUS_PRESENT = 'PRESENT'
@@ -42,9 +45,18 @@ STATUS_OK = 'OK'
 STATUS_NOT_OK = 'NOT OK'
 STATUS_FAILED = 'FAILED'
 
+TEMP_FIELD = {
+    "name": "alias",
+    "value":"value",
+    "max": "max",
+    "min": "min",
+    "high": "high",
+    "low": "low",
+}
+
 
 class checkBase(object):
-    def __init__(self, path, dev_name, display_name, obj_type, config):
+    def __init__(self, path, dev_name, display_name, obj_type, config, source = GET_BY_COMMON, index = None):
         self._peroid_syslog = None
         self._peroid_failed_syslog = None  # exception
         self._preDevStatus = None
@@ -53,6 +65,8 @@ class checkBase(object):
         self._display_name = display_name
         self._type = obj_type
         self._config = config
+        self._source = source
+        self._index = index
 
     def getCurstatus(self):
         # get ok/not ok/absent status
@@ -64,38 +78,69 @@ class checkBase(object):
                 status = property_status
         return status, log
 
+    def getResetfulType(self):
+        pass
+
     def getPresent(self):
         presentFilepath = self.getPath()
         try:
-            # get ok/not ok/absent status
-            presentConfig = self._config["present"]
-            mask = presentConfig.get("mask", 0xff)
-            absent_val = presentConfig.get("ABSENT", None)
-            absent_val = absent_val & mask
-            with open(presentFilepath, "r") as fd:
-                retval = fd.read()
-                if int(retval) == absent_val:
+            if self._source == GET_BY_RESTFUL:
+                restful_type = self.getResetfulType()
+                present_cfg = {"field_name": "present", "type": restful_type, "index": self._index}
+                ret, val = get_single_info_from_restful(present_cfg)
+                if not ret:
+                    return STATUS_FAILED, val
+                if int(val) == DEV_PRESENT:
+                    return STATUS_PRESENT, None
+                else:
                     return STATUS_ABSENT, None
-                return STATUS_PRESENT, None
+            else:
+                # get ok/not ok/absent status
+                presentConfig = self._config["present"]
+                mask = presentConfig.get("mask", 0xff)
+                absent_val = presentConfig.get("ABSENT", None)
+                absent_val = absent_val & mask
+                with open(presentFilepath, "r") as fd:
+                    retval = fd.read()
+                    if int(retval) == absent_val:
+                        return STATUS_ABSENT, None
+                    return STATUS_PRESENT, None
         except Exception as e:
             return STATUS_FAILED, (str(e) + " location[%s]" % presentFilepath)
 
     def getStatus(self):
-        if "status" in self._config:
-            statusConfig = self._config["status"]
-            for itemConfig in statusConfig:
-                mask = itemConfig.get("mask", 0xff)
-                ok_val = itemConfig.get("okval", None)
-                ok_val = ok_val & mask
-                Filepath = itemConfig["path"] % self._name
-                try:
-                    with open(Filepath, "r") as fd1:
-                        retval = fd1.read()
-                        if int(retval) != ok_val:
-                            return STATUS_NOT_OK, None
-                except Exception as e:
-                    return STATUS_FAILED, (str(e) + " location[%s]" % Filepath)
-            return STATUS_OK, None
+        if self._source == GET_BY_RESTFUL:
+            restful_type = self.getResetfulType()
+            dev_type = self.getType()
+            status_field_name = "status"
+            status_ok_list = STATUS_OK_LIST
+            if dev_type == "PSU":
+                status_field_name = "hw_status"
+                status_ok_list = PSU_STATUS_OK_LIST
+            status_cfg = {"field_name": status_field_name, "type": restful_type, "index": self._index}
+            ret, val = get_single_info_from_restful(status_cfg)
+            if not ret:
+                return STATUS_FAILED, val
+            if int(val) in status_ok_list:
+                return STATUS_OK, None
+            else:
+                return STATUS_NOT_OK, None
+        else:
+            if "status" in self._config:
+                statusConfig = self._config["status"]
+                for itemConfig in statusConfig:
+                    mask = itemConfig.get("mask", 0xff)
+                    ok_val = itemConfig.get("okval", None)
+                    ok_val = ok_val & mask
+                    Filepath = itemConfig["path"] % self._name
+                    try:
+                        with open(Filepath, "r") as fd1:
+                            retval = fd1.read()
+                            if int(retval) != ok_val:
+                                return STATUS_NOT_OK, None
+                    except Exception as e:
+                        return STATUS_FAILED, (str(e) + " location[%s]" % Filepath)
+                return STATUS_OK, None
         return None, None
 
     def getPath(self):
@@ -229,8 +274,8 @@ class checkBase(object):
 
 
 class checkSfp(checkBase):
-    def __init__(self, path, dev_name, display_name, config):
-        super(checkSfp, self).__init__(path, dev_name, display_name, 'XCVR', config)
+    def __init__(self, path, dev_name, display_name, config, source = GET_BY_COMMON, index = None):
+        super(checkSfp, self).__init__(path, dev_name, display_name, 'XCVR', config, source, index)
 
     def getPath(self):
         super(checkSfp, self).getPath()
@@ -246,8 +291,8 @@ class checkSfp(checkBase):
 
 
 class checkSlot(checkBase):
-    def __init__(self, path, dev_name, display_name, config):
-        super(checkSlot, self).__init__(path, dev_name, display_name, 'SLOT', config)
+    def __init__(self, path, dev_name, display_name, config, source = GET_BY_COMMON, index = None):
+        super(checkSlot, self).__init__(path, dev_name, display_name, 'SLOT', config, source, index)
 
     def getPath(self):
         super(checkSlot, self).getPath()
@@ -263,8 +308,8 @@ class checkSlot(checkBase):
 
 
 class checkPSU(checkBase):
-    def __init__(self, path, dev_name, display_name, config):
-        super(checkPSU, self).__init__(path, dev_name, display_name, 'PSU', config)
+    def __init__(self, path, dev_name, display_name, config, source = GET_BY_COMMON, index = None):
+        super(checkPSU, self).__init__(path, dev_name, display_name, 'PSU', config, source, index)
 
     def getPath(self):
         super(checkPSU, self).getPath()
@@ -278,10 +323,14 @@ class checkPSU(checkBase):
         super(checkPSU, self).getType()
         return self._type
 
+    def getResetfulType(self):
+        super(checkPSU, self).getResetfulType()
+        return 'psu'
+
 
 class checkFAN(checkBase):
-    def __init__(self, path, dev_name, display_name, config):
-        super(checkFAN, self).__init__(path, dev_name, display_name, 'FAN', config)
+    def __init__(self, path, dev_name, display_name, config, source = GET_BY_COMMON, index = None):
+        super(checkFAN, self).__init__(path, dev_name, display_name, 'FAN', config, source, index)
 
     def getPath(self):
         super(checkFAN, self).getPath()
@@ -295,6 +344,9 @@ class checkFAN(checkBase):
         super(checkFAN, self).getType()
         return self._type
 
+    def getResetfulType(self):
+        super(checkFAN, self).getResetfulType()
+        return 'fan'
 
 class platformSyslog():
     def __init__(self):
@@ -338,76 +390,119 @@ class platformSyslog():
 
         tmpconfig = self.pmon_syslog_config.get('fans', None)
         if tmpconfig is not None:
-            preset_item = tmpconfig.get("present", {})
-            path = preset_item.get("path", [])
-            for location in path:
-                if '*' not in location:
-                    pmon_error("fan location config error: %s" % location)
-                    continue
-                dev_name_index = 0
-                loc_split_list = location.split('/')
-                for i, item in enumerate(loc_split_list):
-                    if '*' in item:
-                        dev_name_index = i
-                        break
-                locations = glob.glob(location)
-                for dev_path in locations:
-                    dev_name_list = dev_path.split('/')
-                    dev_name = dev_name_list[dev_name_index]
-                    dev_name_alias = tmpconfig.get("alias", {})
-                    display_name = dev_name_alias.get(dev_name, dev_name)
-                    dev = checkFAN(dev_path, dev_name, display_name, tmpconfig)
-                    self.__fan_checklist.append(dev)
+            source = tmpconfig.get("source", GET_BY_COMMON)
+            if source == GET_BY_RESTFUL:
+                dev_num_cfg = {"type": "fan", "field_name": "num"}
+                ret, dev_num = get_single_info_from_restful(dev_num_cfg)
+                if not ret:
+                    pmon_error("get fan num error, source: %s, reason: %s" % (source, dev_num))
+                else:
+                    for index in range(1, dev_num + 1):
+                        dev_name = "fan%d" % index
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkFAN("", dev_name, display_name, tmpconfig, source, index)
+                        self.__fan_checklist.append(dev)
+            else:
+                preset_item = tmpconfig.get("present", {})
+                path = preset_item.get("path", [])
+                for location in path:
+                    if '*' not in location:
+                        pmon_error("fan location config error: %s" % location)
+                        continue
+                    dev_name_index = 0
+                    loc_split_list = location.split('/')
+                    for i, item in enumerate(loc_split_list):
+                        if '*' in item:
+                            dev_name_index = i
+                            break
+                    locations = glob.glob(location)
+                    for dev_path in locations:
+                        dev_name_list = dev_path.split('/')
+                        dev_name = dev_name_list[dev_name_index]
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkFAN(dev_path, dev_name, display_name, tmpconfig)
+                        self.__fan_checklist.append(dev)
 
         tmpconfig = self.pmon_syslog_config.get('psus', None)
         if tmpconfig is not None:
-            preset_item = tmpconfig.get("present", {})
-            path = preset_item.get("path", [])
-            for location in path:
-                if '*' not in location:
-                    pmon_error("psu location config error: %s" % location)
-                    continue
-                dev_name_index = 0
-                loc_split_list = location.split('/')
-                for i, item in enumerate(loc_split_list):
-                    if '*' in item:
-                        dev_name_index = i
-                        break
-                locations = glob.glob(location)
-                for dev_path in locations:
-                    dev_name_list = dev_path.split('/')
-                    dev_name = dev_name_list[dev_name_index]
-                    dev_name_alias = tmpconfig.get("alias", {})
-                    display_name = dev_name_alias.get(dev_name, dev_name)
-                    dev = checkPSU(dev_path, dev_name, display_name, tmpconfig)
-                    self.__psu_checklist.append(dev)
+            source = tmpconfig.get("source", GET_BY_COMMON)
+            if source == GET_BY_RESTFUL:
+                dev_num_cfg = {"type": "psu", "field_name": "num"}
+                ret, dev_num = get_single_info_from_restful(dev_num_cfg)
+                if not ret:
+                    pmon_error("get psu num error, source: %s, reason: %s" % (source, dev_num))
+                else:
+                    for index in range(1, dev_num + 1):
+                        dev_name = "psu%d" % index
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkPSU("", dev_name, display_name, tmpconfig, source, index)
+                        self.__psu_checklist.append(dev)
+            else:
+                preset_item = tmpconfig.get("present", {})
+                path = preset_item.get("path", [])
+                for location in path:
+                    if '*' not in location:
+                        pmon_error("psu location config error: %s" % location)
+                        continue
+                    dev_name_index = 0
+                    loc_split_list = location.split('/')
+                    for i, item in enumerate(loc_split_list):
+                        if '*' in item:
+                            dev_name_index = i
+                            break
+                    locations = glob.glob(location)
+                    for dev_path in locations:
+                        dev_name_list = dev_path.split('/')
+                        dev_name = dev_name_list[dev_name_index]
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkPSU(dev_path, dev_name, display_name, tmpconfig)
+                        self.__psu_checklist.append(dev)
 
         tmpconfig = self.pmon_syslog_config.get('slots', None)
         if tmpconfig is not None:
-            preset_item = tmpconfig.get("present", {})
-            path = preset_item.get("path", [])
-            for location in path:
-                if '*' not in location:
-                    pmon_error("slot location config error: %s" % location)
-                    continue
-                dev_name_index = 0
-                loc_split_list = location.split('/')
-                for i, item in enumerate(loc_split_list):
-                    if '*' in item:
-                        dev_name_index = i
-                        break
-                locations = glob.glob(location)
-                for dev_path in locations:
-                    dev_name_list = dev_path.split('/')
-                    dev_name = dev_name_list[dev_name_index]
-                    dev_name_alias = tmpconfig.get("alias", {})
-                    display_name = dev_name_alias.get(dev_name, dev_name)
-                    dev = checkSlot(dev_path, dev_name, display_name, tmpconfig)
-                    self.__slot_checklist.append(dev)
+            source = tmpconfig.get("source", GET_BY_COMMON)
+            if source == GET_BY_RESTFUL:
+                dev_num_cfg = {"type": "slot", "field_name": "num"}
+                ret, dev_num = get_single_info_from_restful(dev_num_cfg)
+                if not ret:
+                    pmon_error("get slot num error, source: %s, reason: %s" % (source, dev_num))
+                else:
+                    for index in range(1, dev_num + 1):
+                        dev_name = "slot%d" % index
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkSlot("", dev_name, display_name, tmpconfig, source, index)
+                        self.__slot_checklist.append(dev)
+            else:
+                preset_item = tmpconfig.get("present", {})
+                path = preset_item.get("path", [])
+                for location in path:
+                    if '*' not in location:
+                        pmon_error("slot location config error: %s" % location)
+                        continue
+                    dev_name_index = 0
+                    loc_split_list = location.split('/')
+                    for i, item in enumerate(loc_split_list):
+                        if '*' in item:
+                            dev_name_index = i
+                            break
+                    locations = glob.glob(location)
+                    for dev_path in locations:
+                        dev_name_list = dev_path.split('/')
+                        dev_name = dev_name_list[dev_name_index]
+                        dev_name_alias = tmpconfig.get("alias", {})
+                        display_name = dev_name_alias.get(dev_name, dev_name)
+                        dev = checkSlot(dev_path, dev_name, display_name, tmpconfig)
+                        self.__slot_checklist.append(dev)
 
         tmpconfig = self.pmon_syslog_config.get('temps', None)
         if tmpconfig is not None:
-            self.__temp_checklist = tmpconfig.get('temps_list', [])
+            self.__temp_source = tmpconfig.get("source", GET_BY_COMMON)
+            self.__temp_checklist = self.generate_temp_config_by_restful()
             self.__temps_pollingseconds = tmpconfig.get('over_temps_polling_seconds', None)
 
     def checkTempStaus(self, temp_item):
@@ -420,10 +515,21 @@ class platformSyslog():
             dev_syslog('%%PMON-5-TEMP_NOTICE: get temperature config parament failed.')
             return
         try:
-            locations = glob.glob(input_path)
-            with open(locations[0], "r") as fd:
-                input_temp = fd.read()
-            input_temp = float(input_temp) / float(input_accuracy)
+            input_temp = None
+            if isinstance(input_path, list):
+                for item in input_path:
+                    locations = glob.glob(item)
+                    with open(locations[0], "r") as fd:
+                        tmp = float(fd.read()) / float(input_accuracy)
+                    if tmp is None:
+                        continue
+                    if input_temp is None or input_temp < tmp:
+                        input_temp = tmp
+            else:
+                locations = glob.glob(input_path)
+                with open(locations[0], "r") as fd:
+                    input_temp = fd.read()
+                input_temp = float(input_temp) / float(input_accuracy)
 
             if 'time' not in temp_item:
                 temp_item['time'] = _time()
@@ -441,6 +547,60 @@ class platformSyslog():
                             temp_item['time'] >= self.__temps_pollingseconds or temp_item['status'] != self.warning_status:
                         dev_syslog('%%PMON-5-TEMP_HIGH: %s temperature %sC is larger than max warning threshold %sC.'
                                    % (temp_name, input_temp, warning_temp))
+                        temp_item['status'] = self.warning_status
+                        temp_item['time'] = _time()
+            else:
+                pmon_debug(
+                    "%s temperature %sC is in range [%s, %s]" %
+                    (temp_name, input_temp, warning_temp, critical_temp))
+                temp_item['status'] = self.normal_status
+                temp_item['time'] = _time()
+        except Exception as e:
+            dev_syslog('%%PMON-5-TEMP_NOTICE: Cannot get %s temperature. Exception log: %s' % (temp_name, str(e)))
+        return
+
+    def generate_temp_config_by_restful(self):
+        temp_configs = []
+        num_config = {"type": "temp", "field_name": "num"}
+
+        ret, num = get_single_info_from_restful(num_config)
+        if ret is False:
+            pmon_error("get temp num fail, reason: %s" % num)
+            return temp_configs
+
+        for i in range(1, num + 1):
+            info_config = {"type": "temp", "field": TEMP_FIELD, "index": i}
+            temp_configs.append(info_config)
+
+        return temp_configs
+
+    def checkTempStausResetful(self, temp_item):
+        try:
+            ret, temp_info = get_multiple_info_from_restful(temp_item)
+            if not ret:
+                pmon_error("get temp info fail, reason: %s" % temp_info)
+                return
+            temp_name = temp_info.get('name', None)
+            warning_temp = float(temp_info.get('high', None)) / 1000
+            critical_temp = float(temp_info.get('max', None)) / 1000
+            input_temp = float(temp_info.get('value', None)) / 1000
+
+            if 'time' not in temp_item:
+                temp_item['time'] = _time()
+                temp_item['status'] = self.normal_status
+            if float(input_temp) >= float(warning_temp):
+                if float(input_temp) >= float(critical_temp):
+                    if _time() - \
+                            temp_item['time'] >= self.__temps_pollingseconds or temp_item['status'] != self.critical_status:
+                        dev_syslog('%%PMON-5-TEMP_HIGH: %s temperature %sC is larger than max critical threshold %sC.'
+                                % (temp_name, input_temp, critical_temp))
+                        temp_item['status'] = self.critical_status
+                        temp_item['time'] = _time()
+                else:
+                    if _time() - \
+                            temp_item['time'] >= self.__temps_pollingseconds or temp_item['status'] != self.warning_status:
+                        dev_syslog('%%PMON-5-TEMP_HIGH: %s temperature %sC is larger than max warning threshold %sC.'
+                                % (temp_name, input_temp, warning_temp))
                         temp_item['status'] = self.warning_status
                         temp_item['time'] = _time()
             else:
@@ -487,24 +647,19 @@ class platformSyslog():
             dev.checkStatus()
         for dev in self.__slot_checklist:
             dev.checkStatus()
-        for temp_item in self.__temp_checklist:
-            self.checkTempStaus(temp_item)
+
+        if self.__temp_source == GET_BY_RESTFUL:
+            for temp_item in self.__temp_checklist:
+                self.checkTempStausResetful(temp_item)
+        else:
+            for temp_item in self.__temp_checklist:
+                self.checkTempStaus(temp_item)
 
     def getPollingtime(self):
         return self.__pollingtime
 
-    def debug_init(self):
-        global debuglevel
-        try:
-            with open(PMON_DEBUG_FILE, "r") as fd:
-                value = fd.read()
-            debuglevel = int(value)
-        except Exception:
-            debuglevel = 0
-
     def doWork(self):
         try:
-            self.debug_init()
             self.updateSysDeviceStatus()
         except Exception as e:
             MSG_EXCEPTION = '%%PMON-5-NOTICE: Exception happened! info:%s' % str(e)
@@ -512,8 +667,10 @@ class platformSyslog():
 
 
 def run():
+    debug_init()
     platform = platformSyslog()
     while True:
+        debug_init()
         if os.path.exists(PMON_SYSLOG_FILE) is True:
             pmon_debug("file exists, do nothing!")
             time.sleep(5)

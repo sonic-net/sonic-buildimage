@@ -9,7 +9,7 @@
 #ifndef INTEL_SPI_H
 #define INTEL_SPI_H
 
-#include <linux/platform_data/x86/spi-intel.h>
+#include <linux/platform_data/intel-spi.h>
 #include <linux/string.h>
 
 #define mem_clear(data, size) memset((data), 0, (size))

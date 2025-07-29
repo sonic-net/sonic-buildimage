@@ -36,6 +36,7 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 #define ADDR_ERAL	0x20
 #define ADDR_EWEN	0x30
 
+
 struct eeprom_93xx46_devtype_data {
 	unsigned int quirks;
 };
@@ -416,6 +417,7 @@ static int eeprom_93xx46_probe_dt(struct spi_device *spi)
 	if (of_property_read_bool(np, "read-only"))
 		pd->flags |= EE_READONLY;
 
+    of_flags = OF_GPIO_ACTIVE_LOW;
 	gpio = of_get_named_gpio_flags(np, "select-gpios", 0, &of_flags);
 	if (gpio_is_valid(gpio)) {
 		unsigned long flags =
@@ -538,7 +540,6 @@ static void eeprom_93xx46_remove(struct spi_device *spi)
 static struct spi_driver wb_eeprom_93xx46_driver = {
 	.driver = {
 		.name	= "wb_93xx46",
-		.of_match_table = of_match_ptr(eeprom_93xx46_of_table),
 	},
 	.probe		= eeprom_93xx46_probe,
 	.remove		= eeprom_93xx46_remove,

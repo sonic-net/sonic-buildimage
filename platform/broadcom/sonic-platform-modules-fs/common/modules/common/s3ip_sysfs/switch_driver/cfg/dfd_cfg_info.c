@@ -19,8 +19,6 @@
 #include "dfd_cfg_info.h"
 #include "dfd_cfg_file.h"
 
-#define DFD_HWMON_NAME              "hwmon"
-
 /* CPLD_VOLATGE_VALUE_MODE1 */
 /* high 8 bit + high 4 bit(bit4-bit7) */
 #define DFD_GET_CPLD_VOLATGE_CODE_VALUE(value)        ((value >> 4)& 0xfff)
@@ -54,6 +52,7 @@ char *g_info_ctrl_mem_str[INFO_CTRL_MEM_END] = {
     ".val_len",
     ".bit_offset",
     ".str_cons",
+    ".val_type",
     ".int_extra1",
     ".int_extra2",
     ".int_extra3",
@@ -94,6 +93,13 @@ char *g_info_pola_str[INFO_POLA_END] = {
     "none",
     "positive",
     "negative",
+};
+
+/* info_val_type_t enumeration string */
+char *g_info_val_type_str[INFO_VAL_TYPE_END] = {
+    "normal",
+    "fixed_key",
+    "nega_key",
 };
 
 /* Read information from the cpld */
@@ -208,6 +214,63 @@ static int dfd_write_info(info_src_t src, char *fpath, int32_t addr, int write_b
     return rv;
 }
 
+static void dfd_val_type_handle(info_ctrl_t *info_ctrl, uint8_t *val, uint8_t is_write)
+{
+    uint8_t ori_val;
+
+    if (info_ctrl == NULL || val == NULL) {
+        DBG_DEBUG(DBG_ERROR, "input arguments error.\n");
+        return;
+    }
+
+    if (!is_write) {
+        switch (info_ctrl->val_type) {
+        case INFO_VAL_TYPE_NORMAL:
+            /* Normal value does not need to be processed */
+            DBG_DEBUG(DBG_VERBOSE, "info ctrl val_type[%d]: Read normal value[0x%x] "
+                "does not need to be processed.\n", info_ctrl->val_type, *val);
+            break;
+        case INFO_VAL_TYPE_FIXED_KEY:
+        case INFO_VAL_TYPE_NEGA_KEY:
+            /* take valid bit0 */
+            ori_val = *val;
+            *val =  ori_val & 0x01;
+            DBG_DEBUG(DBG_VERBOSE, "info ctrl val_type[%d]: Read value[0x%x] take valid bit0 is %d.\n",
+                info_ctrl->val_type, ori_val, *val);
+            break;
+        default:
+            DBG_DEBUG(DBG_ERROR, "info ctrl val_type[%d] invalid.\n", info_ctrl->val_type);
+            break;
+        }
+    } else {
+        switch (info_ctrl->val_type) {
+        case INFO_VAL_TYPE_NORMAL:
+            /* Normal value does not need to be processed */
+            DBG_DEBUG(DBG_VERBOSE, "info ctrl val_type[%d]: Write normal value[0x%x] "
+                "does not need to be processed.\n", info_ctrl->val_type, *val);
+            break;
+        case INFO_VAL_TYPE_FIXED_KEY:
+            /* The fixed key is already included in the configuration value and does not need to be processed */
+            DBG_DEBUG(DBG_VERBOSE, "info ctrl val_type[%d]: Write fixed key value[0x%x] "
+                "does not need to be processed.\n", info_ctrl->val_type, *val);
+            break;
+        case INFO_VAL_TYPE_NEGA_KEY:
+            /* bit[1-7]: Reverse the high 7 bits of the register address, Bit0: a valid bit */
+            ori_val = *val;
+            *val = (~info_ctrl->addr & 0xfe) | (ori_val & 0x01);
+            DBG_DEBUG(DBG_VERBOSE, "info ctrl val_type[%d]: Write negative key value[0x%x] "
+                "calculated from addr[0x%x] and value[0x%x].\n",
+                info_ctrl->val_type, *val, info_ctrl->addr, ori_val);
+            break;
+        default:
+            DBG_DEBUG(DBG_ERROR, "info ctrl val_type[%d] invalid.\n", info_ctrl->val_type);
+            break;
+        }
+    }
+
+    return;
+}
+
 static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_value_f pfun)
 {
     int i, rv;
@@ -242,7 +305,7 @@ static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_
             return -DFD_RV_TYPE_ERR;
         }
 
-        if ((bit_len < 0) || ((bit_offset + bit_len) > read_bytes * 8)) {
+        if ((bit_len <= 0) || ((bit_offset + bit_len) > read_bytes * 8)) {
             DBG_DEBUG(DBG_ERROR, "Invalid info ctrl bit_offsest[%d] and bit_len[%d] exceed read_bytes[%d]\n",
                 bit_offset, bit_len, read_bytes);
             return -DFD_RV_TYPE_ERR;
@@ -327,6 +390,10 @@ static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_
             if (i != (info_ctrl->len - 1)) {
                 int_tmp <<= 8;
             }
+        }
+
+        if (info_ctrl->frmt == INFO_FRMT_BYTE) {
+            dfd_val_type_handle(info_ctrl, (uint8_t *)&int_tmp, 0);
         }
     } else if (IS_INFO_FRMT_NUM_STR(info_ctrl->frmt)) {
         val[readed_bytes] = '\0';
@@ -577,7 +644,7 @@ int dfd_info_set_int(uint64_t key, int val)
         }
         bit_len = info_ctrl->len;   /* info_ctrl->len is write bit len */
         bit_offset = info_ctrl->bit_offset;
-        if ((bit_len < 0) || ((bit_offset + bit_len) > write_bytes * 8)) {
+        if ((bit_len <= 0) || ((bit_offset + bit_len) > write_bytes * 8)) {
             DBG_DEBUG(DBG_ERROR, "Invalid info ctrl bit_offsest[%d] and bit_len[%d] exceed write_bytes[%d]\n",
                 bit_offset, bit_len, write_bytes);
             return -DFD_RV_TYPE_ERR;
@@ -655,6 +722,10 @@ int dfd_info_set_int(uint64_t key, int val)
                 wr_buf[i] = (val >> ((write_bytes - i - 1) * 8)) & 0xff;
             }
         }
+
+        if (info_ctrl->frmt == INFO_FRMT_BYTE) {
+            dfd_val_type_handle(info_ctrl, &wr_buf[0], 1);
+        }
     } else if (IS_INFO_FRMT_NUM_STR(info_ctrl->frmt)) {
         val_buf = info_ctrl->str_cons;
         write_bytes = strlen(info_ctrl->str_cons);
@@ -714,10 +785,6 @@ static long dfd_info_reg2data_linear(uint64_t key, int data)
         break;
     }
 
-    if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_POWER) {
-        val = val * 1000L;
-    }
-
     if (exponent >= 0) {
         val <<= exponent;
     } else {
@@ -727,7 +794,7 @@ static long dfd_info_reg2data_linear(uint64_t key, int data)
     return val;
 }
 
-static long dfd_info_reg2data_tmp464(uint64_t key, int data)
+static long dfd_info_reg2data_tmp464(int data)
 {
     s16 tmp_val;
     long val;
@@ -746,47 +813,37 @@ static long dfd_info_reg2data_tmp464(uint64_t key, int data)
     return val;
 }
 
-static long dfd_info_reg2data_mac_th5(uint64_t key, int data)
+static long dfd_get_mac_temp(int data, int32_t mac_type)
 {
     int tmp_val;
     long val;
 
-    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th5, data=0x%d\n", data);
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_raw_val, data=0x%d\n", data);
 
     tmp_val = data >> 4;
-    val = 476359 - (((tmp_val - 2) * 317704) / 2000);
 
-    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th5, val=0x%ld\n", val);
-    return val;
-}
-
-static long dfd_info_reg2data_mac_th4(uint64_t key, int data)
-{
-    int tmp_val;
-    int val;
-
-    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th4, data=%d\n", data);
-
-    tmp_val = data >> 4;
-    val = 356070 - (((tmp_val - 2) * 237340) / 2000);
-
-    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th4, val=%d\n", val);
-    return val;
-}
-
-static long dfd_info_reg2data_mac_td3(uint64_t key, int data)
-{
-    int val;
-
-    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_td3, data=%d\n", data);
-
-    if (data == 0) {
-        DBG_DEBUG(DBG_ERROR, "invalid value: %d.\n", data);
-        return MAC_TEMP_INVALID;
+    switch (mac_type) {
+    case MAC_TH5:
+        val = 476359 - (((tmp_val - 2) * 317704) / 2000);
+        break;
+    case MAC_TH4:
+        val = 356070 - (((tmp_val - 2) * 237340) / 2000);
+        break;
+    case MAC_TD5:
+        val = 504416 - (((tmp_val - 2) * 329300) / 2000);
+        break;
+    case MAC_TD3:
+        val = 434100 - (12500000 / (data * 100 - 1) * 535);
+        break;
+    case MAC_TH6:
+        val = 378850 - (((tmp_val - 2) * 259680) / 2000);
+        break;
+    default:
+        DBG_DEBUG(DBG_VERBOSE, "unsuport mac type, return raw value\n");
+        return data;
     }
 
-    val = 434100 - (12500000 / (data * 100 - 1) * 535);
-    DBG_DEBUG(DBG_VERBOSE, "td3 mac temp val: %d\n", val);
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_to_temp, val=0x%ld\n", val);
     return val;
 }
 
@@ -868,16 +925,14 @@ static int dfd_info_get_cpld_temperature(uint64_t key, int *value)
         val = dfd_info_reg2data_linear(key, temp_reg);
         break;
     case TMP464:
-        val = dfd_info_reg2data_tmp464(key, temp_reg);
+        val = dfd_info_reg2data_tmp464(temp_reg);
         break;
     case MAC_TH5:
-        val = dfd_info_reg2data_mac_th5(key, temp_reg);
-        break;
     case MAC_TH4:
-        val = dfd_info_reg2data_mac_th4(key, temp_reg);
-        break;
+    case MAC_TD5:
     case MAC_TD3:
-        val = dfd_info_reg2data_mac_td3(key, temp_reg);
+    case MAC_TH6:
+        val = dfd_get_mac_temp(temp_reg, info_ctrl->int_extra1);
         break;
     default:
         val = temp_reg;
@@ -935,7 +990,8 @@ static int dfd_info_get_sensor_value(uint64_t key, uint8_t *buf, int buf_len, in
             memcpy(buf, buf_tmp, buf_real_len);
         }
         return buf_real_len;
-    } else if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_TEMP && info_ctrl->src == INFO_SRC_CPLD) {
+    } else if (DFD_CFG_ITEM_ID(key) == DFD_CFG_ITEM_HWMON_TEMP 
+        && (info_ctrl->src == INFO_SRC_CPLD || info_ctrl->src == INFO_SRC_LOGIC_FILE)) {
         rv = dfd_info_get_cpld_temperature(key, &temp_value);
         if (rv < 0) {
             DBG_DEBUG(DBG_ERROR, "get cpld temperature failed.key=0x%08llx, rv:%d\n", key, rv);
@@ -1031,14 +1087,18 @@ int dfd_info_get_sensor(uint64_t key, char *buf, int buf_len, info_hwmon_buf_f p
  */
 void dfd_info_del_no_print_string(char *buf)
 {
-    int i, len;
+    int i, j, len;
 
     len = strlen(buf);
     /* Culling noncharacter */
     for (i = 0; i < len; i++) {
         if ((buf[i] < 0x21) || (buf[i] > 0x7E)) {
-            buf[i] = '\0';
-            break;
+            for (j = i; j < len - 1; j++) {
+                buf[j] = buf[j + 1];
+            }
+            buf[j] = '\0';
+            len--;
+            i--;
         }
     }
     return;

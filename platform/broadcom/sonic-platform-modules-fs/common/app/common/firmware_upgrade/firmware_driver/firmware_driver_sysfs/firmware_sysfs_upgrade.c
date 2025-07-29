@@ -5,7 +5,6 @@
 #include <linux/ctype.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-#include <linux/uio.h>
 #include <firmware_sysfs.h>
 #include <firmware_sysfs_upgrade.h>
 #include <firmware_upgrade.h>
@@ -15,24 +14,18 @@ static int firmware_file_read(const char *path, uint32_t addr, uint8_t *val, siz
     int ret;
     struct file *filp;
     loff_t pos;
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
 
     filp = filp_open(path, O_RDONLY, 0);
     if (IS_ERR(filp)) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("read open failed errno = %ld\r\n", -PTR_ERR(filp));
+        FIRMWARE_DRIVER_DEBUG_ERROR("read open failed errno = %ld\n", -PTR_ERR(filp));
         filp = NULL;
         goto exit;
     }
 
     pos = (loff_t)addr;
-    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
-    ret = vfs_iter_read(filp, &iter, &pos, 0);
+    ret = kernel_read(filp, val, size, &pos);
     if (ret != size) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("vfs_iter_read failed, path=%s, addr=%d, size=%ld, ret=%d\r\n", path, addr, size, ret);
+        FIRMWARE_DRIVER_DEBUG_ERROR("read kernel_read failed, path=%s, addr=%d, size=%zu, ret=%d\n", path, addr, size, ret);
         goto exit;
     }
     filp_close(filp, NULL);
@@ -52,24 +45,18 @@ static int firmware_file_write(const char *path, uint32_t addr, uint8_t *val, si
     int ret;
     struct file *filp;
     loff_t pos;
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
 
     filp = filp_open(path, O_RDWR, 777);
     if (IS_ERR(filp)) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("write open failed errno = %ld\r\n", -PTR_ERR(filp));
+        FIRMWARE_DRIVER_DEBUG_ERROR("write open failed errno = %ld\n", -PTR_ERR(filp));
         filp = NULL;
         goto exit;
     }
 
     pos = (loff_t)addr;
-    iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
-    ret = vfs_iter_write(filp, &iter, &pos, 0);
+    ret = kernel_write(filp, (void*)val, size, &pos);
     if (ret < 0) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("vfs_iter_write failed, path=%s, addr=%d, size=%ld, ret=%d\r\n", path, addr, size, ret);
+        FIRMWARE_DRIVER_DEBUG_ERROR("write kernel_write failed, path=%s, addr=%d, size=%zu, ret=%d\n", path, addr, size, ret);
         goto exit;
     }
     vfs_fsync(filp, 1);
@@ -103,9 +90,9 @@ static int firmware_file_do_work(char *path, uint32_t addr, uint32_t value, uint
     uint8_t tmp_read8, tmp_write8, tmp_mask8;
     uint32_t tmp_read32, tmp_write32;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("path=%s, addr=0x%x, value=0x%x mask=0x%x\r\n", path, addr, value, mask);
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("path=%s, addr=0x%x, value=0x%x mask=0x%x\n", path, addr, value, mask);
     if ((width > 4) || (width < 0)) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\r\n", width);
+        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\n", width);
         return -1;
     }
     ret = 0;
@@ -113,7 +100,7 @@ static int firmware_file_do_work(char *path, uint32_t addr, uint32_t value, uint
     mem_clear(write_value, sizeof(write_value));
     ret = firmware_file_read(path, addr, read_value, width);
     if (ret < 0) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("firmware sysfs read.\r\n");
+        FIRMWARE_DRIVER_DEBUG_ERROR("firmware sysfs read.\n");
         return -1;
     }
 
@@ -126,7 +113,7 @@ static int firmware_file_do_work(char *path, uint32_t addr, uint32_t value, uint
         FIRMWARE_DRIVER_DEBUG_VERBOSE("1 byte write val[0]:0x%x", write_value[0]);
         break;
     case 2:
-        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\r\n", width);
+        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\n", width);
         return -1;
     case 4:
         memcpy((uint8_t *)&tmp_read32, read_value, 4);
@@ -136,14 +123,14 @@ static int firmware_file_do_work(char *path, uint32_t addr, uint32_t value, uint
             write_value[0], write_value[1], write_value[2], write_value[3]);
         break;
     default:
-        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\r\n", width);
+        FIRMWARE_DRIVER_DEBUG_ERROR("width %d is not support.\n", width);
         return -1;
     }
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("write logic dev[%s] addr[0x%x].\r\n", path, addr);
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("write logic dev[%s] addr[0x%x].\n", path, addr);
     ret = firmware_file_write(path, addr, write_value, width);
     if (ret < 0) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("firmware_file_write %s addr 0x%x failed, ret=%d.\r\n", path, addr, ret);
+        FIRMWARE_DRIVER_DEBUG_ERROR("firmware_file_write %s addr 0x%x failed, ret=%d.\n", path, addr, ret);
         return -1;
     }
 

@@ -19,20 +19,26 @@
 #include <linux/pmbus.h>
 #include <linux/gpio/driver.h>
 #include <linux/delay.h>
+#include <linux/workqueue.h>
+
 #include "wb_pmbus.h"
 #include <wb_bsp_kernel_debug.h>
 
 enum chips { ucd9000, ucd90120, ucd90124, ucd90160, ucd90320, ucd9090,
-         ucd90910 };
+             ucd90910
+           };
 
 #define UCD9000_MONITOR_CONFIG      (0xd5)
 #define UCD9000_NUM_PAGES           (0xd6)
+#define UCD9000_RUN_TIME_CLOCK      (0xd7)
 #define UCD9000_FAN_CONFIG_INDEX    (0xe7)
 #define UCD9000_FAN_CONFIG          (0xe8)
 #define UCD9000_MFR_STATUS          (0xf3)
 #define UCD9000_GPIO_SELECT         (0xfa)
 #define UCD9000_GPIO_CONFIG         (0xfb)
 #define UCD9000_DEVICE_ID           (0xfd)
+
+#define UCD9000_RUN_TIME_CLOCK_COUNT      (8)
 
 /* GPIO CONFIG bits */
 #define UCD9000_GPIO_CONFIG_ENABLE        BIT(0)
@@ -62,12 +68,19 @@ enum chips { ucd9000, ucd90120, ucd90124, ucd90160, ucd90320, ucd9090,
 #define UCD9000_GPI_COUNT         (8)
 #define UCD90320_GPI_COUNT        (32)
 
-#define UCD9000_RETRY_SLEEP_TIME          (10000)   /* 10ms */
+#define UCD9000_RETRY_SLEEP_TIME          (20000)   /* 20ms */
 #define UCD9000_RETRY_TIME                (3)
 #define WB_DEV_NAME_MAX_LEN               (64)
 
 static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
+
+static int dwork_set_time_enable = 0;
+module_param(dwork_set_time_enable, int, S_IRUGO | S_IWUSR);
+
+static int dwork_set_delay = 1800;  /* half hour */
+module_param(dwork_set_delay, int, S_IRUGO | S_IWUSR);
+
 struct ucd9000_data {
     u8 fan_data[UCD9000_NUM_FAN][I2C_SMBUS_BLOCK_MAX];
     struct pmbus_driver_info info;
@@ -75,6 +88,8 @@ struct ucd9000_data {
     struct gpio_chip gpio;
 #endif
     struct dentry *debugfs;
+    struct i2c_client *client;
+    struct delayed_work dwork_set_time;     /* delay work for set ucd90160 fault record time */
 };
 #define to_ucd9000_data(_info) container_of(_info, struct ucd9000_data, info)
 
@@ -100,6 +115,7 @@ struct ucd9000_debugfs_entry {
 
 #define FAULT_CLEAR_CMD                     (0xC)
 #define FAULT_CLEAR_LENGTH                  (18)
+#define ONE_DAY_TO_SECON                    (86400) /* one day is 24*3600 */
 
 static ssize_t get_fault_record(struct device *dev, struct device_attribute *da, char *buf)
 {
@@ -246,6 +262,22 @@ static ssize_t clear_fault_record(struct device *dev, struct device_attribute *d
     return count;
 }
 
+static int wb_i2c_smbus_read_byte_data(const struct i2c_client *client, u8 command)
+{
+    int rv, i;
+
+    for(i = 0; i < UCD9000_RETRY_TIME; i++) {
+        rv = i2c_smbus_read_byte_data(client, command);
+        if (rv >= 0) {
+            return rv;
+        }
+        usleep_range(UCD9000_RETRY_SLEEP_TIME, UCD9000_RETRY_SLEEP_TIME + 1);
+    }
+    DEBUG_ERROR("read_byte_data failed. nr:  %d, addr: 0x%x, reg: 0x%x, rv: %d\n",
+        client->adapter->nr, client->addr, command, rv);
+    return rv;
+}
+
 static int wb_i2c_smbus_read_block_data(const struct i2c_client *client, u8 command, u8 *values)
 {
     int rv, i;
@@ -259,6 +291,22 @@ static int wb_i2c_smbus_read_block_data(const struct i2c_client *client, u8 comm
     }
     DEBUG_ERROR("read_block_data failed. nr:  %d, addr: 0x%x, reg: 0x%x, rv: %d\n",
         client->adapter->nr, client->addr, command, rv);
+    return rv;
+}
+
+static int wb_i2c_smbus_write_block_data(const struct i2c_client *client, u8 command, u8 length, char *data_buf)
+{
+    int rv, i;
+
+    for (i = 0; i < UCD9000_RETRY_TIME; i++) {
+        rv = i2c_smbus_write_block_data(client, command, length, data_buf);
+        if (rv >= 0) {
+            return rv;
+        }
+        usleep_range(UCD9000_RETRY_SLEEP_TIME, UCD9000_RETRY_SLEEP_TIME + 1);
+    }
+    DEBUG_ERROR("write_block_data failed. nr:  %d, addr: 0x%x, reg: 0x%x, rv: %d\n",
+                client->adapter->nr, client->addr, command, rv);
     return rv;
 }
 
@@ -341,11 +389,181 @@ static ssize_t ucd9000_block_data_str_show(struct device *dev, struct device_att
     return snprintf(buf, PAGE_SIZE, "%s\n", block_buffer);
 }
 
+static int get_current_time(uint32_t *day, uint32_t *milliseconds)
+{
+    struct timespec64 ts;
+    u32 remainder;
+
+    memset(&ts, 0, sizeof(struct timespec64));
+
+    ktime_get_real_ts64(&ts);
+
+    *day = div_s64_rem(ts.tv_sec, ONE_DAY_TO_SECON, &remainder);
+    *milliseconds = (remainder * 1000) + (div_s64(ts.tv_nsec, 1000000));
+
+    return 0;
+}
+
+static int convert_to_tm_using_time64(int days, uint32_t milliseconds, struct tm *tm)
+{
+    time64_t seconds;
+
+    /* the number of seconds elapsed since 00:00:00 on January 1, 1970 */
+    seconds = (time64_t)div_s64(milliseconds, 1000) + (days * ONE_DAY_TO_SECON);
+    /* Convert to year-month-day */
+    time64_to_tm(seconds, 0, tm);
+
+    return 0;
+}
+
+static int ucd9000_get_date_func(struct i2c_client *client, char *buf, uint32_t len)
+{
+    uint32_t day;
+    u8 block_buffer[I2C_SMBUS_BLOCK_MAX + 1];
+    int ret;
+    u32 ms_data;
+    struct tm tm;
+    size_t size;
+
+    size = 0;
+    memset(&tm, 0, sizeof(tm));
+    memset(block_buffer, 0, sizeof(block_buffer));
+    ret = wb_i2c_smbus_read_block_data(client, UCD9000_RUN_TIME_CLOCK, block_buffer);
+    if (ret <= 0) {
+        dev_info(&client->dev, "Failed to get clock, ret = %d\n", ret);
+        return -EIO;
+    }
+
+    ms_data = (u32)(block_buffer[0] << 24 | block_buffer[1] << 16 | block_buffer[2] << 8 | block_buffer[3]);
+    day = (u32)(block_buffer[4] << 24 | block_buffer[5] << 16 | block_buffer[6] << 8 | block_buffer[7]);
+    DEBUG_VERBOSE("get date:day %u, milliseconds %u\n", day, ms_data);
+
+    convert_to_tm_using_time64(day, ms_data, &tm);
+    size += snprintf(buf + size, len, "%ld-%02d-%02d %02d:%02d:%02d\n",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    return size;
+}
+
+static ssize_t get_fault_date(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct pmbus_data *data = i2c_get_clientdata(client);
+    int ret;
+
+    mutex_lock(&data->update_lock);
+    ret = ucd9000_get_date_func(client, buf, PAGE_SIZE);
+    mutex_unlock(&data->update_lock);
+
+    return ret;
+}
+
+static int ucd9000_set_date_func(struct i2c_client *client, uint32_t day, uint32_t milliseconds)
+{
+    u8 block_buffer[I2C_SMBUS_BLOCK_MAX + 1];
+    int ret;
+
+    memset(block_buffer, 0, sizeof(block_buffer));
+    DEBUG_VERBOSE("set date:day %u, milliseconds %u\n", day, milliseconds);
+    block_buffer[0] = (milliseconds >> 24) & 0xff;
+    block_buffer[1] = (milliseconds >> 16) & 0xff;
+    block_buffer[2] = (milliseconds >> 8) & 0xff;
+    block_buffer[3] = milliseconds & 0xff;
+
+    block_buffer[4] = (day >> 24) & 0xff;
+    block_buffer[5] = (day >> 16) & 0xff;
+    block_buffer[6] = (day >> 8) & 0xff;
+    block_buffer[7] = day & 0xff;
+    ret = wb_i2c_smbus_write_block_data(client, UCD9000_RUN_TIME_CLOCK, UCD9000_RUN_TIME_CLOCK_COUNT, block_buffer);
+    if (ret != 0) {
+        dev_info(&client->dev, "Failed to set clock, ret = %d\n", ret);
+        return ret;
+    }
+
+    return 0;
+}
+
+static void set_date_work_function(struct work_struct *work) {
+    struct ucd9000_data *data;
+    int ret;
+    uint32_t day;
+    uint32_t milliseconds;
+    struct pmbus_data *pmbus_data;
+
+    data = container_of(work, struct ucd9000_data, dwork_set_time.work);
+    if (data == NULL) {
+        pr_info("Ucd9000 timing failed\n");
+        return;
+    }
+
+    if (data->client == NULL) {
+        pr_info("Ucd9000 timing failed(client is NULL)\n");
+        return;
+    }
+
+    pmbus_data = i2c_get_clientdata(data->client);
+    if (pmbus_data == NULL) {
+        pr_info("Ucd9000 timing failed(pmbus_data is NULL)\n");
+        return;
+    }
+
+    day = 0;
+    milliseconds = 0;
+    (void)get_current_time(&day, &milliseconds);
+    mutex_lock(&pmbus_data->update_lock);
+    ret = ucd9000_set_date_func(data->client, day, milliseconds);
+    if (ret != 0) {
+        dev_info(&data->client->dev, "set_date_work_function, Failed to set ucd9000 clock, ret = %d\n", ret);
+    }
+    mutex_unlock(&pmbus_data->update_lock);
+
+    /* reset delay time */
+    schedule_delayed_work(&data->dwork_set_time, HZ * dwork_set_delay);
+}
+
+static ssize_t set_fault_date_and_time(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct pmbus_data *data = i2c_get_clientdata(client);
+    uint32_t day;
+    uint32_t milliseconds;
+    int ret;
+    unsigned long val;
+
+    ret = kstrtoul(buf, 0, &val);
+    if (ret) {
+        dev_info(&client->dev, "kstrtoul failed, ret = %d\n", ret);
+        return ret;
+    }
+
+    if (val != 1) {
+        dev_info(&client->dev, "please enter 1 to set_fault_date_and_time, val = %ld\n", val);
+        return -EINVAL;
+    }
+
+    day = 0;
+    milliseconds = 0;
+    (void)get_current_time(&day, &milliseconds);
+
+    mutex_lock(&data->update_lock);
+
+    ret = ucd9000_set_date_func(client, day, milliseconds);
+    if (ret != 0) {
+        dev_info(&client->dev, "Failed to set ucd9000 clock, ret = %d\n", ret);
+    }
+
+    mutex_unlock(&data->update_lock);
+
+    return count;
+}
+
 static SENSOR_DEVICE_ATTR(version, S_IRUGO, ucd9000_block_data_str_show, NULL, PMBUS_MFR_REVISION);
-static SENSOR_DEVICE_ATTR(fault_record, S_IRUGO | S_IWUSR , get_fault_record, clear_fault_record, 0);
+static SENSOR_DEVICE_ATTR(fault_date, S_IRUGO | S_IWUSR, get_fault_date, set_fault_date_and_time, 0);
+static SENSOR_DEVICE_ATTR(fault_record, S_IRUGO | S_IWUSR, get_fault_record, clear_fault_record, 0);
 
 static struct attribute *ucd90160_attrs[] = {
     &sensor_dev_attr_version.dev_attr.attr,
+    &sensor_dev_attr_fault_date.dev_attr.attr,
     &sensor_dev_attr_fault_record.dev_attr.attr,
     NULL
 };
@@ -727,10 +945,18 @@ static int ucd9000_probe(struct i2c_client *client)
                      I2C_FUNC_SMBUS_BLOCK_DATA))
         return -ENODEV;
 
+    /* Enable PEC if the controller supports it */
+    ret = wb_i2c_smbus_read_byte_data(client, PMBUS_CAPABILITY);
+    if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK)) {
+        if (i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_PEC)) {
+            client->flags |= I2C_CLIENT_PEC;
+        }
+    }
+
     ret = wb_i2c_smbus_read_block_data(client, UCD9000_DEVICE_ID,
                     block_buffer);
     if (ret < 0) {
-        dev_err(&client->dev, "Failed to read device ID\n");
+        dev_err(&client->dev, "Failed to read device ID, ret:%d.\n", ret);
         return ret;
     }
     block_buffer[ret] = '\0';
@@ -763,11 +989,12 @@ static int ucd9000_probe(struct i2c_client *client)
     if (!data)
         return -ENOMEM;
     info = &data->info;
+    data->client = client;
 
-    ret = i2c_smbus_read_byte_data(client, UCD9000_NUM_PAGES);
+    ret = wb_i2c_smbus_read_byte_data(client, UCD9000_NUM_PAGES);
     if (ret < 0) {
         dev_err(&client->dev,
-            "Failed to read number of active pages\n");
+            "Failed to read number of active pages, ret:%d.\n", ret);
         return ret;
     }
     info->pages = ret;
@@ -784,7 +1011,7 @@ static int ucd9000_probe(struct i2c_client *client)
     ret = wb_i2c_smbus_read_block_data(client, UCD9000_MONITOR_CONFIG,
                     block_buffer);
     if (ret <= 0) {
-        dev_err(&client->dev, "Failed to read configuration data\n");
+        dev_err(&client->dev, "Failed to read configuration data, ret:%d.\n", ret);
         return -ENODEV;
     }
     for (i = 0; i < ret; i++) {
@@ -845,8 +1072,14 @@ static int ucd9000_probe(struct i2c_client *client)
 
     ret = sysfs_create_group(&client->dev.kobj, &ucd9000_sysfs_group);
     if (ret != 0) {
+        wb_pmbus_do_remove(client);
         dev_err(&client->dev, "sysfs_create_group error\n");
         return ret;
+    }
+
+    INIT_DELAYED_WORK(&data->dwork_set_time, set_date_work_function);
+    if (dwork_set_time_enable) {
+        schedule_delayed_work(&data->dwork_set_time, HZ * 3);
     }
 
     return 0;
@@ -854,13 +1087,11 @@ static int ucd9000_probe(struct i2c_client *client)
 
 static void ucd9000_remove(struct i2c_client *client)
 {
-    int ret;
-    sysfs_remove_group(&client->dev.kobj, &ucd9000_sysfs_group);
+    struct ucd9000_data *data = to_ucd9000_data(wb_pmbus_get_driver_info(client));
 
-    ret = wb_pmbus_do_remove(client);
-    if (ret != 0) {
-        DEBUG_ERROR("ucd9000 fail remove pmbus ,ret = %d\n", ret);
-    }
+    cancel_delayed_work_sync(&data->dwork_set_time);
+    sysfs_remove_group(&client->dev.kobj, &ucd9000_sysfs_group);
+    (void)wb_pmbus_do_remove(client);
     return;
 }
 

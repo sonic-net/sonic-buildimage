@@ -612,13 +612,21 @@ class SMBus(object):
         :return: List of bytes
         :rtype: list
         """
-        self._set_address(i2c_addr, force=force)
-        msg = i2c_smbus_ioctl_data.create(
-            read_write=I2C_SMBUS_READ, command=register, size=I2C_SMBUS_BLOCK_DATA
-        )
-        ioctl(self.fd, I2C_SMBUS, msg)
-        length = msg.data.contents.block[0]
-        return msg.data.contents.block[1:length + 1]
+        val_t = -1
+        try:
+            self._set_address(i2c_addr, force=force)
+            msg = i2c_smbus_ioctl_data.create(
+                read_write=I2C_SMBUS_READ, command=register, size=I2C_SMBUS_BLOCK_DATA
+            )
+            val_t = ioctl(self.fd, I2C_SMBUS, msg)
+            length = msg.data.contents.block[0]
+        except Exception as e:
+            returnmsg = str(e)
+            self.close()
+            return False, returnmsg or ""
+        if val_t < 0:
+            return False, "ioctl fail" or ""
+        return True, msg.data.contents.block[1:length + 1]
 
     def write_block_data(self, i2c_addr, register, data, force=None):
         """
@@ -689,15 +697,22 @@ class SMBus(object):
         :return: List of bytes
         :rtype: list
         """
+        val_t = -1
         if length > I2C_SMBUS_BLOCK_MAX:
             raise ValueError("Desired block length over %d bytes" % I2C_SMBUS_BLOCK_MAX)
-        self._set_address(i2c_addr, force=force)
-        msg = i2c_smbus_ioctl_data.create(
-            read_write=I2C_SMBUS_READ, command=register, size=I2C_SMBUS_I2C_BLOCK_DATA
-        )
-        msg.data.contents.byte = length
-        ioctl(self.fd, I2C_SMBUS, msg)
-        return msg.data.contents.block[1:length + 1]
+        try:
+            self._set_address(i2c_addr, force=force)
+            msg = i2c_smbus_ioctl_data.create(
+                read_write=I2C_SMBUS_READ, command=register, size=I2C_SMBUS_I2C_BLOCK_DATA
+            )
+            msg.data.contents.byte = length
+            val_t = ioctl(self.fd, I2C_SMBUS, msg)
+        except Exception as e:
+            returnmsg = str(e)
+            self.close()
+        if val_t < 0:
+            return False, returnmsg or ""
+        return True, msg.data.contents.block[1:length + 1]
 
     def write_i2c_block_data(self, i2c_addr, register, data, force=None):
         """

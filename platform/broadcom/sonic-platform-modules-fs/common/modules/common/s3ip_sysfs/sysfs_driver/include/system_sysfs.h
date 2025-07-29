@@ -3,10 +3,13 @@
 
 struct s3ip_sysfs_system_drivers_s {
     ssize_t (*get_system_value)(unsigned int type, char *buf, size_t count);
+    ssize_t (*get_system_value_match_status)(unsigned int type, char *buf, size_t count);
     ssize_t (*set_system_value)(unsigned int type, int value);
     ssize_t (*get_system_port_power_status)(unsigned int type, char *buf, size_t count);
     ssize_t (*get_bmc_view)(char *buf, size_t count);
     ssize_t (*set_bmc_switch)(const char* buf, size_t count);
+    ssize_t (*get_my_slot_id)(char *buf, size_t count);
+    ssize_t (*get_system_serial_number)(char *buf, size_t count);
 };
 
 extern int s3ip_sysfs_system_drivers_register(struct s3ip_sysfs_system_drivers_s *drv);
@@ -20,7 +23,7 @@ typedef enum wb_plat_system_type_e {
     WB_SYSTEM_CPU_BOARD_CTRL     = 0x0300,  /* cpu board control */
     WB_SYSTEM_CPU_BOARD_STATUS   = 0x0400,  /* cpu board status  */
     WB_SYSTEM_BIOS_UPGRADE       = 0x0500,  /* bios upgrade      */
-    WB_SYSTEM_BIOS_SWITCH        = 0x0600,  /* bios switch       */
+    WB_SYSTEM_BIOS_SWITCH        = 0x0600,  /* bios boot switch  */
     WB_SYSTEM_BIOS_VIEW          = 0x0700,  /* bios flash view   */
     WB_SYSTEM_BIOS_BOOT_OK       = 0x0800,  /* bios boot status  */
     WB_SYSTEM_BIOS_FAIL_RECORD   = 0x0900,  /* bios startup failure record */
@@ -32,6 +35,7 @@ typedef enum wb_plat_system_type_e {
     WB_SYSTEM_BMC_VIEW           = 0x0f00,  /* bmc view          */
     WB_SYSTEM_BMC_SWITCH         = 0x1000,  /* bmc switch        */
     WB_SYSTEM_IS_MAIN_MGMT_BOARD = 0x1100,  /* is main management board */
+    WB_SYSTEM_BIOS_FLASH_SWITCH  = 0x1200,  /* bios flash switch */
 } wb_plat_system_type_t;
 
 #endif /*_SYSTEM_SYSFS_H_ */

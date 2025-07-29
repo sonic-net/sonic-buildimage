@@ -25,6 +25,9 @@
 #define DFD_FAN_EEPROM_MODE_FRU_STRING    "fru"
 #define FAN_SIZE                          (256)
 
+#define FAN_DEFAULT_ID                    (1)
+#define SUB_FAN_DEFAULT_ID                (1)
+
 typedef enum fan_present_status_e {
     ABSENT  = 0,
     PRESENT = 1,
@@ -67,6 +70,22 @@ typedef enum wb_fan_threshold_e {
 
 int g_dfd_fan_dbg_level = 0;
 module_param(g_dfd_fan_dbg_level, int, S_IRUGO | S_IWUSR);
+
+bool is_fan_without_e2(void)
+{
+    uint64_t key;
+    int *item;
+
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_FAN_WITHOUT_E2, 0, 0);
+    item = dfd_ko_cfg_get_item(key);
+    if (item) {
+        /* fan without e2 */
+       return true;
+    }
+
+    /* fan has e2 */
+    return false;
+}
 
 static char *dfd_get_fan_sysfs_name(void)
 {
@@ -224,12 +243,12 @@ ssize_t dfd_get_fan_status_str(unsigned int fan_index, char *buf, size_t count)
     int ret;
 
     if (buf == NULL) {
-        DFD_FAN_DEBUG(DBG_ERROR, "params error, fan_index: %u count: %lu",
+        DFD_FAN_DEBUG(DBG_ERROR, "params error, fan_index: %u count: %zu",
             fan_index, count);
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u\n",
             count, fan_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -243,6 +262,7 @@ ssize_t dfd_get_fan_status_str(unsigned int fan_index, char *buf, size_t count)
     return (ssize_t)snprintf(buf, count, "%d\n", ret);
 }
 
+
 /**
  * dfd_get_fan_present_str - Obtaining fan present status
  * @index: Number of the fan, starting from 1
@@ -254,12 +274,12 @@ ssize_t dfd_get_fan_present_str(unsigned int fan_index, char *buf, size_t count)
     int ret;
 
     if (buf == NULL) {
-        DFD_FAN_DEBUG(DBG_ERROR, "params error, fan_index: %u count: %lu",
+        DFD_FAN_DEBUG(DBG_ERROR, "params error, fan_index: %u count: %zu",
             fan_index, count);
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u\n",
             count, fan_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -293,7 +313,7 @@ ssize_t dfd_get_fan_motor_status_str(unsigned int fan_index, unsigned int motor_
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -367,6 +387,66 @@ static int dfd_fan_product_name_decode(char *fan_buf, int buf_len)
 }
 
 /**
+ * dfd_get_fan_info_without_e2 - Obtaining Fan Information without E2
+ * @index: Number of the fan, starting from 1
+ * @cmd: Fan information type, fan name :2, fan serial number :3, fan hardware version :5
+ * @buf: Receive buf
+ * @count: Accept the buf length
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_fan_info_without_e2(unsigned int fan_index, uint8_t cmd, char *buf, size_t count)
+{
+    uint64_t key;
+    info_ctrl_t *key_info_ctrl;
+    int rv = -DFD_RV_DEV_NOTSUPPORT;
+
+    if (buf == NULL) {
+        DFD_FAN_DEBUG(DBG_ERROR, "buf is NULL, fan index: %u, cmd: 0x%x.\n", fan_index, cmd);
+        return -DFD_RV_INVALID_VALUE;
+    }
+    if (count <= 0) {
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, cmd: 0x%x.\n",
+                      count, fan_index, cmd);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    switch (cmd) {
+    case DFD_DEV_INFO_TYPE_NAME:
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_WITHOUT_E2_MODEL_NAME, WB_MAIN_DEV_FAN, fan_index);
+        break;
+    case DFD_DEV_INFO_TYPE_SN:
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_WITHOUT_E2_SN, WB_MAIN_DEV_FAN, fan_index);
+        break;
+    case DFD_DEV_INFO_TYPE_PART_NUMBER:
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_WITHOUT_E2_PN, WB_MAIN_DEV_FAN, fan_index);
+        break;
+    case DFD_DEV_INFO_TYPE_HW_INFO:
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_WITHOUT_E2_HW_VER, WB_MAIN_DEV_FAN, fan_index);
+        break;
+    case DFD_DEV_INFO_TYPE_VENDOR:
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_WITHOUT_E2_VENDOR, WB_MAIN_DEV_FAN, fan_index);
+        break;
+    default:
+        DBG_DEBUG(DBG_VERBOSE, "unsupport cmd: %d\n", cmd);
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+
+    key_info_ctrl = dfd_ko_cfg_get_item(key);
+    if (key_info_ctrl == NULL) {
+        DBG_DEBUG(DBG_VERBOSE, "can't find dfd config, key: 0x%08llx\n", key);
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+    if (key_info_ctrl->mode == INFO_CTRL_MODE_SRT_CONS) {
+        snprintf(buf, count, "%s\n", key_info_ctrl->str_cons);
+        DBG_DEBUG(DBG_VERBOSE, "get value through string config, key: 0x%08llx, value: %s\n", key, buf);
+        rv = strlen(buf);
+    }
+
+    return rv;
+}
+
+/**
  * dfd_get_fan_info - Obtaining Fan Information
  * @index: Number of the fan, starting from 1
  * @cmd: Fan information type, fan name :2, fan serial number :3, fan hardware version :5
@@ -382,15 +462,22 @@ ssize_t dfd_get_fan_info(unsigned int fan_index, uint8_t cmd, char *buf, size_t 
     char fan_buf[FAN_SIZE];
     dfd_i2c_dev_t *i2c_dev;
     const char *sysfs_name;
+    bool is_without_e2;
 
     if (buf == NULL) {
         DFD_FAN_DEBUG(DBG_ERROR, "buf is NULL, fan index: %u, cmd: 0x%x.\n", fan_index, cmd);
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, cmd: 0x%x.\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, cmd: 0x%x.\n",
             count, fan_index, cmd);
         return -DFD_RV_INVALID_VALUE;
+    }
+
+    is_without_e2 = is_fan_without_e2();
+    if (is_without_e2) {
+        rv = dfd_get_fan_info_without_e2(fan_index, cmd, buf, count);
+        return rv;
     }
 
     mem_clear(buf, count);
@@ -492,7 +579,7 @@ ssize_t dfd_get_fan_speed_str(unsigned int fan_index, unsigned int motor_index,
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -581,7 +668,7 @@ ssize_t dfd_get_fan_pwm_str(unsigned int fan_index, char *buf, size_t count)
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u\n", count,
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u\n", count,
             fan_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -598,6 +685,15 @@ static int dfd_get_fan_type(unsigned int fan_index, int *fan_type, int *fan_sub_
 {
     int rv;
     char fan_buf[FAN_SIZE];
+    bool is_without_e2;
+
+    is_without_e2 = is_fan_without_e2();
+    if (is_without_e2) {
+        /* fan without e2, fan_type and fan_sub_type use id: 1 */
+        *fan_type = FAN_DEFAULT_ID;
+        *fan_sub_type = SUB_FAN_DEFAULT_ID;
+        return DFD_RV_OK;
+    }
 
     /* Get the fan name */
     rv = dfd_get_fan_info(fan_index, DFD_DEV_INFO_TYPE_NAME, fan_buf, FAN_SIZE);
@@ -644,7 +740,7 @@ int dfd_get_fan_speed_target(unsigned int fan_index, unsigned int motor_index, i
     ret = dfd_get_fan_type(fan_index, &fan_type, &fan_sub_type);
     if (ret < 0) {
         DFD_FAN_DEBUG(DBG_ERROR, "fan get type error, rv: %d\n", ret);
-        return -EIO;
+        return ret;
     }
 
     /* Get current PWM */
@@ -689,7 +785,7 @@ ssize_t dfd_get_fan_motor_speed_target_str(unsigned int fan_index, unsigned int 
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -725,7 +821,7 @@ static int dfd_get_fan_motor_speed_tolerance(unsigned int fan_index, unsigned in
     ret = dfd_get_fan_type(fan_index, &fan_type, &fan_sub_type);
     if (ret < 0) {
         DFD_FAN_DEBUG(DBG_ERROR, "fan get type error, ret: %d\n", ret);
-        return -EIO;
+        return ret;
     }
 
     /* Obtain the error rate of the fan */
@@ -773,7 +869,7 @@ ssize_t dfd_get_fan_motor_speed_tolerance_str(unsigned int fan_index, unsigned i
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -808,7 +904,7 @@ static int dfd_get_fan_direction(unsigned int fan_index, int *value)
     rv = dfd_get_fan_type(fan_index, &fan_type, &fan_sub_type);
     if (rv < 0) {
         DFD_FAN_DEBUG(DBG_ERROR, "fan get type error, rv: %d\n", rv);
-        return -EIO;
+        return rv;
     }
 
     /* Obtain the fan direction based on the fan type and subtype */
@@ -880,7 +976,7 @@ static int dfd_get_fan_motor_speed_max(unsigned int fan_index, unsigned int moto
     rv = dfd_get_fan_type(fan_index, &fan_type, &fan_sub_type);
     if (rv < 0) {
         DFD_FAN_DEBUG(DBG_ERROR, "fan get type error, rv: %d\n", rv);
-        return -EIO;
+        return rv;
     }
 
     key1 = DFD_GET_FAN_THRESHOLD_KEY1(FAN_SPEED_MAX, WB_MAIN_DEV_FAN);
@@ -918,7 +1014,7 @@ ssize_t dfd_get_fan_motor_speed_max_str(unsigned int fan_index, unsigned int mot
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -955,7 +1051,7 @@ static int dfd_get_fan_motor_speed_min(unsigned int fan_index, unsigned int moto
     rv = dfd_get_fan_type(fan_index, &fan_type, &fan_sub_type);
     if (rv < 0) {
         DFD_FAN_DEBUG(DBG_ERROR, "fan get type error, rv: %d\n", rv);
-        return -EIO;
+        return rv;
     }
 
     key1 = DFD_GET_FAN_THRESHOLD_KEY1(FAN_SPEED_MIN, WB_MAIN_DEV_FAN);
@@ -993,7 +1089,7 @@ ssize_t dfd_get_fan_motor_speed_min_str(unsigned int fan_index, unsigned int mot
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, fan index: %u, motor index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, fan index: %u, motor index: %u\n",
             count, fan_index, motor_index);
         return -DFD_RV_INVALID_VALUE;
     }

@@ -12,13 +12,37 @@ import logging.handlers
 import shutil
 import gzip
 import ast
+import syslog
+from public.platform_common_config import MGMT_VERSION_PATH, SYSLOG_PREFIX
+
+G_RESTFUL_CLASS = None
+try:
+    from restful_util.restful_interface import *
+    G_RESTFUL_CLASS = RestfulApi()
+except Exception as e:
+    pass
+
+INVALID_DECODE_FUNC = -1
+FIX_DECODE_FUNC = 1
+REVERSE_DECODE_FUNC = 2
 
 CHECK_VALUE_NOT_OK = 0
 CHECK_VALUE_OK = 1
 
+GET_BY_COMMON   = "common"
+GET_BY_RESTFUL = "restful"
+GET_BY_S3IP     = "s3ip"
+
 CONFIG_DB_PATH = "/etc/sonic/config_db.json"
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
 
+DEV_PRESENT     = 1
+DEV_ABSENT      = 0
+
+# bsp common log dir
+BSP_COMMON_LOG_DIR = "/var/log/bsp_tech/"
+
+PLATFORM_REBOOT_REASON_FILE = "/etc/.platform_reboot_reason"
 
 __all__ = [
     "strtoint",
@@ -50,6 +74,39 @@ __all__ = [
     "getMacTemp_sysfs",
     "get_format_value",
     "log_to_file",
+    "GET_BY_COMMON",
+    "GET_BY_RESTFUL",
+    "GET_BY_S3IP",
+    "DEV_PRESENT",
+    "DEV_ABSENT",
+    "get_multiple_info_from_restful",
+    "get_onie_info",
+    "get_single_info_from_restful",
+    "G_RESTFUL_CLASS",
+    "get_monotonic_time",
+    "setup_logger",
+    "BSP_COMMON_LOG_DIR",
+	"get_multiple_info_from_s3ip",
+    "S3IP_PREFIX_DIR_NAME",
+    "DEV_TYPE_FAN",
+    "DEV_TYPE_FAN_MOTOR",
+    "DEV_TYPE_PSU",
+    "DEV_TYPE_CPLD",
+    "DEV_TYPE_FPGA",
+    "DEV_TYPE_VOL",
+    "DEV_TYPE_CURR",
+    "DEV_TYPE_TEMP",
+    "DEV_TYPE_SLOT",
+    "DEV_TYPE_POWER",
+    "waitForDocker",
+    "common_syslog_emerg",
+    "common_syslog_alert",
+    "common_syslog_crit",
+    "common_syslog_error",
+    "common_syslog_warn",
+    "common_syslog_notice",
+    "common_syslog_info",
+    "common_syslog_debug",
 ]
 
 class CodeVisitor(ast.NodeVisitor):
@@ -168,6 +225,92 @@ class CodeVisitor(ast.NodeVisitor):
             return value
         raise TypeError("int() takes 1 or 2 arguments (%s given)" % len(args_val_list))
 
+
+
+def common_syslog_emerg(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-EMERG-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_EMERG, info)
+
+def common_syslog_alert(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-ALERT-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_ALERT, info)
+
+def common_syslog_crit(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-CRIT-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_CRIT, info)
+
+def common_syslog_error(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-ERR-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_ERR, info)
+
+def common_syslog_warn(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-WARNING-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_WARNING, info)
+
+def common_syslog_notice(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-NOTICE-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_NOTICE, info)
+
+def common_syslog_info(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-INFO-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_INFO, info)
+
+def common_syslog_debug(title, info):
+    syslog_prefix = SYSLOG_PREFIX
+    syslog.openlog(f"{syslog_prefix}-DEBUG-{title}", syslog.LOG_PID)
+    syslog.syslog(syslog.LOG_DEBUG, info)
+
+def platform_reboot(reason, info):
+    try:
+        with open(PLATFORM_REBOOT_REASON_FILE, 'w') as file:
+            file.write(reason)
+
+        common_syslog_warn("REBOOT", ("The system will reboot due to %s." % info))
+        time.sleep(0.1)
+        os.system("/sbin/reboot")
+        return True, "success"
+    except Exception as e:
+        return False, str(e)
+
+def secret_key_decode(decode_func, ori_value, addr, is_set):
+    """
+    Function to process the value based on the decode_func parameter.
+
+    Parameters:
+        decode_func (int): Determines the type of processing to apply. Possible values:
+            - FIX_DECODE_FUNC = 1: fix mode.
+            - REVERSE_DECODE_FUNC = 2: Reverse mode.
+        ori_value (int): The original value to process.
+        is_set (bool): Whether the value is being set (True) or read (False).
+
+    Returns:
+        int: The processed value based on the decode_func parameter, or False if the mode is invalid.
+    """
+    if decode_func not in [FIX_DECODE_FUNC, REVERSE_DECODE_FUNC]:
+        return False, ("secret_key_decode failed. decode_func: %s, ori_value: %d, addr: 0x%x" % (decode_func, ori_value, addr))
+
+    if is_set:
+        if decode_func == FIX_DECODE_FUNC:
+            # FIX_DECODE_FUNC: Simply return the original value
+            return True, ori_value
+        elif decode_func == REVERSE_DECODE_FUNC:
+            # Reverse mode: Take the high 7 bits, reverse them, and keep the lowest bit unchanged
+            reversed_value = (~addr & 0xFE) | (ori_value & 0x01)
+            return True, reversed_value
+    else:
+        if decode_func == REVERSE_DECODE_FUNC or decode_func == FIX_DECODE_FUNC:
+            # Return only the lowest bit
+            return True, ori_value & 0x01
+    # If no valid operation is matched, return False as a fallback
+    return False, ("secret_key_decode failed. decode_func: %d, ori_value: %d, addr: 0x%x" % (decode_func, ori_value, addr))
+
 def inttostr(vl, length):
     if not isinstance(vl, int):
         raise Exception(" type error")
@@ -218,7 +361,6 @@ def typeTostr(val):
         strtmp = byteTostr(val)
     return strtmp
 
-
 def getonieplatform(path):
     if not os.path.isfile(path):
         return ""
@@ -231,15 +373,13 @@ def getonieplatform(path):
             machine_vars[tokens[0]] = tokens[1].strip()
     return machine_vars.get("onie_platform")
 
-
 def getplatform_config_db():
     if not os.path.isfile(CONFIG_DB_PATH):
         return ""
-    val = subprocess.check_output(["sonic-cfggen", "-j", CONFIG_DB_PATH, "-v", "DEVICE_METADATA.localhost.platform"]).decode().strip()
+    val = os.popen("sonic-cfggen -j %s -v DEVICE_METADATA.localhost.platform" % CONFIG_DB_PATH).read().strip()
     if len(val) <= 0:
         return ""
     return val
-
 
 def getplatform_name():
     if os.path.isfile('/host/machine.conf'):
@@ -248,31 +388,25 @@ def getplatform_name():
         return getonieplatform('/etc/sonic/machine.conf')
     return getplatform_config_db()
 
-
+# i2cget byte data with offset
 def wbi2cget(bus, devno, address, word=None):
     if word is None:
         command_line = "i2cget -f -y %d 0x%02x 0x%02x " % (bus, devno, address)
     else:
         command_line = "i2cget -f -y %d 0x%02x 0x%02x %s" % (bus, devno, address, word)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
-        time.sleep(0.1)
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
+# i2cset byte data with offset
 def wbi2cset(bus, devno, address, byte):
     command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%02x" % (
         bus, devno, address, byte)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
@@ -311,59 +445,66 @@ def wbpciwr(pcibus, slot, fn, resource, offset, data):
 
 def wbi2cgetWord(bus, devno, address):
     command_line = "i2cget -f -y %d 0x%02x 0x%02x w" % (bus, devno, address)
-    retrytime = 3
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
+# i2sget word data with offset
 def wbi2csetWord(bus, devno, address, byte):
     command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%x w" % (
         bus, devno, address, byte)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
+# i2cget byte data without offset
+def wbi2cgetByte(bus, devno):
+    command_line = "i2cget -f -y %d 0x%02x" % (bus, devno)
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
+    return False, ret_t
+
+
+# i2cset byte data without offset
+def wbi2csetByte(bus, devno, byte):
+    command_line = "i2cset -f -y %d 0x%02x 0x%02x" % (
+        bus, devno, byte)
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
+    return False, ret_t
+
+
+# i2cset byte data with offset and PEC
 def wbi2cset_pec(bus, devno, address, byte):
     command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%02x bp" % (
         bus, devno, address, byte)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
+# i2cset word data with offset and PEC
 def wbi2cset_wordpec(bus, devno, address, byte):
     command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%02x wp" % (
         bus, devno, address, byte)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
 def wbsysset(location, value):
     command_line = "echo 0x%02x > %s" % (value, location)
-    retrytime = 6
-    ret_t = ""
-    for i in range(retrytime):
-        ret, ret_t = exec_os_cmd(command_line)
-        if ret == 0:
-            return True, ret_t
+    ret, ret_t = exec_os_cmd(command_line)
+    if ret == 0:
+        return True, ret_t
     return False, ret_t
 
 
@@ -428,6 +569,13 @@ def exec_os_cmd(cmd):
     status, output = subprocess.getstatusoutput(cmd)
     return status, output
 
+def exec_os_cmd_log(cmd):
+    proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE, shell=False, stderr=sys.stderr, close_fds=True,
+                            stdout=sys.stdout, universal_newlines=True, bufsize=1)
+    proc.wait()
+    stdout = proc.communicate()[0]
+    stdout = typeTostr(stdout)
+    return proc.returncode, stdout
 
 def io_rd(reg_addr, read_len=1):
     try:
@@ -476,25 +624,16 @@ def io_wr(reg_addr, reg_data):
     finally:
         os.close(fd)
 
-def exec_os_cmd_log(cmd):
-    proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE, shell=False, stderr=sys.stderr, close_fds=True,
-                            stdout=sys.stdout, universal_newlines=True, bufsize=1)
-    proc.wait()
-    stdout = proc.communicate()[0]
-    stdout = typeTostr(stdout)
-    return proc.returncode, stdout
-
-
 def write_sysfs(location, value):
     try:
-        if not os.path.isfile(location):
-            return False, ("location[%s] not found !" % location)
-        with open(location, 'w') as fd1:
+        locations = glob.glob(location)
+        if len(locations) == 0:
+            return False, ("%s not found" % location)
+        with open(locations[0], 'w') as fd1:
             fd1.write(value)
     except Exception as e:
         return False, (str(e) + " location[%s]" % location)
     return True, ("set location[%s] %s success !" % (location, value))
-
 
 def read_sysfs(location):
     try:
@@ -539,14 +678,14 @@ def setup_logger(log_file, max_bytes=1024*1024*5, backup_count=3):
     # creat logger
     logger = logging.getLogger(log_file)
     if not logger.hasHandlers():
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
 
         # creat RotatingFileHandler set log file size and backupCount
         handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
         handler.setLevel(logging.DEBUG)
 
         # creat formatter and addd to handler
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(filename)s[%(funcName)s][%(lineno)s]: %(message)s")
         handler.setFormatter(formatter)
 
         logger.addHandler(handler)
@@ -601,8 +740,280 @@ def write_sysfs_value(reg_name, value):
     return True
 
 
+def wb_peci_pcicfglocal_rd(bus, device, func, reg, rd_len):
+    valid_rd_len = (1, 2, 4)
+    if rd_len not in valid_rd_len:
+        return False, "Invalid read length: %d" % rd_len
+
+    command_line = "dfd_debug peci_pcicfglocal_rd 0x%02x 0x%02x 0x%02x 0x%04x %d" % (bus, device, func, reg, rd_len)
+    status, val_t = exec_os_cmd(command_line)
+    if status != 0:
+        return False, val_t
+
+    val_list = []
+    lines = val_t.strip("").split("\n")
+    for line in lines:
+        if line.startswith("0x"):
+            val_list_tmp = re.sub(r'\s+', ' ', line.strip()).split(" ")
+            val_list.extend(val_list_tmp[1:])
+
+    if len(val_list) == 0:
+        return False, "peci_pcicfglocal_rd fail, msg: %s " % val_t
+
+    value = 0
+    for index, val in enumerate(val_list):
+        value |= (int(val, 16) << (8 * index))
+    return True, value
+
+def get_onie_info(info_type):
+    if not os.path.isfile('/host/machine.conf'):
+        return "/host/machine.conf not exist"
+    machine_vars = {}
+    with open('/host/machine.conf') as machine_file:
+        for line in machine_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            machine_vars[tokens[0]] = tokens[1].strip()
+    return machine_vars.get(info_type)
+
+def decode_value(config, value=None):
+    try:
+        decode_type = config.get("decode_type")
+        decode_info = config.get("decode_info", {})
+
+        if decode_type == "direct_config":
+            return True, config.get("value")
+        elif decode_type == "format":
+            format_value = ""
+            attr_unit = decode_info.get("unit", None)
+            attr_decimal_precision = decode_info.get("decimal_precision", None)
+            formula = decode_info.get("formula", None)
+            if formula is not None:
+                value = str(eval(formula % (float(value))))
+                format_value = value
+            if attr_decimal_precision is not None:
+                format = "%%.%df" % attr_decimal_precision
+                value = str(format % (float(value)))
+                format_value = value
+            if attr_unit is not None:
+                format_value += " %s" % attr_unit
+            return True, format_value
+        elif decode_type == "decode":
+            return True, decode_info.get(value, value)
+        else:
+            return False, "unsupport decode_type %s" % decode_type
+
+    except Exception as e:
+        return False, "decode_value error, config: %s, value: %s, reason: %s" % (config, value, e)
+
+DEV_TYPE_FAN = "fan"
+DEV_TYPE_FAN_MOTOR = "fan_motor"
+DEV_TYPE_PSU = "psu"
+DEV_TYPE_CPLD = "cpld"
+DEV_TYPE_FPGA = "fpga"
+DEV_TYPE_VOL = "vol"
+DEV_TYPE_CURR = "curr"
+DEV_TYPE_TEMP = "temp"
+DEV_TYPE_SLOT = "slot"
+DEV_TYPE_POWER = "power"
+
+def get_single_info_from_restful(config):
+    """
+    Retrieve information of a single field of a specific type
+
+    Parameters:
+        config: such as {"type" : "fan", "index" : 1, "field_name" : "present"}
+    """
+    if not G_RESTFUL_CLASS:
+        return False, "restful interface unsupport"
+
+    info_type = config.get("type")
+    if info_type == DEV_TYPE_FAN:
+        field_name = config.get("field_name")
+        fan_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_fan_num()
+        return G_RESTFUL_CLASS.get_fan_field_value(fan_index, field_name)
+    elif info_type == DEV_TYPE_FAN_MOTOR:
+        field_name = config.get("field_name")
+        fan_index = config.get("index")
+        motor_index = config.get("motor_index")
+        return G_RESTFUL_CLASS.get_fan_motor_field_value(fan_index, motor_index, field_name)
+    elif info_type == DEV_TYPE_PSU:
+        field_name = config.get("field_name")
+        psu_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_psu_num()
+        return G_RESTFUL_CLASS.get_psu_field_value(psu_index, field_name)
+    elif info_type == DEV_TYPE_CPLD:
+        field_name = config.get("field_name")
+        cpld_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_cpld_num()
+        return G_RESTFUL_CLASS.get_cpld_field_value(cpld_index, field_name)
+    elif info_type == DEV_TYPE_FPGA:
+        field_name = config.get("field_name")
+        fpga_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_fpga_num()
+        return G_RESTFUL_CLASS.get_fpga_field_value(fpga_index, field_name)
+    elif info_type == DEV_TYPE_VOL:
+        field_name = config.get("field_name")
+        vol_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_vol_num()
+        return G_RESTFUL_CLASS.get_vol_field_value(vol_index, field_name)
+    elif info_type == DEV_TYPE_CURR:
+        field_name = config.get("field_name")
+        curr_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_curr_num()
+        return G_RESTFUL_CLASS.get_curr_field_value(curr_index, field_name)
+    elif info_type == DEV_TYPE_TEMP:
+        field_name = config.get("field_name")
+        temp_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_temp_num()
+        return G_RESTFUL_CLASS.get_temp_field_value(temp_index, field_name)
+    elif info_type == DEV_TYPE_SLOT:
+        field_name = config.get("field_name")
+        slot_index = config.get("index")
+        if field_name == "num":
+            return G_RESTFUL_CLASS.get_slot_num()
+        return G_RESTFUL_CLASS.get_slot_field_value(slot_index, field_name)
+    else:
+        return False, "unsupport restful_info_type %s" % info_type
+
+def get_multiple_info_from_restful(config):
+    """
+    Retrieve information of multiple field of a specific type
+
+    Parameters:
+        config: such as {"type" : "fan", "index" : 1, "field" : 
+                            {
+                                "name":"name",
+                                "presence": "present",
+                            }
+                        }
+    """
+
+    result_dict = {}
+    field_info = config.get("field", {})
+    if not isinstance(field_info, dict) or len(field_info) == 0:
+        msg = "get restful info err, field config : %s err" % field_info
+        return False, msg
+
+    for field_key, field_value in field_info.items():
+        single_get_config = {}
+        single_get_config["type"] = config.get("type")
+        single_get_config["index"] = config.get("index")
+        unit = None
+        value = None
+
+        if isinstance(field_value, dict):
+            unit = field_value.get("unit")
+            if field_value.get("gettype"):
+                field_value["index"] = config.get("index")
+                ret, value = get_single_info_from_restful(field_value)
+            elif field_value.get("key"):
+                single_get_config["field_name"] = field_value.get("key")
+                ret, value = get_single_info_from_restful(single_get_config)
+            if field_value.get("decode_type"):
+                ret, value = decode_value(field_value, value)
+            if unit:
+                value += " %s" % unit
+        else:
+            single_get_config["field_name"] = field_value
+            ret, value = get_single_info_from_restful(single_get_config)
+        result_dict[field_key] = value
+
+    if len(result_dict) == 0:
+        return False, "get restful info null, config: %s" % config
+    return True, result_dict
+
+S3IP_PREFIX_DIR_NAME = {
+    DEV_TYPE_CURR: "curr_sensor",
+    DEV_TYPE_TEMP: "temp_sensor",
+    DEV_TYPE_VOL: "vol_sensor",
+    DEV_TYPE_POWER: "power_sensor",
+}
+
+def get_multiple_info_from_s3ip(config):
+    dev_type = config.get("type")
+    index = config.get("index")
+    prefix = "/sys/s3ip/%s/%s%s/" % (S3IP_PREFIX_DIR_NAME.get(dev_type, dev_type), dev_type, index)
+    field_info = config.get("field", {})
+    if not isinstance(field_info, dict) or len(field_info) == 0:
+        return False, "get s3ip info err, field config err"
+
+    result_dict = {}
+    dev_type = config.get("type")
+    for field_key, field_value in field_info.items():
+        info = None
+        if isinstance(field_value, dict):
+            if field_value.get("key"):
+                ret, info = read_sysfs(prefix + field_value.get("key"))
+            if field_value.get("decode_type"):
+                ret, info = decode_value(field_value, info)
+        else:
+            if field_value == "auto_name_by_type_index":
+                info = dev_type + str(config.get("index"))
+            else:
+                ret, info = read_sysfs(prefix + field_value)
+        result_dict[field_key] = info
+
+    if len(result_dict) == 0:
+        return False, "get s3ip info null, config: %s" % config
+    return True, result_dict
+
+def get_secret_key_register_addr(config):
+    way = config.get("gettype")
+    if way == "devfile":
+        return config.get("offset")
+    else:
+        return None
+
+def supervisor_update():
+    cmd = "supervisorctl update"
+    os.system(cmd)
+    time.sleep(1)
+
+def check_supervisor_sock_exists():
+    path = "/var/run/supervisor/supervisor.sock"
+    if os.path.exists(path):
+        return True
+    return False
+
+def check_supervisor_ready(timeout = 30):
+    time_cnt = 0
+    while True:
+        ret = check_supervisor_sock_exists()
+        if ret is True:
+            return True
+        time_cnt += 1
+        if time_cnt > timeout:
+            break
+        time.sleep(1)
+    return False
+
+def check_supervisor_process_run_by_name(process_name):
+    try:
+        ret, log = exec_os_cmd("supervisorctl status %s" % process_name)
+        if "RUNNING" in log:
+            return True, True
+        else:
+            return True, False
+    except Exception as e:
+        pass
+    return False, "supervisorctl get %s status fail" % process_name
+
 def get_value_once(config):
     try:
+        delay_time = config.get("delay", None)
+        if delay_time is not None:
+            time.sleep(delay_time)
+
         way = config.get("gettype")
         int_decode = config.get("int_decode", 16)
         if way == 'sysfs':
@@ -633,10 +1044,17 @@ def get_value_once(config):
             if ret is True:
                 return True, int(val, int_decode)
             return False, ("i2cword read failed. bus:%d, addr:0x%x, offset:0x%x" % (bus, addr, offset))
+        if way == "i2cbyte":
+            bus = config.get("bus")
+            addr = config.get("loc")
+            ret, val = wbi2cgetByte(bus, addr)
+            if ret is True:
+                return True, int(val, int_decode)
+            return False, ("i2cbyte read failed. bus:%d, addr:0x%x" % (bus, addr))
         if way == "devfile":
             path = config.get("path")
             offset = config.get("offset")
-            read_len = config.get("read_len")
+            read_len = config.get("read_len", 1)
             ret, val_list = dev_file_read(path, offset, read_len)
             if ret is True:
                 if read_len == 1:
@@ -663,6 +1081,14 @@ def get_value_once(config):
             offset = config.get("offset")
             data = config.get("data")
             return wbpcird(pcibus, slot, fn, bar, offset, data)
+        if way == 'peci_pcicfglocal_rd':
+            bus = config.get("bus")
+            dev = config.get("dev")
+            func = config.get("func")
+            reg = config.get("reg")
+            rd_len = config.get("rd_len")
+            ret, val = wb_peci_pcicfglocal_rd(bus, dev, func, reg, rd_len)
+            return ret, val
         if way == 'bit_rd':
             rd_config = config.get("rd_config")
             rd_bit = config.get("rd_bit")
@@ -670,6 +1096,21 @@ def get_value_once(config):
             if ret is False:
                 return False, ("bit_rd read failed, log: %s" % rd_value)
             val = (rd_value & (1 << rd_bit)) >> rd_bit
+            return True, val
+        if way == 'secret_key_rd':
+            secret_key_config = config.get("secret_key_config")
+            if secret_key_config.get("gettype") != "devfile":
+                return False, "secret_key_rd only support gettype=devfile"
+            ret, ori_value = get_value_once(secret_key_config)
+            if ret is False:
+                return False, ("secret_key_rd read failed, log: %s" % ori_value)
+            decode_func = config.get("decode_func", INVALID_DECODE_FUNC)
+            addr = get_secret_key_register_addr(secret_key_config)
+            if addr is None:
+                return False, ("get_secret_key_register_addr failed")
+            ret, val = secret_key_decode(decode_func, ori_value, addr, 0)
+            if ret == False:
+                return False, val
             return True, val
         if way == 'cmd_str':
             cmd = config.get("cmd")
@@ -761,6 +1202,25 @@ def set_value_once(config):
                                (bus, addr, offset, value))
             return True, ("i2cword write bus:%d, addr:0x%x, offset:0x%x, value:0x%x success" %
                           (bus, addr, offset, value))
+        if way == 'i2cbyte':
+            bus = config.get("bus")
+            addr = config.get("loc")
+            value = config.get("value")
+            mask = config.get("mask", 0xff)
+            mask_tuple = (0xff, 0)
+            if mask not in mask_tuple:
+                ret, read_value = wbi2cgetByte(bus, addr)
+                if ret is True:
+                    read_value = int(read_value, base=16)
+                    value = (read_value & mask) | value
+                else:
+                    return False, ("i2c read byte failed. bus:%d, addr:0x%x" % (bus, addr))
+            ret, log = wbi2csetByte(bus, addr, value)
+            if ret is not True:
+                return False, ("i2cbyte write bus:%d, addr:0x%x, value:0x%x failed" %
+                               (bus, addr, value))
+            return True, ("i2cbyte write bus:%d, addr:0x%x, value:0x%x success" %
+                          (bus, addr, value))
         if way == "devfile":
             path = config.get("path")
             offset = config.get("offset")
@@ -789,6 +1249,23 @@ def set_value_once(config):
             if ret is False:
                 return False, ("bit_wr failed, log: %s" % log)
             return True, ("bit_wr success, log: %s" % log)
+        if way == 'secret_key_wr':
+            secret_key_config = config.get("secret_key_config")
+            if secret_key_config.get("gettype") != "devfile":
+                return False, "secret_key_wr only support gettype=devfile"
+            addr = get_secret_key_register_addr(secret_key_config)
+            if addr is None:
+                return False, ("get_secret_key_register_addr failed")
+            decode_func = config.get("decode_func", INVALID_DECODE_FUNC)
+            ori_value = secret_key_config['value']
+            ret, value = secret_key_decode(decode_func, ori_value, addr, 1)
+            if ret is False:
+                return False, ("secret_key_decode failed, log: %s" % value)
+            secret_key_config['value'] = value
+            ret, log = set_value_once(secret_key_config)
+            if ret is False:
+                return False, ("secret_key_wr failed, log: %s" % log)
+            return True, ("secret_key_wr success, log: %s" % log)
         if way == 'creat_file':
             file_name = config.get("file")
             ret, log = exec_os_cmd("touch %s" % file_name)
@@ -821,7 +1298,7 @@ def set_value_once(config):
                 if ret:
                     return False, ("load_process exec %s failed, log: %s" % (cmd, log))
                 return True, ("load_process exec %s success" % cmd)
-            return False, ("load_process script_name:%s already running" % (script_name))
+            return True, ("load_process script_name:%s already running" % (script_name))
         if way == 'unload_process':
             script_name = config.get("script_name")
             rets = getPid(script_name)
@@ -829,6 +1306,31 @@ def set_value_once(config):
                 cmd = "kill " + ret
                 exec_os_cmd(cmd)
             return True, ("unload_process kill %s success" % script_name)
+        if way == 'supervisor_load_process':
+            script_name = config.get("script_name")
+            ret, runnig = check_supervisor_process_run_by_name(script_name)
+            if ret is False:
+                return ret, runnig
+            if runnig is False:
+                cmd = "supervisorctl start %s" % script_name
+                ret, log = exec_os_cmd(cmd)
+                if ret:
+                    return False, ("supervisor_load_process exec %s failed, log: %s" % (cmd, log))
+                return True, ("supervisor_load_process exec %s success" % cmd)
+            return True, ("supervisor_load_process script_name:%s already running" % (script_name))
+        if way == 'supervisor_unload_process':
+            script_name = config.get("script_name")
+            ret, runnig = check_supervisor_process_run_by_name(script_name)
+            if ret is False:
+                return ret, runnig
+            if runnig is True:
+                cmd = "supervisorctl stop %s" % script_name
+                ret, log = exec_os_cmd(cmd)
+                if ret:
+                    return False, ("supervisor_unload_process exec %s failed, log: %s" % (cmd, log))
+                return True, ("supervisor_unload_process exec %s success" % cmd)
+            else:
+                return True, ("supervisor_unload_process script_name:%s already stop" % (script_name))
         if way == "log_to_file":
             log_file_path = config.get("log_file_path")
             log_config = config.get("log_config")
@@ -856,6 +1358,22 @@ def get_value(config):
 
 
 def set_value(config):
+    if config.get("pre_check") is not None:
+        ret, rd_value = get_value(config["pre_check"])
+        if ret is False:
+            log = "do pre check get_value failed, msg: %s" % rd_value
+            return False, log
+        mask = config["pre_check"].get("mask")
+        if mask is not None:
+            value = rd_value & mask
+        else:
+            value = rd_value
+        okval = config["pre_check"].get("okval")
+        if value != okval:
+            log = ("pre_check not ok, rd_value: %s, mask: %s, okval: %s, don't need to set_value" %
+                (rd_value, mask, okval))
+            return True, log
+
     retrytime = 6
     ignore_result_flag = config.get("ignore_result", 0)
     for i in range(retrytime):
@@ -974,21 +1492,101 @@ def get_format_value(format_str):
     return ret
 
 def check_value(config):
+    # check value
+    retrytime = config.get("retry", 1)
+    for i in range(retrytime):
+        ret, rd_value = get_value(config)
+        if ret is False:
+            log = "get_value failed, msg: %s" % rd_value
+            return False, log
+
+        mask = config.get("mask")
+        if mask is not None:
+            value = rd_value & mask
+        else:
+            value = rd_value
+        okval = config.get("okval")
+        if value == okval:
+            log = ("check ok, rd_value: %s, mask: %s, okval: %s, retry: %s" %
+                (rd_value, mask, okval, i))
+            return True, log
+        # check failed, sleep to retry.
+        sleep_time = config.get("sleep_time")
+        if sleep_time is not None:
+            time.sleep(sleep_time)
+    log = ("check failed, rd_value: %s, mask: %s, okval: %s, retry: %s" %
+            (rd_value, mask, okval, retrytime))
+    return False, log
+
+def check_value_and_get_value(config):
     okval = config.get("okval", None)
     mask = config.get("mask", 0xff)
-    retrytime = config.get("retrytime", 6)
+    retrytime = config.get("retry", 6)
     if okval is None:
-        return False, ('Failed:okval is None.config:%s' % config)
+        log = 'Failed: okval is None. config: %s' % config
+        return False, log, log
     for i in range(retrytime):
         ret, val = get_value(config)
         if ret is True:
             val &= mask
+            # Regardless of whether the register check is okval, return the original value of the register val
             if isinstance(okval, list):
                 if val in okval:
-                    return True, CHECK_VALUE_OK
+                    return True, CHECK_VALUE_OK, val
+                else:
+                    return True, CHECK_VALUE_NOT_OK, val
             else:
                 if okval == val:
-                    return True, CHECK_VALUE_OK
-            return True, CHECK_VALUE_NOT_OK
+                    return True, CHECK_VALUE_OK, val
+                return True, CHECK_VALUE_NOT_OK, val
         time.sleep(0.1)
-    return False, val
+    return False, val, val
+
+def generate_mgmt_version_file():
+    cmd = "nohup platform_manufacturer.py -u > /dev/null 2>&1 &"
+    rets = getPid("platform_manufacturer.py")
+    if len(rets) == 0:
+        exec_os_cmd(cmd)
+
+def update_mgmt_version(generate_mgmt_version = 0):
+    if generate_mgmt_version == 1:
+        for i in range(10):
+            generate_mgmt_version_file()
+            if os.path.exists(MGMT_VERSION_PATH):
+                return True, "generate mgmt_version success"
+            time.sleep(1)
+        return False, "generate mgmt_version,failed, %s not exits" % MGMT_VERSION_PATH
+    return True, "skip generate mgmt_version"
+
+def get_mgmt_version():
+    ret, val = update_mgmt_version(1)
+    if ret is False:
+        return ret, val
+    return read_sysfs(MGMT_VERSION_PATH)
+
+def waitForSdk(sdk_fpath, timeout):
+    time_cnt = 0
+    while True:
+        try:
+            if os.path.exists(sdk_fpath):
+                break
+            else:
+                sys.stdout.write(".")
+                sys.stdout.flush()
+                time_cnt = time_cnt + 1
+                if time_cnt > timeout:
+                    raise Exception("waitForSdk timeout")
+                time.sleep(1)
+        except Exception as e:
+            return False
+    return True
+
+def waitForDocker(sdkcheck_params, timeout = 180):
+    if sdkcheck_params is None:
+        return True
+    if sdkcheck_params.get("checktype") == "file":  # Judge by file
+        sdk_fpath = sdkcheck_params.get("sdk_fpath")
+        return waitForSdk(sdk_fpath, timeout)
+    else:
+        # unsupport
+        return False

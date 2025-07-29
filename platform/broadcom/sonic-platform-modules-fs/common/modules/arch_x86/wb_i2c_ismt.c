@@ -70,6 +70,7 @@
 
 #include <linux/io-64-nonatomic-lo-hi.h>
 #include <linux/string.h>
+#include <wb_bsp_i2c_debug.h>
 
 #define mem_clear(data, size) memset((data), 0, (size))
 
@@ -178,6 +179,8 @@ struct ismt_desc {
 } __packed;
 
 struct ismt_priv {
+	/* struct i2c_adapter_debug must be the first member */
+	struct i2c_adapter_debug i2c_ada_dbg;
 	struct i2c_adapter adapter;
 	void __iomem *smba;			/* PCI BAR */
 	struct pci_dev *pci_dev;
@@ -187,6 +190,9 @@ struct ismt_priv {
 	struct completion cmp;			/* interrupt completion */
 	u8 buffer[I2C_SMBUS_BLOCK_MAX + 16];	/* temp R/W data buffer */
 };
+
+static int debug = 0;
+module_param(debug, int, S_IRUGO | S_IWUSR);
 
 static const struct pci_device_id ismt_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_S1200_SMT0) },
@@ -382,6 +388,8 @@ static int ismt_process_desc(const struct ismt_desc *desc,
 	ismt_gen_reg_dump(priv);
 	ismt_mstr_reg_dump(priv);
 
+	DEBUG_INFO_I2C_ADAPTER(&priv->adapter, "status = %d.\n", desc->status);
+
 	if (desc->status & ISMT_DESC_SCS) {
 		if (read_write == I2C_SMBUS_WRITE &&
 		    size != I2C_SMBUS_PROC_CALL)
@@ -540,6 +548,8 @@ static int ismt_access(struct i2c_adapter *adap, u16 addr,
 	struct device *dev = &priv->pci_dev->dev;
 	u8 *dma_buffer = PTR_ALIGN(&priv->buffer[0], 16);
 
+	DEBUG_INFO_I2C_ADAPTER(adap, "Enter ismt_access.\n");
+
 	if (delay > 0) {
         usleep_range(delay, delay + 1);
     }
@@ -568,6 +578,7 @@ static int ismt_access(struct i2c_adapter *adap, u16 addr,
 	    && (size != I2C_SMBUS_I2C_BLOCK_DATA))
 		desc->control |= ISMT_DESC_PEC;
 
+	DEBUG_INFO_I2C_ADAPTER(adap, "size = %d.\n", size);
 	switch (size) {
 	case I2C_SMBUS_QUICK:
 		dev_dbg(dev, "I2C_SMBUS_QUICK\n");
@@ -1076,6 +1087,7 @@ ismt_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	err = i2c_add_adapter(&priv->adapter);
 	if (err)
 		return -ENODEV;
+	I2C_ADAPTER_DEBUG_INIT(&priv->adapter, struct ismt_priv, i2c_ada_dbg);
     dev_info(&pdev->dev, "wb-i2c-ismt probe ok.\n");
 	return 0;
 }
@@ -1087,7 +1099,7 @@ ismt_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 static void ismt_remove(struct pci_dev *pdev)
 {
 	struct ismt_priv *priv = pci_get_drvdata(pdev);
-
+	i2c_adapter_debug_exit(&priv->adapter);
 	i2c_del_adapter(&priv->adapter);
 }
 

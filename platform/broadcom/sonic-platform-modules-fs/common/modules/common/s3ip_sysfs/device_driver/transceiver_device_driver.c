@@ -94,6 +94,28 @@ static ssize_t wb_get_transceiver_present_status(char *buf, size_t count)
 }
 
 /*
+ * wb_get_eth_i2c_bus - Used to get eth i2c bus,
+ * filled the value to buf
+ * @eth_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t wb_get_eth_i2c_bus(unsigned int eth_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_eth_i2c_bus);
+
+    ret = g_drv->get_eth_i2c_bus(eth_index, buf, count);
+    return ret;
+}
+
+/*
  * wb_get_eth_power_on_status - Used to get single port power on status,
  * filled the value to buf, 0: power off, 1: power on
  * @eth_index: start with 1
@@ -131,6 +153,27 @@ static int wb_set_eth_power_on_status(unsigned int eth_index, int status)
     check_p(g_drv->set_eth_power_on_status);
 
     ret = g_drv->set_eth_power_on_status(eth_index, status);
+    return ret;
+}
+
+/*
+ * wb_get_eth_power_group - Used to get single port power group,
+ * filled the value to buf
+ * @eth_index: start with 1
+ * @power_group: Data receiving buffer
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t wb_get_eth_power_group(unsigned int eth_index, int *power_group)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_eth_power_group);
+
+    ret = g_drv->get_eth_power_group(eth_index, power_group);
     return ret;
 }
 
@@ -305,6 +348,25 @@ static ssize_t wb_get_eth_low_power_mode_status(unsigned int eth_index, char *bu
 }
 
 /*
+ * wb_set_eth_low_power_mode_status - Used to set port low power mode status,
+ * @eth_index: start with 1
+ * @mode: low power mode status, 0: high power mode, 1: low power mode
+ *
+ * This function returns 0 on success,
+ * otherwise it returns a negative value on failed.
+ */
+static int wb_set_eth_low_power_mode_status(unsigned int eth_index, int mode)
+{
+    int ret;
+
+    check_p(g_drv);
+    check_p(g_drv->set_eth_low_power_mode_status);
+
+    ret = g_drv->set_eth_low_power_mode_status(eth_index, mode);
+    return ret;
+}
+
+/*
  * wb_get_eth_interrupt_status - Used to get port interruption status,
  * filled the value to buf, 0: no interruption, 1: interruption
  * @eth_index: start with 1
@@ -420,6 +482,7 @@ static struct s3ip_sysfs_transceiver_drivers_s drivers = {
     .get_transceiver_power_on_status = wb_get_transceiver_power_on_status,
     .set_transceiver_power_on_status = wb_set_transceiver_power_on_status,
     .get_transceiver_present_status = wb_get_transceiver_present_status,
+    .get_eth_i2c_bus = wb_get_eth_i2c_bus,
     .get_eth_power_on_status = wb_get_eth_power_on_status,
     .set_eth_power_on_status = wb_set_eth_power_on_status,
     .get_eth_tx_fault_status = wb_get_eth_tx_fault_status,
@@ -430,12 +493,14 @@ static struct s3ip_sysfs_transceiver_drivers_s drivers = {
     .get_eth_reset_status = wb_get_eth_reset_status,
     .set_eth_reset_status = wb_set_eth_reset_status,
     .get_eth_low_power_mode_status = wb_get_eth_low_power_mode_status,
+    .set_eth_low_power_mode_status = wb_set_eth_low_power_mode_status,
     .get_eth_interrupt_status = wb_get_eth_interrupt_status,
     .get_eth_eeprom_size = wb_get_eth_eeprom_size,
     .read_eth_eeprom_data = wb_read_eth_eeprom_data,
     .write_eth_eeprom_data = wb_write_eth_eeprom_data,
     .get_eth_optoe_type = wb_get_eth_optoe_type,
     .set_eth_optoe_type = wb_set_eth_optoe_type,
+    .get_eth_power_group = wb_get_eth_power_group,
 };
 
 static int __init sff_dev_drv_init(void)

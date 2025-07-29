@@ -4,6 +4,7 @@
 
 typedef struct i2c_dev_device_s {
     struct i2c_client *client;
+    struct i2c_adapter *adap;
     uint32_t i2c_bus;
     uint32_t i2c_addr;
     char i2c_name[MAX_NAME_SIZE];

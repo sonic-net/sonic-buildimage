@@ -253,6 +253,7 @@ int pci_rd_main(int argc, char **argv)
            "********************** PCI read test **********************\r\n");
     print_arg(&pci_priv, 1);
 
+    data = 0;
     while (pci_priv.times--) {
         data = *((volatile unsigned int *)(ptr + pci_priv.offset / sizeof(unsigned int)));
     }

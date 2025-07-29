@@ -88,72 +88,18 @@ static ssize_t vol_sensor_type_show(struct switch_obj *obj, struct switch_attrib
     return g_vol_sensor_drv->get_main_board_vol_type(vol_index, buf, PAGE_SIZE);
 }
 
-static ssize_t vol_sensor_max_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t vol_attr_threshold_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     unsigned int vol_index;
+    struct switch_device_attribute  *tmp_attr;
 
     check_p(g_vol_sensor_drv);
-    check_p(g_vol_sensor_drv->get_main_board_vol_max);
+    check_p(g_vol_sensor_drv->get_main_board_vol_threshold);
 
     vol_index = obj->index;
-    VOL_SENSOR_DBG("vol index: %u\n", vol_index);
-    return g_vol_sensor_drv->get_main_board_vol_max(vol_index, buf, PAGE_SIZE);
-}
-
-static ssize_t vol_sensor_max_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int vol_index;
-    int ret;
-
-    check_p(g_vol_sensor_drv);
-    check_p(g_vol_sensor_drv->set_main_board_vol_max);
-
-    vol_index = obj->index;
-    VOL_SENSOR_DBG("vol index: %u\n", vol_index);
-    ret = g_vol_sensor_drv->set_main_board_vol_max(vol_index, buf, count);
-    if (ret < 0) {
-        VOL_SENSOR_ERR("set vol%u max threshold failed, value: %s, count: %lu, ret: %d\n",
-            vol_index, buf, count, ret);
-        return ret;
-    }
-    VOL_SENSOR_DBG("set vol%u max threshold success, value: %s, count: %lu, ret: %d\n",
-        vol_index, buf, count, ret);
-    return count;
-}
-
-static ssize_t vol_sensor_min_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int vol_index;
-
-    check_p(g_vol_sensor_drv);
-    check_p(g_vol_sensor_drv->get_main_board_vol_min);
-
-    vol_index = obj->index;
-    VOL_SENSOR_DBG("vol index: %u\n", vol_index);
-    return g_vol_sensor_drv->get_main_board_vol_min(vol_index, buf, PAGE_SIZE);
-}
-
-static ssize_t vol_sensor_min_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int vol_index;
-    int ret;
-
-    check_p(g_vol_sensor_drv);
-    check_p(g_vol_sensor_drv->set_main_board_vol_min);
-
-    vol_index = obj->index;
-    VOL_SENSOR_DBG("vol index: %u\n", vol_index);
-    ret = g_vol_sensor_drv->set_main_board_vol_min(vol_index, buf, count);
-    if (ret < 0) {
-        VOL_SENSOR_ERR("set vol%u min threshold failed, value: %s, count: %lu, ret: %d\n",
-            vol_index, buf, count, ret);
-        return ret;
-    }
-    VOL_SENSOR_DBG("set vol%u min threshold success, value: %s, count: %lu, ret: %d\n",
-        vol_index, buf, count, ret);
-    return count;
+    tmp_attr = to_switch_device_attr(attr);
+    check_p(tmp_attr);
+    return g_vol_sensor_drv->get_main_board_vol_threshold(vol_index, tmp_attr->type, buf, PAGE_SIZE);
 }
 
 static ssize_t vol_sensor_range_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
@@ -208,21 +154,25 @@ static struct attribute_group vol_sensor_root_attr_group = {
 static struct switch_attribute vol_value_attr = __ATTR(value, S_IRUGO, vol_sensor_value_show, NULL);
 static struct switch_attribute vol_alias_attr = __ATTR(alias, S_IRUGO, vol_sensor_alias_show, NULL);
 static struct switch_attribute vol_type_attr = __ATTR(type, S_IRUGO, vol_sensor_type_show, NULL);
-static struct switch_attribute vol_max_attr = __ATTR(max, S_IRUGO | S_IWUSR, vol_sensor_max_show, vol_sensor_max_store);
-static struct switch_attribute vol_min_attr = __ATTR(min,  S_IRUGO | S_IWUSR, vol_sensor_min_show, vol_sensor_min_store);
 static struct switch_attribute vol_range_attr = __ATTR(range, S_IRUGO, vol_sensor_range_show, NULL);
 static struct switch_attribute vol_nominal_value_attr = __ATTR(nominal_value, S_IRUGO, vol_sensor_nominal_value_show, NULL);
 static struct switch_attribute vol_monitor_flag_attr = __ATTR(monitor_flag,  S_IRUGO, vol_sensor_monitor_flag_show, NULL);
+static SWITCH_DEVICE_ATTR(max, S_IRUGO, vol_attr_threshold_show, NULL, WB_SENSOR_MAX);
+static SWITCH_DEVICE_ATTR(high, S_IRUGO, vol_attr_threshold_show, NULL, WB_SENSOR_HIGH);
+static SWITCH_DEVICE_ATTR(low, S_IRUGO, vol_attr_threshold_show, NULL, WB_SENSOR_LOW);
+static SWITCH_DEVICE_ATTR(min, S_IRUGO, vol_attr_threshold_show, NULL, WB_SENSOR_MIN);
 
 static struct attribute *vol_sensor_attrs[] = {
     &vol_value_attr.attr,
     &vol_alias_attr.attr,
     &vol_type_attr.attr,
-    &vol_max_attr.attr,
-    &vol_min_attr.attr,
     &vol_range_attr.attr,
     &vol_nominal_value_attr.attr,
     &vol_monitor_flag_attr.attr,
+    &switch_dev_attr_max.switch_attr.attr,
+    &switch_dev_attr_high.switch_attr.attr,
+    &switch_dev_attr_low.switch_attr.attr,
+    &switch_dev_attr_min.switch_attr.attr,
     NULL,
 };
 
@@ -286,7 +236,7 @@ static int vol_sensor_sub_create_kobj_and_attrs(struct kobject *parent, int vol_
     }
     return 0;
 error:
-    for (i = vol_index; i > 0; i--) {
+    for (i = vol_index - 1; i > 0; i--) {
         vol_sensor_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_vol_sensor.vol);

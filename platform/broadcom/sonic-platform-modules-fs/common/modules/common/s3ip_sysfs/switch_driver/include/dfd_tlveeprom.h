@@ -1,6 +1,8 @@
 #ifndef _DFD_TLVEEPROM_H_
 #define _DFD_TLVEEPROM_H_
 
+#include "wb_module.h"
+
 #ifndef be16_to_cpu
 #define be16_to_cpu(x)   ntohs(x)
 #endif
@@ -11,12 +13,42 @@
 
 #define TLV_CODE_NAME_LEN 64
 
+#define TLV_CODE_PRODUCT_NAME   (0x21)
+#define TLV_CODE_PART_NUMBER    (0x22)
+#define TLV_CODE_SERIAL_NUMBER  (0x23)
+#define TLV_CODE_MAC_BASE       (0x24)
+#define TLV_CODE_MANUF_DATE     (0x25)
+#define TLV_CODE_DEVICE_VERSION (0x26)
+#define TLV_CODE_LABEL_REVISION (0x27)
+#define TLV_CODE_PLATFORM_NAME  (0x28)
+#define TLV_CODE_ONIE_VERSION   (0x29)
+#define TLV_CODE_MAC_SIZE       (0x2A)
+#define TLV_CODE_MANUF_NAME     (0x2B)
+#define TLV_CODE_MANUF_COUNTRY  (0x2C)
+#define TLV_CODE_VENDOR_NAME    (0x2D)
+#define TLV_CODE_DIAG_VERSION   (0x2E)
+#define TLV_CODE_SERVICE_TAG    (0x2F)
+#define TLV_CODE_VENDOR_EXT     (0xFD)
+#define TLV_CODE_CRC_32         (0xFE)
+#define TLV_CODE_NO_DEFINED     (-1)
+
 /*
  *  Struct for displaying the TLV codes and names.
  */
 struct tlv_code_desc {
     uint8_t m_code;
     char m_name[TLV_CODE_NAME_LEN];
+};
+
+struct tlv_type_cmd_table {
+    int info_type;    /* dev_info_type */
+    int tlv_type;     /* TLV TYPE type */
+};
+
+static const struct tlv_type_cmd_table tlv_type_cmd_table_list[] = {
+    {DFD_DEV_INFO_TYPE_MAC, TLV_CODE_MAC_BASE},
+    {DFD_DEV_INFO_TYPE_NAME, TLV_CODE_PRODUCT_NAME},
+    {DFD_DEV_INFO_TYPE_SN, TLV_CODE_SERIAL_NUMBER},
 };
 
 /* ONIE TLV Type Type and extended TLV type definition */
@@ -66,6 +98,6 @@ typedef enum dfd_tlvinfo_ext_tlv_type_e {
     DFD_TLVINFO_EXT_TLV_TYPE_DEV_TYPE   = 1,
 } dfd_tlvinfo_ext_tlv_type_t;
 
-int dfd_tlvinfo_get_e2prom_info(uint8_t *eeprom, uint32_t size, dfd_tlv_type_t *tlv_type, uint8_t* buf, uint32_t *buf_len);
+int dfd_tlvinfo_get_e2prom_info(uint8_t *eeprom, uint32_t size, int cmd, uint8_t* buf, uint32_t *buf_len);
 
 #endif /* endif _DFD_TLVEEPROM_H_ */

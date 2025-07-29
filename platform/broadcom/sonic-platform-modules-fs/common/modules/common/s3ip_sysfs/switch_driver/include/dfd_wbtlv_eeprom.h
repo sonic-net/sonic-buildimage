@@ -37,4 +37,5 @@ bool dfd_wb_tlv_support_type(uint8_t cmd);
 int dfd_wb_tlv_eeprom_read(int bus, int addr, uint8_t cmd, char *buf, int len,
                const char *sysfs_name);
 
+
 #endif /* endif _DFD_WBTLV_EEPROM_H_ */

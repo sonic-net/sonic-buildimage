@@ -953,7 +953,6 @@ static void ins5699_remove(struct i2c_client *client)
 		cancel_work_sync(&ins5699->work);
 	}
 
-
 	return;
 }
 

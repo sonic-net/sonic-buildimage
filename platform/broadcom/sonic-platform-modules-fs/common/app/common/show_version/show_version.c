@@ -1,8 +1,7 @@
 /**
  * bininfo.c
  *
- * Copyright (C)2009 Ruijie Network Inc. All rights reserved.
- * Original Author: yejx@ruijie.com.cn, 2009-3-31
+ * Copyright (C)2009. All rights reserved.
  * Description:
  *     Define the bininfo Structure
  *     Upgrade lib organization, separated from the original upgrade.c and bininfo.c.
@@ -81,6 +80,7 @@ void bininfo_convert_byteorder(bininfo_t *dst, bininfo_t *src, convert_type type
         break;
     }
 }
+
 
 /**
  * Check the validity of the bininfo structure
@@ -173,6 +173,7 @@ bool bininfo_parse(bininfo_t *info, bininfo_t *info_dsc, void *buf, int check_cr
     return true;
 }
 
+
 /**
  * Display bininfo information
  * @param bin   The bininfo to be displayed
@@ -200,6 +201,7 @@ void bininfo_show_info(bininfo_t *bin)
     printf("  Total Length: %d\n", bin->total_len);
     printf("  Total CRC:    0x%08X\n", bin->crc);
 }
+
 
 /**
  * Search for the corresponding bininfo structure within the bin file content
@@ -390,7 +392,6 @@ exit:
     return -1;
 }
 
-/* 读取分区内容 */
 static int read_mtd(int fd, struct mtd_info_user *mtd_info, uint32_t offset, void *buf, uint32_t len)
 {
     char *tmp_buf;
@@ -672,6 +673,9 @@ int main(int argc, char *argv[])
         dbg_print(is_debug_on, " curent slaveboot   : show_version curent slave\n");
         dbg_print(is_debug_on, " other masterboot   : show_version other master\n");
         dbg_print(is_debug_on, " other slaveboot    : show_version other slave\n");
+        dbg_print(is_debug_on, " partition partition_name : show_version partition xxx\n");
+        dbg_print(is_debug_on, "    The command 'cat /proc/mtd' is used to obtain the"   \
+                               "    partition names\n");
         return -1;   
     }
     
@@ -691,6 +695,10 @@ int main(int argc, char *argv[])
     if ((strcmp(argv[1], "other") == 0) && (strcmp(argv[2], "slave") == 0)) { 
         ret = get_version("slave_bootloader_other");        
     }
+
+    if ((strcmp(argv[1], "partition") == 0) && (argc == 3)) {
+        ret = get_version(argv[2]);     
+    } 
 
     if (ret != 0) {
         dbg_print(is_debug_on, "Get %s version fail!\r\n", argv[1]);

@@ -273,12 +273,12 @@ static int32_t dfd_ko_cpld_logic_dev_read(int32_t addr, uint8_t *buf)
     rd_len = dfd_ko_read_file(logic_dev_path, offset, buf, sizeof(*buf));
     if (rd_len < 0) {
         DBG_DEBUG(DBG_ERROR, "read logic dev data failed, loc: %s, offset: 0x%x, \
-        rd_count: %lu, ret: %d,\n", logic_dev_path, offset, sizeof(*buf), rd_len);
+        rd_count: %zu, ret: %d,\n", logic_dev_path, offset, sizeof(*buf), rd_len);
         return rd_len;
-    } 
+    }
 
     DBG_DEBUG(DBG_VERBOSE, "read logic dev data success, loc: %s, offset: 0x%x, \
-        rd_count: %lu, rd_len: %d,\n", logic_dev_path, offset, sizeof(*buf), rd_len);
+        rd_count: %zu, rd_len: %d,\n", logic_dev_path, offset, sizeof(*buf), rd_len);
     return DFD_RV_OK;
 }
 
@@ -304,21 +304,22 @@ static int32_t dfd_ko_cpld_logic_dev_write(int32_t addr, uint8_t data)
     key = DFD_CFG_KEY(DFD_CFG_ITEM_CPLD_LOGIC_DEV, sub_slot, cpld_id);
     logic_dev_path = dfd_ko_cfg_get_item(key);
     if (logic_dev_path == NULL) {
-        DBG_DEBUG(DBG_ERROR, "get logic dev path error, key_name: %s\n", key_to_name(DFD_CFG_ITEM_CPLD_LPC_DEV));
+        DBG_DEBUG(DBG_ERROR, "get logic dev path error, key_name: %s\n", key_to_name(DFD_CFG_ITEM_CPLD_LOGIC_DEV));
         return -DFD_RV_DEV_NOTSUPPORT;
     }
 
     rv = dfd_ko_write_file(logic_dev_path, offset, &data, sizeof(data));
     if (rv < 0) {
         DBG_DEBUG(DBG_ERROR, "write logic dev data failed, loc: %s, offset: 0x%x, \
-        rd_count: %lu, ret: %d,\n", logic_dev_path, offset, sizeof(data), rv);
+        rd_count: %zu, ret: %d,\n", logic_dev_path, offset, sizeof(data), rv);
         return rv;
     }
 
     DBG_DEBUG(DBG_VERBOSE, "write logic dev data success, loc: %s, offset: 0x%x, \
-        rd_count: %lu, rv: %d,\n", logic_dev_path, offset, sizeof(data), rv);
+        rd_count: %zu, rv: %d,\n", logic_dev_path, offset, sizeof(data), rv);
     return DFD_RV_OK;
 }
+
 
 #ifdef CONFIG_X86
 /**
@@ -734,7 +735,6 @@ int32_t dfd_ko_write_file(char *fpath, int32_t addr, uint8_t *val, int32_t write
     ret = vfs_iter_write(filp, &iter, &pos, 0);
     if (ret < 0) {
         DBG_DEBUG(DBG_ERROR,"vfs_iter_write failed, path=%s, addr=%d, size=%d, ret=%d\n", fpath, addr, write_bytes, ret);
-        ret = -DFD_RV_DEV_FAIL;
     }
     vfs_fsync(filp, 1);
     filp_close(filp, NULL);

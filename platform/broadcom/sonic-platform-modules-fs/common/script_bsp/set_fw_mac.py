@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 import click
-from platform_util import dev_file_read, byteTostr, get_value, set_value, setup_logger, get_monotonic_time, exec_os_cmd
-from platform_config import SET_FW_MAC_CONF
+from platform_util import dev_file_read, byteTostr, get_value, set_value, setup_logger, get_monotonic_time, exec_os_cmd, BSP_COMMON_LOG_DIR, common_syslog_warn, common_syslog_notice
+from platform_config import SET_FW_MAC_CONF, SET_MAC_NEED_REBOOT
 from eepromutil.fru import *
 from eepromutil.fantlv import *
 import eepromutil.onietlv as ot
@@ -21,13 +21,22 @@ SYSE2_PATH = "/sys/bus/i2c/devices/1-0056/eeprom"
 STANDARD_MAC_LEN = 12
 
 DEBUG_FILE = "/etc/.setmac_eth_debug_flag"
-LOG_FILE = "/var/log/bsp_tech/setmac_eth_debug.log"
+LOG_FILE = BSP_COMMON_LOG_DIR + "setmac_eth_debug.log"
 logger = setup_logger(LOG_FILE)
 
 
 SETMAC_ONE_BY_ONE = 1
 SETMAC_ONCE = 2 
 
+SETMAC_TITLE = "SETMAC"
+
+def setmac_warn(s):
+    logger.info(s)
+    common_syslog_warn(SETMAC_TITLE, s)
+
+def setmac_notice(s):
+    logger.info(s)
+    common_syslog_notice(SETMAC_TITLE, s)
 
 def debug_init():
     if os.path.exists(DEBUG_FILE):
@@ -198,7 +207,7 @@ def get_and_validate_act_mac(get_act_mac, eth_name, e2_mac, wait_time):
         if get_monotonic_time() - start_time > wait_time and get_mac_log_flag:
             get_mac_log_flag = False
             start_time = get_monotonic_time()
-            logger.debug("Failed to set the system mac(%s) for %s within %s seconds." % (e2_mac, eth_name, wait_time))
+            setmac_warn("Failed to set the system mac(%s) for %s within %s seconds." % (e2_mac, eth_name, wait_time))
         ret, act_mac = get_value(get_act_mac)
         if not ret:
             logger.debug("get %s act mac fail, reason %s" % (eth_name, act_mac))
@@ -223,7 +232,6 @@ def doSetmac():
             return
         all_success_flag = True
         any_mac_needs_set = False
-
         for setmac_item in SET_FW_MAC_CONF:
             eth_name = setmac_item.get("name", "")
             e2_name = setmac_item.get("e2_name", "")
@@ -302,13 +310,14 @@ def doSetmac():
                     break
                 logger.debug("exec set_mac_end_cmd:%s success" % set_mac_end_cmd_item)
             if set_mac_cmd_flag is True:
-                logger.info("Success to set the system mac(%s) for %s" % (e2_mac, eth_name))
+                setmac_notice("Success to set the system mac(%s) for %s" % (e2_mac, eth_name))
 
         if any_mac_needs_set and all_success_flag:
             logger.info("All eth mac set success, do reboot!")
-            exec_os_cmd("sync")
-            time.sleep(3)
-            exec_os_cmd("/sbin/reboot")
+            if SET_MAC_NEED_REBOOT:
+                exec_os_cmd("sync")
+                time.sleep(3)
+                os.system("/sbin/reboot")
         elif any_mac_needs_set and not all_success_flag:
             logger.error("Some ETH MAC addresses failed to set. No reboot.")
         else:

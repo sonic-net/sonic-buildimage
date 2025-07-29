@@ -59,43 +59,50 @@ static ssize_t eeprom_size_show(struct switch_obj *obj, struct switch_attribute 
 
     EEPROM_DBG("get eeprom size, eeprom index: %u\n", obj->index);
     curr_eeprom = &g_eeprom.eeprom[obj->index - 1];
-    return (ssize_t)snprintf(buf, PAGE_SIZE, "%ld\n", curr_eeprom->bin.size);
+    return (ssize_t)snprintf(buf, PAGE_SIZE, "%zu\n", curr_eeprom->bin.size);
 }
 
-static ssize_t eeprom_alias_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t eeprom_attr_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     unsigned int eeprom_index;
+    struct switch_device_attribute *eeprom_attr;
 
     check_p(g_eeprom_drv);
-    check_p(g_eeprom_drv->get_eeprom_alias);
-
+    check_p(g_eeprom_drv->get_eeprom_attr);
     eeprom_index = obj->index;
     EEPROM_DBG("get eeprom alias, eeprom index: %u\n", eeprom_index);
-    return g_eeprom_drv->get_eeprom_alias(eeprom_index, buf, PAGE_SIZE);
+    eeprom_attr = to_switch_device_attr(attr);
+    check_p(eeprom_attr);
+
+    return g_eeprom_drv->get_eeprom_attr(eeprom_index, eeprom_attr->type, buf, PAGE_SIZE);
 }
 
-static ssize_t eeprom_tag_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t eeprom_attr_store(struct switch_obj *obj, struct switch_attribute *attr,
+                   const char* buf, size_t count)
 {
-    unsigned int eeprom_index;
+    unsigned int eeprom_index, value;
+    int ret;
+    struct switch_device_attribute *eeprom_attr;
 
     check_p(g_eeprom_drv);
-    check_p(g_eeprom_drv->get_eeprom_tag);
+    check_p(g_eeprom_drv->set_eeprom_attr);
+
+    ret = kstrtoint(buf, 0, &value);
+    if (ret != 0) {
+        EEPROM_ERR("Invaild value ret: %d, buf: %s.\n", ret, buf);
+        return -EINVAL;
+    }
 
     eeprom_index = obj->index;
-    EEPROM_DBG("get eeprom tag, eeprom index: %u\n", eeprom_index);
-    return g_eeprom_drv->get_eeprom_tag(eeprom_index, buf, PAGE_SIZE);
-}
-
-static ssize_t eeprom_type_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int eeprom_index;
-
-    check_p(g_eeprom_drv);
-    check_p(g_eeprom_drv->get_eeprom_type);
-
-    eeprom_index = obj->index;
-    EEPROM_DBG("get eeprom type, eeprom index: %u\n", eeprom_index);
-    return g_eeprom_drv->get_eeprom_type(eeprom_index, buf, PAGE_SIZE);
+    eeprom_attr = to_switch_device_attr(attr);
+    check_p(eeprom_attr);
+    ret = g_eeprom_drv->set_eeprom_attr(eeprom_index, eeprom_attr->type, value);
+    if (ret < 0) {
+        EEPROM_ERR("set eeprom%u reg failed, value:0x%x, ret: %d.\n", eeprom_index, value, ret);
+        return ret;
+    }
+    EEPROM_DBG("set eeprom%u reg success, value: 0x%x.\n", eeprom_index, value);
+    return count;
 }
 
 static ssize_t eeprom_eeprom_read(struct file *filp, struct kobject *kobj, struct bin_attribute *attr,
@@ -113,12 +120,12 @@ static ssize_t eeprom_eeprom_read(struct file *filp, struct kobject *kobj, struc
     mem_clear(buf, count);
     rd_len = g_eeprom_drv->read_eeprom_data(eeprom_index, buf, offset, count);
     if (rd_len < 0) {
-        EEPROM_ERR("read eeprom%u eeprom data error, offset: 0x%llx, read len: %lu, ret: %ld.\n",
+        EEPROM_ERR("read eeprom%u eeprom data error, offset: 0x%llx, read len: %zu, ret: %zd.\n",
             eeprom_index, offset, count, rd_len);
         return rd_len;
     }
 
-    EEPROM_DBG("read eeprom%u eeprom data success, offset:0x%llx, read len:%lu, really read len:%ld.\n",
+    EEPROM_DBG("read eeprom%u eeprom data success, offset:0x%llx, read len:%zu, really read len:%zd.\n",
         eeprom_index, offset, count, rd_len);
 
     return rd_len;
@@ -138,28 +145,35 @@ static ssize_t eeprom_eeprom_write(struct file *filp, struct kobject *kobj, stru
     eeprom_index = eeprom_obj->index;
     wr_len = g_eeprom_drv->write_eeprom_data(eeprom_index, buf, offset, count);
     if (wr_len < 0) {
-        EEPROM_ERR("write eeprom%u eeprom data error, offset: 0x%llx, read len: %lu, ret: %ld.\n",
+        EEPROM_ERR("write eeprom%u eeprom data error, offset: 0x%llx, read len: %zu, ret: %zd.\n",
             eeprom_index, offset, count, wr_len);
         return wr_len;
     }
 
-    EEPROM_DBG("write eeprom%u eeprom data success, offset:0x%llx, write len:%lu, really write len:%ld.\n",
+    EEPROM_DBG("write eeprom%u eeprom data success, offset:0x%llx, write len:%zu, really write len:%zd.\n",
         eeprom_index, offset, count, wr_len);
 
     return wr_len;
 }
 
 /************************************eeprom* signal attrs*******************************************/
-static struct switch_attribute eeprom_alias_attr = __ATTR(alias, S_IRUGO | S_IWUSR, eeprom_alias_show, NULL);
-static struct switch_attribute eeprom_tag_attr = __ATTR(tag, S_IRUGO | S_IWUSR, eeprom_tag_show, NULL);
 static struct switch_attribute eeprom_size_attr = __ATTR(size, S_IRUGO, eeprom_size_show, NULL);
-static struct switch_attribute eeprom_type_attr = __ATTR(type, S_IRUGO | S_IWUSR, eeprom_type_show, NULL);
+static SWITCH_DEVICE_ATTR(alias, S_IRUGO, eeprom_attr_show, NULL, DFD_EEPROM_ALIAS_E);
+static SWITCH_DEVICE_ATTR(tag, S_IRUGO, eeprom_attr_show, NULL, DFD_EEPROM_TAG_E);
+static SWITCH_DEVICE_ATTR(type, S_IRUGO, eeprom_attr_show, NULL, DFD_EEPROM_TYPE_E);
+static SWITCH_DEVICE_ATTR(write_protection, S_IRUGO | S_IWUSR, eeprom_attr_show, eeprom_attr_store, DFD_EEPROM_WRITE_PROTECTION_E);
+static SWITCH_DEVICE_ATTR(i2c_bus, S_IRUGO, eeprom_attr_show, NULL, DFD_EEPROM_I2C_BSU_E);
+static SWITCH_DEVICE_ATTR(i2c_addr, S_IRUGO, eeprom_attr_show, NULL, DFD_EEPROM_I2C_ADDR_E);
+
 
 static struct attribute *eeprom_signal_attrs[] = {
-    &eeprom_alias_attr.attr,
-    &eeprom_tag_attr.attr,
     &eeprom_size_attr.attr,
-    &eeprom_type_attr.attr,
+    &switch_dev_attr_alias.switch_attr.attr,
+    &switch_dev_attr_tag.switch_attr.attr,
+    &switch_dev_attr_type.switch_attr.attr,
+    &switch_dev_attr_write_protection.switch_attr.attr,
+    &switch_dev_attr_i2c_bus.switch_attr.attr,
+    &switch_dev_attr_i2c_addr.switch_attr.attr,
     NULL,
 };
 
@@ -289,7 +303,7 @@ static int eeprom_sub_create_kobj_and_attrs(struct kobject *parent, int eeprom_n
     }
     return 0;
 error:
-    for (i = eeprom_index; i > 0; i--) {
+    for (i = eeprom_index - 1; i > 0; i--) {
         eeprom_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_eeprom.eeprom);

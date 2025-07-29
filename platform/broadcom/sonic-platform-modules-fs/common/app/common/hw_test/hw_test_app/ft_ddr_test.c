@@ -2062,7 +2062,7 @@ static int ddr_swap_blocks(char *desc)
     test_times++;
     blk_size = (ulong)blk_size_array[1]; /* 24MB */
 
-    strncpy((char *)(&v_tmp), (char *)(v), sizeof(struct vars));
+    memcpy(&v_tmp, v, sizeof(struct vars));
     if (((ulong)v->map[0].end - (ulong)v->map[0].start) > MEMORY_SIZE_1G) {
         FAC_LOG_DBG(GRTD_LOG_DEBUG, "set memory size to 0x%lx.\n", MEMORY_SIZE_1G);
         v->map[0].end = (unsigned int *)((ulong)v->map[0].start + MEMORY_SIZE_1G);

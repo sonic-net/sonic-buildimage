@@ -45,8 +45,9 @@ static int wb_get_psu_temp_number(unsigned int psu_index)
 }
 
 /*
- * wb_get_psu_model_name - Used to get psu model name,
+ * wb_get_psu_attr - Used to get psu attr,
  * @psu_index: start with 1
+ * @type: attr type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -54,56 +55,14 @@ static int wb_get_psu_temp_number(unsigned int psu_index)
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_psu_model_name(unsigned int psu_index, char *buf, size_t count)
+static ssize_t wb_get_psu_attr(unsigned int psu_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_psu_model_name);
+    check_p(g_drv->get_psu_attr);
 
-    ret = g_drv->get_psu_model_name(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_vendor - Used to get psu model name,
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_vendor(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_vendor);
-
-    ret = g_drv->get_psu_vendor(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_date - Used to get psu date,
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_date(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_date);
-
-    ret = g_drv->get_psu_date(psu_index, buf, count);
+    ret = g_drv->get_psu_attr(psu_index, type, buf, count);
     return ret;
 }
 
@@ -150,6 +109,27 @@ static ssize_t wb_get_psu_hw_status(unsigned int psu_index, char *buf, size_t co
 }
 
 /*
+ * wb_get_psu_hw_detail_status - Used to get psu detail status,
+ * @psu_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t wb_get_psu_hw_detail_status(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_psu_hw_detail_status);
+
+    ret = g_drv->get_psu_hw_detail_status(psu_index, buf, count);
+    return ret;
+}
+
+/*
  * wb_get_psu_alarm - Used to get psu alarm status,
  * @psu_index: start with 1
  * @buf: Data receiving buffer
@@ -167,69 +147,6 @@ static ssize_t wb_get_psu_alarm(unsigned int psu_index, char *buf, size_t count)
     check_p(g_drv->get_psu_alarm);
 
     ret = g_drv->get_psu_alarm(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_serial_number - Used to get psu serial number,
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_serial_number(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_serial_number);
-
-    ret = g_drv->get_psu_serial_number(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_part_number - Used to get psu part number,
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_part_number(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_part_number);
-
-    ret = g_drv->get_psu_part_number(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_hardware_version - Used to get psu hardware version,
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_hardware_version(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_hardware_version);
-
-    ret = g_drv->get_psu_hardware_version(psu_index, buf, count);
     return ret;
 }
 
@@ -259,9 +176,10 @@ static ssize_t wb_get_psu_type(unsigned int psu_index, char *buf, size_t count)
 }
 
 /*
- * wb_get_psu_in_curr - Used to get the input current of psu
+ * wb_get_psu_sensor_attr - Used to get the input current of psu
  * filled the value to buf, the value is integer with mA
  * @psu_index: start with 1
+ * @type: attr type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -269,102 +187,14 @@ static ssize_t wb_get_psu_type(unsigned int psu_index, char *buf, size_t count)
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_psu_in_curr(unsigned int psu_index, char *buf, size_t count)
+static ssize_t wb_get_psu_sensor_attr(unsigned int psu_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_psu_in_curr);
+    check_p(g_drv->get_psu_sensor_attr);
 
-    ret = g_drv->get_psu_in_curr(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_in_vol - Used to get the input voltage of psu
- * filled the value to bu, the value is integer with mV
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_in_vol(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_in_vol);
-
-    ret = g_drv->get_psu_in_vol(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_in_power - Used to get the input power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_in_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_in_power);
-
-    ret = g_drv->get_psu_in_power(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_out_curr - Used to get the output current of psu
- * filled the value to buf, the value is integer with mA
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_out_curr(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_out_curr);
-
-    ret = g_drv->get_psu_out_curr(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_out_vol - Used to get the output voltage of psu
- * filled the value to buf, the value is integer with mV
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_out_vol(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_out_vol);
-
-    ret = g_drv->get_psu_out_vol(psu_index, buf, count);
+    ret = g_drv->get_psu_sensor_attr(psu_index, type, buf, count);
     return ret;
 }
 
@@ -376,50 +206,6 @@ static ssize_t wb_get_psu_attr_threshold(unsigned int psu_index, unsigned int ty
     check_p(g_drv->get_psu_attr_threshold);
 
     ret = g_drv->get_psu_attr_threshold(psu_index, type, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_out_power - Used to get the output power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_out_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_out_power);
-
-    ret = g_drv->get_psu_out_power(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_out_max_power - Used to get the output max power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_out_max_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_out_max_power);
-
-    ret = g_drv->get_psu_out_max_power(psu_index, buf, count);
     return ret;
 }
 
@@ -524,50 +310,6 @@ static ssize_t wb_get_psu_out_status(unsigned int psu_index, char *buf, size_t c
 }
 
 /*
- * wb_get_psu_fan_speed_cal - Used to get psu fan speed cal
- * filled the value to buf
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_fan_speed_cal(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_fan_speed_cal);
-
-    ret = g_drv->get_psu_fan_speed_cal(psu_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_fan_speed - Used to get psu fan speed
- * filled the value to buf
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_fan_speed(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_fan_speed);
-
-    ret = g_drv->get_psu_fan_speed(psu_index, buf, count);
-    return ret;
-}
-
-/*
  * wb_get_psu_fan_ratio - Used to get the ratio of psu fan
  * filled the value to buf
  * @psu_index: start with 1
@@ -609,31 +351,6 @@ static int wb_set_psu_fan_ratio(unsigned int psu_index, int ratio)
 }
 
 /*
- * wb_get_psu_fan_direction - Used to get psu air flow direction,
- * filled the value to buf, air flow direction define as below:
- * 0: F2B
- * 1: B2F
- *
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_fan_direction(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_fan_direction);
-
-    ret = g_drv->get_psu_fan_direction(psu_index, buf, count);
-    return ret;
-}
-
-/*
  * wb_get_psu_led_status - Used to get psu led status
  * filled the value to buf, led status value define as below:
  * 0: dark
@@ -666,54 +383,7 @@ static ssize_t wb_get_psu_led_status(unsigned int psu_index, char *buf, size_t c
 }
 
 /*
- * wb_get_psu_temp_alias - Used to identify the location of the temperature sensor of psu,
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_temp_alias(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_temp_alias);
-
-    ret = g_drv->get_psu_temp_alias(psu_index, temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_temp_type - Used to get the model of temperature sensor of psu,
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_temp_type(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_temp_type);
-
-    ret = g_drv->get_psu_temp_type(psu_index, temp_index, buf, count);
-    return ret;
-
-}
-
-/*
- * wb_get_psu_temp_max - Used to get the maximum threshold of temperature sensor of psu,
+ * wb_get_get_psu_temp_attr - Used to get threshold of temperature sensor of psu,
  * filled the value to buf, the value is integer with millidegree Celsius
  * @psu_index: start with 1
  * @temp_index: start with 1
@@ -724,108 +394,15 @@ static ssize_t wb_get_psu_temp_type(unsigned int psu_index, unsigned int temp_in
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_psu_temp_max(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
+static ssize_t wb_get_psu_temp_attr(unsigned int psu_index, unsigned int temp_index,
+                    unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_psu_temp_max);
+    check_p(g_drv->get_psu_temp_attr);
 
-    ret = g_drv->get_psu_temp_max(psu_index, temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_set_psu_temp_max - Used to set the maximum threshold of temperature sensor of psu,
- * get value from buf and set it to maximum threshold of psu temperature sensor
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: the buf store the data to be set, eg '80.000'
- * @count: length of buf
- *
- * This function returns 0 on success,
- * otherwise it returns a negative value on failed.
- */
-static int wb_set_psu_temp_max(unsigned int psu_index, unsigned int temp_index,
-               const char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->set_psu_temp_max);
-
-    ret = g_drv->set_psu_temp_max(psu_index, temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_temp_min - Used to get the minimum threshold of temperature sensor of psu,
- * filled the value to buf, the value is integer with millidegree Celsius
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_temp_min(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_temp_min);
-
-    ret = g_drv->get_psu_temp_min(psu_index, temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_set_psu_temp_min - Used to set the minimum threshold of temperature sensor of psu,
- * get value from buf and set it to minimum threshold of psu temperature sensor
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: the buf store the data to be set, eg '50.000'
- * @count: length of buf
- *
- * This function returns 0 on success,
- * otherwise it returns a negative value on failed.
- */
-static int wb_set_psu_temp_min(unsigned int psu_index, unsigned int temp_index,
-               const char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->set_psu_temp_min);
-
-    ret = g_drv->set_psu_temp_min(psu_index, temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_psu_temp_value - Used to get the input value of temperature sensor of psu
- * filled the value to buf, the value is integer with millidegree Celsius
- * @psu_index: start with 1
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_psu_temp_value(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_psu_temp_value);
-
-    ret = g_drv->get_psu_temp_value(psu_index, temp_index, buf, count);
+    ret = g_drv->get_psu_temp_attr(psu_index, temp_index, type, buf, count);
     return ret;
 }
 
@@ -929,6 +506,67 @@ static int wb_clear_psu_blackbox(unsigned int psu_index, uint8_t value)
     return ret;
 }
 
+/*
+ * wb_get_psu_support_upgrade - Used to get psu support upgrade,
+ * @psu_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t wb_get_psu_support_upgrade(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_psu_support_upgrade);
+
+    ret = g_drv->get_psu_support_upgrade(psu_index, buf, count);
+    return ret;
+}
+
+/*
+ * wb_get_psu_upgrade_active_type - Used to get psu upgrade active type,
+ * @psu_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t wb_get_psu_upgrade_active_type(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_psu_upgrade_active_type);
+
+    ret = g_drv->get_psu_upgrade_active_type(psu_index, buf, count);
+    return ret;
+}
+
+/*
+ * wb_set_psu_reset - Used to reset psu
+ * @psu_index: start with 1
+ * @value: 1
+ *
+ * This function returns 0 on success,
+ * otherwise it returns a negative value on failed.
+ */
+static int wb_set_psu_reset(unsigned int psu_index, uint8_t value)
+{
+    ssize_t ret;
+
+    check_p(g_drv);
+    check_p(g_drv->set_psu_reset);
+
+    ret = g_drv->set_psu_reset(psu_index, value);
+    return ret;
+}
+
 /****************************************end of psu*******************************************/
 
 static struct s3ip_sysfs_psu_drivers_s drivers = {
@@ -938,46 +576,30 @@ static struct s3ip_sysfs_psu_drivers_s drivers = {
      */
     .get_psu_number = wb_get_psu_number,
     .get_psu_temp_number = wb_get_psu_temp_number,
-    .get_psu_model_name = wb_get_psu_model_name,
-    .get_psu_vendor = wb_get_psu_vendor,
-    .get_psu_date = wb_get_psu_date,
+    .get_psu_attr = wb_get_psu_attr,
     .get_psu_status = wb_get_psu_status,
     .get_psu_hw_status = wb_get_psu_hw_status,
+    .get_psu_hw_detail_status = wb_get_psu_hw_detail_status,
     .get_psu_alarm = wb_get_psu_alarm,
-    .get_psu_serial_number = wb_get_psu_serial_number,
-    .get_psu_part_number = wb_get_psu_part_number,
-    .get_psu_hardware_version = wb_get_psu_hardware_version,
     .get_psu_type = wb_get_psu_type,
-    .get_psu_in_curr = wb_get_psu_in_curr,
-    .get_psu_in_vol = wb_get_psu_in_vol,
-    .get_psu_in_power = wb_get_psu_in_power,
-    .get_psu_out_curr = wb_get_psu_out_curr,
-    .get_psu_out_vol = wb_get_psu_out_vol,
-    .get_psu_out_power = wb_get_psu_out_power,
-    .get_psu_out_max_power = wb_get_psu_out_max_power,
+    .get_psu_sensor_attr = wb_get_psu_sensor_attr,
     .get_psu_present_status = wb_get_psu_present_status,
     .get_psu_status_pmbus = wb_get_psu_status_pmbus,
     .get_psu_in_status = wb_get_psu_in_status,
     .get_psu_out_status = wb_get_psu_out_status,
-    .get_psu_fan_speed = wb_get_psu_fan_speed,
     .get_psu_fan_ratio = wb_get_psu_fan_ratio,
     .set_psu_fan_ratio = wb_set_psu_fan_ratio,
-    .get_psu_fan_direction = wb_get_psu_fan_direction,
     .get_psu_led_status = wb_get_psu_led_status,
-    .get_psu_temp_alias = wb_get_psu_temp_alias,
-    .get_psu_temp_type = wb_get_psu_temp_type,
-    .get_psu_temp_max = wb_get_psu_temp_max,
-    .set_psu_temp_max = wb_set_psu_temp_max,
-    .get_psu_temp_min = wb_get_psu_temp_min,
-    .set_psu_temp_min = wb_set_psu_temp_min,
-    .get_psu_temp_value = wb_get_psu_temp_value,
-    .get_psu_fan_speed_cal = wb_get_psu_fan_speed_cal,
+    .get_psu_temp_attr = wb_get_psu_temp_attr,
     .get_psu_attr_threshold = wb_get_psu_attr_threshold,
     .get_psu_eeprom_size = wb_get_psu_eeprom_size,
     .read_psu_eeprom_data = wb_read_psu_eeprom_data,
     .get_psu_blackbox_path = wb_get_psu_blackbox_path,
     .get_psu_pmbus_info = wb_get_psu_pmbus_info,
     .clear_psu_blackbox = wb_clear_psu_blackbox,
+    .get_psu_support_upgrade = wb_get_psu_support_upgrade,
+    .get_psu_upgrade_active_type = wb_get_psu_upgrade_active_type,
+    .set_psu_reset = wb_set_psu_reset,
 };
 
 static int __init psu_dev_drv_init(void)

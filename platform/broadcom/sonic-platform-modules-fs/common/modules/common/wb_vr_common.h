@@ -9,6 +9,7 @@ typedef struct wb_vr_common_s {
     uint32_t i2c_bus;
     uint32_t i2c_addr;
     struct i2c_client *client;
+    struct i2c_adapter *adap;
 } wb_vr_common_t;
 
 typedef struct wb_vr_common_device_s {

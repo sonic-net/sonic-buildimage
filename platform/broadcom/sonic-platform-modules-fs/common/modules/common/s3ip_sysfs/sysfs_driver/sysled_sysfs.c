@@ -14,7 +14,7 @@
 #include "sysled_sysfs.h"
 
 static int g_sysled_loglevel = 0;
-
+static int g_bmc_sys_led_count[BMC_SYS_LED_STATUS_MAX];
 #define SYSLED_INFO(fmt, args...) do {                                        \
     if (g_sysled_loglevel & INFO) { \
         printk(KERN_INFO "[SYSLED_SYSFS][func:%s line:%d]\n"fmt, __func__, __LINE__, ## args); \
@@ -196,12 +196,187 @@ static ssize_t id_led_status_store(struct switch_obj *obj, struct switch_attribu
     return count;
 }
 
+static ssize_t bmc_host_sysled_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    int ret;
+    check_p(g_sysled_drv);
+    check_p(g_sysled_drv->get_bmc_host_sysled);
+
+    ret = g_sysled_drv->get_bmc_host_sysled(buf, PAGE_SIZE);
+    if (ret < 0) {
+        SYSLED_ERR("Failed to get bmc_host_sysled status. Error code: %d\n", ret);
+        return ret;
+    }
+
+    return ret;
+}
+
+static int get_led_info_by_state(s3ip_led_status_t status, sys_led_info_t *info)
+{
+    switch (status) {
+    case S3IP_LED_STATUS_DARK:
+        info->sys_led_value = S3IP_LED_STATUS_DARK;
+        info->sys_led_priority= SYS_LED_PRIORITY_DARK;
+        break;
+    case S3IP_LED_STATUS_GREEN:
+        info->sys_led_value = S3IP_LED_STATUS_GREEN;
+        info->sys_led_priority= SYS_LED_PRIORITY_GREEN;
+        break;
+    case S3IP_LED_STATUS_RED:
+        info->sys_led_value = S3IP_LED_STATUS_RED;
+        info->sys_led_priority= SYS_LED_PRIORITY_RED;
+        break;
+    case S3IP_LED_STATUS_YELLOW:
+        info->sys_led_value = S3IP_LED_STATUS_YELLOW;
+        info->sys_led_priority= SYS_LED_PRIORITY_YELLOW;
+        break;
+    case S3IP_LED_STATUS_GREEN_FLASH:
+        info->sys_led_value = S3IP_LED_STATUS_GREEN_FLASH;
+        info->sys_led_priority= SYS_LED_PRIORITY_GREEN_4HZ_FLASH;
+        break;
+    case S3IP_LED_STATUS_YELLOW_FLASH:
+        info->sys_led_value = S3IP_LED_STATUS_YELLOW_FLASH;
+        info->sys_led_priority= SYS_LED_PRIORITY_GREEN;
+        break;
+    case S3IP_LED_STATUS_RED_FLASH:
+        info->sys_led_value = S3IP_LED_STATUS_RED_FLASH;
+        info->sys_led_priority= SYS_LED_PRIORITY_GREEN;
+        break;
+    default:
+        return -1;
+    }
+
+    return 0;
+}
+
+static int monitor_host_sys_led_check(s3ip_led_status_t led_status, int get_host_sys_led_value)
+{
+    int rv;
+    sys_led_info_t bmc_sys_led_info;
+    sys_led_info_t host_sys_led_info;
+
+    check_p(g_sysled_drv);
+    check_p(g_sysled_drv->set_bmc_host_sysled_attr);
+    check_p(g_sysled_drv->set_sys_led_status);
+
+    rv = get_led_info_by_state(led_status, &bmc_sys_led_info);
+    if (rv < 0) {
+        SYSLED_ERR("get bmc sys led[state=%d] info fail, rv=%d\n", led_status, rv);
+        return -1;
+    }
+
+    SYSLED_DBG("led_status = 0x%x.\n", led_status);
+
+    rv = get_led_info_by_state(get_host_sys_led_value, &host_sys_led_info);
+    if (rv < 0) {
+        SYSLED_ERR("get host sys led[value=%d] info fail, rv=%d\n", get_host_sys_led_value, rv);
+        return -1;
+    }
+
+    SYSLED_DBG("get_host_sys_led_value = 0x%x.\n", get_host_sys_led_value);
+
+    if ((bmc_sys_led_info.sys_led_priority <= SYS_LED_PRIORITY_MIN)
+        || (bmc_sys_led_info.sys_led_priority >= SYS_LED_PRIORITY_MAX)
+        || (host_sys_led_info.sys_led_priority <= SYS_LED_PRIORITY_MIN)
+        || (host_sys_led_info.sys_led_priority >= SYS_LED_PRIORITY_MAX)) {
+        SYSLED_ERR("sys_led_priority invalid\n");
+        return -1;
+    }
+
+    /* if sys led priority lower than bmc sys led, than write value to sys led */
+    if (host_sys_led_info.sys_led_priority > bmc_sys_led_info.sys_led_priority) {
+        rv = g_sysled_drv->set_sys_led_status(bmc_sys_led_info.sys_led_value);
+        if (rv < 0) {
+            /* In dfd, when the function is not supported, ret = -999 */
+            SYSLED_ERR("set host led reg value failed. type: %d, value: %d, rv:%d\n", WB_SYS_LED_FRONT, bmc_sys_led_info.sys_led_value, rv);
+            return rv;
+        }
+        SYSLED_DBG("host sys_led_priority success, set host sys led 0x%x\n", bmc_sys_led_info.sys_led_value);
+    }
+
+    return 0;
+}
+
+static ssize_t bmc_host_sysled_attr_store(struct switch_obj *obj, struct switch_attribute *attr,
+                    const char *buf, size_t count)
+{
+    int ret, bmc_set_host_sys_led, retry_count;
+    int get_host_sys_led_value;
+    static int pre_bmc_sys_led = S3IP_LED_STATUS_GREEN;
+    char host_buf[WB_MAX_S3IP_NODE_STR_LEN];
+    check_p(g_sysled_drv);
+    check_p(g_sysled_drv->set_bmc_host_sysled_attr);
+    check_p(g_sysled_drv->get_sys_led_status);
+
+    ret = kstrtoint(buf, 0, &bmc_set_host_sys_led);
+    if (ret != 0) {
+        SYSLED_ERR("input parameter: %s error. ret:%d\n", buf, ret);
+        return -EINVAL;
+    }
+
+    if ((bmc_set_host_sys_led != S3IP_LED_STATUS_GREEN) && (bmc_set_host_sys_led != S3IP_LED_STATUS_RED)) {
+        SYSLED_ERR("input parameter: %d error.\n", bmc_set_host_sys_led);
+        return -EINVAL;
+    }
+
+    /* Check array index range to prevent out-of-bounds access */
+    if (bmc_set_host_sys_led < 0 || bmc_set_host_sys_led >= ARRAY_SIZE(g_bmc_sys_led_count)) {
+        SYSLED_ERR("Invalid bmc_set_host_sys_led: %d\n", bmc_set_host_sys_led);
+        return -EINVAL;
+    }
+
+    ret = g_sysled_drv->set_bmc_host_sysled_attr(bmc_set_host_sys_led);
+    if (ret < 0) {
+        /* In dfd, when the function is not supported, ret = -999 */
+        SYSLED_ERR("set bmc host led reg value failed. type: %d, value: %d, ret:%d\n", BMC_HOST_SYS_LED, bmc_set_host_sys_led, ret);
+        return ret;
+    }
+
+    SYSLED_DBG("type: 0x%x. value=%d\n", BMC_HOST_SYS_LED, bmc_set_host_sys_led);
+    memset(host_buf, 0, WB_MAX_S3IP_NODE_STR_LEN);
+    /* check sys led priority */
+    if (bmc_set_host_sys_led == pre_bmc_sys_led) {
+        retry_count = g_bmc_sys_led_count[bmc_set_host_sys_led] + 1;
+        memset(g_bmc_sys_led_count, 0, sizeof(g_bmc_sys_led_count));
+        g_bmc_sys_led_count[bmc_set_host_sys_led] = retry_count;
+
+        /* shake check */
+        if (g_bmc_sys_led_count[bmc_set_host_sys_led] >= HOST_SYS_LED_COUNT_CHECK) {
+            ret = g_sysled_drv->get_sys_led_status(host_buf, WB_MAX_S3IP_NODE_STR_LEN);
+            if (ret < 0) {
+                /* In dfd, when the function is not supported, ret = -999 */
+                SYSLED_ERR("get host led reg value failed. type: %d, ret:%d\n", WB_SYS_LED_FRONT, ret);
+                return ret;
+            }
+            ret = kstrtoint(host_buf, 0, &get_host_sys_led_value);
+            if (ret != 0) {
+               SYSLED_ERR("input parameter: %s error. ret:%d\n", buf, ret);
+               return -EINVAL;
+            }
+            ret = monitor_host_sys_led_check(bmc_set_host_sys_led, get_host_sys_led_value);
+            if (ret < 0) {
+                SYSLED_ERR("check host sys led fail, rv=%d\n", ret);
+                return ret;
+            }
+            g_bmc_sys_led_count[bmc_set_host_sys_led] = 0;
+        }
+    } else {
+        memset(g_bmc_sys_led_count, 0, sizeof(g_bmc_sys_led_count));
+    }
+
+    pre_bmc_sys_led = bmc_set_host_sys_led;
+
+    SYSLED_DBG("set system reg value success. type: %d, value: %d.\n", BMC_HOST_SYS_LED, bmc_set_host_sys_led);
+    return count;
+}
+
 /************************************syseeprom dir and attrs*******************************************/
 static struct switch_attribute sys_led_attr = __ATTR(sys_led_status, S_IRUGO | S_IWUSR, sys_led_status_show, sys_led_status_store);
 static struct switch_attribute bmc_led_attr = __ATTR(bmc_led_status, S_IRUGO | S_IWUSR, bmc_led_status_show, bmc_led_status_store);
 static struct switch_attribute fan_led_attr = __ATTR(fan_led_status, S_IRUGO | S_IWUSR, sys_fan_led_status_show, sys_fan_led_status_store);
 static struct switch_attribute psu_led_attr = __ATTR(psu_led_status, S_IRUGO | S_IWUSR, sys_psu_led_status_show, sys_psu_led_status_store);
 static struct switch_attribute id_led_attr = __ATTR(id_led_status, S_IRUGO | S_IWUSR, id_led_status_show, id_led_status_store);
+static struct switch_attribute bmc_host_sysle_attr = __ATTR(bmc_host_sysled, S_IRUGO | S_IWUSR, bmc_host_sysled_show, bmc_host_sysled_attr_store);
 
 static struct attribute *sysled_dir_attrs[] = {
     &sys_led_attr.attr,
@@ -209,6 +384,7 @@ static struct attribute *sysled_dir_attrs[] = {
     &fan_led_attr.attr,
     &psu_led_attr.attr,
     &id_led_attr.attr,
+    &bmc_host_sysle_attr.attr,
     NULL,
 };
 

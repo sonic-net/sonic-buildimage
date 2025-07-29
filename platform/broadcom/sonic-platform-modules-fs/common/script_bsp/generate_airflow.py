@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 '''
 generate board air flow according to fan and psu air flow
@@ -18,51 +18,31 @@ write resulet to AIRFLOW_RESULT_FILE, file format:
 import os
 import syslog
 import json
+import logging
 from platform_config import AIR_FLOW_CONF, AIRFLOW_RESULT_FILE
-from platform_util import dev_file_read, byteTostr, exec_os_cmd
+from platform_util import dev_file_read, byteTostr, setup_logger, BSP_COMMON_LOG_DIR
 from eepromutil.fru import ipmifru
 from eepromutil.cust_fru import CustFru
 from eepromutil.fantlv import fan_tlv
 
-
-AIRFLOW_DEBUG_FILE = "/etc/.airflow_debug_flag"
-
-AIRFLOWERROR = 1
-AIRFLOWDEBUG = 2
-
-debuglevel = 0
-
+DEBUG_FILE = "/etc/.airflow_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "generate_airflow_debug.log"
+logger = setup_logger(LOG_FILE)
 
 def airflow_info(s):
-    syslog.openlog("AIRFLOW", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
-
-def airflow_error(s):
-    syslog.openlog("AIRFLOW", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.info(s)
 
 def airflow_debug(s):
-    if AIRFLOWDEBUG & debuglevel:
-        syslog.openlog("AIRFLOW", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
-
-def airflow_debug_error(s):
-    if AIRFLOWERROR & debuglevel:
-        syslog.openlog("AIRFLOW", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+def airflow_error(s):
+    logger.error(s)
 
 def debug_init():
-    global debuglevel
-    try:
-        with open(AIRFLOW_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 
 def get_model_fru(device, eeprom):
@@ -144,7 +124,7 @@ def get_device_modele(device):
 
 
 def get_board_air_flow(fan_intake_num, fan_exhaust_num, psu_intake_num, psu_exhaust_num):
-    airflow_debug("fan_intake_num: %d, fan_exhaust_num: %d, psu_intake_num: %d, psu_exhaust_num: %d" %
+    airflow_info("fan_intake_num: %d, fan_exhaust_num: %d, psu_intake_num: %d, psu_exhaust_num: %d" %
                   (fan_intake_num, fan_exhaust_num, psu_intake_num, psu_exhaust_num))
 
     if fan_intake_num == 0 and fan_exhaust_num == 0 and psu_intake_num == 0 and psu_exhaust_num == 0:
@@ -241,14 +221,14 @@ def generate_airflow():
     out_file_dir = os.path.dirname(AIRFLOW_RESULT_FILE)
     if len(out_file_dir) != 0:
         cmd = "mkdir -p %s" % out_file_dir
-        exec_os_cmd(cmd)
-        exec_os_cmd("sync")
+        os.system(cmd)
+        os.system("sync")
     with open(AIRFLOW_RESULT_FILE, "w") as fd:
         fd.write(ret_json)
-    exec_os_cmd("sync")
+    os.system("sync")
 
 
 if __name__ == '__main__':
     debug_init()
-    airflow_debug("enter main")
+    airflow_info("enter main")
     generate_airflow()

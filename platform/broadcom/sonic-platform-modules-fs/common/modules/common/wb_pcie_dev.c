@@ -19,10 +19,6 @@
 #include <wb_bsp_kernel_debug.h>
 
 #define PROXY_NAME "wb-pci-dev"
-
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 #define SEARCH_DEV_DEFAULT       (0)
 #define SEARCH_DEV_BY_BRIDGE     (1)
 
@@ -358,7 +354,7 @@ static int pci_dev_write_tmp(wb_pci_dev_t *wb_pci_dev, uint32_t offset, uint8_t 
 }
 
 static ssize_t pci_dev_write(struct file *file, const char __user *buf, size_t count,
-                    loff_t *offset, int flag)
+                   loff_t *offset, int flag)
 {
     wb_pci_dev_t *wb_pci_dev;
     u8 buf_tmp[MAX_RW_LEN];
@@ -406,7 +402,7 @@ static ssize_t pci_dev_write(struct file *file, const char __user *buf, size_t c
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Devfs]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_pci_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_pci_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(wb_pci_dev->log_node), (uint32_t)*offset, buf_tmp, count);
     }
@@ -582,7 +578,7 @@ int pcie_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Symbol]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_pci_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_pci_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(wb_pci_dev->log_node), offset, buf, count);
     }
@@ -801,7 +797,7 @@ static ssize_t status_show(struct kobject *kobj, struct kobj_attribute *attr, ch
         /* Within the time range of status_cache_ms, directly return the last result */
         DEBUG_VERBOSE("time before last time %d ms return last status: %d\n",
             status_cache_ms, pci_dev->dev_status);
-        return sprintf(buf, "%u\n", pci_dev->dev_status);
+        return sprintf(buf, "%d\n", pci_dev->dev_status);
     }
 
     pci_dev->last_jiffies = jiffies;
@@ -844,7 +840,7 @@ static ssize_t file_cache_rd_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", pci_dev->file_cache_rd);
+    return snprintf(buf, PAGE_SIZE, "%u\n", pci_dev->file_cache_rd);
 }
 
 static ssize_t file_cache_rd_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)

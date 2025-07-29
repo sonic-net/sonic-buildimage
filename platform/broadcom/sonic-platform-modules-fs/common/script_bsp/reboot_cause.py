@@ -4,25 +4,26 @@ import sys
 import os
 import time
 import syslog
-from platform_util import get_value, set_value, exec_os_cmd
+import logging
+from platform_util import get_value, set_value, exec_os_cmd, setup_logger, BSP_COMMON_LOG_DIR
 from platform_config import REBOOT_CAUSE_PARA
 
-REBOOT_CAUSE_DEBUG_FILE = "/etc/.reboot_cause_debug"
+DEBUG_FILE = "/etc/.reboot_cause_debug"
 REBOOT_CAUSE_STARTED_FLAG = "/tmp/.reboot_cause_started_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "reboot_cause_debug.log"
+logger = setup_logger(LOG_FILE)
 
-debuglevel = 0
-
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def record_syslog_debug(s):
-    if debuglevel:
-        syslog.openlog("REBOOT_CAUSE_DEBUG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def record_syslog(s):
-    syslog.openlog("REBOOT_CAUSE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 class RebootCause():
     def __init__(self):
@@ -30,21 +31,17 @@ class RebootCause():
         self.reboot_cause_list = self.reboot_cause_para.get('reboot_cause_list', None)
         self.other_reboot_cause_record = self.reboot_cause_para.get('other_reboot_cause_record', None)
 
-    def debug_init(self):
-        global debuglevel
-        if os.path.exists(REBOOT_CAUSE_DEBUG_FILE):
-            debuglevel = 1
-        else:
-            debuglevel = 0
-
     def monitor_point_check(self, item):
         try:
             gettype = item.get('gettype', None)
+            mask = item.get('mask', None)
             okval = item.get('okval', None)
             compare_mode = item.get('compare_mode', "equal")
             ret, value = get_value(item)
             if ret is True:
                 record_syslog('%%REBOOT_CAUSE-1-INFO: get reboot cause, item: %s value: %s.' % (item, value))
+                if mask:
+                    value &= mask
                 if compare_mode == "equal":
                     if isinstance(okval, list):
                         if value in okval:
@@ -116,6 +113,13 @@ class RebootCause():
                         record_syslog('%%REBOOT_CAUSE-3-EXCEPTION: get date failed.')
                         continue
 
+                    if  isinstance(file_log, dict):
+                        ret, file_log = get_value(file_log)
+                        if ret is False:
+                            RET["RETURN_KEY1"] = -1
+                            record_syslog('%%REBOOT_CAUSE-3-EXCEPTION: get reboot reason fail. reason: %s' % file_log)
+                            continue
+
                     reocrd_cmd = "echo %s %s %s %s" % (file_log, date, operate_cmd, file_path)
                     status, ret_t = exec_os_cmd(reocrd_cmd)
                     if status != 0:
@@ -169,10 +173,11 @@ class RebootCause():
 
     def run(self):
         try:
-            self.debug_init()
+            debug_init()
             if os.path.exists(REBOOT_CAUSE_STARTED_FLAG):
                 record_syslog_debug(
                     '%%REBOOT_CAUSE-6-DEBUG: Reboot cause has been started and will not be started again')
+                time.sleep(5)
                 sys.exit(0)
             self.reboot_cause_check()
             exec_os_cmd("touch %s" % REBOOT_CAUSE_STARTED_FLAG)
@@ -184,5 +189,6 @@ class RebootCause():
 
 
 if __name__ == '__main__':
+    debug_init()
     reboot_cause = RebootCause()
     reboot_cause.run()

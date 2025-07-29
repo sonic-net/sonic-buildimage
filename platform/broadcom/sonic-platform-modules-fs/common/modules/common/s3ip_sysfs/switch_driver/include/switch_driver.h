@@ -3,6 +3,13 @@
 
 #define SWITCH_DEV_NO_SUPPORT         "NA"
 #define SWITCH_DEV_ERROR              "ACCESS FAILED"
+#define SWITCH_DEV_NO_CFG             "NO_CFG"
+
+/* Used in the bitmap buff */
+#define SWITCH_BIT_DEV_NO_SUPPORT         "N"
+#define SWITCH_BIT_DEV_ERROR              "E"
+#define SWITCH_BIT_NOT_CFG                "-"
+
 #define WB_SYSFS_RV_UNSUPPORT         (999)
 
 typedef enum dbg_level_e {
@@ -33,38 +40,16 @@ typedef enum air_flow_direction_e {
     B2F = 1, /* air enters from the back of the cabinet, and exhausts from the front */
 } air_flow_direction_t;
 
-typedef enum psu_input_type_e {
-    POWER_DC = 0,
-    POWER_AC = 1,
-} psu_input_type_t;
-
-typedef enum psu_status_e {
-    PSU_STATUS_ABSENT  = 0, /* psu absent */
-    PSU_STATUS_PRESENT = 1, /* psu present and status ok */
-    PSU_STATUS_WARN    = 2, /* psu present and status warn (pmbus 0x79 bit11 value 0)*/
-    PSU_STATUS_FAIL    = 3, /* psu present and status fail (pmbus 0x79 bit11 value 1)*/
-} psu_status_t;
-
-typedef enum psu_status_word_e {
-    PSU_VOUT_FAULT = 0x8000,
-    PSU_IOUT_FAULT = 0x4000,
-    PSU_INPUT_FAULT = 0x2000,
-    PSU_MFR_FAULT = 0x1000,
-    PSU_PG_FAULT = 0x0800,
-    PSU_FAN_FAULT = 0x0400,
-    PSU_OFF_FAULT = 0x0040,
-    PSU_TEMP_FAULT = 0x0004,
-} psu_status_word_t;
-
-typedef enum psu_io_status_e {
-    PSU_IO_STATUS_ABNORMAL = 0,
-    PSU_IO_STATUS_NORMAL  = 1,
-} psu_io_status_t;
-
 typedef enum dev_status_e {
     DEV_ABSENT  = 0, /* dev absent */
     DEV_PRESENT = 1, /* dev present */
 } dev_status_t;
+
+typedef enum value_equal_to_extra1_e {
+    DFD_CONFIG_NOT_EQUAL_TO_EXTRA1   = 0,
+    DFD_CONFIG_EQUAL_TO_EXTRA1       = 1,
+    DFD_CONFIG_IGNORE_TO_EXTRA1      = 2,
+} value_equal_to_extra1_t;
 
 extern int g_switch_dbg_level;
 

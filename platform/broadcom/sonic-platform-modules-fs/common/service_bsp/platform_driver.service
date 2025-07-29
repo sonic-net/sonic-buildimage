@@ -1,7 +1,8 @@
 [Unit]
 Description= Global Initialize platform drivers.
-After=local-fs.target
+After=local-fs.target platform_base.service
 Before=pmon.service platform_process.service
+Requires=platform_base.service
 #DefaultDependencies=no
 
 [Service]

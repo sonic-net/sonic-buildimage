@@ -20,10 +20,13 @@
 #include <linux/platform_data/i2c-gpio.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <wb_bsp_i2c_debug.h>
 
 extern int wb_i2c_bit_add_numbered_bus(struct i2c_adapter *adap);
 
 struct i2c_gpio_private_data {
+	/* struct i2c_adapter_debug must be the first member */
+	struct i2c_adapter_debug i2c_ada_dbg;
 	struct gpio_desc *sda;
 	struct gpio_desc *scl;
 	struct i2c_adapter adap;
@@ -477,6 +480,9 @@ static int i2c_gpio_probe(struct platform_device *pdev)
 
 	i2c_gpio_fault_injector_init(pdev);
 
+	i2c_set_adapdata(adap, priv);
+	I2C_ADAPTER_DEBUG_INIT(adap, struct i2c_gpio_private_data, i2c_ada_dbg);
+
 	return 0;
 }
 
@@ -489,6 +495,8 @@ static int i2c_gpio_remove(struct platform_device *pdev)
 
 	priv = platform_get_drvdata(pdev);
 	adap = &priv->adap;
+
+	i2c_adapter_debug_exit(adap);
 
 	i2c_del_adapter(adap);
 

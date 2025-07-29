@@ -48,7 +48,7 @@ WDIOS_DISABLECARD = 0x0001
 WDIOS_ENABLECARD = 0x0002
 
 WDT_COMMON_ERROR = -1
-WDT_IDENTITY = "CPLD Watchdog"
+WDT_IDENTITY = ["CPLD Watchdog", "iTCO_wdt"]
 WDT_SYSFS_PATH = "/sys/class/watchdog/"
 
 DEFAULT_TIMEOUT = 180
@@ -60,6 +60,10 @@ class Watchdog(WatchdogBase):
     """
 
     def __init__(self):
+        self.watchdog = None
+        self.wdt_main_dev_name = None
+
+    def _init_wdt(self):
         self.watchdog, self.wdt_main_dev_name = self._get_wdt()
         self.status_path = "/sys/class/watchdog/%s/status" % self.wdt_main_dev_name
         self.state_path = "/sys/class/watchdog/%s/state" % self.wdt_main_dev_name
@@ -75,7 +79,7 @@ class Watchdog(WatchdogBase):
         """
         identity = self._read_file(
             "{}/{}/identity".format(WDT_SYSFS_PATH, dev))
-        return identity == WDT_IDENTITY
+        return identity in WDT_IDENTITY
 
     def _get_wdt(self):
         """
@@ -84,7 +88,7 @@ class Watchdog(WatchdogBase):
         wdt_main_dev_list = [dev for dev in os.listdir(
             "/dev/") if dev.startswith("watchdog") and self._is_wd_main(dev)]
         if not wdt_main_dev_list:
-            return None
+            return None, None
         wdt_main_dev_name = wdt_main_dev_list[0]
         watchdog_device_path = "/dev/{}".format(wdt_main_dev_name)
         watchdog = os.open(watchdog_device_path, os.O_RDWR)
@@ -164,6 +168,8 @@ class Watchdog(WatchdogBase):
             An integer specifying the *actual* number of seconds the watchdog
             was armed with. On failure returns -1.
         """
+        if self.watchdog is None:
+            self._init_wdt()
         ret = WDT_COMMON_ERROR
         if seconds < 0:
             return ret
@@ -190,6 +196,8 @@ class Watchdog(WatchdogBase):
         Returns:
             A boolean, True if watchdog is disarmed successfully, False if not
         """
+        if self.watchdog is None:
+            self._init_wdt()
         disarmed = False
         if self.is_armed():
             try:
@@ -208,6 +216,8 @@ class Watchdog(WatchdogBase):
         Returns:
             A boolean, True if watchdog is armed, False if not
         """
+        if self.watchdog is None:
+            self._init_wdt()
         return self.armed
 
     def get_remaining_time(self):
@@ -220,7 +230,8 @@ class Watchdog(WatchdogBase):
             watchdog timer. If the watchdog is not armed, returns -1.
         """
         timeleft = WDT_COMMON_ERROR
-
+        if self.watchdog is None:
+            self._init_wdt()
         if self.armed:
             try:
                 timeleft = self._gettimeleft()
@@ -233,4 +244,5 @@ class Watchdog(WatchdogBase):
         """
         Close watchdog
         """
-        os.close(self.watchdog)
+        if self.watchdog is not None:
+            os.close(self.watchdog)

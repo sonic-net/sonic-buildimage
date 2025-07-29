@@ -5,6 +5,7 @@
 #include <linux/clk.h>
 #include <asm/byteorder.h>
 
+
 #define SPI_CPLD_BUSY_DELAY (50)
 #define SPI_CPLD_BUSY_TIMEOUT (300000)
 #define SPI_CPLD_BUSY_WATCHDOG_TIMES (50000)

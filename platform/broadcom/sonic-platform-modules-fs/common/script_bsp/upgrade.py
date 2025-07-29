@@ -7,13 +7,14 @@ import syslog
 import signal
 import click
 import traceback
-from platform_util import get_value, set_value, exec_os_cmd, exec_os_cmd_log, write_sysfs
+import logging
+from platform_util import get_value, set_value, exec_os_cmd, exec_os_cmd_log, write_sysfs, check_value, setup_logger, BSP_COMMON_LOG_DIR
 from platform_config import UPGRADE_SUMMARY, WARM_UPGRADE_STARTED_FLAG, FW_UPGRADE_STARTED_FLAG
 from warm_upgrade import WarmBasePlatform
-from wbutil.baseutil import get_machine_info
 from wbutil.baseutil import get_board_id
 from time import monotonic as _time
 import shutil
+from public.platform_common_config import UPGRADE_BY_FIRMWARE_UPGRADE_COMMON, UPGRADE_BY_FIRMWARE_UPGRADE_UPDATE_HEADER, UPGRADE_BY_AFU, UPGRADE_BY_CUSTOM, SUPPORT_UPGRADE_LIST
 
 
 ############################# Error code defined #############################
@@ -42,19 +43,19 @@ ERR_FW_INVALID_PARAM = -712    # Invalid parameter
 ERR_FW_UNZIP_FAILED = -713    # Unzip firmware failed
 ERR_FW_MULTI_TYPE_NAME = -714    # Multiple matches found for type
 ERR_FW_NO_TYPE_FOUND = -715    # No type found
+ERR_FW_MULTI_CHAIN_CHECK = -716    # Multiple chain check error
 
 FIRMWARE_SUCCESS = 0
 CHECK_OK = 0
+MAX_HEADER_SIZE = 1000
 
 FIlE_WITH_HEADER = 1
 FIlE_WITHOUT_HEADER = 2
 
-UPGRADE_DEBUG_FILE = "/etc/.upgrade_debug_flag"
 UPGRADE_FILE_DIR = "/tmp/firmware/"
-
-UPGRADEDEBUG = 1
-
-debuglevel = 0
+DEBUG_FILE = "/etc/.upgrade_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "upgrade_debug.log"
+logger = setup_logger(LOG_FILE)
 
 COLD_UPGRADE = 1
 WARM_UPGRADE = 2
@@ -89,6 +90,46 @@ LPC_BMC_FLASH_PRE_WR_SIZE = 0x20000
 MAIN_CARD = 0
 CHILDREN_CARD = 1
 
+SUPPORT_FILE_TYPE = ("VME", "SYSFS", "SPI-LOGIC-DEV", "MTD", "ISC", "JBI", "VME-I2C")
+
+FW_NAME_CLICK_HELP = "Specify the name of firmware.\n"
+AFU_UPGRADE_CMD = "/usr/local/bin/afulnx_64 %s /P /B /N /L /K /RLC:E"
+
+def is_upgrade_debug_mode():
+    return os.path.exists(DEBUG_FILE)
+
+def help_get_firmware_name():
+    fw_name = ""
+    try:
+        max_slot_num = UPGRADE_SUMMARY.get("max_slot_num", 0)
+        for slot in range(0, max_slot_num + 1):
+            slot_fw_name = ""
+            tmp_name = ""
+            slot_config =  UPGRADE_SUMMARY.get("slot%d" % slot, {})
+            for filetype in SUPPORT_FILE_TYPE:
+                file_type_conf = slot_config.get(filetype, {})
+                for chain, chain_conf in file_type_conf.items():
+                    if isinstance(chain_conf, dict):
+                        name = chain_conf.get('name')
+                        if isinstance(name, str):
+                            tmp_name += name + ", "
+                    elif isinstance(chain_conf, list):
+                        for chain_conf_item in chain_conf:
+                            name = chain_conf_item.get('name')
+                            if isinstance(name, str):
+                                tmp_name += name + ", "
+            if len(tmp_name) != 0:
+                slot_fw_name = ("slot%d: %s" % (slot, tmp_name)).rstrip(", ") + "\n"
+                fw_name += slot_fw_name
+
+    except Exception as e:
+        fw_name = ""
+    return fw_name
+
+
+FW_NAME_CLICK_HELP += help_get_firmware_name()
+
+
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
 
 
@@ -109,43 +150,28 @@ class AliasedGroup(click.Group):
 
 
 def debug_init():
-    global debuglevel
-    if os.path.exists(UPGRADE_DEBUG_FILE):
-        debuglevel = debuglevel | UPGRADEDEBUG
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        debuglevel = debuglevel & ~(UPGRADEDEBUG)
+        logger.setLevel(logging.INFO)
 
 
 def upgradewarninglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("UPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def upgradecriticallog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("UPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_CRIT, s)
-
+    logger.critical(s)
 
 def upgradeerror(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("UPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def upgradedebuglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if UPGRADEDEBUG & debuglevel:
-        syslog.openlog("UPGRADE", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
 def upgrade_print_and_debug_log(s):
     # s = s.decode('utf-8').encode('gb2312')
     print(s)
-    if UPGRADEDEBUG & debuglevel:
-        syslog.openlog("UPGRADE", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.info(s)
 
 def signal_init():
     signal.signal(signal.SIGINT, signal.SIG_IGN)  # ignore ctrl+c signal
@@ -161,9 +187,9 @@ class BasePlatform():
         self.max_slot_num = self.upgrade_param.get("max_slot_num", 0)
         self.head_info_config = {}
         self.slot_config = {}
-        self.cold_chain_config = {}
         self.subtype = None
         self.chain = None
+        self.chain_list = []
         self.filetype = None
         self.e2_devtype_config = self.upgrade_param.get('e2_devtype', {})
         self.DEVTYPE = None
@@ -262,15 +288,15 @@ class BasePlatform():
             return ERR_FW_CARD_ABSENT, "slot absent"
         return CHECK_OK, "slot present"
 
-    def subprocess_warm_upgrade(self, config, file, main_type, sub_type, slot):
+    def subprocess_warm_upgrade(self, config, file, main_type, sub_type, slot, filetype, chain):
         dev_name = config.get("name", None)
         status, output = self.subprocess_firmware_upgrade(config, file, main_type, sub_type, slot)
         if status is False:
             upgradeerror("%s warm upgrade failed" % dev_name)
             return False, output
-        command = "warm_upgrade.py %s 0x%x 0x%x %s %s %s" % (file, main_type, sub_type, slot, self.filetype, self.chain)
+        command = "warm_upgrade.py %s 0x%x 0x%x %s %s %s" % (file, main_type, sub_type, slot, filetype, chain)
         upgradedebuglog("warm upgrade cmd: %s" % command)
-        if os.path.exists(UPGRADE_DEBUG_FILE):
+        if is_upgrade_debug_mode():
             status, output = exec_os_cmd_log(command)
         else:
             status, output = exec_os_cmd(command)
@@ -280,13 +306,62 @@ class BasePlatform():
         upgradedebuglog("%s warm upgrade success" % dev_name)
         return True, "upgrade success"
 
+    def do_fw_upg_cmd_once(self, dev_name, cmd_config):
+        support_operation_list = ["set_value", "check_value", "backup_value"]
+        operation = cmd_config.get("operation", "set_value")
+        if operation not in support_operation_list:
+            log = "%s do cmd: %s failed, invalid operation type: %s" % (dev_name, cmd_config, operation)
+            upgradeerror(log)
+            return False, log
+
+        # set value
+        if operation == "set_value":
+            ret, log = set_value(cmd_config)
+            if ret is False:
+                log = "%s do cmd: %s set_value failed, msg: %s" % (dev_name, cmd_config, log)
+                upgradeerror(log)
+                return False, log
+            log = "%s do cmd: %s set_value success, msg: %s" % (dev_name, cmd_config, log)
+            upgradedebuglog(log)
+            return True, log
+        elif operation == "backup_value":
+            if cmd_config.get("value") is None:
+                ret, val = get_value(cmd_config)
+                if ret is False:
+                    log = "%s do cmd: %s get_backup_value failed, msg: %s" % (dev_name, cmd_config, val)
+                    upgradeerror(log)
+                    return False, log
+                cmd_config["value"] = val
+                log = "%s do cmd: %s get_backup_value success, val: %s" % (dev_name, cmd_config, val)
+                upgradedebuglog(log)
+                return True, log
+            else:
+                ret, log = set_value(cmd_config)
+                if ret is False:
+                    log = "%s do cmd: %s set_backup_value failed, msg: %s" % (dev_name, cmd_config, log)
+                    upgradeerror(log)
+                    return False, log
+                log = "%s do cmd: %s set_backup_value success, msg: %s" % (dev_name, cmd_config, log)
+                upgradedebuglog(log)
+                return True, log
+        else:
+            # check value
+            ret, log = check_value(cmd_config)
+            if ret is False:
+                log = "%s do cmd: %s check_value failed, msg: %s" % (dev_name, cmd_config, log)
+                upgradeerror(log)
+                return False, log
+            log = "%s do cmd: %s check_value success, msg: %s" % (dev_name, cmd_config, log)
+            upgradedebuglog(log)
+            return True, log
+
     def do_fw_upg_init_cmd(self, dev_name, init_cmd_list):
         # pre operation
         try:
             for init_cmd_config in init_cmd_list:
-                ret, log = set_value(init_cmd_config)
-                if ret is False:
-                    upgradeerror("%s do init cmd: %s failed, msg: %s" % (dev_name, init_cmd_config, log))
+                status, log = self.do_fw_upg_cmd_once(dev_name, init_cmd_config)
+                if status is False:
+                    upgradeerror("%s do_fw_upg_init_cmd %s failed" % (dev_name, init_cmd_config))
                     return False, log
             msg = "%s firmware init cmd all set success" % dev_name
             upgradedebuglog(msg)
@@ -298,9 +373,9 @@ class BasePlatform():
         # end operation
         ret = 0
         for finish_cmd_config in finish_cmd_list:
-            ret_t, log = set_value(finish_cmd_config)
-            if ret_t is False:
-                upgradeerror("%s do finish cmd: %s failed, msg: %s" % (dev_name, finish_cmd_config, log))
+            status, log = self.do_fw_upg_cmd_once(dev_name, finish_cmd_config)
+            if status is False:
+                upgradeerror("%s do_fw_upg_finish_cmd %s failed" % (dev_name, finish_cmd_config))
                 ret = -1
         if ret != 0:
             msg = "%s firmware finish cmd exec failed" % dev_name
@@ -310,19 +385,120 @@ class BasePlatform():
         upgradedebuglog(msg)
         return True, msg
 
-    def subprocess_firmware_upgrade(self, config, file, main_type, sub_type, slot):
+    def do_fw_upg_finish_cmd_update(self, dev_name, init_cmd_list, finish_cmd_list):
+        try:
+            msg = "%s raw finish_cmd_list: %s" % (dev_name, finish_cmd_list)
+            upgradedebuglog(msg)
+            msg = "%s init_cmd_list: %s" % (dev_name, init_cmd_list)
+            upgradedebuglog(msg)
+
+            init_cmd_name_map = {}
+            for init_cmd_config in init_cmd_list:
+                if init_cmd_config.get("operation", "set_value") == "backup_value":
+                    init_cmd_name = init_cmd_config.get("name")
+                    if init_cmd_name:
+                        init_cmd_name_map[init_cmd_name] = init_cmd_config
+            
+            for i in range(len(finish_cmd_list)):
+                if finish_cmd_list[i].get("operation", "set_value") == "backup_value":
+                    finish_cmd_name = finish_cmd_list[i].get("name")
+                    if finish_cmd_name and init_cmd_name_map.get(finish_cmd_name):
+                        finish_cmd_list[i] = init_cmd_name_map.get(finish_cmd_name)
+
+            msg = "%s upgraded finish_cmd_list: %s" % (dev_name, finish_cmd_list)
+            upgradedebuglog(msg)
+            msg = "%s firmware upgrade finish cmd success" % dev_name
+            upgradedebuglog(msg)
+            return True, msg
+        except Exception as e:
+            upgradeerror(str(e))
+            return False, str(e)
+
+    def do_fw_upg_raw_file_generate(self, head_file, raw_file = None):
+        try:
+            if raw_file is None:
+                dir_name = os.path.dirname(head_file)
+                file_name = os.path.basename(head_file)
+                raw_file = os.path.join(dir_name, f"raw_{file_name}")
+
+            with open(head_file, 'rb') as fd:
+                rdbuf = fd.read()
+
+            # Locate header position (same logic as original code; note newline in binary data is b'\n')
+            # Note: If "FILEHEADER(\n" in original file is a text string, need to convert to byte string for matching
+            file_head_end = rdbuf.index(b')\n') + 2
+
+            # Strip header and retain remaining content (binary data)
+            remaining_content = rdbuf[file_head_end:].lstrip()
+
+            with open(raw_file, 'wb') as fd:
+                fd.write(remaining_content)
+
+            upgradedebuglog(f"Successfully stripped head from head file: {head_file}")
+            return True, raw_file
+
+        except Exception as e:
+            msg = f"Failed to backup and strip head: {str(e)}"
+            upgradeerror(msg)
+            return False, msg
+
+    def upgrade_cmd_generate(self, config, file, main_type, sub_type, slot, filetype, chain):
+        upgrade_way = config.get("upgrade_way", UPGRADE_BY_FIRMWARE_UPGRADE_COMMON)
+        raw_file = None
+
+        if upgrade_way not in SUPPORT_UPGRADE_LIST:
+            return False, "unsupport upgrade way: %s" % upgrade_way, None
+
+        if upgrade_way == UPGRADE_BY_FIRMWARE_UPGRADE_COMMON:
+            command = "firmware_upgrade %s 0x%x 0x%x %s %s 0x%x" % (file, main_type, sub_type, slot, filetype, chain)
+            return True, command, None
+        elif upgrade_way == UPGRADE_BY_FIRMWARE_UPGRADE_UPDATE_HEADER:
+            new_file_type = config.get("new_file_type")
+            new_chain = config.get("new_chain")
+            if new_file_type is None or new_chain is None:
+                return False, "upgrade way: %s new_file_type or new_chain not define, new_file_type: %s, new_chain: %s" % (upgrade_way, new_file_type, new_chain), None
+            ret, raw_file = self.do_fw_upg_raw_file_generate(file)
+            if ret is False:
+                return False, "upgrade way: %s generate raw file failed, reason: %s" % (upgrade_way, raw_file), None
+            command = "firmware_upgrade %s 0x%x 0x%x %s %s 0x%x" % (raw_file, main_type, sub_type, slot, new_file_type, new_chain)
+            return True, command, raw_file
+        elif upgrade_way == UPGRADE_BY_AFU:
+            ret, raw_file = self.do_fw_upg_raw_file_generate(file)
+            if ret is False:
+                return False, "upgrade way: %s generate raw file failed, reason: %s" % (upgrade_way, raw_file), None
+            command = AFU_UPGRADE_CMD % raw_file
+            return True, command, raw_file
+        elif upgrade_way == UPGRADE_BY_CUSTOM:
+            upgrade_cmd = config.get("upgrade_cmd")
+            if upgrade_cmd is None:
+                return False, "upgrade way: %s upgrade_cmd not define, upgrade_cmd: %s" % (upgrade_way, upgrade_cmd), None
+            ret, raw_file = self.do_fw_upg_raw_file_generate(file)
+            if ret is False:
+                return False, "upgrade way: %s generate raw file failed, reason: %s" % (upgrade_way, raw_file), None
+            command = upgrade_cmd % raw_file
+            return True, command, raw_file
+        else:
+            return False, "unsupport upgrade way: %s" % upgrade_way, None
+
+    def subprocess_firmware_upgrade(self, config, file, main_type, sub_type, slot, filetype, chain):
         dev_name = config.get("name", None)
         init_cmd_list = config.get("init_cmd", [])
         finish_cmd_list = config.get("finish_cmd", [])
         try:
+            ret, command, raw_file = self.upgrade_cmd_generate(config, file, main_type, sub_type, slot, filetype, chain)
+            if ret is False:
+                upgradeerror("%s firmware upgrade failed, msg: %s" % (dev_name, command))
+                return False, command
+
             ret, log = self.do_fw_upg_init_cmd(dev_name, init_cmd_list)
+            self.do_fw_upg_finish_cmd_update(dev_name, init_cmd_list, finish_cmd_list)
             if ret is False:
                 self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
                 return False, log
             time.sleep(0.5)  # delay 0.5s after execute init_cmd
-            command = "firmware_upgrade %s 0x%x 0x%x %s %s 0x%x" % (file, main_type, sub_type, slot, self.filetype, self.chain)
+
             upgradedebuglog("firmware upgrade cmd: %s" % command)
-            if os.path.exists(UPGRADE_DEBUG_FILE):
+            if is_upgrade_debug_mode():
                 status, output = exec_os_cmd_log(command)
             else:
                 status, output = exec_os_cmd(command)
@@ -331,6 +507,9 @@ class BasePlatform():
                 upgradeerror("%s firmware upgrade failed, msg: %s" % (dev_name, output))
                 return False, output
             upgradedebuglog("%s firmware upgrade success" % dev_name)
+            if raw_file:
+                if os.path.exists(raw_file):
+                    os.remove(raw_file)
             ret, log = self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
             if ret is False:
                 return False, log
@@ -339,19 +518,20 @@ class BasePlatform():
             self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
             return False, str(e)
 
-    def subprocess_test_upgrade(self, config, file, main_type, sub_type, slot):
+    def subprocess_test_upgrade(self, config, file, main_type, sub_type, slot, filetype, chain):
         dev_name = config.get("name", None)
         init_cmd_list = config.get("init_cmd", [])
         finish_cmd_list = config.get("finish_cmd", [])
         try:
             ret, log = self.do_fw_upg_init_cmd(dev_name, init_cmd_list)
+            self.do_fw_upg_finish_cmd_update(dev_name, init_cmd_list, finish_cmd_list)
             if ret is False:
                 self.do_fw_upg_finish_cmd(dev_name, finish_cmd_list)
                 return False, log
             time.sleep(0.5)  # delay 0.5s after execute init_cmd
-            command = "firmware_upgrade test %s 0x%x 0x%x %s" % (file, main_type, sub_type, slot)
+            command = "firmware_upgrade test %s 0x%x 0x%x %s %s 0x%x" % (file, main_type, sub_type, slot, filetype, chain)
             upgradedebuglog("firmware upgrade cmd: %s" % command)
-            if os.path.exists(UPGRADE_DEBUG_FILE):
+            if is_upgrade_debug_mode():
                 status, output = exec_os_cmd_log(command)
             else:
                 status, output = exec_os_cmd(command)
@@ -375,10 +555,10 @@ class BasePlatform():
         access_timeout = bmc_access_config.get("timeout", 1200)
         access_interval = bmc_access_config.get("interval", 20)
         access_check_delay = bmc_access_config.get("check_delay", 5)
-        
+
         if access_success_code is None or access_fail_code is None or access_runing_code is None:
             return False, "upgrade_other_bmc_access_check: config err"
-        
+
         time.sleep(access_check_delay)
         start_time = _time()
         while True:
@@ -401,13 +581,13 @@ class BasePlatform():
             else:
                 log = "upgrade_other_bmc_access_check: unknow access_code: %s" % val
                 return False, log
-            
+
             delta_time = _time() - start_time
             if delta_time >= access_timeout or delta_time < 0:
                 log = "upgrade_other_bmc_access_check: upgrade other bmc timeout"
                 return False, log
             time.sleep(access_interval)
-            
+
     def upgrade_current_bmc_access_check(self, bmc_access_config):
         access_timeout = bmc_access_config.get("timeout", 1200)
         access_interval = bmc_access_config.get("interval", 20)
@@ -682,7 +862,7 @@ class BasePlatform():
                 ret, log = self.write_to_char_device(LPC_BMC_SLAVE_FLASH_DEV, file, LPC_BMC_FLASH_PRE_WR_SIZE)
                 if ret == False:
                     return False, "lpc upgrade bmc slave flash fail, reason: %s" % log
-            
+
             if chip_select == CHIP_SLAVE:
                 ret, log = write_sysfs(LPC_BMC_RESET, "0")
             else:
@@ -792,7 +972,12 @@ class BasePlatform():
                     return False, msg
                 upgradedebuglog("e2 get id:%s success" % e2_id)
             else:
-                e2_id = int(get_board_id(get_machine_info()), base = 16)
+                ret, val_tmp = get_board_id()
+                if ret is False:
+                    msg = "get_board_id failed, log: %s" % val_tmp
+                    upgradeerror(msg)
+                    return False, msg
+                e2_id = int(val_tmp, base = 16)
             upgradedebuglog("card_id_check get e2 card id success. e2_id: 0x%x" % e2_id)
 
             #set upgrade file header card id to list
@@ -812,104 +997,37 @@ class BasePlatform():
             log = "card id check exception happend. reason:%s" % str(e)
             return False, log
 
-    """
-    Returns:
-        str: A status message indicating the result of the search.
-            - CHECK_OK if exactly one match is found.
-            - ERR_FW_MULTI_TYPE_NAME if multiple matches are found.
-            - ERR_FW_NO_TYPE_FOUND if no matches are found.
-    eg:
-    "slot0": {
-        "subtype": 0,
-        "SPI-LOGIC-DEV": {
-            "chain1":{
-                "name":"IOB_FPGA",
-            },
-        },
-        "MTD": {
-            "chain9": {
-                "name": "BIOS",
-                "is_support_warm_upg": 0,
-                ],
-            },
-        },
-        "TEST": {
-            "fpga": [
-                {"chain": 1, "file": "/etc/.upgrade_test/0x40bd/iob_fpga_test_header.bin", "display_name": "IOB_FPGA"},
-            ],
-        },
-    },
-    
-    find "IOB_FPGA":
-        
-    init:
-    stack = [(slot_config, [])]
-    
-    Ite1:
-    pop slot_config
-    stack = [
-        ({"SPI-LOGIC-DEV": {...}}, ["SPI-LOGIC-DEV"]),
-        ({"MTD": {...}}, ["MTD"])
-    ]
-    
-    Ite2:
-    pop "SPI-LOGIC-DEV"
-    
-    stack = [
-        ({"MTD": {...}}, ["MTD"])
-    ]
-    results = [
-        {'path': ['slot0', 'SPI-LOGIC-DEV', 'chain8']}
-    ]
-    
-    Ite3:
-    pop "MTD"
-    
-    return results
-
-    """
     def find_chaininfo_by_firmware_name(self, slot_config, firmware_name):
         try:
-            # Initialize a stack with the starting configuration and an empty path
-            stack = [(slot_config, [])]
+            self.chain_list = []
             results = []
             all_names = []
-            
-            # Iterate through the stack to search for the firmware_name
-            while stack:
-                current_summary, current_path = stack.pop()  # Pop the last element from the stack
-                
-                # Iterate through the current dictionary
-                for k, v in current_summary.items():
-                    # Skip the TEST configuration
-                    if k == "TEST":
-                        continue
-                    # If the value is a dictionary, add it to the stack with the updated path
-                    if isinstance(v, dict):
-                        new_path = current_path + [k]
-                        stack.append((v, new_path))
-                    # If the value is a list, iterate through the list and add dictionaries to the stack
-                    elif isinstance(v, list):
-                        for idx, item in enumerate(v):
-                            if isinstance(item, dict):
-                                new_path = current_path + [item]
-                                stack.append((item, new_path))
-                    # If the value is a dictionary and has a 'name' key that matches the firmware_name
-                    if isinstance(v, dict) and v.get('name', None) is not None:
-                        if firmware_name is not None and str(v.get('name', '')).lower() == str(firmware_name).lower():
-                            results.append({'path': current_path + [k]})  # Add the match to the results list
-                        all_names.append(v.get('name'))
-    
+            for filetype in SUPPORT_FILE_TYPE:
+                file_type_conf = slot_config.get(filetype, {})
+                for chain, chain_conf in file_type_conf.items():
+                    if isinstance(chain_conf, dict):
+                        name = chain_conf.get('name')
+                        if isinstance(name, str):
+                            all_names.append(name)
+                            if name.lower() == firmware_name.lower():
+                                results.append({"filetype": filetype, "chain": chain})
+                    elif isinstance(chain_conf, list):
+                        for chain_conf_item in chain_conf:
+                            name = chain_conf_item.get('name')
+                            if isinstance(name, str):
+                                all_names.append(name)
+                                if name.lower() == firmware_name.lower():
+                                    results.append({"filetype": filetype, "chain": chain})
             if len(results) == 1:
-                upgradedebuglog(f"Found chain for name '{firmware_name}' at path: {results[0]['path']}")
-                # eg: [{'path': [SPI-LOGIC-DEV', 'chain1']},]
-                path = results[0]['path']
-                self.filetype = path[0]
-                self.chain = int(path[1].split('chain')[1])
+                upgradedebuglog(f"Found chain for name '{firmware_name}' at filetype: {results[0]['filetype']}, chain: {results[0]['chain']}")
+                self.filetype = results[0]['filetype']
+                chain = int(results[0]['chain'].split('chain')[1])
+                self.chain_list.append(chain)
                 return CHECK_OK, results
             if len(results) > 1:
-                upgradeerror(f"Multiple matches found for name '{firmware_name}': {results}")
-                return ERR_FW_MULTI_TYPE_NAME, results
+                msg = f"Multiple matches found for name '{firmware_name}': {results}"
+                upgradeerror(msg)
+                return ERR_FW_MULTI_TYPE_NAME, msg
             upgradeerror(f"Firmware '{firmware_name}' not found")
             available_names = "\n".join(sorted(set(all_names)))
             upgradeerror(f"Available names: \n{available_names}")
@@ -939,15 +1057,18 @@ class BasePlatform():
                 ret, sub_e2_card_id = self.card_id_check(e2_subtype_config, self.SUBTYPE, CHILDREN_CARD)
                 if ret != True:
                     return ERR_FW_HEAD_CHECK, sub_e2_card_id
+                self.subtype = sub_e2_card_id
 
             if len(self.CHAIN) == 0 or len(self.FILETYPE) == 0:
                 return ERR_FW_HEAD_CHECK, ("CHAIN:%s, FILETYPE:%s get failed" % (self.CHAIN, self.FILETYPE))
-            self.chain = int(self.CHAIN)
+
+            chain_list = self.CHAIN.split(',')
+            self.chain_list = [ int(tmp, base=10) for tmp in chain_list ]
             #set self.devtype to upgrade cmd use
             self.devtype = e2_card_id
             self.filetype = self.FILETYPE
-            upgradedebuglog("file head param: devtype:0x%x, subtype:0x%x, chain:%s, filetype:%s"
-                            % (self.devtype, self.subtype, self.chain, self.filetype))
+            upgradedebuglog("file head param: devtype:0x%x, subtype:0x%x, chain_list:%s, filetype:%s"
+                            % (self.devtype, self.subtype, self.chain_list, self.filetype))
             return CHECK_OK, "SUCCESS"
         except Exception as e:
             return ERR_FW_RAISE_EXCEPTION, str(e)
@@ -956,7 +1077,7 @@ class BasePlatform():
         try:
             self.head_info_config = {}
             with open(file, 'r', errors='ignore') as fd:
-                rdbuf = fd.read()
+                rdbuf = fd.read(MAX_HEADER_SIZE)
             upgradedebuglog("start parse upgrade file head")
             file_head_start = rdbuf.index('FILEHEADER(\n')  # ponit to F
             file_head_start += rdbuf[file_head_start:].index('\n')  # ponit to \n
@@ -974,7 +1095,7 @@ class BasePlatform():
             msg = "parse %s head failed, msg: %s" % (file, str(e))
             upgradeerror(msg)
             return ERR_FW_RAISE_EXCEPTION, msg
-        
+
     def is_file_header_present(self, file):
         """
         Checks if the specified firmware file contains 'FILEHEADER'.
@@ -982,7 +1103,7 @@ class BasePlatform():
         try:
             with open(file, 'r', errors='ignore') as fd:
                 # Read the entire file content
-                rdbuf = fd.read()
+                rdbuf = fd.read(MAX_HEADER_SIZE)
                 # Check if 'FILEHEADER' is present in the file content
                 if 'FILEHEADER' in rdbuf:
                     return CHECK_OK, FIlE_WITH_HEADER
@@ -992,7 +1113,7 @@ class BasePlatform():
             msg = "parse %s head failed, msg: %s" % (file, str(e))
             upgradeerror(msg)
             return ERR_FW_RAISE_EXCEPTION, msg
-    
+
     def get_file_size_k(self, file):
         fsize = os.path.getsize(file)
         fsize = fsize / float(1024)
@@ -1032,14 +1153,14 @@ class BasePlatform():
             upgradeerror(str(e))
             return False, str(e)
 
-    def upgrading(self, config, file, devtype, subtype, slot, option_flag, chanel=None, erase_type=None):
+    def upgrading(self, config, file, devtype, subtype, slot, option_flag, chanel, erase_type, filetype, chain):
         dev_name = config.get("name", None)
         if option_flag == COLD_UPGRADE:
-            status, output = self.subprocess_firmware_upgrade(config, file, devtype, subtype, slot)
+            status, output = self.subprocess_firmware_upgrade(config, file, devtype, subtype, slot, filetype, chain)
         elif option_flag == WARM_UPGRADE:
-            status, output = self.subprocess_warm_upgrade(config, file, devtype, subtype, slot)
+            status, output = self.subprocess_warm_upgrade(config, file, devtype, subtype, slot, filetype, chain)
         elif option_flag == TEST_UPGRADE:
-            status, output = self.subprocess_test_upgrade(config, file, devtype, subtype, slot)
+            status, output = self.subprocess_test_upgrade(config, file, devtype, subtype, slot, filetype, chain)
         elif option_flag == BMC_UPGRADE:
             status, output = self.subprocess_bmc_upgrade(config, file, slot, chanel, erase_type)
         else:
@@ -1053,10 +1174,138 @@ class BasePlatform():
         upgradedebuglog("%s upgrade success" % dev_name)
         return True, "upgrade success"
 
-    def initial_check(self, file, slot, upg_type, firmware_name=None):
+    def initial_check_chain(self, file, upg_type, chain_config):
+        fool_proofing = chain_config.get("fool_proofing")
+        if fool_proofing is not None:
+            upgradedebuglog("do fool proofing check...")
+            status, log = self.upgrade_fool_proofing(fool_proofing)
+            if status is False:
+                msg = "upgrade fool proofing check failed, msg: %s" % log
+                upgradedebuglog(msg)
+                return ERR_FW_FOOL_PROOF, msg
+            upgradedebuglog("do fool proofing check ok")
+
+        if upg_type == WARM_UPGRADE:
+            upgradedebuglog("do support warm upgrade check...")
+            if chain_config.get("is_support_warm_upg", 0) != 1:
+                msg = "chain config not support warm upgrade"
+                upgradedebuglog(msg)
+                return ERR_FW_NOSUPPORT_HOT, msg
+            upgradedebuglog("chain config support warm upgrade check ok")
+
+        filesizecheck = chain_config.get("filesizecheck", 0)
+        if filesizecheck != 0:
+            upgradedebuglog("do file size check...")
+            file_size = self.get_file_size_k(file)
+            if file_size > filesizecheck:
+                msg = "filesizecheck failed: file size: %s exceed check size: %s" % (file_size, filesizecheck)
+                upgradedebuglog(msg)
+                return ERR_FW_CHECK_SIZE, msg
+            msg = "filesizecheck ok, file size: %s, check size: %s" % (file_size, filesizecheck)
+            upgradedebuglog(msg)
+
+        msg = "initial_check_chain success"
+        upgradedebuglog(msg)
+        return CHECK_OK, msg
+
+    # update file_list through parse chain_config and params
+    def initial_check_chain_update_flie_list(self, file, slot, chip_select, upg_type, chain_config, file_list, firmware_name):
+        if isinstance(chain_config, dict):
+            # chain_config is dictionary chip_select must None
+            if chip_select is not None:
+                msg = ("Invalid chip_select: %s. file: %s, slot: %s, filetype: %s, chain: %s config is dictionary, but chip_select is not None" %
+                    (chip_select, file, slot, self.filetype, self.chain))
+                upgradedebuglog(msg)
+                return ERR_FW_INVALID_PARAM, msg
+            ret, log = self.initial_check_chain(file, upg_type, chain_config)
+            if ret != CHECK_OK:
+                msg = ("initial_check_chain failed, file: %s, slot: %s, filetype: %s, chain: %s, log: %s" %
+                    (file, slot, self.filetype, self.chain, log))
+                upgradedebuglog(msg)
+                return ret, msg
+            file_instance = FileUpg(chain_config, file, self.devtype, self.subtype, slot, self.filetype, self.chain, upg_type)
+            file_list.append(file_instance)
+            msg = ("initial_check_chain success, file: %s, slot: %s, filetype: %s, chain: %s, append to file_list" %
+                    (file, slot, self.filetype, self.chain))
+            upgradedebuglog(msg)
+            return CHECK_OK, msg
+
+        # chain_config is list and firmware_name is not None
+        if firmware_name is not None:
+            for index, chain_item in enumerate(chain_config):
+                if firmware_name.lower() == chain_item.get("name", "").lower():
+                    ret, log = self.initial_check_chain(file, upg_type, chain_item)
+                    if ret != CHECK_OK:
+                        msg = ("initial_check_chain failed, file: %s, slot: %s, filetype: %s, chain: %s, log: %s" %
+                            (file, slot, self.filetype, self.chain, log))
+                        upgradedebuglog(msg)
+                        return ret, msg
+                    file_instance = FileUpg(chain_item, file, self.devtype,
+                                        self.subtype, slot, self.filetype, self.chain, upg_type, index, chain_item.get("chip_select"))
+                    file_list.append(file_instance)
+                    msg = ("initial_check_chain success, file: %s, slot: %s, filetype: %s, chain: %s, index: %d, chip_select: %s, append to file_list" %
+                        (file, slot, self.filetype, self.chain, index, chip_select))
+                    upgradedebuglog(msg)
+                    return CHECK_OK, msg
+            msg = ("Can't find firmware_name: %s in chain config, file: %s, slot: %s, filetype: %s, chain: %s" %
+                    (firmware_name, file, slot, self.filetype, self.chain))
+            upgradedebuglog(msg)
+            return ERR_FW_CONFIG_FOUND, msg
+
+        # chain_config is list and chip_select is None, traverse all chains
+        if chip_select is None:
+            for index, chain_item in enumerate(chain_config):
+                if chain_item.get("traverse_skip", 0) == 1:
+                    upgradedebuglog("file: %s, slot: %s, filetype: %s, chain: %s, index: %d, chip_select: %s, skip to traverse" %
+                        (file, slot, self.filetype, self.chain, index, chain_item.get("chip_select")))
+                    continue
+                ret, log = self.initial_check_chain(file, upg_type, chain_item)
+                if ret != CHECK_OK:
+                    msg = ("initial_check_chain failed, file: %s, slot: %s, filetype: %s, chain: %s, index: %d, log: %s" %
+                        (file, slot, self.filetype, self.chain, index, log))
+                    upgradedebuglog(msg)
+                    accept_error = (ERR_FW_CARD_ABSENT, ERR_FW_HEAD_CHECK, ERR_FW_FOOL_PROOF)
+                    if ret in accept_error:
+                        msg = ("file: %s, slot: %s, filetype: %s, chain: %s, index: %d, initial check ret: %d, acceptable error." %
+                            (file, slot, self.filetype, self.chain, index, ret))
+                        upgradedebuglog(msg)
+                        continue
+                    return ret, log
+                file_instance = FileUpg(chain_item, file, self.devtype,
+                                    self.subtype, slot, self.filetype, self.chain, upg_type, index, chain_item.get("chip_select"))
+                file_list.append(file_instance)
+                upgradedebuglog("initial_check_chain success, file: %s, slot: %s, filetype: %s, chain: %s, index: %d, chip_select: %s, append to file_list" %
+                    (file, slot, self.filetype, self.chain, index, chain_item.get("chip_select")))
+            msg = ("All chains init success, file: %s, slot: %s, filetype: %s, chain: %s" %
+                (file, slot, self.filetype, self.chain))
+            upgradedebuglog(msg)
+            return CHECK_OK, msg
+
+        # chain_config is list and chip_select is not None, get chip_select chain config
+        for index, chain_item in enumerate(chain_config):
+            if chip_select == chain_item.get("chip_select"):
+                ret, log = self.initial_check_chain(file, upg_type, chain_item)
+                if ret != CHECK_OK:
+                    msg = ("initial_check_chain failed, file: %s, slot: %s, filetype: %s, chain: %s, log: %s" %
+                        (file, slot, self.filetype, self.chain, log))
+                    upgradedebuglog(msg)
+                    return ret, msg
+                file_instance = FileUpg(chain_item, file, self.devtype,
+                                    self.subtype, slot, self.filetype, self.chain, upg_type, index, chain_item.get("chip_select"))
+                file_list.append(file_instance)
+                msg = ("initial_check_chain success, file: %s, slot: %s, filetype: %s, chain: %s, index: %d, chip_select: %s, append to file_list" %
+                    (file, slot, self.filetype, self.chain, index, chip_select))
+                upgradedebuglog(msg)
+                return CHECK_OK, msg
+        msg = ("Can't find chip_select: %s in chain config, file: %s, slot: %s, filetype: %s, chain: %s" %
+                (chip_select, file, slot, self.filetype, self.chain))
+        upgradedebuglog(msg)
+        return ERR_FW_CONFIG_FOUND, msg
+
+    def initial_check(self, file, slot, upg_type, chip_select, file_list, firmware_name, specify_chain):
         try:
-            upgradedebuglog("BasePlatform initial_check, file: %s, slot: %s, upg_type: %s, firmware_name: %s" %
-                            (file, slot, upg_type, firmware_name))
+            upgradedebuglog("BasePlatform initial_check, file: %s, slot: %s, upg_type: %s, chip_select: %s, firmware_name: %s, specify_chain: %s" %
+                            (file, slot, upg_type, chip_select, firmware_name, specify_chain))
 
             upgradedebuglog("do file exist check...")
             if not os.path.isfile(file):
@@ -1113,45 +1362,48 @@ class BasePlatform():
                 msg = "file: %s filetype: %s no support" % (file, self.filetype)
                 upgradedebuglog(msg)
                 return ERR_FW_CONFIG_FOUND, msg
-            chain_num = "chain%s" % self.chain
-            chain_config = filetype_config.get(chain_num, {})
-            if len(chain_config) == 0:
-                msg = "file: %s get %s config failed" % (file, chain_num)
+
+            if specify_chain is not None:
+                if specify_chain not in self.chain_list:
+                    msg = "Unsupport chain: %d, support chain list: %s" % (specify_chain, self.chain_list)
+                    upgradeerror(msg)
+                    return ERR_FW_INVALID_PARAM, msg
+                # specify_chain to upgrade
+                msg = "specify_chain to upgrade, chain_list: %s, specify_chain: %s" % (self.chain_list, specify_chain)
                 upgradedebuglog(msg)
-                return ERR_FW_CONFIG_FOUND, msg
-            self.cold_chain_config = chain_config
-            upgradedebuglog("get %s filetype: %s %s config success" % (slot_name, self.filetype, chain_num))
+                self.chain_list = [specify_chain]
 
-            fool_proofing = chain_config.get("fool_proofing")
-            if fool_proofing is not None:
-                upgradedebuglog("do fool proofing check...")
-                status, log = self.upgrade_fool_proofing(fool_proofing)
-                if status is False:
-                    msg = "upgrade fool proofing check failed, msg: %s" % log
-                    upgradedebuglog(msg)
-                    return ERR_FW_FOOL_PROOF, msg
-                upgradedebuglog("do fool proofing check ok")
+            error_chain = []
+            for chain in self.chain_list:
+                self.chain = chain
+                chain_num = "chain%s" % self.chain
+                chain_config = filetype_config.get(chain_num, {})
+                if not isinstance(chain_config, dict) and not isinstance(chain_config, list):
+                    msg = ("Invalid chain config: %s, file: %s, slot: %s, filetype: %s, chain: %s" %
+                        (chain_config, file, slot, self.filetype, self.chain))
+                    upgradeerror(msg)
+                    error_chain.append(chain)
+                    continue
 
-            if upg_type == WARM_UPGRADE:
-                upgradedebuglog("do support warm upgrade check...")
-                if chain_config.get("is_support_warm_upg", 0) != 1:
-                    msg = "file: %s %s chain config not support warm upgrade" % (file, slot_name)
-                    upgradedebuglog(msg)
-                    return ERR_FW_NOSUPPORT_HOT, msg
-                upgradedebuglog("file: %s %s chain config support warm upgrade" % (file, slot_name))
+                if len(chain_config) == 0:
+                    msg = ("Chain config is empty, file: %s, slot: %s, filetype: %s, chain: %s" %
+                        (file, slot, self.filetype, self.chain))
+                    upgradeerror(msg)
+                    error_chain.append(chain)
+                    continue
 
-            filesizecheck = chain_config.get("filesizecheck", 0)
-            if filesizecheck != 0:
-                upgradedebuglog("do file size check...")
-                file_size = self.get_file_size_k(file)
-                if file_size > filesizecheck:
-                    msg = "file: %s size: %s exceed %s" % (file, file_size, filesizecheck)
-                    upgradedebuglog(msg)
-                    return ERR_FW_CHECK_SIZE, msg
-                msg = "file: %s size: %s check ok" % (file, file_size)
-                upgradedebuglog(msg)
+                upgradedebuglog("get %s filetype: %s %s config success" % (slot_name, self.filetype, chain_num))
 
-            msg = "file: %s slot: %s upgrade type: %s check ok" % (file, slot, upg_type)
+                ret, msg = self.initial_check_chain_update_flie_list(file, slot, chip_select, upg_type, chain_config, file_list, firmware_name)
+                if ret != CHECK_OK:
+                    upgradeerror("%s filetype: %s %s initial_check failed, msg: %s" % (slot_name, self.filetype, chain_num, msg))
+                    error_chain.append(chain)
+            if len(error_chain) != 0:
+                msg = ("%s filetype: %s multiple chain check error, chain_list: %s, error chain: %s" %
+                    (slot_name, self.filetype, self.chain_list, error_chain))
+                upgradeerror(msg)
+                return ERR_FW_MULTI_CHAIN_CHECK, msg
+            msg = "%s filetype: %s multiple chain check ok, chain_list: %s" % (slot_name, self.filetype, self.chain_list)
             upgradedebuglog(msg)
             return CHECK_OK, msg
         except Exception as e:
@@ -1159,19 +1411,38 @@ class BasePlatform():
             upgradeerror(msg)
             return ERR_FW_RAISE_EXCEPTION, str(e)
 
-    def do_upgrade(self, file, slot, upg_type):
+    def do_upgrade_test(self, file, slot, upg_type, success_chain, fail_chain, chip_select):
         try:
-            ret, log = self.initial_check(file, slot, upg_type)
+            file_test_list = []
+            ret, log = self.initial_check(file, slot, upg_type, chip_select, file_test_list, None, None)
             if ret != CHECK_OK:
                 return ret, log
 
+            if len(file_test_list) == 0:
+                msg = "file_test_list is empty, file: %s, slot: %s" % (file, slot)
+                upgradeerror(msg)
+                return ERR_FW_NO_FILE_SUCCESS, msg
+
             # start upgrading
+            err_cnt = 0
+            msg = ""
             upgradedebuglog("start upgrading")
-            ret, log = self.upgrading(self.cold_chain_config, file, self.devtype, self.subtype, slot, upg_type)
-            if ret is False:
-                upgradeerror("upgrade failed")
-                return ERR_FW_UPGRADE, log
-            upgradedebuglog("upgrade success")
+            for file_test in file_test_list:
+                ret, log = self.upgrading(file_test.config, file, self.devtype, self.subtype, slot, upg_type,
+                    None, None, file_test.filetype, file_test.chain)
+                if ret is False:
+                    fail_chain.append(file_test.chain)
+                    log = ("Upgrade test failed, file: %s, slot: %s, filetype: %s, chain: %s, index: %s, log: %s\n" %
+                        (file, slot, file_test.filetype, file_test.chain, file_test.chain_index, log))
+                    upgradeerror(log)
+                    err_cnt += 1
+                    msg += log
+                else:
+                    success_chain.append(file_test.chain)
+                    upgradedebuglog("Upgrade success, file: %s, slot: %s, filetype: %s, chain: %s, index: %s" %
+                        (file, slot, file_test.filetype, file_test.chain, file_test.chain_index))
+            if err_cnt != 0:
+                return ERR_FW_UPGRADE, msg
             return FIRMWARE_SUCCESS, "SUCCESS"
         except Exception as e:
             return ERR_FW_RAISE_EXCEPTION, str(e)
@@ -1212,10 +1483,9 @@ class BasePlatform():
 
             # test_file existence check
             for test_config in device_list:
-                chain_num = test_config.get("chain", None)
                 test_file = test_config.get("file", None)
                 display_name = test_config.get("display_name", None)
-                if chain_num is None or test_file is None or display_name is None:
+                if test_file is None or display_name is None:
                     log = "test_config:%s lack of config" % test_config
                     upgradeerror(log)
                     return ERR_FW_CONFIG_FOUND, log
@@ -1229,27 +1499,35 @@ class BasePlatform():
             failed_summary = "chain test failed.\ntest fail chain:"
             success_summary = "test success chain:"
             for test_config in device_list:
-                chain_num = test_config.get("chain", None)
+                success_chain = []
+                fail_chain = []
                 test_file = test_config.get("file", None)
                 display_name = test_config.get("display_name", None)
+                chip_select = test_config.get("chip_select", None)
                 pre_check_conf = test_config.get("pre_check", None)
                 if pre_check_conf is not None:
                     status, msg = self.do_pre_check(pre_check_conf)
                     if status is False:
                         pre_check_failed += 1
-                        log = "\nchain:%d, name:%s, pre check failed, msg: %s" % (chain_num, display_name, msg)
+                        log = "\nname:%s, pre check failed, msg: %s" % (display_name, msg)
                         upgradedebuglog(log)
                         pre_check_failed_summary += log
                         continue
-                    upgradedebuglog("chain:%d, name:%s, pre check ok, msg: %s" % (chain_num, display_name, msg))
-                ret, log = self.do_upgrade(test_file, slot, TEST_UPGRADE)
+                    upgradedebuglog("name:%s, pre check ok, msg: %s" % (display_name, msg))
+                ret, log = self.do_upgrade_test(test_file, slot, TEST_UPGRADE, success_chain, fail_chain, chip_select)
                 if ret != FIRMWARE_SUCCESS:
                     RET = -1
-                    upgradeerror("chain:%d, name:%s test failed" % (chain_num, display_name))
-                    failed_summary += "\n    chain:%d, name:%s;" % (chain_num, display_name)
+                    if len(fail_chain) != 0:
+                        for chain in fail_chain:
+                            upgradeerror("chain:%d, name:%s test failed" % (chain, display_name))
+                            failed_summary += "\n    chain:%d, name:%s;" % (chain, display_name)
+                    else:
+                        upgradeerror("name:%s test failed" % (display_name))
+                        failed_summary += "\n    name:%s;" % (display_name)
                 else:
-                    upgradedebuglog("chain:%d, name:%s test success" % (chain_num, display_name))
-                    success_summary += "\n    chain:%d, name:%s;" % (chain_num, display_name)
+                    for chain in success_chain:
+                        upgradedebuglog("chain:%d, name:%s test success" % (chain, display_name))
+                        success_summary += "\n    chain:%d, name:%s;" % (chain, display_name)
             if RET != 0:
                 return ERR_FW_UPGRADE, failed_summary
             if pre_check_failed == len(device_list):
@@ -1283,7 +1561,7 @@ class BasePlatform():
         exec_os_cmd("touch %s" % FW_UPGRADE_STARTED_FLAG)
         exec_os_cmd("sync")
         ret, log = self.upgrading(bmc_upgrade_config, file, self.devtype,
-                                  self.subtype, chip_select, BMC_UPGRADE, chanel, erase_type)
+                                  self.subtype, chip_select, BMC_UPGRADE, chanel, erase_type, None, None)
         exec_os_cmd("rm -rf %s" % FW_UPGRADE_STARTED_FLAG)
         exec_os_cmd("sync")
         if ret is True:
@@ -1297,7 +1575,7 @@ class BasePlatform():
 
 # single file upgrade operation
 class FileUpg(object):
-    def __init__(self, config, file, devtype, subtype, slot, filetype, chain, upg_type, firmware_name=None):
+    def __init__(self, config, file, devtype, subtype, slot, filetype, chain, upg_type, chain_index=None, chip_select=None):
         self.config = config
         self.file = file
         self.devtype = devtype
@@ -1306,9 +1584,13 @@ class FileUpg(object):
         self.filetype = filetype # The type of the firmware file (e.g., cpld, fpga, bcm, etc.).
         self.chain = chain
         self.upg_type = upg_type # The type of upgrade (cold, warm, etc.).
+        self.chain_index = chain_index
+        self.chip_select = chip_select
 
     def __repr__(self):
-        return "file:%s slot:%d" % (self.file, self.slot)
+        if self.chip_select is not None:
+            return "file:%s slot:%d filetype:%s chain:%d chip_select:%s" % (self.file, self.slot, self.filetype, self.chain, self.chip_select)
+        return "file:%s slot:%d filetype:%s chain:%d" % (self.file, self.slot, self.filetype, self.chain)
 
 # manage multiple files update
 class FwUpg(object):
@@ -1378,8 +1660,11 @@ class FwUpg(object):
             fw_upg_devtype = fw_upg_instance.devtype
             fw_upg_subype = fw_upg_instance.subtype
             fw_upg_slot = fw_upg_instance.slot
+            fw_upg_filetype = fw_upg_instance.filetype
+            fw_upg_chain = fw_upg_instance.chain
             ret, log = self.upg_platform.upgrading(
-                fw_upg_config, fw_upg_file, fw_upg_devtype, fw_upg_subype, fw_upg_slot, COLD_UPGRADE)
+                fw_upg_config, fw_upg_file, fw_upg_devtype, fw_upg_subype, fw_upg_slot, COLD_UPGRADE,
+                None, None, fw_upg_filetype, fw_upg_chain)
             if ret is False:
                 upgradeerror("cold upgrade %s slot%d failed, log:%s" % (fw_upg_file, fw_upg_slot, log))
                 return ERR_FW_UPGRADE, log
@@ -1391,38 +1676,33 @@ class FwUpg(object):
             upgradeerror(msg)
             return ERR_FW_UPGRADE, msg
 
-    def do_file_init_check(self, file_path, slot, upg_type, firmware_name=None):
-        upgradedebuglog("do_file_init_check, file_path: %s, slot: %s, upg_type: %s, firmware_name: %s" % (file_path, slot, upg_type, firmware_name))
+    def do_file_init_check(self, file_path, slot, upg_type, chip_select, firmware_name, specify_chain):
+        upgradedebuglog("do_file_init_check, file_path: %s, slot: %s, upg_type: %s, chip_select: %s, firmware_name: %s, specify_chain: %s" %
+            (file_path, slot, upg_type, chip_select, firmware_name, specify_chain))
 
         if slot is None:  # traverse all slots
             for i in range(0, self.max_slot_num + 1):
-                ret, log = self.upg_platform.initial_check(file_path, i, upg_type, firmware_name)
+                ret, log = self.upg_platform.initial_check(file_path, i, upg_type, chip_select, self.file_list, firmware_name, specify_chain)
                 if ret != CHECK_OK:
                     upgradedebuglog(
                         "file: %s, slot%d initial check not ok, ret: %d, msg: %s" %
                         (file_path, i, ret, log))
-                    accept_error = (ERR_FW_CARD_ABSENT, ERR_FW_HEAD_CHECK, ERR_FW_FOOL_PROOF)
+                    accept_error = (ERR_FW_CARD_ABSENT, ERR_FW_HEAD_CHECK, ERR_FW_FOOL_PROOF, ERR_FW_NO_TYPE_FOUND)
                     if ret in accept_error:
                         msg = "file: %s, slot%d initial check ret: %d, acceptable error." % (file_path, i, ret)
                         upgradedebuglog(msg)
                         continue
                     return ret, log
-                file_instance = FileUpg(self.upg_platform.cold_chain_config, file_path, self.upg_platform.devtype,
-                                        self.upg_platform.subtype, i, self.upg_platform.filetype, self.upg_platform.chain, upg_type)
-                self.file_list.append(file_instance)
         else:
             slot = int(slot, 10)
-            ret, log = self.upg_platform.initial_check(file_path, slot, upg_type, firmware_name)
+            ret, log = self.upg_platform.initial_check(file_path, slot, upg_type, chip_select, self.file_list, firmware_name, specify_chain)
             if ret != CHECK_OK:
                 msg = "file: %s, slot%d initial check not ok, ret: %d,  msg: %s" % (file_path, slot, ret, log)
                 return ret, msg
-            file_instance = FileUpg(self.upg_platform.cold_chain_config, file_path, self.upg_platform.devtype,
-                                    self.upg_platform.subtype, slot, self.upg_platform.filetype, self.upg_platform.chain, upg_type)
-            self.file_list.append(file_instance)
         msg = "file: %s all slots init check ok" % file_path
         return CHECK_OK, msg
 
-    def do_dir_init_check(self, path, slot, upg_type, firmware_name=None):
+    def do_dir_init_check(self, path, slot, upg_type, chip_select, firmware_name, specify_chain):
         for root, dirs, names in os.walk(path):
             # root: directory absolute path
             # dirs: folder path collection under directory
@@ -1430,20 +1710,37 @@ class FwUpg(object):
             for filename in names:
                 # file_path is file absolute path
                 file_path = os.path.join(root, filename)
-                ret, log = self.do_file_init_check(file_path, slot, upg_type, firmware_name)
+                ret, log = self.do_file_init_check(file_path, slot, upg_type, chip_select, firmware_name, specify_chain)
                 if ret != CHECK_OK:
-                    upgradedebuglog(log)
-
-        msg = "%d files in dir have been check ok" % len(self.file_list)
+                    return ret, log
+        msg = "all files in dir have been check ok"
         upgradedebuglog(msg)
         return CHECK_OK, msg
 
-    def do_fw_upg(self, path, slot, upg_type, firmware_name=None):
+    def do_fw_upg(self, path, slot, upg_type, chip_select, firmware_name, specify_chain):
         match_zip_file_flag = False
         try:
-            upgradedebuglog("do_fw_upg, path: %s, slot: %s, upg_type: %s, firmware_name: %s" % (path, slot, upg_type, firmware_name))
+            upgradedebuglog("do_fw_upg, path: %s, slot: %s, chip_select: %s upg_type: %s, firmware_name: %s, specify_chain: %s" %
+                (path, slot, chip_select, upg_type, firmware_name, specify_chain))
+
             if slot is not None and not slot.isdigit():
-                msg = "invalid slot param: %s" % slot
+                if chip_select is not None:
+                    msg = "Invalid params, slot: %s, chip_select: %s" % (slot, chip_select)
+                    upgradeerror(msg)
+                    return ERR_FW_INVALID_PARAM, msg
+                chip_select = slot
+                slot = None
+                upgradedebuglog("After adjust params slot %s, chip_select %s" % (slot, chip_select))
+
+            if firmware_name is not None and chip_select is not None:
+                msg = ("Invalid params, firmware_name: %s, chip_select must be None, but it is actually %s" %
+                    (firmware_name, chip_select))
+                upgradeerror(msg)
+                return ERR_FW_INVALID_PARAM, msg
+
+            if firmware_name is not None and specify_chain is not None:
+                msg = ("Invalid params, firmware_name: %s, specify_chain must be None, but it is actually %s" %
+                    (firmware_name, specify_chain))
                 upgradeerror(msg)
                 return ERR_FW_INVALID_PARAM, msg
 
@@ -1457,7 +1754,7 @@ class FwUpg(object):
                 # remove origin firmware upgrade file
                 exec_os_cmd("rm -rf %s" % UPGRADE_FILE_DIR)
                 cmd = "unzip -o %s -d /tmp/" % path
-                if os.path.exists(UPGRADE_DEBUG_FILE):
+                if is_upgrade_debug_mode():
                     status, output = exec_os_cmd_log(cmd)
                 else:
                     status, output = exec_os_cmd(cmd)
@@ -1473,9 +1770,9 @@ class FwUpg(object):
                     msg = "directory upgrade is not supported when firmware_name: %s is specified." % firmware_name
                     upgradeerror(msg)
                     return ERR_FW_INVALID_PARAM, msg
-                ret, msg = self.do_dir_init_check(path, slot, upg_type, firmware_name)
+                ret, msg = self.do_dir_init_check(path, slot, upg_type, chip_select, firmware_name, specify_chain)
             elif os.path.isfile(path):
-                ret, msg = self.do_file_init_check(path, slot, upg_type, firmware_name)
+                ret, msg = self.do_file_init_check(path, slot, upg_type, chip_select, firmware_name, specify_chain)
             else:
                 ret = ERR_FW_FILE_FOUND
                 msg = "path: %s not found" % path
@@ -1492,9 +1789,10 @@ class FwUpg(object):
 
             SUCCUSS_FILE_SUMMARY = "SUCCESS FILE: \n"
             # file cold upgrade
-            upgradedebuglog("start all files cold upgrade")
+            upgradedebuglog("start all files cold upgrade, file_list len: %d" % len(self.file_list))
             for file_instance in self.file_list:
                 file_info = repr(file_instance)
+                upgradedebuglog("%s start to cold upgrade" % file_info)
                 ret, log = self.do_file_cold_upg(file_instance)
                 if ret != FIRMWARE_SUCCESS:
                     msg = "%s cold upgrade failed, ret:%d, \n log:\n%s." % (file_info, ret, log)
@@ -1514,7 +1812,7 @@ class FwUpg(object):
             upgradedebuglog(msg)
             return FIRMWARE_SUCCESS, SUCCUSS_FILE_SUMMARY
         except Exception as e:
-            msg = "do dir upgrade exception happend. log: %s" % str(e)
+            msg = "do fw upgrade exception happend. log: %s" % str(e)
             upgradeerror(msg)
             return ERR_FW_UPGRADE, msg
         finally:
@@ -1522,12 +1820,12 @@ class FwUpg(object):
                 exec_os_cmd("rm -rf %s" % UPGRADE_FILE_DIR)
 
     # firmware_name: An optional parameter for specifying the firmware type. (FCB_CPLD, etc.).
-    def fw_upg(self, path, slot, upg_type, firmware_name=None):
+    def fw_upg(self, path, slot, upg_type, chip_select, firmware_name, specify_chain):
         print("+================================+")
         print("|  Doing upgrade, please wait... |")
         exec_os_cmd("touch %s" % FW_UPGRADE_STARTED_FLAG)
         exec_os_cmd("sync")
-        ret, log = self.do_fw_upg(path, slot, upg_type, firmware_name)
+        ret, log = self.do_fw_upg(path, slot, upg_type, chip_select, firmware_name, specify_chain)
         exec_os_cmd("rm -rf %s" % FW_UPGRADE_STARTED_FLAG)
         exec_os_cmd("sync")
         if ret == FIRMWARE_SUCCESS:
@@ -1552,22 +1850,26 @@ def main():
 @main.command()
 @click.argument('file_name', required=True)
 @click.argument('slot_num', required=False, default=None)
-@click.option('-n', '--name', default=None, help='Specify the type of firmware (e.g., BASE_CPLD)')
-def cold(file_name, slot_num, name):
+@click.argument('chip_select', required=False, default=None)
+@click.option('-n', '--name', default=None, help=FW_NAME_CLICK_HELP)
+@click.option('-c', '--chain', default=None, type=int, help='Specify the chain of firmware')
+def cold(file_name, slot_num, chip_select, name, chain):
     '''cold upgrade'''
     fwupg = FwUpg()
-    fwupg.fw_upg(file_name, slot_num, COLD_UPGRADE, name)
+    fwupg.fw_upg(file_name, slot_num, COLD_UPGRADE, chip_select, name, chain)
 
 
 # warm upgrade
 @main.command()
 @click.argument('file_name', required=True)
 @click.argument('slot_num', required=False, default=None)
-@click.option('-n', '--name', default=None, help='Specify the type of firmware (e.g., BASE_CPLD)')
-def warm(file_name, slot_num, name):
+@click.argument('chip_select', required=False, default=None)
+@click.option('-n', '--name', default=None, help=FW_NAME_CLICK_HELP)
+@click.option('-c', '--chain', default=None, type=int, help='Specify the chain of firmware')
+def warm(file_name, slot_num, chip_select, name, chain):
     '''warm upgrade'''
     fwupg = FwUpg()
-    fwupg.fw_upg(file_name, slot_num, WARM_UPGRADE, name)
+    fwupg.fw_upg(file_name, slot_num, WARM_UPGRADE, chip_select, name, chain)
 
 
 # test upgrade
@@ -1590,6 +1892,19 @@ def bmc(file_name, chip_select, chanel, erase_type):
     '''BMC upgrade'''
     platform = BasePlatform()
     platform.do_bmc_upgrade_main(file_name, chip_select, chanel, erase_type)
+
+# remove_header
+@main.command()
+@click.argument('file_name', required=True)
+@click.argument('out_file_name', required=False, default=None)
+def remove_header(file_name, out_file_name):
+    '''remove_header'''
+    platform = BasePlatform()
+    ret, msg = platform.do_fw_upg_raw_file_generate(file_name, out_file_name)
+    if ret is False:
+        print("remove file header fail, reason: %s" % msg)
+    else:
+        print("remove file header success, output file: %s" % msg)
 
 
 if __name__ == '__main__':

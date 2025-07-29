@@ -111,7 +111,7 @@ static s32 ncs23322_read_word_data(struct i2c_client *client, int page, u8 reg)
     return i2c_smbus_read_word_data(client, reg);
 }
 
-static s32 ncs23322_read_i2c_block_data(struct i2c_client *client, int page, u8 reg, u8 length, 
+static s32 ncs23322_read_i2c_block_data(struct i2c_client *client, int page, u8 reg, u8 length,
             u8* values)
 {
     int rv;
@@ -174,7 +174,7 @@ static int ncs23322_write_word_data(struct i2c_client *client, int page, u8 reg,
     return i2c_smbus_write_word_data(client, reg, value);
 }
 
-static s32 ncs23322_write_i2c_block_data(struct i2c_client *client, int page, u8 reg, u8 length, 
+static s32 ncs23322_write_i2c_block_data(struct i2c_client *client, int page, u8 reg, u8 length,
             u8* values)
 {
     int rv;
@@ -188,7 +188,7 @@ static s32 ncs23322_write_i2c_block_data(struct i2c_client *client, int page, u8
     return i2c_smbus_write_i2c_block_data(client, reg, length, values);
 }
 
-static ssize_t ncs23322_general_word_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_word_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -211,7 +211,7 @@ static ssize_t ncs23322_general_word_show(struct device *dev, struct device_attr
     return snprintf(buf, PAGE_SIZE, "0x%x\n", status & 0xffff);
 }
 
-static ssize_t ncs23322_general_word_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_word_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -244,7 +244,7 @@ static ssize_t ncs23322_general_word_store(struct device *dev, struct device_att
 }
 
 #if 0
-static ssize_t ncs23322_general_byte_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_byte_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -267,7 +267,7 @@ static ssize_t ncs23322_general_byte_show(struct device *dev, struct device_attr
     return snprintf(buf, PAGE_SIZE, "0x%x\n", status & 0xff);
 }
 
-static ssize_t ncs23322_general_byte_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_byte_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -299,7 +299,7 @@ static ssize_t ncs23322_general_byte_store(struct device *dev, struct device_att
 }
 #endif
 
-static ssize_t ncs23322_general_bit_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_bit_show(struct device *dev, struct device_attribute *da,
                 char *buf, int bit)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -321,7 +321,7 @@ static ssize_t ncs23322_general_bit_show(struct device *dev, struct device_attri
     return snprintf(buf, PAGE_SIZE, "0x%x\n", status & 0xff);
 }
 
-static ssize_t ncs23322_general_bit_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_general_bit_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count, int bit)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -382,7 +382,7 @@ static ssize_t ncs23322_design_id_show(struct device *dev, struct device_attribu
     return snprintf(buf, PAGE_SIZE, "0x%llx\n", val);
 }
 
-static ssize_t ncs23322_design_id_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_design_id_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     struct ncs23322_data *data = dev_get_drvdata(dev);
@@ -407,7 +407,7 @@ static ssize_t ncs23322_design_id_store(struct device *dev, struct device_attrib
     mutex_lock(&data->update_lock);
     ret = ncs23322_write_i2c_block_data(client, page, reg, DESIGNED_ID_SIZE, values);
     if (ret < 0) {
-        DEBUG_ERROR("ncs23322 write i2c block data failed page [%d] reg [0x%x], errno: %d\n", 
+        DEBUG_ERROR("ncs23322 write i2c block data failed page [%d] reg [0x%x], errno: %d\n",
             page, reg, ret);
         mutex_unlock(&data->update_lock);
         return ret;
@@ -417,25 +417,25 @@ static ssize_t ncs23322_design_id_store(struct device *dev, struct device_attrib
     return count;
 }
 
-static ssize_t ncs23322_sysclk_unlock_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_sysclk_unlock_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     return ncs23322_general_bit_show(dev, da, buf, SYSCLK_UNLOCK_OFFSET);
 }
 
-static ssize_t ncs23322_sysclk_unlock_flg_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_sysclk_unlock_flg_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     return ncs23322_general_bit_show(dev, da, buf, SYSCLK_UNLOCK_FLG_OFFSET);
 }
 
-static ssize_t ncs23322_sysclk_unlock_flg_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_sysclk_unlock_flg_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     return ncs23322_general_bit_store(dev, da, buf, count, SYSCLK_UNLOCK_FLG_OFFSET);
 }
 
-static ssize_t ncs23322_efuse_err_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_efuse_err_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     return ncs23322_general_bit_show(dev, da, buf, EFUSE_ERR_OFFSEET);
@@ -446,25 +446,25 @@ static ssize_t ncs23322_fw_err_show(struct device *dev, struct device_attribute 
     return ncs23322_general_bit_show(dev, da, buf, FW_ERR_OFFSEET);
 }
 
-static ssize_t ncs23322_ram_err_flg_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_ram_err_flg_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     return ncs23322_general_bit_show(dev, da, buf, RAM_ERR_FLG_OFFSEET);
 }
 
-static ssize_t ncs23322_ram_err_flg_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_ram_err_flg_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     return ncs23322_general_bit_store(dev, da, buf, count, RAM_ERR_FLG_OFFSEET);
 }
 
-static ssize_t ncs23322_dfx_en_show(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_dfx_en_show(struct device *dev, struct device_attribute *da,
                 char *buf)
 {
     return ncs23322_general_bit_show(dev, da, buf, DFX_EN_OFFSET);
 }
 
-static ssize_t ncs23322_dfx_en_store(struct device *dev, struct device_attribute *da, 
+static ssize_t ncs23322_dfx_en_store(struct device *dev, struct device_attribute *da,
                 const char *buf, size_t count)
 {
     return ncs23322_general_bit_store(dev, da, buf, count, DFX_EN_OFFSET);

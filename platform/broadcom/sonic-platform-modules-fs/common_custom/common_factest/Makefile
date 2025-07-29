@@ -8,7 +8,7 @@ export SUB_BUILD_DIR
 all : CHECK
 CHECK :
 	@if [ ! -d ${INSTALL_SCRIPT_DIR} ]; then mkdir -p ${INSTALL_SCRIPT_DIR} ;fi
-	@if [ -d $(PWD)/script/ ]; then cp -r $(PWD)/script/* ${INSTALL_SCRIPT_DIR} ;fi
+	@if [ $(ls -A $(PWD)/script/ | wc -l) -gt 0 ]; then cp -r $(PWD)/script/* ${INSTALL_SCRIPT_DIR} ;fi
 	@if [ -d $(INSTALL_SCRIPT_DIR) ]; then chmod +x $(INSTALL_SCRIPT_DIR)/* ;fi
 
 clean:

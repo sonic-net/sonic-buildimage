@@ -13,6 +13,14 @@
 #include <wb_bsp_kernel_debug.h>
 
 #define RC32312_PAGE_REG                    (0xfd)
+#define RC32312_APLL_EVENT_REG              (0x6e)
+#define RC32312_APLL_CLEAR_VAL              (0x03)
+#define RC32312_APLL_CLEAR_MASK             (0x03)
+#define RC32312_APLL_LOL_EVENT_REG          (0x6f)
+#define RC32312_APLL_LOL_EVENT_CLEAR_VAL    (0x0)
+#define RC32312_APLL_LOL_EVENT_CLEAR_MASK   (0x0f)
+
+#define RC32312_APLL_PAGE                   (2)
 #define RC32312_OUT_CTRL_EN                 (0x0001)
 #define RC32312_OUT_CTRL_DIS                (0x0002)
 
@@ -247,9 +255,63 @@ static ssize_t set_rc32312_out_ctrl_value(struct device *dev, struct device_attr
     return count;
 }
 
-static SENSOR_DEVICE_ATTR_2(apll_event, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, 2, 0x6e);
-static SENSOR_DEVICE_ATTR_2(apll_lol_event, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, 2, 0x6f);
-static SENSOR_DEVICE_ATTR_2(apll_sts, S_IRUGO, show_rc32312_value, NULL, 2, 0x71);
+static int clear_rc32312_value(struct rc32312_data *data, int page, u8 reg, u8 val, u8 mask)
+{
+    struct i2c_client *client;
+    s32 ori_status;
+    u8 clear_value;
+    int ret;
+
+    if (!data || !data->client) {
+        DEBUG_ERROR("Invalid data or client pointer\n");
+        return -EINVAL;
+    }
+    client = data->client;
+
+    mutex_lock(&data->update_lock);
+    ori_status = rc32312_read_byte_data(client, page, reg);
+    if (ori_status < 0) {
+        DEBUG_ERROR("rc32312 read value failed page [%d] reg [0x%x], errno: %d\n", page, reg, ori_status);
+        mutex_unlock(&data->update_lock);
+        return ori_status;
+    }
+    clear_value = (((u8)ori_status & ~(mask)) | (val & (mask)));
+
+    ret = rc32312_write_byte_data(client, page, reg, clear_value);
+    if (ret < 0) {
+        DEBUG_ERROR("rc32312 write value failed page [%d] reg [0x%x] val [0x%x], errno: %d\n", page, reg, clear_value, ret);
+        mutex_unlock(&data->update_lock);
+        return ret;
+    }
+
+    DEBUG_VERBOSE("rc32312 clear value success page [%d] reg [0x%x] value [0x%x]\n", page, reg, clear_value);
+    mutex_unlock(&data->update_lock);
+
+    return 0;
+}
+
+static int rc32312_init(struct rc32312_data *data)
+{
+    int ret;
+
+    if (!data) {
+        DEBUG_ERROR("Invalid data pointer\n");
+        return -EINVAL;
+    }
+
+    ret = clear_rc32312_value(data, RC32312_APLL_PAGE, RC32312_APLL_EVENT_REG, RC32312_APLL_CLEAR_VAL, RC32312_APLL_CLEAR_MASK);
+    ret += clear_rc32312_value(data, RC32312_APLL_PAGE, RC32312_APLL_LOL_EVENT_REG, RC32312_APLL_LOL_EVENT_CLEAR_VAL, RC32312_APLL_LOL_EVENT_CLEAR_MASK);
+    if (ret < 0) {
+        dev_warn(&data->client->dev, "RC32312 init fail\n");
+        return ret;
+    }
+    dev_dbg(&data->client->dev, "RC32312 init success.\n");
+    return ret;
+}
+
+static SENSOR_DEVICE_ATTR_2(apll_event, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, RC32312_APLL_PAGE, RC32312_APLL_EVENT_REG);
+static SENSOR_DEVICE_ATTR_2(apll_lol_event, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, RC32312_APLL_PAGE, RC32312_APLL_LOL_EVENT_REG);
+static SENSOR_DEVICE_ATTR_2(apll_sts, S_IRUGO, show_rc32312_value, NULL, RC32312_APLL_PAGE, 0x71);
 static SENSOR_DEVICE_ATTR_2(xtal_los_evt, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, 1, 0x78);
 static SENSOR_DEVICE_ATTR_2(xtal_los_cnt, S_IRUGO | S_IWUSR, show_rc32312_value, set_rc32312_value, 1, 0x79);
 static SENSOR_DEVICE_ATTR_2(xtal_los_sts, S_IRUGO, show_rc32312_value, NULL, 1, 0x7a);
@@ -322,6 +384,7 @@ static int rc32312_probe(struct i2c_client *client, const struct i2c_device_id *
         return -ENODEV;
     }
 
+    (void)rc32312_init(data);
     ret = sysfs_create_group(&client->dev.kobj, data->sysfs_group);
     if (ret < 0) {
         dev_err(&client->dev, "RC32312 sysfs_create_group failed %d\n", ret);

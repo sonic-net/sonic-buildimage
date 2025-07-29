@@ -71,7 +71,7 @@ ssize_t dfd_get_led_status(uint16_t led_id, uint8_t led_index, char *buf, size_t
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DBG_SYSLED_DEBUG(DBG_ERROR, "buf size error, count: %lu, led_id: %u, led_index: %u\n",
+        DBG_SYSLED_DEBUG(DBG_ERROR, "buf size error, count: %zu, led_id: %u, led_index: %u\n",
             count, led_id, led_index);
         return -DFD_RV_INVALID_VALUE;
     }

@@ -1,8 +1,10 @@
 #!/usr/bin/python3
+from public.platform_common_config import FW_UPGRADE_STARTED_FLAG, WARM_UPG_FLAG, WARM_UPGRADE_STARTED_FLAG, AIRFLOW_RESULT_FILE, SUB_VERSION_FILE, PLUGINS_DOCKER_STARTED_FLAG, SET_MAC_NEED_REBOOT
 
 __all__ = [
     "BLACKLIST_DRIVERS",
     "DRIVERLISTS",
+    "DRIVERLISTS_CHECK",
     "DEVICE",
     "STARTMODULE",
     "MAC_DEFAULT_PARAM",
@@ -75,9 +77,15 @@ __all__ = [
     "HW_MONITOR_PARAM",
     "POWER_CTRL_CONF",
     "S3IP_DEBUG_FILE_LIST",
-    "MGMT_VERSION_PATH",
     "BSP_COMMON_LOG_PATH",
     "BSP_COMMON_LOG_DIR",
+    "SUB_VERSION_FILE",
+    "UBOOT_INFO_CONF",
+    "DFX_XDPE_MONITOR_INFO",
+    "DFX_REG_MONITOR_PARAM",
+    "PLATFORM_SENSORS_CFG",
+    "PLUGINS_DOCKER_STARTED_FLAG",
+    "SET_MAC_NEED_REBOOT",
 ]
 
 # driver blacklist parameter
@@ -85,7 +93,7 @@ BLACKLIST_DRIVERS = []
 
 # driver list parameter
 DRIVERLISTS = []
-
+DRIVERLISTS_CHECK = []
 # device list parameter
 DEVICE = []
 
@@ -118,28 +126,27 @@ REBOOT_CAUSE_PARA = []
 
 # upgrade parameter
 UPGRADE_SUMMARY = {}
-FW_UPGRADE_STARTED_FLAG = "/etc/sonic/.doing_fw_upg"
 
 # warm_uprade parameter
 WARM_UPGRADE_PARAM = {}
-WARM_UPG_FLAG = "/etc/sonic/.warm_upg_flag"
-WARM_UPGRADE_STARTED_FLAG = "/etc/sonic/.doing_warm_upg"
 
 # platform_e2 parameter
 PLATFORM_E2_CONF = {}
 
+# xdpe monitor info
+DFX_XDPE_MONITOR_INFO = {}
+
+# dfx reg monitor 
+DFX_REG_MONITOR_PARAM = {}
+
 # generate_airflow parameter
 AIR_FLOW_CONF = {}
-AIRFLOW_RESULT_FILE = "/etc/sonic/.airflow"
-
-# generate_mgmt_version parameter
-MGMT_VERSION_PATH = "/tmp/.platform/mgmt_version"
 
 # bsp common log dir
 BSP_COMMON_LOG_DIR = "/var/log/bsp_tech/"
 
 # bsp common log path
-BSP_COMMON_LOG_PATH = "/var/log/bsp_tech/bsp_common.log"
+BSP_COMMON_LOG_PATH = BSP_COMMON_LOG_DIR + "bsp_common.log"
 
 # Initialization parameters
 INIT_PARAM_PRE = []
@@ -167,6 +174,11 @@ PRODUCT_NAME_CONF = {}
 PRODUCT_INFO_CONF = {}
 
 HW_MONITOR_PARAM = {}
+
+# uboot version info
+UBOOT_INFO_CONF = {}
+
+PLATFORM_SENSORS_CFG = {}
 
 ################################ fancontrol parameter###################################
 MONITOR_TEMP_MIN = 38

@@ -2,49 +2,36 @@
 # -*- coding: UTF-8 -*-
 import os
 import syslog
+import logging
 from platform_config import PRODUCT_NAME_CONF
 from wbutil.baseutil import get_machine_info
 from wbutil.baseutil import get_onie_machine
+from wbutil.baseutil import get_sub_version
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR
 
 BOARD_ID_PATH = "/sys/module/platform_common/parameters/dfd_my_type"
-PRODUCT_DEBUG_FILE = "/etc/.product_debug_flag"
 PRODUCT_RESULT_FILE = "/tmp/.productname"
-
-PRODUCTERROR = 1
-PRODUCTDEBUG = 2
-
-debuglevel = 0
-
+DEBUG_FILE = "/etc/.logger.debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "product_name_debug.log"
+logger = setup_logger(LOG_FILE)
 
 def product_info(s):
-    syslog.openlog("PRODUCT", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def product_error(s):
-    syslog.openlog("PRODUCT", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def product_debug(s):
-    if PRODUCTDEBUG & debuglevel:
-        syslog.openlog("PRODUCT", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
 def product_debug_error(s):
-    if PRODUCTERROR & debuglevel:
-        syslog.openlog("PRODUCT", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def debug_init():
-    global debuglevel
-    try:
-        with open(PRODUCT_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception as e:
-        debuglevel = 0
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 ################################## Custom interface storage area for each product begin ###################################
 
@@ -163,7 +150,13 @@ def save_product_name():
     # Get product name
     product_name = get_product_name()
     board_id = get_board_id()
-    name = "%s_%s\n" % (product_name, board_id)
+    status, sub_ver = get_sub_version()
+    if status is False:
+        product_debug("get sub_ver faield, msg: %s" % sub_ver)
+        name = "%s_%s\n" % (product_name, board_id)
+    else:
+        name = "%s_%s_%s\n" % (product_name, board_id, sub_ver)
+
     product_info("save product name: %s" % name)
     with open(PRODUCT_RESULT_FILE, "w") as fd:
         fd.write(name)
@@ -171,5 +164,5 @@ def save_product_name():
 
 if __name__ == '__main__':
     debug_init()
-    product_debug("enter main")
+    product_info("enter main")
     save_product_name()

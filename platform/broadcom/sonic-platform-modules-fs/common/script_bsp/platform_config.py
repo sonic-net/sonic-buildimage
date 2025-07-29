@@ -2,11 +2,13 @@
 
 import sys
 import os
-from wbutil.baseutil import get_machine_info
 from wbutil.baseutil import get_platform_info
 from wbutil.baseutil import get_board_id
+from wbutil.baseutil import get_sub_version
+
 
 __all__ = [
+    "module_product",
     "MAILBOX_DIR",
     "PLATFORM_GLOBALCONFIG",
     "GLOBALCONFIG",
@@ -51,36 +53,70 @@ __all__ = [
     "HW_MONITOR_PARAM",
     "POWER_CTRL_CONF",
     "S3IP_DEBUG_FILE_LIST",
-    "MGMT_VERSION_PATH",
     "BSP_COMMON_LOG_PATH",
     "BSP_COMMON_LOG_DIR",
+    "UBOOT_INFO_CONF",
+    "DFX_XDPE_MONITOR_INFO",
+    "DFX_REG_MONITOR_PARAM",
+    "PLATFORM_SENSORS_CFG",
+    "PLUGINS_DOCKER_STARTED_FLAG",
+    "SET_MAC_NEED_REBOOT",
 ]
 
+platform = "NA"
+board_id = "NA"
+sub_ver = "NA"
 
 def getdeviceplatform():
-    x = get_platform_info(get_machine_info())
-    if x is not None:
-        filepath = "/usr/share/sonic/device/" + x
+    status, val_tmp = get_platform_info()
+    if status is True:
+        filepath = "/usr/share/sonic/device/" + val_tmp
         return filepath
     return None
 
+def get_product_info():
+    global platform
+    global board_id
+    global sub_ver
 
-platform = get_platform_info(get_machine_info())
-board_id = get_board_id(get_machine_info())
+    status, val_tmp = get_platform_info()
+    if status is True:
+        platform = val_tmp
+
+    status, val_tmp = get_board_id()
+    if status is True:
+        board_id = val_tmp
+
+    status, val_tmp = get_sub_version()
+    if status is True:
+        sub_ver = val_tmp
+    return
+
+
+get_product_info()
 platformpath = getdeviceplatform()
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
-grtd_productfile = (platform + "_config").replace("-", "_")
+platform_subver_configfile = (platform + "_" + board_id + "_" + sub_ver + "_config")  # platfrom + board_id + sub_ver
+platform_boardid_configfile = (platform + "_" + board_id + "_config") # platfrom + board_id
+platform_configfile = (platform + "_config")
+# bmc use _platform_config
+platform_config_file_bmc = (platform + "_platform_config")
 common_productfile = "platform_common"
-platform_configfile = (platform + "_" + board_id + "_config").replace("-", "_")  # platfrom + board_id
+
+
 configfile_pre = "/usr/local/bin/"
 sys.path.append(platformpath)
 sys.path.append(configfile_pre)
 
 ############################################################################################
-if os.path.exists(configfile_pre + platform_configfile + ".py"):
+if os.path.exists(configfile_pre + platform_subver_configfile + ".py"):
+    module_product = __import__(platform_subver_configfile, globals(), locals(), [], 0)
+elif os.path.exists(configfile_pre + platform_boardid_configfile + ".py"):
+    module_product = __import__(platform_boardid_configfile, globals(), locals(), [], 0)
+elif os.path.exists(configfile_pre + platform_configfile + ".py"):
     module_product = __import__(platform_configfile, globals(), locals(), [], 0)
-elif os.path.exists(configfile_pre + grtd_productfile + ".py"):
-    module_product = __import__(grtd_productfile, globals(), locals(), [], 0)
+elif os.path.exists(configfile_pre + platform_config_file_bmc + ".py"):
+    module_product = __import__(platform_config_file_bmc, globals(), locals(), [], 0)
 elif os.path.exists(configfile_pre + common_productfile + ".py"):
     module_product = __import__(common_productfile, globals(), locals(), [], 0)
 else:
@@ -88,11 +124,17 @@ else:
     sys.exit(-1)
 ############################################################################################
 
+
+def get_config_param(name, default):
+    return getattr(module_product, name, default)
+
+
 PLATFORM_GLOBALCONFIG = {
     "DRIVERLISTS": module_product.DRIVERLISTS,
     "OPTOE": module_product.OPTOE,
     "DEVS": module_product.DEVICE,
-    "BLACKLIST_DRIVERS": module_product.BLACKLIST_DRIVERS
+    "BLACKLIST_DRIVERS": module_product.BLACKLIST_DRIVERS,
+    "DRIVERLISTS_CHECK":module_product.DRIVERLISTS_CHECK
 }
 GLOBALCONFIG = PLATFORM_GLOBALCONFIG
 
@@ -136,9 +178,6 @@ PLATFORM_E2_CONF = module_product.PLATFORM_E2_CONF
 AIR_FLOW_CONF = module_product.AIR_FLOW_CONF
 AIRFLOW_RESULT_FILE = module_product.AIRFLOW_RESULT_FILE
 
-# generate_mgmt_version parameter
-MGMT_VERSION_PATH = module_product.MGMT_VERSION_PATH
-
 # bsp common log dir
 BSP_COMMON_LOG_DIR = module_product.BSP_COMMON_LOG_DIR
 
@@ -175,6 +214,21 @@ HW_MONITOR_PARAM = module_product.HW_MONITOR_PARAM
 # s3ip dev present debug file config
 S3IP_DEBUG_FILE_LIST = module_product.S3IP_DEBUG_FILE_LIST
 
+# uboot info config
+UBOOT_INFO_CONF = module_product.UBOOT_INFO_CONF
+
+# xdpe monitor info
+DFX_XDPE_MONITOR_INFO = module_product.DFX_XDPE_MONITOR_INFO
+
+# dfx reg monitor
+DFX_REG_MONITOR_PARAM = module_product.DFX_REG_MONITOR_PARAM
+
+PLATFORM_SENSORS_CFG = module_product.PLATFORM_SENSORS_CFG
+
+# plugin start flag
+PLUGINS_DOCKER_STARTED_FLAG = module_product.PLUGINS_DOCKER_STARTED_FLAG
+
+SET_MAC_NEED_REBOOT = module_product.SET_MAC_NEED_REBOOT
 ################################ fancontrol parameter###################################
 
 

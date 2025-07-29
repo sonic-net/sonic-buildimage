@@ -4,30 +4,35 @@
 import os
 import time
 import syslog
+import logging
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
-from platform_util import get_value
+from platform_util import get_value, setup_logger, BSP_COMMON_LOG_DIR
 
-INTELLIGENT_MONITOR_DEBUG_FILE = "/etc/.intelligent_monitor_debug"
 INTELLIGENT_MONITOR_FILE = "/tmp/.intelligent_factest_mode_en"
-debuglevel = 0
 
+DEBUG_FILE = "/etc/.intelligent_monitor_debug"
+LOG_FILE = BSP_COMMON_LOG_DIR + "intelligent_monitor_debug.log"
+logger = setup_logger(LOG_FILE)
+
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def monitor_syslog_debug(s):
-    if debuglevel:
-        syslog.openlog("INTELLIGENT_MONITOR_DEBUG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def monitor_syslog(s):
     syslog.openlog("INTELLIGENT_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def pmon_syslog_notice(s):
     syslog.openlog("PMON_SYSLOG", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_NOTICE, s)
-
+    logger.error(s)
 
 class IntelligentMonitor():
     def __init__(self):
@@ -46,13 +51,6 @@ class IntelligentMonitor():
     @property
     def interval(self):
         return self.__interval
-
-    def debug_init(self):
-        global debuglevel
-        if os.path.exists(INTELLIGENT_MONITOR_DEBUG_FILE):
-            debuglevel = 1
-        else:
-            debuglevel = 0
 
     def dcdc_whitelist_check(self, dcdc_name):
         try:
@@ -90,6 +88,9 @@ class IntelligentMonitor():
                         monitor_syslog(
                             '%%INTELLIGENT_MONITOR-3-DCDC_SENSOR_FAILED: The value of %s read failed.' %
                             (dcdc_name))
+                    elif (item['Max'] is None) or (item['Min'] is None):
+                        monitor_syslog_debug('%%INTELLIGENT_MONITOR-6-DCDC_SENSOR_IGNORE: %s ignore, value is %.3f%s.' %
+                                             (dcdc_name, item['Value'], item['Unit']))
                     elif float(item['Value']) > float(item['Max']):
                         pmon_syslog_notice('%%PMON-5-VOLTAGE_HIGH: %s voltage %.3f%s is larger than max threshold %.3f%s.' %
                                            (dcdc_name, float(item['Value']), item['Unit'], float(item['Max']), item['Unit']))
@@ -113,7 +114,7 @@ class IntelligentMonitor():
     def run(self):
         while True:
             try:
-                self.debug_init()
+                debug_init()
                 if os.path.exists(INTELLIGENT_MONITOR_FILE) is True:
                     monitor_syslog_debug("file exists, do nothing!")
                     time.sleep(5)
@@ -125,5 +126,6 @@ class IntelligentMonitor():
 
 
 if __name__ == '__main__':
+    debug_init()
     intelligent_monitor = IntelligentMonitor()
     intelligent_monitor.run()

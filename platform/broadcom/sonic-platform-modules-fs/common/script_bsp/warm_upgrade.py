@@ -6,16 +6,13 @@ import time
 import syslog
 import signal
 import click
-from platform_util import get_value, set_value, exec_os_cmd, exec_os_cmd_log
+import logging
+from platform_util import get_value, set_value, exec_os_cmd, exec_os_cmd_log, setup_logger, BSP_COMMON_LOG_DIR
 from platform_config import WARM_UPGRADE_PARAM
 
-
-WARM_UPGRADE_DEBUG_FILE = "/etc/.warm_upgrade_debug_flag"
-
-WARMUPGRADEDEBUG = 1
-
-debuglevel = 0
-
+DEBUG_FILE = "/etc/.warm_upgrade_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "warm_upgrade_debug.log"
+logger = setup_logger(LOG_FILE)
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
 
 
@@ -36,42 +33,28 @@ class AliasedGroup(click.Group):
 
 
 def debug_init():
-    global debuglevel
-    if os.path.exists(WARM_UPGRADE_DEBUG_FILE):
-        debuglevel = debuglevel | WARMUPGRADEDEBUG
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        debuglevel = debuglevel & ~(WARMUPGRADEDEBUG)
+        logger.setLevel(logging.INFO)
 
 
 def warmupgradewarninglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("WARMUPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def warmupgradecriticallog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("WARMUPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_CRIT, s)
-
+    logger.critical(s)
 
 def warmupgradeerror(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("WARMUPGRADE", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def warmupgradedebuglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if WARMUPGRADEDEBUG & debuglevel:
-        syslog.openlog("WARMUPGRADE", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def subprocess_warm_upgrade(file, main_type, sub_type, slot, file_type, chain):
     command = "firmware_upgrade %s 0x%x 0x%x %s %s 0x%x" % (file, main_type, sub_type, slot, file_type, chain)
     warmupgradedebuglog("warm upgrade firmware cmd:%s" % command)
-    if os.path.exists(WARM_UPGRADE_DEBUG_FILE):
+    if os.path.exists(DEBUG_FILE):
         return exec_os_cmd_log(command)
     return exec_os_cmd(command)
 
@@ -102,7 +85,7 @@ class RefreshUpgradeBase(object):
         self.finish_cmd_list = self._config.get("finish_cmd", [])
         self.file_type = file_type
         self.chain = chain
-        
+
     def get_config(self):
         pass
 
@@ -200,23 +183,70 @@ class RefreshUpgradeBase(object):
         warmupgradedebuglog(msg)
         return True, msg
 
+    def wait_for_value(self, config):
+        timeout = config.get("timeout", None)
+        ok_value = config.get("okval", None)
+        mask = config.get("mask", None)
+        if ok_value is None:
+            warmupgradeerror("wait_for_value err: ok_value is None")
+            return False, "wait_for_value err: ok_value is None"
+        if timeout is not None:
+            start_time = time.time()
+            while True:
+                ret, val = get_value(config)
+                if ret == False:
+                    warmupgradeerror(val)
+                    return ret, val
+                warmupgradedebuglog("wait_for_value: read_value: %s " % val)
+                if mask is not None:
+                    val = val & mask
+                    warmupgradedebuglog("wait_for_value: mask_value: %s " % val)
+                if val == ok_value:
+                    warmupgradedebuglog("wait_for_value success, ok_val: %s read_value: %s " % (ok_value, val))
+                    return True, "wait_for_value success"
+                delta_time = time.time() - start_time
+                if delta_time >= timeout or delta_time < 0:
+                    warmupgradeerror("wait_for_value fail, reason: timeout")
+                    return False, "wait_for_value fail, reason: timeout"
+                time.sleep(0.1)
+        else:
+            ret, val = get_value(config)
+            if ret == False:
+                warmupgradeerror(val)
+                return ret, val
+            warmupgradedebuglog("wait_for_value, read_value: %s " % val)
+            if mask is not None:
+                val = val & mask
+                warmupgradedebuglog("wait_for_value: mask_value: %s " % val)
+            if val == ok_value:
+                warmupgradedebuglog("wait_for_value success, ok_val: %s read_value: %s " % (ok_value, val))
+                return True, "wait_for_value success"
+            else:
+                warmupgradeerror("wait_for_value fail, reason: read_value != ok_val")
+                return False, "wait_for_value fail, reason: read_value != ok_val"
+
     def access_test(self, config):
-        skip = config.get("skip", 0)
-        if skip == 1:
-            return True
         # polling execute command
         polling_cmd_list = config.get("polling_cmd", [])
         for polling_cmd_config in polling_cmd_list:
-            ret, log = set_value(polling_cmd_config)
-            if ret is False:
-                warmupgradeerror(log)
-                return False
+            if polling_cmd_config.get("okval", None) is not None:
+                 ret, val = self.wait_for_value(polling_cmd_config)
+                 if ret == False:
+                    return False
+            else:
+                ret, log = set_value(polling_cmd_config)
+                if ret == False:
+                    warmupgradeerror(log)
+                    return False
         polling_delay = config.get("polling_delay", None)
         if polling_delay is not None:
             time.sleep(polling_delay)
 
         # record check val
         check_val = config.get("value", None)
+        ok_val = config.get("okval", None)
+        if ok_val is not None:
+            check_val = ok_val
         # write value
         ret, log = set_value(config)
         if ret is False:
@@ -286,8 +316,8 @@ class RefreshUpgradeBase(object):
             # upgrade refresh file
             if self.refresh_file is not None:
                 status, output = subprocess_warm_upgrade(
-                    self.refresh_file, self._devtype, self._subtype, self._slot_num, 
-                    self.chain, self.file_type)
+                    self.refresh_file, self._devtype, self._subtype, self._slot_num,
+                    self.file_type, self.chain)
                 if status:
                     log = "%s refresh file upg failed, msg: %s" % (self.device_name, output)
                     warmupgradeerror(log)

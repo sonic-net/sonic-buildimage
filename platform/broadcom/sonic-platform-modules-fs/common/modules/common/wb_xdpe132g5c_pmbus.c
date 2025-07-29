@@ -24,6 +24,21 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 #define XDPE132G5C_PROT_VR13_5MV    (0x07) /* VR13.0 mode, 5-mV DAC */
 #define RETRY_TIME                  (15)
 
+enum chips {
+    XDPE132G5C,
+    XDPE1A2G5B,
+    XDPE19284C,
+    XDPE192C4B,
+};
+
+struct xdpe_chip_data {
+    enum chips id;
+    struct pmbus_driver_info info;
+    u32 vout_multiplier[2];
+};
+
+#define to_xdpe_chip_data(x) container_of(x, struct xdpe_chip_data, info)
+
 static pmbus_info_t dfx_infos[] = {
     {.page_mask = GENMASK(1,0), .pmbus_name = "STATUS_BYTE", .pmbus_reg = PMBUS_STATUS_BYTE, .width = BYTE_DATA, .data_type = RAWDATA_BYTE},
     {.page_mask = GENMASK(1,0), .pmbus_name = "STATUS_WORD", .pmbus_reg = PMBUS_STATUS_WORD, .width = WORD_DATA, .data_type = RAWDATA_WORD},
@@ -384,50 +399,159 @@ static int xdpe132g5c_identify(struct i2c_client *client, struct pmbus_driver_in
     return 0;
 }
 
-static struct pmbus_driver_info xdpe132g5c_info = {
-    .pages = XDPE132G5C_PAGE_NUM,
-    .format[PSC_VOLTAGE_IN] = linear,
-    .format[PSC_VOLTAGE_OUT] = linear,
-    .format[PSC_TEMPERATURE] = linear,
-    .format[PSC_CURRENT_IN] = linear,
-    .format[PSC_CURRENT_OUT] = linear,
-    .format[PSC_POWER] = linear,
-    .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
+static int xdpe_chip_read_word_data(struct i2c_client *client, int page, int phase, int reg)
+{
+    const struct pmbus_driver_info *info = wb_pmbus_get_driver_info(client);
+    const struct xdpe_chip_data *data = to_xdpe_chip_data(info);
+    int ret = 0;
+
+    /* Virtual PMBUS Command not supported */
+    if (reg >= PMBUS_VIRT_BASE) {
+        DEBUG_ERROR("reg:0x%x is invalid\n", reg);
+        ret = -ENXIO;
+        return ret;
+    }
+    switch (reg) {
+    case PMBUS_READ_VOUT:
+        ret = wb_pmbus_read_word_data(client, page, phase, reg);
+        DEBUG_INFO("READ_VOUT Value:%d %d %d\n", ret, data->vout_multiplier[0],
+                    data->vout_multiplier[1]);
+        ret = ((ret * data->vout_multiplier[0])/data->vout_multiplier[1]);
+        break;
+    default:
+        ret = wb_pmbus_read_word_data(client, page, phase, reg);
+        break;
+    }
+    return ret;
+}
+
+
+static struct pmbus_driver_info xdpe1x2g5_info[] = {
+    [XDPE132G5C] = {
+        .pages = XDPE132G5C_PAGE_NUM,
+        .format[PSC_VOLTAGE_IN] = linear,
+        .format[PSC_VOLTAGE_OUT] = linear,
+        .format[PSC_TEMPERATURE] = linear,
+        .format[PSC_CURRENT_IN] = linear,
+        .format[PSC_CURRENT_OUT] = linear,
+        .format[PSC_POWER] = linear,
+        .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
         | PMBUS_HAVE_STATUS_INPUT | PMBUS_HAVE_TEMP
         | PMBUS_HAVE_STATUS_TEMP
         | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT
         | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | PMBUS_HAVE_POUT,
-    .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
-        | PMBUS_HAVE_STATUS_INPUT
+        .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_IIN | PMBUS_HAVE_PIN
+        | PMBUS_HAVE_STATUS_INPUT | PMBUS_HAVE_TEMP
+        | PMBUS_HAVE_STATUS_TEMP
         | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT
         | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | PMBUS_HAVE_POUT,
-    .groups = xdpe132g5_attribute_groups,
-    .identify = xdpe132g5c_identify,
+        .groups = xdpe132g5_attribute_groups,
+        .identify = xdpe132g5c_identify,
+    },
+    [XDPE1A2G5B] = {
+        .pages = XDPE132G5C_PAGE_NUM,
+        .read_word_data = xdpe_chip_read_word_data,
+        .format[PSC_VOLTAGE_IN] = linear,
+        .format[PSC_VOLTAGE_OUT] = linear,
+        .format[PSC_TEMPERATURE] = linear,
+        .format[PSC_CURRENT_IN] = linear,
+        .format[PSC_CURRENT_OUT] = linear,
+        .format[PSC_POWER] = linear,
+        .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .groups = xdpe132g5_attribute_groups,
+    },
+    [XDPE19284C] = {
+        .pages = 2,
+        .read_word_data = xdpe_chip_read_word_data,
+        .format[PSC_VOLTAGE_IN] = linear,
+        .format[PSC_VOLTAGE_OUT] = linear,
+        .format[PSC_TEMPERATURE] = linear,
+        .format[PSC_CURRENT_IN] = linear,
+        .format[PSC_CURRENT_OUT] = linear,
+        .format[PSC_POWER] = linear,
+        .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .groups = xdpe132g5_attribute_groups,
+    },
+    [XDPE192C4B] = {
+        .pages = 2,
+        .read_word_data = xdpe_chip_read_word_data,
+        .format[PSC_VOLTAGE_IN] = linear,
+        .format[PSC_VOLTAGE_OUT] = linear,
+        .format[PSC_TEMPERATURE] = linear,
+        .format[PSC_CURRENT_IN] = linear,
+        .format[PSC_CURRENT_OUT] = linear,
+        .format[PSC_POWER] = linear,
+        .func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
+            PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
+            PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
+            PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
+        .groups = xdpe132g5_attribute_groups,
+    },
 };
 
 static int xdpe132g5c_probe(struct i2c_client *client,
              const struct i2c_device_id *id)
 {
-    struct pmbus_driver_info *info;
+    struct xdpe_chip_data *chip_data;
     struct pmbus_data *data;
     int ret;
 
-    info = devm_kmemdup(&client->dev, &xdpe132g5c_info, sizeof(*info), GFP_KERNEL);
-    if (!info) {
-        dev_info(&client->dev, "devm_kmemdup failed\n");
+    /* 1. alloc mem and do init */
+    chip_data = devm_kzalloc(&client->dev, sizeof(*chip_data), GFP_KERNEL);
+    if (!chip_data) {
+        dev_err(&client->dev, "devm_kzalloc fail\n");
         return -ENOMEM;
     }
 
-    ret = wb_pmbus_do_probe(client, &xdpe132g5c_info);
+    chip_data->id = id->driver_data;
+    memcpy(&chip_data->info, &xdpe1x2g5_info[id->driver_data], sizeof(chip_data->info));
+
+    ret = of_property_read_u32_array(client->dev.of_node, "vout_multiplier",
+                                     chip_data->vout_multiplier, ARRAY_SIZE(chip_data->vout_multiplier));
+    DEBUG_INFO("vout_multipplier:%d %d, ret:%d\n", 
+               chip_data->vout_multiplier[0], chip_data->vout_multiplier[1], ret);
+    if (ret != 0) {
+        /* get fail use default val */
+        chip_data->vout_multiplier[0] = 0x01;
+        chip_data->vout_multiplier[1] = 0x01;
+    }
+
+    if (chip_data->vout_multiplier[0] == 0 || chip_data->vout_multiplier[1] == 0) {
+        dev_err(&client->dev, "vout_multiplier have 0. its invalid\n");
+        return -EINVAL;
+    }
+
+    /* 2. pmbus do probe */
+    ret = wb_pmbus_do_probe(client, &chip_data->info);
     if (ret != 0) {
         dev_info(&client->dev, "wb_pmbus_do_probe failed, ret: %d.\n", ret);
         return ret;
     }
 
+    /* 3. init clinet data */
     data = i2c_get_clientdata(client);
     data->pmbus_info_array = dfx_infos;
     data->pmbus_info_array_size = ARRAY_SIZE(dfx_infos);
 
+    /* 4. create sysfs group */
     ret = sysfs_create_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
     if (ret != 0) {
         dev_info(&client->dev, "Failed to create xdpe132g5c_sysfs_attrs_group, ret: %d.\n", ret);
@@ -446,14 +570,20 @@ static void xdpe132g5c_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id xdpe132g5c_id[] = {
-    {"wb_xdpe132g5c_pmbus", 0},
+    {"wb_xdpe132g5c_pmbus", XDPE132G5C},
+    {"wb_xdpe1a2g5b_pmbus", XDPE1A2G5B},
+    {"wb_xdpe19284c_pmbus", XDPE19284C},
+    {"wb_xdpe192c4b_pmbus", XDPE192C4B},
     {}
 };
 
 MODULE_DEVICE_TABLE(i2c, xdpe132g5c_id);
 
 static const struct of_device_id __maybe_unused xdpe132g5c_of_match[] = {
-    {.compatible = "infineon,wb_xdpe132g5c_pmbus"},
+    {.compatible = "infineon,wb_xdpe132g5c_pmbus", .data = (void *)XDPE132G5C},
+    {.compatible = "infineon,wb_xdpe1a2g5b_pmbus", .data = (void *)XDPE1A2G5B},
+    {.compatible = "infineon,wb_xdpe19284c_pmbus", .data = (void *)XDPE19284C},
+    {.compatible = "infineon,wb_xdpe192c4b_pmbus", .data = (void *)XDPE192C4B},
     {}
 };
 MODULE_DEVICE_TABLE(of, xdpe132g5c_of_match);

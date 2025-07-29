@@ -15,6 +15,14 @@
 
 static int g_fan_loglevel = 0;
 static bool g_fan_status_debug  = 0;
+static int fan_manu_adjustment_mode = 0;
+static int fan_manu_adjustment_ratio = 100;
+static bool fan_manu_adjustment_flag = false;
+static struct mutex fan_mutex;
+
+#define FANCTRL_MODE_ENABLE_VALUE         (1)
+#define FANCTRL_MODE_RATIO_MIN         (30)
+#define FANCTRL_MODE_RATIO_MAX         (100)
 
 #define FAN_INFO(fmt, args...) do {                                        \
     if (g_fan_loglevel & INFO) { \
@@ -382,11 +390,91 @@ ssize_t fan_direction_show(struct switch_obj *obj, struct switch_attribute *attr
     return g_fan_drv->get_fan_direction(fan_index, buf, PAGE_SIZE);
 }
 
+static ssize_t fan_manu_adjustment_mode_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    return (ssize_t)snprintf(buf, PAGE_SIZE, "%d\n", fan_manu_adjustment_mode);
+}
+
+static ssize_t fan_manu_adjustment_mode_store(struct switch_obj *obj, struct switch_attribute *attr,
+                   const char* buf, size_t count)
+{
+    int ret;
+    int val;
+    int set_flag;
+
+    set_flag = 0;
+    val = 0;
+    ret = kstrtoint(buf, 0, &val);
+    if (ret != 0) {
+        FAN_ERR("invaild fan manual mode ratio ret: %d, buf: %s.\n", ret, buf);
+        return -EINVAL;
+    }
+
+    if (val != 0 && val != FANCTRL_MODE_ENABLE_VALUE) {
+        FAN_ERR("param invalid, can not set ratio: %d.\n", val);
+        return -EINVAL;
+    }
+
+    mutex_lock(&fan_mutex);
+    if (fan_manu_adjustment_flag) {
+        set_flag = 1;
+        fan_manu_adjustment_mode = val;
+        if (val == 0) {
+            fan_manu_adjustment_flag = false;
+        }
+        FAN_DBG("set fan_manu_adjustment_mode success. fan_manu_adjustment_mode = %d \n", fan_manu_adjustment_mode);
+    }
+    mutex_unlock(&fan_mutex);
+
+    if (set_flag == 0) {
+        FAN_ERR("mode not set\n");
+        return -EINVAL;
+    }
+
+    return count;
+}
+
+ssize_t fan_manu_adjustment_ratio_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    return (ssize_t)snprintf(buf, PAGE_SIZE, "%d\n", fan_manu_adjustment_ratio);
+}
+
+static ssize_t fan_manu_adjustment_ratio_store(struct switch_obj *obj, struct switch_attribute *attr,
+                   const char* buf, size_t count)
+{
+    int ret;
+    int val;
+
+    val = 0;
+    ret = kstrtoint(buf, 0, &val);
+    if (ret != 0) {
+        FAN_ERR("invaild fan manual mode ratio ret: %d, buf: %s.\n", ret, buf);
+        return -EINVAL;
+    }
+
+    if (val < FANCTRL_MODE_RATIO_MIN || val > FANCTRL_MODE_RATIO_MAX) {
+        FAN_ERR("param invalid, can not set ratio: %d.\n", val);
+        return -EINVAL;
+    }
+
+    mutex_lock(&fan_mutex);
+    fan_manu_adjustment_ratio = val;
+    fan_manu_adjustment_flag = true;
+    FAN_DBG("set fan_manu_adjustment_ratio success. fan_manu_adjustment_mode = %d fan_manu_adjustment_flag = %d  \n", fan_manu_adjustment_ratio, fan_manu_adjustment_flag);
+    mutex_unlock(&fan_mutex);
+
+    return count;
+}
+
 /************************************fan dir and attrs*******************************************/
 static struct switch_attribute fan_number_att = __ATTR(number, S_IRUGO, fan_number_show, NULL);
+static struct switch_attribute fan_adjustment_mode_att = __ATTR(manual_adjustment_mode, S_IRUGO | S_IWUSR, fan_manu_adjustment_mode_show, fan_manu_adjustment_mode_store);
+static struct switch_attribute fan_adjustment_ratio_att = __ATTR(manual_adjustment_ratio, S_IRUGO | S_IWUSR, fan_manu_adjustment_ratio_show, fan_manu_adjustment_ratio_store);
 
 static struct attribute *fan_dir_attrs[] = {
     &fan_number_att.attr,
+    &fan_adjustment_mode_att.attr,
+    &fan_adjustment_ratio_att.attr,
     NULL,
 };
 
@@ -505,7 +593,7 @@ static int fanindex_motor_create_kobj_and_attrs(struct fan_obj_s *curr_fan)
     }
     return 0;
 motor_error:
-    for (i = motor_index; i > 0; i--) {
+    for (i = motor_index - 1; i > 0; i--) {
         fanindex_single_motor_remove_kobj_and_attrs(curr_fan, i);
     }
     kfree(curr_fan->motor);
@@ -560,7 +648,7 @@ static int fan_motor_create(void)
     }
     return 0;
 error:
-    for (i = fan_index; i > 0; i--) {
+    for (i = fan_index - 1; i > 0; i--) {
         curr_fan = &g_fan.fan[i - 1];
         fanindex_motor_remove_kobj_and_attrs(curr_fan);
     }
@@ -638,7 +726,7 @@ static int fan_sub_create_kobj_and_attrs(struct kobject *parent, int fan_num)
     }
     return 0;
 error:
-    for (i = fan_index; i > 0; i--) {
+    for (i = fan_index - 1; i > 0; i--) {
         fan_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_fan.fan);
@@ -720,6 +808,7 @@ int s3ip_sysfs_fan_drivers_register(struct s3ip_sysfs_fan_drivers_s *drv)
         return -EINVAL;
     }
 
+    mutex_init(&fan_mutex);
     mem_clear(&g_fan, sizeof(struct fan_s));
     g_fan.fan_number = fan_num;
     ret = fan_root_create();

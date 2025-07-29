@@ -148,78 +148,42 @@ static ssize_t cpld_reboot_cause_show(struct switch_obj *obj, struct switch_attr
     return (ssize_t)snprintf(buf, PAGE_SIZE, "%d\n", reboot_cause_type);
 }
 
-static ssize_t cpld_alias_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t cpld_attr_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     unsigned int cpld_index;
+    struct switch_device_attribute *cpld_attr;
 
     check_p(g_cpld_drv);
-    check_p(g_cpld_drv->get_main_board_cpld_alias);
+    check_p(g_cpld_drv->get_main_board_cpld_attr);
 
     cpld_index = obj->index;
     CPLD_DBG("cpld index: %u\n", cpld_index);
-    return g_cpld_drv->get_main_board_cpld_alias(cpld_index, buf, PAGE_SIZE);
+    cpld_attr = to_switch_device_attr(attr);
+    check_p(cpld_attr);
+
+    return g_cpld_drv->get_main_board_cpld_attr(cpld_index, cpld_attr->type, buf, PAGE_SIZE);
 }
 
-static ssize_t cpld_type_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int cpld_index;
-
-    check_p(g_cpld_drv);
-    check_p(g_cpld_drv->get_main_board_cpld_type);
-
-    cpld_index = obj->index;
-    CPLD_DBG("cpld index: %u\n", cpld_index);
-    return g_cpld_drv->get_main_board_cpld_type(cpld_index, buf, PAGE_SIZE);
-}
-
-static ssize_t cpld_fw_version_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int cpld_index;
-
-    check_p(g_cpld_drv);
-    check_p(g_cpld_drv->get_main_board_cpld_firmware_version);
-
-    cpld_index = obj->index;
-    CPLD_DBG("cpld index: %u\n", cpld_index);
-    return g_cpld_drv->get_main_board_cpld_firmware_version(cpld_index, buf, PAGE_SIZE);
-}
-
-static ssize_t cpld_board_version_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int cpld_index;
-
-    check_p(g_cpld_drv);
-    check_p(g_cpld_drv->get_main_board_cpld_board_version);
-
-    cpld_index = obj->index;
-    CPLD_DBG("cpld index: %u\n", cpld_index);
-    return g_cpld_drv->get_main_board_cpld_board_version(cpld_index, buf, PAGE_SIZE);
-}
-
-static ssize_t cpld_test_reg_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int cpld_index;
-
-    check_p(g_cpld_drv);
-    check_p(g_cpld_drv->get_main_board_cpld_test_reg);
-
-    cpld_index = obj->index;
-    CPLD_DBG("cpld index: %u\n", cpld_index);
-    return g_cpld_drv->get_main_board_cpld_test_reg(cpld_index, buf, PAGE_SIZE);
-}
-
-static ssize_t cpld_test_reg_store(struct switch_obj *obj, struct switch_attribute *attr,
+static ssize_t cpld_attr_store(struct switch_obj *obj, struct switch_attribute *attr,
                    const char* buf, size_t count)
 {
     unsigned int cpld_index, value;
     int ret;
+    struct switch_device_attribute *cpld_attr;
 
     check_p(g_cpld_drv);
-    check_p(g_cpld_drv->set_main_board_cpld_test_reg);
+    check_p(g_cpld_drv->set_main_board_cpld_attr);
+
+    ret = kstrtoint(buf, 0, &value);
+    if (ret != 0) {
+        CPLD_ERR("Invaild value ret: %d, buf: %s.\n", ret, buf);
+        return -EINVAL;
+    }
 
     cpld_index = obj->index;
-    sscanf(buf, "0x%x", &value);
-    ret = g_cpld_drv->set_main_board_cpld_test_reg(cpld_index, value);
+    cpld_attr = to_switch_device_attr(attr);
+    check_p(cpld_attr);
+    ret = g_cpld_drv->set_main_board_cpld_attr(cpld_index, cpld_attr->type, value);
     if (ret < 0) {
         CPLD_ERR("set cpld%u test reg failed, value:0x%x, ret: %d.\n", cpld_index, value, ret);
         return ret;
@@ -243,18 +207,25 @@ static struct attribute_group cpld_root_attr_group = {
 };
 
 /*******************************cpld[1-n] dir and attrs*******************************************/
-static struct switch_attribute cpld_alias_attr = __ATTR(alias, S_IRUGO, cpld_alias_show, NULL);
-static struct switch_attribute cpld_type_attr = __ATTR(type, S_IRUGO, cpld_type_show, NULL);
-static struct switch_attribute cpld_fw_version_attr = __ATTR(firmware_version, S_IRUGO, cpld_fw_version_show, NULL);
-static struct switch_attribute cpld_board_version_attr = __ATTR(board_version, S_IRUGO, cpld_board_version_show, NULL);
-static struct switch_attribute cpld_test_reg_attr = __ATTR(reg_test, S_IRUGO | S_IWUSR, cpld_test_reg_show, cpld_test_reg_store);
+static SWITCH_DEVICE_ATTR(alias, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_NAME_E);
+static SWITCH_DEVICE_ATTR(type, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_TYPE_E);
+static SWITCH_DEVICE_ATTR(firmware_version, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_FW_VERSION_E);
+static SWITCH_DEVICE_ATTR(board_version, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_HW_VERSION_E);
+static SWITCH_DEVICE_ATTR(reg_test, S_IRUGO | S_IWUSR, cpld_attr_show, cpld_attr_store, DFD_CPLD_REG_TEST_TYPE_E);
+static SWITCH_DEVICE_ATTR(vendor, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_VENDOR_E);
+static SWITCH_DEVICE_ATTR(support_upgrade, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_SUPPORT_UPGRADE_E);
+static SWITCH_DEVICE_ATTR(upgrade_active_type, S_IRUGO, cpld_attr_show, NULL, DFD_CPLD_UPGRADE_ACTIVE_TYPE_E);
+
 
 static struct attribute *cpld_attrs[] = {
-    &cpld_alias_attr.attr,
-    &cpld_type_attr.attr,
-    &cpld_fw_version_attr.attr,
-    &cpld_board_version_attr.attr,
-    &cpld_test_reg_attr.attr,
+    &switch_dev_attr_alias.switch_attr.attr,
+    &switch_dev_attr_type.switch_attr.attr,
+    &switch_dev_attr_firmware_version.switch_attr.attr,
+    &switch_dev_attr_board_version.switch_attr.attr,
+    &switch_dev_attr_reg_test.switch_attr.attr,
+    &switch_dev_attr_vendor.switch_attr.attr,
+    &switch_dev_attr_support_upgrade.switch_attr.attr,
+    &switch_dev_attr_upgrade_active_type.switch_attr.attr,
     NULL,
 };
 
@@ -316,7 +287,7 @@ static int cpld_sub_create_kobj_and_attrs(struct kobject *parent, int cpld_num)
     }
     return 0;
 error:
-    for (i = cpld_index; i > 0; i--) {
+    for (i = cpld_index - 1; i > 0; i--) {
         cpld_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_cpld.cpld);

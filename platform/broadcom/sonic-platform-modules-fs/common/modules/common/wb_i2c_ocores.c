@@ -30,7 +30,7 @@
 
 #include "wb_i2c_ocores.h"
 #include <wb_logic_dev_common.h>
-#include <wb_bsp_kernel_debug.h>
+#include <wb_bsp_i2c_debug.h>
 
 #define OCORES_FLAG_POLL      BIT(0)
 
@@ -110,6 +110,8 @@ typedef struct wb_pci_dev_s {
  * can't run in parallel.
  */
 struct ocores_i2c {
+    /* struct i2c_adapter_debug must be the first member */
+    struct i2c_adapter_debug i2c_ada_dbg;
     uint32_t base_addr;
     uint32_t reg_shift;
     uint32_t reg_io_width;
@@ -410,12 +412,14 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
     struct i2c_msg *msg = i2c->msg;
     u8 val;
 
-    DEBUG_INFO("Enter i2c-%d ocores_process, current remaining nmsgs: %d\n",
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Enter i2c-%d ocores_process, current remaining nmsgs: %d\n",
         i2c->adap.nr, i2c->nmsgs);
-    DEBUG_INFO("Current i2c->state: %s(%d), ocores status: 0x%02x\n",stri2cstate(i2c->state), i2c->state, stat);
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Current i2c->state: %s(%d), ocores status: 0x%02x\n",
+        stri2cstate(i2c->state), i2c->state, stat);
     if ((i2c->state == STATE_DONE) || (i2c->state == STATE_ERROR)) {
         /* stop has been sent */
-        DEBUG_INFO("i2c->state: %s(%d), Write CMD_IACK to Command register and finish i2c operation\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "i2c->state: %s(%d), Write CMD_IACK to Command register and finish i2c operation\n",
             stri2cstate(i2c->state), i2c->state);
         oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_IACK);
         wake_up(&i2c->wait);
@@ -425,7 +429,8 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
     /* error? */
     if (stat & OCI2C_STAT_ARBLOST) {
         i2c->state = STATE_ERROR;
-        DEBUG_INFO("[Arbitration lost]ocores status: 0x%02x, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "[Arbitration lost]ocores status: 0x%02x, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
             stat, stri2cstate(i2c->state), i2c->state);
         oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
         goto out;
@@ -433,30 +438,36 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
 
     if (ocores_msg_check(i2c->msg, i2c->nmsgs) != 0) {
         i2c->state = STATE_ERROR;
-        DEBUG_INFO("ocores_msg_check failed, msg buf is NULL, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "ocores_msg_check failed, msg buf is NULL, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
             stri2cstate(i2c->state), i2c->state);
         oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
         goto out;
     }
 
-    DEBUG_INFO("Current msg slave addr: 0x%02x, msg flags: 0x%04x, msg len: %d, i2c->pos: %d\n",
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "Current msg slave addr: 0x%02x, msg flags: 0x%04x, msg len: %d, i2c->pos: %d\n",
         msg->addr, msg->flags, msg->len, i2c->pos);
 
     if ((i2c->state == STATE_START) || (i2c->state == STATE_WRITE)) {
-        DEBUG_INFO("i2c->state: %s(%d), check if ACK is received\n", stri2cstate(i2c->state), i2c->state);
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "i2c->state: %s(%d), check if ACK is received\n", stri2cstate(i2c->state), i2c->state);
         i2c->state = (msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
-        DEBUG_INFO("Set i2c->state to: %s(%d), according to i2c msg flags: 0x%04x\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "Set i2c->state to: %s(%d), according to i2c msg flags: 0x%04x\n",
             stri2cstate(i2c->state), i2c->state, msg->flags);
         if (stat & OCI2C_STAT_NACK) {
             i2c->state = STATE_ERROR;
-            DEBUG_INFO("[NACK]ocores status: 0x%02x, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "[NACK]ocores status: 0x%02x, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
                 stat, stri2cstate(i2c->state), i2c->state);
             oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
             goto out;
         }
-        DEBUG_INFO("Check ACK ok, recevice ACK\n");
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Check ACK ok, recevice ACK\n");
     } else {
-        DEBUG_INFO("i2c->state: %s(%d), read Receive register\n", stri2cstate(i2c->state), i2c->state);
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "i2c->state: %s(%d), read Receive register\n", stri2cstate(i2c->state), i2c->state);
         val = oc_getreg(i2c, OCI2C_DATA);
         msg->buf[i2c->pos++] = val;
         /* Some SMBus transactions require that we receive the
@@ -464,13 +475,15 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
         if ((i2c->pos == 1) && (msg->flags & I2C_M_RECV_LEN)) {
             if ((val <= 0) || (val > I2C_SMBUS_BLOCK_MAX)) {
                 i2c->state = STATE_ERROR;
-                DEBUG_INFO("Invalid SMBus block read len: %d, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+                DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                    "Invalid SMBus block read len: %d, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
                     val, stri2cstate(i2c->state), i2c->state);
                 oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
                 goto out;
             }
             msg->len += val;
-            DEBUG_INFO("SMBus block read len: %d, msg->len adjust to: %d \n", val, msg->len);
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "SMBus block read len: %d, msg->len adjust to: %d \n", val, msg->len);
         }
     }
 
@@ -480,26 +493,31 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
         i2c->msg++;
         i2c->pos = 0;
         msg = i2c->msg;
-        DEBUG_INFO("End of i2c msg, current remaining nmsgs: %d\n", i2c->nmsgs);
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "End of i2c msg, current remaining nmsgs: %d\n", i2c->nmsgs);
         if (i2c->nmsgs) {    /* end? */
             /* send start? */
             if (!(msg->flags & I2C_M_NOSTART)) {
                 u8 addr = i2c_8bit_addr_from_msg(msg);
                 i2c->state = STATE_START;
-                DEBUG_INFO("Deal next i2c msg, set i2c->state: %s(%d) and Write i2c 8bit addr 0x%02x to Transmit register\n",
+                DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                    "Deal next i2c msg, set i2c->state: %s(%d) and Write i2c 8bit addr 0x%02x to Transmit register\n",
                     stri2cstate(i2c->state), i2c->state, addr);
                 oc_setreg(i2c, OCI2C_DATA, addr);
-                DEBUG_INFO("Write CMD_START to Command register and start i2c %s operation\n",
+                DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                    "Write CMD_START to Command register and start i2c %s operation\n",
                     msg->flags & I2C_M_RD ? "read" : "write");
                 oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_START);
                 goto out;
             }
             i2c->state = (msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
-            DEBUG_INFO("Deal next i2c msg with I2C_M_NOSTART, set i2c->state to: %s(%d)\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "Deal next i2c msg with I2C_M_NOSTART, set i2c->state to: %s(%d)\n",
                 stri2cstate(i2c->state), i2c->state);
         } else {
             i2c->state = STATE_DONE;
-            DEBUG_INFO("End of all i2c msgs, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "End of all i2c msgs, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
                 stri2cstate(i2c->state), i2c->state);
             oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
             goto out;
@@ -511,30 +529,37 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
          * Reading the first byte data requires sending an ACK
          */
          if ((i2c->pos == 0) && (msg->flags & I2C_M_RECV_LEN)) {
-            DEBUG_INFO("i2c->state: %s(%d), SMBus block read the first byte with READ_ACK to Command register\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "i2c->state: %s(%d), SMBus block read the first byte with READ_ACK to Command register\n",
                 stri2cstate(i2c->state), i2c->state);
              oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_READ_ACK);
          } else {
              if (i2c->pos == (msg->len - 1)) {
                 val = OCI2C_CMD_READ_NACK;
-                DEBUG_INFO("i2c->state: %s(%d), i2c msg len: %d, i2c->pos: %d, read the last byte with READ_NACK to Command register\n",
+                DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                    "i2c->state: %s(%d), i2c msg len: %d, i2c->pos: %d, read the last byte with READ_NACK to Command register\n",
                     stri2cstate(i2c->state), i2c->state, msg->len, i2c->pos);
              } else {
                 val = OCI2C_CMD_READ_ACK;
-                DEBUG_INFO("i2c->state: %s(%d), i2c msg len: %d, i2c->pos: %d, read the data with READ_ACK to Command register\n",
+                DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                    "i2c->state: %s(%d), i2c msg len: %d, i2c->pos: %d, read the data with READ_ACK to Command register\n",
                     stri2cstate(i2c->state), i2c->state, msg->len, i2c->pos);
              }
              oc_setreg(i2c, OCI2C_CMD, val);
          }
     } else {
-        DEBUG_INFO("i2c->state: %s(%d), Write data to Transmit register\n", stri2cstate(i2c->state), i2c->state);
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "i2c->state: %s(%d), Write data to Transmit register\n", stri2cstate(i2c->state),
+            i2c->state);
         oc_setreg(i2c, OCI2C_DATA, msg->buf[i2c->pos++]);
-        DEBUG_INFO("Write CMD_WRITE to Command register and start i2c write operation\n");
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "Write CMD_WRITE to Command register and start i2c write operation\n");
         oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_WRITE);
     }
 
 out:
-    DEBUG_INFO("Normal exit i2c-%d ocores_process, i2c->state: %s(%d)\n", i2c->adap.nr, stri2cstate(i2c->state), i2c->state);
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Normal exit i2c-%d ocores_process, i2c->state: %s(%d)\n",
+        i2c->adap.nr, stri2cstate(i2c->state), i2c->state);
     return;
 }
 
@@ -549,14 +574,17 @@ static irqreturn_t ocores_isr(int irq, void *dev_id)
     }
 
     spin_lock_irqsave(&i2c->process_lock, flags);
-    DEBUG_INFO("Read Status register to check if byte transfer is completed\n");
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "Read Status register to check if byte transfer is completed\n");
     stat = oc_getreg(i2c, OCI2C_STATUS);
     if (!(stat & OCI2C_STAT_IF)) {
-        DEBUG_INFO("Status register value: 0x%02x, Interrupt flag not set, IRQ_NONE\n", stat);
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "Status register value: 0x%02x, Interrupt flag not set, IRQ_NONE\n", stat);
         spin_unlock_irqrestore(&i2c->process_lock, flags);
         return IRQ_NONE;
     }
-    DEBUG_INFO("Status register value: 0x%02x, byte transfer completed, start ocores_process\n", stat);
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "Status register value: 0x%02x, byte transfer completed, start ocores_process\n", stat);
     ocores_process(i2c, stat);
     spin_unlock_irqrestore(&i2c->process_lock, flags);
 
@@ -573,7 +601,8 @@ static void ocores_process_timeout(struct ocores_i2c *i2c)
 
     spin_lock_irqsave(&i2c->process_lock, flags);
     i2c->state = STATE_ERROR;
-    DEBUG_INFO("ocores_process_timeout, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "ocores_process_timeout, set i2c->state to: %s(%d) and Write CMD_STOP to Command register\n",
         stri2cstate(i2c->state), i2c->state);
     oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
     mdelay(1);
@@ -605,21 +634,25 @@ static int ocores_wait(struct ocores_i2c *i2c,
     usleep = OCORE_WAIT_SCH;
     j = jiffies + timeout;
     while (1) {
-        DEBUG_INFO("Read Status register to check if the ocores status is ok, mask: 0x%02x, except value: 0x%02x\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "Read Status register to check if the ocores status is ok, mask: 0x%02x, except value: 0x%02x\n",
             mask, val);
         jiffies_tmp = jiffies;
         status = oc_getreg(i2c, reg);
         if ((status & mask) == val) {
-            DEBUG_INFO("Ocores wait ok, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "Ocores wait ok, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
                 status, mask, val);
             break;
         }
 
-        DEBUG_INFO("Ocores wait retry, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "Ocores wait retry, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
             status, mask, val);
 
         if (time_after(jiffies_tmp, j)) {
-            DEBUG_INFO("Ocores wait timeout, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "Ocores wait timeout, ocores status: 0x%02x, mask: 0x%02x, except value: 0x%02x\n",
                 status, mask, val);
             return -ETIMEDOUT;
         }
@@ -661,7 +694,8 @@ static int ocores_poll_wait(struct ocores_i2c *i2c)
      */
     err = ocores_wait(i2c, OCI2C_STATUS, mask, 0, msecs_to_jiffies(100));
     if (err) {
-         DEBUG_INFO("ocores status timeout, bit 0x%x did not clear in 100ms, err %d\n", mask, err);
+         DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "ocores status timeout, bit 0x%x did not clear in 100ms, err %d\n", mask, err);
     }
     return err;
 }
@@ -685,14 +719,16 @@ static int ocores_process_polling(struct ocores_i2c *i2c)
         err = ocores_poll_wait(i2c);
         if (err) {
             i2c->state = STATE_ERROR;
-            DEBUG_INFO("ocores_poll_wait timeout, ret: %d, set i2c->state to: %s(%d)\n",
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "ocores_poll_wait timeout, ret: %d, set i2c->state to: %s(%d)\n",
                 err, stri2cstate(i2c->state), i2c->state);
             break; /* timeout */
         }
 
         ret = ocores_isr(-1, i2c);
         if (ret == IRQ_NONE) {
-            DEBUG_INFO("All messages have been transferred, exit ocores_process_polling\n");
+            DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+                "All messages have been transferred, exit ocores_process_polling\n");
             break; /* all messages have been transferred */
         }
     }
@@ -716,12 +752,14 @@ static void ocores_check_i2c_unblock(struct ocores_i2c *i2c, bool polling)
     /* I2C Arbitration lost (Deadlock detection) */
     stat = oc_getreg(i2c, OCI2C_STATUS);
     if (!(stat & OCI2C_STAT_ARBLOST)) {
-        DEBUG_INFO("ocores dev_name: %s, base_addr: 0x%x, status: 0x%x, not Arbitration lost\n",
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+            "ocores dev_name: %s, base_addr: 0x%x, status: 0x%x, not Arbitration lost\n",
             i2c->dev_name, i2c->base_addr, stat);
         spin_unlock_irqrestore(&i2c->process_lock, flags);
         return;
     }
-    DEBUG_WARN("ocores dev_name: %s, base_addr: 0x%x, status: 0x%x, Arbitration lost, try to send 9 clock\n",
+    DEBUG_WARN_I2C_ADAPTER(&i2c->adap, 
+        "ocores dev_name: %s, base_addr: 0x%x, status: 0x%x, Arbitration lost, try to send 9 clock\n",
         i2c->dev_name, i2c->base_addr, stat);
     /* Disable interrupts first in interrupt mode */
     if (!polling) {
@@ -735,7 +773,8 @@ static void ocores_check_i2c_unblock(struct ocores_i2c *i2c, bool polling)
     /* Wait until RD + STOP completes sending */
     err = ocores_wait(i2c, OCI2C_STATUS, OCI2C_STAT_TIP, 0, msecs_to_jiffies(I2C_WAIT_RD_STOP_TIMEOUT_MS));
     if (err) {
-        DEBUG_WARN("ocores dev_name: %s, base_addr: 0x%x, wait  transfer complete timeout in %dms, err: %d\n",
+        DEBUG_WARN_I2C_ADAPTER(&i2c->adap, 
+            "ocores dev_name: %s, base_addr: 0x%x, wait  transfer complete timeout in %dms, err: %d\n",
             i2c->dev_name, i2c->base_addr, I2C_WAIT_RD_STOP_TIMEOUT_MS, err);
     }
 
@@ -752,18 +791,18 @@ static int ocores_xfer_core(struct ocores_i2c *i2c,
     u8 ctrl;
     unsigned long flags;
 
-    DEBUG_INFO("Enter ocores_xfer_core, polling mode: %d\n", polling);
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Enter ocores_xfer_core, polling mode: %d\n", polling);
     /* I2C deadlock detection and 9clock mechanism */
     ocores_check_i2c_unblock(i2c, polling);
     spin_lock_irqsave(&i2c->process_lock, flags);
 
-    DEBUG_INFO("Read Control register\n");
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Read Control register\n");
     ctrl = oc_getreg(i2c, OCI2C_CONTROL);
     if (polling) {
-        DEBUG_INFO("Polling mode, write Control register to disable irq\n");
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Polling mode, write Control register to disable irq\n");
         oc_setreg(i2c, OCI2C_CONTROL, ctrl & ~OCI2C_CTRL_IEN);
     } else {
-        DEBUG_INFO("Irq mode, write Control register to enable irq\n");
+        DEBUG_INFO_I2C_ADAPTER(&i2c->adap, "Irq mode, write Control register to enable irq\n");
         oc_setreg(i2c, OCI2C_CONTROL, ctrl | OCI2C_CTRL_IEN);
     }
 
@@ -771,10 +810,12 @@ static int ocores_xfer_core(struct ocores_i2c *i2c,
     i2c->pos = 0;
     i2c->nmsgs = num;
     i2c->state = STATE_START;
-    DEBUG_INFO("Set i2c->state: %s(%d) and Write i2c 8bit addr 0x%02x to Transmit register\n",
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "Set i2c->state: %s(%d) and Write i2c 8bit addr 0x%02x to Transmit register\n",
         stri2cstate(i2c->state), i2c->state, i2c_8bit_addr_from_msg(i2c->msg));
     oc_setreg(i2c, OCI2C_DATA, i2c_8bit_addr_from_msg(i2c->msg));
-    DEBUG_INFO("Write CMD_START to Command register and start i2c %s operation\n",
+    DEBUG_INFO_I2C_ADAPTER(&i2c->adap, 
+        "Write CMD_START to Command register and start i2c %s operation\n",
         i2c->msg->flags & I2C_M_RD ? "read" : "write");
     oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_START);
 
@@ -805,14 +846,14 @@ static int ocores_xfer(struct i2c_adapter *adap,
     struct ocores_i2c *i2c;
     int ret, i;
 
-    DEBUG_INFO("Enter ocores_xfer.\n");
+    DEBUG_INFO_I2C_ADAPTER(adap, "Enter ocores_xfer.\n");
     if (!adap || ocores_msg_check(msgs, num)) {
-        DEBUG_INFO("[MAYBE USER SPACE ERROR]: msg buf is NULL\n");
+        DEBUG_ERROR_I2C_ADAPTER(adap, "[MAYBE USER SPACE ERROR]: msg buf is NULL\n");
         return -EFAULT;
     }
-    DEBUG_INFO("i2c-%d, ocores_xfer total msgs num: %d\n", adap->nr, num);
+    DEBUG_INFO_I2C_ADAPTER(adap, "i2c-%d, ocores_xfer total msgs num: %d\n", adap->nr, num);
     for (i = 0; i < num; i++) {
-        DEBUG_INFO("msg[%d] slave addr: 0x%02x, msg flags: 0x%04x, msg len: %d\n",
+        DEBUG_INFO_I2C_ADAPTER(adap, "msg[%d] slave addr: 0x%02x, msg flags: 0x%04x, msg len: %d\n",
             i, msgs[i].addr, msgs[i].flags, msgs[i].len);
     }
 
@@ -822,7 +863,8 @@ static int ocores_xfer(struct i2c_adapter *adap,
     i2c->state = STATE_DONE;
     ret = ocores_poll_wait(i2c);
     if (ret) {
-        DEBUG_INFO("Enter ocores_xfer and find adapter:%d addr:0x%x is busy.\n", adap->nr, i2c->msg->addr);
+        DEBUG_INFO_I2C_ADAPTER(adap, "Enter ocores_xfer and find adapter:%d addr:0x%x is busy.\n",
+            adap->nr, i2c->msg->addr);
         return ret;
     }
 
@@ -832,7 +874,7 @@ static int ocores_xfer(struct i2c_adapter *adap,
         ret = ocores_xfer_core(i2c, msgs, num, false);
     }
 
-    DEBUG_INFO("Exit ocores_xfer, ret: %d\n", ret);
+    DEBUG_INFO_I2C_ADAPTER(adap, "Exit ocores_xfer, ret: %d\n", ret);
     return ret;
 }
 
@@ -1156,6 +1198,8 @@ static int ocores_i2c_probe(struct platform_device *pdev)
     if (ret) {
         goto fail_add;
     }
+
+    I2C_ADAPTER_DEBUG_INIT(&i2c->adap, struct ocores_i2c, i2c_ada_dbg);
     DEBUG_VERBOSE("Main probe out\n");
     dev_info(i2c->dev, "registered i2c-%d for %s with base address:0x%x success.\n",
         i2c->adap.nr, i2c->dev_name, i2c->base_addr);
@@ -1170,13 +1214,19 @@ static int ocores_i2c_remove(struct platform_device *pdev)
 {
     struct ocores_i2c *i2c = platform_get_drvdata(pdev);
     u8 ctrl = oc_getreg(i2c, OCI2C_CONTROL);
+    int i2c_bus;
 
+    DEBUG_VERBOSE("Enter ocores_i2c_remove\n");
+    i2c_adapter_debug_exit(&i2c->adap);
+    i2c_bus = i2c->adap.nr;
     /* disable i2c logic */
     ctrl &= ~(OCI2C_CTRL_EN | OCI2C_CTRL_IEN);
     oc_setreg(i2c, OCI2C_CONTROL, ctrl);
 
     /* remove adapter & data */
+    DEBUG_VERBOSE("Starting unregistered i2c-%d.\n", i2c_bus);
     i2c_del_adapter(&i2c->adap);
+    dev_info(&pdev->dev, "Unregistered i2c-%d success.\n", i2c_bus);
     return 0;
 }
 

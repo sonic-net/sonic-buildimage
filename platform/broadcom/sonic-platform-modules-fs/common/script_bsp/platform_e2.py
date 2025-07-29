@@ -17,6 +17,10 @@ import eepromutil.onietlv as ot
 from platform_config import PLATFORM_E2_CONF
 from platform_util import byteTostr, dev_file_read, read_sysfs, exec_os_cmd
 from enum import Enum
+try:
+    from cpoutil import get_all_oe_vendor_info, get_all_rlm_vendor_info
+except:
+    pass
 
 PYTHON_VERSION = sys.version_info.major
 GENERATE_RAWDATA_NUM = 0
@@ -591,7 +595,7 @@ def write_rawdata_to_file(rawdata,out_file):
     out_file_dir = os.path.dirname(out_file)
     if len(out_file_dir) != 0:
         cmd = "mkdir -p %s" % out_file_dir
-        exec_os_cmd(cmd)
+        os.system(cmd)
     data_array = bytearray()
     for x in rawdata:
         data_array.append(ord(x))
@@ -969,6 +973,21 @@ def generate_eeprom_rawdata(file):
         print("All generate_flag config is 0, no eeprom rawdata was generated.")
     return
 
+def get_all_oe_rlm_vendor_info():
+    try:
+        oe_vendor_info_dict = get_all_oe_vendor_info()
+        for oe_index, vendor_info in oe_vendor_info_dict.items():
+            print("===================oe{}===================".format(oe_index))
+            for key, value in vendor_info.items():
+                print("{:40s} {}".format(key, value))
+        rlm_vendor_info_dict = get_all_rlm_vendor_info()
+        for rlm_index, vendor_info in rlm_vendor_info_dict.items():
+            print("===================rlm{}===================".format(rlm_index))
+            for key, value in vendor_info.items():
+                print("{:40s} {}".format(key, value))
+    except Exception as e:
+        return
+        
 def change_onie_tlv_dict_value(raw_dict, field, value):
     onietlv = ot.onie_tlv()
 
@@ -1160,7 +1179,7 @@ def syseeprom_set(choice, value, syseeprom_index):
 def all():
     '''get all eeprom info'''
     get_all_eeprom_info()
-
+    get_all_oe_rlm_vendor_info()
 
 if __name__ == '__main__':
     main()

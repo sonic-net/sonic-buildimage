@@ -15,7 +15,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/spi-nor.h>
-#include <linux/platform_data/x86/spi-intel.h>
+#include <linux/platform_data/intel-spi.h>
 
 #include "intel_spi.h"
 

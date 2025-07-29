@@ -30,6 +30,9 @@
 #define MAX_RW_LEN                (256)
 #define MAX_NAME_SIZE             (32)
 
+#define KERNEL_SPACE              (0)
+#define USER_SPACE                (1)
+
 #define CACHE_FILE_PATH           "/tmp/.%s_cache"
 #define MASK_FILE_PATH            "/tmp/.%s_mask"
 
@@ -62,7 +65,7 @@ typedef struct {
     struct mutex file_lock;
 } wb_bsp_key_device_log_node_t;
 
-#define DEBUG_BUF_MAX_LEN                   (1024)
+#define DEBUG_BUF_MAX_LEN                   (256)
 
 extern struct kobject *logic_dev_kobj;
 extern unsigned long (*kallsyms_lookup_name_fun)(const char *name);

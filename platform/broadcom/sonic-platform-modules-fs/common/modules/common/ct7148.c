@@ -100,6 +100,7 @@ static ct7318_temp_threshold_t g_ct7318_input_threshold_info[] = {
     },
 };
 
+
 static int ct7318_input_temp_check(struct ct7318_data *data, int input_val)
 {
     int i, size;

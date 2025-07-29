@@ -25,9 +25,6 @@
 #define IO_INDIRECT_OP_WRITE               (0x2)
 #define IO_INDIRECT_OP_READ                (0X3)
 
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 /* Use the wb_bsp_kernel_debug header file must define debug variable */
 static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
@@ -330,8 +327,8 @@ static ssize_t io_dev_read(struct file *file, char __user *buf, size_t count, lo
     *offset += read_len;
     ret = read_len;
     return ret;
-
 }
+
 static ssize_t io_dev_read_user(struct file *file, char __user *buf, size_t count, loff_t *offset)
 {
     int ret;
@@ -467,7 +464,7 @@ static ssize_t io_dev_write(struct file *file, const char __user *buf, size_t co
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Devfs]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_io_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_io_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(wb_io_dev->log_node), (uint32_t)*offset, buf_tmp, count);
     }
@@ -644,7 +641,7 @@ int io_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_t
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Symbol]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_io_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, wb_io_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(wb_io_dev->log_node), offset, buf, count);
     }
@@ -868,7 +865,7 @@ static ssize_t file_cache_rd_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", io_dev->file_cache_rd);
+    return snprintf(buf, PAGE_SIZE, "%u\n", io_dev->file_cache_rd);
 }
 
 static ssize_t file_cache_rd_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -902,7 +899,7 @@ static ssize_t file_cache_wr_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", io_dev->file_cache_wr);
+    return snprintf(buf, PAGE_SIZE, "%u\n", io_dev->file_cache_wr);
 }
 
 static ssize_t file_cache_wr_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)

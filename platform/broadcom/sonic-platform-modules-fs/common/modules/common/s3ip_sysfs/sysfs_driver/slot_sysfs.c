@@ -343,11 +343,11 @@ static ssize_t slot_temp_max_store(struct switch_obj *obj, struct switch_attribu
     temp_index = obj->index;
     ret = g_slot_drv->set_slot_temp_max(slot_index, temp_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u temp%u max threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u temp%u max threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, temp_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u temp%u max threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u temp%u max threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, temp_index, buf, count, ret);
     return count;
 }
@@ -383,11 +383,11 @@ static ssize_t slot_temp_min_store(struct switch_obj *obj, struct switch_attribu
     temp_index = obj->index;
     ret = g_slot_drv->set_slot_temp_min(slot_index, temp_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u temp%u min threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u temp%u min threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, temp_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u temp%u min threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u temp%u min threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, temp_index, buf, count, ret);
     return count;
 }
@@ -473,11 +473,11 @@ static ssize_t slot_vol_max_store(struct switch_obj *obj, struct switch_attribut
     vol_index = obj->index;
     ret = g_slot_drv->set_slot_vol_max(slot_index, vol_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u vol%u max threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u vol%u max threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, vol_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u vol%u max threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u vol%u max threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, vol_index, buf, count, ret);
     return count;
 }
@@ -513,11 +513,11 @@ static ssize_t slot_vol_min_store(struct switch_obj *obj, struct switch_attribut
     vol_index = obj->index;
     ret = g_slot_drv->set_slot_vol_min(slot_index, vol_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u vol%u min threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u vol%u min threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, vol_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u vol%u min threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u vol%u min threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, vol_index, buf, count, ret);
     return count;
 }
@@ -634,11 +634,11 @@ static ssize_t slot_curr_max_store(struct switch_obj *obj, struct switch_attribu
     curr_index = obj->index;
     ret = g_slot_drv->set_slot_curr_max(slot_index, curr_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u curr%u max threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u curr%u max threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, curr_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u curr%u max threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u curr%u max threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, curr_index, buf, count, ret);
     return count;
 }
@@ -674,11 +674,11 @@ static ssize_t slot_curr_min_store(struct switch_obj *obj, struct switch_attribu
     curr_index = obj->index;
     ret = g_slot_drv->set_slot_curr_min(slot_index, curr_index, buf, count);
     if (ret < 0) {
-        SLOT_ERR("set slot%u curr%u min threshold failed, value: %s, count: %lu, ret: %d\n",
+        SLOT_ERR("set slot%u curr%u min threshold failed, value: %s, count: %zu, ret: %d\n",
             slot_index, curr_index, buf, count, ret);
         return ret;
     }
-    SLOT_DBG("set slot%u curr%u min threshold success, value: %s, count: %lu, ret: %d\n",
+    SLOT_DBG("set slot%u curr%u min threshold success, value: %s, count: %zu, ret: %d\n",
         slot_index, curr_index, buf, count, ret);
     return count;
 }
@@ -1168,7 +1168,7 @@ static int slotindex_cpld_create_kobj_and_attrs(struct slot_obj_s *curr_slot)
     }
     return 0;
 error:
-    for (i = cpld_index; i > 0; i--) {
+    for (i = cpld_index - 1; i > 0; i--) {
         slotindex_single_cpld_remove_kobj_and_attrs(curr_slot, i);
     }
     kfree(curr_slot->cpld);
@@ -1199,7 +1199,7 @@ static int slot_cpld_create(void)
     }
     return 0;
 error:
-    for (i = slot_index; i > 0; i--) {
+    for (i = slot_index - 1; i > 0; i--) {
         curr_slot = &g_slot.slot[i - 1];
         slotindex_cpld_remove_kobj_and_attrs(curr_slot);
     }
@@ -1296,7 +1296,7 @@ static int slotindex_fpga_create_kobj_and_attrs(struct slot_obj_s *curr_slot)
     }
     return 0;
 error:
-    for (i = fpga_index; i > 0; i--) {
+    for (i = fpga_index - 1; i > 0; i--) {
         slotindex_single_fpga_remove_kobj_and_attrs(curr_slot, i);
     }
     kfree(curr_slot->fpga);
@@ -1327,7 +1327,7 @@ static int slot_fpga_create(void)
     }
     return 0;
 error:
-    for (i = slot_index; i > 0; i--) {
+    for (i = slot_index - 1; i > 0; i--) {
         curr_slot = &g_slot.slot[i - 1];
         slotindex_fpga_remove_kobj_and_attrs(curr_slot);
     }
@@ -1424,7 +1424,7 @@ static int slotindex_curr_create_kobj_and_attrs(struct slot_obj_s *curr_slot)
     }
     return 0;
 error:
-    for (i = curr_index; i > 0; i--) {
+    for (i = curr_index - 1; i > 0; i--) {
         slotindex_single_curr_remove_kobj_and_attrs(curr_slot, i);
     }
     kfree(curr_slot->curr);
@@ -1455,7 +1455,7 @@ static int slot_curr_create(void)
     }
     return 0;
 error:
-    for (i = slot_index; i > 0; i--) {
+    for (i = slot_index - 1; i > 0; i--) {
         curr_slot = &g_slot.slot[i - 1];
         slotindex_curr_remove_kobj_and_attrs(curr_slot);
     }
@@ -1552,7 +1552,7 @@ static int slotindex_vol_create_kobj_and_attrs(struct slot_obj_s *curr_slot)
     }
     return 0;
 error:
-    for (i = vol_index; i > 0; i--) {
+    for (i = vol_index - 1; i > 0; i--) {
         slotindex_single_vol_remove_kobj_and_attrs(curr_slot, i);
     }
     kfree(curr_slot->vol);
@@ -1583,7 +1583,7 @@ static int slot_vol_create(void)
     }
     return 0;
 error:
-    for (i = slot_index; i > 0; i--) {
+    for (i = slot_index - 1; i > 0; i--) {
         curr_slot = &g_slot.slot[i - 1];
         slotindex_vol_remove_kobj_and_attrs(curr_slot);
     }
@@ -1680,7 +1680,7 @@ static int slotindex_temp_create_kobj_and_attrs(struct slot_obj_s *curr_slot)
     }
     return 0;
 error:
-    for (i = temp_index; i > 0; i--) {
+    for (i = temp_index - 1; i > 0; i--) {
         slotindex_single_temp_remove_kobj_and_attrs(curr_slot, i);
     }
     kfree(curr_slot->temp);
@@ -1711,7 +1711,7 @@ static int slot_temp_create(void)
     }
     return 0;
 error:
-    for (i = slot_index; i > 0; i--) {
+    for (i = slot_index - 1; i > 0; i--) {
         curr_slot = &g_slot.slot[i - 1];
         slotindex_temp_remove_kobj_and_attrs(curr_slot);
     }
@@ -1846,7 +1846,7 @@ static int slot_sub_create_kobj_and_attrs(struct kobject *parent, int slot_num)
     }
     return 0;
 error:
-    for(i = slot_index; i > 0; i--) {
+    for(i = slot_index - 1; i > 0; i--) {
         slot_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_slot.slot);

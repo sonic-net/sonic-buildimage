@@ -288,7 +288,6 @@ class sensor_s3ip(sensor):
         self.min_path = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "min")
         self.max_path = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "max")
         self.alias = "%s/%s/%s" % (self.s3ip_conf.get("path"), self.s3ip_conf.get("sensor_dir"), "alias")
-        self.sensor_id = self.s3ip_conf.get("type").upper()
 
     @property
     def Min(self):

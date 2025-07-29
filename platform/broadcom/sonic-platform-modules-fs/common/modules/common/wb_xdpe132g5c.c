@@ -20,6 +20,9 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/kernel.h>
+#include <linux/miscdevice.h>
 #include <wb_bsp_kernel_debug.h>
 
 #define WB_I2C_RETRY_SLEEP_TIME          (10000)   /* 10ms */
@@ -59,6 +62,35 @@
 #define WB_XDPE_PHASE15_CURR_REG         (0xc8)
 #define WB_XDPE_PHASE16_CURR_REG         (0xca)
 
+#define WB_XDPE_MAX_MISC_DEV_NUM         (256)
+#define WB_XDPE_BUF_LEN_MAX              (256)
+
+#define WIDTH_1Byte                      (1)
+#define WIDTH_2Byte                      (2)
+
+/* Read two bytes of the XDPE132 firmware CRC value from register 0xA6 */
+#define WB_XDPE_CHIP_CRC_COMMAND         (0xa6)
+/* Read four bytes of date information (year-month-day) from registers 0x76, 0x77, 0x78, and 0x79, representing the format xxxx-yy-zz */
+#define WB_XDPE_CHIP_VER_DATE_COMMAND    (0x76)
+#define WB_XDPE_CHIP_VER_DATE_LEN        (4)
+/* Read the remaining NVM upgrade count (up to a maximum of 25) from registers 0xA0 and 0xA2. */
+#define WB_XDPE_CHIP_NVM_HIGH_COMMAND    (0xa0)
+#define WB_XDPE_CHIP_NVM_LOW_COMMAND     (0xa2)
+#define WB_XDPE_CHIP_NVM_TIME_MAX        (25)
+/* Device read/write enable flag */
+#define WB_XDPE_DEV_AVAILABLE_FLAG       (1)
+#define WB_XDPE_DEV_UNAVAILABLE_FLAG     (0)
+
+/* Character device read/write interface, macros related to offset parsing */
+/* Does the input parameter offset indicate the need for paging? Bit 16 set to 1 means paging is required. */
+#define WB_XDPE_DEV_RW_SET_PAGE_MASK     (0x10000)
+/* Does the input parameter offset indicate the starting address of the page to be switched? Bits 8 to 15 represent the page address information. */
+#define WB_XDPE_DEV_RW_PAGE_INFO_BIT     (8)
+
+/* Firmware upgrade command to write to the ROM register address and value, i.e., writing 0x3F42 to register 0xE8 on page 0. */
+#define WB_XDPE_STORE_TO_NVM_COMMAND     (0xe8)
+#define WB_XDPE_STORE_TO_NVM_VALUE       (0x3f42)
+
 static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 struct xdpe_data {
@@ -66,7 +98,11 @@ struct xdpe_data {
     struct device *hwmon_dev;
     struct mutex update_lock;
     long long vout_max;
-    long vout_min;
+    long long vout_min;
+    u32 dev_available;
+    struct device *dev;
+    struct miscdevice misc;
+    const char dev_name[WB_XDPE_BUF_LEN_MAX];
 };
 
 typedef struct xdpe_vout_data_s {
@@ -81,6 +117,28 @@ static xdpe_vout_data_t g_xdpe_vout_group[] = {
     {.vout_mode = 0x15, .vout_precision = 2048},
     {.vout_mode = 0x14, .vout_precision = 4096},
 };
+
+static struct xdpe_data* xdpe132g5c_dev_arry[WB_XDPE_MAX_MISC_DEV_NUM];
+
+/* Determine whether the device is accessible; return true if accessible, otherwise return false. */
+static bool is_xdpe_dev_available(struct device *dev)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("is_xdpe_dev_available param error\n");
+        return false;
+    }
+
+    if (data->dev_available) {
+        return true;
+    }
+
+    return false;
+}
 
 static s32 wb_i2c_smbus_read_byte_data(const struct i2c_client *client, u8 command)
 {
@@ -195,6 +253,11 @@ static ssize_t xdpe_power_value_show(struct device *dev, struct device_attribute
     struct xdpe_data *data;
     long value1, value2;
 
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
     data = dev_get_drvdata(dev);
     client = data->client;
     attr = to_sensor_dev_attr(da);
@@ -279,10 +342,15 @@ static ssize_t xdpe_avs_vout_show(struct device *dev, struct device_attribute *d
     int ret, ori_page, vout_cmd, vout_precision;
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout;
+    long long vout;
 
     client = to_i2c_client(dev);
     data = i2c_get_clientdata(client);
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     mutex_lock(&data->update_lock);
 
@@ -319,10 +387,10 @@ static ssize_t xdpe_avs_vout_show(struct device *dev, struct device_attribute *d
     wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, ori_page);
     mutex_unlock(&data->update_lock);
 
-    vout = vout_cmd * 1000L * 1000L / vout_precision;
-    DEBUG_VERBOSE("%d-%04x: vout: %ld, vout_cmd: 0x%x, precision: %d\n", client->adapter->nr,
+    vout = div_s64(vout_cmd * 1000LL * 1000LL, vout_precision);
+    DEBUG_VERBOSE("%d-%04x: vout: %lld, vout_cmd: 0x%x, precision: %d\n", client->adapter->nr,
         client->addr, vout, vout_cmd, vout_precision);
-    return snprintf(buf, PAGE_SIZE, "%ld\n", vout);
+    return snprintf(buf, PAGE_SIZE, "%lld\n", vout);
 error:
     wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, ori_page);
     mutex_unlock(&data->update_lock);
@@ -335,18 +403,23 @@ static ssize_t xdpe_avs_vout_store(struct device *dev, struct device_attribute *
     int ret, ori_page, vout_cmd, vout_cmd_set, vout_precision;
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout, vout_max, vout_min;
+    long long vout, vout_max, vout_min;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     vout = 0;
-    ret = kstrtol(buf, 0, &vout);
+    ret = kstrtoll(buf, 0, &vout);
     if (ret) {
         DEBUG_ERROR("%d-%04x: invalid value: %s \n", client->adapter->nr, client->addr, buf);
         return -EINVAL;
     }
 
     if (vout <= 0) {
-        DEBUG_ERROR("%d-%04x: invalid value: %ld \n", client->adapter->nr, client->addr, vout);
+        DEBUG_ERROR("%d-%04x: invalid value: %lld \n", client->adapter->nr, client->addr, vout);
         return -EINVAL;
     }
 
@@ -354,7 +427,7 @@ static ssize_t xdpe_avs_vout_store(struct device *dev, struct device_attribute *
     vout_max = data->vout_max;
     vout_min = data->vout_min;
     if ((vout > vout_max) || (vout < vout_min)) {
-        DEBUG_ERROR("%d-%04x: vout value: %ld, out of range [%ld, %ld] \n", client->adapter->nr,
+        DEBUG_ERROR("%d-%04x: vout value: %lld, out of range [%lld, %lld] \n", client->adapter->nr,
             client->addr, vout, vout_min, vout_max);
         return -EINVAL;
     }
@@ -383,9 +456,9 @@ static ssize_t xdpe_avs_vout_store(struct device *dev, struct device_attribute *
         goto error;
     }
 
-    vout_cmd_set = (vout * vout_precision) / (1000L * 1000L);
+    vout_cmd_set = div_s64(vout * vout_precision, 1000L * 1000L);
     if (vout_cmd_set > 0xffff) {
-        DEBUG_ERROR("%d-%04x: invalid value, vout %ld, vout_precision: %d, vout_cmd_set: 0x%x\n",
+        DEBUG_ERROR("%d-%04x: invalid value, vout %lld, vout_precision: %d, vout_cmd_set: 0x%x\n",
             client->adapter->nr, client->addr, vout, vout_precision, vout_cmd_set);
         ret = -EINVAL;
         goto error;
@@ -414,7 +487,7 @@ static ssize_t xdpe_avs_vout_store(struct device *dev, struct device_attribute *
 
     wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, ori_page);
     mutex_unlock(&data->update_lock);
-    DEBUG_VERBOSE("%d-%04x: set vout cmd success, vout %ld, vout_precision: %d, vout_cmd_set: 0x%x\n",
+    DEBUG_VERBOSE("%d-%04x: set vout cmd success, vout %lld, vout_precision: %d, vout_cmd_set: 0x%x\n",
         client->adapter->nr, client->addr, vout, vout_precision, vout_cmd_set);
     return count;
 error:
@@ -427,12 +500,17 @@ static ssize_t xdpe_avs_vout_max_show(struct device *dev, struct device_attribut
 {
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout_max;
+    long long vout_max;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     data = i2c_get_clientdata(client);
     vout_max = data->vout_max;
-    return snprintf(buf, PAGE_SIZE, "%ld\n", vout_max);
+    return snprintf(buf, PAGE_SIZE, "%lld\n", vout_max);
 }
 
 static ssize_t xdpe_avs_vout_max_store(struct device *dev, struct device_attribute *da,
@@ -441,16 +519,21 @@ static ssize_t xdpe_avs_vout_max_store(struct device *dev, struct device_attribu
     int ret;
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout_max;
+    long long vout_max;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     vout_max = 0;
-    ret = kstrtol(buf, 10, &vout_max);
+    ret = kstrtoll(buf, 10, &vout_max);
     if (ret) {
         DEBUG_ERROR("%d-%04x: invalid value: %s \n", client->adapter->nr, client->addr, buf);
         return -EINVAL;
     }
-    DEBUG_VERBOSE("%d-%04x: vout max threshold: %ld", client->adapter->nr, client->addr,
+    DEBUG_VERBOSE("%d-%04x: vout max threshold: %lld", client->adapter->nr, client->addr,
         vout_max);
     data = i2c_get_clientdata(client);
     data->vout_max = vout_max;
@@ -461,12 +544,17 @@ static ssize_t xdpe_avs_vout_min_show(struct device *dev, struct device_attribut
 {
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout_min;
+    long long vout_min;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     data = i2c_get_clientdata(client);
     vout_min = data->vout_min;
-    return snprintf(buf, PAGE_SIZE, "%ld\n", vout_min);
+    return snprintf(buf, PAGE_SIZE, "%lld\n", vout_min);
 }
 
 static ssize_t xdpe_avs_vout_min_store(struct device *dev, struct device_attribute *da,
@@ -475,16 +563,21 @@ static ssize_t xdpe_avs_vout_min_store(struct device *dev, struct device_attribu
     int ret;
     struct i2c_client *client;
     struct xdpe_data *data;
-    long vout_min;
+    long long vout_min;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     vout_min = 0;
-    ret = kstrtol(buf, 10, &vout_min);
+    ret = kstrtoll(buf, 10, &vout_min);
     if (ret) {
         DEBUG_ERROR("%d-%04x: invalid value: %s \n", client->adapter->nr, client->addr, buf);
         return -EINVAL;
     }
-    DEBUG_VERBOSE("%d-%04x: vout min threshold: %ld", client->adapter->nr, client->addr,
+    DEBUG_VERBOSE("%d-%04x: vout min threshold: %lld", client->adapter->nr, client->addr,
         vout_min);
     data = i2c_get_clientdata(client);
     data->vout_min = vout_min;
@@ -498,6 +591,11 @@ static ssize_t xdpe_word_data_show(struct device *dev, struct device_attribute *
     struct xdpe_data *data;
     u8 page = to_sensor_dev_attr_2(da)->nr;
     u8 reg = to_sensor_dev_attr_2(da)->index;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     client = to_i2c_client(dev);
     data = i2c_get_clientdata(client);
@@ -547,6 +645,11 @@ static ssize_t xdpe_phase_curr_show(struct device *dev, struct device_attribute 
     struct i2c_client *client;
     struct xdpe_data *data;
     int value;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
 
     data = dev_get_drvdata(dev);
     client = data->client;
@@ -610,6 +713,424 @@ error1:
     return ret;
 }
 
+/* Read two bytes of the XDPE132 firmware CRC value from register 0xA6. */
+static ssize_t xdpe_show_chip_crc(struct device *dev, struct device_attribute *da, char *buf)
+{
+    int ret, crc_val;
+    struct i2c_client *client;
+    struct xdpe_data *data;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_show_chip_crc param error\n");
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    /* Switch to PAGE 0. */
+    ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, WB_XDPE_PHASE_CURR_PAGE);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe avs vout page%u failed, ret: %d\n", client->adapter->nr,
+            client->addr, WB_XDPE_PHASE_CURR_PAGE, ret);
+        goto error;
+    }
+
+    /* read crc */
+    crc_val = wb_i2c_smbus_read_word_data(client, WB_XDPE_CHIP_CRC_COMMAND);
+    if (crc_val < 0) {
+        ret = crc_val;
+        DEBUG_ERROR("%d-%04x: read xdpe crc command reg: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, WB_XDPE_I2C_VOUT_COMMAND, ret);
+        goto error;
+    }
+
+    mutex_unlock(&data->update_lock);
+
+    DEBUG_VERBOSE("%d-%04x: offset: 0x%x, crc: 0x%x\n",
+        client->adapter->nr, client->addr, WB_XDPE_CHIP_CRC_COMMAND, crc_val);
+
+    return snprintf(buf, WB_XDPE_BUF_LEN_MAX, "0x%x\n", crc_val);
+
+error:
+    mutex_unlock(&data->update_lock);
+    return ret;
+}
+
+/* Read four bytes of date information (year-month-day) from registers 0x76, 0x77, 0x78, and 0x79, representing the format xxxx-yy-zz. */
+static ssize_t xdpe_show_chip_ver_date(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+    int date_ver[WB_XDPE_CHIP_VER_DATE_LEN];
+    int ret, i, date_tmp;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_show_chip_ver_date param error\n");
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    /* Switch to PAGE 0. */
+    ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, WB_XDPE_PHASE_CURR_PAGE);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe avs vout page%u failed, ret: %d\n", client->adapter->nr,
+            client->addr, WB_XDPE_PHASE_CURR_PAGE, ret);
+        goto error;
+    }
+
+    memset(date_ver, 0, sizeof(date_ver));
+    for (i = 0; i < WB_XDPE_CHIP_VER_DATE_LEN; i++) {
+        date_tmp = wb_i2c_smbus_read_byte_data(client, WB_XDPE_CHIP_VER_DATE_COMMAND + i);
+        if (date_tmp < 0) {
+            ret = date_tmp;
+            DEBUG_ERROR("%d-%04x: read xdpe crc command reg: 0x%x failed, ret: %d\n",
+                client->adapter->nr, client->addr, (WB_XDPE_I2C_VOUT_COMMAND + i), ret);
+            goto error;
+        }
+        date_ver[i] = date_tmp & 0xff;
+        DEBUG_VERBOSE("%d-%04x: offset: 0x%x, crc: 0x%x\n",
+            client->adapter->nr, client->addr, (WB_XDPE_I2C_VOUT_COMMAND + i), date_ver[i]);
+    }
+    mutex_unlock(&data->update_lock);
+
+    return snprintf(buf, WB_XDPE_BUF_LEN_MAX, "%02x%02x-%02x-%02x\n", date_ver[0], date_ver[1], date_ver[2], date_ver[3]);
+
+error:
+    mutex_unlock(&data->update_lock);
+    return ret;
+}
+
+/* Read the remaining NVM upgrade count (up to a maximum of 25) from registers 0xA0 and 0xA2. */
+static ssize_t xdpe_show_chip_nvm_times(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+    int nvm_val_high, nvm_val_low, nvm_val, nvm_time;
+    int ret, i;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_show_chip_nvm_times param error\n");
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    /* Switch to PAGE 0. */
+    ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, WB_XDPE_PHASE_CURR_PAGE);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe avs vout page%u failed, ret: %d\n", client->adapter->nr,
+            client->addr, WB_XDPE_PHASE_CURR_PAGE, ret);
+        goto error;
+    }
+
+    nvm_val_high = wb_i2c_smbus_read_word_data(client, WB_XDPE_CHIP_NVM_HIGH_COMMAND);
+    if (nvm_val_high < 0) {
+        ret = nvm_val_high;
+        DEBUG_ERROR("%d-%04x: read xdpe crc command reg: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, WB_XDPE_CHIP_NVM_HIGH_COMMAND, nvm_val_high);
+        goto error;
+    }
+
+    nvm_val_low = wb_i2c_smbus_read_word_data(client, WB_XDPE_CHIP_NVM_LOW_COMMAND);
+    if (nvm_val_low < 0) {
+        ret = nvm_val_low;
+        DEBUG_ERROR("%d-%04x: read xdpe crc command reg: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, WB_XDPE_CHIP_NVM_LOW_COMMAND, nvm_val_low);
+        goto error;
+    }
+
+    mutex_unlock(&data->update_lock);
+
+    /* Starting from 0, iterate through bits 0 to 24 (a total of 25 bits) of the variable tmp. */
+    /* For each bit that is 0, it indicates one remaining upgrade attempt. */
+    nvm_val = ((nvm_val_high & 0xffff) << 16) | (nvm_val_low & 0xffff);
+    nvm_time = 0;
+    for (i = 0; i < WB_XDPE_CHIP_NVM_TIME_MAX; i++) {
+        if ((nvm_val & (0x1 << i)) == 0) {
+            nvm_time++;
+        }
+    }
+
+    DEBUG_VERBOSE("%d-%04x: high: 0x%x, low: 0x%x, nvm_val: 0x%x, nvm_time: %d\n",
+        client->adapter->nr, client->addr, nvm_val_high, nvm_val_low, nvm_val, nvm_time);
+
+    return snprintf(buf, WB_XDPE_BUF_LEN_MAX, "%d\n", nvm_time);
+
+error:
+    mutex_unlock(&data->update_lock);
+    return ret;
+}
+
+static ssize_t xdpe_show_chip_version_info(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct i2c_client *client;
+    char buf_tmp[WB_XDPE_BUF_LEN_MAX];
+    int ret, buf_len;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_power_value_show return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+    client = to_i2c_client(dev);
+    buf_len = 0;
+
+    memset(buf_tmp, 0, sizeof(buf_tmp));
+    ret = xdpe_show_chip_crc(dev, da, buf_tmp);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: read xdpe crc failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        return ret;
+    }
+    buf_len += snprintf(buf + buf_len, PAGE_SIZE - buf_len, "Chip CRC8: %s", buf_tmp);
+
+    memset(buf_tmp, 0, sizeof(buf_tmp));
+    ret = xdpe_show_chip_ver_date(dev, da, buf_tmp);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: read xdpe ver_date failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        return ret;
+    }
+    buf_len += snprintf(buf + buf_len, PAGE_SIZE - buf_len, "Chip Version Date: %s", buf_tmp);
+
+    memset(buf_tmp, 0, sizeof(buf_tmp));
+    ret = xdpe_show_chip_nvm_times(dev, da, buf_tmp);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: read xdpe nvm_times failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        return ret;
+    }
+    buf_len += snprintf(buf + buf_len, PAGE_SIZE - buf_len, "Chip NVM Program times left: %s", buf_tmp);
+
+    return buf_len;
+}
+
+/* Firmware upgrade command to write to the ROM register address and value, i.e., writing 0x3F42 to register 0xE8 on page 0. */
+static ssize_t xdpe_store_remap_to_nvm(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+    long param;
+    int ret, read_back;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_store_remap_to_nvm return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_store_remap_to_nvm param error\n");
+        return -EINVAL;
+    }
+
+    ret = kstrtol(buf, 0, &param);
+    if (ret) {
+        DEBUG_ERROR("%d-%04x: invalid value: %s\n", client->adapter->nr, client->addr, buf);
+        return -EINVAL;
+    }
+
+    /* If the input parameter is not 0x3F42, exit. */
+    if ((param & 0xffff) != WB_XDPE_STORE_TO_NVM_VALUE) {
+        DEBUG_ERROR("%d-%04x: invalid param: 0x%lx\n", client->adapter->nr, client->addr, param);
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    /* Switch to PAGE 0 */
+    ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, 0);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe page 0 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        goto error;
+    }
+
+    ret = wb_i2c_smbus_write_word_data(client, WB_XDPE_STORE_TO_NVM_COMMAND, WB_XDPE_STORE_TO_NVM_VALUE);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe store_nvm cmd reg: 0x%x,  value: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, WB_XDPE_STORE_TO_NVM_COMMAND, WB_XDPE_STORE_TO_NVM_VALUE, ret);
+        goto error;
+    }
+    /* Read-back verification */
+    read_back = wb_i2c_smbus_read_word_data(client, WB_XDPE_STORE_TO_NVM_COMMAND);
+    if (read_back < 0) {
+        ret = read_back;
+        DEBUG_ERROR("%d-%04x: read xdpe store_nvm command reg: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, WB_XDPE_I2C_VOUT_COMMAND, ret);
+        goto error;
+    }
+    if (read_back != WB_XDPE_STORE_TO_NVM_VALUE) {
+        ret = -EIO;
+        DEBUG_ERROR("%d-%04x: xdpe store_nvm value check error, read: 0x%x, set: 0x%x\n",
+            client->adapter->nr, client->addr, read_back, WB_XDPE_STORE_TO_NVM_VALUE);
+        goto error;
+    }
+
+    mutex_unlock(&data->update_lock);
+    DEBUG_VERBOSE("%d-%04x: store remap to nvm success\n", client->adapter->nr, client->addr);
+    return count;
+
+error:
+    mutex_unlock(&data->update_lock);
+    DEBUG_VERBOSE("%d-%04x: store remap to nvm failed\n", client->adapter->nr, client->addr);
+    return ret;
+}
+
+/* I2C unlock */
+static ssize_t xdpe_unlock_dev_i2c(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+    int ret, read_val_0xfd, read_val_0x90;
+
+    if (is_xdpe_dev_available(dev) == false) {
+        DEBUG_VERBOSE("xdpe_store_remap_to_nvm return failed due to dev unavailable\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_unlock_dev_i2c param error\n");
+        return -EINVAL;
+    }
+
+    mutex_lock(&data->update_lock);
+
+    /* Switch to PAGE 0 */
+    ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, 0);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe page 0 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        goto error;
+    }
+
+    /* read 0xfd */
+    read_val_0xfd = wb_i2c_smbus_read_byte_data(client, 0xfd);
+    if (read_val_0xfd < 0) {
+        ret = read_val_0xfd;
+        DEBUG_ERROR("%d-%04x: read xdpe reg: 0xfd failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+        goto error;
+    }
+
+    if ((read_val_0xfd & 0xff) == 0) {
+        /* Read value 0 from address 0xFD, then write 0x2 to address 0xE6. */
+        ret = wb_i2c_smbus_write_byte_data(client, 0xe6, 0x2);
+        if (ret < 0) {
+            DEBUG_ERROR("%d-%04x: write xdpe reg 0xe6 0x2 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+            goto error;
+        }
+
+        /* read 0x90 */
+        read_val_0x90 = wb_i2c_smbus_read_byte_data(client, 0x90);
+        if (read_val_0x90 < 0) {
+            ret = read_val_0x90;
+            DEBUG_ERROR("%d-%04x: read xdpe reg: 0x90 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+            goto error;
+        }
+
+        if (((read_val_0x90 >> 5) & 0x01) == 0) {
+            ret = wb_i2c_smbus_write_byte_data(client, 0xec, 0x5a);
+            if (ret < 0) {
+                DEBUG_ERROR("%d-%04x: write xdpe reg 0xec 0x5a failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+                goto error;
+            }
+            ret = wb_i2c_smbus_write_byte_data(client, 0xed, 0xa5);
+            if (ret < 0) {
+                DEBUG_ERROR("%d-%04x: write xdpe reg 0xed 0xa5 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+                goto error;
+            }
+        }
+    } else {
+        /* If the value read from 0xFD is non-zero, write 0x3 to 0xE6. */
+        ret = wb_i2c_smbus_write_byte_data(client, 0xe6, 0x3);
+        if (ret < 0) {
+            DEBUG_ERROR("%d-%04x: write xdpe reg 0xe6 0x3 failed, ret: %d\n", client->adapter->nr, client->addr, ret);
+            goto error;
+        }
+    }
+
+    mutex_unlock(&data->update_lock);
+    DEBUG_VERBOSE("%d-%04x: xdpe unlock i2c success\n", client->adapter->nr, client->addr);
+    return count;
+
+error:
+    mutex_unlock(&data->update_lock);
+    DEBUG_VERBOSE("%d-%04x: xdpe unlock i2c failed\n", client->adapter->nr, client->addr);
+    return ret;
+}
+
+static ssize_t xdpe_get_dev_available_flag(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_get_dev_available_flag param error\n");
+        return -EINVAL;
+    }
+
+    return snprintf(buf, PAGE_SIZE, "%d\n", data->dev_available);
+}
+
+static ssize_t xdpe_set_dev_available_flag(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct i2c_client *client;
+    struct xdpe_data *data;
+    long set_val;
+    int ret;
+
+    if (buf == NULL) {
+        DEBUG_ERROR("xdpe_set_dev_available_flag param buf error\n");
+        return -EINVAL;
+    }
+
+    client = to_i2c_client(dev);
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("xdpe_set_dev_available_flag param error\n");
+        return -EINVAL;
+    }
+
+    set_val = WB_XDPE_DEV_AVAILABLE_FLAG;
+    ret = kstrtol(buf, 0, &set_val);
+    if (ret) {
+        DEBUG_ERROR("%d-%04x: invalid value: %s \n", client->adapter->nr, client->addr, buf);
+        return -EINVAL;
+    }
+
+    if (set_val == WB_XDPE_DEV_UNAVAILABLE_FLAG) {
+        data->dev_available = WB_XDPE_DEV_UNAVAILABLE_FLAG;
+    } else {
+        data->dev_available = WB_XDPE_DEV_AVAILABLE_FLAG;
+    }
+    DEBUG_VERBOSE("%d-%04x: set_val: %ld, dev_available: %d\n",
+        client->adapter->nr, client->addr, set_val, data->dev_available);
+
+    return count;
+}
+
 /* xdpe hwmon */
 static SENSOR_DEVICE_ATTR(power1_input, S_IRUGO, xdpe_power_value_show, NULL, 0x072c);
 static SENSOR_DEVICE_ATTR(power2_input, S_IRUGO, xdpe_power_value_show, NULL, 0x0b2c);
@@ -662,11 +1183,34 @@ static SENSOR_DEVICE_ATTR(avs_vout_max, S_IRUGO | S_IWUSR, xdpe_avs_vout_max_sho
 static SENSOR_DEVICE_ATTR(avs_vout_min, S_IRUGO | S_IWUSR, xdpe_avs_vout_min_show, xdpe_avs_vout_min_store, 0);
 static SENSOR_DEVICE_ATTR_2(version, S_IRUGO, xdpe_word_data_show, NULL, WB_XDPE_VERSION_PAGE, WB_XDPE_VERSION_REG);
 
+static SENSOR_DEVICE_ATTR(dev_available, S_IRUGO | S_IWUSR, xdpe_get_dev_available_flag, xdpe_set_dev_available_flag, 0);
+
+/* show chip ver sysfs */
+static SENSOR_DEVICE_ATTR(chip_crc, S_IRUGO, xdpe_show_chip_crc, NULL, 0);
+static SENSOR_DEVICE_ATTR(chip_ver_date, S_IRUGO, xdpe_show_chip_ver_date, NULL, 0);
+static SENSOR_DEVICE_ATTR(chip_nvm_time, S_IRUGO, xdpe_show_chip_nvm_times, NULL, 0);
+static SENSOR_DEVICE_ATTR(chip_ver_info, S_IRUGO, xdpe_show_chip_version_info, NULL, 0);
+
+/* firmware upgrade sysfs */
+static SENSOR_DEVICE_ATTR(store_to_nvm, S_IRUGO | S_IWUSR, NULL, xdpe_store_remap_to_nvm, 0);
+static SENSOR_DEVICE_ATTR(unlock_i2c, S_IRUGO | S_IWUSR, NULL, xdpe_unlock_dev_i2c, 0);
+
 static struct attribute *xdpe132g5c_sysfs_attrs[] = {
     &sensor_dev_attr_avs_vout.dev_attr.attr,
     &sensor_dev_attr_avs_vout_max.dev_attr.attr,
     &sensor_dev_attr_avs_vout_min.dev_attr.attr,
     &sensor_dev_attr_version.dev_attr.attr,
+    &sensor_dev_attr_dev_available.dev_attr.attr,
+    /* show chip ver sysfs */
+    &sensor_dev_attr_chip_crc.dev_attr.attr,
+    &sensor_dev_attr_chip_ver_date.dev_attr.attr,
+    &sensor_dev_attr_chip_nvm_time.dev_attr.attr,
+    &sensor_dev_attr_chip_ver_info.dev_attr.attr,
+
+    /* firmware upgrade sysfs */
+    &sensor_dev_attr_store_to_nvm.dev_attr.attr,
+    &sensor_dev_attr_unlock_i2c.dev_attr.attr,
+
     NULL,
 };
 
@@ -674,9 +1218,228 @@ static const struct attribute_group xdpe132g5c_sysfs_attrs_group = {
     .attrs = xdpe132g5c_sysfs_attrs,
 };
 
+static loff_t xdpe132g5c_dev_llseek(struct file *file, loff_t offset, int origin)
+{
+    loff_t ret = 0;
+
+    switch (origin) {
+    case SEEK_SET:        /* Offset relative to the beginning of the file. */
+        if (offset < 0) {
+            DEBUG_VERBOSE("SEEK_SET, offset:%lld, invalid.\r\n", offset);
+            ret = -EINVAL;
+            break;
+        }
+        file->f_pos = offset;
+        ret = file->f_pos;
+        break;
+    case SEEK_CUR:        /* Offset relative to the current position in the file. */
+        if (file->f_pos + offset < 0) {
+            DEBUG_VERBOSE("SEEK_CUR out of range, f_ops:%lld, offset:%lld.\n", file->f_pos, offset);
+        }
+        file->f_pos += offset;
+        ret = file->f_pos;
+        break;
+    default:
+        DEBUG_VERBOSE("unsupport llseek type:%d.\n", origin);
+        ret = -EINVAL;
+        break;
+    }
+    return ret;
+}
+
+/**
+ * The xdpe132 character device read interface currently supports only 1-byte or 2-byte reads.
+ * The offset supports the format: Bit16 set to 1 + Followed by 8 bits for the page number + Followed by 8 bits for the read address
+ * For example, 0x10234 means reading from page 2, address 0x34.
+ *              0x00034 means reading from address 0x34 of the current page without switching pages.
+ */
+static ssize_t xdpe132g5c_dev_read(struct file *file, char __user *buf, size_t count, loff_t *offset)
+{
+    struct xdpe_data *i2c_dev;
+    struct i2c_client *client;
+    loff_t offset_tmp;
+    u8 page, addr;
+    int data, ret;
+
+    if (file == NULL || buf == NULL || offset == NULL || *offset < 0) {
+        DEBUG_ERROR("param error, read failed.\n");
+        return -EINVAL;
+    }
+
+    if (count != WIDTH_1Byte && count != WIDTH_2Byte) {
+        DEBUG_ERROR("read conut %lu .\n", count);
+        return -EINVAL;
+    }
+
+    i2c_dev = file->private_data;
+    if (i2c_dev == NULL) {
+        DEBUG_ERROR("can't get read private_data .\r\n");
+        return -EINVAL;
+    }
+    client = i2c_dev->client;
+    if (client == NULL) {
+        DEBUG_ERROR("can't get client.\r\n");
+        return -EINVAL;
+    }
+
+    offset_tmp = *offset;
+    addr = offset_tmp & 0xff;
+    page = (offset_tmp >> WB_XDPE_DEV_RW_PAGE_INFO_BIT) & 0xff;
+    DEBUG_VERBOSE("%d-%04x: offset_tmp 0x%llx addr 0x%x page 0x%x\n",
+        client->adapter->nr, client->addr, offset_tmp, addr, page);
+
+    mutex_lock(&i2c_dev->update_lock);
+
+    if (offset_tmp & WB_XDPE_DEV_RW_SET_PAGE_MASK) {
+        /* need switch page */
+        ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, page);
+        if (ret < 0) {
+            DEBUG_ERROR("%d-%04x: set xdpe page%u failed, ret: %d\n", client->adapter->nr,
+                client->addr, page, ret);
+            goto error;
+        }
+    }
+
+    if (count == WIDTH_1Byte) {
+        data = wb_i2c_smbus_read_byte_data(client, addr);
+    } else {
+        data = wb_i2c_smbus_read_word_data(client, addr);
+    }
+    if (data < 0) {
+        DEBUG_ERROR("%d-%04x: read xdpe reg: 0x%x failed, ret: %d\n",
+            client->adapter->nr, client->addr, (u8)*offset, data);
+        goto error;
+    }
+
+    mutex_unlock(&i2c_dev->update_lock);
+
+    if (copy_to_user(buf, &data, count)) {
+        DEBUG_ERROR("copy_to_user error \r\n");
+        return -EFAULT;
+    }
+    /* After reading the data, the offset address is incremented by the number of bytes read (count). */
+    *offset += count;
+
+    return count;
+
+error:
+    mutex_unlock(&i2c_dev->update_lock);
+    return -EFAULT;
+}
+
+/* The xdpe132 character device write interface currently supports only 1-byte writes. */
+static ssize_t xdpe132g5c_dev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset)
+{
+    struct xdpe_data *i2c_dev;
+    struct i2c_client *client;
+    loff_t offset_tmp;
+    u8 page, addr, val;
+    int ret;
+
+    if (count != WIDTH_1Byte) {
+        DEBUG_ERROR("write conut %lu\n", count);
+        return -EINVAL;
+    }
+
+    i2c_dev = file->private_data;
+    if (i2c_dev == NULL) {
+        DEBUG_ERROR("get write private_data error.\r\n");
+        return -EINVAL;
+    }
+    client = i2c_dev->client;
+    if (client == NULL) {
+        DEBUG_ERROR("can't get client.\r\n");
+        return -EINVAL;
+    }
+
+    if (copy_from_user(&val, buf, count)) {
+        DEBUG_ERROR("copy_from_user error.\r\n");
+        return -EFAULT;
+    }
+
+    offset_tmp = *offset;
+    addr = offset_tmp & 0xff;
+    page = (offset_tmp >> WB_XDPE_DEV_RW_PAGE_INFO_BIT) & 0xff;
+    DEBUG_VERBOSE("%d-%04x: offset_tmp 0x%llx addr 0x%x page 0x%x\n",
+        client->adapter->nr, client->addr, offset_tmp, addr, page);
+
+    mutex_lock(&i2c_dev->update_lock);
+
+    if (offset_tmp & WB_XDPE_DEV_RW_SET_PAGE_MASK) {
+        /* need switch page */
+        ret = wb_i2c_smbus_write_byte_data(client, WB_XDPE_I2C_PAGE_ADDR, page);
+        if (ret < 0) {
+            DEBUG_ERROR("%d-%04x: set xdpe page%u failed, ret: %d\n", client->adapter->nr,
+                client->addr, page, ret);
+            goto error;
+        }
+    }
+
+    ret = wb_i2c_smbus_write_byte_data(client, addr, val);
+    if (ret < 0) {
+        DEBUG_ERROR("%d-%04x: set xdpe page%u failed, ret: %d\n",
+            client->adapter->nr, client->addr, addr, ret);
+        goto error;
+    }
+
+    mutex_unlock(&i2c_dev->update_lock);
+
+    /* After reading the data, the offset address is incremented by the number of bytes read (count). */
+    *offset += count;
+
+    return count;
+
+error:
+    mutex_unlock(&i2c_dev->update_lock);
+    return -EFAULT;
+}
+
+static long xdpe132g5c_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+    return 0;
+}
+
+static int xdpe132g5c_dev_open(struct inode *inode, struct file *file)
+{
+    unsigned int minor = iminor(inode);
+    struct xdpe_data *i2c_dev;
+
+    if (minor >= WB_XDPE_MAX_MISC_DEV_NUM) {
+        DEBUG_ERROR("minor [%d] is greater than max i2c dev num [%d], open fail.\r\n",
+            minor, WB_XDPE_MAX_MISC_DEV_NUM);
+        return -EINVAL;
+    }
+    i2c_dev = xdpe132g5c_dev_arry[minor];
+    if (i2c_dev == NULL) {
+        return -ENODEV;
+    }
+
+    file->private_data = i2c_dev;
+
+    return 0;
+}
+
+static int xdpe132g5c_dev_release(struct inode *inode, struct file *file)
+{
+    file->private_data = NULL;
+
+    return 0;
+}
+
+static const struct file_operations xdpe132g5c_dev_fops = {
+    .owner          = THIS_MODULE,
+    .llseek         = xdpe132g5c_dev_llseek,
+    .read           = xdpe132g5c_dev_read,
+    .write          = xdpe132g5c_dev_write,
+    .unlocked_ioctl = xdpe132g5c_dev_ioctl,
+    .open           = xdpe132g5c_dev_open,
+    .release        = xdpe132g5c_dev_release,
+};
+
 static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
     struct xdpe_data *data;
+    struct miscdevice *misc;
     int ret;
 
     DEBUG_VERBOSE("bus: %d, addr: 0x%02x do probe.\n", client->adapter->nr, client->addr);
@@ -705,6 +1468,37 @@ static int xdpe132g5c_probe(struct i2c_client *client, const struct i2c_device_i
     }
     data->vout_max = WB_XDPE_VOUT_MAX_THRESHOLD;
     data->vout_min = WB_XDPE_VOUT_MIN_THRESHOLD;
+
+    /* dev_available The initial value is 1. 
+     * When this value is exported to user space for modification, 
+     * if it is set to 0, all related nodes become inaccessible. */
+    data->dev_available = WB_XDPE_DEV_AVAILABLE_FLAG;
+
+    snprintf(data->dev_name, sizeof(data->dev_name), "xdpe_%d_0x%02x", client->adapter->nr,
+        client->addr);
+    misc = &data->misc;
+    misc->minor = MISC_DYNAMIC_MINOR;
+    misc->name = data->dev_name;
+    misc->fops = &xdpe132g5c_dev_fops;
+    if (misc_register(misc) != 0) {
+        dev_err(&client->dev, "register %s faild.\r\n", misc->name);
+        hwmon_device_unregister(data->hwmon_dev);
+        sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+        return -ENXIO;
+    }
+
+    if (misc->minor >= WB_XDPE_MAX_MISC_DEV_NUM) {
+        dev_err(&client->dev, "minor number beyond the limit! is %d.\r\n", misc->minor);
+        hwmon_device_unregister(data->hwmon_dev);
+        sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+        misc_deregister(misc);
+        return -ENXIO;
+    }
+    /* Add to the device list */
+    xdpe132g5c_dev_arry[misc->minor] = data;
+    dev_info(&client->dev, "bus: %d addr: 0x%02x register %s success.\n",
+        client->adapter->nr, client->addr, misc->name);
+
     dev_info(&client->dev, "xdpe132g5c probe success\n");
     return 0;
 }
@@ -715,8 +1509,22 @@ static void xdpe132g5c_remove(struct i2c_client *client)
 
     DEBUG_VERBOSE("bus: %d, addr: 0x%02x do remove\n", client->adapter->nr, client->addr);
     data = i2c_get_clientdata(client);
+    if (data == NULL || data->hwmon_dev == NULL) {
+        DEBUG_VERBOSE("get client data error\n");
+        return;
+    }
+
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &xdpe132g5c_sysfs_attrs_group);
+
+    DEBUG_VERBOSE("xdpe132g5c_remove minor %d\n", data->misc.minor);
+    if ((data->misc.minor >= 0) && (data->misc.minor < WB_XDPE_MAX_MISC_DEV_NUM)) {
+        if (xdpe132g5c_dev_arry[data->misc.minor] != NULL) {
+            xdpe132g5c_dev_arry[data->misc.minor] = NULL;
+        }
+    }
+    misc_deregister(&data->misc);
+
     return;
 }
 

@@ -30,7 +30,7 @@
 #define REVID_MASK			GENMASK(31, 16)
 
 #define PADBAR				0x00c
-
+#define MISCCFG 			0x010
 #define PADOWN_BITS			4
 #define PADOWN_SHIFT(p)			((p) % 8 * PADOWN_BITS)
 #define PADOWN_MASK(p)			(GENMASK(3, 0) << PADOWN_SHIFT(p))
@@ -66,6 +66,8 @@
 #define PADCFG1_TERM_5K			BIT(1)
 #define PADCFG1_TERM_1K			BIT(0)
 #define PADCFG1_TERM_833		(BIT(1) | BIT(0))
+
+#define MISCCFG_IRQ 			BIT(3)
 
 #define PADCFG2				0x008
 #define PADCFG2_DEBEN			BIT(0)
@@ -328,7 +330,6 @@ static void intel_pin_dbg_show(struct pinctrl_dev *pctldev, struct seq_file *s,
 	int locked;
 	bool acpi;
 	void __iomem *padcfg0, *padcfg1;
-
 
 	if (!intel_pad_owned_by_host(pctrl, pin)) {
 		seq_puts(s, "not available");
@@ -810,8 +811,7 @@ static int intel_config_set_pull(struct intel_pinctrl *pctrl, unsigned int pin,
 static int intel_config_set_debounce(struct intel_pinctrl *pctrl,
 				     unsigned int pin, unsigned int debounce)
 {
-	void __iomem *padcfg0;
-    void __iomem *padcfg2;
+	void __iomem *padcfg0, *padcfg2;
 	unsigned long flags;
 	u32 value0, value2;
 
@@ -1045,6 +1045,30 @@ static int intel_gpio_get_direction(struct gpio_chip *chip, unsigned int offset)
 		return GPIO_LINE_DIRECTION_IN;
 
 	return GPIO_LINE_DIRECTION_OUT;
+}
+
+static int intel_set_irq_number(struct intel_pinctrl *pctrl, int irq)
+{
+	void __iomem *reg;
+	u32 value;
+	int i;
+	struct intel_community *community;
+
+	for (i = 0; i < pctrl->ncommunities; i++) {
+		community = &pctrl->communities[i];
+		reg = community->regs + MISCCFG;
+		value = readl(reg);
+		if (irq == 14) {
+			value &= ~MISCCFG_IRQ;
+		} else if (irq == 15) {
+			value |= MISCCFG_IRQ;
+		} else {
+			return -EINVAL;
+		}
+		writel(value, reg);
+	}
+
+	return 0;
 }
 
 static int intel_gpio_direction_input(struct gpio_chip *chip, unsigned int offset)
@@ -1381,6 +1405,8 @@ static int intel_gpio_probe(struct intel_pinctrl *pctrl, int irq)
 		dev_err(pctrl->dev, "failed to register gpiochip\n");
 		return ret;
 	}
+
+	intel_set_irq_number(pctrl, irq);
 
 	return 0;
 }

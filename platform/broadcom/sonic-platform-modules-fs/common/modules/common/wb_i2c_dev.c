@@ -18,9 +18,6 @@
 #include "wb_i2c_dev.h"
 #include <wb_bsp_kernel_debug.h>
 
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 #define PROXY_NAME "wb-i2c-dev"
 #define MAX_BUS_WIDTH        (16)
 #define TRANSFER_WRITE_BUFF  (MAX_RW_LEN + MAX_BUS_WIDTH)
@@ -92,6 +89,7 @@ static int transfer_read(struct i2c_client *client, u8 *buf, loff_t regaddr, siz
     i = 0;
 
     mem_clear(offset_buf, sizeof(offset_buf));
+    mem_clear(&data, sizeof(data));
 
     switch (i2c_dev->addr_bus_width) {
     case WIDTH_4Byte:
@@ -126,7 +124,11 @@ static int transfer_read(struct i2c_client *client, u8 *buf, loff_t regaddr, siz
         msgs[1].buf = buf;
 
         msgs_num = 2;
-        ret = i2c_transfer(client->adapter, msgs, msgs_num);
+        if (in_interrupt() || oops_in_progress) {
+            ret = __i2c_transfer(client->adapter, msgs, msgs_num);
+        } else {
+            ret = i2c_transfer(client->adapter, msgs, msgs_num);
+        }
         if (ret != msgs_num) {
             DEBUG_ERROR("i2c_transfer read error\n");
             return -EINVAL;
@@ -238,7 +240,11 @@ static int transfer_write(struct i2c_client *client, u8 *buf, loff_t regaddr, si
         msgs[0].buf = offset_buf;
 
         msgs_num = 1;
-        ret = i2c_transfer(adap, msgs, msgs_num);
+        if (in_interrupt() || oops_in_progress) {
+            ret = __i2c_transfer(adap, msgs, msgs_num);
+        } else {
+            ret = i2c_transfer(adap, msgs, msgs_num);
+        }
         if (ret != msgs_num) {
             DEBUG_ERROR("i2c_transfer write error\n");
             return -EINVAL;
@@ -511,7 +517,7 @@ static ssize_t i2c_dev_read_user(struct file *file, char __user *buf, size_t cou
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_read_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = i2c_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -595,7 +601,7 @@ static ssize_t i2c_dev_write_user(struct file *file, const char __user *buf, siz
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_write_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = i2c_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -1201,6 +1207,7 @@ static int of_i2c_dev_config_init(struct i2c_client *client, struct i2c_dev_info
         i2c_dev->per_wr_len, i2c_dev->i2c_len);
     return 0;
 }
+
 
 static int i2c_dev_config_init(struct i2c_client *client, struct i2c_dev_info *i2c_dev)
 {

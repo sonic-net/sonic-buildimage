@@ -132,8 +132,8 @@ struct ina3221_data {
     struct mutex lock;
     u32 reg_config;
     int summation_shunt_resistor;
-    int pv_max;
-    int pv_min;
+    long pv_max;
+    long pv_min;
 
     bool single_shot;
 };
@@ -232,6 +232,7 @@ static int ina3221_read_value(struct ina3221_data *ina, unsigned int reg,
     unsigned int regval;
     int ret;
 
+    regval = 0;
     ret = regmap_read(ina->regmap, reg, &regval);
     if (ret)
         return ret;
@@ -937,6 +938,7 @@ static int ina3221_probe_from_dt(struct device *dev, struct ina3221_data *ina)
 {
     const struct device_node *np = dev->of_node;
     struct device_node *child;
+    s32 pv_max, pv_min;
     int ret;
 
     ina->pv_max = INA3221_DEFAULT_POWER_UPPER;
@@ -948,15 +950,19 @@ static int ina3221_probe_from_dt(struct device *dev, struct ina3221_data *ina)
 
     ina->single_shot = of_property_read_bool(np, "ti,single-shot");
 
+    pv_max = 0;
+    pv_min = 0;
     ret = 0;
-    ret += of_property_read_s32(np, "pv_max", &ina->pv_max);
-    ret += of_property_read_s32(np, "pv_min", &ina->pv_min);
+    ret += of_property_read_s32(np, "pv_max", &pv_max);
+    ret += of_property_read_s32(np, "pv_min", &pv_min);
     if (ret) {
         dev_info(dev, "pv_max or pv_min not config, use default\n");
-        ina->pv_max = INA3221_DEFAULT_POWER_UPPER;
-        ina->pv_min = INA3221_DEFAULT_POWER_LOWER;
+        pv_max = INA3221_DEFAULT_POWER_UPPER;
+        pv_min = INA3221_DEFAULT_POWER_LOWER;
     }
-    dev_info(dev, "pv_max: %d, pv_min: %d\n", ina->pv_max, ina->pv_min);
+    ina->pv_max = pv_max;
+    ina->pv_min = pv_min;
+    dev_info(dev, "pv_max: %ld, pv_min: %ld\n", ina->pv_max, ina->pv_min);
 
     for_each_child_of_node(np, child) {
         ret = ina3221_probe_child_from_dt(dev, child, ina);
@@ -974,18 +980,18 @@ static int ina3221_set_pv_threshold(struct ina3221_data *ina) {
     unsigned int regval;
 
     if (ina->pv_max != INA3221_DEFAULT_POWER_UPPER) {
-        ret = ina3221_reg_rw(ina, INA3221_POWER_UPPER, (long *)&ina->pv_max, &regval, false);
+        ret = ina3221_reg_rw(ina, INA3221_POWER_UPPER, &ina->pv_max, &regval, false);
         if (ret < 0) {
-            dev_err(ina->pm_dev, "ina3221 reg write fail, reg:0x%x, val: %d, ret:%d\n", INA3221_POWER_UPPER, ina->pv_max, ret);
+            dev_err(ina->pm_dev, "ina3221 reg write fail, reg:0x%x, val: %ld, ret:%d\n", INA3221_POWER_UPPER, ina->pv_max, ret);
             return ret;
         }
         dev_dbg(ina->pm_dev, "set reg:0x%x val: 0x%x\n", INA3221_POWER_UPPER, regval);
     }
 
     if (ina->pv_min != INA3221_DEFAULT_POWER_LOWER) {
-        ret = ina3221_reg_rw(ina, INA3221_POWER_LOWER, (long *)&ina->pv_min, &regval, false);
+        ret = ina3221_reg_rw(ina, INA3221_POWER_LOWER, &ina->pv_min, &regval, false);
         if (ret < 0) {
-            dev_err(ina->pm_dev, "ina3221 reg write fail, reg:0x%x, val: %d, ret:%d\n", INA3221_POWER_LOWER, ina->pv_min, ret);
+            dev_err(ina->pm_dev, "ina3221 reg write fail, reg:0x%x, val: %ld, ret:%d\n", INA3221_POWER_LOWER, ina->pv_min, ret);
             return ret;
         }
         dev_dbg(ina->pm_dev, "set reg:0x%x val: 0x%x\n", INA3221_POWER_LOWER, regval);

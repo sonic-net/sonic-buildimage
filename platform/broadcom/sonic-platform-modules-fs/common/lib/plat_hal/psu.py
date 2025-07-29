@@ -10,6 +10,9 @@ from eepromutil.cust_fru import CustFru
 from plat_hal.devicebase import devicebase
 from plat_hal.sensor import sensor
 
+from eepromutil.wedge_v5 import WedgeV5
+
+PSU_SUPPORT_E2_TYPE = ["fru", "custfru", "wedge_v5"]
 
 class psu(devicebase):
     __pmbus = None
@@ -174,16 +177,19 @@ class psu(devicebase):
             self.__InputStatus = False
         else:
             ret, val = self.get_value(self.__InputStatus_config)
-            mask = self.__InputStatus_config.get("mask")
+            mask = self.__InputStatus_config.get("mask", 0xffff)
             if ret is True:
                 ret,value = self.strToint(val)
             if ret is True:
                 ttt = value & mask
                 okval = self.__InputStatus_config.get("okval", 0)
-                if ttt == okval:
-                    self.__InputStatus = True
+                reverse = self.__InputStatus_config.get("reverse", False)
+                if isinstance(okval, int):
+                    okval = [okval]
+                if ttt in okval:
+                    self.__InputStatus = True if not reverse else False
                 else:
-                    self.__InputStatus = False
+                    self.__InputStatus = False if not reverse else True
             else:
                 self.__InputStatus = False
         return self.__InputStatus
@@ -319,16 +325,19 @@ class psu(devicebase):
             self.__OutputStatus = False
         else:
             ret, val = self.get_value(self.__OutputStatus_config)
-            mask = self.__OutputStatus_config.get("mask")
+            mask = self.__OutputStatus_config.get("mask", 0xffff)
             if ret is True:
                 ret,value = self.strToint(val)
             if ret is True:
                 ttt = value & mask
                 okval = self.__OutputStatus_config.get("okval", 0)
-                if ttt == okval:
-                    self.__OutputStatus = True
+                reverse = self.__OutputStatus_config.get("reverse", False)
+                if isinstance(okval, int):
+                    okval = [okval]
+                if ttt in okval:
+                    self.__OutputStatus = True if not reverse else False
                 else:
-                    self.__OutputStatus = False
+                    self.__OutputStatus = False if not reverse else True
             else:
                 self.__OutputStatus = False
         return self.__OutputStatus
@@ -425,10 +434,10 @@ class psu(devicebase):
         mask = self.__presentconfig.get("mask")
         ret,value = self.strToint(val)
         if ret is True:
-	        ttt = value & mask
-	        okval = self.__presentconfig.get("okval", 0)
-	        if ttt == okval:
-	            return True
+            ttt = value & mask
+            okval = self.__presentconfig.get("okval", 0)
+            if ttt == okval:
+                return True
         return False
 
     @property
@@ -588,14 +597,9 @@ class psu(devicebase):
             return False
         return True
 
-    def get_fru_info_by_decode(self):
+    def get_fru_info_by_decode(self, eeprom):
         try:
-            eeprom = self.get_eeprom_info(self.e2loc)
-            if eeprom is None:
-                raise Exception("%s:value is none" % self.name)
             fru = ipmifru()
-            if isinstance(eeprom, bytes):
-                eeprom = self.byteTostr(eeprom)
             fru.decodeBin(eeprom)
             if fru.productInfoArea is not None:
                 self.productManufacturer = fru.productInfoArea.productManufacturer.strip()
@@ -612,14 +616,9 @@ class psu(devicebase):
             return False
         return True
 
-    def get_custfru_info_by_decode(self):
+    def get_custfru_info_by_decode(self, eeprom):
         try:
-            eeprom = self.get_eeprom_info(self.e2loc)
-            if eeprom is None:
-                raise Exception("%s:value is none" % self.name)
             custfru = CustFru()
-            if isinstance(eeprom, bytes):
-                eeprom = self.byteTostr(eeprom)
             custfru.decode(eeprom)
             self.productManufacturer = custfru.manufacturer.strip()
             self.productName = custfru.product_name.strip()
@@ -635,6 +634,51 @@ class psu(devicebase):
             return False
         return True
 
+    def get_wedge_v5_info_by_decode(self, eeprom):
+        try:
+            wegdev5 = WedgeV5()
+            rets = wegdev5.decode(eeprom)
+            self.productVersion = None
+            production_state = None
+            production_version = None
+            production_sub_version = None
+            for item in rets:
+                if item["code"] == wegdev5.FBWV5_PRODUCT_SERIAL_NUMBER:
+                    self.productSerialNumber = item["value"].replace("\x00", "").strip()
+                if item["code"] == wegdev5.FBWV5_ODM_PCBA_PART_NUMBER:
+                    self.productPartModelName = item["value"].replace("\x00", "").strip()
+                if item["code"] == wegdev5.FBWV5_PRODUCT_NAME:
+                    self.productName = item["value"].replace("\x00", "").strip()
+                if item["code"] == wegdev5.FBWV5_SYSTEM_MANUFACTURER:
+                    self.productManufacturer = item["value"].replace("\x00", "").strip()
+                if item["code"] == wegdev5.FBWV5_PRODUCT_PRODUCTION_STATE:
+                    production_state = "%d" % item["value"]
+                if item["code"] == wegdev5.FBWV5_PRODUCT_VERSION:
+                    production_version = "%d" % item["value"]
+                if item["code"] == wegdev5.FBWV5_PRODUCT_SUB_VERSION:
+                    production_sub_version = "%d" % item["value"]
+            if production_state != None and production_version != None and production_sub_version != None:
+                self.productVersion = "{}.{}.{}".format(production_state, production_version, production_sub_version)
+            else:
+                self.productVersion = None
+        except Exception:
+            self.productManufacturer = None
+            self.productName = None
+            self.productPartModelName = None
+            self.productVersion = None
+            self.productSerialNumber = None
+            return False
+        return True
+
+    def get_fru_info_by_type(self, type, eeprom):
+        if type == "fru":
+            return self.get_fru_info_by_decode(eeprom)
+        if type == "custfru":
+            return self.get_custfru_info_by_decode(eeprom)
+        if type == "wedge_v5":
+            return self.get_wedge_v5_info_by_decode(eeprom)
+        return False
+
     def get_fru_info(self):
         try:
             if self.present is not True:
@@ -643,11 +687,24 @@ class psu(devicebase):
             if self.get_fru_info_by_sysfs() is True:
                 return True
 
-            if self.e2_type == "fru":
-                return self.get_fru_info_by_decode()
+            eeprom = self.get_eeprom_info(self.e2loc)
+            if eeprom is None:
+                raise Exception("%s:value is none" % self.name)
+            if isinstance(eeprom, bytes):
+                eeprom = self.byteTostr(eeprom)
 
-            if self.e2_type == "custfru":
-                return self.get_custfru_info_by_decode()
+            if isinstance(self.e2_type, str):
+                return self.get_fru_info_by_type(self.e2_type, eeprom)
+
+            if isinstance(self.e2_type, list):
+                for e2_type in self.e2_type:
+                    if self.get_fru_info_by_type(e2_type, eeprom):
+                        return True
+
+            else:
+                for e2_type in PSU_SUPPORT_E2_TYPE:
+                    if self.get_fru_info_by_type(e2_type, eeprom):
+                        return True
 
             raise Exception("%s: unsupport e2_type: %s" % (self.name, self.e2_type))
         except Exception:

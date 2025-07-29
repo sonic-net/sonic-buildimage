@@ -120,7 +120,7 @@ static void fpga_pcie_remove(struct pci_dev *pdev)
 
 static const struct pci_device_id fpga_pci_ids[] = {
         { PCI_DEVICE(0x10ee, 0x7022), .driver_data = XILINX_FPGA_USE_MSI},
-        { PCI_DEVICE(0x10ee, 0x7011), .driver_data = XILINX_FPGA_NUSE_MSI},
+        { PCI_DEVICE(0x10ee, 0x7011), .driver_data = XILINX_FPGA_USE_MSI},
         { PCI_DEVICE(0x1ded, 0x7022), .driver_data = XILINX_FPGA_USE_MSI},
         { PCI_DEVICE(0x1ded, 0x7021), .driver_data = XILINX_FPGA_USE_MSI},
         { PCI_DEVICE(0x1ded, 0x5220), .driver_data = XILINX_FPGA_USE_MSI},

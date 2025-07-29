@@ -46,6 +46,14 @@ struct system_s {
 static struct s3ip_sysfs_system_drivers_s *g_system_drv = NULL;
 static struct switch_obj *g_system_obj = NULL;
 
+static ssize_t my_slot_id_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    check_p(g_system_drv);
+    check_p(g_system_drv->get_my_slot_id);
+
+    return g_system_drv->get_my_slot_id(buf, PAGE_SIZE);
+}
+
 static ssize_t system_value_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     struct switch_device_attribute *system_attr;
@@ -57,6 +65,28 @@ static ssize_t system_value_show(struct switch_obj *obj, struct switch_attribute
     check_p(system_attr);
     SYSTEM_DBG("system_value_show type 0x%x \n", system_attr->type);
     return g_system_drv->get_system_value(system_attr->type, buf, PAGE_SIZE);
+}
+
+/**
+ * system_value_match_status_show - show system value match status
+ * @obj: switch obj
+ * @attr: switch attribute
+ * @buf: buffer to store value
+ *
+ * Return: status on success, ACCESS_FAILED on error
+ */
+static ssize_t system_value_match_status_show(struct switch_obj *obj, 
+                struct switch_attribute *attr, char *buf)
+{
+    struct switch_device_attribute *system_attr;
+
+    check_p(g_system_drv);
+    check_p(g_system_drv->get_system_value_match_status);
+
+    system_attr = to_switch_device_attr(attr);
+    check_p(system_attr);
+    SYSTEM_DBG("system_value_match_status_show type 0x%x \n", system_attr->type);
+    return g_system_drv->get_system_value_match_status(system_attr->type, buf, PAGE_SIZE);
 }
 
 static ssize_t system_value_store(struct switch_obj *obj, struct switch_attribute *attr,
@@ -143,13 +173,22 @@ static ssize_t system_bmc_switch(struct switch_obj *obj, struct switch_attribute
     return count;
 }
 
+static ssize_t system_get_serial_number(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+{
+    check_p(g_system_drv);
+    check_p(g_system_drv->get_system_serial_number);
+
+    return g_system_drv->get_system_serial_number(buf, PAGE_SIZE);
+}
+
 /************************************system dir and attrs*******************************************/
 static SWITCH_DEVICE_ATTR(bmc_ready, S_IRUGO | S_IWUSR, system_value_show, system_value_store, WB_SYSTEM_BMC_READY);
 static SWITCH_DEVICE_ATTR(sol_active, S_IRUGO | S_IWUSR, system_value_show, system_value_store, WB_SYSTEM_SOL_ACTIVE);
 static SWITCH_DEVICE_ATTR(psu_reset, S_IWUSR, NULL, system_value_store, WB_SYSTEM_PSU_RESET);
 static SWITCH_DEVICE_ATTR(cpu_board_ctrl, S_IWUSR, NULL, system_value_store, WB_SYSTEM_CPU_BOARD_CTRL);
-static SWITCH_DEVICE_ATTR(cpu_board_status, S_IRUGO , system_value_show, NULL, WB_SYSTEM_CPU_BOARD_STATUS);
-static SWITCH_DEVICE_ATTR(bios_switch, S_IWUSR, NULL, system_value_store, WB_SYSTEM_BIOS_SWITCH);
+static SWITCH_DEVICE_ATTR(cpu_board_status, S_IRUGO , system_value_match_status_show, NULL, WB_SYSTEM_CPU_BOARD_STATUS);
+static SWITCH_DEVICE_ATTR(bios_switch, S_IRUGO | S_IWUSR, system_value_show, system_value_store, WB_SYSTEM_BIOS_SWITCH);
+static SWITCH_DEVICE_ATTR(bios_flash_switch, S_IRUGO | S_IWUSR, system_value_show, system_value_store, WB_SYSTEM_BIOS_FLASH_SWITCH);
 static SWITCH_DEVICE_ATTR(bios_view, S_IRUGO, system_value_show, NULL, WB_SYSTEM_BIOS_VIEW);
 static SWITCH_DEVICE_ATTR(bios_boot_ok, S_IRUGO, system_value_show, NULL, WB_SYSTEM_BIOS_BOOT_OK);
 static SWITCH_DEVICE_ATTR(bios_fail_record, S_IRUGO, system_value_show, NULL, WB_SYSTEM_BIOS_FAIL_RECORD);
@@ -161,6 +200,8 @@ static SWITCH_DEVICE_ATTR(port_pwr_ctl, S_IRUGO | S_IWUSR, system_port_port_stat
 static SWITCH_DEVICE_ATTR(bmc_view, S_IRUGO, system_bmc_view, NULL, WB_SYSTEM_BMC_VIEW);
 static SWITCH_DEVICE_ATTR(bmc_switch, S_IWUSR, NULL, system_bmc_switch, WB_SYSTEM_BMC_SWITCH);
 static SWITCH_DEVICE_ATTR(is_main_mgmt_board, S_IRUGO , system_value_show, NULL, WB_SYSTEM_IS_MAIN_MGMT_BOARD);
+static SWITCH_DEVICE_ATTR(product_serial_number, S_IRUGO, system_get_serial_number, NULL, 0);
+static struct switch_attribute slot_id_attr = __ATTR(slot_id, S_IRUGO, my_slot_id_show, NULL);
 
 static struct attribute *system_dir_attrs[] = {
     &switch_dev_attr_bmc_ready.switch_attr.attr,
@@ -169,6 +210,7 @@ static struct attribute *system_dir_attrs[] = {
     &switch_dev_attr_cpu_board_ctrl.switch_attr.attr,
     &switch_dev_attr_cpu_board_status.switch_attr.attr,
     &switch_dev_attr_bios_switch.switch_attr.attr,
+    &switch_dev_attr_bios_flash_switch.switch_attr.attr,
     &switch_dev_attr_bios_view.switch_attr.attr,
     &switch_dev_attr_bios_boot_ok.switch_attr.attr,
     &switch_dev_attr_bios_fail_record.switch_attr.attr,
@@ -180,6 +222,8 @@ static struct attribute *system_dir_attrs[] = {
     &switch_dev_attr_bmc_view.switch_attr.attr,
     &switch_dev_attr_bmc_switch.switch_attr.attr,
     &switch_dev_attr_is_main_mgmt_board.switch_attr.attr,
+    &switch_dev_attr_product_serial_number.switch_attr.attr,
+    &slot_id_attr.attr,
     NULL,
 };
 

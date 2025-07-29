@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <debug.h>
 #include <stdint.h>
+#include <fw_upg_ispvme_i2c.h>
 
 #define ERR_FW_CHECK_CPLD_UPGRADE       (-601)   /* File validation error */
 #define ERR_FW_CHECK_FPGA_UPGRADE       (-602)
@@ -28,7 +29,7 @@
 #define FIRMWARE_SUCCESS             (0)
 
 #define FIRMWARE_WITH_HEADER         (1)   /* file with header */
-#define FIRMWARE_WITHOUT_HEADER           (2)   /* file without header */
+#define FIRMWARE_WITHOUT_HEADER      (2)   /* file without header */
 
 #define FIRMWARE_ACTION_CHECK        0
 #define FIRMWARE_ACTION_MATCH        1
@@ -37,8 +38,9 @@
 #define FIRMWARE_ACTION_SUPPORT      4
 
 #define FIRMWARE_UPGRADE_RETRY_CNT   (10)
-#define FIRMWARE_NAME_LEN            (48)
+#define FIRMWARE_NAME_LEN            (64)
 #define FIRMWARE_SLOT_MAX_NUM        (16)           /* Maximum number of links supported by board cards */
+#define FIRMWARE_INVALID_CHAIN       (-1)
 
 /* Upgrade file headers */
 #define MAX_DEV_NUM                     10           /* Maximum number of devices to which the upgrade file is applicable */
@@ -103,12 +105,13 @@ typedef struct name_info_s {
     int card_type[MAX_DEV_NUM];                      /* main board type */
     int sub_type[MAX_DEV_NUM];                       /* sub board type */
     int type;                                        /* device type */
-    int chain;                                        /* chain num */
+    int chain;                                       /* chain num */
     char chip_name[FIRMWARE_NAME_LEN];               /* chip name */
     char version[FIRMWARE_NAME_LEN];                 /* version */
     int file_type;                                   /* file type */
     unsigned int crc32;                              /* 4 byte CRC values */
     int header_exist;                                /* header flag */
+    int chain_list[FIRMWARE_SLOT_MAX_NUM];           /* header chain list */
 } name_info_t;
 
 typedef struct cmd_info_s {
@@ -132,6 +135,8 @@ typedef enum firmware_file_type_s {
     FIRMWARE_SPI_LOGIC_DEV, /* FPGA SPI upgrde register upgrade flash */
     FIRMWARE_SYSFS_DEV,     /* write file upgrade eeprom */
     FIRMWARE_MTD,           /* upgrade mtd device */
+    FIRMWARE_ISPVME_I2C,    /* upgrade i2c device */
+    FIRMWARE_SYSFS_XDPE132, /* write file upgrade xdpe132 */
     FIRMWARE_NONE,
 } firmware_file_type_t;
 
@@ -164,6 +169,8 @@ int firmware_upgrade_spi_logic_dev_get_flash_id(char *dev_name, uint32_t *flash_
 extern int firmware_upgrade_sysfs(int fd, uint8_t *buf, uint32_t size, name_info_t *info);
 /* sysfs upgrade test*/
 extern int firmware_upgrade_sysfs_test(int fd, name_info_t *info);
+/* sysfs xdpe132 upgrade */
+extern int firmware_upgrade_sysfs_xdpe132(int fd, char *file_name, int header_offset);
 
 /* isc upgrade */
 extern int firmware_upgrade_jtag(int fd, uint8_t *buf, uint32_t size, name_info_t *info);

@@ -129,6 +129,9 @@ static int dfd_get_sensor_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t s
     } else if (sensor_type == WB_MINOR_DEV_CURR) {
         key = DFD_CFG_KEY(DFD_CFG_ITEM_HWMON_CURR, key_index1, key_index2);
         sensor_valid_flag_key = DFD_CFG_KEY(DFD_CFG_ITEM_CURR_VALID_FLAG, key_index1, key_index2);
+    } else if (sensor_type == WB_MINOR_DEV_POWER) {
+        key = DFD_CFG_KEY(DFD_CFG_ITEM_HWMON_POWER, key_index1, key_index2);
+		sensor_valid_flag_key = DFD_CFG_KEY(DFD_CFG_ITEM_POWER_VALID_FLAG, key_index1, key_index2);
     } else {
         DFD_SENSOR_DEBUG(DBG_ERROR, "Unknow sensor type: %u\n",sensor_type);
         return -DFD_RV_INVALID_VALUE;
@@ -140,13 +143,13 @@ static int dfd_get_sensor_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t s
 
     info_ctrl = dfd_ko_cfg_get_item(sensor_valid_flag_key);
     if (info_ctrl == NULL) {
-        DBG_DEBUG(DBG_VERBOSE, "no cfg %s, think it is valid default\n", key_to_name(sensor_valid_flag_key));
+        DBG_DEBUG(DBG_VERBOSE, "no cfg %s, think it is valid default\n", key_to_name(DFD_CFG_ITEM_ID(sensor_valid_flag_key)));
     } else {
         sensor_valid_flag = 0;
         rv = dfd_info_get_int(sensor_valid_flag_key, &sensor_valid_flag, NULL);
         if (rv < 0) {
             DFD_SENSOR_DEBUG(DBG_ERROR, "get sensor_valid_flag fail, key_name: %s, rv: %d\n",
-                key_to_name(sensor_valid_flag_key), rv);
+                key_to_name(DFD_CFG_ITEM_ID(sensor_valid_flag_key)), rv);
             return rv;
         }
         sensor_valid_val = info_ctrl->int_cons;
@@ -155,7 +158,7 @@ static int dfd_get_sensor_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t s
 
         if (sensor_valid_flag != sensor_valid_val) {
             DFD_SENSOR_DEBUG(DBG_ERROR, "sensor is invalid, do not get sensor info. key_name: %s\n",
-                key_to_name(sensor_valid_flag_key));
+                key_to_name(DFD_CFG_ITEM_ID(sensor_valid_flag_key)));
             return -DFD_RV_INVALID_VALUE;
         }
     }
@@ -185,7 +188,7 @@ ssize_t dfd_get_temp_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t temp_i
     }
 
     if (count <= 0) {
-        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %lu\n", count);
+        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %zu\n", count);
         return -DFD_RV_INVALID_VALUE;
     }
 
@@ -218,7 +221,7 @@ ssize_t dfd_get_voltage_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t in_
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %lu\n", count);
+        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %zu\n", count);
         return -DFD_RV_INVALID_VALUE;
     }
     rv = dfd_get_sensor_info(main_dev_id, dev_index, WB_MINOR_DEV_IN, in_index, in_attr, buf,
@@ -227,6 +230,38 @@ ssize_t dfd_get_voltage_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t in_
         DFD_SENSOR_DEBUG(DBG_ERROR, "get voltage info error, rv: %d\n", rv);
     } else {
         DFD_SENSOR_DEBUG(DBG_VERBOSE, "get voltage info success, value: %s\n", buf);
+    }
+    return rv;
+}
+
+/**
+ * dfd_get_power_info - Get power information
+ * @main_dev_id: Motherboard :0 Power supply :2 subcard :5
+ * @dev_index: If no device index exists, the value is 0, and 1 indicates slot1
+ * @in_index: Power index, starting at 1
+ * @in_type: Power type,1:alias 2:type 3:max 4:max_hyst 5:min 6:input
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_power_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t in_index,
+            uint8_t in_attr, char *buf, size_t count)
+{
+    int rv;
+
+    if (buf == NULL) {
+        DFD_SENSOR_DEBUG(DBG_ERROR, "param error buf is NULL.\n");
+        return -DFD_RV_INVALID_VALUE;
+    }
+    if (count <= 0) {
+        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %zu\n", count);
+        return -DFD_RV_INVALID_VALUE;
+    }
+    rv = dfd_get_sensor_info(main_dev_id, dev_index, WB_MINOR_DEV_POWER, in_index, in_attr, buf,
+             count);
+    if (rv < 0) {
+        DFD_SENSOR_DEBUG(DBG_ERROR, "get power info error, rv: %d\n", rv);
+    } else {
+        DFD_SENSOR_DEBUG(DBG_VERBOSE, "get power info success, value: %s\n", buf);
     }
     return rv;
 }
@@ -250,7 +285,7 @@ ssize_t dfd_get_current_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t cur
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %lu\n", count);
+        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %zu\n", count);
         return -DFD_RV_INVALID_VALUE;
     }
     rv = dfd_get_sensor_info(main_dev_id, dev_index, WB_MINOR_DEV_CURR, curr_index, curr_attr,
@@ -282,7 +317,7 @@ ssize_t dfd_get_psu_sensor_info(uint8_t psu_index, uint8_t sensor_type, char *bu
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %lu\n", count);
+        DFD_SENSOR_DEBUG(DBG_ERROR, "buf size error, count: %zu\n", count);
         return -DFD_RV_INVALID_VALUE;
     }
     key = DFD_CFG_KEY(DFD_CFG_ITEM_HWMON_PSU, psu_index, sensor_type);
@@ -363,3 +398,4 @@ int dfd_get_main_board_monitor_flag(uint8_t main_dev_id, uint8_t dev_index, uint
 
     return (ssize_t)snprintf(buf, PAGE_SIZE, "%d\n", data);
 }
+

@@ -198,6 +198,7 @@ static inline u32 oc_spi_getreg_8(struct spioc *spioc, int reg)
     u32 value, pos;
 
     pos = spioc->base_addr + (reg << spioc->reg_shift);
+    mem_clear(buf_tmp, sizeof(buf_tmp));
     oc_spi_reg_read(spioc, pos, buf_tmp, REG_IO_WIDTH_1);
     value = buf_tmp[0];
 

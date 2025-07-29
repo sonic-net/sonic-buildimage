@@ -473,7 +473,7 @@ static int isl68137_probe(struct i2c_client *client)
         dev_info(&client->dev, "isl68137 pmbus probe error %d\n", status);
         return status;
     }
-	
+
     data = i2c_get_clientdata(client);
     data->pmbus_info_array = isl68137_dfx_infos;
     data->pmbus_info_array_size = ARRAY_SIZE(isl68137_dfx_infos);
@@ -500,6 +500,7 @@ static void isl68137_remove(struct i2c_client *client)
     }
     return;
 }
+
 
 static const struct i2c_device_id raa_dmpvr_id[] = {
     {"wb_isl68127", raa_dmpvr1_2rail},

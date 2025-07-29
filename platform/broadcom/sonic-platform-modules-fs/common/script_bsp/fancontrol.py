@@ -5,7 +5,7 @@ import click
 import os
 import subprocess
 import time
-from ruijieutil import *
+from platform_util import *
 import syslog
 import traceback
 import glob
@@ -13,16 +13,12 @@ import copy
 import fcntl
 import math
 from wbutil.smbus import SMBus
+from public.platform_common_config import SDKCHECK_PARAMS
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-DEBUG_COMMON = 0x01
-DEBUG_LEDCONTROL = 0x02
-DEBUG_FANCONTROL = 0x04
-
-debuglevel = 0
-FANCTROL_DEBUG_FILE = "/etc/.fancontrol_debug_flag"
-
+DEBUG_FILE = "/etc/.fancontrol_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "fancontrol_debug.log"
+logger = setup_logger(LOG_FILE)
 OTP_REBOOT_JUDGE_FILE = "/etc/.otp_reboot_flag"  # coordination with REBOOT_CAUSE_PARA
 
 
@@ -43,28 +39,23 @@ class AliasedGroup(click.Group):
 def fanwarninglog(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def fancriticallog(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_CRIT, s)
-
+    logger.critical(s)
 
 def fanerror(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def faninfo(s):
-    syslog.openlog("FANCONTROL", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def fanwarningdebuglog(debug, s):
-    if debuglevel & debug:
-        syslog.openlog("FANCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def exec_os_cmd(cmd):
     status, output = subprocess.getstatusoutput(cmd)
@@ -785,7 +776,7 @@ class FanControl():
 
     def getMacStatus_bcmcmd(self):
         try:
-            if waitForDocker(timeout=0) == True:
+            if waitForDocker(SDKCHECK_PARAMS, timeout=0) == True:
                 sta, ret = getMacTemp()
                 if sta == True:
                     self._mac_aver = float(ret.get("average", self._mac_aver))
@@ -1186,7 +1177,7 @@ class FanControl():
                     exec_os_cmd(create_judge_file)
                     exec_os_cmd("sync")
                     time.sleep(3)
-                    exec_os_cmd("/sbin/reboot")
+                    os.system("/sbin/reboot")
         except Exception as e:
             fanerror("%%policy: checkCrit failed")
             fanerror(str(e))
@@ -1218,15 +1209,10 @@ def doLedCtrol(fanCtrol):
 
 
 def debug_init():
-    global debuglevel
-    try:
-        with open(FANCTROL_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception as e:
-        debuglevel = 0
-    return
-
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def run(interval, fanCtrol):
     loop = MONITOR_CONST.MONITOR_INTERVAL
@@ -1271,4 +1257,5 @@ def stop():
 
 # device_i2c operation
 if __name__ == '__main__':
+    debug_init()
     main()

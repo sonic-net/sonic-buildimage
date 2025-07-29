@@ -88,72 +88,18 @@ static ssize_t curr_sensor_type_show(struct switch_obj *obj, struct switch_attri
     return g_curr_sensor_drv->get_main_board_curr_type(curr_index, buf, PAGE_SIZE);
 }
 
-static ssize_t curr_sensor_max_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t curr_attr_threshold_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     unsigned int curr_index;
+    struct switch_device_attribute  *tmp_attr;
 
     check_p(g_curr_sensor_drv);
-    check_p(g_curr_sensor_drv->get_main_board_curr_max);
+    check_p(g_curr_sensor_drv->get_main_board_curr_threshold);
 
     curr_index = obj->index;
-    CURR_SENSOR_DBG("curr index: %u\n", curr_index);
-    return g_curr_sensor_drv->get_main_board_curr_max(curr_index, buf, PAGE_SIZE);
-}
-
-static ssize_t curr_sensor_max_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int curr_index;
-    int ret;
-
-    check_p(g_curr_sensor_drv);
-    check_p(g_curr_sensor_drv->set_main_board_curr_max);
-
-    curr_index = obj->index;
-    CURR_SENSOR_DBG("curr index: %u\n", curr_index);
-    ret = g_curr_sensor_drv->set_main_board_curr_max(curr_index, buf, count);
-    if (ret < 0) {
-        CURR_SENSOR_ERR("set curr%u max threshold failed, value: %s, count: %lu, ret: %d\n",
-            curr_index, buf, count, ret);
-        return ret;
-    }
-    CURR_SENSOR_DBG("set curr%u max threshold success, value: %s, count: %lu, ret: %d\n",
-        curr_index, buf, count, ret);
-    return count;
-}
-
-static ssize_t curr_sensor_min_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int curr_index;
-
-    check_p(g_curr_sensor_drv);
-    check_p(g_curr_sensor_drv->get_main_board_curr_min);
-
-    curr_index = obj->index;
-    CURR_SENSOR_DBG("curr index: %u\n", curr_index);
-    return g_curr_sensor_drv->get_main_board_curr_min(curr_index, buf, PAGE_SIZE);
-}
-
-static ssize_t curr_sensor_min_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int curr_index;
-    int ret;
-
-    check_p(g_curr_sensor_drv);
-    check_p(g_curr_sensor_drv->set_main_board_curr_min);
-
-    curr_index = obj->index;
-    CURR_SENSOR_DBG("curr index: %u\n", curr_index);
-    ret = g_curr_sensor_drv->set_main_board_curr_min(curr_index, buf, count);
-    if (ret < 0) {
-        CURR_SENSOR_ERR("set curr%u min threshold failed, value: %s, count: %lu, ret: %d\n",
-            curr_index, buf, count, ret);
-        return ret;
-    }
-    CURR_SENSOR_DBG("set curr%u min threshold success, value: %s, count: %lu, ret: %d\n",
-        curr_index, buf, count, ret);
-    return count;
+    tmp_attr = to_switch_device_attr(attr);
+    check_p(tmp_attr);
+    return g_curr_sensor_drv->get_main_board_curr_threshold(curr_index, tmp_attr->type, buf, PAGE_SIZE);
 }
 
 static ssize_t curr_sensor_monitor_flag_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
@@ -183,17 +129,21 @@ static struct attribute_group curr_sensor_root_attr_group = {
 static struct switch_attribute curr_value_attr = __ATTR(value, S_IRUGO, curr_sensor_value_show, NULL);
 static struct switch_attribute curr_alias_attr = __ATTR(alias, S_IRUGO, curr_sensor_alias_show, NULL);
 static struct switch_attribute curr_type_attr = __ATTR(type, S_IRUGO, curr_sensor_type_show, NULL);
-static struct switch_attribute curr_max_attr = __ATTR(max, S_IRUGO | S_IWUSR, curr_sensor_max_show, curr_sensor_max_store);
-static struct switch_attribute curr_min_attr = __ATTR(min,  S_IRUGO | S_IWUSR, curr_sensor_min_show, curr_sensor_min_store);
 static struct switch_attribute curr_monitor_flag_attr = __ATTR(monitor_flag,  S_IRUGO, curr_sensor_monitor_flag_show, NULL);
+static SWITCH_DEVICE_ATTR(max, S_IRUGO, curr_attr_threshold_show, NULL, WB_SENSOR_MAX);
+static SWITCH_DEVICE_ATTR(high, S_IRUGO, curr_attr_threshold_show, NULL, WB_SENSOR_HIGH);
+static SWITCH_DEVICE_ATTR(low, S_IRUGO, curr_attr_threshold_show, NULL, WB_SENSOR_LOW);
+static SWITCH_DEVICE_ATTR(min, S_IRUGO, curr_attr_threshold_show, NULL, WB_SENSOR_MIN);
 
 static struct attribute *curr_sensor_attrs[] = {
     &curr_value_attr.attr,
     &curr_alias_attr.attr,
     &curr_type_attr.attr,
-    &curr_max_attr.attr,
-    &curr_min_attr.attr,
     &curr_monitor_flag_attr.attr,
+    &switch_dev_attr_max.switch_attr.attr,
+    &switch_dev_attr_high.switch_attr.attr,
+    &switch_dev_attr_low.switch_attr.attr,
+    &switch_dev_attr_min.switch_attr.attr,
     NULL,
 };
 
@@ -255,7 +205,7 @@ static int curr_sensor_sub_create_kobj_and_attrs(struct kobject *parent, int cur
     }
     return 0;
 error:
-    for (i = curr_index; i > 0; i--) {
+    for (i = curr_index - 1; i > 0; i--) {
         curr_sensor_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_curr_sensor.curr);

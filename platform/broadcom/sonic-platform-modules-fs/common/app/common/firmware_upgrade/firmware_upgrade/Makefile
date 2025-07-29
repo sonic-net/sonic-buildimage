@@ -6,8 +6,8 @@ SRC :=
 SRC += $(shell find $(PWD) -name '*.c')
 
 OBJ := $(SRC:%.c=%.o)
-LIB += $(BUILD_CFALGS) $(BUILD_LDFLAGS) -lpthread -lreadline -lncurses
-INCLUDE = -Iinclude
+LIB += $(BUILD_CFALGS) $(BUILD_LDFLAGS) -lpthread -lncurses
+INCLUDE = -Iinclude -I../include
 INCLUDE+= -Wall
 APP = firmware_upgrade
 ELF_FILE = $(APP)

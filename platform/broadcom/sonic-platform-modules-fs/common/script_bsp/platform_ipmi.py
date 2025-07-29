@@ -4,42 +4,39 @@ import sys
 import os
 import syslog
 import click
-from platform_util import exec_os_cmd
-
+import logging
+from platform_util import exec_os_cmd, setup_logger, BSP_COMMON_LOG_DIR
 
 IPMITOOL_CMD = "ipmitool raw 0x32 0x04"  # All products are the same command
+IPMI_CHANEL_CHECK = "ipmitool mc info"
 
-PLATFORM_IPMI_DEBUG_FILE = "/etc/.platform_ipmi_debug_flag"
-UPGRADEDEBUG = 1
-debuglevel = 0
+DEBUG_FILE = "/etc/.platform_ipmi_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "platform_ipmi_debug.log"
+logger = setup_logger(LOG_FILE)
 
 
 def debug_init():
-    global debuglevel
-    if os.path.exists(PLATFORM_IPMI_DEBUG_FILE):
-        debuglevel = debuglevel | UPGRADEDEBUG
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        debuglevel = debuglevel & ~(UPGRADEDEBUG)
-
+        logger.setLevel(logging.INFO)
 
 def ipmidebuglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if UPGRADEDEBUG & debuglevel:
-        syslog.openlog("PLATFORM_IPMI", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def ipmierror(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("PLATFORM_IPMI", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 @click.command()
 @click.argument('cmd', required=True)
 def platform_ipmi_main(cmd):
     '''Send command to BMC through ipmi'''
     try:
+        #check ipmi chanel first
+        status, output = exec_os_cmd(IPMI_CHANEL_CHECK)
+        if status:
+            return False, "ipmi chanel check fail"
+
         # Convert string command to ASCII
         user_cmd = ""
         for ch in cmd:

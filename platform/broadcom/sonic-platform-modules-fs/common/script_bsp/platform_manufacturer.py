@@ -10,11 +10,16 @@ import os
 import time
 import sys
 import argparse
-from platform_config import MANUINFO_CONF
-from monitor import status
+from platform_config import MANUINFO_CONF, BSP_COMMON_LOG_PATH
+from public.platform_common_config import MGMT_VERSION_PATH
+try:
+    from monitor import status
+except ImportError:
+    pass
+
 from platform_util import *
-from platform_config import MGMT_VERSION_PATH, BSP_COMMON_LOG_PATH
 from time import monotonic as _time
+from platform_util import exec_os_cmd_log
 
 INDENT = 4
 args = None
@@ -106,13 +111,19 @@ def run_extra_func(funcname):
     # improve performance
     if funcname in g_extra_cache:
         return g_extra_cache.get(funcname)
-    func = getattr(status, funcname)
-    ret = []
-    func(ret)
-    if ret:
-        g_extra_cache[funcname] = ret
-    return ret
-
+    try:
+        func = getattr(status, funcname)
+        ret = []
+        func(ret)
+        if ret:
+            g_extra_cache[funcname] = ret
+        return ret
+    except AttributeError as e:
+        print(e)
+        return False
+    except Exception as e:
+        print(e)
+        return False
 
 def get_extra_value(funcname, itemid, key):
     for item in run_extra_func(funcname):
@@ -307,7 +318,7 @@ def sort_key(e):
 
 class ExtraFunc(object):
     @staticmethod
-    def get_bcm5387_version(params):
+    def get_cpu_bmc_switch_version(params):
         version = ""
         try:
             before_deal_list = params.get("before", [])
@@ -326,10 +337,18 @@ class ExtraFunc(object):
                     with open(MGMT_VERSION_PATH, 'w') as file:
                         file.write('')
 
-                ret, log = write_sysfs(MGMT_VERSION_PATH, ("%s\n" % version))
-                if ret is False:
-                    log = "%s: writer mgmt version to path fail, version:%s, patch:%s, reason:%s" % (CURRENT_FILE_NAME, version, MGMT_VERSION_PATH, log)
-                    log_to_file(log, BSP_COMMON_LOG_PATH)
+                with open(MGMT_VERSION_PATH, 'r+') as file:
+                    content = file.read().strip()
+                    if content != version:
+                        file.seek(0)  # set point to head
+                        file.truncate()  # clear the content
+                        file.write(f"{version}\n")
+                        log = "%s: old mgmt version: %s not equal new mgmt version: %s, write new version to file: %s" % (CURRENT_FILE_NAME, content, version, MGMT_VERSION_PATH)
+                        log_to_file(log, BSP_COMMON_LOG_PATH)
+                    else:
+                        log = "%s: old mgmt version: %s equal new mgmt version: %s, do nothing" % (CURRENT_FILE_NAME, content, version)
+                        log_to_file(log, BSP_COMMON_LOG_PATH)
+
             after_deal_list = params.get("after", [])
             deal_itmes(after_deal_list)
 
@@ -406,13 +425,6 @@ class VersionHunter:
         self.decode = None
         self.timeout = 10
         self.__dict__.update(entires)
-
-    def check_para(self):
-        if self.pattern is None:
-            return False
-        if self.cmd is None or self.file is None:
-            return False
-        return True
 
     def get_version(self):
         ret = "NA"
@@ -534,6 +546,7 @@ def ApplicationInstance():
 
 
 def run():
+
     if os.geteuid() != 0:
         print("Root privileges are required for this operation")
         sys.exit(1)
@@ -576,4 +589,11 @@ if __name__ == "__main__":
     parser.add_argument('-u','--update', action='store_true', help='update firmware version.')
 
     args = parser.parse_args()
-    run()
+
+    if MANUINFO_CONF.get("version2", 0):
+        cmd_v2 = 'platform_manufacturer_v2.py'
+        if args.update:
+            cmd_v2 = f"{cmd_v2} -u"
+        exec_os_cmd_log(cmd_v2)
+    else:
+        run()

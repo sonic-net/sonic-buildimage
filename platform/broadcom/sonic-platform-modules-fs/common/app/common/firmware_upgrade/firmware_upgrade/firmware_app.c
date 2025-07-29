@@ -23,6 +23,8 @@ static firmware_file_name_t firmware_file_str[] = {
     {"SPI-LOGIC-DEV",   FIRMWARE_SPI_LOGIC_DEV},
     {"SYSFS",           FIRMWARE_SYSFS_DEV},
     {"MTD",             FIRMWARE_MTD},
+    {"VME-I2C",         FIRMWARE_ISPVME_I2C},
+    {"SYSFS-XDPE132",   FIRMWARE_SYSFS_XDPE132},
 };
 
 /**
@@ -164,8 +166,13 @@ static int firmware_get_dev_file_name(name_info_t *info, char *file_name, int le
     case FIRMWARE_SPI_LOGIC_DEV:
     case FIRMWARE_SYSFS_DEV:
     case FIRMWARE_MTD:
+    case FIRMWARE_SYSFS_XDPE132:
         snprintf(file_name, len, "/dev/firmware_sysfs%d", info->chain);
         break;
+    case FIRMWARE_ISPVME_I2C:
+        (void)snprintf(file_name, len, "/dev/"ISPVME_I2C_MISCDEV_NAME_PREFIX"%u", info->chain);
+        break;
+
     default:
         ret = FIRMWARE_FAILED;
         break;
@@ -188,7 +195,7 @@ int firmware_check_chip_verison(int fd, name_info_t *info)
     char version[FIRMWARE_NAME_LEN + 1];
 
     dbg_print(is_debug_on, "Check chip version.\n");
-    mem_clear(version, FIRMWARE_NAME_LEN);
+    mem_clear(version, sizeof(version));
     cmd_info.size = FIRMWARE_NAME_LEN;
     cmd_info.data = (void *) version;
 
@@ -396,6 +403,14 @@ static int firmware_upgrade(char *file_name, name_info_t *info)
         dbg_print(is_debug_on, "start to mtd device upgrade: %s.\n", file_name);
         ret = firmware_upgrade_mtd(fd, upg_buf, upg_size, info);
         break;
+    case FIRMWARE_ISPVME_I2C:
+        dbg_print(is_debug_on, "start to ispvme i2c device upgrade: %s.\n", file_name);
+        ret = firmware_upgrade_ispvme_i2c(fd, file_name, header_offset);
+        break;
+    case FIRMWARE_SYSFS_XDPE132:
+        dbg_print(is_debug_on, "start to sysfs xdpe132 upgrade: %s.\n", file_name);
+        ret = firmware_upgrade_sysfs_xdpe132(fd, file_name, header_offset);
+        break;
     default:
         dbg_print(is_debug_on, "Error: file type is not support: %s.\n", file_name);
         free(upg_buf);
@@ -527,6 +542,10 @@ static int firmware_upgrade_test(char *file_name, name_info_t *info)
         dbg_print(is_debug_on, "start to mtd device upgrade test: %s.\n", file_name);
         ret = firmware_upgrade_mtd_test(fd, info);
         break;
+    case FIRMWARE_ISPVME_I2C:
+        dbg_print(is_debug_on, "start to ispvme i2c device upgrade: %s.\n", file_name);
+        ret = firmware_upgrade_ispvme_i2c(fd, file_name, header_offset);
+        break;
     default:
         dbg_print(is_debug_on, "Error: test file type is not support: %s.\n", file_name);
         free(upg_buf);
@@ -560,12 +579,16 @@ static int firmware_upgrade_test(char *file_name, name_info_t *info)
 static firmware_file_type_t firmware_upgrade_file_type_map(char *type_str)
 {
     int type_num;
-    int i;
+    int i, org_len, dst_len;
 
     type_num = (sizeof(firmware_file_str) /sizeof(firmware_file_str[0]));
     for (i = 0; i < type_num; i++) {
-        if (!strncmp(firmware_file_str[i].firmware_file_name_str, type_str,
-                strlen(firmware_file_str[i].firmware_file_name_str))) {
+        org_len = strlen(firmware_file_str[i].firmware_file_name_str);
+        dst_len = strlen(type_str);
+        if (org_len != dst_len) {
+            continue;
+        }
+        if (!strncmp(firmware_file_str[i].firmware_file_name_str, type_str, org_len)) {
             return firmware_file_str[i].firmware_file_type;
         }
     }
@@ -615,7 +638,12 @@ static int firmware_upgrade_parse_kv(const char *key, const char *value, name_in
         }
     } else if (strcmp(key, FILEHEADER_CHAIN) == 0) {
         /* link num */
-        info->chain = strtoul(value, NULL, 0);
+        for (i = 0; i < FIRMWARE_SLOT_MAX_NUM && (info->chain_list[i] != FIRMWARE_INVALID_CHAIN); i++);
+        if (i == FIRMWARE_SLOT_MAX_NUM) {
+            dbg_print(is_debug_on, "Error:chain is full for %s. \n", value);
+            return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
+        }
+        info->chain_list[i] = strtoul(value, NULL, 0);
     } else if (strcmp(key, FILEHEADER_CHIPNAME) == 0) {
         /* chip name */
         if (strlen(value) >= FIRMWARE_NAME_LEN) {
@@ -623,7 +651,7 @@ static int firmware_upgrade_parse_kv(const char *key, const char *value, name_in
             return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
         }
         mem_clear(info->chip_name, sizeof(info->chip_name));
-         snprintf(info->chip_name, sizeof(info->chip_name) - 1, "%s", value);
+        snprintf(info->chip_name, sizeof(info->chip_name), "%s", value);
     } else if (strcmp(key, FILEHEADER_VERSION) == 0) {
         /* version */
         if (strlen(value) >= FIRMWARE_NAME_LEN) {
@@ -631,7 +659,7 @@ static int firmware_upgrade_parse_kv(const char *key, const char *value, name_in
             return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
         }
         mem_clear(info->version, sizeof(info->version));
-        snprintf(info->version, sizeof(info->version) - 1, "%s", value);
+        snprintf(info->version, sizeof(info->version), "%s", value);
     } else if (strcmp(key, FILEHEADER_FILETYPE) == 0) {
         /* file type */
         info->file_type = firmware_upgrade_file_type_map((char *)value);
@@ -660,6 +688,10 @@ static int firmware_upgrade_parse_check(char *file_name, name_info_t *info)
         dbg_print(is_debug_on, "Error: %s card type is missing.\n", file_name);
         return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
     }
+    if (info->chain_list[0] == FIRMWARE_INVALID_CHAIN) {
+        dbg_print(is_debug_on, "Error: %s chain is missing.\n", file_name);
+        return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
+    }
     if ((info->type <= FIRMWARE_UNDEF_TYPE) || (info->type > FIRMWARE_OTHER)) {
         dbg_print(is_debug_on, "Error: %s type is unknown.\n", file_name);
         return firmware_error_type(FIRMWARE_ACTION_CHECK, info);
@@ -686,14 +718,18 @@ static int firmware_upgrade_parse_check(char *file_name, name_info_t *info)
     for (i = 0; i < MAX_DEV_NUM && info->sub_type[i]; i++){
         dbg_print(is_debug_on, "0x%x, ", info->sub_type[i]);
     }
+    dbg_print(is_debug_on, "    chain: ");
+    for (i = 0; i < FIRMWARE_SLOT_MAX_NUM && (info->chain_list[i] != FIRMWARE_INVALID_CHAIN); i++){
+        dbg_print(is_debug_on, "0x%x, ", info->chain_list[i]);
+     }
+
     dbg_print(is_debug_on, "\n"
                            "    type     : %d, \n"
-                           "    chain     : %d, \n"
                            "    chip name: %s \n"
                            "    version  : %s \n"
                            "    file type: %d \n"
                            "    the crc32 value: %#x \n",
-    info->type, info->chain, info->chip_name, info->version, info->file_type, info->crc32);
+    info->type, info->chip_name, info->version, info->file_type, info->crc32);
     return FIRMWARE_SUCCESS;
 }
 
@@ -712,8 +748,7 @@ static int firmware_upgrade_read_header(char *file_name, name_info_t *info)
     char header_buffer[MAX_HEADER_SIZE];
     char header_key[MAX_HEADER_KV_SIZE];
     char header_var[MAX_HEADER_KV_SIZE];
-    int ret;
-    int len;
+    int ret, len, i;
 
     fp = fopen(file_name, "r");
     if (fp == NULL) {
@@ -742,6 +777,10 @@ static int firmware_upgrade_read_header(char *file_name, name_info_t *info)
 
     dbg_print(is_debug_on, "File parse start.\n");
     mem_clear(info, sizeof(name_info_t));
+    /* init chain_list value to FIRMWARE_INVALID_CHAIN */
+    for (i = 0; i < FIRMWARE_SLOT_MAX_NUM; i++) {
+        info->chain_list[i] = FIRMWARE_INVALID_CHAIN;
+    }
     ret = 0;
     charn = charp;
     mem_clear(header_key, sizeof(header_key));
@@ -791,10 +830,9 @@ static int firmware_upgrade_read_header(char *file_name, name_info_t *info)
  * function: get upgrade info for argc7: chain and file_type are specified
  * return value : success--FIRMWARE_SUCCESS, other fail return error code
  */
-static int firmware_upgrade_one_file_get_info_argc7(int argc, char *argv[], name_info_t *info)
+static int firmware_upgrade_one_file_get_info_argc7(int argc, char *argv[], name_info_t *info, int *chain_value)
 {
-    int ret;
-
+    int ret, i;
     int main_type, sub_type, slot, chain, file_type;
     char *file_name, *file_type_str;
 
@@ -826,19 +864,19 @@ static int firmware_upgrade_one_file_get_info_argc7(int argc, char *argv[], name
         return ret;
     }
 
-    /* argc=7 + without header：use input para */
+    /* argc=7 + without header:use input para */
     if (info->header_exist == FIRMWARE_WITHOUT_HEADER) {
         info->card_type[0] = main_type;
         info->sub_type[0] = sub_type;
         info->type = FIRMWARE_OTHER;
-        info->chain = chain;
+        *chain_value = chain;
         /* info->chip_name not set */
         snprintf(info->version, sizeof(info->version) - 1, "v1.0"); /* to skip version check */
         info->file_type = firmware_upgrade_file_type_map(file_type_str);
         /* info->crc32  not set */
         header_offset = 0;
     } else {
-        /* argc=7 + with header：check input para and header. */
+        /* argc=7 + with header:check input para and header. */
         file_type = firmware_upgrade_file_type_map(file_type_str);
         if (file_type != info->file_type) {
             dbg_print(is_debug_on,
@@ -846,12 +884,17 @@ static int firmware_upgrade_one_file_get_info_argc7(int argc, char *argv[], name
                     file_type, info->file_type);
             return FIRMWARE_FAILED;
         }
-        if (chain != info->chain) {
-            dbg_print(is_debug_on,
-                    "chain in input para is not equal to the one in header. chain in input para: %d, chain in header: %d.\n",
-                    chain, info->chain);
+        for (i = 0; i < FIRMWARE_SLOT_MAX_NUM; i++) {
+            if (info->chain_list[i] == chain) {
+                dbg_print(is_debug_on, "Match chain %d in header\n", chain);
+                break;
+            }
+        }
+        if (i == FIRMWARE_SLOT_MAX_NUM) {
+            dbg_print(is_debug_on, "Can't find chind %d in header\n", chain);
             return FIRMWARE_FAILED;
         }
+        *chain_value = chain;
     }
 
     return FIRMWARE_SUCCESS;
@@ -911,6 +954,7 @@ static int firmware_upgrade_one_file(int argc, char *argv[])
     name_info_t info;
     int main_type, sub_type, slot;
     char *file_name;
+    int i, chain_value, totalerr;
 
     file_name = argv[1];
     main_type = strtoul(argv[2], NULL, 0);
@@ -919,13 +963,13 @@ static int firmware_upgrade_one_file(int argc, char *argv[])
 
     /* paramter check1 */
     if ((slot < 0) || (file_name == NULL)) {
-        dbg_print(is_debug_on,
-                "Failed firmware_upgrade_one_file parameter err.\n");
+        dbg_print(is_debug_on, "Failed firmware_upgrade_one_file parameter err.\n");
         return FIRMWARE_FAILED;
     }
 
+    chain_value = FIRMWARE_INVALID_CHAIN;
     if (argc == 7) {
-        ret = firmware_upgrade_one_file_get_info_argc7(argc, argv, &info);
+        ret = firmware_upgrade_one_file_get_info_argc7(argc, argv, &info, &chain_value);
         if (ret != FIRMWARE_SUCCESS) {
             dbg_print(is_debug_on, "get_info_argc7 failed: %s.\n",
                     file_name);
@@ -948,21 +992,53 @@ static int firmware_upgrade_one_file(int argc, char *argv[])
     /* Check the file information to determine that the file is available for use on the device */
     ret = firmware_check_file_info(&info, main_type, sub_type, slot);
     if (ret != FIRMWARE_SUCCESS) {
-        dbg_print(is_debug_on, "File is not match with the device: %s.\n",
-                file_name);
+        dbg_print(is_debug_on, "File is not match with the device: %s.\n", file_name);
         return ret;
     }
 
     /* The link number corresponding to the upgrade file is calculated based on the slot number.
-     16 links are reserved for each slot. main boade slot is 0. */
-    info.chain += slot * FIRMWARE_SLOT_MAX_NUM;
-    ret = firmware_upgrade(file_name, &info);
-    if (ret != FIRMWARE_SUCCESS) {
-        dbg_print(is_debug_on, "Failed to upgrade: %s.\n", file_name);
-        return ret;
+       16 links are reserved for each slot. main boade slot is 0. */
+    if (chain_value != FIRMWARE_INVALID_CHAIN) {
+        info.chain = chain_value + (slot * FIRMWARE_SLOT_MAX_NUM);
+        dbg_print(is_debug_on, "Specify chain upgrade, file: %s, slot: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, chain_value, info.chain);
+        ret = firmware_upgrade(file_name, &info);
+        if (ret != FIRMWARE_SUCCESS) {
+            dbg_print(is_debug_on, "Failed to upgrade: %s, slot: %d, chain_value: %d, chain: %d\n",
+                file_name, slot, chain_value, info.chain);
+            return ret;
+        }
+        dbg_print(is_debug_on, "Specify chain upgrade success, file: %s, slot: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, chain_value, info.chain);
+        return FIRMWARE_SUCCESS;
+    }
+    /* Traverse all chains for upgrade */
+    totalerr = 0;
+    for (i = 0; i < FIRMWARE_SLOT_MAX_NUM; i++) {
+        if (info.chain_list[i] == FIRMWARE_INVALID_CHAIN) {
+            dbg_print(is_debug_on, "End of chain_list, index: %d\n", i);
+            break;
+        }
+        info.chain = info.chain_list[i] + (slot * FIRMWARE_SLOT_MAX_NUM);
+        dbg_print(is_debug_on, "Traverse upgrade, file: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, i, info.chain_list[i], info.chain);
+        ret = firmware_upgrade(file_name, &info);
+        if (ret != FIRMWARE_SUCCESS) {
+            totalerr += 1;
+            dbg_print(is_debug_on, "Failed to upgrade: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d, ret: %d\n",
+                file_name, slot, i, info.chain_list[i], info.chain, ret);
+        } else {
+            dbg_print(is_debug_on, "Traverse upgrade success, file: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d\n",
+                file_name, slot, i, info.chain_list[i], info.chain);
+        }
     }
 
-    return FIRMWARE_SUCCESS;
+    if (totalerr == 0) {
+        dbg_print(is_debug_on, "Traverse upgrade all success, file: %s, total chain number: %d\n", file_name, i);
+        return FIRMWARE_SUCCESS;
+    }
+    dbg_print(is_debug_on, "Traverse upgrade failed, file: %s, total error: %d\n", file_name, totalerr);
+    return FIRMWARE_FAILED;
 }
 
 /*
@@ -974,22 +1050,46 @@ static int firmware_upgrade_one_file(int argc, char *argv[])
  * @slot: 0--main, sub slot starts at 1
  * return value : success--FIRMWARE_SUCCESS, other fail return error code
  */
-static int firmware_upgrade_file_test(char *file_name, int main_type, int sub_type, int slot)
+static int firmware_upgrade_file_test(int argc, char *argv[])
 {
     int ret;
     name_info_t info;
+    int main_type, sub_type, slot;
+    char *file_name;
+    int i, chain_value, totalerr;
 
+    /* argv[0] is 'test' */
+    file_name = argv[1];
+    main_type = strtoul(argv[2], NULL, 0);
+    sub_type = strtoul(argv[3], NULL, 0);
+    slot = strtoul(argv[4], NULL, 0);
+
+    /* paramter check1 */
     if ((slot < 0) || (file_name == NULL)) {
         dbg_print(is_debug_on, "Failed firmware_upgrade_one_file parameter err.\n");
         return FIRMWARE_FAILED;
     }
 
-    dbg_print(is_debug_on, "firmware upgrade %s 0x%x 0x%x %d\n", file_name, main_type, sub_type, slot);
-    /* Read the header information of the upgrade file */
-    ret = firmware_upgrade_read_header(file_name, &info);
-    if (ret != FIRMWARE_SUCCESS) {
-        dbg_print(is_debug_on, "Failed to get file header: %s, ret=%d\n", file_name, ret);
-        return ret;
+    chain_value = FIRMWARE_INVALID_CHAIN;
+    if (argc == 7) {
+        ret = firmware_upgrade_one_file_get_info_argc7(argc, argv, &info, &chain_value);
+        if (ret != FIRMWARE_SUCCESS) {
+            dbg_print(is_debug_on, "get_info_argc7 failed: %s.\n",
+                    file_name);
+            return ret;
+        }
+    } else if (argc == 5) {
+        ret = firmware_upgrade_one_file_get_info_argc5(argc, argv, &info);
+        if (ret != FIRMWARE_SUCCESS) {
+            dbg_print(is_debug_on, "get_info_argc5 failed: %s.\n",
+                    file_name);
+            return ret;
+        }
+    } else {
+        dbg_print(is_debug_on,
+                "Failed firmware_upgrade_one_file argument number: %d parameter err.\n",
+                argc);
+        return FIRMWARE_FAILED;
     }
 
     /* Check the file information to determine that the file is available for use on the device */
@@ -1001,14 +1101,48 @@ static int firmware_upgrade_file_test(char *file_name, int main_type, int sub_ty
 
     /* The link number corresponding to the upgrade file is calculated based on the slot number.
        16 links are reserved for each slot. main boade slot is 0. */
-    info.chain += slot * FIRMWARE_SLOT_MAX_NUM;
-    ret = firmware_upgrade_test(file_name, &info);
-    if (ret != FIRMWARE_SUCCESS) {
-        dbg_print(is_debug_on, "Failed to upgrade: %s, ret=%d\n", file_name, ret);
-        return ret;
+    if (chain_value != FIRMWARE_INVALID_CHAIN) {
+        info.chain = chain_value + (slot * FIRMWARE_SLOT_MAX_NUM);
+        dbg_print(is_debug_on, "Specify chain upgrade test, file: %s, slot: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, chain_value, info.chain);
+        ret = firmware_upgrade_test(file_name, &info);
+        if (ret != FIRMWARE_SUCCESS) {
+            dbg_print(is_debug_on, "Failed to upgrade test: %s, slot: %d, chain_value: %d, chain: %d\n",
+                file_name, slot, chain_value, info.chain);
+            return ret;
+        }
+        dbg_print(is_debug_on, "Specify chain upgrade test success, file: %s, slot: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, chain_value, info.chain);
+        return FIRMWARE_SUCCESS;
     }
 
-    return FIRMWARE_SUCCESS;
+    /* Traverse all chains for upgrade test */
+    totalerr = 0;
+    for (i = 0; i < FIRMWARE_SLOT_MAX_NUM; i++) {
+        if (info.chain_list[i] == FIRMWARE_INVALID_CHAIN) {
+            dbg_print(is_debug_on, "End of chain_list, index: %d\n", i);
+            break;
+        }
+        info.chain = info.chain_list[i] + (slot * FIRMWARE_SLOT_MAX_NUM);
+        dbg_print(is_debug_on, "Traverse upgrade test, file: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d\n",
+            file_name, slot, i, info.chain_list[i], info.chain);
+        ret = firmware_upgrade_test(file_name, &info);
+        if (ret != FIRMWARE_SUCCESS) {
+            totalerr += 1;
+            dbg_print(is_debug_on, "Failed to upgrade test: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d, ret: %d\n",
+                file_name, slot, i, info.chain_list[i], info.chain, ret);
+        } else {
+            dbg_print(is_debug_on, "Traverse upgrade test success, file: %s, slot: %d, chain index: %d, chain_value: %d, chain: %d\n",
+                file_name, slot, i, info.chain_list[i], info.chain);
+        }
+    }
+
+    if (totalerr == 0) {
+        dbg_print(is_debug_on, "Traverse upgrade test all success, file: %s, total chain number: %d\n", file_name, i);
+        return FIRMWARE_SUCCESS;
+    }
+    dbg_print(is_debug_on, "Traverse upgrade test failed, file: %s, total error: %d\n", file_name, totalerr);
+    return FIRMWARE_FAILED;
 }
 
 static int firmware_upgrade_data_dump(char *argv[])
@@ -1044,8 +1178,10 @@ static int firmware_upgrade_data_dump(char *argv[])
 static void print_usage(void)
 {
     printf("Use:\n");
-    printf(" upgrade file : firmware_upgrade file main_type sub_type slot file_type chain\n");
-    printf(" upgrade test : firmware_upgrade test file main_type sub_type slot\n");
+    printf(" upgrade file with header : firmware_upgrade file main_type sub_type slot\n");
+    printf(" upgrade file with/without heade: firmware_upgrade file main_type sub_type slot file_type chain\n");
+    printf(" upgrade test with header: firmware_upgrade test file main_type sub_type slot\n");
+    printf(" upgrade test with/without heade: firmware_upgrade test file main_type sub_type slot file_type chain\n");
     printf(" spi_logic_dev dump : firmware_upgrade dump spi_logic_dev dev_path offset size print/record_file_path\n");
     printf(" spi_logic_dev : firmware_upgrade spi_logic_dev dev_path get_flash_id\n");
     return;
@@ -1054,7 +1190,6 @@ static void print_usage(void)
 int main(int argc, char *argv[])
 {
     int ret;
-    int main_type, sub_type, slot;
     uint32_t flash_id;
 
     is_debug_on = firmware_upgrade_debug();
@@ -1063,7 +1198,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, SIG_IGN);    /* ignore ctrl+c signal */
     signal(SIGTSTP, SIG_IGN);   /* ignore ctrl+z signal */
 
-    if ((argc != 4) && (argc != 5) && (argc != 6) && (argc != 7)) {
+    if ((argc != 4) && (argc != 5) && (argc != 6) && (argc != 7) && (argc != 8)) {
         print_usage();
         dbg_print(is_debug_on, "Failed to upgrade the number of argv: %d.\n", argc);
         return ERR_FW_UPGRADE;
@@ -1082,7 +1217,18 @@ int main(int argc, char *argv[])
         return ERR_FW_UPGRADE;
     }
 
-    if ((argc == 5) || (argc == 7))  {
+    if ((argc == 7) && (strcmp(argv[1], "dump") == 0)) {
+        /* print device data */
+        ret = firmware_upgrade_data_dump(argv);
+        if (ret == FIRMWARE_SUCCESS) {
+            printf("dump data succeeded.\n");
+            return FIRMWARE_SUCCESS;
+        }
+        printf("dump data failed. ret:%d\n", ret);
+        return ret;
+    }
+
+    if ((argc == 5) || (argc == 7)) {
         printf("+================================+\n");
         printf("|Begin to upgrade, please wait...|\n");
         ret = firmware_upgrade_one_file(argc, argv);
@@ -1097,13 +1243,11 @@ int main(int argc, char *argv[])
         printf("+================================+\n");
         dbg_print(is_debug_on, "Sucess to upgrade a firmware file: %s.\n", argv[1]);
         return FIRMWARE_SUCCESS;
-    } else if ((argc == 6) && (strcmp(argv[1], "test") == 0)) {
-        main_type = strtoul(argv[3], NULL, 0);
-        sub_type = strtoul(argv[4], NULL, 0);
-        slot = strtoul(argv[5], NULL, 0);
+    } else if (((argc == 6) || (argc == 8)) && (strcmp(argv[1], "test") == 0)) {
         printf("+=====================================+\n");
         printf("|Begin to upgrade test, please wait...|\n");
-        ret = firmware_upgrade_file_test(argv[2], main_type, sub_type, slot);
+        /* Skip one parameter to make the argc and argv of the test command consistent with the upgrade command */
+        ret = firmware_upgrade_file_test(argc - 1, argv + 1);
         if (ret == FIRMWARE_SUCCESS) {
             printf("|       Upgrade test succeeded!       |\n");
             printf("+=====================================+\n");
@@ -1118,16 +1262,6 @@ int main(int argc, char *argv[])
             dbg_print(is_debug_on, "Failed to upgrade test a firmware file: %s. (%d)\n", argv[2], ret);
             printf("|         Upgrade test failed!        |\n");
             printf("+=====================================+\n");
-            return ret;
-        }
-    } else if (strcmp(argv[1], "dump") == 0) {
-        /* print device data */
-        ret = firmware_upgrade_data_dump(argv);
-        if (ret == FIRMWARE_SUCCESS) {
-            printf("dump data succeeded.\n");
-            return FIRMWARE_SUCCESS;
-        } else {
-            printf("dump data failed. ret:%d\n", ret);
             return ret;
         }
     }

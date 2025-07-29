@@ -5,6 +5,7 @@
 #include <linux/device.h>
 #include <linux/kallsyms.h>
 #include <linux/string.h>
+#include <wb_bsp_i2c_debug.h>
 
 #define mem_clear(data, size) memset((data), 0, (size))
 
@@ -68,6 +69,8 @@ typedef struct fpga_i2c_reg_addr_s {
 } fpga_i2c_reg_addr_t;
 
 typedef struct fpga_i2c_dev_s {
+    /* struct i2c_adapter_debug must be the first member */
+    struct i2c_adapter_debug i2c_ada_dbg;
     fpga_i2c_reg_t reg;
     fpga_i2c_reset_cfg_t reset_cfg;
     fpga_i2c_reg_addr_t i2c_addr_desc;

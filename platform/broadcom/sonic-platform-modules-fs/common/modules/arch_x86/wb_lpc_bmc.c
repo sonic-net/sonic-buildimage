@@ -18,9 +18,6 @@
 #include <wb_bsp_kernel_debug.h>
 #include <wb_logic_dev_common.h>
 
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 
@@ -870,7 +867,7 @@ static int read_single_bmc_flash(flash_info_t* info, uint32_t start_addr, int re
     return ret;
 }
 
-static ssize_t bmc_dev_read(struct file *file, char __user *buf, size_t count, loff_t *offset, int flag)
+static ssize_t bmc_dev_read(struct file *file, char __user *buf, size_t count, loff_t *offset)
 {
     int i;
     uint32_t *read_val;
@@ -913,8 +910,7 @@ static ssize_t bmc_dev_read(struct file *file, char __user *buf, size_t count, l
     disable_ilpc2ahb();
     mutex_unlock(&g_wb_lpc_bmc->update_lock);
 
-    /* check flag is user spase or kernel spase */
-    if (flag == USER_SPACE) {
+    if (access_ok(buf, count)) {
         DEBUG_VERBOSE("user space read, buf: %p, offset: 0x%llx, read count %ld.\n",
             buf, *offset, count);
         if (copy_to_user(buf, buf_tmp, count)) {
@@ -931,27 +927,17 @@ static ssize_t bmc_dev_read(struct file *file, char __user *buf, size_t count, l
     return count;
 }
 
-static ssize_t bmc_dev_read_user(struct file *file, char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_dev_read_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = bmc_dev_read(file, buf, count, offset, USER_SPACE);
-    return ret;
-}
-
 static ssize_t bmc_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
     int ret;
 
     DEBUG_VERBOSE("bmc_dev_read_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = bmc_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
+    ret = bmc_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos);
     return ret;
 }
 
-static ssize_t read_bmc_flash(struct file *file, char __user *buf, size_t count, loff_t *offset, int cs, int flag)
+static ssize_t read_bmc_flash(struct file *file, char __user *buf, size_t count, loff_t *offset, int cs)
 {
     int ret, current_bmc;
     u8 buf_tmp[DEV_RDWR_MAX_LEN];
@@ -1007,8 +993,7 @@ static ssize_t read_bmc_flash(struct file *file, char __user *buf, size_t count,
 
     mutex_unlock(&g_wb_lpc_bmc->update_lock);
 
-    /* check flag is user spase or kernel spase */
-    if (flag == USER_SPACE) {
+    if (access_ok(buf, count)) {
         DEBUG_VERBOSE("user space read, buf: %p, offset: 0x%llx, read count %ld.\n",
             buf, *offset, count);
         if (copy_to_user(buf, buf_tmp, count)) {
@@ -1028,33 +1013,13 @@ err:
     return ret;
 }
 
-static ssize_t bmc_master_flash_read_user(struct file *file, char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_master_flash_read_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = read_bmc_flash(file, buf, count, offset, CURRENT_MASTER, USER_SPACE);
-    return ret;
-}
-
 static ssize_t bmc_master_flash_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
     int ret;
 
     DEBUG_VERBOSE("bmc_master_flash_read_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = read_bmc_flash(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, CURRENT_MASTER, KERNEL_SPACE);
-    return ret;
-}
-
-static ssize_t bmc_slave_flash_read_user(struct file *file, char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_slave_flash_read_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = read_bmc_flash(file, buf, count, offset, CURRENT_SLAVE, USER_SPACE);
+    ret = read_bmc_flash(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, CURRENT_MASTER);
     return ret;
 }
 
@@ -1064,11 +1029,11 @@ static ssize_t bmc_slave_flash_read_iter(struct kiocb *iocb, struct iov_iter *to
 
     DEBUG_VERBOSE("bmc_slave_flash_read_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = read_bmc_flash(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, CURRENT_SLAVE, KERNEL_SPACE);
+    ret = read_bmc_flash(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, CURRENT_SLAVE);
     return ret;
 }
 
-static ssize_t bmc_dev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset, int flag)
+static ssize_t bmc_dev_write(struct file *file, const char __user *buf, size_t count, loff_t *offset)
 {
     int i;
     u8 buf_tmp[DEV_RDWR_MAX_LEN];
@@ -1097,8 +1062,7 @@ static ssize_t bmc_dev_write(struct file *file, const char __user *buf, size_t c
     }
 
     mem_clear(buf_tmp, sizeof(buf_tmp));
-    /* check flag is user spase or kernel spase */
-    if (flag == USER_SPACE) {
+    if (access_ok(buf, count)) {
         DEBUG_VERBOSE("user space write, buf: %p, offset: 0x%llx, write count %ld.\n",
             buf, *offset, count);
         if (copy_from_user(buf_tmp, buf, count)) {
@@ -1126,27 +1090,16 @@ static ssize_t bmc_dev_write(struct file *file, const char __user *buf, size_t c
     return count;
 }
 
-static ssize_t bmc_dev_write_user(struct file *file, const char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_dev_write_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = bmc_dev_write(file, buf, count, offset, USER_SPACE);
-    return ret;
-}
-
 static ssize_t bmc_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
     int ret = 0;
 
     DEBUG_VERBOSE("bmc_dev_write_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = bmc_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
+    ret = bmc_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos);
     return ret;
 }
-
-static ssize_t write_bmc_flash(struct file *file, char __user *buf, size_t count, loff_t *offset, int cs, int flag)
+static ssize_t write_bmc_flash(struct file *file, char __user *buf, size_t count, loff_t *offset, int cs)
 {
     int ret, current_bmc;
     flash_info_t* info;
@@ -1216,9 +1169,7 @@ static ssize_t write_bmc_flash(struct file *file, char __user *buf, size_t count
         chunk_size = (bytes_remaining > info->page_size) ? info->page_size : bytes_remaining;
 
         mem_clear(g_wb_lpc_bmc->flash_wr_buf, sizeof(g_wb_lpc_bmc->flash_wr_buf));
-
-        /* check flag is user spase or kernel spase */
-        if (flag == USER_SPACE) {
+        if (access_ok(buf + buf_offset, chunk_size)) {
             DEBUG_VERBOSE("user space write, buf: %p, offset: 0x%llx, write count %ld.\n",
                 buf + buf_offset, *offset, chunk_size);
             if (copy_from_user(g_wb_lpc_bmc->flash_wr_buf, buf + buf_offset, chunk_size)) {
@@ -1256,33 +1207,13 @@ err:
     return ret;
 }
 
-static ssize_t bmc_master_flash_write_user(struct file *file, const char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_master_flash_write_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = write_bmc_flash(file, buf, count, offset, CURRENT_MASTER, USER_SPACE);
-    return ret;
-}
-
 static ssize_t bmc_master_flash_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
     int ret = 0;
 
     DEBUG_VERBOSE("bmc_master_flash_write_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = write_bmc_flash(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, CURRENT_MASTER, KERNEL_SPACE);
-    return ret;
-}
-
-static ssize_t bmc_slave_flash_write_user(struct file *file, const char __user *buf, size_t count, loff_t *offset)
-{
-    int ret;
-
-    DEBUG_VERBOSE("bmc_slave_flash_write_user, file: %p, count: %zu, offset: %lld\n",
-        file, count, *offset);
-    ret = write_bmc_flash(file, buf, count, offset, CURRENT_SLAVE, USER_SPACE);
+    ret = write_bmc_flash(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, CURRENT_MASTER);
     return ret;
 }
 
@@ -1292,7 +1223,7 @@ static ssize_t bmc_slave_flash_write_iter(struct kiocb *iocb, struct iov_iter *f
 
     DEBUG_VERBOSE("bmc_slave_flash_write_iter, file: %p, count: %ld, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = write_bmc_flash(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, CURRENT_SLAVE, KERNEL_SPACE);
+    ret = write_bmc_flash(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, CURRENT_SLAVE);
     return ret;
 }
 
@@ -1405,8 +1336,6 @@ static long bmc_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 static const struct file_operations bmc_dev_fops = {
     .owner      = THIS_MODULE,
     .llseek     = bmc_dev_llseek,
-    .read       = bmc_dev_read_user,
-    .write      = bmc_dev_write_user,
     .read_iter  = bmc_dev_read_iter,
     .write_iter = bmc_dev_write_iter,
     .unlocked_ioctl = bmc_dev_ioctl,
@@ -1415,8 +1344,6 @@ static const struct file_operations bmc_dev_fops = {
 static const struct file_operations bmc_master_flash_dev_fops = {
     .owner      = THIS_MODULE,
     .llseek     = bmc_flash_llseek,
-    .read       = bmc_master_flash_read_user,
-    .write      = bmc_master_flash_write_user,
     .read_iter  = bmc_master_flash_read_iter,
     .write_iter = bmc_master_flash_write_iter,
     .unlocked_ioctl = bmc_dev_ioctl,
@@ -1425,8 +1352,6 @@ static const struct file_operations bmc_master_flash_dev_fops = {
 static const struct file_operations bmc_slave_flash_dev_fops = {
     .owner      = THIS_MODULE,
     .llseek     = bmc_flash_llseek,
-    .read       = bmc_slave_flash_read_user,
-    .write      = bmc_slave_flash_write_user,
     .read_iter  = bmc_slave_flash_read_iter,
     .write_iter = bmc_slave_flash_write_iter,
     .unlocked_ioctl = bmc_dev_ioctl,

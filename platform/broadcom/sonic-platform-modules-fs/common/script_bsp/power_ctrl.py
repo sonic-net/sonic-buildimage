@@ -6,19 +6,20 @@ import os
 import fcntl
 import time
 import sys
-from platform_util import get_value, set_value
+import logging
+from platform_util import get_value, set_value, setup_logger, BSP_COMMON_LOG_DIR
 from platform_config import POWER_CTRL_CONF
 from time import monotonic as _time
 
-POWERCTLDEBUG = 0
 OE_SUPPROT_OPERATE = ("status", "off", "on", "reset")
 STATUS_OFF = "off"
 STATUS_ON = "on"
 STATUS_UNKNOWN = "unknown"
 CLI_CONFIRM = True
-POWER_CTRL_DEBUG_FILE = "/etc/.power_control_debug"
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
-
+DEBUG_FILE = "/etc/.power_control_debug"
+LOG_FILE = BSP_COMMON_LOG_DIR + "power_ctrl_debug.log"
+logger = setup_logger(LOG_FILE)
 
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
@@ -36,19 +37,13 @@ class AliasedGroup(click.Group):
 
 
 def debug_init():
-    global POWERCTLDEBUG
-    if os.path.exists(POWER_CTRL_DEBUG_FILE):
-        POWERCTLDEBUG = 1
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        POWERCTLDEBUG = 0
-
+        logger.setLevel(logging.INFO)
 
 def powerctrldebug(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if POWERCTLDEBUG == 1:
-        syslog.openlog("POWERCTRL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def get_status_once(conf):
     val_conf = conf.get("val_conf", {})

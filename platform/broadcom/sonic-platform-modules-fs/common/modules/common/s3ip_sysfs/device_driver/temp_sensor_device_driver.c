@@ -41,53 +41,10 @@ static int wb_get_main_board_temp_number(void)
 }
 
 /*
- * wb_get_main_board_temp_alias - Used to identify the location of the temperature sensor,
- * such as air_inlet, air_outlet and so on.
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_alias(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_alias);
-
-    ret = g_drv->get_main_board_temp_alias(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_type - Used to get the model of temperature sensor,
- * such as lm75, tmp411 and so on
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_type(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_type);
-
-    ret = g_drv->get_main_board_temp_type(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_max - Used to get the maximum threshold of temperature sensor
+ * wb_get_temp_attr - Used to get the attr of temperature sensor
  * filled the value to buf, the value is integer with millidegree Celsius
  * @temp_index: start with 1
+ * @type: threshold type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -95,101 +52,14 @@ static ssize_t wb_get_main_board_temp_type(unsigned int temp_index, char *buf, s
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_main_board_temp_max(unsigned int temp_index, char *buf, size_t count)
+static ssize_t wb_get_temp_attr(unsigned int temp_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_max);
+    check_p(g_drv->get_temp_attr);
 
-    ret = g_drv->get_main_board_temp_max(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_min - Used to get the minimum threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_min(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_min);
-
-    ret = g_drv->get_main_board_temp_min(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_high - Used to get the highimum threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_high(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_high);
-
-    ret = g_drv->get_main_board_temp_high(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_low - Used to get the lowimum threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_low(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_low);
-
-    ret = g_drv->get_main_board_temp_low(temp_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_temp_value - Used to get the input value of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_temp_value(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_temp_value);
-
-    ret = g_drv->get_main_board_temp_value(temp_index, buf, count);
+    ret = g_drv->get_temp_attr(temp_index, type, buf, count);
     return ret;
 }
 
@@ -221,13 +91,7 @@ static struct s3ip_sysfs_temp_sensor_drivers_s drivers = {
      * if not support the function, set corresponding hook to NULL.
      */
     .get_main_board_temp_number = wb_get_main_board_temp_number,
-    .get_main_board_temp_alias = wb_get_main_board_temp_alias,
-    .get_main_board_temp_type = wb_get_main_board_temp_type,
-    .get_main_board_temp_max = wb_get_main_board_temp_max,
-    .get_main_board_temp_min = wb_get_main_board_temp_min,
-    .get_main_board_temp_value = wb_get_main_board_temp_value,
-    .get_main_board_temp_high = wb_get_main_board_temp_high,
-    .get_main_board_temp_low = wb_get_main_board_temp_low,
+    .get_temp_attr = wb_get_temp_attr,
     .get_main_board_temp_monitor_flag = wb_get_main_board_temp_monitor_flag,
 };
 

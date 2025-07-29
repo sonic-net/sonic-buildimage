@@ -11,6 +11,7 @@
 #include "switch_driver.h"
 #include "wb_module.h"
 #include "wb_fan_driver.h"
+#include "wb_cablletray_driver.h"
 #include "wb_eeprom_driver.h"
 #include "wb_cpld_driver.h"
 #include "wb_fpga_driver.h"
@@ -21,29 +22,10 @@
 #include "wb_sff_driver.h"
 #include "wb_watchdog_driver.h"
 #include "wb_system_driver.h"
+#include "wb_misc_fw_driver.h"
 #include "dfd_cfg.h"
 
 int g_switch_dbg_level = 0;
-
-/* change the following parameter by your switch. */
-#define MAIN_BOARD_TEMP_SENSOR_NUMBER    (10)
-#define MAIN_BOARD_VOL_SENSOR_NUMBER     (10)
-#define MAIN_BOARD_CURR_SENSOR_NUMBER    (0)
-#define SYSEEPROM_SIZE                   (256)
-#define FAN_NUMBER                       (6)
-#define FAN_MOTOR_NUMBER                 (2)
-#define PSU_NUMBER                       (2)
-#define PSU_TEMP_SENSOR_NUMBER           (3)
-#define ETH_NUMBER                       (32)
-#define ETH_EEPROM_SIZE                  (0x8180)
-#define MAIN_BOARD_FPGA_NUMBER           (1)
-#define MAIN_BOARD_CPLD_NUMBER           (5)
-#define SLOT_NUMBER                      (0)
-#define SLOT_TEMP_NUMBER                 (0)
-#define SLOT_VOL_NUMBER                  (0)
-#define SLOT_CURR_NUMBER                 (0)
-#define SLOT_FPGA_NUMBER                 (0)
-#define SLOT_CPLD_NUMBER                 (0)
 
 /***************************************main board temp*****************************************/
 /*
@@ -62,63 +44,10 @@ static int dfd_get_main_board_temp_number(void)
 }
 
 /*
- * dfd_get_main_board_temp_alias - Used to identify the location of the temperature sensor,
- * such as air_inlet, air_outlet and so on.
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_alias(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_ALIAS,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_type - Used to get the model of temperature sensor,
- * such as lm75, tmp411 and so on
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_type(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_TYPE,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_max - Used to get the maximum threshold of temperature sensor
+ * dfd_get_temp_attr - Used to get the attr of temperature sensor
  * filled the value to buf, the value is integer with millidegree Celsius
  * @temp_index: start with 1
+ * @type: threshold type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -126,118 +55,11 @@ static ssize_t dfd_get_main_board_temp_type(unsigned int temp_index, char *buf, 
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t dfd_get_main_board_temp_max(unsigned int temp_index, char *buf, size_t count)
+static ssize_t dfd_get_temp_attr(unsigned int temp_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_MAX,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_min - Used to get the minimum threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_min(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_MIN,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_high - Used to get the high threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_high(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_HIGH,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_low - Used to get the low threshold of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_low(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_LOW,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_temp_value - Used to get the input value of temperature sensor
- * filled the value to buf, the value is integer with millidegree Celsius
- * @temp_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_temp_value(unsigned int temp_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, WB_SENSOR_INPUT,
+    ret = dfd_get_temp_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, temp_index, type,
               buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
@@ -339,9 +161,10 @@ static ssize_t dfd_get_main_board_vol_type(unsigned int vol_index, char *buf, si
 }
 
 /*
- * dfd_get_main_board_vol_max - Used to get the maximum threshold of voltage sensor
- * filled the value to buf, the value is integer with mV
+ * dfd_get_main_board_vol_threshold - Used to get the threshold of volerature sensor
+ * filled the value to buf, the value is integer with millidegree Celsius
  * @vol_index: start with 1
+ * @type: threshold type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -349,38 +172,11 @@ static ssize_t dfd_get_main_board_vol_type(unsigned int vol_index, char *buf, si
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t dfd_get_main_board_vol_max(unsigned int vol_index, char *buf, size_t count)
+static ssize_t dfd_get_main_board_vol_threshold(unsigned int vol_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
-    ret = dfd_get_voltage_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_MAX,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_vol_min - Used to get the minimum threshold of voltage sensor
- * filled the value to buf, the value is integer with mV
- * @vol_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_vol_min(unsigned int vol_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_voltage_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_MIN,
+    ret = dfd_get_voltage_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, type,
               buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
@@ -560,9 +356,10 @@ static ssize_t dfd_get_main_board_curr_type(unsigned int curr_index, char *buf, 
 }
 
 /*
- * dfd_get_main_board_curr_max - Used to get the maximum threshold of current sensor
- * filled the value to buf, the value is integer with mA
+ * dfd_get_main_board_curr_threshold - Used to get the threshold of currerature sensor
+ * filled the value to buf, the value is integer with millidegree Celsius
  * @curr_index: start with 1
+ * @type: threshold type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -570,38 +367,11 @@ static ssize_t dfd_get_main_board_curr_type(unsigned int curr_index, char *buf, 
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t dfd_get_main_board_curr_max(unsigned int curr_index, char *buf, size_t count)
+static ssize_t dfd_get_main_board_curr_threshold(unsigned int curr_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
-    ret = dfd_get_current_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, curr_index, WB_SENSOR_MAX,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_curr_min - Used to get the minimum threshold of current sensor
- * filled the value to buf, the value is integer with mA
- * @curr_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_curr_min(unsigned int curr_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_current_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, curr_index, WB_SENSOR_MIN,
+    ret = dfd_get_current_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, curr_index, type,
               buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
@@ -665,6 +435,176 @@ static ssize_t dfd_get_main_board_curr_monitor_flag(unsigned int index, char *bu
     return ret;
 }
 /*********************************end of main board current************************************/
+
+/*************************************main board power***************************************/
+static int dfd_get_main_board_power_number(void)
+{
+    int ret;
+
+    ret = dfd_get_dev_number(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_POWER);
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_alias - Used to identify the location of the power sensor,
+ * @vol_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_alias(unsigned int power_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_power_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, power_index, WB_SENSOR_ALIAS,
+              buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_type - Used to get the model of power sensor,
+ * such as udc90160, tps53622 and so on
+ * @vol_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_type(unsigned int vol_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_power_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_TYPE,
+              buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_max - Used to get the maximum threshold of power sensor
+ * filled the value to buf, the value is integer with uW
+ * @vol_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_max(unsigned int vol_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_power_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_MAX,
+              buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_min - Used to get the minimum threshold of power sensor
+ * filled the value to buf, the value is integer with uW
+ * @vol_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_min(unsigned int vol_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_power_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_MIN,
+              buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_value - Used to get the input value of power sensor
+ * filled the value to buf, the value is integer with uW
+ * @vol_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_value(unsigned int vol_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_power_info(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, vol_index, WB_SENSOR_INPUT,
+              buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_main_board_power_monitor_flag - Used to get monitor flag of power sensor
+ * filled the value to buf, the value is integer
+ * @temp_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_main_board_power_monitor_flag(unsigned int temp_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_main_board_monitor_flag(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_NONE, WB_MINOR_DEV_POWER, temp_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+/*********************************end of main board voltage************************************/
+
 
 /*****************************************syseeprom*******************************************/
 /*
@@ -736,6 +676,7 @@ static int dfd_reload_s3ip_config(void)
     ret = dfd_dev_cfg_init(true);
     return ret;
 }
+
 
 /*************************************end of debug****************************************/
 
@@ -1298,7 +1239,7 @@ static int dfd_get_psu_number(void)
 }
 
 /*
- * dfd_get_psu_present_status - Used to get psu present status
+ * dfd_get_psu_present - Used to get psu present
  * filled the value to buf, psu present status define see enum psu_status_e
  * @psu_index: start with 1
  * @buf: Data receiving buffer
@@ -1331,110 +1272,27 @@ static int dfd_get_psu_temp_number(unsigned int psu_index)
     return ret;
 }
 
-/* Similar to dfd_get_psu_model_name */
-static ssize_t dfd_get_psu_model_name(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_PART_NAME, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-static ssize_t dfd_get_psu_vendor(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_VENDOR, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-static ssize_t dfd_get_psu_date(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_ASSET_TAG, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
 static ssize_t dfd_get_psu_status(unsigned int psu_index, char *buf, size_t count)
 {
     ssize_t ret;
-    int status_word;
     int status;
 
     status = dfd_get_psu_present_status(psu_index);
     if (status == DEV_ABSENT) {
         mem_clear(buf,  count);
-        status = status | 0x01;
+        status = 0x01;
         return (ssize_t)snprintf(buf, count, "0x%x\n", status);
     }
 
-    status_word = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &status_word);
+    ret = dfd_get_psu_status_str(psu_index, buf, count);
     if (ret < 0) {
-        SWITCH_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %ld, psu_index: %u\n", ret, psu_index);
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
         } else {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
         }
     }
-
-    status = 0;
-    mem_clear(buf, count);
-    if (status_word < 0) {
-        return status_word;
-    } else {
-        status = (status_word & PSU_OFF_FAULT) ? (status | 0x02) : status;
-        status = (status_word & PSU_FAN_FAULT) ? (status | 0x04) : status;
-        status = (status_word & PSU_VOUT_FAULT) ? (status | 0x08) : status;
-        status = (status_word & PSU_IOUT_FAULT) ? (status | 0x10) : status;
-        status = (status_word & PSU_INPUT_FAULT) ? (status | 0x20) : status;
-        status = (status_word & PSU_TEMP_FAULT) ? (status | 0x40) : status;
-    }
-    return (ssize_t)snprintf(buf, count, "0x%x\n", status);
+    return ret;
 }
 
 static ssize_t dfd_get_psu_alarm(unsigned int psu_index, char *buf, size_t count)
@@ -1449,75 +1307,6 @@ static ssize_t dfd_get_psu_alarm(unsigned int psu_index, char *buf, size_t count
     }
 
     ret = dfd_get_psu_alarm_status(psu_index, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to wb_get_fan_serial_number */
-static ssize_t dfd_get_psu_serial_number(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_SN, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to wb_get_fan_part_number */
-static ssize_t dfd_get_psu_part_number(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_PART_NUMBER, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to wb_get_fan_hardware_version */
-static ssize_t dfd_get_psu_hardware_version(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_HW_INFO, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -1562,9 +1351,10 @@ static ssize_t dfd_get_psu_type(unsigned int psu_index, char *buf, size_t count)
 }
 
 /*
- * dfd_get_psu_in_curr - Used to get the input current of psu
+ * dfd_get_psu_sensor_attr - Used to get the sensor attr of psu
  * filled the value to buf, the value is integer with mA
  * @psu_index: start with 1
+ * @type: attr type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -1572,7 +1362,7 @@ static ssize_t dfd_get_psu_type(unsigned int psu_index, char *buf, size_t count)
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t dfd_get_psu_in_curr(unsigned int psu_index, char *buf, size_t count)
+static ssize_t dfd_get_psu_sensor_attr(unsigned int psu_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
     int status;
@@ -1583,205 +1373,7 @@ static ssize_t dfd_get_psu_in_curr(unsigned int psu_index, char *buf, size_t cou
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
     }
 
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_IN_CURR, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_in_vol - Used to get the input voltage of psu
- * filled the value to buf, the value is integer with mV
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_in_vol(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_IN_VOL, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_in_power - Used to get the input power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_in_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_IN_POWER, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_out_curr - Used to get the output current of psu
- * filled the value to buf, the value is integer with mA
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_out_curr(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_OUT_CURR, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_out_vol - Used to get the output voltage of psu
- * filled the value to buf, the value is integer with mV
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_out_vol(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_OUT_VOL, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_out_power - Used to get the output power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_out_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_OUT_POWER, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_out_max_power - Used to get the output max power of psu
- * filled the value to buf, the value is integer with uW
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_out_max_power(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_MAX_OUTPUT_POWRER, buf, count);
+    ret = dfd_get_psu_sensor_info(psu_index, type, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -1873,6 +1465,21 @@ static ssize_t dfd_get_psu_hw_status(unsigned int psu_index, char *buf, size_t c
     return ret;
 }
 
+static ssize_t dfd_get_psu_hw_detail_status(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_psu_hw_detail_status_str(psu_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
 static ssize_t dfd_get_psu_attr_threshold(unsigned int psu_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
@@ -1900,39 +1507,6 @@ static ssize_t dfd_get_psu_status_pmbus(unsigned int psu_index, char *buf, size_
     }
 
     ret = dfd_get_psu_status_pmbus_str(psu_index, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_psu_fan_speed - Used to get psu fan speed
- * filled the value to buf
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_fan_speed(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_sensor_info(psu_index, PSU_FAN_SPEED, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -1990,42 +1564,10 @@ static int dfd_set_psu_fan_ratio(unsigned int psu_index, int ratio)
     return -WB_SYSFS_RV_UNSUPPORT;
 }
 
-/*
- * dfd_get_psu_fan_direction - Used to get psu air flow direction,
- * filled the value to buf, air flow direction define enum air_flow_direction_e
- * @psu_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_psu_fan_direction(unsigned int psu_index, char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_FAN_DIRECTION, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
 /* Similar to dfd_get_fan_led_status */
 static ssize_t dfd_get_psu_led_status(unsigned int psu_index, char *buf, size_t count)
 {
+#if 0
     ssize_t ret;
     int status_word;
     int status;
@@ -2038,9 +1580,9 @@ static ssize_t dfd_get_psu_led_status(unsigned int psu_index, char *buf, size_t 
     status = LED_STATUS_GREEN;
 
     status_word = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &status_word);
+    ret = dfd_get_psu_pmbus_val(psu_index, &status_word, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
-        SWITCH_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %ld, psu_index: %u\n", ret, psu_index);
+        SWITCH_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %zd, psu_index: %u\n", ret, psu_index);
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
         } else {
@@ -2053,9 +1595,12 @@ static ssize_t dfd_get_psu_led_status(unsigned int psu_index, char *buf, size_t 
         return (ssize_t)snprintf(buf, count, "%d\n", status);
     }
     return (ssize_t)snprintf(buf, count, "%d\n", status); /* led green */
+#else
+    return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+#endif
 }
 
-static ssize_t dfd_get_psu_fan_speed_cal(unsigned int psu_index, char *buf, size_t count)
+static ssize_t dfd_get_psu_attr(unsigned int psu_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
     int status;
@@ -2066,7 +1611,7 @@ static ssize_t dfd_get_psu_fan_speed_cal(unsigned int psu_index, char *buf, size
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
     }
 
-    ret = dfd_get_psu_info(psu_index, DFD_DEV_INFO_TYPE_SPEED_CAL, buf, count);
+    ret = dfd_get_psu_info(psu_index, type, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -2075,62 +1620,11 @@ static ssize_t dfd_get_psu_fan_speed_cal(unsigned int psu_index, char *buf, size
         }
     }
     return ret;
-}
-
-/* Similar to dfd_get_main_board_temp_alias */
-static ssize_t dfd_get_psu_temp_alias(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, WB_SENSOR_ALIAS,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to dfd_get_main_board_temp_type */
-static ssize_t dfd_get_psu_temp_type(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, WB_SENSOR_TYPE,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-
 }
 
 /* Similar to dfd_get_main_board_temp_max */
-static ssize_t dfd_get_psu_temp_max(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
+static ssize_t dfd_get_psu_temp_attr(unsigned int psu_index, unsigned int temp_index,
+                    unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
     int status;
@@ -2141,73 +1635,7 @@ static ssize_t dfd_get_psu_temp_max(unsigned int psu_index, unsigned int temp_in
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
     }
 
-    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, WB_SENSOR_MAX,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to dfd_set_main_board_temp_max */
-static int dfd_set_psu_temp_max(unsigned int psu_index, unsigned int temp_index,
-               const char *buf, size_t count)
-{
-    /* add vendor codes here */
-    return -WB_SYSFS_RV_UNSUPPORT;
-}
-
-/* Similar to dfd_get_main_board_temp_min */
-static ssize_t dfd_get_psu_temp_min(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf, count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, WB_SENSOR_MIN,
-              buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/* Similar to dfd_set_main_board_temp_min */
-static int dfd_set_psu_temp_min(unsigned int psu_index, unsigned int temp_index,
-               const char *buf, size_t count)
-{
-    /* add vendor codes here */
-    return -WB_SYSFS_RV_UNSUPPORT;
-}
-
-/* Similar to dfd_get_main_board_temp_value */
-static ssize_t dfd_get_psu_temp_value(unsigned int psu_index, unsigned int temp_index,
-                   char *buf, size_t count)
-{
-    ssize_t ret;
-    int status;
-
-    status = dfd_get_psu_present_status(psu_index);
-    if (status == DEV_ABSENT) {
-        mem_clear(buf,  count);
-        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-    }
-
-    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, WB_SENSOR_INPUT,
+    ret = dfd_get_temp_info(WB_MAIN_DEV_PSU, psu_index, temp_index, type,
               buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
@@ -2318,6 +1746,70 @@ static int dfd_clear_psu_blackbox_info(unsigned int psu_index, uint8_t value)
     return ret;
 
 }
+
+static ssize_t dfd_get_psu_support_upgrade(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+    int status;
+
+    status = dfd_get_psu_present_status(psu_index);
+    if (status == DEV_ABSENT) {
+        mem_clear(buf, count);
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = dfd_get_psu_support_upgrade_func(psu_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+static ssize_t dfd_get_psu_upgrade_active_type(unsigned int psu_index, char *buf, size_t count)
+{
+    ssize_t ret;
+    int status;
+
+    status = dfd_get_psu_present_status(psu_index);
+    if (status == DEV_ABSENT) {
+        mem_clear(buf, count);
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = dfd_get_psu_upgrade_active_type_func(psu_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_clear_psu_blackbox_info - Used to clear psu blackbox information
+ * @psu_index: start with 1
+ * @value: 1
+ *
+ * This function returns 0 on success,
+ * otherwise it returns a negative value on failed.
+ */
+static int dfd_set_psu_reset(unsigned int psu_index, uint8_t value)
+{
+    int ret;
+
+    ret = dfd_set_psu_reset_func(psu_index, value);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    return ret;
+}
 /****************************************end of psu*******************************************/
 /****************************************transceiver******************************************/
 static int dfd_get_eth_number(void)
@@ -2343,10 +1835,13 @@ static ssize_t dfd_get_transceiver_power_on_status(char *buf, size_t count)
     ssize_t ret;
     unsigned int eth_index, eth_num;
     int len, left_len;
-    eth_num = dfd_get_dev_number(WB_MAIN_DEV_SFF, WB_MINOR_DEV_NONE);
-    if (eth_num <= 0) {
+    int rv;
+
+    rv = dfd_get_dev_number(WB_MAIN_DEV_SFF, WB_MINOR_DEV_NONE);
+    if (rv <= 0) {
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
     }
+    eth_num = rv;
 
     mem_clear(buf, count);
     len = 0;
@@ -2355,9 +1850,9 @@ static ssize_t dfd_get_transceiver_power_on_status(char *buf, size_t count)
     for (eth_index = 1; eth_index <= eth_num; eth_index++) {
         SWITCH_DEBUG(DBG_VERBOSE, "eth index: %u\n", eth_index);
         if (left_len > 0) {
-            ret = dfd_get_sff_cpld_info(eth_index, WB_SFF_POWER_ON, buf, left_len);
+            ret = dfd_get_sff_cpld_info(eth_index, WB_SFF_POWER_ON, buf + len, left_len);
             if (ret < 0) {
-                SWITCH_DEBUG(DBG_ERROR, "get eth%u power status failed, ret: %ld\n", eth_index, ret);
+                SWITCH_DEBUG(DBG_ERROR, "get eth%u power status failed, ret: %zd\n", eth_index, ret);
                 break;
             }
         } else {
@@ -2381,13 +1876,13 @@ static ssize_t dfd_get_transceiver_power_on_status(char *buf, size_t count)
 
     len = strlen(buf);
     if (len >= count) {
-        SWITCH_DEBUG(DBG_ERROR, "error: get_transceiver_power_on_status buffers too long, need: %ld, act: %d.\n", count, len);
+        SWITCH_DEBUG(DBG_ERROR, "error: get_transceiver_power_on_status buffers too long, need: %zu, act: %d.\n", count, len);
         mem_clear(buf, count);
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
     }
     buf[len] = '\n';
     ret = strlen(buf);
-    SWITCH_DEBUG(DBG_VERBOSE, "get_transceiver_power_on_status ok. sff num:%d, len:%ld\n", eth_num, ret);
+    SWITCH_DEBUG(DBG_VERBOSE, "get_transceiver_power_on_status ok. sff num:%d, len:%zd\n", eth_num, ret);
 
     return ret;
 }
@@ -2425,11 +1920,13 @@ static ssize_t dfd_get_transceiver_present_status(char *buf, size_t count)
     ssize_t ret;
     unsigned int eth_index, eth_num;
     int len, left_len;
+    int rv;
 
-    eth_num = dfd_get_dev_number(WB_MAIN_DEV_SFF, WB_MINOR_DEV_NONE);
-    if (eth_num <= 0) {
+    rv = dfd_get_dev_number(WB_MAIN_DEV_SFF, WB_MINOR_DEV_NONE);
+    if (rv <= 0) {
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
     }
+    eth_num = rv;
 
     mem_clear(buf, count);
     len = 0;
@@ -2440,7 +1937,7 @@ static ssize_t dfd_get_transceiver_present_status(char *buf, size_t count)
         if (left_len > 0) {
             ret = dfd_get_sff_cpld_info(eth_index, WB_SFF_MODULE_PRESENT, buf + len, left_len);
             if (ret < 0) {
-                SWITCH_DEBUG(DBG_ERROR, "get eth%u present status failed, ret: %ld\n", eth_index, ret);
+                SWITCH_DEBUG(DBG_ERROR, "get eth%u present status failed, ret: %zd\n", eth_index, ret);
                 break;
             }
         } else {
@@ -2464,14 +1961,40 @@ static ssize_t dfd_get_transceiver_present_status(char *buf, size_t count)
 
     len = strlen(buf);
     if (len >= count) {
-        SWITCH_DEBUG(DBG_ERROR, "error: get_transceiver_present_status buffers too long, need: %ld, act: %d.\n", count, len);
+        SWITCH_DEBUG(DBG_ERROR, "error: get_transceiver_present_status buffers too long, need: %zu, act: %d.\n", count, len);
         mem_clear(buf, count);
         return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
     }
     buf[len] = '\n';
     ret = strlen(buf);
-    SWITCH_DEBUG(DBG_VERBOSE, "get_transceiver_present_status ok. sff num:%d, len:%ld\n", eth_num, ret);
+    SWITCH_DEBUG(DBG_VERBOSE, "get_transceiver_present_status ok. sff num:%d, len:%zd\n", eth_num, ret);
 
+    return ret;
+}
+
+/*
+ * dfd_get_eth_i2c_bus - Used to get eth i2c bus,
+ * filled the value to buf
+ * @eth_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_eth_i2c_bus(unsigned int eth_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_single_eth_i2c_bus(eth_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
     return ret;
 }
 
@@ -2489,8 +2012,23 @@ static ssize_t dfd_get_transceiver_present_status(char *buf, size_t count)
 static ssize_t dfd_get_eth_power_on_status(unsigned int eth_index, char *buf, size_t count)
 {
     ssize_t ret;
+    int power_group;
 
-    ret = dfd_get_sff_cpld_info(eth_index, WB_SFF_POWER_ON, buf, count);
+    ret = dfd_get_single_eth_power_group(eth_index, &power_group);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        /* If the port does not support power group, get the individual port status */
+        ret = dfd_get_sff_cpld_info(eth_index, WB_SFF_POWER_ON, buf, count);
+        if (ret < 0) {
+            if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+                return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+            } else {
+                return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+            }
+        }
+        return ret;
+    }
+
+    ret = dfd_get_sff_power_group_state(power_group, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -2511,12 +2049,25 @@ static ssize_t dfd_get_eth_power_on_status(unsigned int eth_index, char *buf, si
  */
 static int dfd_set_eth_power_on_status(unsigned int eth_index, int status)
 {
-    int ret;
+    int ret, power_group;
 
-    ret = dfd_set_sff_cpld_info(eth_index, WB_SFF_POWER_ON, status);
+    ret = dfd_get_single_eth_power_group(eth_index, &power_group);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        /* If the port does not support power group, set the individual port status */
+        SWITCH_DEBUG(DBG_VERBOSE, "set the individual port status. eth:%d, status:%d\n", eth_index, status);
+        ret = dfd_set_sff_cpld_info(eth_index, WB_SFF_POWER_ON, status);
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return -WB_SYSFS_RV_UNSUPPORT;
+        }
+        return ret;
+    }
+
+    SWITCH_DEBUG(DBG_VERBOSE, "set the group status. power group:%d, status:%d\n", power_group, status);
+    ret = dfd_set_sff_power_group_state(power_group, status);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
+
     return ret;
 }
 
@@ -2728,6 +2279,24 @@ static int dfd_set_eth_optoe_type(unsigned int eth_index, int optoe_type)
     return ret;
 }
 
+/**
+ * dfd_get_eth_power_group - get sff power group
+ * @sff_index: Optical module number, starting from 1
+ * @power_group: power group
+ * return: Success: Returns the length of fill buf
+ *       : Failed: A negative value is returned
+ */
+static ssize_t dfd_get_eth_power_group(unsigned int eth_index, int *power_group)
+{
+    ssize_t ret;
+
+    ret = dfd_get_single_eth_power_group(eth_index, power_group);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+    return ret;
+}
+
 /*
  * dfd_get_eth_low_power_mode_status - Used to get port low power mode status,
  * filled the value to buf, 0: high power mode, 1: low power mode
@@ -2750,6 +2319,25 @@ static ssize_t dfd_get_eth_low_power_mode_status(unsigned int eth_index, char *b
         } else {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
         }
+    }
+    return ret;
+}
+
+/*
+ * dfd_set_eth_low_power_mode_status - Used to set port low power mode status,
+ * @eth_index: start with 1
+ * @mode: low power mode status, 0: high power mode, 1: low power mode
+ *
+ * This function returns 0 on success,
+ * otherwise it returns a negative value on failed.
+ */
+static int dfd_set_eth_low_power_mode_status(unsigned int eth_index, int mode)
+{
+    int ret;
+
+    ret = dfd_set_sff_cpld_info(eth_index, WB_SFF_LPMODE, mode);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
     }
     return ret;
 }
@@ -2887,7 +2475,7 @@ static ssize_t dfd_get_bmc_led_status(char *buf, size_t count)
 {
     int ret;
 
-    ret = dfd_get_led_status(WB_BMC_LED_FRONT, WB_MINOR_DEV_NONE, buf, count);
+    ret = dfd_get_led_status(WB_BMC_LED, WB_MINOR_DEV_NONE, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -2903,7 +2491,7 @@ static int dfd_set_bmc_led_status(int status)
 {
     int ret;
 
-    ret = dfd_set_led_status(WB_BMC_LED_FRONT, WB_MINOR_DEV_NONE, status);
+    ret = dfd_set_led_status(WB_BMC_LED, WB_MINOR_DEV_NONE, status);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
@@ -2994,6 +2582,48 @@ static int dfd_set_id_led_status(int status)
     return ret;
 }
 
+/*
+ * dfd_get_bmc_host_sysled - Used to get BMC HOST system LED status
+ * @buf: Data receiving buffer
+ * @count: Length of the buffer
+ *
+ * This function returns the length of the filled buffer,
+ * if not supported, it fills "NA" into the buffer,
+ * otherwise, it returns a negative value on failure.
+ */
+static ssize_t dfd_get_bmc_host_sysled(char *buf, size_t count)
+{
+    int ret;
+
+    ret = dfd_get_led_status(BMC_HOST_SYS_LED, WB_MINOR_DEV_NONE, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_set_bmc_host_sysled_attr - Used to set BMC HOST system LED attributes
+ * @status: LED status, defined in enum led_status_e
+ *
+ * This function returns 0 on success,
+ * otherwise, it returns a negative value on failure.
+ */
+static int dfd_set_bmc_host_sysled_attr(int status)
+{
+    int ret;
+
+    ret = dfd_set_led_status(BMC_HOST_SYS_LED, WB_MINOR_DEV_NONE, status);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+    return ret;
+}
+
 /**************************************end of sysled******************************************/
 /******************************************FPGA***********************************************/
 static int dfd_get_main_board_fpga_number(void)
@@ -3004,21 +2634,17 @@ static int dfd_get_main_board_fpga_number(void)
     return ret;
 }
 
-/*
- * dfd_get_main_board_fpga_alias - Used to identify the location of fpga,
- * @fpga_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_fpga_alias(unsigned int fpga_index, char *buf, size_t count)
+static ssize_t dfd_get_fpga_attr(unsigned int fpga_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
+    dfd_sysfs_get_data_func fpga_get_func;
 
-    ret = dfd_get_fpga_name(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
+    fpga_get_func = dfd_get_sysfs_value_func(fpga_func_table, type, ARRAY_SIZE(fpga_func_table));
+    if (fpga_get_func == NULL) {
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = fpga_get_func(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -3030,124 +2656,32 @@ static ssize_t dfd_get_main_board_fpga_alias(unsigned int fpga_index, char *buf,
 }
 
 /*
- * dfd_get_main_board_fpga_type - Used to get fpga model name
- * @fpga_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_fpga_type(unsigned int fpga_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_fpga_type(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_fpga_firmware_version - Used to get fpga firmware version,
- * @fpga_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_fpga_firmware_version(unsigned int fpga_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_fpga_fw_version(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_fpga_board_version - Used to get fpga board version,
- * @fpga_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_fpga_board_version(unsigned int fpga_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_fpga_hw_version(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_fpga_test_reg - Used to test fpga register read
- * filled the value to buf, value is hexadecimal, start with 0x
- * @fpga_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_fpga_test_reg(unsigned int fpga_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_fpga_testreg_str(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_set_main_board_fpga_test_reg - Used to test fpga register write
- * @fpga_index: start with 1
- * @value: value write to fpga
+ * dfd_set_fpga_attr - Used to set fpga register
+ * @cpld_index: start with 1
+ * @type: write fpga attr
+ * @value: value write to cpld
  *
  * This function returns 0 on success,
  * otherwise it returns a negative value on failed.
  */
-static int dfd_set_main_board_fpga_test_reg(unsigned int fpga_index, unsigned int value)
+static int dfd_set_fpga_attr(unsigned int fpga_index, unsigned int type, unsigned int value)
 {
     int ret;
+    dfd_sysfs_set_data_func fpga_set_func;
 
-    ret = dfd_set_fpga_testreg(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, value);
+    fpga_set_func = dfd_set_sysfs_value_func(fpga_func_table, type, ARRAY_SIZE(fpga_func_table));
+    if (fpga_set_func == NULL) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    ret = fpga_set_func(WB_MAIN_DEV_MAINBOARD, fpga_index - 1, &value, 1);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
+
     return ret;
 }
+
 /***************************************end of FPGA*******************************************/
 /******************************************CPLD***********************************************/
 static int dfd_get_main_board_cpld_number(void)
@@ -3158,21 +2692,17 @@ static int dfd_get_main_board_cpld_number(void)
     return ret;
 }
 
-/*
- * dfd_get_main_board_cpld_alias - Used to identify the location of cpld,
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_cpld_alias(unsigned int cpld_index, char *buf, size_t count)
+static ssize_t dfd_get_cpld_attr(unsigned int cpld_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
+    dfd_sysfs_get_data_func cpld_get_func;
 
-    ret = dfd_get_cpld_name(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
+    cpld_get_func = dfd_get_sysfs_value_func(cpld_func_table, type, ARRAY_SIZE(cpld_func_table));
+    if (cpld_get_func == NULL) {
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = cpld_get_func(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -3184,125 +2714,90 @@ static ssize_t dfd_get_main_board_cpld_alias(unsigned int cpld_index, char *buf,
 }
 
 /*
- * dfd_get_main_board_cpld_type - Used to get cpld model name
+ * dfd_set_cpld_attr - Used to set cpld register
  * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_cpld_type(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_cpld_type(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_cpld_firmware_version - Used to get cpld firmware version,
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_cpld_firmware_version(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_cpld_fw_version(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_cpld_board_version - Used to get cpld board version,
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_cpld_board_version(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_cpld_hw_version(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_get_main_board_cpld_test_reg - Used to test cpld register read
- * filled the value to buf, value is hexadecimal, start with 0x
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_main_board_cpld_test_reg(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_cpld_testreg_str(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
-
-/*
- * dfd_set_main_board_cpld_test_reg - Used to test cpld register write
- * @cpld_index: start with 1
+ * @type: write cpld attr
  * @value: value write to cpld
  *
  * This function returns 0 on success,
  * otherwise it returns a negative value on failed.
  */
-static int dfd_set_main_board_cpld_test_reg(unsigned int cpld_index, unsigned int value)
+static int dfd_set_cpld_attr(unsigned int cpld_index, unsigned int type, unsigned int value)
 {
     int ret;
+    dfd_sysfs_set_data_func cpld_set_func;
 
-    ret = dfd_set_cpld_testreg(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, value);
+    cpld_set_func = dfd_set_sysfs_value_func(cpld_func_table, type, ARRAY_SIZE(cpld_func_table));
+    if (cpld_set_func == NULL) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    ret = cpld_set_func(WB_MAIN_DEV_MAINBOARD, cpld_index - 1, &value, 1);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
+
     return ret;
 }
 /***************************************end of CPLD*******************************************/
+/******************************************OTHER_FW***********************************************/
+static int dfd_get_main_board_misc_fw_number(void)
+{
+    int ret;
+
+    ret = dfd_get_dev_number(WB_MAIN_DEV_MAINBOARD, WB_MINOR_DEV_MISC_FW);
+    return ret;
+}
+
+static ssize_t dfd_get_misc_fw_attr(unsigned int misc_fw_index, unsigned int type, char *buf, size_t count)
+{
+    ssize_t ret;
+    dfd_sysfs_get_data_func misc_fw_get_func;
+
+    misc_fw_get_func = dfd_get_sysfs_value_func(misc_fw_func_table, type, ARRAY_SIZE(misc_fw_func_table));
+    if (misc_fw_get_func == NULL) {
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = misc_fw_get_func(WB_MAIN_DEV_MAINBOARD, misc_fw_index - 1, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_set_misc_fw_attr - Used to set misc_fw register
+ * @misc_fw_index: start with 1
+ * @type: write misc_fw attr
+ * @value: value write to misc_fw
+ *
+ * This function returns 0 on success,
+ * otherwise it returns a negative value on failed.
+ */
+static int dfd_set_misc_fw_attr(unsigned int misc_fw_index, unsigned int type, unsigned int value)
+{
+    int ret;
+    dfd_sysfs_set_data_func misc_fw_set_func;
+
+    misc_fw_set_func = dfd_set_sysfs_value_func(misc_fw_func_table, type, ARRAY_SIZE(misc_fw_func_table));
+    if (misc_fw_set_func == NULL) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    ret = misc_fw_set_func(WB_MAIN_DEV_MAINBOARD, misc_fw_index - 1, &value, 1);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
+    return ret;
+}
+
+/***************************************end of MISC_FW*******************************************/
 /****************************************watchdog*********************************************/
 /*
  * dfd_get_watchdog_identify - Used to get watchdog identify, such as iTCO_wdt
@@ -4068,7 +3563,7 @@ static int dfd_set_slot_fpga_test_reg(unsigned int slot_index, unsigned int fpga
 {
     int ret;
 
-    ret = dfd_set_fpga_testreg(slot_index, fpga_index - 1, value);
+    ret = dfd_set_fpga_testreg(slot_index, fpga_index - 1, &value, 1);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
@@ -4166,7 +3661,7 @@ static int dfd_set_slot_cpld_test_reg(unsigned int slot_index, unsigned int cpld
 {
     int ret;
 
-    ret = dfd_set_cpld_testreg(slot_index, cpld_index - 1, value);
+    ret = dfd_set_cpld_testreg(slot_index, cpld_index - 1, &value, 1);
     if (ret == -DFD_RV_DEV_NOTSUPPORT) {
         return -WB_SYSFS_RV_UNSUPPORT;
     }
@@ -4174,11 +3669,43 @@ static int dfd_set_slot_cpld_test_reg(unsigned int slot_index, unsigned int cpld
 }
 /***************************************end of slot*******************************************/
 /*****************************************system*********************************************/
+static ssize_t dfd_get_system_my_slot_id(char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_my_slot_id(buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+
+    buf = strstrip(buf);
+    return ret;
+}
+
 static ssize_t dfd_get_system_value(unsigned int type, char *buf, size_t count)
 {
     int ret, value;
 
     ret = dfd_system_get_system_value(type, &value);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return (ssize_t)snprintf(buf, count, "%d\n", value);
+}
+
+static ssize_t dfd_get_system_value_match_status(unsigned int type, char *buf, size_t count)
+{
+    int ret, value;
+
+    ret = dfd_system_get_system_value_match_status(type, &value);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -4235,6 +3762,23 @@ static ssize_t dfd_set_system_bmc_switch(const char* buf, size_t count)
     return ret;
 }
 
+static ssize_t dfd_get_system_serial_number(char *buf, size_t count)
+{
+    int ret;
+
+    /* Default to use eeprom_0_1 */
+    ret = dfd_get_system_info(WB_MAIN_DEV_MAINBOARD, 1, DFD_DEV_INFO_TYPE_SN, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+
+    return ret;
+}
+
 /*************************************end of system*****************************************/
 /*****************************************eeprom*********************************************/
 static int dfd_get_eeprom_number(void)
@@ -4259,17 +3803,17 @@ static int dfd_get_board_eeprom_size(unsigned int e2_index)
     return ret;
 }
 
-/*
- * dfd_get_board_eeprom_alias - Used to get board eeprom alias, including slots eeprom
- *
- * This function returns the alias of board eeprom, including slots eeprom
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_board_eeprom_alias(unsigned int e2_index, char *buf, size_t count)
+static ssize_t dfd_get_eeprom_attr(unsigned int eeprom_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
+    dfd_sysfs_get_data_func eeprom_get_func;
 
-    ret = dfd_get_eeprom_alias(WB_MAIN_DEV_MAINBOARD, e2_index, buf, count);
+    eeprom_get_func = dfd_get_sysfs_value_func(eeprom_func_table, type, ARRAY_SIZE(eeprom_func_table));
+    if (eeprom_get_func == NULL) {
+        return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+    }
+
+    ret = eeprom_get_func(WB_MAIN_DEV_MAINBOARD, eeprom_index, buf, count);
     if (ret < 0) {
         if (ret == -DFD_RV_DEV_NOTSUPPORT) {
             return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
@@ -4281,46 +3825,32 @@ static ssize_t dfd_get_board_eeprom_alias(unsigned int e2_index, char *buf, size
 }
 
 /*
- * dfd_get_board_eeprom_tag - Used to get board eeprom tag, including slots eeprom
+ * dfd_set_eeprom_attr - Used to set eeprom register
+ * @cpld_index: start with 1
+ * @type: write eeprom attr
+ * @value: value write to cpld
  *
- * This function returns the alias of board eeprom, including slots eeprom
+ * This function returns 0 on success,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t dfd_get_board_eeprom_tag(unsigned int e2_index, char *buf, size_t count)
+static int dfd_set_eeprom_attr(unsigned int eeprom_index, unsigned int type, unsigned int value)
 {
-    ssize_t ret;
+    int ret;
+    dfd_sysfs_set_data_func eeprom_set_func;
 
-    ret = dfd_get_eeprom_tag(WB_MAIN_DEV_MAINBOARD, e2_index, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
+    eeprom_set_func = dfd_set_sysfs_value_func(eeprom_func_table, type, ARRAY_SIZE(eeprom_func_table));
+    if (eeprom_set_func == NULL) {
+        return -WB_SYSFS_RV_UNSUPPORT;
     }
+
+    ret = eeprom_set_func(WB_MAIN_DEV_MAINBOARD, eeprom_index, &value, 1);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+
     return ret;
 }
 
-/*
- * dfd_get_board_eeprom_type - Used to get board eeprom type, including slots eeprom
- *
- * This function returns the type of board eeprom, including slots eeprom
- * otherwise it returns a negative value on failed.
- */
-static ssize_t dfd_get_board_eeprom_type(unsigned int e2_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    ret = dfd_get_eeprom_type(WB_MAIN_DEV_MAINBOARD, e2_index, buf, count);
-    if (ret < 0) {
-        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
-        } else {
-            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
-        }
-    }
-    return ret;
-}
 
 /*
  * dfd_read_board_eeprom_data - Used to read board eeprom data, including slots eeprom
@@ -4368,6 +3898,243 @@ static ssize_t dfd_write_board_eeprom_data(unsigned int e2_index, char *buf, lof
 
 /*************************************end of eeprom*****************************************/
 
+
+/********************************************cabletray**********************************************/
+static int dfd_get_cabletray_number(void)
+{
+    int ret;
+
+    ret = dfd_get_dev_number(WB_MAIN_DEV_CABLETRAY, WB_MINOR_DEV_NONE);
+    return ret;
+}
+
+/*
+ * dfd_get_cabletray_model_name - Used to get cabletray model name,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_name(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_NAME, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+
+/*
+ * dfd_get_cabletray_alias - Used to identify the location of cabletray,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_alias(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_eeprom_alias(WB_MAIN_DEV_CABLETRAY, cabletray_index, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_cabletray_manufacturer - Used to get cabletray manufacturer,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_manufacturer(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_VENDOR, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_cabletray_serial_number - Used to get cabletray serial number,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_serial_number(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_SN, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_cabletray_part_number - Used to get cabletray part number,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_part_number(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_PART_NUMBER, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_get_cabletray_version - Used to get cabletray version,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_version(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_HW_INFO, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+
+/*
+ * dfd_get_cabletray_eeprom_size - Used to get cabletray eeprom size
+ *
+ * This function returns the size of cabletray eeprom,
+ * otherwise it returns a negative value on failed.
+ */
+ static int dfd_get_cabletray_eeprom_size(unsigned int cabletray_index)
+ {
+     int ret;
+ 
+     ret = dfd_get_eeprom_size(WB_MAIN_DEV_CABLETRAY, cabletray_index);
+     return ret;
+ }
+
+/*
+ * dfd_get_cabletray_slotid - Used to get cabletray slotid,
+ * @cabletray_index: start with 1
+ * @buf: Data receiving buffer
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * if not support this attributes filled "NA" to buf,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_get_cabletray_slotid(unsigned int cabletray_index, char *buf, size_t count)
+{
+    ssize_t ret;
+
+    /* get slotid form dfd_info_get_int intf */
+    ret = dfd_get_cabletray_slotid_info(cabletray_index, buf, count);
+    if (ret >= 0) {
+        /* get slotid success */
+        return ret;
+    } else {
+        if (ret != -DFD_RV_DEV_NOTSUPPORT) {
+            /* get slotid failed */
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+
+    /* get slotid form eerpom */
+    ret = dfd_get_cabletray_info(cabletray_index, DFD_DEV_INFO_TYPE_EXTRA1, buf, count);
+    if (ret < 0) {
+        if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_NO_SUPPORT);
+        } else {
+            return (ssize_t)snprintf(buf, count, "%s\n", SWITCH_DEV_ERROR);
+        }
+    }
+    return ret;
+}
+
+/*
+ * dfd_read_cabletray_eeprom_data - Used to read cabletray eeprom data,
+ * @buf: Data read buffer
+ * @offset: offset address to read cabletray eeprom data
+ * @count: length of buf
+ *
+ * This function returns the length of the filled buffer,
+ * returns 0 means EOF,
+ * otherwise it returns a negative value on failed.
+ */
+static ssize_t dfd_read_cabletray_eeprom_data(unsigned int cabletray_index, char *buf, loff_t offset,
+    size_t count)
+{
+    ssize_t ret;
+
+    ret = dfd_read_eeprom_data(WB_MAIN_DEV_CABLETRAY, cabletray_index, buf, offset, count);
+    if (ret == -DFD_RV_DEV_NOTSUPPORT) {
+        return -WB_SYSFS_RV_UNSUPPORT;
+    }
+    return ret;
+}
+/*************************************end of cabletray*****************************************/
+
 static struct switch_drivers_s switch_drivers = {
     /*
      * set odm switch drivers,
@@ -4375,20 +4142,13 @@ static struct switch_drivers_s switch_drivers = {
      */
     /* temperature sensors */
     .get_main_board_temp_number = dfd_get_main_board_temp_number,
-    .get_main_board_temp_alias = dfd_get_main_board_temp_alias,
-    .get_main_board_temp_type = dfd_get_main_board_temp_type,
-    .get_main_board_temp_max = dfd_get_main_board_temp_max,
-    .get_main_board_temp_min = dfd_get_main_board_temp_min,
-    .get_main_board_temp_value = dfd_get_main_board_temp_value,
-    .get_main_board_temp_high = dfd_get_main_board_temp_high,
-    .get_main_board_temp_low = dfd_get_main_board_temp_low,
+    .get_temp_attr = dfd_get_temp_attr,
     .get_main_board_temp_monitor_flag = dfd_get_main_board_temp_monitor_flag,
     /* voltage sensors */
     .get_main_board_vol_number = dfd_get_main_board_vol_number,
     .get_main_board_vol_alias = dfd_get_main_board_vol_alias,
     .get_main_board_vol_type = dfd_get_main_board_vol_type,
-    .get_main_board_vol_max = dfd_get_main_board_vol_max,
-    .get_main_board_vol_min = dfd_get_main_board_vol_min,
+    .get_main_board_vol_threshold = dfd_get_main_board_vol_threshold,
     .get_main_board_vol_range = dfd_get_main_board_vol_range,
     .get_main_board_vol_nominal_value = dfd_get_main_board_vol_nominal_value,
     .get_main_board_vol_value = dfd_get_main_board_vol_value,
@@ -4397,10 +4157,17 @@ static struct switch_drivers_s switch_drivers = {
     .get_main_board_curr_number = dfd_get_main_board_curr_number,
     .get_main_board_curr_alias = dfd_get_main_board_curr_alias,
     .get_main_board_curr_type = dfd_get_main_board_curr_type,
-    .get_main_board_curr_max = dfd_get_main_board_curr_max,
-    .get_main_board_curr_min = dfd_get_main_board_curr_min,
+    .get_main_board_curr_threshold = dfd_get_main_board_curr_threshold,
     .get_main_board_curr_value = dfd_get_main_board_curr_value,
     .get_main_board_curr_monitor_flag = dfd_get_main_board_curr_monitor_flag,
+    /* power sensors */
+    .get_main_board_power_number = dfd_get_main_board_power_number,
+    .get_main_board_power_alias = dfd_get_main_board_power_alias,
+    .get_main_board_power_type = dfd_get_main_board_power_type,
+    .get_main_board_power_max = dfd_get_main_board_power_max,
+    .get_main_board_power_min = dfd_get_main_board_power_min,
+    .get_main_board_power_value = dfd_get_main_board_power_value,
+    .get_main_board_power_monitor_flag = dfd_get_main_board_power_monitor_flag,
     /* syseeprom */
     .get_syseeprom_size = dfd_get_syseeprom_size,
     .read_syseeprom_data = dfd_read_syseeprom_data,
@@ -4430,46 +4197,30 @@ static struct switch_drivers_s switch_drivers = {
     /* psu */
     .get_psu_number = dfd_get_psu_number,
     .get_psu_temp_number = dfd_get_psu_temp_number,
-    .get_psu_model_name = dfd_get_psu_model_name,
-    .get_psu_vendor = dfd_get_psu_vendor,
-    .get_psu_date = dfd_get_psu_date,
+    .get_psu_attr = dfd_get_psu_attr,
     .get_psu_status = dfd_get_psu_status,
     .get_psu_hw_status = dfd_get_psu_hw_status,
+    .get_psu_hw_detail_status = dfd_get_psu_hw_detail_status,
     .get_psu_alarm = dfd_get_psu_alarm,
-    .get_psu_serial_number = dfd_get_psu_serial_number,
-    .get_psu_part_number = dfd_get_psu_part_number,
-    .get_psu_hardware_version = dfd_get_psu_hardware_version,
     .get_psu_type = dfd_get_psu_type,
-    .get_psu_in_curr = dfd_get_psu_in_curr,
-    .get_psu_in_vol = dfd_get_psu_in_vol,
-    .get_psu_in_power = dfd_get_psu_in_power,
-    .get_psu_out_curr = dfd_get_psu_out_curr,
-    .get_psu_out_vol = dfd_get_psu_out_vol,
-    .get_psu_out_power = dfd_get_psu_out_power,
-    .get_psu_out_max_power = dfd_get_psu_out_max_power,
+    .get_psu_sensor_attr = dfd_get_psu_sensor_attr,
     .get_psu_present_status = dfd_get_psu_present,
     .get_psu_in_status = dfd_get_psu_in_status,
     .get_psu_out_status = dfd_get_psu_out_status,
     .get_psu_status_pmbus = dfd_get_psu_status_pmbus,
-    .get_psu_fan_speed = dfd_get_psu_fan_speed,
     .get_psu_fan_ratio = dfd_get_psu_fan_ratio,
     .set_psu_fan_ratio = dfd_set_psu_fan_ratio,
-    .get_psu_fan_direction = dfd_get_psu_fan_direction,
     .get_psu_led_status = dfd_get_psu_led_status,
-    .get_psu_temp_alias = dfd_get_psu_temp_alias,
-    .get_psu_temp_type = dfd_get_psu_temp_type,
-    .get_psu_temp_max = dfd_get_psu_temp_max,
-    .set_psu_temp_max = dfd_set_psu_temp_max,
-    .get_psu_temp_min = dfd_get_psu_temp_min,
-    .set_psu_temp_min = dfd_set_psu_temp_min,
-    .get_psu_temp_value = dfd_get_psu_temp_value,
-    .get_psu_fan_speed_cal = dfd_get_psu_fan_speed_cal,
+    .get_psu_temp_attr = dfd_get_psu_temp_attr,
     .get_psu_attr_threshold = dfd_get_psu_attr_threshold,
     .get_psu_eeprom_size = dfd_get_psu_eeprom_size,
     .read_psu_eeprom_data = dfd_read_psu_eeprom_data,
     .get_psu_blackbox_path = dfd_get_psu_blackbox_path,
     .get_psu_pmbus_info = dfd_get_psu_pmbus_info,
     .clear_psu_blackbox = dfd_clear_psu_blackbox_info,
+    .get_psu_support_upgrade = dfd_get_psu_support_upgrade,
+    .get_psu_upgrade_active_type = dfd_get_psu_upgrade_active_type,
+    .set_psu_reset = dfd_set_psu_reset,
     /* transceiver */
     .get_eth_number = dfd_get_eth_number,
     .get_transceiver_power_on_status = dfd_get_transceiver_power_on_status,
@@ -4480,17 +4231,20 @@ static struct switch_drivers_s switch_drivers = {
     .get_eth_tx_disable_status = dfd_get_eth_tx_disable_status,
     .set_eth_tx_disable_status = dfd_set_eth_tx_disable_status,
     .get_transceiver_present_status = dfd_get_transceiver_present_status,
+    .get_eth_i2c_bus = dfd_get_eth_i2c_bus,
     .get_eth_present_status = dfd_get_eth_present_status,
     .get_eth_rx_los_status = dfd_get_eth_rx_los_status,
     .get_eth_reset_status = dfd_get_eth_reset_status,
     .set_eth_reset_status = dfd_set_eth_reset_status,
     .get_eth_low_power_mode_status = dfd_get_eth_low_power_mode_status,
+    .set_eth_low_power_mode_status = dfd_set_eth_low_power_mode_status,
     .get_eth_interrupt_status = dfd_get_eth_interrupt_status,
     .get_eth_eeprom_size = dfd_get_eth_eeprom_size,
     .read_eth_eeprom_data = dfd_read_eth_eeprom_data,
     .write_eth_eeprom_data = dfd_write_eth_eeprom_data,
     .get_eth_optoe_type = dfd_get_eth_optoe_type,
     .set_eth_optoe_type = dfd_set_eth_optoe_type,
+    .get_eth_power_group = dfd_get_eth_power_group,
     /* sysled */
     .get_sys_led_status = dfd_get_sys_led_status,
     .set_sys_led_status = dfd_set_sys_led_status,
@@ -4502,22 +4256,20 @@ static struct switch_drivers_s switch_drivers = {
     .set_sys_psu_led_status = dfd_set_sys_psu_led_status,
     .get_id_led_status = dfd_get_id_led_status,
     .set_id_led_status = dfd_set_id_led_status,
+    .get_bmc_host_sysled = dfd_get_bmc_host_sysled,
+    .set_bmc_host_sysled_attr = dfd_set_bmc_host_sysled_attr,
     /* FPGA */
     .get_main_board_fpga_number = dfd_get_main_board_fpga_number,
-    .get_main_board_fpga_alias = dfd_get_main_board_fpga_alias,
-    .get_main_board_fpga_type = dfd_get_main_board_fpga_type,
-    .get_main_board_fpga_firmware_version = dfd_get_main_board_fpga_firmware_version,
-    .get_main_board_fpga_board_version = dfd_get_main_board_fpga_board_version,
-    .get_main_board_fpga_test_reg = dfd_get_main_board_fpga_test_reg,
-    .set_main_board_fpga_test_reg = dfd_set_main_board_fpga_test_reg,
+    .get_main_board_fpga_attr = dfd_get_fpga_attr,
+    .set_main_board_fpga_attr = dfd_set_fpga_attr,
     /* CPLD */
     .get_main_board_cpld_number = dfd_get_main_board_cpld_number,
-    .get_main_board_cpld_alias = dfd_get_main_board_cpld_alias,
-    .get_main_board_cpld_type = dfd_get_main_board_cpld_type,
-    .get_main_board_cpld_firmware_version = dfd_get_main_board_cpld_firmware_version,
-    .get_main_board_cpld_board_version = dfd_get_main_board_cpld_board_version,
-    .get_main_board_cpld_test_reg = dfd_get_main_board_cpld_test_reg,
-    .set_main_board_cpld_test_reg = dfd_set_main_board_cpld_test_reg,
+    .get_main_board_cpld_attr = dfd_get_cpld_attr,
+    .set_main_board_cpld_attr = dfd_set_cpld_attr,
+    /* MISC_FW */
+    .get_main_board_misc_fw_number = dfd_get_main_board_misc_fw_number,
+    .get_main_board_misc_fw_attr = dfd_get_misc_fw_attr,
+    .set_main_board_misc_fw_attr = dfd_set_misc_fw_attr,
     /* watchdog */
     .get_watchdog_identify = dfd_get_watchdog_identify,
     .get_watchdog_timeleft = dfd_get_watchdog_timeleft,
@@ -4575,18 +4327,31 @@ static struct switch_drivers_s switch_drivers = {
     .get_slot_cpld_test_reg = dfd_get_slot_cpld_test_reg,
     .set_slot_cpld_test_reg = dfd_set_slot_cpld_test_reg,
     .get_system_value = dfd_get_system_value,
+    .get_system_value_match_status = dfd_get_system_value_match_status,
+    .get_my_slot_id = dfd_get_system_my_slot_id,
     .get_system_port_power_status = dfd_get_system_port_power_status,
     .set_system_value = dfd_set_system_value,
     .set_bmc_switch = dfd_set_system_bmc_switch,
     .get_bmc_view = dfd_get_system_bmc_view,
+    .get_system_serial_number = dfd_get_system_serial_number,
     /* eeprom */
     .get_eeprom_number = dfd_get_eeprom_number,
     .get_eeprom_size = dfd_get_board_eeprom_size,
-    .get_eeprom_alias = dfd_get_board_eeprom_alias,
-    .get_eeprom_tag = dfd_get_board_eeprom_tag,
-    .get_eeprom_type = dfd_get_board_eeprom_type,
+    .get_eeprom_attr = dfd_get_eeprom_attr,
+    .set_eeprom_attr = dfd_set_eeprom_attr,
     .read_eeprom_data = dfd_read_board_eeprom_data,
     .write_eeprom_data = dfd_write_board_eeprom_data,
+    /* cabletray */
+    .get_cabletray_number = dfd_get_cabletray_number,
+    .get_cabletray_name = dfd_get_cabletray_name,
+    .get_cabletray_alias = dfd_get_cabletray_alias,
+    .get_cabletray_manufacturer = dfd_get_cabletray_manufacturer,
+    .get_cabletray_serial_number = dfd_get_cabletray_serial_number,
+    .get_cabletray_part_number = dfd_get_cabletray_part_number,
+    .get_cabletray_version = dfd_get_cabletray_version,
+    .get_cabletray_slotid = dfd_get_cabletray_slotid,
+    .get_cabletray_eeprom_size = dfd_get_cabletray_eeprom_size,
+    .read_cabletray_eeprom_data = dfd_read_cabletray_eeprom_data,
 };
 
 struct switch_drivers_s * s3ip_switch_driver_get(void)

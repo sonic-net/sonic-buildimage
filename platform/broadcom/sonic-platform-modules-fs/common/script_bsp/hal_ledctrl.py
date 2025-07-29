@@ -3,9 +3,10 @@ import os
 import time
 import syslog
 import traceback
+import logging
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
-from platform_util import get_value
+from platform_util import get_value, setup_logger, BSP_COMMON_LOG_DIR
 try:
     import abc
 except ImportError as error:
@@ -14,6 +15,8 @@ except ImportError as error:
 SWITCH_TEMP = "SWITCH_TEMP"
 F2B_AIR_FLOW = "intake"
 B2F_AIR_FLOW = "exhaust"
+E2_F2B_AIR_FLOW = "F2B"
+E2_B2F_AIR_FLOW = "B2F"
 ONIE_E2_NAME = "ONIE_E2"
 
 # status
@@ -25,12 +28,9 @@ STATUS_FAILED = "FAILED"
 STATUS_UNKNOWN = "UNKNOWN"
 
 LED_CONTRL_FILE = "/tmp/.ledcontrol_factest_mode_en"
-LEDCTROL_DEBUG_FILE = "/etc/.ledcontrol_debug_flag"
-
-LEDCTROLERROR = 1
-LEDCTROLDEBUG = 2
-
-debuglevel = 0
+DEBUG_FILE = "/etc/.ledcontrol_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "hal_ledctrl_debug.log"
+logger = setup_logger(LOG_FILE)
 # led status defined
 COLOR_GREEN = 1
 COLOR_AMBER = 2
@@ -38,42 +38,32 @@ COLOR_RED = 3
 COLOR_FLASH = 4
 LED_STATUS_DICT = {COLOR_GREEN: "green", COLOR_AMBER: "amber", COLOR_RED: "red", COLOR_FLASH: "flash"}
 
-
 def ledcontrol_debug(s):
-    if LEDCTROLDEBUG & debuglevel:
-        syslog.openlog("LEDCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def ledcontrol_error(s):
-    if LEDCTROLERROR & debuglevel:
-        syslog.openlog("LEDCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def air_flow_warn(s):
     syslog.openlog("AIR_FLOW_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def air_flow_error(s):
     syslog.openlog("AIR_FLOW_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def air_flow_emerg(s):
     syslog.openlog("AIR_FLOW_MONITOR", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_EMERG, s)
-
+    logger.error(s)
 
 def debug_init():
-    global debuglevel
-    try:
-        with open(LEDCTROL_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 
 class DevBase(object):
@@ -333,7 +323,7 @@ class ledcontrol(object):
         self.__sysled_check_temp = self.__ledcontrol_para.get("sysled_check_temp", 1)
         self.__sysled_check_fw_up = self.__ledcontrol_para.get("sysled_check_fw_up", 0)
         self.__smbled_ctrl = self.__ledcontrol_para.get("smbled_ctrl", 0)
-
+        self.__set_fan_module_led = self.__ledcontrol_para.get("set_fan_module_led", 1)
     @property
     def na_ret(self):
         return self.int_case.na_ret
@@ -406,6 +396,10 @@ class ledcontrol(object):
     def interval(self):
         return self.__interval
 
+    @property
+    def is_set_fan_module_led(self):
+        return self.__set_fan_module_led
+
     def get_fan_total_number(self):
         return self.int_case.get_fan_total_number()
 
@@ -470,7 +464,7 @@ class ledcontrol(object):
 
     @property
     def board_air_flow(self):
-        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW)
+        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW, E2_F2B_AIR_FLOW, E2_B2F_AIR_FLOW)
         if self.__board_air_flow not in air_flow_tuple:
             self.__board_air_flow = self.int_case.get_device_airflow(ONIE_E2_NAME)
             ledcontrol_debug("board_air_flow: %s" % self.__board_air_flow)
@@ -661,7 +655,7 @@ class ledcontrol(object):
 
     def check_board_air_flow(self):
         board_air_flow = self.board_air_flow
-        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW)
+        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW, E2_F2B_AIR_FLOW, E2_B2F_AIR_FLOW)
         if board_air_flow not in air_flow_tuple:
             air_flow_error("%%AIR_FLOW_MONITOR-3-BOARD: Get board air flow failed, value: %s." % board_air_flow)
             return False
@@ -909,7 +903,8 @@ class ledcontrol(object):
         # set fan led
         self.set_fan_led(fan_led_color)
         # set fan module led
-        self.set_fan_module_led()
+        if self.is_set_fan_module_led:
+            self.set_fan_module_led()
 
     def dealPsuLedStatus(self):
         psu_led_status_list = []

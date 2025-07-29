@@ -183,7 +183,7 @@ def get_status():
 
 
 def set_psu_fan_speed_pwm(realspeed):
-    r'''set_psu_fan_speed_pwm'''
+    r'''set_psu_fan_speed_pwm pwm'''
     print("=================set_psu_fan_speed_pwm======================")
     psus = int_case.get_psus()
     for psu_item in psus:
@@ -299,7 +299,7 @@ def get_fan_speed_pwm():
 
 
 def set_fan_speed_pwm(pwm):
-    r'''set_fan_speed_pwm'''
+    r'''set_fan_speed_pwm pwm'''
     print("=================set_fan_speed_pwm======================")
     fans = int_case.get_fans()
     for fan in fans:
@@ -352,12 +352,12 @@ def fan_feed_watchdog():
 
 
 def set_fan_led(color):
-    r'''set_fan_led'''
+    r'''set_fan_led color'''
     print("=================set_fan_led======================")
     fans = int_case.get_fans()
     for fan in fans:
         print("%s" % fan.name)
-        print(color, int_case.set_fan_led(fan_item.name, color))
+        print(color, int_case.set_fan_led(fan.name, color))
 
 def get_fan_led():
     r'''fan_get_led'''
@@ -541,7 +541,7 @@ def set_single_led_color(led_name, color):
 
 
 def get_single_led_color(led_name):
-    r'''get_single_led_color'''
+    r'''get_single_led_color led_name'''
     print("=================get_single_led_color======================")
     leds = int_case.get_leds()
     for led_item in leds:
@@ -562,6 +562,15 @@ def get_device_airflow():
     print("=================get_device_airflow======================")
     airflow = int_case.get_device_airflow("ONIE_E2")
     print("%s" % airflow)
+
+
+def get_temps_sensor():
+    r'''get_temps_sensor'''
+    print("=================get_temps_sensor======================")
+    temp_list = int_case.get_temps()
+    for temp in temp_list:
+        print("id: %s, name: %s, API name: %s, value: %s, Min: %s, Low: %s, High: %s, Max: %s, Invalid: %s, Error: %s" %
+            (temp.temp_id, temp.name, temp.api_name, temp.Value, temp.Min, temp.Low, temp.High, temp.Max, temp.temp_invalid, temp.temp_error))
 
 def get_cpu_reset_num():
     r'''get_cpu_reset_num'''

@@ -31,7 +31,7 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 #define VOUT_REG_TO_VALUE(reg_val)   (((reg_val) & 0x3ff) * 10 / 4)
 
 /* LSB: 1C */
-#define TEMP_REG_TO_VALUE(reg_val)   ((((s16)(((reg_val) & 0x3ff) << 4)) >> 4) * 1000)  
+#define TEMP_REG_TO_VALUE(reg_val)   ((((s16)(((reg_val) & 0x3ff) << 4)) >> 4) * 1000)
 /*
  * Select PIN and rail A POUT report resolution.
  * 2'b00: 2W/LSB
@@ -63,6 +63,7 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 #define JWH63_MFR_VR_CONFIG_RA            (0x7)
 #define JWH63_MFR_VR_CONFIG_RB            (0x8)
 #define VID_STEP_SEL_OFFSET               (4)
+
 
 static int jwh63_data2reg_vid(struct pmbus_data *data, int page, int val)
 {
@@ -163,7 +164,7 @@ static ssize_t jwh63_avs_vout_show(struct device *dev, struct device_attribute *
     return snprintf(buf, PAGE_SIZE, "%d\n", vout);
 }
 
-static ssize_t jwh63_avs_vout_store(struct device *dev, struct device_attribute *devattr, 
+static ssize_t jwh63_avs_vout_store(struct device *dev, struct device_attribute *devattr,
                 const char *buf, size_t count)
 {
     struct i2c_client *client = to_i2c_client(dev->parent);
@@ -247,7 +248,7 @@ error:
     return ret;
 }
 
-static ssize_t jwh63_avs_vout_max_store(struct device *dev, struct device_attribute *devattr, 
+static ssize_t jwh63_avs_vout_max_store(struct device *dev, struct device_attribute *devattr,
                 const char *buf, size_t count)
 {
     struct i2c_client *client = to_i2c_client(dev->parent);
@@ -275,7 +276,7 @@ static ssize_t jwh63_avs_vout_max_store(struct device *dev, struct device_attrib
     return count;
 }
 
-static ssize_t jwh63_avs_vout_max_show(struct device *dev, struct device_attribute *devattr, 
+static ssize_t jwh63_avs_vout_max_show(struct device *dev, struct device_attribute *devattr,
                 char *buf)
 {
     struct i2c_client *client = to_i2c_client(dev->parent);
@@ -291,7 +292,7 @@ static ssize_t jwh63_avs_vout_max_show(struct device *dev, struct device_attribu
     return snprintf(buf, PAGE_SIZE, "%d\n", data->vout_max[attr->index]);
 }
 
-static ssize_t jwh63_avs_vout_min_store(struct device *dev, struct device_attribute *devattr, 
+static ssize_t jwh63_avs_vout_min_store(struct device *dev, struct device_attribute *devattr,
                 const char *buf, size_t count)
 {
     struct i2c_client *client = to_i2c_client(dev->parent);
@@ -319,7 +320,7 @@ static ssize_t jwh63_avs_vout_min_store(struct device *dev, struct device_attrib
     return count;
 }
 
-static ssize_t jwh63_avs_vout_min_show(struct device *dev, struct device_attribute *devattr, 
+static ssize_t jwh63_avs_vout_min_show(struct device *dev, struct device_attribute *devattr,
                 char *buf)
 {
     struct i2c_client *client = to_i2c_client(dev->parent);
@@ -463,7 +464,7 @@ static ssize_t jwh63_pout_show(struct device *dev, struct device_attribute *deva
 static ssize_t jwh63_word_data_show(struct device *dev, struct device_attribute *devattr,
                    char *buf)
 {
-    struct i2c_client *client = to_i2c_client(dev->parent);
+    struct i2c_client *client = to_i2c_client(dev);
     u8 page = to_sensor_dev_attr_2(devattr)->nr;
     u8 reg = to_sensor_dev_attr_2(devattr)->index;
     struct pmbus_data *data = i2c_get_clientdata(client);
@@ -481,6 +482,7 @@ static ssize_t jwh63_word_data_show(struct device *dev, struct device_attribute 
     DEBUG_INFO("%d-%04x: read word data success, page%u, reg: 0x%x, value: 0x%04x\n",
         client->adapter->nr, client->addr, page, reg, word_data);
     mutex_unlock(&data->update_lock);
+
     return snprintf(buf, PAGE_SIZE, "0x%04x\n", word_data);
 }
 
@@ -506,7 +508,7 @@ static ssize_t jwh63_phase_curr(struct device *dev, struct device_attribute *dev
     value = PHASE_REG_TO_VALUE((word_data & mask) >> offset);
     DEBUG_INFO("%d-%04x: read word data success, page%u, reg: 0x%x, value: 0x%04x\n",
         client->adapter->nr, client->addr, page, reg, value);
-    
+
     mutex_unlock(&data->update_lock);
     return snprintf(buf, PAGE_SIZE, "%04d\n", value);
 }
@@ -542,8 +544,6 @@ static SENSOR_DEVICE_ATTR_RO(loopb_temp, jwh63_temp, JWH63_LOOP_B);
 static SENSOR_DEVICE_ATTR_RO(loopb_pout, jwh63_pout, JWH63_LOOP_B);
 
 /* param _nr is page , param _index is reg addr */
-static SENSOR_DEVICE_ATTR_2_RO(product_rev_user, jwh63_word_data, JWH63_LOOP_A,
-        JWH63_PRODUCT_REV_USER_REG);
 static SENSOR_DEVICE_ATTR_2_RO(loopa_phase1_curr, jwh63_loopx_phase1_curr, JWH63_LOOP_A,
         JWH63_READ_CS_1_2_REG);
 static SENSOR_DEVICE_ATTR_2_RO(loopa_phase2_curr, jwh63_loopx_phase2_curr, JWH63_LOOP_A,
@@ -619,20 +619,22 @@ static const struct attribute_group phase_curr_group = {
     .attrs = phase_curr_attrs,
 };
 
-static struct attribute *others_attrs[] = {
+static SENSOR_DEVICE_ATTR_2_RO(product_rev_user, jwh63_word_data, JWH63_LOOP_A,
+        JWH63_PRODUCT_REV_USER_REG);
+
+static struct attribute *jwh63_sysfs_attrs[] = {
     &sensor_dev_attr_product_rev_user.dev_attr.attr,
     NULL,
 };
 
-static const struct attribute_group others_group = {
-    .attrs = others_attrs,
+static const struct attribute_group jwh63_sysfs_group = {
+    .attrs = jwh63_sysfs_attrs,
 };
 
 static const struct attribute_group *jwh63_attribute_groups[] = {
     &avs_ctrl_group,
     &loop_status_group,
     &phase_curr_group,
-    &others_group,
     NULL,
 };
 
@@ -694,6 +696,7 @@ static struct pmbus_driver_info jwh63_info = {
 static int jwh63_probe(struct i2c_client *client)
 {
     struct pmbus_driver_info *info;
+    int ret;
 
     info = devm_kmemdup(&client->dev, &jwh63_info, sizeof(*info), GFP_KERNEL);
     if (!info) {
@@ -701,24 +704,33 @@ static int jwh63_probe(struct i2c_client *client)
         return -ENOMEM;
     }
 
-    return wb_pmbus_do_probe(client, info);
+    ret = wb_pmbus_do_probe(client, info);
+    if (ret != 0) {
+        dev_info(&client->dev, "wb_pmbus_do_probe failed, ret: %d.\n", ret);
+        return ret;
+    }
+
+    ret = sysfs_create_group(&client->dev.kobj, &jwh63_sysfs_group);
+    if (ret != 0) {
+        dev_info(&client->dev, "Failed to create jwh63_sysfs_group, ret: %d.\n", ret);
+        wb_pmbus_do_remove(client);
+        return ret;
+    }
+
+    return 0;
+}
+
+static void jwh63_remove(struct i2c_client *client)
+{
+    sysfs_remove_group(&client->dev.kobj, &jwh63_sysfs_group);
+    (void)wb_pmbus_do_remove(client);
+    return;
 }
 
 static const struct i2c_device_id jwh63_id[] = {
     {"wb_jwh63", 0},
     {}
 };
-
-static void jwh63_remove(struct i2c_client *client)
-{
-    int ret;
-
-    ret = wb_pmbus_do_remove(client);
-    if (ret != 0) {
-        DEBUG_ERROR("jwh63 fail remove pmbus ,ret = %d\n", ret);
-    }
-    return;
-}
 
 MODULE_DEVICE_TABLE(i2c, jwh63_id);
 
@@ -743,4 +755,3 @@ module_i2c_driver(JWH63_driver);
 MODULE_AUTHOR("Support");
 MODULE_DESCRIPTION("PMBus driver for Infineon JWH63 family");
 MODULE_LICENSE("GPL");
- 

@@ -176,6 +176,29 @@ static int wb_set_id_led_status(int status)
     return ret;
 }
 
+/* Similar to wb_get_sys_led_status */
+static ssize_t wb_get_bmc_host_sysled(char *buf, size_t count)
+{
+    int ret;
+
+    check_p(g_drv);
+    check_p(g_drv->get_bmc_host_sysled);
+
+    ret = g_drv->get_bmc_host_sysled(buf, count);
+    return ret;
+}
+
+/* Similar to wb_set_sys_led_status */
+static int wb_set_bmc_host_sysled_attr(int status)
+{
+    int ret;
+
+    check_p(g_drv);
+    check_p(g_drv->set_bmc_host_sysled_attr);
+
+    ret = g_drv->set_bmc_host_sysled_attr(status);
+    return ret;
+}
 /**************************************end of sysled******************************************/
 
 static struct s3ip_sysfs_sysled_drivers_s drivers = {
@@ -193,6 +216,8 @@ static struct s3ip_sysfs_sysled_drivers_s drivers = {
     .set_sys_psu_led_status = wb_set_sys_psu_led_status,
     .get_id_led_status = wb_get_id_led_status,
     .set_id_led_status = wb_set_id_led_status,
+    .get_bmc_host_sysled = wb_get_bmc_host_sysled,
+    .set_bmc_host_sysled_attr = wb_set_bmc_host_sysled_attr,
 };
 
 static int __init sysled_init(void)

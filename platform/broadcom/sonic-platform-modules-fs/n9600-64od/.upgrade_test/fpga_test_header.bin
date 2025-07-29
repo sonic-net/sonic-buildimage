@@ -1,6 +1,6 @@
 fpga_test_0_1.bin
 FILEHEADER(
-DEVTYPE=0x40d7
+DEVTYPE=0x40e9
 TYPE=fpga
 CHAIN=1
 CHIPNAME=fpga

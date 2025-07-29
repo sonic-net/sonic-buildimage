@@ -249,6 +249,7 @@ exit:
 
 static int pca9641_reset_file_write(const char *path, uint32_t pos, uint8_t *val, size_t size)
 {
+
     int ret;
     struct file *filp;
     loff_t tmp_pos;
@@ -270,7 +271,7 @@ static int pca9641_reset_file_write(const char *path, uint32_t pos, uint8_t *val
     iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
     ret = vfs_iter_write(filp, &iter, &tmp_pos, 0);
     if (ret < 0) {
-        DEBUG_ERROR("pca9641 vfs_iter_write failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
+        DEBUG_ERROR("vfs_iter_write failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
         goto exit;
     }
 
@@ -740,6 +741,7 @@ static int pca9541_reg_read(struct i2c_client *client, u8 command)
 	} else {
 		union i2c_smbus_data data;
 
+        mem_clear(&data, sizeof(data));
 		ret = adap->algo->smbus_xfer(adap, client->addr,
 					     client->flags,
 					     I2C_SMBUS_READ,

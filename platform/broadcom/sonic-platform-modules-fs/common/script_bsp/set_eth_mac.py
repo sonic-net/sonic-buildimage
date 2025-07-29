@@ -1,49 +1,37 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 import syslog
 import os
 import re
 import eepromutil.onietlv as ot
+import logging
 from eepromutil.fru import ipmifru
 from platform_config import SET_MAC_CONF
-from platform_util import byteTostr, dev_file_read, exec_os_cmd
+from platform_util import byteTostr, dev_file_read, exec_os_cmd, setup_logger, BSP_COMMON_LOG_DIR
 
 
 STANDARD_MAC_LEN = 12
-SETMAC_DEBUG_FILE = "/etc/.setmac_debug_flag"
-
-SETMACERROR = 1
-SETMACDEBUG = 2
-debuglevel = 0
+DEBUG_FILE = "/etc/.setmac_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "set_eth_mac_debug.log"
+logger = setup_logger(LOG_FILE)
 
 cfg_prefix = "iface"
 mac_prefix = "hwaddress ether"
 
-def setmac_debug(s):
-    if SETMACDEBUG & debuglevel:
-        syslog.openlog("SETMAC", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_INFO, s)
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
+def setmac_debug(s):
+    logger.debug(s)
 
 def setmac_error(s):
-    if SETMACERROR & debuglevel:
-        syslog.openlog("SETMAC", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
+    logger.error(s)
 
 def setmac_info(s):
-    syslog.openlog("SETMAC", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
-
-def debug_init():
-    global debuglevel
-    try:
-        with open(SETMAC_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
-
+    logger.info(s)
 
 def decode_mac(encodedata):
     if encodedata == None:
@@ -194,13 +182,13 @@ def set_e2_mac_to_config_file(eth_name, mac, ifcfg):
         if not os.path.exists(cfg_file_dir):
             cmd = "mkdir -p %s" % cfg_file_dir
             setmac_info("Create interfaces config directory: %s" % cfg_file_dir)
-            exec_os_cmd(cmd)
-            exec_os_cmd("sync")
+            os.system(cmd)
+            os.system("sync")
         wr_val = cfg_prefix + " %s\n" % eth_name
         wr_val += "    %s %s\n" % (mac_prefix, mac)
         with open(ifcfg_file_path, "w") as fd:
             fd.write(wr_val)
-        exec_os_cmd("sync")
+        os.system("sync")
         setmac_info("Create interfaces config: %s with mac address: %s" % (ifcfg_file_path, mac))
         return True
     except Exception as e:

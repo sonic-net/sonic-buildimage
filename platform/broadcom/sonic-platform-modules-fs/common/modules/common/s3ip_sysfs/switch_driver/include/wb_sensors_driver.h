@@ -48,6 +48,18 @@ ssize_t dfd_get_current_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t cur
 ssize_t dfd_get_psu_sensor_info(uint8_t psu_index, uint8_t sensor_type, char *buf, size_t count);
 
 /**
+ * dfd_get_power_info - Get power information
+ * @main_dev_id: Motherboard :0 Power supply :2 subcard :5
+ * @dev_index: If no device index exists, the value is 0, and 1 indicates slot1
+ * @in_index: Power index, starting at 1
+ * @in_type: Power type,1:alias 2:type 3:max 4:max_hyst 5:min 6:input
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_power_info(uint8_t main_dev_id, uint8_t dev_index, uint8_t in_index,
+            uint8_t in_attr, char *buf, size_t count);
+
+/**
  * dfd_get_main_board_monitor_flag - Get Monitor flag info
  * @main_dev_id: Motherboard :0 Power supply :2 subcard :5
  * @dev_index: If no device index exists, the value is 0, and 1 indicates slot1

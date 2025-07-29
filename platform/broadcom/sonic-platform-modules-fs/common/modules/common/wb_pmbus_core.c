@@ -5,6 +5,7 @@
  * Copyright (c) 2010, 2011 Ericsson AB.
  * Copyright (c) 2012 Guenter Roeck
  */
+
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
 #include <linux/math64.h>
@@ -2571,6 +2572,27 @@ static int pmbus_init_common(struct i2c_client *client, struct pmbus_data *data,
     struct device *dev = &client->dev;
     int page, ret, i;
 
+	/*
+	 * Figure out if PEC is enabled before accessing any other register.
+	 * Make sure PEC is disabled, will be enabled later if needed.
+	 */
+	client->flags &= ~I2C_CLIENT_PEC;
+
+    /* Enable PEC if the controller supports it */
+    for(i = 0; i < PMBUS_RETRY_TIME; i++) {
+        ret = i2c_smbus_read_byte_data(client, PMBUS_CAPABILITY);
+        if (ret >= 0) {
+            break;
+        }
+        usleep_range(PMBUS_RETRY_SLEEP_TIME, PMBUS_RETRY_SLEEP_TIME + 1);
+    }
+
+    if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK)) {
+        if (i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_PEC)) {
+            client->flags |= I2C_CLIENT_PEC;
+        }
+    }
+
     /*
      * Some PMBus chips don't support PMBUS_STATUS_WORD, so try
      * to use PMBUS_STATUS_BYTE instead if that is the case.
@@ -2597,18 +2619,6 @@ static int pmbus_init_common(struct i2c_client *client, struct pmbus_data *data,
         dev_info(dev, "PMBus status register not found\n");
         return -ENODEV;
     }
-
-    /* Enable PEC if the controller supports it */
-    for(i = 0; i < PMBUS_RETRY_TIME; i++) {
-        ret = i2c_smbus_read_byte_data(client, PMBUS_CAPABILITY);
-        if (ret >= 0) {
-            break;
-        }
-        usleep_range(PMBUS_RETRY_SLEEP_TIME, PMBUS_RETRY_SLEEP_TIME + 1);
-    }
-
-    if (ret >= 0 && (ret & PB_CAPABILITY_ERROR_CHECK))
-        client->flags |= I2C_CLIENT_PEC;
 
     /*
      * Check if the chip is write protected. If it is, we can not clear
@@ -3197,7 +3207,7 @@ ssize_t pmbus_device_name_show(struct device *dev, struct device_attribute *deva
         dev_err(dev, "get_chip_name_by_id failed, ret = %d\n", ret);
         return ret;
     }
-    dev_dbg(dev, "find chip name success, device name: %s.\n", pmbus_dev_infos[i].chip_name);
+    dev_dbg(dev, "find chip name success, device name: %s.\n", chip_name);
 
     return snprintf(buf, PAGE_SIZE, "%s\n", chip_name);
 }

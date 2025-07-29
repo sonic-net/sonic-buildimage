@@ -104,11 +104,11 @@ static ssize_t syseeprom_read(struct file *filp, struct kobject *kobj, struct bi
     mem_clear(buf, count);
     rd_len = g_syseeprom_drv->read_syseeprom_data(buf, offset, count);
     if (rd_len < 0) {
-        SWITCH_ERR("read syseeprom data error, offset: 0x%llx, read len: %lu, ret: %ld.\n",
+        SWITCH_ERR("read syseeprom data error, offset: 0x%llx, read len: %zu, ret: %zd.\n",
             offset, count, rd_len);
         return rd_len;
     }
-    SWITCH_DBG("read syseeprom data success, offset:0x%llx, read len:%lu, really read len:%ld.\n",
+    SWITCH_DBG("read syseeprom data success, offset:0x%llx, read len:%zu, really read len:%zd.\n",
         offset, count, rd_len);
     return rd_len;
 }
@@ -123,11 +123,11 @@ static ssize_t syseeprom_write(struct file *filp, struct kobject *kobj, struct b
 
     wr_len = g_syseeprom_drv->write_syseeprom_data(buf, offset, count);
     if (wr_len < 0) {
-        SWITCH_ERR("write syseeprom data error, offset: 0x%llx, read len: %lu, ret: %ld.\n",
+        SWITCH_ERR("write syseeprom data error, offset: 0x%llx, read len: %zu, ret: %zd.\n",
             offset, count, wr_len);
         return wr_len;
     }
-    SWITCH_DBG("write syseeprom data success, offset:0x%llx, write len:%lu, really write len:%ld.\n",
+    SWITCH_DBG("write syseeprom data success, offset:0x%llx, write len:%zu, really write len:%zd.\n",
         offset, count, wr_len);
     return wr_len;
 }

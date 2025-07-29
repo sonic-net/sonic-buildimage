@@ -107,6 +107,7 @@
 #include <linux/platform_data/itco_wdt.h>
 #include <linux/pm_runtime.h>
 #include <linux/string.h>
+#include <wb_bsp_i2c_debug.h>
 
 #if IS_ENABLED(CONFIG_I2C_MUX_GPIO) && defined CONFIG_DMI
 #include <linux/gpio/machine.h>
@@ -271,6 +272,8 @@ struct i801_mux_config {
 };
 
 struct i801_priv {
+	/* struct i2c_adapter_debug must be the first member */
+	struct i2c_adapter_debug i2c_ada_dbg;
 	struct i2c_adapter adapter;
 	unsigned long smba;
 	unsigned char original_hstcfg;
@@ -314,6 +317,9 @@ struct i801_priv {
 #define FEATURE_IDF		BIT(15)
 #define FEATURE_TCO_SPT		BIT(16)
 #define FEATURE_TCO_CNL		BIT(17)
+
+static int debug = 0;
+module_param(debug, int, S_IRUGO | S_IWUSR);
 
 static const char *i801_feature_names[] = {
 	"SMBus PEC",
@@ -949,9 +955,12 @@ static s32 i801_access(struct i2c_adapter *adap, u16 addr,
 	int ret = 0, xact = 0;
 	struct i801_priv *priv = i2c_get_adapdata(adap);
 
+	DEBUG_INFO_I2C_ADAPTER(adap, "Enter i801_access.\n");
+
 	mutex_lock(&priv->acpi_lock);
 	if (priv->acpi_reserved) {
 		mutex_unlock(&priv->acpi_lock);
+		DEBUG_ERROR_I2C_ADAPTER(adap, "Exit for acpi_reserved.\n");
 		return -EBUSY;
 	}
 
@@ -961,50 +970,81 @@ static s32 i801_access(struct i2c_adapter *adap, u16 addr,
 		&& size != I2C_SMBUS_QUICK
 		&& size != I2C_SMBUS_I2C_BLOCK_DATA;
 
+	DEBUG_INFO_I2C_ADAPTER(adap, "size = %d.\n", size);
 	switch (size) {
 	case I2C_SMBUS_QUICK:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_QUICK\n");
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | (read_write & 0x01), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) | (read_write & 0x01),
 		       SMBHSTADD(priv));
 		xact = I801_QUICK;
 		break;
 	case I2C_SMBUS_BYTE:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_BYTE\n");
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | (read_write & 0x01), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) | (read_write & 0x01),
 		       SMBHSTADD(priv));
-		if (read_write == I2C_SMBUS_WRITE)
+		if (read_write == I2C_SMBUS_WRITE) {
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 			outb_p(command, SMBHSTCMD(priv));
+		}
 		xact = I801_BYTE;
 		break;
 	case I2C_SMBUS_BYTE_DATA:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_BYTE_DATA\n");
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | (read_write & 0x01), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) | (read_write & 0x01),
-		       SMBHSTADD(priv));
+				SMBHSTADD(priv));
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 		outb_p(command, SMBHSTCMD(priv));
-		if (read_write == I2C_SMBUS_WRITE)
+		if (read_write == I2C_SMBUS_WRITE) {
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", data->byte, SMBHSTDAT0(priv));
 			outb_p(data->byte, SMBHSTDAT0(priv));
+		}
 		xact = I801_BYTE_DATA;
 		break;
 	case I2C_SMBUS_WORD_DATA:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_WORD_DATA\n");
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | (read_write & 0x01), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) | (read_write & 0x01),
-		       SMBHSTADD(priv));
+				SMBHSTADD(priv));
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 		outb_p(command, SMBHSTCMD(priv));
 		if (read_write == I2C_SMBUS_WRITE) {
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", data->word & 0xff, 
+				SMBHSTDAT0(priv));
 			outb_p(data->word & 0xff, SMBHSTDAT0(priv));
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", (data->word & 0xff00) >> 8, 
+				SMBHSTDAT1(priv));
 			outb_p((data->word & 0xff00) >> 8, SMBHSTDAT1(priv));
 		}
 		xact = I801_WORD_DATA;
 		break;
 	case I2C_SMBUS_BLOCK_DATA:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_BLOCK_DATA\n");
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | (read_write & 0x01), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) | (read_write & 0x01),
 		       SMBHSTADD(priv));
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 		outb_p(command, SMBHSTCMD(priv));
 		block = 1;
 		break;
 	case I2C_SMBUS_I2C_BLOCK_DATA:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_I2C_BLOCK_DATA\n");
 		/*
 		 * NB: page 240 of ICH5 datasheet shows that the R/#W
 		 * bit should be cleared here, even when reading.
 		 * However if SPD Write Disable is set (Lynx Point and later),
 		 * the read will fail if we don't set the R/#W bit.
 		 */
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", 
+			((addr & 0x7f) << 1) | ((priv->original_hstcfg & SMBHSTCFG_SPD_WD) ? 
+			(read_write & 0x01) : 0), SMBHSTADD(priv));
 		outb_p(((addr & 0x7f) << 1) |
 		       ((priv->original_hstcfg & SMBHSTCFG_SPD_WD) ?
 			(read_write & 0x01) : 0),
@@ -1012,17 +1052,23 @@ static s32 i801_access(struct i2c_adapter *adap, u16 addr,
 		if (read_write == I2C_SMBUS_READ) {
 			/* NB: page 240 of ICH5 datasheet also shows
 			 * that DATA1 is the cmd field when reading */
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTDAT1(priv));
 			outb_p(command, SMBHSTDAT1(priv));
-		} else
+		} else {
+			DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 			outb_p(command, SMBHSTCMD(priv));
+		}
 		block = 1;
 		break;
 	case I2C_SMBUS_BLOCK_PROC_CALL:
+		DEBUG_INFO_I2C_ADAPTER(adap, "transfer mode: I2C_SMBUS_BLOCK_PROC_CALL\n");
 		/*
 		 * Bit 0 of the slave address register always indicate a write
 		 * command.
 		 */
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", (addr & 0x7f) << 1, SMBHSTADD(priv));
 		outb_p((addr & 0x7f) << 1, SMBHSTADD(priv));
+		DEBUG_INFO_I2C_ADAPTER(adap, "Write 0x%x to 0x%lx\n", command, SMBHSTCMD(priv));
 		outb_p(command, SMBHSTCMD(priv));
 		block = 1;
 		break;
@@ -1063,10 +1109,13 @@ static s32 i801_access(struct i2c_adapter *adap, u16 addr,
 	case I801_BYTE:	/* Result put in SMBHSTDAT0 */
 	case I801_BYTE_DATA:
 		data->byte = inb_p(SMBHSTDAT0(priv));
+		DEBUG_INFO_I2C_ADAPTER(adap, "Read 0x%x from 0x%lx\n", data->byte, SMBHSTDAT0(priv));
 		break;
 	case I801_WORD_DATA:
 		data->word = inb_p(SMBHSTDAT0(priv)) +
 			     (inb_p(SMBHSTDAT1(priv)) << 8);
+		DEBUG_INFO_I2C_ADAPTER(adap, "Read 0x%x from 0x%lx and 0x%lx\n", data->word, 
+			SMBHSTDAT0(priv), SMBHSTDAT1(priv));
 		break;
 	}
 
@@ -1209,6 +1258,10 @@ static void __init input_apanel_init(void)
 	const void __iomem *p;
 
 	bios = ioremap(0xF0000, 0x10000); /* Can't fail */
+    if (bios == NULL) {
+        return;
+    }
+
 	p = bios_signature(bios);
 	if (p) {
 		/* just use the first address */
@@ -2027,6 +2080,7 @@ static int i801_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_put_autosuspend(&dev->dev);
 	pm_runtime_allow(&dev->dev);
+	I2C_ADAPTER_DEBUG_INIT(&priv->adapter, struct i801_priv, i2c_ada_dbg);
 	dev_info(&dev->dev, "wb-i2c-i801 probe ok.\n");
 
 	return 0;
@@ -2036,6 +2090,7 @@ static void i801_remove(struct pci_dev *dev)
 {
 	struct i801_priv *priv = pci_get_drvdata(dev);
 
+	i2c_adapter_debug_exit(&priv->adapter);
 	pm_runtime_forbid(&dev->dev);
 	pm_runtime_get_noresume(&dev->dev);
 

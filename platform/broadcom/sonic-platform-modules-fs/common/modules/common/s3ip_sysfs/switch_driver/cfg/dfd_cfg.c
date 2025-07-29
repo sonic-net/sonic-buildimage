@@ -65,6 +65,34 @@ char *key_to_name(uint64_t key)
     return dfd_cfg_item_name[key];
 }
 
+
+/*
+* Removes trailing spaces from the end of a given string.
+* @param str The string from which to remove trailing spaces.
+*/
+void dfd_ko_trim_trailing_spaces(char *str)
+{
+    int i, len;
+
+    if (str == NULL) {
+        return;
+    }
+
+    len = strlen(str);
+    if (len == 0) {
+        return;
+    }
+
+    /* Use a for loop to iterate from the end of the string to the beginning */
+    for (i = len - 1; i >= 0; --i) {
+        if (str[i] != ' ') {
+            /* If a non-space character is found, break the loop */
+            break;
+        }
+        str[i] = '\0'; /* Replace the space with the null terminator */
+    }
+}
+
 /* Strip out Spaces and carriage returns */
 void dfd_ko_cfg_del_space_lf_cr(char *str)
 {
@@ -352,6 +380,7 @@ int dfd_ko_cfg_get_slot_card_type_by_name(char *slot_name, int *slot_card_type)
     return 0;
 }
 
+
 /* Convert a string to a value */
 static int dfd_ko_cfg_get_value_from_char(char *value_str, int32_t *value, int line_num)
 {
@@ -551,7 +580,7 @@ static int dfd_ko_cfg_add_str_item(uint64_t key, char *str, int line_num)
         /* kmalloc new node */
         str_cfg = (char *)kmalloc(DFD_CFG_STR_MAX_LEN, GFP_KERNEL);
         if (str_cfg == NULL) {
-            DBG_DEBUG(DBG_ERROR, "line%d: kmalloc str[%lu] fail\n", line_num, strlen(str));
+            DBG_DEBUG(DBG_ERROR, "line%d: kmalloc str[%zu] fail\n", line_num, strlen(str));
             return -1;
         }
         mem_clear(str_cfg, DFD_CFG_STR_MAX_LEN);
@@ -806,6 +835,9 @@ static void dfd_ko_cfg_set_info_ctrl_mem_value(info_ctrl_t *info_ctrl, info_ctrl
     case INFO_CTRL_MEM_STR_CONS:
         mem_clear(info_ctrl->str_cons, sizeof(info_ctrl->str_cons));
         strlcpy(info_ctrl->str_cons, buf_val, sizeof(info_ctrl->str_cons));
+        break;
+    case INFO_CTRL_VAL_TYPE:
+        info_ctrl->val_type = dfd_ko_cfg_get_enum_value_by_str(g_info_val_type_str, INFO_VAL_TYPE_END, buf_val);
         break;
     case INFO_CTRL_MEM_INT_EXTRA1:
         dfd_ko_cfg_get_value_from_char(buf_val, &(info_ctrl->int_extra1), line_num);
@@ -1090,7 +1122,7 @@ void dfd_ko_cfg_show_item(uint64_t key)
     dfd_ko_cfg_print_item(key, cfg);
 }
 
-/* x86 devices get the card type method */
+/* devices get the card type method */
 static int dfd_get_my_dev_type_by_file(void)
 {
     struct file *fp;

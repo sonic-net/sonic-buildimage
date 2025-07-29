@@ -1,15 +1,10 @@
 /*
- * Copyright(C) 2018 Ruijie Network. All rights reserved.
+ * Copyright(C) 2018. All rights reserved.
  */
 /*
  * debug.h
- * Original Author : zhangdandan(zhangdandan@ruijie.com.cn) 2018-09-11 
  *
  * Debug control for showing version
- *
- * History
- *
- *    v1.0    zhangdandan(zhangdandan@ruijie.com.cn)  2018-09-11  Initial version.
  *
  */
  
@@ -60,3 +55,4 @@ int show_version_debug(void)
     fclose(fp);
     return DEBUG_IGNORE;
 }
+

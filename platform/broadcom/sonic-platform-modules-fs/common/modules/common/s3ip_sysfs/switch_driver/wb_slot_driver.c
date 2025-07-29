@@ -83,7 +83,7 @@ ssize_t dfd_get_slot_present_str(unsigned int slot_index, char *buf, size_t coun
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, slot index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, slot index: %u\n",
             count, slot_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -194,7 +194,7 @@ ssize_t dfd_get_slot_status_str(unsigned int slot_index, char *buf, size_t count
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %lu, slot index: %u\n",
+        DFD_FAN_DEBUG(DBG_ERROR, "buf size error, count: %zu, slot index: %u\n",
             count, slot_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -298,7 +298,7 @@ ssize_t dfd_get_slot_info(unsigned int slot_index, uint8_t cmd, char *buf, size_
     }
 
     if (count <= 0) {
-        DFD_SLOT_DEBUG(DBG_ERROR, "buf size error, count: %lu, slot index: %u, cmd: 0x%x.\n",
+        DFD_SLOT_DEBUG(DBG_ERROR, "buf size error, count: %zu, slot index: %u, cmd: 0x%x.\n",
             count, slot_index, cmd);
         return -DFD_RV_INVALID_VALUE;
     }

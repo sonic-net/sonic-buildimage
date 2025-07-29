@@ -164,7 +164,7 @@ static int firmware_fpga_read_word(char *dev_name, uint32_t addr, uint32_t *val)
     uint32_t retry;
 
     if (sizeof(int) < FIRMWARE_FPGA_WORD_LEN) {
-        dbg_print(is_debug_on, "Error:dfd_fpga_read_word buf len %ld support len %d.\n",
+        dbg_print(is_debug_on, "Error:dfd_fpga_read_word buf len %zu support len %d.\n",
                 sizeof(int), FIRMWARE_FPGA_WORD_LEN);
         return -1;
     }
@@ -820,10 +820,9 @@ static int firmware_upgreade_fpga_onetime(firmware_spi_logic_upg_t *upg_priv,
             }
         }
 
-        if (size > FFPGA_UPG_DATA_SIZE) {
+        len = size - offset;
+        if (len > FFPGA_UPG_DATA_SIZE) {
             len = FFPGA_UPG_DATA_SIZE;
-        } else {
-            len = size;
         }
 
         /* first, Write data */

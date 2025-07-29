@@ -119,7 +119,7 @@ static s32 wb_i2c_smbus_write_word_data(const struct i2c_client *client, u8 comm
 }
 
 /* Get 9081 voltage units */
-static int ucd9081_get_vref(struct i2c_client *client) 
+static int ucd9081_get_vref(struct i2c_client *client)
 {
     int ret;
     uint16_t wr_val;
@@ -130,7 +130,7 @@ static int ucd9081_get_vref(struct i2c_client *client)
     data = i2c_get_clientdata(client);
     DEBUG_VERBOSE("%d-%04x: enter ucd9081_get_vref\n", client->adapter->nr,
         client->addr);
-    
+
     mutex_lock(&data->update_lock);
     /* 0.Backup original WADDR */
     ret = wb_i2c_smbus_read_word_data(client, WB_UCD9081_WADDR1);
@@ -193,7 +193,7 @@ static int ucd9081_get_vref(struct i2c_client *client)
     } else {
         data->vref = WB_UCD9081_VREF_INTERNAL;
     }
-    
+
     mutex_unlock(&data->update_lock);
     DEBUG_VERBOSE("%d-%04x: ucd9081 use vref: %d\n",
                 client->adapter->nr, client->addr, data->vref);

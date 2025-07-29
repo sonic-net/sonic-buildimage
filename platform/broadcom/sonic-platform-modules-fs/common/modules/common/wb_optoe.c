@@ -101,9 +101,64 @@
  * considerably more pages (at least to page 0xAF), which this driver
  * supports.
  *
- * NOTE: This version of the driver ONLY SUPPORTS BANK 0 PAGES on CMIS
- * devices.
+ * For CMIS transceivers that support Banked Pages, access to these pages
+ * is also supported. To access the banked pages, set the number of banks
+ * to access via the `bank_count` sysfs entry.
+ * By default, `bank_count` is set to 0, which disables this feature.
  *
+ * The maximum number of banks supported in this version is 8.
+ *
+ * When access to the Banked Pages is enabled, they are mapped into a linear
+ * address space. The mapping starts right after the Non-Banked Page area,
+ * as shown below.
+ *
+ *                    +-------------------------------+
+ *                    |        Lower Page             |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page 0h) |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page 1h) |
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page Fh) |
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page FFh)|
+ *                    +-------------------------------+
+ *                    +-------------------------------+
+ *                    |        Lower Page             |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page 0h) |
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page Fh) |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 1, Page 10h)|
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 1, Page FFh)|
+ *                    +-------------------------------+
+ *                    +-------------------------------+
+ *                    |        Lower Page             |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page 0h) |
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 0, Page Fh) |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 2, Page 10h)|
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                    +-------------------------------+
+ *                    |  Upper Page (Bank 2, Page FFh)|
+ *                    +-------------------------------+
+ *                    |             ...               |
+ *                         (continued for more banks)
  **/
 
 /* #define DEBUG 1 */
@@ -153,6 +208,12 @@ struct optoe_platform_data {
 
 /* fundamental unit of addressing for EEPROM */
 #define OPTOE_PAGE_SIZE 128
+#define OPTOE_DEFAULT_BANK_COUNT           (1)
+#define OPTOE_MAX_SUPPORTED_BANK_COUNT     (8)
+#define OPTOE_NON_BANKED_PAGE_COUNT        (16)  /* page 00h-0Fh are not banked */
+#define OPTOE_BANKED_PAGE_COUNT            (240) /* page 10h-FFh are banked */
+#define OPTOE_ONE_BANK_MAX_PAGE_COUNT      (OPTOE_BANKED_PAGE_COUNT + OPTOE_NON_BANKED_PAGE_COUNT + 1)
+
 /*
  * Single address devices (eg QSFP) have 256 pages, plus the unpaged
  * low 128 bytes.  If the device does not support paging, it is
@@ -171,6 +232,7 @@ struct optoe_platform_data {
 #define TWO_ADDR_NO_0X51_SIZE (2 * OPTOE_PAGE_SIZE)
 
 /* a few constants to find our way around the EEPROM */
+#define OPTOE_BANK_SELECT_REG   0x7E
 #define OPTOE_PAGE_SELECT_REG   0x7F
 #define ONE_ADDR_PAGEABLE_REG 0x02
 #define QSFP_NOT_PAGEABLE (1<<2)
@@ -199,6 +261,7 @@ struct optoe_data {
 
 	u8 *writebuf;
 	unsigned int write_max;
+	unsigned int bank_count; /* 0 means bank is not supported */
 
 	unsigned int num_addresses;
 
@@ -250,13 +313,17 @@ static const struct i2c_device_id optoe_ids[] = {
 };
 MODULE_DEVICE_TABLE(i2c, optoe_ids);
 
+static uint32_t one_addr_eeprom_size_with_bank(uint32_t bank_count)
+{
+	return bank_count * OPTOE_ONE_BANK_MAX_PAGE_COUNT * OPTOE_PAGE_SIZE;
+}
 /*-------------------------------------------------------------------------*/
 /*
  * This routine computes the addressing information to be used for
  * a given r/w request.
  *
  * Task is to calculate the client (0 = i2c addr 50, 1 = i2c addr 51),
- * the page, and the offset.
+ * the bank, the page, and the offset.
  *
  * Handles both single address (eg QSFP) and two address (eg SFP).
  *     For SFP, offset 0-255 are on client[0], >255 is on client[1]
@@ -279,35 +346,45 @@ MODULE_DEVICE_TABLE(i2c, optoe_ids);
  */
 
 static uint8_t optoe_translate_offset(struct optoe_data *optoe,
-		loff_t *offset, struct i2c_client **client)
+		loff_t *offset, struct i2c_client **client, uint8_t *bank)
 {
-	unsigned int page = 0;
+	unsigned int tmp_page = 0;
+	unsigned int act_page = 0;
 
 	*client = optoe->client[0];
-
-	/* if SFP style, offset > 255, shift to i2c addr 0x51 */
+	/* One module corresponds to one bank; a bank is divided into 257 pages, each page being 128 bytes */
+	/* If using SFP style and the offset exceeds 255, switch to I2C address 0x51 */
 	if (optoe->dev_class == TWO_ADDR) {
 		if (*offset > 255) {
-			/* like QSFP, but shifted to client[1] */
+			/* Similar to QSFP, but switch to client[1] */
 			*client = optoe->client[1];
 			*offset -= 256;
 		}
 	}
 
-	/*
-	 * if offset is in the range 0-128...
-	 * page doesn't matter (using lower half), return 0.
-	 * offset is already correct (don't add 128 to get to paged area)
+	/* 
+	 * Pages start from 0; maximum index is OPTOE_ONE_BANK_MAX_PAGE_COUNT * bank_count
+	 * Note: page will always be positive since *offset >= 128
 	 */
-	if (*offset < OPTOE_PAGE_SIZE)
-		return page;
+    tmp_page = (*offset >> 7) % OPTOE_ONE_BANK_MAX_PAGE_COUNT;
+	*bank = (*offset >> 7) / OPTOE_ONE_BANK_MAX_PAGE_COUNT;
 
-	/* note, page will always be positive since *offset >= 128 */
-	page = (*offset >> 7)-1;
-	/* 0x80 places the offset in the top half, offset is last 7 bits */
+	/* If low page */
+	if (tmp_page == 0) {
+		*offset = *offset & 0x7f;
+		act_page = 0;
+		*bank = 0;
+		return act_page;
+	}
+
 	*offset = OPTOE_PAGE_SIZE + (*offset & 0x7f);
+	act_page = tmp_page - 1;
+	/* If within the first 16 pages, set bank to 0 */
+	if (act_page < OPTOE_NON_BANKED_PAGE_COUNT) {
+		*bank = 0;
+	}
 
-	return page;  /* note also returning client and offset */
+	return act_page; /* Note: also returns client, bank and offset via pointers */
 }
 
 static ssize_t optoe_eeprom_read(struct optoe_data *optoe,
@@ -506,38 +583,71 @@ static ssize_t optoe_eeprom_write(struct optoe_data *optoe,
 	return -ETIMEDOUT;
 }
 
+static ssize_t optoe_eeprom_page_or_bank_set(struct optoe_data *optoe, struct i2c_client *client, uint8_t new_loc, unsigned int offset)
+{
+	int ret = 0;
+	uint8_t current_loc;
+
+	ret = optoe_eeprom_read(optoe, client, &current_loc, offset, 1);
+    if (ret < 0) {
+        dev_dbg(&client->dev, "Read register: 0x%x for get current_loc location failed. ret:%d\n", offset, ret);
+        return ret;
+    }
+
+    /* Only when read and current_loc location is inconsistent, will doing switch */
+    if (current_loc != new_loc) {
+        ret = optoe_eeprom_write(optoe, client, &new_loc,
+            offset, 1);
+        if (ret < 0) {
+            dev_dbg(&client->dev,
+                "Write register: 0x%x for location %d failed ret:%d!\n",
+                    offset, new_loc, ret);
+            return ret;
+        }
+    }
+	return 0;
+}
+
+static ssize_t optoe_eeprom_set_bank_and_page(struct optoe_data *optoe, struct i2c_client *client, uint8_t bank, uint8_t page)
+{
+	int ret = 0;
+
+	if(optoe->bank_count > 1) {
+		ret = optoe_eeprom_page_or_bank_set(optoe, client, bank, OPTOE_BANK_SELECT_REG);
+		if (ret < 0) {
+			dev_dbg(&client->dev, "Set bank register to new bank failed. ret:%d\n", ret);
+			return ret;
+		}
+	}
+
+	ret = optoe_eeprom_page_or_bank_set(optoe, client, page, OPTOE_PAGE_SELECT_REG);
+	if (ret < 0) {
+        dev_dbg(&client->dev, "Set page register to new page failed. ret:%d\n", ret);
+        return ret;
+    }
+
+	return 0;
+}
+
 static ssize_t optoe_eeprom_update_client(struct optoe_data *optoe,
 				char *buf, loff_t off,
 				size_t count, int opcode)
 {
 	struct i2c_client *client;
 	ssize_t retval = 0;
-	uint8_t page = 0;
-    uint8_t loc;
+	uint8_t page = 0, bank = 0;
 	loff_t phy_offset = off;
 	int ret = 0;
 
-	page = optoe_translate_offset(optoe, &phy_offset, &client);
+	page = optoe_translate_offset(optoe, &phy_offset, &client, &bank);
 	dev_dbg(&client->dev,
-		"%s off %lld  page:%d phy_offset:%lld, count:%ld, opcode:%d\n",
-		__func__, off, page, phy_offset, (long int) count, opcode);
+		"%s off %lld bank:%d page:%d phy_offset:%lld, count:%ld, opcode:%d\n",
+		__func__, off, bank, page, phy_offset, (long int) count, opcode);
 
-    ret = optoe_eeprom_read(optoe, client, &loc, OPTOE_PAGE_SELECT_REG, 1);
-    if (ret < 0) {
-        dev_dbg(&client->dev, "Read page register for get now location page failed. ret:%d\n", ret);
+	ret = optoe_eeprom_set_bank_and_page(optoe, client, bank, page);
+	if (ret < 0) {
+        dev_dbg(&client->dev, "Set bank and page register failed. ret:%d\n", ret);
         return ret;
-    }
-
-    /* Only when read and now location page is inconsistent, will doing switch page */
-    if (loc != page) {
-        ret = optoe_eeprom_write(optoe, client, &page,
-            OPTOE_PAGE_SELECT_REG, 1);
-        if (ret < 0) {
-            dev_dbg(&client->dev,
-                "Write page register for page %d failed ret:%d!\n",
-                    page, ret);
-            return ret;
-        }
     }
 
 	while (count) {
@@ -633,8 +743,9 @@ static ssize_t optoe_page_legal(struct optoe_data *optoe,
 		/* if no pages needed, we're good */
 		if ((off + len) <= ONE_ADDR_EEPROM_UNPAGED_SIZE)
 			return len;
+		maxlen = one_addr_eeprom_size_with_bank(optoe->bank_count);
 		/* if offset exceeds possible pages, we're not good */
-		if (off >= ONE_ADDR_EEPROM_SIZE)
+		if (off >= maxlen)
 			return OPTOE_EOF;
 		/* in between, are pages supported? */
 		status = optoe_eeprom_read(optoe, client, &regval,
@@ -658,7 +769,7 @@ static ssize_t optoe_page_legal(struct optoe_data *optoe,
 			maxlen = ONE_ADDR_EEPROM_UNPAGED_SIZE - off;
 		} else {
 			/* Pages supported, trim len to the end of pages */
-			maxlen = ONE_ADDR_EEPROM_SIZE - off;
+			maxlen = maxlen - off;
 		}
 		len = (len > maxlen) ? maxlen : len;
 		dev_dbg(&client->dev,
@@ -868,6 +979,9 @@ static ssize_t set_dev_class(struct device *dev,
 		return -EINVAL;
 
 	mutex_lock(&optoe->lock);
+	if (dev_class != CMIS_ADDR) {
+		optoe->bank_count = 1;
+	}
 	if (dev_class == TWO_ADDR) {
 		/* SFP family */
 		/* if it doesn't exist, create 0x51 i2c address */
@@ -939,6 +1053,53 @@ static ssize_t set_port_name(struct device *dev,
 	return count;
 }
 
+static ssize_t show_bank_count(struct device *dev,
+			struct device_attribute *dattr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct optoe_data *optoe = i2c_get_clientdata(client);
+	ssize_t count;
+
+	mutex_lock(&optoe->lock);
+	count = sprintf(buf, "%u\n", optoe->bank_count);
+	mutex_unlock(&optoe->lock);
+
+	return count;
+}
+
+static ssize_t set_bank_count(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct optoe_data *optoe = i2c_get_clientdata(client);
+	unsigned int bank_count;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &bank_count);
+	if (ret) {
+        dev_err(&client->dev, "Invaild input bank count value [%s], errno: %d\n", buf, ret);
+        return -EINVAL;
+    }
+
+	if (bank_count < 1 || bank_count > OPTOE_MAX_SUPPORTED_BANK_COUNT) {
+		dev_err(&client->dev, "Invaild input bank count: %d, value must in range 1 to %d\n", bank_count, OPTOE_MAX_SUPPORTED_BANK_COUNT);
+		return -EINVAL;
+	}
+
+	mutex_lock(&optoe->lock);
+	/* setting bank size is only supported for the CMIS device */ 
+	if (optoe->dev_class != CMIS_ADDR) {
+		mutex_unlock(&optoe->lock);
+		return -EINVAL;
+	}
+	optoe->bank_count = bank_count;
+	mutex_unlock(&optoe->lock);
+
+	return count;
+}
+
+
 static ssize_t file_cache_rd_show(struct device *dev, struct device_attribute *dattr, char *buf) {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct optoe_data *optoe = i2c_get_clientdata(client);
@@ -986,6 +1147,7 @@ static DEVICE_ATTR(port_name,  0644, show_port_name, set_port_name);
 #endif  /* if NOT defined EEPROM_CLASS, the common case */
 
 static DEVICE_ATTR(dev_class,  0644, show_dev_class, set_dev_class);
+static DEVICE_ATTR(bank_count, 0644, show_bank_count, set_bank_count);
 
 static struct attribute *optoe_attrs[] = {
 #ifndef EEPROM_CLASS
@@ -995,6 +1157,7 @@ static struct attribute *optoe_attrs[] = {
     &dev_attr_file_cache_rd.attr,
     &dev_attr_cache_file_path.attr,
     &dev_attr_mask_file_path.attr,
+    &dev_attr_bank_count.attr,
 	NULL,
 };
 
@@ -1019,6 +1182,7 @@ static int optoe_probe(struct i2c_client *client,
 		goto exit;
 	}
 
+    mem_clear(&chip, sizeof(chip));
 	if (client->dev.platform_data) {
 		chip = *(struct optoe_platform_data *)client->dev.platform_data;
 		/* take the port name from the supplied platform data */
@@ -1091,7 +1255,7 @@ static int optoe_probe(struct i2c_client *client,
 	} else if (strcmp(client->name, "wb_optoe3") == 0) {
 		/* CMIS spec */
 		optoe->dev_class = CMIS_ADDR;
-		chip.byte_len = ONE_ADDR_EEPROM_SIZE;
+		chip.byte_len = one_addr_eeprom_size_with_bank(OPTOE_MAX_SUPPORTED_BANK_COUNT);
 		num_addresses = 1;
 	} else {     /* those were the only choices */
 		err = -EINVAL;
@@ -1102,6 +1266,7 @@ static int optoe_probe(struct i2c_client *client,
 	optoe->use_smbus = use_smbus;
 	optoe->chip = chip;
 	optoe->num_addresses = num_addresses;
+	optoe->bank_count = OPTOE_DEFAULT_BANK_COUNT;
 	memcpy(optoe->port_name, port_name, MAX_PORT_NAME_LEN);
 
     optoe->file_cache_rd = 0;

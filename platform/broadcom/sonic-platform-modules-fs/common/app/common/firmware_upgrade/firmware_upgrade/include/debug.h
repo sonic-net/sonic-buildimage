@@ -23,9 +23,12 @@ enum debug_s {
     DEBUG_IGNORE,                   /* ignore debug */
 };
 
-#define dbg_print(debug, fmt, arg...)  \
-    if (debug == DEBUG_APP_ON || debug == DEBUG_ALL_ON) \
-        { do{printf(fmt,##arg);} while(0); }
+#define dbg_print(debug, fmt, args...) do {                \
+    if (debug == DEBUG_APP_ON || debug == DEBUG_ALL_ON) {  \
+        printf("<Func:%s, Line:%d>: " fmt,                 \
+            __FUNCTION__, __LINE__, ##args);               \
+    }                                                      \
+} while (0)
 
 /* firmware upgrade debug switch */
 extern int firmware_upgrade_debug(void);

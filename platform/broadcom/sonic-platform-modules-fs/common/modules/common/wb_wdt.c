@@ -770,6 +770,7 @@ static int gpio_wdt_init(wb_wdt_priv_t *priv, wb_wdt_device_t *wb_wdt_device)
     gpio_wdt = &priv->gpio_wdt;
 
     if (dev->of_node) {
+        flags = OF_GPIO_ACTIVE_LOW;
         gpio_wdt->gpio = of_get_gpio_flags(dev->of_node, 0, &flags);
     } else {
         gpio_wdt->gpio = wb_wdt_device->wdt_config_mode.gpio_wdt.gpio;

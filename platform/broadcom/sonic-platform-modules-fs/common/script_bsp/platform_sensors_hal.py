@@ -2,7 +2,8 @@
 
 import os
 import sys
-from plat_hal.interface import interface, getplatform_name
+from plat_hal.interface import interface
+from wbutil.baseutil import get_platform_info
 from collections import OrderedDict
 
 class Platoform_sensor_hal(object):
@@ -20,9 +21,10 @@ class Platoform_sensor_hal(object):
         print(msg)
 
     def print_platform(self):
-        platform_info = getplatform_name()
-        self.print_console(platform_info)
-        self.print_console("")
+        status, platform_info = get_platform_info()
+        if status is True:
+            self.print_console(platform_info)
+            self.print_console("")
 
     def print_boardtemp(self):
         try:
@@ -34,7 +36,7 @@ class Platoform_sensor_hal(object):
             MCU_air_inlet1       : 16.5 C (high = 80.0 C)
             '''
             info_dict = self.int_case.get_temp_info_s3ip()
-    
+
             monitor_sensor = []
             for sensor_key, sensor_info in info_dict.items():
                 monitor_one_sensor_dict = OrderedDict()
@@ -46,13 +48,13 @@ class Platoform_sensor_hal(object):
                     monitor_one_sensor_dict["status"] = self.__STATUS_FAILED
                 # monitor_one_sensor_dict['temp1_max_hyst'] = sensor_info["High"]
                 monitor_sensor.append(monitor_one_sensor_dict)
-    
+
             print_info_str = ""
             toptile = "Onboard Temperature Sensors:"
             errformat = "    {id:<25} : {status}"
             # formatstr = "    {id:<20} : {temp1_input} C (high = {temp1_max} C, hyst = {temp1_max_hyst} C)"
             formatstr = "    {id:<25} : {temp1_input} C (high = {temp1_max} C)"
-    
+
             if len(monitor_sensor) != 0:
                 print_info_str += toptile + '\n'
                 for item in monitor_sensor:
@@ -89,7 +91,7 @@ class Platoform_sensor_hal(object):
                     monitor_one_fan_dict["fan_type"] = fan_dict.get(fan.name).get("DisplayName")
                     monitor_one_fan_dict["sn"] = fan_dict.get(fan.name).get("SN")
                     monitor_one_fan_dict["hw_version"] = fan_dict.get(fan.name).get("HW")
-        
+
                     all_rotors_ok = True
                     rotor_speeds = {}
                     for rotor in fan.rotor_list:
@@ -103,7 +105,7 @@ class Platoform_sensor_hal(object):
                     monitor_one_fan_dict["status"] = self.__STATUS_OK if all_rotors_ok else self.__STATUS_NOT_OK
                 monitor_one_fan_dict["rotor_num"] = len(fan.rotor_list)
                 monitor_fans.append(monitor_one_fan_dict)
-    
+
             print_info_str = ""
             toptile = "Onboard fan Sensors:"
             errformat = "    {id} : {status}\n"  # "    {id:<20} : {status}"
@@ -111,7 +113,7 @@ class Platoform_sensor_hal(object):
                 "        fan_type  : {fan_type}\n"  \
                 "        sn        : {sn}\n"  \
                 "        hw_version: {hw_version}\n"  \
-                "        Speed     : {Speed} RPM\n"     \
+                "        Speed     : {Rotor1:<5} RPM\n"     \
                 "        status    : {status} \n"
             fan_double_rotor_format = "    {id} : \n"  \
                 "        fan_type  : {fan_type}\n"  \
@@ -121,7 +123,7 @@ class Platoform_sensor_hal(object):
                 "            speed_front : {Rotor1:<5} RPM\n"     \
                 "            speed_rear  : {Rotor2:<5} RPM\n"     \
                 "        status    : {status} \n"
-    
+
             if len(monitor_fans) != 0:
                 print_info_str += toptile + '\n'
                 for item in monitor_fans:
@@ -217,11 +219,9 @@ class Platoform_sensor_hal(object):
                 monitor_one_sensor_dict = OrderedDict()
                 monitor_one_sensor_dict['id'] = sensor_key
                 try:
-                    monitor_one_sensor_dict['dcdc_input'] = float(sensor_info["Value"]) / 1000
-                    monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
-                    monitor_one_sensor_dict['dcdc_min'] = float(sensor_info["Min"]) / 1000
-                    monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
-                    monitor_one_sensor_dict['dcdc_max'] = float(sensor_info["Max"]) / 1000
+                    monitor_one_sensor_dict['dcdc_input'] = float(sensor_info["Value"])
+                    monitor_one_sensor_dict['dcdc_min'] = float(sensor_info["Min"])
+                    monitor_one_sensor_dict['dcdc_max'] = float(sensor_info["Max"])
                     monitor_one_sensor_dict['dcdc_unit'] = sensor_info["Unit"]
                     monitor_one_sensor_dict["status"] = sensor_info["Status"]
                 except Exception:
@@ -256,7 +256,7 @@ class Platoform_sensor_hal(object):
         self.print_psu_sensor()
         # self.print_slot_sensor()
         self.print_boarddcdc()
-    
+
     def get_sensor_print_src(self):
         return self.int_case.get_sensor_print_src()
 

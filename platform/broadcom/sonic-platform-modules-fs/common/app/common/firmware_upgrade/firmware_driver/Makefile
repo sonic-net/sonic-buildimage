@@ -4,6 +4,7 @@ firmware-y:=
 firmware-y += firmware_driver_ispvme
 firmware-y += firmware_driver_cpld
 firmware-y += firmware_driver_sysfs
+firmware-y += firmware_driver_ispvme_i2c
 
 .PHONY: all
 all: build

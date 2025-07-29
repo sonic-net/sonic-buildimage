@@ -11,5 +11,8 @@ vol_sensor_sysfs.o \
 watchdog_sysfs.o \
 system_sysfs.o \
 eeprom_sysfs.o \
+power_sensor_sysfs.o \
+cabletray_sysfs.o \
+misc_fw_sysfs.o \
 
 obj-m := s3ip_sysfs.o

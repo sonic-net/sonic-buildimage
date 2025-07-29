@@ -3,17 +3,7 @@
 
 struct s3ip_sysfs_temp_sensor_drivers_s {
     int (*get_main_board_temp_number)(void);
-    ssize_t (*get_main_board_temp_alias)(unsigned int temp_index, char *buf, size_t count);
-    ssize_t (*get_main_board_temp_type)(unsigned int temp_index, char *buf, size_t count);
-    ssize_t (*get_main_board_temp_max)(unsigned int temp_index, char *buf, size_t count);
-    int (*set_main_board_temp_max)(unsigned int temp_index, const char *buf, size_t count);
-    ssize_t (*get_main_board_temp_min)(unsigned int temp_index, char *buf, size_t count);
-    int (*set_main_board_temp_min)(unsigned int temp_index, const char *buf, size_t count);
-    ssize_t (*get_main_board_temp_high)(unsigned int temp_index, char *buf, size_t count);
-    int (*set_main_board_temp_high)(unsigned int temp_index, const char *buf, size_t count);
-    ssize_t (*get_main_board_temp_low)(unsigned int temp_index, char *buf, size_t count);
-    int (*set_main_board_temp_low)(unsigned int temp_index, const char *buf, size_t count);
-    ssize_t (*get_main_board_temp_value)(unsigned int temp_index, char *buf, size_t count);
+    ssize_t (*get_temp_attr)(unsigned int temp_index, unsigned int type, char *buf, size_t count);
     ssize_t (*get_main_board_temp_monitor_flag)(unsigned int temp_index, char *buf, size_t count);
 };
 

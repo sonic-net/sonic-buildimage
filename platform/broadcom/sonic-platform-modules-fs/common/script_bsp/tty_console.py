@@ -56,6 +56,7 @@ if __name__ == '__main__':
 
     if not os.path.exists(console_file):
         logger.error("device %s not exist", console_file)
+        time.sleep(5) #delay to satisfy supervisor
         sys.exit(1)
 
     nopen = 3
@@ -69,6 +70,7 @@ if __name__ == '__main__':
             nopen = nopen - 1
             time.sleep(1)
     if nopen == 0:
+        time.sleep(5) #delay to satisfy supervisor
         sys.exit(1)
 
     try:

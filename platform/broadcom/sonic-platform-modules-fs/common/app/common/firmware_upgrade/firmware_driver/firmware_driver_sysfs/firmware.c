@@ -2,19 +2,19 @@
 #include <linux/module.h>
 #include <firmware_sysfs.h>
 
-int g_firmware_driver_debug = 0;
-module_param(g_firmware_driver_debug, int, S_IRUGO | S_IWUSR);
+int g_firmware_sysfs_driver_debug = 0;
+module_param(g_firmware_sysfs_driver_debug, int, S_IRUGO | S_IWUSR);
 
 static LIST_HEAD(drv_list);
 static LIST_HEAD(dev_list);
 
 /**
- * firmware_driver_register
+ * firmware_sysfs_driver_register
  * function:Registered Device Driver
  * @fw_drv:param[in] Driver information
  * return value : success--FIRMWARE_SUCCESS; fail--FIRMWARE_FAILED
  */
-int firmware_driver_register(firmware_driver_t *fw_drv)
+int firmware_sysfs_driver_register(firmware_driver_t *fw_drv)
 {
     int ret;
 
@@ -37,21 +37,21 @@ int firmware_driver_register(firmware_driver_t *fw_drv)
 }
 
 /**
- * firmware_driver_unregister
+ * firmware_sysfs_driver_unregister
  * function:unregister Device Driver
  * @fw_drv:param[in] Driver information
  */
-void firmware_driver_unregister(firmware_driver_t *fw_drv)
+void firmware_sysfs_driver_unregister(firmware_driver_t *fw_drv)
 {
     list_del_init(&fw_drv->list);
     platform_driver_unregister(fw_drv->drv);
 }
 
 /*
- * firmware_get_device_by_minor
+ * firmware_sysfs_get_device_by_minor
  * function: Get device information based on minor
  */
-firmware_device_t *firmware_get_device_by_minor(int minor)
+firmware_device_t *firmware_sysfs_get_device_by_minor(int minor)
 {
     firmware_device_t *tmp;
 
@@ -65,12 +65,12 @@ firmware_device_t *firmware_get_device_by_minor(int minor)
 }
 
 /**
- * firmware_device_register
+ * firmware_sysfs_device_register
  * function:Registered Driver Device
  * @fw_dev: param[in] Driver information
  * return value:success--FIRMWARE_SUCCESS; fail--FIRMWARE_FAILED
  */
-int firmware_device_register(firmware_device_t *fw_dev)
+int firmware_sysfs_device_register(firmware_device_t *fw_dev)
 {
     int ret;
     firmware_device_t *tmp;
@@ -100,10 +100,10 @@ int firmware_device_register(firmware_device_t *fw_dev)
 }
 
 /**
- * firmware_device_unregister
+ * firmware_sysfs_device_unregister
  * function: unregister Driver Device
  */
-void firmware_device_unregister(firmware_device_t *fw_dev)
+void firmware_sysfs_device_unregister(firmware_device_t *fw_dev)
 {
     list_del(&fw_dev->list);
     misc_deregister(&fw_dev->dev);

@@ -14,7 +14,7 @@ static int firmware_sysfs_open(struct inode *inode, struct file *file)
     firmware_device_t *frm_dev;
 
     FIRMWARE_DRIVER_DEBUG_VERBOSE("Open device.\n");
-    frm_dev = firmware_get_device_by_minor(MINOR(inode->i_rdev));
+    frm_dev = firmware_sysfs_get_device_by_minor(MINOR(inode->i_rdev));
     if (frm_dev == NULL) {
         return -ENXIO;
     }
@@ -106,7 +106,7 @@ static long firmware_sysfs_ioctl(struct file *file, unsigned int cmd, unsigned l
         }
         break;
     default:
-        FIRMWARE_DRIVER_DEBUG_ERROR("not find cmd: %d\r\n", cmd);
+        FIRMWARE_DRIVER_DEBUG_ERROR("not find cmd: %d\n", cmd);
         return -ENOTTY;
     } /* End of switch */
 
@@ -138,9 +138,9 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t 
     firmware_logic_dev_en_t *firmware_logic_dev_en_point;
     uint32_t test_base, test_size;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_dev_loc_config_init\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_dev_loc_config_init\n");
     if (sysfs_info == NULL) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\r\n");
+        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\n");
         return -1;
     }
 
@@ -320,9 +320,9 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_sysfs_t *sy
     firmware_upgrade_device_t *firmware_upgrade_device;
     firmware_sysfs_device_t sysfs_upg_device;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_dev_loc_config_init\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_dev_loc_config_init\n");
     if (sysfs_info == NULL) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\r\n");
+        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\n");
         return -1;
     }
 
@@ -398,7 +398,7 @@ static int firmware_sysfs_probe(struct platform_device *pdev)
     firmware_sysfs_t *sysfs_info;
     firmware_device_t *frm_dev;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_sysfs_probe\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_sysfs_probe\n");
     sysfs_info = devm_kzalloc(&pdev->dev, sizeof(firmware_sysfs_t), GFP_KERNEL);
     if (sysfs_info == NULL) {
         FIRMWARE_DRIVER_DEBUG_ERROR("Failed to kzalloc device tree.\n");
@@ -434,7 +434,7 @@ static int firmware_sysfs_probe(struct platform_device *pdev)
 
     FIRMWARE_DRIVER_DEBUG_VERBOSE("Register sysfs firmware chain:%d, name:%s.\n", frm_dev->chain, frm_dev->name);
 
-    ret = firmware_device_register(frm_dev);
+    ret = firmware_sysfs_device_register(frm_dev);
     if (ret < 0) {
         FIRMWARE_DRIVER_DEBUG_ERROR("Failed to register firmware device.\n");
         return -EPERM;
@@ -449,7 +449,7 @@ static int __exit firmware_sysfs_remove(struct platform_device *pdev)
     firmware_device_t *frm_dev;
 
     frm_dev = (firmware_device_t *)platform_get_drvdata(pdev);
-    firmware_device_unregister(frm_dev);
+    firmware_sysfs_device_unregister(frm_dev);
     platform_set_drvdata(pdev, NULL);
 
     return 0;
@@ -483,7 +483,7 @@ int firmware_sysfs_init(void)
 
     INIT_LIST_HEAD(&fmw_drv_sysfs.list);
     FIRMWARE_DRIVER_DEBUG_VERBOSE("sysfs upgrade driver register \n");
-    ret = firmware_driver_register(&fmw_drv_sysfs);
+    ret = firmware_sysfs_driver_register(&fmw_drv_sysfs);
     if (ret < 0) {
         FIRMWARE_DRIVER_DEBUG_ERROR("sysfs upgrade driver register failed\n");
         return ret;
@@ -493,6 +493,6 @@ int firmware_sysfs_init(void)
 
 void firmware_sysfs_exit(void)
 {
-    firmware_driver_unregister(&fmw_drv_sysfs);
+    firmware_sysfs_driver_unregister(&fmw_drv_sysfs);
     INIT_LIST_HEAD(&fmw_drv_sysfs.list);
 }

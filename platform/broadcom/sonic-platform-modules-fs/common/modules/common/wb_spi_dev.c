@@ -2,6 +2,7 @@
  * wb_spi_dev.c
  * ko to read/write spi device through /dev/XXX device
  */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -24,8 +25,6 @@
 
 #define OP_READ             (0x3)
 #define OP_WRITE            (0x2)
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
 
 /* Use the wb_bsp_kernel_debug header file must define debug variable */
 static int debug = 0;
@@ -412,7 +411,7 @@ static ssize_t spi_dev_read_user(struct file *file, char __user *buf, size_t cou
 {
     int ret;
 
-    DEBUG_VERBOSE("spi_dev_read_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("spi_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = spi_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -477,7 +476,7 @@ static ssize_t spi_dev_write(struct file *file, const char __user *buf,
         mem_clear(bsp_log_dev_name, sizeof(bsp_log_dev_name));
         mem_clear(bsp_log_file_path, sizeof(bsp_log_file_path));
         snprintf(bsp_log_dev_name, sizeof(bsp_log_dev_name), "[Devfs]");
-        snprintf(bsp_log_file_path, sizeof(bsp_log_dev_name), "%s.%s_bsp_key_reg", BSP_LOG_DIR, spi_dev->name);
+        snprintf(bsp_log_file_path, sizeof(bsp_log_file_path), "%s.%s_bsp_key_reg", BSP_LOG_DIR, spi_dev->name);
         (void)wb_bsp_key_device_log(bsp_log_dev_name, bsp_log_file_path, WB_BSP_LOG_MAX,
                 &(spi_dev->log_node), (uint32_t)*offset, val, count);
     }
@@ -497,7 +496,7 @@ static ssize_t spi_dev_write_user(struct file *file, const char __user *buf, siz
 {
     int ret;
 
-    DEBUG_VERBOSE("spi_dev_write_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("spi_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = spi_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -544,6 +543,8 @@ static loff_t spi_dev_llseek(struct file *file, loff_t offset, int origin)
         if (((file->f_pos + offset) > spi_dev->spi_len) || ((file->f_pos + offset) < 0)) {
             DEBUG_ERROR("SEEK_CUR out of range, f_ops: %lld, offset: %lld\n",
                  file->f_pos, offset);
+            ret = - EINVAL;
+            break;
         }
         file->f_pos += offset;
         ret = file->f_pos;
@@ -928,7 +929,7 @@ static ssize_t file_cache_rd_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", spi_dev->file_cache_rd);
+    return snprintf(buf, PAGE_SIZE, "%u\n", spi_dev->file_cache_rd);
 }
 
 static ssize_t file_cache_rd_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -1138,6 +1139,7 @@ static int of_spi_dev_config_init(struct spi_device *spi, struct spi_dev_info *s
         DEBUG_VERBOSE("Don't support bsp key record.\n");
         spi_dev->log_node.log_num = 0;
     }
+
 
     DEBUG_VERBOSE("spi_name: %s, spi_alias: %s, data_bus_width: %d, addr_bus_width: %d, per_rd_len: %d, per_wr_len: %d, spi_len: 0x%x\n",
         spi_dev->name, spi_dev->alias, spi_dev->data_bus_width, spi_dev->addr_bus_width, spi_dev->per_rd_len,

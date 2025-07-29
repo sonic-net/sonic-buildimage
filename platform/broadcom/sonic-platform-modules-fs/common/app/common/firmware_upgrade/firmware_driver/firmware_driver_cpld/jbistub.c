@@ -822,7 +822,7 @@ DWORD get_tick_count(void)
 #define DELAY_SAMPLES 10
 #define DELAY_CHECK_LOOPS 10000
 
-void calibrate_delay(void)
+static void jbi_calibrate_delay(void)
 {
 #if PORT == WINDOWS || PORT == DOS
     int sample = 0;
@@ -1176,7 +1176,7 @@ int main(int argc, char **argv)
             /*
             *   Calibrate the delay loop function
             */
-            calibrate_delay();
+            jbi_calibrate_delay();
 
             /*
             *   Check CRC
@@ -2373,7 +2373,7 @@ int jbi_main(unsigned char *addr, unsigned long size, int argc, char * const arg
     }
 
     /* Calibrate the delay loop function */
-    calibrate_delay();
+    jbi_calibrate_delay();
 
     jbi_init_mm();
 

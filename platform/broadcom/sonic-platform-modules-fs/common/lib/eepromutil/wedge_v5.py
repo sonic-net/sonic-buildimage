@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import re
 
@@ -44,6 +44,11 @@ class WedgeV5():
     FBWV5_SWITCH_ASIC_MAC_LEN = 8
     FBWV5_META_RESERVED_MAC = 0x14
     FBWV5_META_RESERVED_MAC_LEN = 8
+    FBWV6_META_RMA = 0x15
+    FBWV6_META_RMA_LEN = 1
+    FBWV6_META_VENDOR_DEFINED_FIELD_1 = 0x65
+    FBWV6_META_VENDOR_DEFINED_FIELD_2 = 0x66
+    FBWV6_META_VENDOR_DEFINED_FIELD_3 = 0x67
     FBWV5_CRC16 = 0xFA
 
 
@@ -144,6 +149,22 @@ class WedgeV5():
         return self._MetaReservedMAC_SIZE
 
     @property
+    def rma(self):
+        return self._RMA
+
+    @property
+    def vendor_defined_field_1(self):
+        return self._VendorDefinedField1
+
+    @property
+    def vendor_defined_field_2(self):
+        return self._VendorDefinedField2
+
+    @property
+    def vendor_defined_field_3(self):
+        return self._VendorDefinedField3
+
+    @property
     def crc16(self):
         return self._crc16
 
@@ -173,6 +194,10 @@ class WedgeV5():
         self._SWITCH_ASIC_MAC_SIZE = ""
         self._MetaReservedMAC = ""
         self._MetaReservedMAC_SIZE = ""
+        self._RMA = ""
+        self._VendorDefinedField1 = ""
+        self._VendorDefinedField2 = ""
+        self._VendorDefinedField3 = ""
         self._crc16 = ""
 
     def crc_ccitt(self, data, crc_init=0xFFFF, poly=0x1021):
@@ -473,13 +498,40 @@ class WedgeV5():
             _len = ord(t[1])
             value = "0x%04X" % ((ord(t[2]) << 8) | (ord(t[3])))
             self._crc16 = value
+        elif ord(t[0]) == self.FBWV6_META_RMA :
+            name = "RMA"
+            _len = ord(t[1])
+            if _len != self.FBWV6_META_RMA_LEN:
+                raise WedgeException("Invalid RMA len: %d" % _len, -1)
+            value = ord(t[2])
+            self._RMA = value
+        elif ord(t[0]) == self.FBWV6_META_VENDOR_DEFINED_FIELD_1:
+            name = "Vendor Defined Field 1"
+            _len = ord(t[1])
+            value = ""
+            for c in t[2:2 + ord(t[1])]:
+                value += "0x%02X " % (ord(c),)
+            self._VendorDefinedField1 = value
+        elif ord(t[0]) == self.FBWV6_META_VENDOR_DEFINED_FIELD_2:
+            name = "Vendor Defined Field 2"
+            _len = ord(t[1])
+            value = ""
+            for c in t[2:2 + ord(t[1])]:
+                value += "0x%02X " % (ord(c),)
+            self._VendorDefinedField2 = value
+        elif ord(t[0]) == self.FBWV6_META_VENDOR_DEFINED_FIELD_3:
+            name = "Vendor Defined Field 3"
+            _len = ord(t[1])
+            value = ""
+            for c in t[2:2 + ord(t[1])]:
+                value += "0x%02X " % (ord(c),)
+            self._VendorDefinedField3 = value
         else:
             name = "Unknown"
             _len = ord(t[1])
             value = ""
             for c in t[2:2 + ord(t[1])]:
                 value += "0x%02X " % (ord(c),)
-            raise WedgeException("Unknown Wedge EEPROM Format V5 TLV type: 0x%02x, len: %d, value: %s" % (ord(t[0]), ord(t[1]), value), -1)
         ret.append({"name": name, "code": ord(t[0]), "value": value, "lens": _len})
         return ret
 
@@ -504,7 +556,7 @@ class WedgeV5():
         e2_index += 2
 
         # E2 Version check
-        if ord(e2[e2_index]) != self.VERSION:
+        if ord(e2[e2_index]) < self.VERSION:
             raise WedgeException("Wedge eeprom version: 0x%02x, not V5 format" % ord(e2[e2_index]), -10)
         e2_index += 1
 

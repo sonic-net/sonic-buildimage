@@ -28,9 +28,6 @@ complie_clean_dirs := $(addprefix _clean_,$(clean_dirs) )
 build: COMPILE_WHL
 	@echo "build success"
 
-build: $(CUSTOMS_DIRS)
-	@echo "build success"
-
 $(custom_clean_dirs):
 	$(MAKE) -C $(patsubst _clean_%,%,$@) clean
 
@@ -57,19 +54,23 @@ COMPILE_WHL: $(COMPILE_DIRS)
 		cp -r $(MOD_SRC_DIR)/common/lib/wbutil $(MOD_SRC_DIR)/$${mod}/; \
 		cp -r $(MOD_SRC_DIR)/common/lib/eepromutil $(MOD_SRC_DIR)/$${mod}/; \
 		cp -r $(MOD_SRC_DIR)/common/lib/restful_util $(MOD_SRC_DIR)/$${mod}/; \
+		cp -r $(MOD_SRC_DIR)/common/lib/public $(MOD_SRC_DIR)/$${mod}/; \
 		cp -r $(MOD_SRC_DIR)/common/sonic_platform $(MOD_SRC_DIR)/$${mod}/; \
 		cp $(MOD_SRC_DIR)/common/script_bsp/hal_pltfm.py $(MOD_SRC_DIR)/$${mod}/hal_pltfm.py; \
 		cp $(MOD_SRC_DIR)/common/script_bsp/platform_util.py $(MOD_SRC_DIR)/$${mod}/platform_util.py; \
 		cp $(MOD_SRC_DIR)/common/script_bsp/platform_intf.py $(MOD_SRC_DIR)/$${mod}/platform_intf.py; \
+		cp $(MOD_SRC_DIR)/common/script/port_util.py $(MOD_SRC_DIR)/$${mod}/port_util.py; \
 		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/plat_hal; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/wbutil; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/eepromutil; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/restful_util; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/public; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/sonic_platform; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/hal_pltfm.py; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/platform_intf.py; \
 		rm -rf $(MOD_SRC_DIR)/$${mod}/platform_util.py; \
+		rm -rf $(MOD_SRC_DIR)/$${mod}/port_util.py; \
 		cd $(MOD_SRC_DIR); \
 	done)
 

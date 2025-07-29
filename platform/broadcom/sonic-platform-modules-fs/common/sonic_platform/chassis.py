@@ -20,11 +20,12 @@ try:
     # from sonic_platform.watchdog import Watchdog
     from sonic_platform.component import Component
     from sonic_platform.eeprom import Eeprom
-    from sonic_platform.dcdc import Dcdc, VoltageSensor, CurrentSensor
+    from sonic_platform.dcdc import Dcdc
     from plat_hal.baseutil import baseutil
 
     from plat_hal.interface import interface
     from time import monotonic as _time
+    from port_util import get_port_config
 
 except ImportError as error:
     raise ImportError(str(error) + "- required module not found")from error
@@ -59,8 +60,14 @@ class Chassis(ChassisBase):
         # So that sfp.py implementation can be generic to all platforms
         try:
             self._sfp_list = []
-            self.port_num = baseutil.get_config().get("sfps", None).get("port_num", 0)
-            self.port_start_index = baseutil.get_config().get("sfps", None).get("port_index_start", 0)
+            # 从独立的 {platform}_port_config.py 文件中加载配置
+            port_config, err = get_port_config()
+            if port_config:
+                sfp_config = port_config.get("sfps", None)
+            else:
+                sfp_config = baseutil.get_config().get("sfps", None)
+            self.port_num = sfp_config.get("port_num", 0)
+            self.port_start_index = sfp_config.get("port_index_start", 0)
             # fix problem with first index is 1, we add a fake sfp node
             if self.port_start_index == 1:
                 self._sfp_list.append(Sfp(1))
@@ -104,23 +111,9 @@ class Chassis(ChassisBase):
             self._component_list.append(componentobj)
 
         dcdc_num = self.int_case.get_dcdc_total_number()
-        vol_index = 1
-        curr_index = 1
         for index in range(dcdc_num):
             dcdcobj = Dcdc(self.int_case, index + 1)
             self._dcdc_list.append(dcdcobj)
-            dcdc_id = "DCDC" + str(index + 1)
-            dcdc_unit = self.int_case.get_dcdc_unit_by_id(dcdc_id)
-
-            if dcdc_unit == "V" or dcdc_unit == "mV":
-                volobj = VoltageSensor(self.int_case, index + 1, vol_index)
-                self._voltage_sensor_list.append(volobj)
-                vol_index += 1
-
-            if dcdc_unit == "A" or dcdc_unit == "mA":
-                currobj = CurrentSensor(self.int_case, index + 1, curr_index)
-                self._current_sensor_list.append(currobj)
-                curr_index += 1
 
     def get_name(self):
         """
@@ -253,29 +246,6 @@ class Chassis(ChassisBase):
         ret, color = self.int_case.get_led_color_by_type('SYS_LED')
         if ret is True:
             return color
-        return 'N/A'
-
-    def set_uid_led(self, color):
-        """
-        Sets the state of the system UID LED
-
-        Args:
-            color: A string representing the color with which to set the
-                   system UID LED
-
-        Returns:
-            bool: True if system LED state is set successfully, False if not
-        """
-        return False
-
-    def get_uid_led(self):
-        """
-        Gets the state of the system UID LED
-
-        Returns:
-            A string, one of the valid LED color strings which could be vendor
-            specified.
-        """
         return 'N/A'
 
     def get_base_mac(self):

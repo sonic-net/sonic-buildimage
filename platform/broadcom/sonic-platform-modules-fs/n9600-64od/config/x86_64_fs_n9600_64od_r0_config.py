@@ -1013,12 +1013,12 @@ DRIVERLISTS = [
     {"name": "wb_fpga_pca954x_drv", "delay": 0},
     {"name": "wb_fpga_pca954x_device", "delay": 0},
     {"name": "wb_i2c_dev_device", "delay": 0},
-    {"name": "mdio_bitbang", "delay": 0},
-    {"name": "mdio_gpio", "delay": 0},
-    {"name": "wb_mdio_gpio_device gpio_mdc=69 gpio_mdio=70 gpio_chip_name=INTC3001:00", "delay": 0},
+#    {"name": "mdio_bitbang", "delay": 0},
+#    {"name": "mdio_gpio", "delay": 0},
+#    {"name": "wb_mdio_gpio_device gpio_mdc=69 gpio_mdio=70 gpio_chip_name=INTC3001:00", "delay": 0},
     {"name": "wb_wdt", "delay": 0},
     {"name": "wb_wdt_device", "delay": 0},
-    {"name": "wb_eeprom_93xx46", "delay": 0},
+#    {"name": "wb_eeprom_93xx46", "delay": 0},
     {"name": "wb_lm75", "delay": 0},
     {"name": "wb_tmp401", "delay": 0},
     {"name": "ct7148", "delay": 0},
@@ -1132,7 +1132,7 @@ INIT_COMMAND = [
     ]
 
 UPGRADE_SUMMARY = {
-    "devtype": 0x40d7,
+    "devtype": 0x40e9,
 
     "slot0": {
         "subtype": 0,

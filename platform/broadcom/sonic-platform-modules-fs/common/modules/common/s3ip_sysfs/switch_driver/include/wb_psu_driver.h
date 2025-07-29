@@ -68,13 +68,7 @@ ssize_t dfd_get_psu_alarm_status(unsigned int psu_index, char *buf, size_t count
  */
 ssize_t dfd_get_psu_fan_ratio_str(unsigned int psu_index, char *buf, size_t count);
 ssize_t dfd_set_psu_fan_ratio_str(unsigned int psu_index, int pwm);
-/**
- * dfd_get_psu_pmbus_status - Get power Status Word
- * @index: Number of the power supply, starting from 1
- * return: Success: Length of the status string
- *       : Negative value - Read failed
- */
-ssize_t dfd_get_psu_pmbus_status(unsigned int psu_index, int *status);
+
 /**
  * dfd_get_psu_present_status - Obtain the power supply status
  * @index: Number of the power supply, starting from 1
@@ -86,9 +80,20 @@ int dfd_get_psu_present_status(unsigned int psu_index);
 
 ssize_t dfd_get_psu_threshold_str(unsigned int psu_index, unsigned int type, char *buf, size_t count);
 
+ssize_t dfd_get_psu_status_str(unsigned int psu_index, char *buf, size_t count);
+
 ssize_t dfd_get_psu_hw_status_str(unsigned int psu_index, char *buf, size_t count);
+
+ssize_t dfd_get_psu_hw_detail_status_str(unsigned int psu_index, char *buf, size_t count);
 
 ssize_t dfd_get_psu_blackbox(unsigned int psu_index, char *buf, size_t count);
 ssize_t dfd_get_psu_pmbus(unsigned int psu_index, char *buf, size_t count);
 int dfd_clear_psu_blackbox(unsigned int psu_index, uint8_t value);
+
+ssize_t dfd_get_psu_support_upgrade_func(unsigned int psu_index, char *buf, size_t count);
+
+ssize_t dfd_get_psu_upgrade_active_type_func(unsigned int psu_index, char *buf, size_t count);
+
+int dfd_set_psu_reset_func(unsigned int psu_index, uint8_t value);
+
 #endif /* _WB_PSU_DRIVER_H_ */

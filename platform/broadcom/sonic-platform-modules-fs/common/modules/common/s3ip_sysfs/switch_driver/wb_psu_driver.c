@@ -19,15 +19,152 @@
 #include "dfd_cfg_adapter.h"
 #include "dfd_cfg_info.h"
 #include "dfd_frueeprom.h"
+#include "dfd_cfg_file.h"
 
 #define PSU_SIZE                         (256)
-#define WB_GET_PSU_PMBUS_BUS(addr)       (((addr) >> 24) & 0xff)
-#define WB_GET_PSU_PMBUS_ADDR(addr)      (((addr) >> 8) & 0xffff)
-#define WB_GET_PSU_PMBUS_OFFSET(addr)    ((addr) & 0xff)
+#define WB_GET_PSU_PMBUS_BUS(addr)       (((addr) >> 16) & 0xffff)
+#define WB_GET_PSU_PMBUS_ADDR(addr)      ((addr) & 0xffff)
 #define DFD_PSU_FRU_MODE_E2_STRING       "eeprom"
 #define DFD_PSU_FRU_MODE_PMBUS_STRING    "pmbus"
 
-#define PSU_PMBUS_POWER_GOOD        BIT(11)
+#define PSU_PMBUS_POWER_GOOD          BIT(11)
+#define PSU_PMBUS_TEMPERATURE         BIT(2)
+#define PSU_PMBUS_IOUT_OC             BIT(4)
+#define PSU_PMBUS_FAN                 BIT(10)
+#define PSU_PMBUS_INPUT               BIT(13)
+#define PSU_PMBUS_IOUT_POUT           BIT(14)
+#define PSU_PMBUS_VOUT                BIT(15)
+
+typedef enum psu_status_e {
+    PSU_STATUS_ABSENT               = 0, /* psu absent */
+    PSU_STATUS_OK                   = 1, /* psu present and status ok */
+    PSU_STATUS_WARN                 = 2, /* psu present and status warn (pmbus 0x79 bit11 value 0)*/
+    PSU_STATUS_OUTPUT_FAIL          = 3, /* psu present and status fail (pmbus 0x79 bit11 value 1 and bit13 value 0)*/
+    PSU_STATUS_INPUT_OUTPUT_FAIL    = 4, /* psu present and status fail (pmbus 0x79 bit11 value 1 and bit13 value 1)*/
+} psu_status_t;
+
+typedef enum psu_status_word_e {
+    PSU_VOUT_FAULT = 0x8000,
+    PSU_IOUT_FAULT = 0x4000,
+    PSU_INPUT_FAULT = 0x2000,
+    PSU_MFR_FAULT = 0x1000,
+    PSU_PG_FAULT = 0x0800,
+    PSU_FAN_FAULT = 0x0400,
+    PSU_OFF_FAULT = 0x0040,
+    PSU_TEMP_FAULT = 0x0004,
+} psu_status_word_t;
+
+typedef struct {
+    const char *sysfs_name;
+    const char *attr_name;
+    uint32_t mask;
+} psu_pmbus_status_extra_info_t;
+
+typedef struct {
+    const char *attr_name;
+    uint32_t bit_offset;
+    const psu_pmbus_status_extra_info_t *extra_info;
+    size_t extra_info_len;
+} psu_pmbus_status_info_t;
+
+static const psu_pmbus_status_extra_info_t psu_pmbus_input_fault_infos[] = {
+    {
+        .sysfs_name = PMBUS_STATUS_INPUT_SYSFS,
+        .attr_name = "INPUT_UNDER_FAULT",
+        .mask = (BIT(3) | BIT(4)),
+    },
+    {
+        .sysfs_name = PMBUS_STATUS_INPUT_SYSFS,
+        .attr_name = "INPUT_OVER_FAULT",
+        .mask = BIT(7),
+    },
+};
+
+static const psu_pmbus_status_extra_info_t psu_pmbus_output_fault_infos[] = {
+    {
+        .sysfs_name = PMBUS_STATUS_VOUT_SYSFS,
+        .attr_name = "VOUT_OVER_FAULT",
+        .mask = BIT(7),
+    },
+    {
+        .sysfs_name = PMBUS_STATUS_VOUT_SYSFS,
+        .attr_name = "VOUT_UNDER_FAULT",
+        .mask = BIT(4),
+    },
+};
+
+static const psu_pmbus_status_info_t psu_pmbus_status_fault_infos[] = {
+    {
+        .attr_name = "TEMPERATURE_FAULT",
+        .bit_offset = PSU_PMBUS_TEMPERATURE,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+    {
+        .attr_name = "IOUT_OC_FAULT",
+        .bit_offset = PSU_PMBUS_IOUT_OC,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+    {
+        .attr_name = "FAN_FAULT",
+        .bit_offset = PSU_PMBUS_FAN,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+    {
+        .attr_name = "INPUT_FAULT",
+        .bit_offset = PSU_PMBUS_INPUT,
+        .extra_info = psu_pmbus_input_fault_infos,
+        .extra_info_len = ARRAY_SIZE(psu_pmbus_input_fault_infos)
+    },
+    {
+        .attr_name = "VOUT_FAULT",
+        .bit_offset = PSU_PMBUS_VOUT,
+        .extra_info = psu_pmbus_output_fault_infos,
+        .extra_info_len = ARRAY_SIZE(psu_pmbus_output_fault_infos)
+    },
+};
+
+static const psu_pmbus_status_extra_info_t psu_pmbus_input_warn_infos[] = {
+    {
+        .sysfs_name = PMBUS_STATUS_INPUT_SYSFS,
+        .attr_name = "INPUT_UNDER_WARN",
+        .mask = BIT(5),
+    },
+    {
+        .sysfs_name = PMBUS_STATUS_INPUT_SYSFS,
+        .attr_name = "INPUT_OVER_WARN",
+        .mask = BIT(6),
+    },
+};
+
+static const psu_pmbus_status_info_t psu_pmbus_status_warn_infos[] = {
+    {
+        .attr_name = "TEMPERATURE_WARN",
+        .bit_offset = PSU_PMBUS_TEMPERATURE,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+    {
+        .attr_name = "FAN_WARN",
+        .bit_offset = PSU_PMBUS_FAN,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+    {
+        .attr_name = "INPUT_WARN",
+        .bit_offset = PSU_PMBUS_INPUT,
+        .extra_info = psu_pmbus_input_warn_infos,
+        .extra_info_len = ARRAY_SIZE(psu_pmbus_input_warn_infos)
+    },
+    {
+        .attr_name = "IOUT_POUT_WARN",
+        .bit_offset = PSU_PMBUS_IOUT_POUT,
+        .extra_info = NULL,
+        .extra_info_len = 0
+    },
+};
 
 typedef enum dfd_psu_pmbus_type_e {
     DFD_PSU_PMBUS_TYPE_AC      = 1,
@@ -61,6 +198,7 @@ typedef enum psu_fru_mode_e {
     PSU_FRU_MODE_E2,         /* eeprom */
     PSU_FRU_MODE_PMBUS,      /*pmbus*/
 } fan_eeprom_mode_t;
+
 
 /* PMBUS STATUS WORD decode */
 #define PSU_STATUS_WORD_CML             (1 << 1)
@@ -131,48 +269,6 @@ static char *dfd_get_psu_sysfs_name(void)
     return sysfs_name;
 }
 
-static void dfd_psu_del_no_print_string(char *buf)
-{
-    int i, len;
-
-    len = strlen(buf);
-    /* Culling noncharacter */
-    for (i = 0; i < len; i++) {
-        if ((buf[i] < 0x21) || (buf[i] > 0x7E)) {
-            buf[i] = '\0';
-            break;
-        }
-    }
-    return;
-}
-
-/*
-* Removes trailing spaces from the end of a given string.
-* @param str The string from which to remove trailing spaces.
-*/
-static void dfd_trim_trailing_spaces(char *str)
-{
-    int i, len;
-
-    if (str == NULL) {
-        return;
-    }
-
-    len = strlen(str);
-    if (len == 0) {
-        return;
-    }
-
-    /* Use a for loop to iterate from the end of the string to the beginning */
-    for (i = len - 1; i >= 0; --i) {
-        if (str[i] != ' ') {
-            /* If a non-space character is found, break the loop */
-            break;
-        }
-        str[i] = '\0'; /* Replace the space with the null terminator */
-    }
-}
-
 /**
  * dfd_get_psu_present_status - Obtain the power supply status
  * @index: Number of the power supply, starting from 1
@@ -211,7 +307,7 @@ ssize_t dfd_get_psu_present_status_str(unsigned int psu_index, char *buf, size_t
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
             count, psu_index);
         return -EINVAL;
     }
@@ -225,29 +321,131 @@ ssize_t dfd_get_psu_present_status_str(unsigned int psu_index, char *buf, size_t
     return (ssize_t)snprintf(buf, count, "%d\n", ret);
 }
 
-ssize_t dfd_get_psu_pmbus_status(unsigned int psu_index, int *status)
+static ssize_t dfd_get_psu_pmbus_path(unsigned int psu_index, char *sysfs_path, int size)
 {
+    uint16_t addr;
+    uint16_t bus;
     int key;
-    int ret;
-    char psu_buf[PSU_SIZE];
+    uint32_t *psu_pmbus_addr;
 
-    /* PMBUS STATUS WORD (0x79) */
-    mem_clear(psu_buf, sizeof(psu_buf));
-    key = DFD_CFG_KEY(DFD_CFG_ITEM_HWMON_PSU, psu_index, PSU_HW_STATUS);
-    ret = dfd_info_get_sensor(key, psu_buf, sizeof(psu_buf), NULL);
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_PMBUS_ADDR, psu_index, 0);
+    psu_pmbus_addr = dfd_ko_cfg_get_item(key);
+    if (psu_pmbus_addr == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus addr error, key: 0x%x\n", key);
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+
+    addr = WB_GET_PSU_PMBUS_ADDR(*psu_pmbus_addr);
+    bus = WB_GET_PSU_PMBUS_BUS(*psu_pmbus_addr);
+
+    snprintf(sysfs_path, size, "/sys/bus/i2c/devices/%d-%04x/", bus, addr);
+    return 0;
+}
+
+static ssize_t dfd_get_psu_pmbus_val(unsigned int psu_index, int *val, const char *sysfs_name)
+{
+    int ret, rd_len;
+    char psu_pmbus_path[DFD_SYSFS_PATH_MAX_LEN];
+    char sysfs_path[DFD_SYSFS_PATH_MAX_LEN];
+    char tmp_buf[INFO_BUF_MAX_LEN];
+
+    mem_clear(psu_pmbus_path, sizeof(psu_pmbus_path));
+    ret = dfd_get_psu_pmbus_path(psu_index, psu_pmbus_path, sizeof(psu_pmbus_path));
     if (ret < 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status info failed, key: 0x%08x, ret: %d\n",
-            psu_index, DFD_CFG_ITEM_HWMON_PSU, ret);
         return ret;
     }
 
-    DFD_PSU_DEBUG(DBG_VERBOSE, "psu_index: %u, pmbus_data = %s \n", psu_index, psu_buf);
-    ret = kstrtoint(psu_buf, 0, status);
-    if (ret) {
-        DFD_PSU_DEBUG(DBG_ERROR, "invalid value: %s \n", psu_buf);
+    /* get real sysfs */
+    mem_clear(sysfs_path, sizeof(sysfs_path));
+    snprintf(sysfs_path, sizeof(sysfs_path), "%s%s", psu_pmbus_path, sysfs_name);
+
+    /* get sysfs value */
+    mem_clear(tmp_buf, sizeof(tmp_buf));
+    rd_len = dfd_ko_read_file(sysfs_path, 0, tmp_buf, sizeof(tmp_buf));
+    if (rd_len < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "read psu%d pmbus val failed, pmbus_info path: %s, ret: %d\n",
+            psu_index, sysfs_path, rd_len);
+        return rd_len;
+    } else {
+        DFD_PSU_DEBUG(DBG_VERBOSE, "read psu%u pmbus val success, pmbus_info path: %s, rd_len: %d\n",
+            psu_index, sysfs_path, rd_len);
+    }
+
+    ret = kstrtoint(tmp_buf, 0, val);
+    if (ret != 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "invaild psu pmbus val ret: %d, buf: %s.\n", ret, tmp_buf);
         return -EINVAL;
     }
+
     return 0;
+}
+
+static ssize_t dfd_get_psu_out_and_alert_status(unsigned int psu_index, int *output_status, int *alert_status)
+{
+    int ret;
+    int output_key, alert_key;
+
+    output_key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_STATUS, psu_index, DFD_PSU_OUTPUT_STATUS);
+    alert_key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_STATUS, psu_index, DFD_PSU_ALERT_STATUS);
+    ret = dfd_info_get_int(output_key, output_status, NULL);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu output_key error, ret: %d, psu_index: %u\n",
+            ret, psu_index);
+        return ret;
+    }
+    ret = dfd_info_get_int(alert_key, alert_status, NULL);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu alert_key error, ret: %d, psu_index: %u\n",
+            ret, psu_index);
+        return ret;
+    }
+    DFD_PSU_DEBUG(DBG_VERBOSE, "get psu %u alert: %u, output:  %u.\n", psu_index, *alert_status, *output_status);
+    return 0;
+}
+
+
+/**
+ * dfd_get_psu_status_str - get psu status str
+ * @index: Number of the power supply, starting from 1
+ * return: Success: Length of the status string
+ *       : Gets the value on the pmbus register of the power supply
+ */
+ssize_t dfd_get_psu_status_str(unsigned int psu_index, char *buf, size_t count)
+{
+    int ret;
+    int status_word;
+    int status;
+
+    if (buf == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "params error, psu_index: %u", psu_index);
+        return -EINVAL;
+    }
+    if (count <= 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
+            count, psu_index);
+        return -EINVAL;
+    }
+
+    status_word = 0;
+    ret = dfd_get_psu_pmbus_val(psu_index, &status_word, PMBUS_STATUS_WORD_SYSFS);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status failed, ret: %d\n", psu_index, ret);
+        return ret;
+    }
+
+    status = 0;
+    mem_clear(buf, count);
+    if (status_word < 0) {
+        return status_word;
+    } else {
+        status = (status_word & PSU_OFF_FAULT) ? (status | 0x02) : status;
+        status = (status_word & PSU_FAN_FAULT) ? (status | 0x04) : status;
+        status = (status_word & PSU_VOUT_FAULT) ? (status | 0x08) : status;
+        status = (status_word & PSU_IOUT_FAULT) ? (status | 0x10) : status;
+        status = (status_word & PSU_INPUT_FAULT) ? (status | 0x20) : status;
+        status = (status_word & PSU_TEMP_FAULT) ? (status | 0x40) : status;
+    }
+    return (ssize_t)snprintf(buf, count, "0x%x\n", status);
 }
 
 /**
@@ -261,15 +459,14 @@ ssize_t dfd_get_psu_hw_status_str(unsigned int psu_index, char *buf, size_t coun
     int ret;
     int status_word;
     int status;
-    int output_key, output_status;
-    int alert_key, alert_status;
+    int alert_status, output_status;
 
     if (buf == NULL) {
         DFD_PSU_DEBUG(DBG_ERROR, "params error, psu_index: %u", psu_index);
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
             count, psu_index);
         return -EINVAL;
     }
@@ -285,39 +482,118 @@ ssize_t dfd_get_psu_hw_status_str(unsigned int psu_index, char *buf, size_t coun
     }
 
     /* get psu alert and power status from cpld */
-    output_key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_STATUS, psu_index, DFD_PSU_OUTPUT_STATUS);
-    alert_key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_STATUS, psu_index, DFD_PSU_ALERT_STATUS);
-    ret = dfd_info_get_int(output_key, &output_status, NULL);
+    ret = dfd_get_psu_out_and_alert_status(psu_index, &output_status, &alert_status);
     if (ret < 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "get psu output_key error, ret: %d, psu_index: %u\n",
-            ret, psu_index);
         return ret;
     }
-    ret = dfd_info_get_int(alert_key, &alert_status, NULL);
-    if (ret < 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "get psu alert_key error, ret: %d, psu_index: %u\n",
-            ret, psu_index);
-        return ret;
-    }
-    DFD_PSU_DEBUG(DBG_VERBOSE, "get psu %u alert: %u, output:  %u.\n", psu_index, alert_status, output_status);
+
     /* if cpld status not ok */
     if (alert_status || !output_status) {
     /* jduge psu status from psu pmbus 0x79 */
         status_word = 0;
-        ret = dfd_get_psu_pmbus_status(psu_index, &status_word);
+        ret = dfd_get_psu_pmbus_val(psu_index, &status_word, PMBUS_STATUS_WORD_SYSFS);
         if (ret < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %d, psu_index: %u\n", ret, psu_index);
             return ret;
+        }
+
+        DFD_PSU_DEBUG(DBG_VERBOSE, "get psu %u statu reg value: %u.\n", psu_index, status_word);
+        if (status_word & PSU_PMBUS_POWER_GOOD) {
+            if (status_word & PSU_PMBUS_INPUT) {
+                status = PSU_STATUS_INPUT_OUTPUT_FAIL;
+            } else {
+                status = PSU_STATUS_OUTPUT_FAIL;
+            }
         } else {
-            DFD_PSU_DEBUG(DBG_VERBOSE, "get psu %u statu reg value: %u.\n", psu_index, status_word);
-            status = (status_word & PSU_PMBUS_POWER_GOOD) ? PSU_STATUS_FAIL : PSU_STATUS_WARN;
+            status = PSU_STATUS_WARN;
         }
     } else {
-        status = PSU_STATUS_PRESENT;
+        status = PSU_STATUS_OK;
     }
 
     mem_clear(buf,  count);
     return (ssize_t)snprintf(buf, count, "%d\n", status);
+}
+
+/**
+ * dfd_get_psu_hw_detail_status_str - get psu detail status str
+ * @index: Number of the power supply, starting from 1
+ * return: Success: Length of the status string
+ *       : Gets the value on the pmbus register of the power supply
+ */
+ssize_t dfd_get_psu_hw_detail_status_str(unsigned int psu_index, char *buf, size_t count)
+{
+    int ret, i, j, len;
+    int status_word;
+    int tmp_val;
+    const psu_pmbus_status_info_t *status_infos = NULL;
+    size_t status_infos_size = 0;
+    int alert_status, output_status;
+
+    if (buf == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "params error, psu_index: %u", psu_index);
+        return -EINVAL;
+    }
+    if (count <= 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
+            count, psu_index);
+        return -EINVAL;
+    }
+
+    /* get psu present status first */
+    ret = dfd_get_psu_present_status(psu_index);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu present status error, ret: %d, psu_index: %u\n", ret, psu_index);
+        return ret;
+    }
+    if (ret == PSU_STATUS_ABSENT) {
+        return (ssize_t)snprintf(buf, count, "ABSENT\n");
+    }
+
+    /* get psu alert and power status from cpld */
+    ret = dfd_get_psu_out_and_alert_status(psu_index, &output_status, &alert_status);
+    if (ret < 0) {
+        return ret;
+    }
+
+    /* if cpld status ok */
+    if (!alert_status && output_status) {
+        return (ssize_t)snprintf(buf, count, "OK\n");
+    }
+
+    ret = dfd_get_psu_pmbus_val(psu_index, &status_word, PMBUS_STATUS_WORD_SYSFS);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %d, psu_index: %u\n", ret, psu_index);
+        return ret;
+    }
+
+    if (status_word & PSU_PMBUS_POWER_GOOD) {
+        status_infos = psu_pmbus_status_fault_infos;
+        status_infos_size = ARRAY_SIZE(psu_pmbus_status_fault_infos);
+    } else {
+        status_infos = psu_pmbus_status_warn_infos;
+        status_infos_size = ARRAY_SIZE(psu_pmbus_status_warn_infos);
+    }
+
+    len = 0;
+    for (i = 0; i < status_infos_size; i++) {
+        if (status_word & status_infos[i].bit_offset) {
+            len += scnprintf(buf + len, count - len, "%s\n", status_infos[i].attr_name);
+            for (j = 0; j < status_infos[i].extra_info_len; j++) {
+                ret = dfd_get_psu_pmbus_val(psu_index, &tmp_val, status_infos[i].extra_info[j].sysfs_name);
+                if (ret < 0) {
+                    DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus sysfs error, ret: %d, psu_index: %u, sysfs_name:%s\n", \
+                        ret, psu_index, status_infos[i].extra_info[j].sysfs_name);
+                    return ret;
+                }
+                if (tmp_val & status_infos[i].extra_info[j].mask) {
+                    len += scnprintf(buf + len, count - len, "  %s\n", status_infos[i].extra_info[j].attr_name);
+                }
+            }
+        }
+    }
+
+    return len;
 }
 
 /**
@@ -336,13 +612,13 @@ ssize_t dfd_get_psu_status_pmbus_str(unsigned int psu_index, char *buf, size_t c
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
     /* Gets the status from the pmbus register of the power supply */
     pmbus_data = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &pmbus_data);
+    ret = dfd_get_psu_pmbus_val(psu_index, &pmbus_data, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
         DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status failed,  ret: %d\n", psu_index, ret);
         return ret;
@@ -395,13 +671,13 @@ ssize_t dfd_get_psu_out_status_str(unsigned int psu_index, char *buf, size_t cou
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
     /* Gets the status from the pmbus register of the power supply */
     pmbus_data = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &pmbus_data);
+    ret = dfd_get_psu_pmbus_val(psu_index, &pmbus_data, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
         DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status failed, ret: %d\n", psu_index, ret);
         return ret;
@@ -542,7 +818,7 @@ static int dfd_get_psu_type(unsigned int psu_index, dfd_i2c_dev_t *i2c_dev, int 
     }
 
     DFD_PSU_DEBUG(DBG_VERBOSE, "%s\n", psu_buf);
-    dfd_psu_del_no_print_string(psu_buf);
+    dfd_info_del_no_print_string(psu_buf);
 
     DFD_PSU_DEBUG(DBG_VERBOSE, "dfd_psu_product_name_decode get psu name %s\n", psu_buf);
     rv = dfd_ko_cfg_get_power_type_by_name((char *)psu_buf, power_type);
@@ -578,7 +854,7 @@ ssize_t dfd_get_psu_info(unsigned int psu_index, uint8_t cmd, char *buf, size_t 
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u, cmd: 0x%x\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u, cmd: 0x%x\n",
             count, psu_index, cmd);
         return -EINVAL;
     }
@@ -602,49 +878,49 @@ ssize_t dfd_get_psu_info(unsigned int psu_index, uint8_t cmd, char *buf, size_t 
         rv = dfd_get_psu_type(psu_index, i2c_dev, &power_type, sysfs_name, fru_mode);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu get type error, rv: %d\n", rv);
-            return -EIO;
+            return rv;
         }
         rv = dfd_psu_product_name_decode(power_type, psu_buf, PSU_SIZE);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu name decode error, power_type[0x%x] rv: %d\n",
                 power_type, rv);
-            return -EIO;
+            return rv;
         }
     } else if (cmd == DFD_DEV_INFO_TYPE_FAN_DIRECTION) {
         rv = dfd_get_psu_type(psu_index, i2c_dev, &power_type, sysfs_name, fru_mode);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu get type error, rv: %d\n", rv);
-            return -EIO;
+            return rv;
         }
         rv = dfd_psu_fan_direction_decode(power_type, psu_buf, PSU_SIZE);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu input type decode error, power_type[0x%x] rv: %d\n",
                 power_type, rv);
-            return -EIO;
+            return rv;
         }
     } else if (cmd == DFD_DEV_INFO_TYPE_MAX_OUTPUT_POWRER) {
         rv = dfd_get_psu_type(psu_index, i2c_dev, &power_type, sysfs_name, fru_mode);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu get type error, rv:%d\n", rv);
-            return -EIO;
+            return rv;
         }
         rv = dfd_psu_max_output_power(power_type, psu_buf, PSU_SIZE);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu max ouput power error, power_type[0x%x] rv: %d\n",
                 power_type, rv);
-            return -EIO;
+            return rv;
         }
     } else if (cmd == DFD_DEV_INFO_TYPE_SPEED_CAL) {
         rv = dfd_get_psu_type(psu_index, i2c_dev, &power_type, sysfs_name, fru_mode);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu get type error, rv:%d\n", rv);
-            return -EIO;
+            return rv;
         }
         rv = dfd_get_psu_fan_speed_cal_str(power_type, psu_buf, PSU_SIZE);
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu fan speed cal error, power_type[0x%x] rv: %d\n",
                 power_type, rv);
-            return -EIO;
+            return rv;
         }
     } else {
         if (fru_mode == PSU_FRU_MODE_PMBUS) {
@@ -654,7 +930,7 @@ ssize_t dfd_get_psu_info(unsigned int psu_index, uint8_t cmd, char *buf, size_t 
         }
         if (rv < 0) {
             DFD_PSU_DEBUG(DBG_ERROR, "psu eeprom read failed, rv: %d\n", rv);
-            return -EIO;
+            return rv;
         }
     }
 
@@ -662,7 +938,7 @@ ssize_t dfd_get_psu_info(unsigned int psu_index, uint8_t cmd, char *buf, size_t 
     if (cmd == DFD_DEV_INFO_TYPE_PART_NUMBER ||
         cmd == DFD_DEV_INFO_TYPE_SN ||
         cmd == DFD_DEV_INFO_TYPE_VENDOR) {
-        dfd_trim_trailing_spaces(psu_buf);
+        dfd_ko_trim_trailing_spaces(psu_buf);
     }
 
     snprintf(buf, count, "%s\n", psu_buf);
@@ -687,7 +963,7 @@ ssize_t dfd_get_psu_input_type(unsigned int psu_index, char *buf, size_t count)
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
@@ -733,12 +1009,12 @@ ssize_t dfd_get_psu_in_status_str(unsigned int psu_index, char *buf, size_t coun
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
     pmbus_data = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &pmbus_data);
+    ret = dfd_get_psu_pmbus_val(psu_index, &pmbus_data, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
         DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status failed, ret: %d\n", psu_index, ret);
         return ret;
@@ -767,13 +1043,13 @@ ssize_t dfd_get_psu_alarm_status(unsigned int psu_index, char *buf, size_t count
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
     /* PMBUS STATUS WORD (0x79) */
     pmbus_data = 0;
-    ret = dfd_get_psu_pmbus_status(psu_index, &pmbus_data);
+    ret = dfd_get_psu_pmbus_val(psu_index, &pmbus_data, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
         DFD_PSU_DEBUG(DBG_ERROR, "get psu%u pmbus status failed, ret: %d\n", psu_index, ret);
         return ret;
@@ -817,7 +1093,7 @@ ssize_t dfd_get_psu_fan_ratio_str(unsigned int psu_index, char *buf, size_t coun
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
 
@@ -844,7 +1120,7 @@ ssize_t dfd_get_psu_threshold_str(unsigned int psu_index, unsigned int type, cha
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n", count, psu_index);
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n", count, psu_index);
         return -EINVAL;
     }
     key = DFD_CFG_KEY(DFD_CFG_ITEM_HWMON_PSU, psu_index, type);
@@ -868,7 +1144,7 @@ ssize_t dfd_get_psu_blackbox(unsigned int psu_index, char *buf, size_t count)
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
             count, psu_index);
         return -EINVAL;
     }
@@ -899,7 +1175,7 @@ ssize_t dfd_get_psu_pmbus(unsigned int psu_index, char *buf, size_t count)
         return -EINVAL;
     }
     if (count <= 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %lu, psu index: %u\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
             count, psu_index);
         return -EINVAL;
     }
@@ -918,10 +1194,10 @@ ssize_t dfd_get_psu_pmbus(unsigned int psu_index, char *buf, size_t count)
     mem_clear(buf,  count);
     rd_len = dfd_ko_read_file(pmbus_info_path, 0, buf, count);
     if (rd_len < 0) {
-        DFD_PSU_DEBUG(DBG_ERROR, "read psu%u pmbus info failed, pmbus_info path: %s, ret: %ld\n",
+        DFD_PSU_DEBUG(DBG_ERROR, "read psu%u pmbus info failed, pmbus_info path: %s, ret: %zd\n",
             psu_index, pmbus_info_path, rd_len);
     } else {
-        DFD_PSU_DEBUG(DBG_VERBOSE, "read psu%u pmbus info success, pmbus_info path: %s, rd_len: %ld\n",
+        DFD_PSU_DEBUG(DBG_VERBOSE, "read psu%u pmbus info success, pmbus_info path: %s, rd_len: %zd\n",
             psu_index, pmbus_info_path, rd_len);
     }
 
@@ -958,3 +1234,101 @@ int dfd_clear_psu_blackbox(unsigned int psu_index, uint8_t value)
     DFD_PSU_DEBUG(DBG_VERBOSE, "psu_index: %u, clear blackbox info success\n", psu_index);
     return DFD_RV_OK;
 }
+
+ssize_t dfd_get_psu_support_upgrade_func(unsigned int psu_index, char *buf, size_t count)
+{
+    uint64_t key;
+    int psu_support_upgrade;
+    int ret;
+
+    if (buf == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "param error, buf is NULL, psu index: %u\n",
+            psu_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    if (count <= 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
+            count, psu_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    mem_clear(buf, count);
+    psu_support_upgrade = 0;
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_SUPPORT_UPGRADE, psu_index, 0);
+    ret = dfd_info_get_int(key, &psu_support_upgrade, NULL);
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "psu%u support upgrade config error, key_name: %s\n",
+            psu_index, key_to_name(DFD_CFG_ITEM_PSU_SUPPORT_UPGRADE));
+        return ret;
+    }
+
+    DFD_PSU_DEBUG(DBG_VERBOSE, "%d\n", psu_support_upgrade);
+    snprintf(buf, count, "%d\n", psu_support_upgrade);
+    return strlen(buf);
+}
+
+ssize_t dfd_get_psu_upgrade_active_type_func(unsigned int psu_index, char *buf, size_t count)
+{
+    uint64_t key;
+    char *psu_upgrade_active_type;
+
+    if (buf == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "param error, buf is NULL, psu index: %u\n",
+            psu_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    if (count <= 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "buf size error, count: %zu, psu index: %u\n",
+            count, psu_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    mem_clear(buf, count);
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_UPGRADE_ACTIVE_TYPE, psu_index, 0);
+    psu_upgrade_active_type = dfd_ko_cfg_get_item(key);
+    if (psu_upgrade_active_type == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "psu%u support upgrade config error, key_name: %s\n",
+            psu_index, key_to_name(DFD_CFG_ITEM_PSU_UPGRADE_ACTIVE_TYPE));
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+
+    DFD_PSU_DEBUG(DBG_VERBOSE, "%s\n", psu_upgrade_active_type);
+    snprintf(buf, count, "%s\n", psu_upgrade_active_type);
+    return strlen(buf);
+}
+
+int dfd_set_psu_reset_func(unsigned int psu_index, uint8_t value)
+{
+    uint64_t key;
+    int ret;
+    char *psu_reset_info_path;
+    uint8_t wr_buf[INFO_INT_MAX_LEN];
+
+    /* get current step cfg */
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_PSU_RESET, psu_index, 0);
+    psu_reset_info_path = dfd_ko_cfg_get_item(key);
+    if (psu_reset_info_path == NULL) {
+        DFD_PSU_DEBUG(DBG_ERROR, "get psu_reset_info_path fail, key_name=%s, psu_index=0x%x\n",
+            key_to_name(DFD_CFG_ITEM_PSU_RESET), psu_index);
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+    
+    DFD_PSU_DEBUG(DBG_VERBOSE, "psu_index: %u, psu reset path: %s, write value: %u\n",
+        psu_index, psu_reset_info_path, value);
+
+    mem_clear(wr_buf, sizeof(wr_buf));
+    snprintf(wr_buf, sizeof(wr_buf), "%u", value);
+    ret = dfd_ko_write_file(psu_reset_info_path, 0, wr_buf, strlen(wr_buf));
+    if (ret < 0) {
+        DFD_PSU_DEBUG(DBG_ERROR, "set_psu_reset_func value error, key_name=%s, psu%u, value=%d, ret:%d\n",
+            key_to_name(DFD_CFG_ITEM_PSU_RESET), psu_index, value, ret);
+        return ret;
+    }
+
+    DFD_PSU_DEBUG(DBG_VERBOSE, "psu_index: %u, psu reset info success\n", psu_index);
+
+    return DFD_RV_OK;
+}
+

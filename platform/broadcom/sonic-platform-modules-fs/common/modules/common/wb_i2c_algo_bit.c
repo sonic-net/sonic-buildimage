@@ -21,7 +21,7 @@
 #include <linux/sched.h>
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
-#include <wb_bsp_kernel_debug.h>
+#include <wb_bsp_i2c_debug.h>
 
 static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
@@ -581,7 +581,7 @@ static int bit_xfer(struct i2c_adapter *i2c_adap,
 	}
 
     if (check_bit_i2c_unblock(i2c_adap) < 0) {
-        DEBUG_ERROR("check i2c is block.\n");
+        DEBUG_ERROR_I2C_ADAPTER(i2c_adap, "check i2c is block.\n");
         return -EIO;
     }
 

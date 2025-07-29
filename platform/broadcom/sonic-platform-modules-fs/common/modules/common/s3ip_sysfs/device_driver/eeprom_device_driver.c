@@ -58,55 +58,37 @@ static int wb_get_eeprom_size(unsigned int e2_index)
 }
 
 /*
- * wb_get_eeprom_alias - Used to get eeprom alias
+ * wb_get_eeprom_attr - Used to get eeprom attr
  *
  * This function returns the size of eeprom by your switch,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_eeprom_alias(unsigned int e2_index, char *buf, size_t count)
+static ssize_t wb_get_eeprom_attr(unsigned int e2_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_eeprom_alias);
+    check_p(g_drv->get_eeprom_attr);
 
-    ret = g_drv->get_eeprom_alias(e2_index, buf, count);
+    ret = g_drv->get_eeprom_attr(e2_index, type, buf, count);
     return ret;
 }
 
 /*
- * wb_get_eeprom_tag - Used to get eeprom tag
+ * wb_set_eeprom_attr - Used to set eeprom attrs
  *
- * This function returns the size of eeprom by your switch,
- * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_eeprom_tag(unsigned int e2_index, char *buf, size_t count)
+static int wb_set_eeprom_attr(unsigned int e2_index, unsigned int type, unsigned int value)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_eeprom_tag);
+    check_p(g_drv->set_eeprom_attr);
 
-    ret = g_drv->get_eeprom_tag(e2_index, buf, count);
+    ret = g_drv->set_eeprom_attr(e2_index, type, value);
     return ret;
 }
 
-/*
- * wb_get_eeprom_type - Used to get eeprom type
- *
- * This function returns the size of eeprom by your switch,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_eeprom_type(unsigned int e2_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_eeprom_type);
-
-    ret = g_drv->get_eeprom_type(e2_index, buf, count);
-    return ret;
-}
 
 /*
  * wb_read_eeprom_data - Used to read eeprom data,
@@ -157,9 +139,8 @@ static struct s3ip_sysfs_eeprom_drivers_s drivers = {
      * if not support the function, set corresponding hook to NULL.
      */
     .get_eeprom_number = wb_get_eeprom_number,
-    .get_eeprom_alias = wb_get_eeprom_alias,
-    .get_eeprom_tag = wb_get_eeprom_tag,
-    .get_eeprom_type = wb_get_eeprom_type,
+    .get_eeprom_attr = wb_get_eeprom_attr,
+    .set_eeprom_attr = wb_set_eeprom_attr,
     .get_eeprom_size = wb_get_eeprom_size,
     .read_eeprom_data = wb_read_eeprom_data,
     .write_eeprom_data = wb_write_eeprom_data,

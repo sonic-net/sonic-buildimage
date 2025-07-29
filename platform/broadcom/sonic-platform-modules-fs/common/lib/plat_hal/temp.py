@@ -157,6 +157,7 @@ class temp(sensor):
         self.__Value = val
 
 class temp_s3ip(sensor_s3ip):
-    def __init__(self, s3ip_conf = None):
+    def __init__(self, s3ip_conf = None, id = None):
         super(temp_s3ip, self).__init__(s3ip_conf)
-        self.temp_id = s3ip_conf.get("type").upper()
+        self.temp_id = id
+

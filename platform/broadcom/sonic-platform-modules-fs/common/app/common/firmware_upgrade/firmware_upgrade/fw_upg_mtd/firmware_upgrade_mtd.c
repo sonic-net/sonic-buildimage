@@ -394,6 +394,7 @@ int firmware_upgrade_mtd_test(int fd, name_info_t *info)
     uint8_t *data_buf;
     uint8_t num;
     int j;
+    int mtdnum;
 
     if (info == NULL) {
         dbg_print(is_debug_on, "Input invalid error.\n");
@@ -408,8 +409,13 @@ int firmware_upgrade_mtd_test(int fd, name_info_t *info)
     }
 
     if (dev_info.test_size == 0) {
-        dbg_print(is_debug_on, "Error: get flash size:%d, not support.\n", dev_info.test_size);
-        return FIRMWARE_NOT_SUPPORT;
+        /* If the test_size not configure, check whether the mtd device exists */
+        ret = get_mtdnum_from_name(dev_info.mtd_name, &mtdnum);
+        if (ret < 0) {
+            dbg_print(is_debug_on, "Error:not find %s mtd num.\n", dev_info.mtd_name);
+            return FIRMWARE_FAILED;
+        }
+        return FIRMWARE_SUCCESS;
     }
 
     data_buf = (uint8_t *) malloc(dev_info.test_size);

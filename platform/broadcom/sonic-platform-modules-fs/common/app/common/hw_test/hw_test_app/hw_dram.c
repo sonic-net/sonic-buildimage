@@ -782,6 +782,10 @@ int dram_test_main(int argc, char **argv)
 
     printf("\r\n"
            "********************** dram test **********************\r\n");
+
+    debug = 0;
+    simple = 0;
+    all = 0;
     ret = dram_test_arg_pars(argc, argv, &simple, &all, &debug);
     if (ret < 0) {
         fprintf(stderr,

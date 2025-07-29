@@ -1,44 +1,32 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 import syslog
 import os
 import shutil
+import logging
 from platform_config import DRVIER_UPDATE_CONF
-from platform_util import exec_os_cmd
+from platform_util import exec_os_cmd, setup_logger, BSP_COMMON_LOG_DIR
 
-
-DRV_UPDATE_DEBUG_FILE = "/etc/.drv_update_debug_flag"
-
-DRVUPDATEERROR = 1
-DRVUPDATEDEBUG = 2
-debuglevel = 0
-
+DEBUG_FILE = "/etc/.drv_update_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "drv_update_debug.log"
+logger = setup_logger(LOG_FILE)
 
 def drv_update_debug(s):
-    if DRVUPDATEDEBUG & debuglevel:
-        syslog.openlog("DRV_UPDATE", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.debug(s)
 
 def drv_update_error(s):
-    if DRVUPDATEERROR & debuglevel:
-        syslog.openlog("DRV_UPDATE", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def drv_update_info(s):
     syslog.openlog("DRV_UPDATE", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_NOTICE, s)
+    logger.info(s)
 
 def debug_init():
-    global debuglevel
-    try:
-        with open(DRV_UPDATE_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
-
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def get_driver_md5sum(drv_path):
     status, output = exec_os_cmd("md5sum %s" % drv_path)
@@ -135,16 +123,16 @@ def doDrvUpdate():
 
     if update_initramfs_flag == 1:
         drv_update_debug("starting to update initramfs")
-        exec_os_cmd("update-initramfs -u")
+        os.system("update-initramfs -u")
         drv_update_debug("update initramfs finish")
 
-    exec_os_cmd("sync")
+    os.system("sync")
     if update_initramfs_flag == 1 and err_cnt == 0 and reboot_flag == 1:
         reboot_log = "%DRV_UPDATE-5-REBOOT: Update initramfs is completed, restarting the system to take effect."
         reboot_log_cmd = "echo '%s' > /dev/ttyS0" % reboot_log
         exec_os_cmd(reboot_log_cmd)
         drv_update_info(reboot_log)
-        exec_os_cmd("/sbin/reboot")
+        os.system("/sbin/reboot")
     return
 
 if __name__ == '__main__':

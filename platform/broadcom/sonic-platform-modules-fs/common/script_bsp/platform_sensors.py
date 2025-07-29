@@ -3,18 +3,8 @@
 import os
 import sys
 import importlib.machinery
-
-try:
-    from platform_sensors_hal import Platoform_sensor_hal
-
-    platform_sensor_hal = Platoform_sensor_hal()
-    print_src = platform_sensor_hal.get_sensor_print_src()
-    if print_src == "s3ip":
-        platform_sensor_hal.getsensors()
-        sys.exit(0)
-except Exception as e:
-    pass
-        
+from platform_sensors_v2 import *
+from platform_sensors_hal import Platoform_sensor_hal
 
 def get_machine_info():
     if not os.path.isfile('/host/machine.conf'):
@@ -79,12 +69,6 @@ def printerr(msg):
 
 def print_console(msg):
     print(msg)
-
-
-val_t = load_platform_monitor()
-if val_t != 0:
-    raise Exception("load monitor.py error")
-
 
 def print_platform():
     platform_info = get_platform_name()
@@ -288,7 +272,16 @@ def getsensors():
 
 
 if __name__ == "__main__":
-    if os.geteuid() != 0:
-        print("Root privileges are required for this operation")
-        sys.exit(1)
-    getsensors()
+    if len(PLATFORM_SENSORS_CFG) > 0:
+        Platoform_sensor_v2 = Platoform_sensor_v2()
+        Platoform_sensor_v2.getsensors()
+    else:
+        platform_sensor_hal = Platoform_sensor_hal()
+        print_src = platform_sensor_hal.get_sensor_print_src()
+        if print_src == "s3ip":
+            platform_sensor_hal.getsensors()
+        else:
+            val_t = load_platform_monitor()
+            if val_t != 0:
+                raise Exception("load monitor.py error")
+            getsensors()

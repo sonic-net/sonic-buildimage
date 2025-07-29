@@ -267,7 +267,7 @@ static int finish_cpld(void)
     mdelay(10);
     ret = firmware_upgrade_en(0);
     if (ret < 0){
-        FIRMWARE_DRIVER_DEBUG_ERROR("Error: close firmware upgrade en failed, ret %d.\r\n", ret);
+        FIRMWARE_DRIVER_DEBUG_ERROR("Error: close firmware upgrade en failed, ret %d.\n", ret);
     }
 
     gpio_free(current_fmw_cpld->tdi);
@@ -1181,7 +1181,7 @@ static void cpld_reset(int chip)
     /* Gets the number of chips in the CPLD */
     chip_num_init();
     if (!chip_num) {
-        pr_notice("There is no CPLD chip or the chip is not supported!!\r\n");
+        pr_notice("There is no CPLD chip or the chip is not supported!!\n");
         FIRMWARE_DRIVER_DEBUG_ERROR("chip_num == NULL.\n");
     } else {
         FIRMWARE_DRIVER_DEBUG_VERBOSE("enter cpld read id.\n");

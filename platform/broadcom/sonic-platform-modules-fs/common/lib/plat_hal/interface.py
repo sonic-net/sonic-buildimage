@@ -7,7 +7,7 @@
 #######################################################
 import collections
 from plat_hal.chassisbase import chassisbase
-from plat_hal.baseutil import baseutil, getplatform_name
+from plat_hal.baseutil import baseutil
 from plat_hal.osutil import osutil
 from plat_hal.devicebase import devicebase
 
@@ -672,9 +672,6 @@ class interface(object):
             dic["DisplayName"] = self.na_ret
         return dic
 
-    def get_product_fullname(self):
-        return baseutil.get_product_fullname()
-
     def get_fan_status(self, fan_name):
         fan = self.chas.get_fan_byname(fan_name)
         if fan is None:
@@ -861,17 +858,6 @@ class interface(object):
                 dic['Value'] = self.error_ret
             dic["Unit"] = dcdctmp.sensor.Unit
         return dic
-
-    def get_dcdc_unit_by_id(self, dcdc_id):
-        dcdclist = self.chas.dcdc_list
-        dcdctmp = None
-        for dcdc in dcdclist:
-            if dcdc.dcdc_id == dcdc_id:
-                dcdctmp = dcdc
-        dic = collections.OrderedDict()
-        if dcdctmp is None:
-            return self.na_ret
-        return dcdctmp.sensor.Unit
 
     def get_dcdc_all_info(self):
         val_list = collections.OrderedDict()
@@ -1211,18 +1197,6 @@ class interface(object):
             dic["Desc"] = comptmp.desc
             dic["Slot"] = comptmp.slot
         return dic
-
-    def get_bmc_productname(self):
-        """
-        Get product name
-
-        @return product name string, e.g. $(device name)-F-$(VENDOR_NAME), if error return "N/A"
-        """
-        bmc = self.chas.get_bmc_byname("master")
-        if bmc is None:
-            baseutil.logger_debug("name bmc(master) not find")
-            return self.na_ret
-        return bmc.get_productname()
 
     def call_bmc_diagcmd(self, cmdstr):
         """

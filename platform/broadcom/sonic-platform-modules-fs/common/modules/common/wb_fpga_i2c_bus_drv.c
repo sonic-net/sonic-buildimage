@@ -22,7 +22,7 @@
 #include <linux/uaccess.h>
 
 #include <wb_logic_dev_common.h>
-#include <wb_bsp_kernel_debug.h>
+#include <wb_bsp_i2c_debug.h>
 
 #define DRV_NAME                      "wb-fpga-i2c"
 #define DRV_VERSION                   "1.0"
@@ -103,12 +103,14 @@ static int fpga_reg_write(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint8_t val)
 
     ret = fpga_device_write(fpga_i2c, addr, &val, sizeof(uint8_t));
     if (ret < 0) {
-        DEBUG_ERROR("fpga reg write failed, dev name:%s, offset:0x%x, value:0x%x.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga reg write failed, dev name:%s, offset:0x%x, value:0x%x.\n",
             fpga_i2c->dev_name, addr, val);
         return -EIO;
     }
 
-    DEBUG_VERBOSE("fpga reg write success, dev name:%s, offset:0x%x, value:0x%x.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga reg write success, dev name:%s, offset:0x%x, value:0x%x.\n",
         fpga_i2c->dev_name, addr, val);
     return 0;
 }
@@ -119,12 +121,14 @@ static int fpga_reg_read(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint8_t *val)
 
     ret = fpga_device_read(fpga_i2c, addr, val, sizeof(uint8_t));
     if (ret < 0) {
-        DEBUG_ERROR("fpga reg read failed, dev name:%s, offset:0x%x\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga reg read failed, dev name:%s, offset:0x%x\n",
             fpga_i2c->dev_name, addr);
         return -EIO;
     }
 
-    DEBUG_VERBOSE("fpga reg read success, dev name:%s, offset:0x%x, value:0x%x.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga reg read success, dev name:%s, offset:0x%x, value:0x%x.\n",
         fpga_i2c->dev_name, addr, *val);
     return 0;
 }
@@ -135,12 +139,14 @@ static int fpga_data_write(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint8_t *val
 
     ret = fpga_device_write(fpga_i2c, addr, val, size);
     if (ret < 0) {
-        DEBUG_ERROR("fpga data write failed, dev name:%s, offset:0x%x, size:%zu.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga data write failed, dev name:%s, offset:0x%x, size:%zu.\n",
             fpga_i2c->dev_name, addr, size);
         return -EIO;
     }
 
-    DEBUG_VERBOSE("fpga data write success, dev name:%s, offset:0x%x, size:%zu.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga data write success, dev name:%s, offset:0x%x, size:%zu.\n",
         fpga_i2c->dev_name, addr, size);
     return 0;
 }
@@ -151,12 +157,14 @@ static int fpga_data_read(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint8_t *val,
 
     ret = fpga_device_read(fpga_i2c, addr, val, size);
     if (ret < 0) {
-        DEBUG_ERROR("fpga data read failed, dev name:%s, offset:0x%x, size:%zu.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga data read failed, dev name:%s, offset:0x%x, size:%zu.\n",
             fpga_i2c->dev_name, addr, size);
         return -EIO;
     }
 
-    DEBUG_VERBOSE("fpga data read success, dev name:%s, offset:0x%x, size:%zu.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga data read success, dev name:%s, offset:0x%x, size:%zu.\n",
         fpga_i2c->dev_name, addr, size);
     return 0;
 }
@@ -170,12 +178,14 @@ static int fpga_reg_write_32(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint32_t v
     little_endian_dword_to_buf(buf, sizeof(buf), val);
     ret = fpga_device_write(fpga_i2c, addr, buf, sizeof(buf));
     if (ret < 0) {
-        DEBUG_ERROR("fpga reg write failed, dev name: %s, offset: 0x%x, value: 0x%x.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga reg write failed, dev name: %s, offset: 0x%x, value: 0x%x.\n",
             fpga_i2c->dev_name, addr, val);
         return -EIO;
     }
 
-    DEBUG_VERBOSE("fpga reg write success, dev name: %s, offset: 0x%x, value: 0x%x.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga reg write success, dev name: %s, offset: 0x%x, value: 0x%x.\n",
         fpga_i2c->dev_name, addr, val);
     return 0;
 }
@@ -188,12 +198,14 @@ static int fpga_reg_read_32(fpga_i2c_dev_t *fpga_i2c, uint32_t addr, uint32_t *v
     mem_clear(buf, sizeof(buf));
     ret = fpga_device_read(fpga_i2c, addr, buf, sizeof(buf));
     if (ret < 0) {
-        DEBUG_ERROR("fpga reg read failed, dev name: %s, offset: 0x%x, ret: %d\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga reg read failed, dev name: %s, offset: 0x%x, ret: %d\n",
             fpga_i2c->dev_name, addr, ret);
         return -EIO;
     }
     little_endian_buf_to_dword(buf, sizeof(buf), val);
-    DEBUG_VERBOSE("fpga reg read success, dev name: %s, offset: 0x%x, value: 0x%x.\n",
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+        "fpga reg read success, dev name: %s, offset: 0x%x, value: 0x%x.\n",
         fpga_i2c->dev_name, addr, *val);
     return 0;
 }
@@ -205,18 +217,31 @@ static int fpga_i2c_is_busy(fpga_i2c_dev_t *fpga_i2c)
     fpga_i2c_reg_t *reg;
 
     reg = &fpga_i2c->reg;
+    val = 0;
     ret = fpga_reg_read(fpga_i2c, reg->i2c_status, &val);
     if (ret < 0 ) {
-        DEBUG_ERROR("read fpga i2c status reg failed, reg addr:0x%x, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "read fpga i2c status reg failed, reg addr:0x%x, ret:%d.\n",
             reg->i2c_status, ret);
         return 1;
     }
     if (val & FPGA_I2C_STA_BUSY) {
-        DEBUG_ERROR("fpga i2c status busy, reg addr:0x%x, value:0x%x.\n",
+        DEBUG_INFO_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga i2c status busy, reg addr:0x%x, value:0x%x.\n",
             reg->i2c_status, val);
         return 1;
     } else {
         return 0;
+    }
+}
+
+static void sleep_by_time(int sleep_time)
+{
+    if (in_interrupt() || oops_in_progress) {
+        /* If currently in an interrupt context or during a panic, call the udelay function. */
+        udelay(sleep_time);
+    } else {
+        usleep_range(sleep_time, sleep_time + 1);
     }
 }
 
@@ -227,7 +252,7 @@ static int fpga_i2c_wait(fpga_i2c_dev_t *fpga_i2c)
     retry_cnt = FPGA_I2C_XFER_TIME_OUT/FPGA_I2C_SLEEP_TIME;
     while (retry_cnt--) {
         if (fpga_i2c_is_busy(fpga_i2c)) {
-            usleep_range(FPGA_I2C_SLEEP_TIME, FPGA_I2C_SLEEP_TIME + 1);
+            sleep_by_time(FPGA_I2C_SLEEP_TIME);
         } else {
             return 0;
         }
@@ -243,16 +268,18 @@ static int fpga_i2c_check_status(fpga_i2c_dev_t *fpga_i2c)
     fpga_i2c_reg_t *reg;
 
     reg = &fpga_i2c->reg;
-
+    data = 0;
     ret = fpga_reg_read(fpga_i2c, reg->i2c_status, &data);
     if (ret) {
-        DEBUG_ERROR("read fpga i2c status reg failed, reg addr:0x%x, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "read fpga i2c status reg failed, reg addr:0x%x, ret:%d.\n",
             reg->i2c_status, ret);
         return ret;
     }
 
     if (data & FPGA_I2C_STA_FAIL) {
-        DEBUG_ERROR("fpga i2c status error, reg addr:0x%x, value:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga i2c status error, reg addr:0x%x, value:%d.\n",
             reg->i2c_status, data);
 
         /* read i2c_err_vec to confirm err type*/
@@ -260,11 +287,13 @@ static int fpga_i2c_check_status(fpga_i2c_dev_t *fpga_i2c)
             /* read i2c_err_vec reg */
             ret = fpga_reg_read(fpga_i2c, reg->i2c_err_vec, &data);
             if (ret) {
-                DEBUG_ERROR("read fpga i2c err vec reg failed, reg addr:0x%x, ret:%d.\n",
+                DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                    "read fpga i2c err vec reg failed, reg addr:0x%x, ret:%d.\n",
                     reg->i2c_err_vec, ret);
                 return ret;
             }
-            DEBUG_VERBOSE("get i2c err vec, reg addr:0x%x, read value:0x%x\n", reg->i2c_err_vec, data);
+            DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "get i2c err vec, reg addr:0x%x, read value:0x%x\n", reg->i2c_err_vec, data);
 
             /* match i2c_err_vec reg value and err type*/
             switch (data) {
@@ -278,14 +307,16 @@ static int fpga_i2c_check_status(fpga_i2c_dev_t *fpga_i2c)
                 ret = -ENXIO;
                 break;
             default:
-                DEBUG_ERROR("get i2c err vec value out of range, reg addr:0x%x, read value:0x%x\n",
+                DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                    "get i2c err vec value out of range, reg addr:0x%x, read value:0x%x\n",
                     reg->i2c_err_vec, data);
                 ret = -EREMOTEIO;
                 break;
             }
             return ret;
         } else {
-            DEBUG_VERBOSE("i2c err vec not config, fpga i2c status check return -1\n");
+            DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "i2c err vec not config, fpga i2c status check return -1\n");
             return -EREMOTEIO;
         }
     }
@@ -305,7 +336,8 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
 
     ret = fpga_reg_write(fpga_i2c, reg->i2c_slave, i2c_addr);
     if (ret) {
-        DEBUG_ERROR("write fpga i2c slave reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "write fpga i2c slave reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
             reg->i2c_slave, i2c_addr, ret);
         goto exit;
     }
@@ -317,10 +349,12 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
     if (i2c_reg_addr_len > 0 && i2c_reg_addr_len <= I2C_REG_MAX_WIDTH) {
         ret = fpga_data_write(fpga_i2c, reg->i2c_reg, i2c_read_addr_buf, i2c_reg_addr_len);
         if (ret) {
-            DEBUG_ERROR("write fpga i2c offset reg failed, fpga addr:0x%x, reg len:%d, ret:%d\n",
+            DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "write fpga i2c offset reg failed, fpga addr:0x%x, reg len:%d, ret:%d\n",
                 reg->i2c_reg, i2c_reg_addr_len, ret);
             for (i = 0; i < i2c_reg_addr_len; i++) {
-                DEBUG_ERROR("%02d : %02x\n", i, i2c_read_addr_buf[i]);
+                DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), "%02d : %02x\n", i, 
+                    i2c_read_addr_buf[i]);
             }
             goto exit;
         }
@@ -328,14 +362,16 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
 
     ret = fpga_reg_write_32(fpga_i2c, reg->i2c_data_len, length);
     if (ret) {
-        DEBUG_ERROR("write fpga i2c date len reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "write fpga i2c date len reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
             reg->i2c_data_len, length, ret);
         goto exit;
     }
 
     ret = fpga_reg_write(fpga_i2c, reg->i2c_reg_len, i2c_reg_addr_len);
     if (ret) {
-        DEBUG_ERROR("write fpga i2c reg len reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "write fpga i2c reg len reg failed, reg addr:0x%x, value:0x%x, ret:%d.\n",
             reg->i2c_reg_len, i2c_reg_addr_len, ret);
         goto exit;
     }
@@ -346,7 +382,8 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
 
         ret = fpga_data_write(fpga_i2c, reg->i2c_data_buf, data, length);
         if (ret) {
-            DEBUG_ERROR("write fpga i2c date buf failed, reg addr:0x%x, write len:%d, ret:%d.\n",
+            DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "write fpga i2c date buf failed, reg addr:0x%x, write len:%d, ret:%d.\n",
                 reg->i2c_data_buf, length, ret);
             goto exit;
         }
@@ -355,20 +392,21 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
 
     ret = fpga_reg_write(fpga_i2c, reg->i2c_ctrl, op);
     if (ret) {
-        DEBUG_ERROR("write fpga i2c control reg failed, reg addr:0x%x, value:%d, ret:%d.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "write fpga i2c control reg failed, reg addr:0x%x, value:%d, ret:%d.\n",
             reg->i2c_ctrl, op, ret);
         goto exit;
     }
 
     ret = fpga_i2c_wait(fpga_i2c);
     if (ret) {
-        DEBUG_ERROR("wait fpga i2c status timeout.\n");
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), "wait fpga i2c status timeout.\n");
         goto exit;
     }
 
     ret = fpga_i2c_check_status(fpga_i2c);
     if (ret) {
-        DEBUG_ERROR("check fpga i2c status error.\n");
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), "check fpga i2c status error.\n");
         goto exit;
     }
 
@@ -376,7 +414,8 @@ static int fpga_i2c_do_work(fpga_i2c_dev_t *fpga_i2c, int i2c_addr,
 
         ret = fpga_data_read(fpga_i2c, reg->i2c_data_buf, data, length);
         if (ret) {
-            DEBUG_ERROR("read fpga i2c data buf failed, reg addr:0x%x, read len:%d, ret:%d.\n",
+            DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "read fpga i2c data buf failed, reg addr:0x%x, read len:%d, ret:%d.\n",
                 reg->i2c_data_buf, length, ret);
             goto exit;
         }
@@ -395,14 +434,16 @@ static int fpga_i2c_write(fpga_i2c_dev_t *fpga_i2c, int target,
     if (i2c_msg_num == I2C_READ_MSG_NUM) {
 
         if (length > I2C_REG_MAX_WIDTH) {
-            DEBUG_ERROR("read reg addr len %d, more than max length.\n", length);
+            DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "read reg addr len %d, more than max length.\n", length);
             return -EINVAL;
         }
 
         i2c_addr_desc = &fpga_i2c->i2c_addr_desc;
         for (i = 0; i < length; i++) {
             i2c_addr_desc->read_reg_addr[i] = data[length -i -1];
-            DEBUG_VERBOSE("%02d : %02x\n", i, i2c_addr_desc->read_reg_addr[i]);
+            DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), "%02d : %02x\n", i, 
+                i2c_addr_desc->read_reg_addr[i]);
         }
         i2c_addr_desc->reg_addr_len = length;
         ret = 0;
@@ -446,7 +487,8 @@ static int fpga_i2c_read(fpga_i2c_dev_t *fpga_i2c, int target,
 
         ret = fpga_i2c_do_work(fpga_i2c, target, data + offset_size, fpga_i2c->reg.i2c_data_buf_len, 1);
         if (ret != 0) {
-            DEBUG_ERROR("fpga_i2c_read failed, i2c addr:0x%x, offset:0x%x, ret:%d.\n",
+            DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+                "fpga_i2c_read failed, i2c addr:0x%x, offset:0x%x, ret:%d.\n",
                 target, offset_size, ret);
             return ret;
         }
@@ -480,17 +522,17 @@ static void fpga_i2c_reset(fpga_i2c_dev_t *fpga_i2c) {
     reset_cfg = &fpga_i2c->reset_cfg;
     reset_addr = reset_cfg->reset_addr;
     if (reset_cfg->reset_delay_b) {
-        usleep_range(reset_cfg->reset_delay_b, reset_cfg->reset_delay_b + 1);
+        sleep_by_time(reset_cfg->reset_delay_b);
     }
 
     fpga_reg_write_32(fpga_i2c, reset_addr, reset_cfg->reset_on);
     if (reset_cfg->reset_delay) {
-        usleep_range(reset_cfg->reset_delay, reset_cfg->reset_delay + 1);
+        sleep_by_time(reset_cfg->reset_delay);
     }
 
     fpga_reg_write_32(fpga_i2c, reset_addr, reset_cfg->reset_off);
     if (reset_cfg->reset_delay_a) {
-        usleep_range(reset_cfg->reset_delay_a, reset_cfg->reset_delay_a + 1);
+        sleep_by_time(reset_cfg->reset_delay_a);
     }
 
     return;
@@ -517,11 +559,11 @@ static int fpga_i2c_adapter_init(fpga_i2c_dev_t *fpga_i2c)
     ret += fpga_reg_write(fpga_i2c, reg->i2c_filter, fpga_i2c->i2c_filter_value);
     ret += fpga_reg_write(fpga_i2c, reg->i2c_stretch, fpga_i2c->i2c_stretch_value);
     if (ret < 0) {
-        DEBUG_ERROR("fpga_i2c_init failed.\n");
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), "fpga_i2c_init failed.\n");
         return ret;
     }
 
-    DEBUG_VERBOSE("fpga_i2c_init ok.\n");
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), "fpga_i2c_init ok.\n");
     return 0;
 }
 
@@ -540,21 +582,25 @@ static int fpga_i2c_params_check(fpga_i2c_dev_t *fpga_i2c)
     ret += fpga_reg_read(fpga_i2c, reg->i2c_filter, &i2c_filter_value);
     ret += fpga_reg_read(fpga_i2c, reg->i2c_stretch, &i2c_stretch_value);
     if (ret < 0) {
-        DEBUG_ERROR("read fpga i2c params failed.\n");
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), "read fpga i2c params failed.\n");
         return 1;
     }
 
     if ((i2c_scale_value != fpga_i2c->i2c_scale_value)
             || (i2c_filter_value != fpga_i2c->i2c_filter_value)
             || (i2c_stretch_value != fpga_i2c->i2c_stretch_value)) {
-        DEBUG_ERROR("fpga i2c params check error, read value: i2c_scale 0x%x, i2c_filter:0x%x, i2c_stretch:0x%x.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga i2c params check error, read value: i2c_scale 0x%x, "
+            "i2c_filter:0x%x, i2c_stretch:0x%x.\n",
             i2c_scale_value, i2c_filter_value, i2c_stretch_value);
-        DEBUG_ERROR("fpga i2c params check error, config value: i2c_scale 0x%x, i2c_filter:0x%x, i2c_stretch:0x%x.\n",
+        DEBUG_ERROR_I2C_ADAPTER(&(fpga_i2c->adap), 
+            "fpga i2c params check error, config value: i2c_scale 0x%x, "
+            "i2c_filter:0x%x, i2c_stretch:0x%x.\n",
             fpga_i2c->i2c_scale_value, fpga_i2c->i2c_filter_value, fpga_i2c->i2c_stretch_value);
         return 1;
     }
 
-    DEBUG_VERBOSE("fpga i2c params check ok.\n");
+    DEBUG_VERBOSE_I2C_ADAPTER(&(fpga_i2c->adap), "fpga i2c params check ok.\n");
     return 0;
 }
 
@@ -570,26 +616,27 @@ static int fpga_i2c_xfer(struct i2c_adapter *adap,
     fpga_i2c = i2c_get_adapdata(adap);
 
     if (num != I2C_READ_MSG_NUM && num != I2C_WRITE_MSG_NUM) {
-        DEBUG_ERROR("unsupport i2c_msg len:%d.\n", num);
+        DEBUG_ERROR_I2C_ADAPTER(adap, "unsupport i2c_msg len:%d.\n", num);
         return -EINVAL;
     }
 
     if ((num == I2C_WRITE_MSG_NUM) && (msgs[0].len > fpga_i2c->reg.i2c_data_buf_len)) {
-        DEBUG_ERROR("unsupport i2c_msg type:msg[0].flag:0x%x, buf len:0x%x.\n",
+        DEBUG_ERROR_I2C_ADAPTER(adap, "unsupport i2c_msg type:msg[0].flag:0x%x, buf len:0x%x.\n",
             msgs[0].flags, msgs[0].len);
         return -EINVAL;
     }
 
     if (num == I2C_READ_MSG_NUM ) {
         if ((msgs[0].flags & I2C_M_RD) ||!(msgs[1].flags & I2C_M_RD)) {
-            DEBUG_ERROR("unsupport i2c_msg type:msg[0].flag:0x%x, msg[1].flag:0x%x.\n",
+            DEBUG_ERROR_I2C_ADAPTER(adap, 
+                "unsupport i2c_msg type:msg[0].flag:0x%x, msg[1].flag:0x%x.\n",
                 msgs[0].flags, msgs[1].flags);
             return -EINVAL;
         }
     }
 
     if (fpga_i2c_is_busy(fpga_i2c)) {
-        DEBUG_ERROR("fpga i2c adapter %d is busy, do reset.\n", adap->nr);
+        DEBUG_ERROR_I2C_ADAPTER(adap, "fpga i2c adapter %d is busy, do reset.\n", adap->nr);
         if (fpga_i2c->reset_cfg.i2c_adap_reset_flag == 1) {
 
             fpga_i2c_reset(fpga_i2c);
@@ -600,7 +647,7 @@ static int fpga_i2c_xfer(struct i2c_adapter *adap,
     }
 
     if (fpga_i2c->i2c_params_check && fpga_i2c_params_check(fpga_i2c)) {
-        DEBUG_ERROR("fpga i2c params check failed, try to reinitialize.\n");
+        DEBUG_ERROR_I2C_ADAPTER(adap, "fpga i2c params check failed, try to reinitialize.\n");
         fpga_i2c_adapter_init(fpga_i2c);
     }
 
@@ -611,7 +658,7 @@ static int fpga_i2c_xfer(struct i2c_adapter *adap,
 
     for (i = 0; ret == 0 && i < num; i++) {
         pmsg = &msgs[i];
-        DEBUG_VERBOSE("Doing %s %d byte(s) to/from 0x%02x - %d of %d messages\n",
+        DEBUG_VERBOSE_I2C_ADAPTER(adap, "Doing %s %d byte(s) to/from 0x%02x - %d of %d messages\n",
             pmsg->flags & I2C_M_RD ? "read" : "write", pmsg->len, pmsg->addr, i + 1, num);
 
         if (pmsg->flags & I2C_M_RD) {
@@ -619,12 +666,13 @@ static int fpga_i2c_xfer(struct i2c_adapter *adap,
 
             if (pmsg->flags & I2C_M_RECV_LEN) {
                 if ((ret != 0) || (pmsg->buf[0] > I2C_SMBUS_BLOCK_MAX) || (pmsg->buf[0] <= 0)) {
-                    DEBUG_ERROR("smbus block data read failed, ret:%d, read len:%u.\n",
+                    DEBUG_ERROR_I2C_ADAPTER(adap,
+                        "smbus block data read failed, ret:%d, read len:%u.\n",
                         ret, pmsg->buf[0]);
                     return -EPROTO;
                 }
                 pmsg->len += pmsg->buf[0];
-                DEBUG_VERBOSE("smbus block data read, read len:%d.\n", pmsg->len);
+                DEBUG_VERBOSE_I2C_ADAPTER(adap, "smbus block data read, read len:%d.\n", pmsg->len);
                 ret = fpga_i2c_read(fpga_i2c, pmsg->addr, pmsg->buf, pmsg->len);
             }
         } else {
@@ -955,7 +1003,8 @@ static int fpga_i2c_probe(struct platform_device *pdev)
         dev_info(fpga_i2c->dev, "Failed to add adapter.\n");
         goto fail_add;
     }
-
+    
+    I2C_ADAPTER_DEBUG_INIT(&fpga_i2c->adap, fpga_i2c_dev_t, i2c_ada_dbg);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
     of_i2c_register_devices(&fpga_i2c->adap);
 #endif
@@ -975,6 +1024,7 @@ static int fpga_i2c_remove(struct platform_device *pdev)
     fpga_i2c_dev_t *fpga_i2c;
 
     fpga_i2c = platform_get_drvdata(pdev);
+    i2c_adapter_debug_exit(&fpga_i2c->adap);
     i2c_del_adapter(&fpga_i2c->adap);
     platform_set_drvdata(pdev, NULL);
     return 0;

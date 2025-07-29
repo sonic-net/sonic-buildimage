@@ -13,9 +13,6 @@
 #include "wb_platform_i2c_dev.h"
 #include <wb_bsp_kernel_debug.h>
 
-#define KERNEL_SPACE         (0)
-#define USER_SPACE           (1)
-
 #define PROXY_NAME "wb-platform-i2c-dev"
 #define MAX_BUS_WIDTH        (16)
 #define TRANSFER_WRITE_BUFF  (MAX_RW_LEN + MAX_BUS_WIDTH)
@@ -354,7 +351,7 @@ static int device_read(struct platform_i2c_dev_info *i2c_dev, uint32_t offset, u
     case WIDTH_2Byte:
         tmp_offset = offset & 0x1;
         if (tmp_offset) {
-            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %lu invalid.\n",
+            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %zu invalid.\n",
                 width, offset, count);
             return -EINVAL;
         }
@@ -393,10 +390,10 @@ static int device_read(struct platform_i2c_dev_info *i2c_dev, uint32_t offset, u
     if (i2c_dev->file_cache_rd) {
         ret = cache_value_read(i2c_dev->mask_file_path, i2c_dev->cache_file_path, offset, buf, count);
         if (ret < 0) {
-            DEBUG_ERROR("i2c data offset: 0x%x, read_len: %lu, read cache file fail, ret: %d, return act value\n",
+            DEBUG_ERROR("i2c data offset: 0x%x, read_len: %zu, read cache file fail, ret: %d, return act value\n",
                 offset, count, ret);
         } else {
-            DEBUG_VERBOSE("i2c data offset: 0x%x, read_len: %lu success, read from cache value\n",
+            DEBUG_VERBOSE("i2c data offset: 0x%x, read_len: %zu success, read from cache value\n",
                 offset, count);
         }
     }
@@ -418,13 +415,13 @@ static int device_write(struct platform_i2c_dev_info *i2c_dev, uint32_t offset, 
     u32 max_per_len;
 
     if (offset >= i2c_dev->i2c_len) {
-        DEBUG_VERBOSE("offset: 0x%x, i2c len: 0x%x, count: %lu, EOF.\n",
+        DEBUG_VERBOSE("offset: 0x%x, i2c len: 0x%x, count: %zu, EOF.\n",
             offset, i2c_dev->i2c_len, count);
         return 0;
     }
 
     if (count > (i2c_dev->i2c_len - offset)) {
-        DEBUG_VERBOSE("read count out of range. input len:%lu, read len:%u.\n",
+        DEBUG_VERBOSE("read count out of range. input len:%zu, read len:%u.\n",
             count, i2c_dev->i2c_len - offset);
         count = i2c_dev->i2c_len - offset;
     }
@@ -434,7 +431,7 @@ static int device_write(struct platform_i2c_dev_info *i2c_dev, uint32_t offset, 
     case WIDTH_4Byte:
         tmp_offset = offset & 0x3;
         if (tmp_offset) {
-            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %lu invalid.\n",
+            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %zu invalid.\n",
                 width, offset, count);
             return -EINVAL;
         }
@@ -442,7 +439,7 @@ static int device_write(struct platform_i2c_dev_info *i2c_dev, uint32_t offset, 
     case WIDTH_2Byte:
         tmp_offset = offset & 0x1;
         if (tmp_offset) {
-            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %lu invalid.\n",
+            DEBUG_ERROR("data bus width: %u, offset: 0x%x, read size %zu invalid.\n",
                 width, offset, count);
             return -EINVAL;
         }
@@ -509,33 +506,33 @@ static ssize_t i2c_dev_read(struct file *file, char __user *buf, size_t count, l
     }
 
     if (count > sizeof(val)) {
-        DEBUG_VERBOSE("read count %lu exceed max %lu.\n", count, sizeof(val));
+        DEBUG_VERBOSE("read count %zu exceed max %zu.\n", count, sizeof(val));
         count = sizeof(val);
     }
 
     mem_clear(val, sizeof(val));
     read_len = device_read(i2c_dev, (uint32_t)*offset, val, count);
     if (read_len < 0) {
-        DEBUG_ERROR("i2c dev read failed, dev name: %s, offset: 0x%x, len: %lu.\n",
+        DEBUG_ERROR("i2c dev read failed, dev name: %s, offset: 0x%x, len: %zu.\n",
             i2c_dev->name, (uint32_t)*offset, count);
         return read_len;
     }
 
     if (read_len == 0) {
-        DEBUG_VERBOSE("i2c dev read EOF, offset: 0x%llx, count: %lu\n", *offset, count);
+        DEBUG_VERBOSE("i2c dev read EOF, offset: 0x%llx, count: %zu\n", *offset, count);
         return 0;
     }
 
     /* check flag is user spase or kernel spase */
     if (flag == USER_SPACE) {
-        DEBUG_VERBOSE("user space read, buf: %p, offset: 0x%llx, read count %lu.\n",
+        DEBUG_VERBOSE("user space read, buf: %p, offset: 0x%llx, read count %zu.\n",
             buf, *offset, count);
         if (copy_to_user(buf, val, read_len)) {
             DEBUG_ERROR("copy_to_user failed.\n");
             return -EFAULT;
         }
     } else {
-        DEBUG_VERBOSE("kernel space read, buf: %p, offset: 0x%llx, read count %lu.\n",
+        DEBUG_VERBOSE("kernel space read, buf: %p, offset: 0x%llx, read count %zu.\n",
             buf, *offset, count);
         memcpy(buf, val, read_len);
     }
@@ -549,7 +546,7 @@ static ssize_t i2c_dev_read_user(struct file *file, char __user *buf, size_t cou
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_read_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = i2c_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -559,7 +556,7 @@ static ssize_t i2c_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_read_iter, file: %p, count: %lu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_read_iter, file: %p, count: %zu, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
     ret = i2c_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
@@ -590,21 +587,21 @@ static ssize_t i2c_dev_write(struct file *file, const char __user *buf, size_t c
     }
 
     if (count > sizeof(val)) {
-        DEBUG_VERBOSE("write count %lu exceed max %lu.\n", count, sizeof(val));
+        DEBUG_VERBOSE("write count %zu exceed max %zu.\n", count, sizeof(val));
         count = sizeof(val);
     }
 
     mem_clear(val, sizeof(val));
     /* check flag is user spase or kernel spase */
     if (flag == USER_SPACE) {
-        DEBUG_VERBOSE("user space write, buf: %p, offset: 0x%llx, write count %lu.\n",
+        DEBUG_VERBOSE("user space write, buf: %p, offset: 0x%llx, write count %zu.\n",
             buf, *offset, count);
         if (copy_from_user(val, buf, count)) {
             DEBUG_ERROR("copy_from_user failed.\n");
             return -EFAULT;
         }
     } else {
-        DEBUG_VERBOSE("kernel space write, buf: %p, offset: 0x%llx, write count %lu.\n",
+        DEBUG_VERBOSE("kernel space write, buf: %p, offset: 0x%llx, write count %zu.\n",
             buf, *offset, count);
         memcpy(val, buf, count);
     }
@@ -620,7 +617,7 @@ static ssize_t i2c_dev_write(struct file *file, const char __user *buf, size_t c
 
     write_len = device_write(i2c_dev, (uint32_t)*offset, val, count);
     if (write_len < 0) {
-        DEBUG_ERROR("i2c dev write failed, dev name: %s, offset: 0x%llx, len: %lu, ret: %d\n",
+        DEBUG_ERROR("i2c dev write failed, dev name: %s, offset: 0x%llx, len: %zu, ret: %d\n",
             i2c_dev->name, *offset, count, write_len);
         return write_len;
     }
@@ -633,7 +630,7 @@ static ssize_t i2c_dev_write_user(struct file *file, const char __user *buf, siz
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_write_user, file: %p, count: %zu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
     ret = i2c_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
@@ -643,7 +640,7 @@ static ssize_t i2c_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
     int ret;
 
-    DEBUG_VERBOSE("i2c_dev_write_iter, file: %p, count: %lu, offset: %lld\n",
+    DEBUG_VERBOSE("i2c_dev_write_iter, file: %p, count: %zu, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
     ret = i2c_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
@@ -698,8 +695,8 @@ static loff_t i2c_dev_llseek(struct file *file, loff_t offset, int origin)
 static const struct file_operations i2c_dev_fops = {
     .owner      = THIS_MODULE,
     .llseek     = i2c_dev_llseek,
-    .read           = i2c_dev_read_user,
-    .write          = i2c_dev_write_user,
+    .read       = i2c_dev_read_user,
+    .write      = i2c_dev_write_user,
     .read_iter     = i2c_dev_read_iter,
     .write_iter    = i2c_dev_write_iter,
     .unlocked_ioctl = i2c_dev_ioctl,
@@ -744,7 +741,7 @@ int platform_i2c_device_func_read(const char *path, uint32_t offset, uint8_t *bu
     }
 
     if (count > MAX_RW_LEN) {
-        DEBUG_ERROR("read count %lu, beyond max:%d.\n", count, MAX_RW_LEN);
+        DEBUG_ERROR("read count %zu, beyond max:%d.\n", count, MAX_RW_LEN);
         return -EINVAL;
     }
 
@@ -756,7 +753,7 @@ int platform_i2c_device_func_read(const char *path, uint32_t offset, uint8_t *bu
 
     ret = device_read(i2c_dev, offset, buf, count);
     if (ret < 0) {
-        DEBUG_ERROR("i2c dev read failed, dev name: %s, offset: 0x%x, len: %lu, ret: %d\n",
+        DEBUG_ERROR("i2c dev read failed, dev name: %s, offset: 0x%x, len: %zu, ret: %d\n",
             i2c_dev->name, offset, count, ret);
     }
 
@@ -782,7 +779,7 @@ int platform_i2c_device_func_write(const char *path, uint32_t offset, uint8_t *b
     }
 
     if (count > MAX_RW_LEN) {
-        DEBUG_ERROR("write count %lu, beyond max:%d.\n", count, MAX_RW_LEN);
+        DEBUG_ERROR("write count %zu, beyond max:%d.\n", count, MAX_RW_LEN);
         return -EINVAL;
     }
 
@@ -803,7 +800,7 @@ int platform_i2c_device_func_write(const char *path, uint32_t offset, uint8_t *b
 
     ret = device_write(i2c_dev, offset, buf, count);
     if (ret < 0) {
-        DEBUG_ERROR("i2c dev write failed, dev name: %s, offset: 0x%x, len: %lu, ret: %d\n",
+        DEBUG_ERROR("i2c dev write failed, dev name: %s, offset: 0x%x, len: %zu, ret: %d\n",
             i2c_dev->name, offset, count, ret);
     }
 
@@ -1030,7 +1027,7 @@ static ssize_t file_cache_rd_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", i2c_dev->file_cache_rd);
+    return snprintf(buf, PAGE_SIZE, "%u\n", i2c_dev->file_cache_rd);
 }
 
 static ssize_t file_cache_rd_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -1064,7 +1061,7 @@ static ssize_t file_cache_wr_show(struct kobject *kobj, struct kobj_attribute *a
     }
 
     mem_clear(buf, PAGE_SIZE);
-    return snprintf(buf, PAGE_SIZE, "%d\n", i2c_dev->file_cache_wr);
+    return snprintf(buf, PAGE_SIZE, "%u\n", i2c_dev->file_cache_wr);
 }
 
 static ssize_t file_cache_wr_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)

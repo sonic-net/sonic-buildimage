@@ -2,6 +2,9 @@
 import time
 import syslog
 import redis
+import logging
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR
+import os
 
 mac_mac_temp = "/etc/sonic/max_mac_temp"
 redis_local_host = '127.0.0.1'
@@ -9,43 +12,22 @@ redis_port = 6379
 redis_info_db = 6
 period = 3
 
-MACTEMP_DEBUG_FILE = "/etc/.mactemp_debug_flag"
-
-MACTEMPERROR = 1
-MACTEMPDEBUG = 2
-
-debuglevel = 0
+DEBUG_FILE = "/etc/.mactemp_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "get_mac_temperature_debug.log"
+logger = setup_logger(LOG_FILE)
 redis_info_client = redis.Redis(host=redis_local_host, port=redis_port, db=redis_info_db)
 
-def mactemp_info(s):
-    syslog.openlog("MACTEMP", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
-
-def mactemp_error(s):
-    syslog.openlog("MACTEMP", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
-
 def mactemp_debug(s):
-    if MACTEMPDEBUG & debuglevel:
-        syslog.openlog("MACTEMP", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def mactemp_debug_error(s):
-    if MACTEMPERROR & debuglevel:
-        syslog.openlog("MACTEMP", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-        
+    logger.error(s)
+
 def debug_init():
-    global debuglevel
-    try:
-        with open(MACTEMP_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 def write_temperature_to_file(file_path, temperature):
     temperature = round(temperature * 1000)
@@ -84,6 +66,7 @@ def get_max_temperature():
 
 def generate_mactemp():
     while True:
+        debug_init()
         max_temperature = get_max_temperature()
         if max_temperature is None:
             mactemp_debug("get_max_temperature fail.")

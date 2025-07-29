@@ -608,6 +608,7 @@ static int at24_probe(struct i2c_client *client)
 	if (IS_ERR(cdata))
 		return PTR_ERR(cdata);
 
+    page_size = 0;
 	err = device_property_read_u32(dev, "pagesize", &page_size);
 	if (err)
 		/*
@@ -623,6 +624,7 @@ static int at24_probe(struct i2c_client *client)
 	if (device_property_present(dev, "no-read-rollover"))
 		flags |= AT24_FLAG_NO_RDROL;
 
+    addrw = 0;
 	err = device_property_read_u32(dev, "address-width", &addrw);
 	if (!err) {
 		switch (addrw) {
@@ -641,6 +643,7 @@ static int at24_probe(struct i2c_client *client)
 		}
 	}
 
+    byte_len = 0;
 	err = device_property_read_u32(dev, "size", &byte_len);
 	if (err)
 		byte_len = cdata->byte_len;
@@ -656,6 +659,7 @@ static int at24_probe(struct i2c_client *client)
 	if (!is_power_of_2(page_size))
 		dev_warn(dev, "page_size looks suspicious (no power of 2)!\n");
 
+    num_addresses = 0;
 	err = device_property_read_u32(dev, "num-addresses", &num_addresses);
 	if (err) {
 		if (flags & AT24_FLAG_TAKE8ADDR)

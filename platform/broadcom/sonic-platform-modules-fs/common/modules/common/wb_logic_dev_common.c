@@ -2,10 +2,10 @@
  * wb_logic_dev_common.c
  * ko provide universal methods to logic_dev module
  */
+#include <linux/uio.h>
 
 #include <wb_logic_dev_common.h>
 #include <wb_bsp_kernel_debug.h>
-#include <linux/uio.h>
 
 /* Use the wb_bsp_kernel_debug header file must define debug variable */
 static int debug = 0;
@@ -17,7 +17,7 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 
 static int noop_pre(struct kprobe *p, struct pt_regs *regs) { return 0; }
 static struct kprobe kp = {
-	.symbol_name = "kallsyms_lookup_name",
+    .symbol_name = "kallsyms_lookup_name",
 };
 unsigned long (*kallsyms_lookup_name_fun)(const char *name) = NULL;
 
@@ -28,17 +28,17 @@ static int find_kallsyms_lookup_name(void)
 {
     int ret = -1;
 
-	kp.pre_handler = noop_pre;
-	ret = register_kprobe(&kp);
+    kp.pre_handler = noop_pre;
+    ret = register_kprobe(&kp);
     if (ret < 0) {
-	    DEBUG_ERROR("register_kprobe failed, error:%d\n", ret);
+        DEBUG_ERROR("register_kprobe failed, error:%d\n", ret);
         return ret;
-	}
-	DEBUG_INFO("kallsyms_lookup_name addr: %p\n", kp.addr);
-	kallsyms_lookup_name_fun = (void*)kp.addr;
-	unregister_kprobe(&kp);
+    }
+    DEBUG_INFO("kallsyms_lookup_name addr: %p\n", kp.addr);
+    kallsyms_lookup_name_fun = (void*)kp.addr;
+    unregister_kprobe(&kp);
 
-	return ret;
+    return ret;
 }
 
 EXPORT_SYMBOL_GPL(kallsyms_lookup_name_fun);
@@ -59,6 +59,12 @@ static int wb_bsp_log_file_backup(char *src_path, struct file *src_fp, int src_f
         return -ENOMEM;
     }
 
+    struct kvec iov = {
+        .iov_base = buffer,
+        .iov_len = min_t(size_t, src_file_size, MAX_RW_COUNT),
+    };
+    struct iov_iter iter;
+
     mem_clear(dst_path, sizeof(dst_path));
     snprintf(dst_path, sizeof(dst_path), "%s_bak", src_path);
     dst_fp = filp_open(dst_path, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -70,9 +76,10 @@ static int wb_bsp_log_file_backup(char *src_path, struct file *src_fp, int src_f
 
     /* read origin file */
     src_offset = 0;
-    bytes_read = kernel_read(src_fp, buffer, src_file_size, &src_offset);
+    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
+    bytes_read = vfs_iter_read(src_fp, &iter, &src_offset, 0);
     if (bytes_read < 0) {
-        DEBUG_ERROR("Read %s failed, src_file_size: %d, ret: %zu\n", src_path, src_file_size, bytes_read);
+        DEBUG_ERROR("vfs_iter_read %s failed, src_file_size: %d, ret: %zu\n", src_path, src_file_size, bytes_read);
         ret = bytes_read;
         goto out_close_dst;
     }
@@ -313,7 +320,7 @@ EXPORT_SYMBOL_GPL(dev_rw_check);
 
 void logic_dev_dump_data(const char *dev_name, uint32_t offset, u8 *val, size_t count, bool read_flag)
 {
-    int i, len;
+    int i;
     uint8_t buf[DEBUG_BUF_MAX_LEN];
     uint8_t *point;
 
@@ -324,21 +331,22 @@ void logic_dev_dump_data(const char *dev_name, uint32_t offset, u8 *val, size_t 
 
     mem_clear(buf, sizeof(buf));
     point = buf;
-    len = DEBUG_BUF_MAX_LEN - 1 - 1;
-    printk(KERN_INFO "%s %s, offset=0x%x, count=%lu, data:\n", dev_name, read_flag ? "read":"write", offset, count);
-    for (i = 0; (i < count) && (len > 0); i++) {
-        snprintf(point, len, "0x%02x ", val[i]);
+    printk(KERN_INFO "%s %s, offset=0x%x, count=%zu, data:\n", dev_name, read_flag ? "read":"write", offset, count);
+    for (i = 0; i < count; i++) {
+        snprintf(point, DEBUG_BUF_MAX_LEN - (point - buf), "0x%02x ", val[i]);
         /* Format length. */
         point += 5;
-        len -= 5;
         if (((i + 1) % 16) == 0) {
             printk(KERN_INFO "%s\n", buf);
             point = buf;
-            len = DEBUG_BUF_MAX_LEN - 1 - 1;
             mem_clear(buf, sizeof(buf));
         }
     }
-    printk(KERN_INFO "%s\n", buf);
+
+    if (point != buf) {
+        printk(KERN_INFO "%s\n", buf);
+    }
+
     return;
 }
 EXPORT_SYMBOL_GPL(logic_dev_dump_data);
@@ -366,10 +374,9 @@ static int wb_dev_file_write(const char *path, uint32_t pos, uint8_t *val, size_
     iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
     ret = vfs_iter_write(filp, &iter, &tmp_pos, 0);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_write failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
+        DEBUG_ERROR("vfs_iter_write failed, ret=%d\r\n", ret);
         goto exit;
     }
-    
     vfs_fsync(filp, 1);
     filp_close(filp, NULL);
 
@@ -403,14 +410,12 @@ static int wb_dev_file_read(const char *path, uint32_t pos, uint8_t *val, size_t
     }
     ret = 0;
     tmp_pos = (loff_t)pos;
-
     iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
     ret = vfs_iter_read(filp, &iter, &tmp_pos, 0);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_read failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
+        DEBUG_ERROR("vfs_iter_read failed, ret=%d\r\n", ret);
         goto exit;
     }
-
     filp_close(filp, NULL);
 
     return ret;

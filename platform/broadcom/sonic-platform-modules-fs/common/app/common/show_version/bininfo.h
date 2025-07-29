@@ -1,9 +1,8 @@
 /*
- * Copyright (C) 2006 ruijie network inc.
+ * Copyright (C) 2006.
  * All rights reserved.
  *
  * /include/lib/bininfo.h
- * Original Author: mayy(myy@star-net.cn), 2006-6-20
  *
  * Description:
  * 
@@ -20,21 +19,10 @@
  * 'Other Data' is appended data such as 'ConfData' & 'InstallPackge'.
  * 'bininfo_t' is the description of the binary file format, see below.
  * 
- * History:
- * 
- * Shuying Song (songsy@ruijie.com.cn), 2007-7-16
- * Change the bininfo struct and binary file format to new one;
- * 
- * ChenPP(chenpp@star-net.cn), 2006-6-30
- * Add some comments;
- * Add some function interface;
- * Modify some implemention;
- *
- * mayy(mayy@star-net.cn), 2006-6-20
- * inital version.
  */
 #ifndef _BIN_HEAD_H_
 #define _BIN_HEAD_H_
+
 
 /* The addresses of the bin file segment and bininfo are both 32-byte aligned */
 #define BIN_ALIGN               32
@@ -91,3 +79,4 @@ unsigned long crc32 (unsigned long, const unsigned char *, unsigned int);
 unsigned long simple_strtoul(const char *cp, char **endp,
 				unsigned int base);
 #endif  /* _BIN_HEAD_H_ */
+

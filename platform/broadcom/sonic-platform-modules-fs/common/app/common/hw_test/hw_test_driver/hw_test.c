@@ -622,4 +622,4 @@ static void __exit dram_exit(void)
 module_init(dram_init);
 module_exit(dram_exit);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("sonic_rd <sonic_rd@whitebox.com.cn>");
+MODULE_AUTHOR("support");

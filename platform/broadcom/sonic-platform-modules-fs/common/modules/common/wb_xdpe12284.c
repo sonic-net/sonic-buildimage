@@ -24,6 +24,7 @@
 #define XDPE122_WRITE_PROTECT_OPEN   (0x40)
 #define XDPE122_LOOPA_STATUS_PAGE    (0x60)
 #define XDPE122_LOOPB_STATUS_PAGE    (0x61)
+#define XDPE122_CRC_PAGE             (0x62)
 #define XDPE122_I2C_READ_IOUT        (0x0E)
 #define XDPE122_I2C_READ_VOUT        (0x12)
 #define XDPE122_I2C_READ_TEMP        (0x18)
@@ -36,6 +37,9 @@
 #define XDPE122_VERSION_PAGE         (0x22)
 #define XDPE122_VERSION1_REG         (0x3f)
 #define XDPE122_VERSION2_REG         (0x40)
+
+#define XDPE122_CRC_LO_REG           (0x42)
+#define XDPE122_CRC_HI_REG           (0x43)
 
 #define XDPE122_LOOP_A               (0)
 #define XDPE122_LOOP_B               (1)
@@ -578,6 +582,49 @@ static ssize_t xdpe122_phase_curr_show(struct device *dev, struct device_attribu
     return snprintf(buf, PAGE_SIZE, "%lld\n", value);
 }
 
+static ssize_t xdpe122_crc_show(struct device *dev, 
+                struct device_attribute *devattr __maybe_unused, char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct pmbus_data *data;
+    int ret_lo, ret_hi;
+    uint16_t crc_lo, crc_hi;
+    uint32_t crc;
+
+    if (client == NULL) {
+        return -ENODEV;
+    }
+    data = i2c_get_clientdata(client);
+    if (data == NULL) {
+        DEBUG_ERROR("pmbus_data is NULL\n");
+        return -ENODEV;
+    }
+
+    mutex_lock(&data->update_lock);
+    ret_lo = wb_pmbus_read_word_data(client, XDPE122_CRC_PAGE, 0xff, XDPE122_CRC_LO_REG);
+    ret_hi = wb_pmbus_read_word_data(client, XDPE122_CRC_PAGE, 0xff, XDPE122_CRC_HI_REG);
+    mutex_unlock(&data->update_lock);
+
+    if (ret_lo < 0) {
+        DEBUG_ERROR("read crc lo failed: %d\n", ret_lo);
+        return ret_lo;
+    }
+
+    if (ret_hi < 0) {
+        DEBUG_ERROR("read crc hi failed: %d\n", ret_hi);
+        return ret_hi;
+    }
+
+    crc_lo = (uint16_t)ret_lo;
+    crc_hi = (uint16_t)ret_hi;
+
+    DEBUG_VERBOSE("CRC lo: 0x%04x, hi: 0x%04x\n", crc_lo, crc_hi);
+
+    crc = ((u32)crc_hi << 16) | crc_lo;
+
+    return snprintf(buf, PAGE_SIZE, "0x%08x\n", crc);
+}
+
 static SENSOR_DEVICE_ATTR_RW(avs0_vout, xdpe122_avs_vout, 0);
 static SENSOR_DEVICE_ATTR_RW(avs1_vout, xdpe122_avs_vout, 1);
 static SENSOR_DEVICE_ATTR_RW(avs0_vout_max, pmbus_avs_vout_max, 0);
@@ -696,6 +743,7 @@ static SENSOR_DEVICE_ATTR_RO(status0_byte, pmbus_get_status_byte, 0);
 static SENSOR_DEVICE_ATTR_RO(status1_byte, pmbus_get_status_byte, 1);
 static SENSOR_DEVICE_ATTR_RO(status0_word, pmbus_get_status_word, 0);
 static SENSOR_DEVICE_ATTR_RO(status1_word, pmbus_get_status_word, 1);
+static SENSOR_DEVICE_ATTR_RO(crc, xdpe122_crc, 0);
 /* Page: 0x22; Reg: 0x1f */
 static SENSOR_DEVICE_ATTR_2(cfg_reg_0x1f, S_IRUGO | S_IWUSR, show_cfg_reg_value, set_cfg_reg_value, 0x22, 0x1f);
 
@@ -710,6 +758,7 @@ static struct attribute *xdpe12284_attrs[] = {
     &sensor_dev_attr_status1_byte.dev_attr.attr,
     &sensor_dev_attr_status0_word.dev_attr.attr,
     &sensor_dev_attr_status1_word.dev_attr.attr,
+    &sensor_dev_attr_crc.dev_attr.attr,
     &sensor_dev_attr_cfg_reg_0x1f.dev_attr.attr,
     NULL
 };
@@ -865,6 +914,7 @@ static void xdpe122_remove(struct i2c_client *client)
     (void)wb_pmbus_do_remove(client);
     return;
 }
+
 
 static const struct i2c_device_id xdpe122_id[] = {
 	{"wb_xdpe12254", 0},

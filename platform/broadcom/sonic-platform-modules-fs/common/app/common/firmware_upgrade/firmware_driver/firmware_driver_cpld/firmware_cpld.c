@@ -14,7 +14,7 @@ static int firmware_cpld_open(struct inode *inode, struct file *file)
     firmware_device_t *frm_dev;
 
     FIRMWARE_DRIVER_DEBUG_VERBOSE("Open cpld device.\n");
-    frm_dev = firmware_get_device_by_minor(MINOR(inode->i_rdev));
+    frm_dev = firmware_cpld_get_device_by_minor(MINOR(inode->i_rdev));
     if (frm_dev == NULL) {
         return -ENXIO;
     }
@@ -135,7 +135,7 @@ static long firmware_cpld_ioctl(struct file *file, unsigned int cmd, unsigned lo
         }
         break;
     default:
-        FIRMWARE_DRIVER_DEBUG_ERROR("not find cmd: %d\r\n", cmd);
+        FIRMWARE_DRIVER_DEBUG_ERROR("not find cmd: %d\n", cmd);
         return -ENOTTY;
     } /* End of switch */
 
@@ -164,9 +164,9 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
     int i;
     char buf[64];
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_upgrade_config_init\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_upgrade_config_init\n");
     if (cpld_info == NULL) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\r\n");
+        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\n");
         return -1;
     }
 
@@ -227,9 +227,9 @@ static int firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *cpl
     firmware_upgrade_device_t *firmware_upgrade_device;
     firmware_jtag_device_t jtag_upg_device;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_upgrade_config_init\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_upgrade_config_init\n");
     if (cpld_info == NULL) {
-        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\r\n");
+        FIRMWARE_DRIVER_DEBUG_ERROR("info is null\n");
         return -1;
     }
 
@@ -283,7 +283,7 @@ static int  firmware_cpld_probe(struct platform_device *pdev)
     firmware_cpld_t *cpld_info;
     firmware_device_t *frm_dev;
 
-    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_cpld_probe\r\n");
+    FIRMWARE_DRIVER_DEBUG_VERBOSE("Enter firmware_cpld_probe\n");
     /* Gets the information in the device tree */
     cpld_info = devm_kzalloc(&pdev->dev, sizeof(firmware_cpld_t), GFP_KERNEL);
     if (cpld_info == NULL) {
@@ -320,7 +320,7 @@ static int  firmware_cpld_probe(struct platform_device *pdev)
 
     FIRMWARE_DRIVER_DEBUG_VERBOSE("Register cpld firmware chain:%d, name:%s.\n", frm_dev->chain, frm_dev->name);
 
-    ret = firmware_device_register(frm_dev);
+    ret = firmware_cpld_device_register(frm_dev);
     if (ret < 0) {
         FIRMWARE_DRIVER_DEBUG_ERROR("Failed to register firmware device.\n");
         return -EPERM;
@@ -335,7 +335,7 @@ static int __exit firmware_cpld_remove(struct platform_device *pdev)
     firmware_device_t *frm_dev;
 
     frm_dev = (firmware_device_t *)platform_get_drvdata(pdev);
-    firmware_device_unregister(frm_dev);
+    firmware_cpld_device_unregister(frm_dev);
     platform_set_drvdata(pdev, NULL);
 
     return 0;
@@ -369,7 +369,7 @@ int firmware_cpld_init(void)
 
     INIT_LIST_HEAD(&fmw_drv_cpld.list);
     FIRMWARE_DRIVER_DEBUG_VERBOSE("cpld upgrade driver register \n");
-    ret = firmware_driver_register(&fmw_drv_cpld);
+    ret = firmware_cpld_driver_register(&fmw_drv_cpld);
     if (ret < 0) {
         FIRMWARE_DRIVER_DEBUG_ERROR("cpld upgrade driver register failed.\n");
         return ret;
@@ -379,6 +379,6 @@ int firmware_cpld_init(void)
 
 void firmware_cpld_exit(void)
 {
-    firmware_driver_unregister(&fmw_drv_cpld);
+    firmware_cpld_driver_unregister(&fmw_drv_cpld);
     INIT_LIST_HEAD(&fmw_drv_cpld.list);
 }

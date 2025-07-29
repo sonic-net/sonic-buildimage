@@ -264,13 +264,13 @@ static int ipmi_validate_common_hdr(const uint8_t *fru_data, const size_t data_l
 }
 
 /* Header information acquisition */
-static int dfd_get_frue2prom_info(int bus, int dev_addr, fru_common_header_t *info, const char *sysfs_name)
+static int dfd_get_frue2prom_header_info(int bus, int dev_addr, fru_common_header_t *info, const char *sysfs_name)
 {
     int ret;
     uint8_t fru_common_header_info[sizeof(fru_common_header_t)];
 
     if (info == NULL) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter!\n");
+        DBG_FRU_DEBUG(DBG_ERROR, "dfd_get_frue2prom_header_info Invalid parameter!\n");
         return -DFD_RV_INVALID_VALUE;
     }
 
@@ -294,7 +294,7 @@ static int dfd_set_fru_product_info(ipmi_product_info_t *ipmi_product_info, ipmi
     int ret;
     ret = DFD_RV_OK;
     if (ipmi_product_info == NULL || vpd_info == NULL) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter!\n");
+        DBG_FRU_DEBUG(DBG_ERROR, "dfd_set_fru_product_info Invalid parameter!\n");
         return -DFD_RV_INVALID_VALUE;
     }
 
@@ -305,9 +305,6 @@ static int dfd_set_fru_product_info(ipmi_product_info_t *ipmi_product_info, ipmi
         break;
     case DFD_DEV_INFO_TYPE_NAME:
         ipmi_product_info->product_name = vpd_info;
-        break;
-    case DFD_DEV_INFO_TYPE_DEV_TYPE:
-        ipmi_product_info->product_type_fields = vpd_info;
         break;
     case DFD_DEV_INFO_TYPE_HW_INFO:
         ipmi_product_info->product_version = vpd_info;
@@ -320,6 +317,19 @@ static int dfd_set_fru_product_info(ipmi_product_info_t *ipmi_product_info, ipmi
         break;
     case DFD_DEV_INFO_TYPE_ASSET_TAG:
         ipmi_product_info->product_asset_tag = vpd_info;
+        break;
+    case DFD_DEV_INFO_TYPE_EXTRA1:
+        ipmi_product_info->product_extra1 = vpd_info;
+        break;
+    case DFD_DEV_INFO_TYPE_DEV_TYPE:
+    case DFD_DEV_INFO_TYPE_EXTRA2:
+        ipmi_product_info->product_extra2 = vpd_info;
+        break;
+    case DFD_DEV_INFO_TYPE_EXTRA3:
+        ipmi_product_info->product_extra3 = vpd_info;
+        break;
+    case DFD_DEV_INFO_TYPE_EXTRA4:
+        ipmi_product_info->product_extra4 = vpd_info;
         break;
     default:
         ret = -1;
@@ -334,7 +344,7 @@ static int dfd_set_fru_board_info(ipmi_board_info_t *ipmi_board_info, ipmi_fru_f
     int ret;
     ret = DFD_RV_OK;
     if (ipmi_board_info == NULL || vpd_info == NULL) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter!\n");
+        DBG_FRU_DEBUG(DBG_ERROR, "dfd_set_fru_board_info Invalid parameter!\n");
         return -DFD_RV_INVALID_VALUE;
     }
 
@@ -367,46 +377,156 @@ static int dfd_set_fru_board_info(ipmi_board_info_t *ipmi_board_info, ipmi_fru_f
 }
 
 /**
- * dfd_get_fru_data - Obtain product area FRU information
+ * Helper function to read FRU common header from a file
+ */
+static int dfd_get_frue2prom_header_info_by_file(char *file_path, fru_common_header_t *info)
+{
+    int ret;
+    uint8_t fru_common_header_info[sizeof(fru_common_header_t)];
+
+    if (info == NULL || file_path == NULL) {
+        DBG_FRU_DEBUG(DBG_ERROR, "dfd_get_frue2prom_header_info_by_file Invalid parameter!\n");
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    ret = dfd_ko_read_file(file_path, 0, (uint8_t *)info, sizeof(fru_common_header_t));
+    if (ret < 0) {
+        DBG_FRU_DEBUG(DBG_ERROR, "Read eeprom head info error(file: %s).\n", file_path);
+        return ret;
+    }
+
+    memcpy(fru_common_header_info, (uint8_t *)info, sizeof(fru_common_header_t));
+
+    if (ipmi_validate_common_hdr(fru_common_header_info, sizeof(fru_common_header_t)) != 0) {
+        return -DFD_RV_TYPE_ERR;
+    }
+
+    return DFD_RV_OK;
+}
+
+/**
+ * Calculate the offset based on the data_area type.
+ * @param info          The FRU common header information.
+ * @param data_area     The data area type (FRU_BOARD_AREA or FRU_PRODUCT_AREA).
+ * @returns             The calculated offset on success, negative value on failure.
+ */
+static int calculate_data_area_offset(const fru_common_header_t *info, int data_area)
+{
+    if (!info) {
+        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter passed to calculate_data_area_offset.\n");
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    switch (data_area) {
+    case FRU_BOARD_AREA:
+        return info->board_offset * IPMI_EIGHT_BYTES;
+    case FRU_PRODUCT_AREA:
+        return info->product_offset * IPMI_EIGHT_BYTES;
+    default:
+        DBG_FRU_DEBUG(DBG_ERROR, "Invalid data_area type: %d\n", data_area);
+        return -DFD_RV_INVALID_VALUE;
+    }
+}
+
+/* Function to handle FRU data processing based on the data_area type */
+static int dfd_process_fru_data(int data_area, int type, uint8_t *fru_data, int fru_len_tmp,
+                            ipmi_fru_field_t *vpd_info,
+                            ipmi_board_info_t *ipmi_board_info,
+                            ipmi_product_info_t *ipmi_product_info)
+{
+    int ret;
+
+    switch (data_area) {
+    case FRU_BOARD_AREA:
+        ret = dfd_set_fru_board_info(ipmi_board_info, vpd_info, type);
+        if (ret < 0) {
+            DBG_FRU_DEBUG(DBG_ERROR, "dfd_set_fru_board_info fail. type: %d, ret: %d\n", type, ret);
+            return ret;
+        }
+        ret = ipmi_fru_board_info_area(fru_data, fru_len_tmp, ipmi_board_info);
+        if (ret < 0) {
+            DBG_FRU_DEBUG(DBG_ERROR, "ipmi_fru_board_info_area fail. ret: %d\n", ret);
+            return ret;
+        }
+        break;
+    case FRU_PRODUCT_AREA:
+        ret = dfd_set_fru_product_info(ipmi_product_info, vpd_info, type);
+        if (ret < 0) {
+            DBG_FRU_DEBUG(DBG_ERROR, "dfd_set_fru_product_info fail. type: %d, ret: %d\n", type, ret);
+            return ret;
+        }
+        ret = ipmi_fru_product_info_area(fru_data, fru_len_tmp, ipmi_product_info);
+        if (ret < 0) {
+            DBG_FRU_DEBUG(DBG_ERROR, "ipmi_fru_product_info_area fail. ret: %d\n", ret);
+            return ret;
+        }
+        break;
+    default:
+        DBG_FRU_DEBUG(DBG_ERROR, "Unhandled data_area type: %d\n", data_area);
+        return -DFD_RV_INVALID_VALUE;
+    }
+    return ret;
+}
+
+/**
+ * dfd_get_fru_data_common - Obtain FRU information
  * @bus:FRU E2 bus number
  * @dev_addr:FRU E2 Device address
+ * @file_path:eeprom file path
  * @type 2: Product name, 3: product serial number 5: hardware version number 6: product ID
  * @buf: Data is stored in buf
  * @buf_len:buf length
  * @sysfs_name:sysfs attribute name
+ * @data_area: 1: board data, 0: product data
  * @returns:0 success, negative value: failed
  */
-int dfd_get_fru_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf_len, const char *sysfs_name)
+static int dfd_get_fru_data_common(int bus, int dev_addr, char *file_path, int type, uint8_t *buf,
+            uint32_t buf_len, const char *sysfs_name, int data_area)
 {
     fru_common_header_t info;
     uint8_t *fru_data;
     int ret;
     uint8_t fru_len;
-    ipmi_product_info_t ipmi_product_info;
-    ipmi_fru_field_t vpd_info;
-    int product_offset;
+    int offset;
     int fru_len_tmp;
+    ipmi_fru_field_t vpd_info;
+    ipmi_board_info_t ipmi_board_info;
+    ipmi_product_info_t ipmi_product_info;
 
     if (buf == NULL || buf_len <= 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter!\n");
+        DBG_FRU_DEBUG(DBG_ERROR, "dfd_get_fru_data_common Invalid parameter!\n");
         return -DFD_RV_INVALID_VALUE;
     }
 
-    DBG_FRU_DEBUG(DBG_VERBOSE, "Read fru eeprom (bus: %d, addr: 0x%02x, type:%d, buf: %p, len: %d).\n",
-                  bus, dev_addr, type, buf, buf_len);
+    if (file_path) {
+        DBG_FRU_DEBUG(DBG_VERBOSE, "Read fru file (file: %s, type:%d, buf: %p, len: %d).\n",
+                      file_path, type, buf, buf_len);
+        ret = dfd_get_frue2prom_header_info_by_file(file_path, &info);
+    } else {
+        DBG_FRU_DEBUG(DBG_VERBOSE, "Read fru eeprom (bus: %d, addr: 0x%02x, type:%d, buf: %p, len: %d).\n",
+                      bus, dev_addr, type, buf, buf_len);
+        ret = dfd_get_frue2prom_header_info(bus, dev_addr, &info, sysfs_name);
+    }
 
-    ret = dfd_get_frue2prom_info(bus, dev_addr, &info, sysfs_name);
     if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Read eeprom info head error(bus: %d, addr: 0x%02x, buf: %p, len: %d).\n",
-                      bus, dev_addr, buf, buf_len);
+        DBG_FRU_DEBUG(DBG_ERROR, "Read eeprom info head error.\n");
         return ret;
     }
 
-    product_offset = info.product_offset * IPMI_EIGHT_BYTES;
-    ret = dfd_ko_i2c_read(bus, dev_addr, product_offset + 1, &fru_len, 1, sysfs_name);
+    offset = calculate_data_area_offset(&info, data_area);
+    if (offset < 0) {
+        DBG_FRU_DEBUG(DBG_ERROR, "Calculate data area offset error.\n");
+        return -DFD_RV_INVALID_VALUE;
+    }
+    
+    if (file_path) {
+        ret = dfd_ko_read_file(file_path, offset + 1, &fru_len, 1);
+    } else {
+        ret = dfd_ko_i2c_read(bus, dev_addr, offset + 1, &fru_len, 1, sysfs_name);
+    }
+
     if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "read eeprom info product_offset(bus: %d, addr: 0x%02x, product offset:%d).\n",
-                      bus, dev_addr, info.product_offset);
+        DBG_FRU_DEBUG(DBG_ERROR, "Read eeprom info offset error.\n");
         return -DFD_RV_DEV_FAIL;
     }
 
@@ -417,7 +537,12 @@ int dfd_get_fru_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf
         return -DFD_RV_NO_MEMORY;
     }
 
-    ret = dfd_ko_i2c_read(bus, dev_addr, product_offset, fru_data, fru_len_tmp, sysfs_name);
+    if (file_path) {
+        ret = dfd_ko_read_file(file_path, offset, fru_data, fru_len_tmp);
+    } else {
+        ret = dfd_ko_i2c_read(bus, dev_addr, offset, fru_data, fru_len_tmp, sysfs_name);
+    }
+
     if (ret < 0) {
         DBG_FRU_DEBUG(DBG_ERROR, "Get FRU data error.\n");
         kfree(fru_data);
@@ -425,21 +550,16 @@ int dfd_get_fru_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf
     }
 
     mem_clear((uint8_t *)&vpd_info, sizeof(ipmi_fru_field_t));
-    ret = dfd_set_fru_product_info(&ipmi_product_info, &vpd_info, type);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Not support to get info: %d.\n", type);
-        kfree(fru_data);
-        return ret;
-    }
-
-    ret = ipmi_fru_product_info_area(fru_data, fru_len_tmp, &ipmi_product_info);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "analysis FRU product info error.\n");
-        kfree(fru_data);
-        return ret;
-    }
+    mem_clear((uint8_t *)&ipmi_board_info, sizeof(ipmi_board_info_t));
+    mem_clear((uint8_t *)&ipmi_product_info, sizeof(ipmi_product_info_t));
+    ret = dfd_process_fru_data(data_area, type, fru_data, fru_len_tmp, &vpd_info, &ipmi_board_info, &ipmi_product_info);
 
     kfree(fru_data);
+
+    if (ret < 0) {
+        DBG_FRU_DEBUG(DBG_ERROR, "Analysis FRU info error.\n");
+        return ret;
+    }
 
     buf_len = buf_len < vpd_info.type_length_field_length ? buf_len : vpd_info.type_length_field_length;
     memcpy(buf, (uint8_t *)&vpd_info, buf_len);
@@ -448,82 +568,39 @@ int dfd_get_fru_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf
 }
 
 /**
- * dfd_get_fru_board_data - Obtain the FRU information of the board area
- * @bus:FRU E2 bus number
- * @dev_addr:FRU E2 Device address
- * @type: 2: Product name, 3: product serial number 5: hardware version number
- * @buf:Data is stored in buf
- * @buf_len:buf length
- * @sysfs_name:sysfs attribute name
- * @returns: 0 success, negative value: failed
+ * dfd_get_fru_product_data_by_file - Obtain product area FRU information by file
+ */
+int dfd_get_fru_product_data_by_file(char *file_path, int type, uint8_t *buf, uint32_t buf_len)
+{   
+    DBG_FRU_DEBUG(DBG_VERBOSE, "dfd_get_fru_product_data_by_file.\n");
+    return dfd_get_fru_data_common(IPMI_INVALID_BUS_ADDR, IPMI_INVALID_BUS_ADDR, file_path, type, buf, buf_len, NULL, FRU_PRODUCT_AREA);
+}
+
+#if 0
+/**
+ * dfd_get_fru_board_data_by_file - Obtain board area FRU information by file
+ */
+int dfd_get_fru_board_data_by_file(char *file_path, int type, uint8_t *buf, uint32_t buf_len)
+{
+    DBG_FRU_DEBUG(DBG_VERBOSE, "dfd_get_fru_board_data_by_file.\n");
+    return dfd_get_fru_data_common(IPMI_INVALID_BUS_ADDR, IPMI_INVALID_BUS_ADDR, file_path, type, buf, buf_len, NULL, FRU_BOARD_AREA);
+}
+#endif
+
+/**
+ * dfd_get_fru_data - Obtain product area FRU information by i2c
+ */
+int dfd_get_fru_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf_len, const char *sysfs_name)
+{
+    DBG_FRU_DEBUG(DBG_VERBOSE, "dfd_get_fru_data.\n");
+    return dfd_get_fru_data_common(bus, dev_addr, NULL, type, buf, buf_len, sysfs_name, FRU_PRODUCT_AREA);
+}
+
+/**
+ * dfd_get_fru_board_data - Obtain board area FRU information by i2c
  */
 int dfd_get_fru_board_data(int bus, int dev_addr, int type, uint8_t *buf, uint32_t buf_len, const char *sysfs_name)
 {
-    fru_common_header_t info;
-    uint8_t *fru_data;
-    int ret;
-    uint8_t fru_len;
-    ipmi_board_info_t ipmi_board_info;
-    ipmi_fru_field_t vpd_info;
-    int board_offset;
-    int fru_len_tmp;
-
-    if (buf == NULL || buf_len <= 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Invalid parameter!\n");
-        return -DFD_RV_INVALID_VALUE;
-    }
-
-    DBG_FRU_DEBUG(DBG_VERBOSE, "Read fru eeprom (bus: %d, addr: 0x%02x, type:%d, buf: %p, len: %d).\n",
-                  bus, dev_addr, type, buf, buf_len);
-
-    ret = dfd_get_frue2prom_info(bus, dev_addr, &info, sysfs_name);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Read eeprom info head error(bus: %d, addr: 0x%02x, buf: %p, len: %d).\n",
-                      bus, dev_addr, buf, buf_len);
-        return ret;
-    }
-
-    board_offset = info.board_offset * IPMI_EIGHT_BYTES;
-    ret = dfd_ko_i2c_read(bus, dev_addr, board_offset + 1, &fru_len, 1, sysfs_name);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "read eeprom info product_offset(bus: %d, addr: 0x%02x, product offset:%d).\n",
-                      bus, dev_addr, info.board_offset);
-        return -DFD_RV_DEV_FAIL;
-    }
-
-    fru_len_tmp = fru_len * IPMI_EIGHT_BYTES;
-    fru_data = (uint8_t *)kmalloc(sizeof(uint8_t) * fru_len_tmp, GFP_KERNEL);
-    if (fru_data == NULL) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Allocate buffer(len:%d) error!\n", fru_len_tmp);
-        return -DFD_RV_NO_MEMORY;
-    }
-
-    ret = dfd_ko_i2c_read(bus, dev_addr, board_offset, fru_data, fru_len_tmp, sysfs_name);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Get FRU data error.\n");
-        kfree(fru_data);
-        return ret;
-    }
-
-    mem_clear((uint8_t *)&vpd_info, sizeof(ipmi_fru_field_t));
-    ret = dfd_set_fru_board_info(&ipmi_board_info, &vpd_info, type);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "Not support to get info: %d.\n", type);
-        kfree(fru_data);
-        return ret;
-    }
-
-    ret = ipmi_fru_board_info_area(fru_data, fru_len_tmp, &ipmi_board_info);
-    if (ret < 0) {
-        DBG_FRU_DEBUG(DBG_ERROR, "analysis FRU product info error.\n");
-        kfree(fru_data);
-        return ret;
-    }
-
-    kfree(fru_data);
-
-    buf_len = buf_len < vpd_info.type_length_field_length ? buf_len : vpd_info.type_length_field_length;
-    memcpy(buf, (uint8_t *)&vpd_info, buf_len);
-
-    return DFD_RV_OK;
+    DBG_FRU_DEBUG(DBG_VERBOSE, "dfd_get_fru_board_data.\n");
+    return dfd_get_fru_data_common(bus, dev_addr, NULL, type, buf, buf_len, sysfs_name, FRU_BOARD_AREA);
 }

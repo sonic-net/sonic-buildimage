@@ -5,10 +5,7 @@ struct s3ip_sysfs_curr_sensor_drivers_s {
     int (*get_main_board_curr_number)(void);
     ssize_t (*get_main_board_curr_alias)(unsigned int curr_index, char *buf, size_t count);
     ssize_t (*get_main_board_curr_type)(unsigned int curr_index, char *buf, size_t count);
-    ssize_t (*get_main_board_curr_max)(unsigned int curr_index, char *buf, size_t count);
-    int (*set_main_board_curr_max)(unsigned int curr_index, const char *buf, size_t count);
-    ssize_t (*get_main_board_curr_min)(unsigned int curr_index, char *buf, size_t count);
-    int (*set_main_board_curr_min)(unsigned int curr_index, const char *buf, size_t count);
+    ssize_t (*get_main_board_curr_threshold)(unsigned int curr_index, unsigned int type, char *buf, size_t count);
     ssize_t (*get_main_board_curr_value)(unsigned int curr_index, char *buf, size_t count);
     ssize_t (*get_main_board_curr_monitor_flag)(unsigned int curr_index, char *buf, size_t count);
 };

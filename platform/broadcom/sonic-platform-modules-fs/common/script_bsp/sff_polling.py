@@ -6,13 +6,20 @@ import os
 import time
 import syslog
 import click
+import logging
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR
 from platform_config import *
 
-SFF_POLLING_DEBUG_FILE = "/etc/.sff_polling_debug_flag"
-SFF_POLLING_DEBUG = 1
-SFF_POLLING_ERROR = 2
-debuglevel = 0
 SFF_TYPE_UNKNOWN = "UNKNOWN"
+DEBUG_FILE = "/etc/.sff_polling_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "sff_polling_debug.log"
+logger = setup_logger(LOG_FILE)
+
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -32,28 +39,11 @@ class AliasedGroup(click.Group):
 
 
 def sff_polling_debug(s):
-    if SFF_POLLING_DEBUG & debuglevel:
-        syslog.openlog("SFF_POLLING_DEBUG", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
 
 def sff_polling_error(s):
-    if SFF_POLLING_ERROR & debuglevel:
-        syslog.openlog("SFF_POLLING_ERROR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
-
-def debug_init():
-    global debuglevel
-
-    try:
-        with open(SFF_POLLING_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception as e:
-        debuglevel = 0
-    return
-
+    logger.error(s)
 
 def dev_file_write(path, offset, buf):
     msg = ""
@@ -260,4 +250,5 @@ def start():
 
 
 if __name__ == '__main__':
+    debug_init()
     main()

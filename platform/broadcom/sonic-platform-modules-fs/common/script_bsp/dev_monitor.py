@@ -5,8 +5,10 @@ import time
 import syslog
 import traceback
 import click
+import logging
 from platform_config import DEV_MONITOR_PARAM
-from platform_util import get_value, exec_os_cmd
+from platform_util import get_value, set_value, setup_logger, BSP_COMMON_LOG_DIR, waitForDocker
+from public.platform_common_config import SDKCHECK_PARAMS
 
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
@@ -26,88 +28,58 @@ class AliasedGroup(click.Group):
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
         return None
 
-
-DEVMONITOR_DEBUG_FILE = "/etc/.devmonitor_debug_flag"
-
-debuglevel = 0
-
+DEBUG_FILE = "/etc/.devmonitor_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "dev_monitor_debug.log"
+logger = setup_logger(LOG_FILE)
 
 def debug_init():
-    global debuglevel
-    if os.path.exists(DEVMONITOR_DEBUG_FILE):
-        debuglevel = 1
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        debuglevel = 0
-
-
-def devwarninglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("DEVMONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_WARNING, s)
-
-
-def devcriticallog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("DEVMONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_CRIT, s)
-
+        logger.setLevel(logging.INFO)
 
 def deverror(s):
     # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("DEVMONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def devinfo(s):
     # s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("DEVMONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def devdebuglog(s):
-    # s = s.decode('utf-8').encode('gb2312')
-    if debuglevel == 1:
-        syslog.openlog("DEVMONITOR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
 
 class DevMonitor():
 
     def getpresentstatus(self, param):
         try:
-            res = False
             ret = {}
             ret["status"] = ''
 
-            presentbit = param.get('presentbit')
-            okval = param.get('okval')
-            res,val = get_value(param)
-            if not res:
+            ret_t, val = get_value(param)
+            if ret_t is False:
                 ret["status"] = "NOT OK"
-                return ret
-            
-            retval = val
-            if (isinstance(retval, int)):
-                val_t = (retval & (1 << presentbit)) >> presentbit
-            else:
-                ret["status"] = "NOT OK"
+                devdebuglog("get present status failed, param: %s, log: %s" % (param, val))
                 return ret
 
+            presentbit = param.get('presentbit', 0)
+            okval = param.get('okval')
+            val_t = (val & (1 << presentbit)) >> presentbit
             if val_t != okval:
                 ret["status"] = "ABSENT"
             else:
                 ret["status"] = "PRESENT"
         except Exception as e:
             ret["status"] = "NOT OK"
-            deverror("getpresentstatus error")
-            deverror(str(e))
+            deverror("getpresentstatus error, msg: %s" % (traceback.format_exc()))
         return ret
 
     def removeDev(self, bus, loc):
         cmd = "echo  0x%02x > /sys/bus/i2c/devices/i2c-%d/delete_device" % (loc, bus)
         devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
         if os.path.exists(devpath):
-            exec_os_cmd(cmd)
+            os.system(cmd)
 
     def addDev(self, name, bus, loc):
         if name == "lm75":
@@ -115,7 +87,7 @@ class DevMonitor():
         cmd = "echo  %s 0x%02x > /sys/bus/i2c/devices/i2c-%d/new_device" % (name, loc, bus)
         devpath = "/sys/bus/i2c/devices/%d-%04x" % (bus, loc)
         if os.path.exists(devpath) is False:
-            exec_os_cmd(cmd)
+            os.system(cmd)
 
     def checkattr(self, bus, loc, attr):
         try:
@@ -124,14 +96,60 @@ class DevMonitor():
                 return True
         except Exception as e:
             deverror("checkattr error")
-            deverror(str(e))
+            deverror(str(traceback.format_exc()))
         return False
+
+    def register_bind_dev_again(self, device_name, driver_name, driver_type):
+        action = {"gettype": "cmd", "cmd" : "echo %s > /sys/bus/%s/drivers/%s/bind"}
+        action["cmd"] = action["cmd"] % (device_name, driver_type, driver_name)
+
+        ret, msg = set_value(action)
+        if ret is False:
+            devdebuglog("%s register_bind_dev_again fail, reason: %s" % (device_name, msg))
+        else:
+            devdebuglog("%s register_bind_dev_again  success" % device_name)
+
+        return ret
+
+    def do_bind_dev_pre_check(self, device_name, driver_name, driver_type):
+        bind_dev_pre_check_cmd = {
+            "cmd": "echo %s > /sys/bus/%s/drivers/%s/unbind",
+            "gettype": "cmd",
+            "pre_check": {
+                "gettype": "file_exist",
+                "judge_file": "/sys/bus/%s/drivers/%s/%s",
+                "okval": True
+            }
+        }
+        bind_dev_pre_check_cmd["cmd"] = bind_dev_pre_check_cmd["cmd"] % (device_name, driver_type, driver_name)
+        bind_dev_pre_check_cmd["pre_check"]["judge_file"] = bind_dev_pre_check_cmd["pre_check"]["judge_file"]  % (driver_type, driver_name, device_name)
+
+        ret, msg = set_value(bind_dev_pre_check_cmd)
+        if ret is False:
+            devdebuglog("%s do_bind_dev_pre_check fail, reason: %s" % (device_name, msg))
+        else:
+            devdebuglog("%s do_bind_dev_pre_check  success" % device_name)
+
+        return ret
+
+    def register_device_again(self, device_name, bus, loc, driver_name, driver_type):
+        if driver_type:
+            ret = self.do_bind_dev_pre_check(device_name, driver_name, driver_type)
+            if ret is False:
+                return
+
+            self.register_bind_dev_again(device_name, driver_name, driver_type)
+        else:
+            self.removeDev(bus, loc)
+            time.sleep(0.1)
+            self.addDev(device_name, bus, loc)
 
     def monitor(self, ret):
         totalerr = 0
         for item in ret:
             try:
                 name = item.get('name')
+                driver_type = item.get('driver_type')
                 itemattr = '%sattr' % name
                 val_t = getattr(DevMonitor, itemattr, None)
                 if val_t == 'OK':
@@ -155,13 +173,9 @@ class DevMonitor():
                             presentstatus = self.getpresentstatus(present)
                             devdebuglog("%s present status:%s" % (name, presentstatus.get('status')))
                             if presentstatus.get('status') == 'PRESENT':
-                                self.removeDev(bus, loc)
-                                time.sleep(0.1)
-                                self.addDev(devname, bus, loc)
+                                self.register_device_again(devname, bus, loc, name, driver_type)
                         else:
-                            self.removeDev(bus, loc)
-                            time.sleep(0.1)
-                            self.addDev(devname, bus, loc)
+                            self.register_device_again(devname, bus, loc, name, driver_type)
                     else:
                         setattr(DevMonitor, item_devattr, 'OK')
                     val_t = getattr(DevMonitor, item_devattr, None)
@@ -176,7 +190,7 @@ class DevMonitor():
             except Exception as e:
                 totalerr -= 1
                 deverror("monitor error")
-                deverror(str(e))
+                deverror(traceback.format_exc())
         return totalerr
 
     def psusmonitor(self):
@@ -230,6 +244,23 @@ class DevMonitor():
         devdebuglog("slotsattr:value:%s" % (val_t))
         return ret
 
+    def binddevsmonitor(self):
+        binddevs_conf = DEV_MONITOR_PARAM.get('binddevs')
+        if binddevs_conf is None:
+            return 0
+        binddevsattr = 'binddevsattr'
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        if val_t == 'OK':
+            return 0
+        ret = self.monitor(binddevs_conf)
+        if ret == 0:
+            setattr(DevMonitor, binddevsattr, 'OK')
+        else:
+            setattr(DevMonitor, binddevsattr, 'NOT OK')
+        val_t = getattr(DevMonitor, binddevsattr, None)
+        devdebuglog("binddevsattr:value:%s" % (val_t))
+        return ret
+
     def othersmonitor(self):
         others_conf = DEV_MONITOR_PARAM.get('others')
         if others_conf is None:
@@ -247,6 +278,29 @@ class DevMonitor():
         devdebuglog("othersattr:value:%s" % (val_t))
         return ret
 
+    def sdkmonitor(self):
+        sdk_conf = DEV_MONITOR_PARAM.get('sdk')
+        ret = 0
+        if sdk_conf is None:
+            return ret
+        sdkattr = 'sdkattr'
+        val_t = getattr(DevMonitor, sdkattr, None)
+        if val_t == 'OK':
+            return ret
+        if waitForDocker(SDKCHECK_PARAMS, timeout=0) == True:
+            setattr(DevMonitor, sdkattr, 'OK')
+            acts = sdk_conf.get("act", [])
+            for item in acts:
+                res, log = set_value(item)
+                if not res:
+                    setattr(DevMonitor, sdkattr, 'NOT OK')
+                    devdebuglog("deal sdk monitor items error:%s" % log)
+        else:
+            ret = -1
+            setattr(DevMonitor, sdkattr, 'NOT OK')
+        val_t = getattr(DevMonitor, sdkattr, None)
+        devdebuglog("sdkattr:value:%s" % (val_t))
+        return ret
 
 def doDevMonitor(devMonitor):
     ret_t = 0
@@ -254,6 +308,8 @@ def doDevMonitor(devMonitor):
     ret_t += devMonitor.fansmonitor()
     ret_t += devMonitor.slotsmonitor()
     ret_t += devMonitor.othersmonitor()
+    ret_t += devMonitor.binddevsmonitor()
+    ret_t += devMonitor.sdkmonitor()
     return ret_t
 
 
@@ -265,7 +321,7 @@ def run(interval, devMonitor):
             ret = doDevMonitor(devMonitor)
         except Exception as e:
             traceback.print_exc()
-            deverror(str(e))
+            deverror(traceback.format_exc())
             ret = -1
         if ret == 0:
             time.sleep(5)
@@ -277,7 +333,7 @@ def run(interval, devMonitor):
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 def main():
     '''device operator'''
-
+    debug_init()
 
 @main.command()
 def start():

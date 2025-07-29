@@ -305,6 +305,7 @@ typedef enum flash_id {
     AT25DF161 = 0x02461F,
     AT25DF321 = 0x01471F,
     GD25Q256 = 0X1940c8,
+    GD25B512M = 0X1a47c8,
 } flash_id_t;
 
 typedef enum flash_type {
@@ -528,6 +529,17 @@ static flash_info_t flash_info[] = {
         .page_size = BYTE_256,
         .flash_id = GD25Q256,
         .block_size = STEP_256,
+        .full_erase = 1,
+        .erase_block_command = BLOCK_ERASE_64,
+        .page_program = COMMON_PAGE_PROGRAM,
+    },
+    {
+        .flash_name = "GD25B512M",
+        .flash_size = M64,
+        .flash_type = SPI,
+        .page_size = BYTE_256,
+        .flash_id = GD25B512M,
+        .block_size = STEP_64,
         .full_erase = 1,
         .erase_block_command = BLOCK_ERASE_64,
         .page_program = COMMON_PAGE_PROGRAM,

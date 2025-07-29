@@ -40,27 +40,10 @@
  *  with Ipmi-fru.  If not, see <http://www.gnu.org/licenses/>.
 \*****************************************************************************/
 #include <linux/module.h>
+#include <linux/slab.h>
 
 #include "dfd_tlveeprom.h"
 #include "wb_module.h"
-
-#define TLV_CODE_PRODUCT_NAME   (0x21)
-#define TLV_CODE_PART_NUMBER    (0x22)
-#define TLV_CODE_SERIAL_NUMBER  (0x23)
-#define TLV_CODE_MAC_BASE       (0x24)
-#define TLV_CODE_MANUF_DATE     (0x25)
-#define TLV_CODE_DEVICE_VERSION (0x26)
-#define TLV_CODE_LABEL_REVISION (0x27)
-#define TLV_CODE_PLATFORM_NAME  (0x28)
-#define TLV_CODE_ONIE_VERSION   (0x29)
-#define TLV_CODE_MAC_SIZE       (0x2A)
-#define TLV_CODE_MANUF_NAME     (0x2B)
-#define TLV_CODE_MANUF_COUNTRY  (0x2C)
-#define TLV_CODE_VENDOR_NAME    (0x2D)
-#define TLV_CODE_DIAG_VERSION   (0x2E)
-#define TLV_CODE_SERVICE_TAG    (0x2F)
-#define TLV_CODE_VENDOR_EXT     (0xFD)
-#define TLV_CODE_CRC_32         (0xFE)
 
 /* using in is_valid_tlvinfo_header */
 static uint32_t g_eeprom_size;
@@ -342,7 +325,7 @@ int parse_tlv_eeprom(uint8_t *eeprom, uint32_t size)
     unsigned int i;
     bool ret;
     tlvinfo_header_t *eeprom_hdr;
-    tlv_decode_value_t decode_value;
+    tlv_decode_value_t *decode_value;
     int j;
 
     eeprom_hdr = (tlvinfo_header_t *) eeprom;
@@ -358,26 +341,35 @@ int parse_tlv_eeprom(uint8_t *eeprom, uint32_t size)
         return -1;
     }
 
+    decode_value = (tlv_decode_value_t *)kzalloc(sizeof(tlv_decode_value_t), GFP_KERNEL);
+    if (!decode_value) {
+        DBG_DEBUG(DBG_ERROR, "Memory allocation failed for decode_value\n");
+        return -ENOMEM;
+    }
+
     for (i = 0; i < TLV_CODE_NUM; i++) {
-        mem_clear((void *)&decode_value, sizeof(tlv_decode_value_t));
-        ret = tlvinfo_decode_tlv(eeprom, tlv_code_list[i].m_code, &decode_value);
+        mem_clear((void *)decode_value, sizeof(tlv_decode_value_t));
+        ret = tlvinfo_decode_tlv(eeprom, tlv_code_list[i].m_code, decode_value);
         if (!ret) {
             DBG_DEBUG(DBG_ERROR, "No found type: %s\n", tlv_code_list[i].m_name);
             continue;
         }
 
         DBG_DEBUG(DBG_VERBOSE, "i: %d,Found type: %s tlv[%d]:%s\n", i, tlv_code_list[i].m_name, tlv_code_list[i].m_code,
-            decode_value.value);
-        for (j = 0; j < decode_value.length; j++) {
+            decode_value->value);
+        for (j = 0; j < decode_value->length; j++) {
             if ((j % 16) == 0) {
                 DBG_DEBUG(DBG_VERBOSE, "\n");
             }
-            DBG_DEBUG(DBG_VERBOSE, "%02x ", decode_value.value[j]);
+            DBG_DEBUG(DBG_VERBOSE, "%02x ", decode_value->value[j]);
         }
         DBG_DEBUG(DBG_VERBOSE, "\n\n");
     }
+
+    kfree(decode_value);
     return 0;
 }
+
 static int dfd_parse_tlv_eeprom(uint8_t *eeprom, uint32_t size, uint8_t main_type, tlv_decode_value_t *decode_value)
 {
     bool ret;
@@ -414,6 +406,7 @@ static int dfd_parse_tlv_eeprom(uint8_t *eeprom, uint32_t size, uint8_t main_typ
 
     return 0;
 }
+
 #if 0
 /* Parsing extends the custom TLV format */
 static int tlvinfo_find_wb_ext_tlv(tlv_decode_value_t *ext_tlv_value, uint8_t ext_type,
@@ -462,29 +455,58 @@ static int tlvinfo_find_wb_ext_tlv(tlv_decode_value_t *ext_tlv_value, uint8_t ex
     return -1;
 }
 #endif
-/* Obtain EEPROM information */
-int dfd_tlvinfo_get_e2prom_info(uint8_t *eeprom, uint32_t size, dfd_tlv_type_t *tlv_type, uint8_t* buf, uint32_t *buf_len)
-{
-    tlv_decode_value_t decode_value;
-    int ret;
 
-    if (eeprom == NULL || tlv_type == NULL || buf == NULL) {
+/* Obtain EEPROM information */
+int dfd_tlvinfo_get_e2prom_info(uint8_t *eeprom, uint32_t size, int cmd, uint8_t* buf, uint32_t *buf_len)
+{
+    tlv_decode_value_t *decode_value;
+    int ret;
+    int i;
+    uint8_t main_type;
+
+    if (eeprom == NULL || buf == NULL) {
         DBG_DEBUG(DBG_ERROR, "Input para invalid.\n");
         return -1;
     }
 
-    mem_clear((void *)&decode_value, sizeof(tlv_decode_value_t));
-    ret = dfd_parse_tlv_eeprom(eeprom, size, tlv_type->main_type, &decode_value);
-    if (ret) {
-        DBG_DEBUG(DBG_ERROR, "dfd_parse_tlv_eeprom failed ret %d.\n", ret);
-        return ret;
+    main_type = 0;
+    for (i = 0; i < (ARRAY_SIZE(tlv_type_cmd_table_list)); i++) {
+        if (tlv_type_cmd_table_list[i].info_type == cmd) {
+            main_type = (uint8_t)tlv_type_cmd_table_list[i].tlv_type;
+            break;
+        }
     }
 
-    if (*buf_len >= decode_value.length) {
-        memcpy(buf, decode_value.value, decode_value.length);
-        *buf_len = decode_value.length;
-        return 0;
+    if (i == (ARRAY_SIZE(tlv_type_cmd_table_list))) {
+        DBG_DEBUG(DBG_ERROR, "Not find tlv type . cmd = %d\n", cmd);
+        return -1;
     }
-    DBG_DEBUG(DBG_ERROR, "buf_len %d small than info_len %d.\n", *buf_len, decode_value.length);
-    return -1;
+
+    decode_value = (tlv_decode_value_t *)kzalloc(sizeof(tlv_decode_value_t), GFP_KERNEL);
+    if (!decode_value) {
+        DBG_DEBUG(DBG_ERROR, "Memory allocation failed for decode_value\n");
+        return -ENOMEM;
+    }
+
+    ret = dfd_parse_tlv_eeprom(eeprom, size, main_type, decode_value);
+    if (ret) {
+        DBG_DEBUG(DBG_ERROR, "dfd_parse_tlv_eeprom failed ret %d.\n", ret);
+        goto out;
+    }
+
+    if (*buf_len >= decode_value->length) {
+        memcpy(buf, decode_value->value, decode_value->length);
+        *buf_len = decode_value->length;
+        ret = 0;
+        goto out;
+    }
+
+    ret = -1;
+    DBG_DEBUG(DBG_ERROR, "buf_len %d small than info_len %d.\n", *buf_len, decode_value->length);
+
+out:
+    kfree(decode_value);
+
+    return ret;
 }
+

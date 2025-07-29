@@ -52,176 +52,18 @@ static ssize_t temp_sensor_number_show(struct switch_obj *obj, struct switch_att
     return (ssize_t)snprintf(buf, PAGE_SIZE, "%u\n", g_temp_sensor.temp_number);
 }
 
-static ssize_t temp_sensor_value_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
+static ssize_t temp_attr_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
 {
     unsigned int temp_index;
+    struct switch_device_attribute  *tmp_attr;
 
     check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_value);
+    check_p(g_temp_sensor_drv->get_temp_attr);
 
     temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_value(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_alias_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_alias);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_alias(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_type_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_type);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_type(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_max_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_max);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_max(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_max_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int temp_index;
-    int ret;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->set_main_board_temp_max);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    ret = g_temp_sensor_drv->set_main_board_temp_max(temp_index, buf, count);
-    if (ret < 0) {
-        TEMP_SENSOR_ERR("set temp%u max threshold failed, value: %s, count: %lu, ret: %d\n",
-            temp_index, buf, count, ret);
-        return ret;
-    }
-    TEMP_SENSOR_DBG("set temp%u max threshold success, value: %s, count: %lu, ret: %d\n",
-        temp_index, buf, count, ret);
-    return count;
-}
-
-static ssize_t temp_sensor_min_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_min);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_min(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_min_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int temp_index;
-    int ret;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->set_main_board_temp_min);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    ret = g_temp_sensor_drv->set_main_board_temp_min(temp_index, buf, count);
-    if (ret < 0) {
-        TEMP_SENSOR_ERR("set temp%u min threshold failed, value: %s, count: %lu, ret: %d\n",
-            temp_index, buf, count, ret);
-        return ret;
-    }
-    TEMP_SENSOR_DBG("set temp%u min threshold success, value: %s, count: %lu, ret: %d\n",
-        temp_index, buf, count, ret);
-    return count;
-}
-
-static ssize_t temp_sensor_high_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_high);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_high(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_high_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int temp_index;
-    int ret;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->set_main_board_temp_high);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    ret = g_temp_sensor_drv->set_main_board_temp_high(temp_index, buf, count);
-    if (ret < 0) {
-        TEMP_SENSOR_ERR("set temp%u high threshold failed, value: %s, count: %lu, ret: %d\n",
-            temp_index, buf, count, ret);
-        return ret;
-    }
-    TEMP_SENSOR_DBG("set temp%u high threshold success, value: %s, count: %lu, ret: %d\n",
-        temp_index, buf, count, ret);
-    return count;
-}
-
-static ssize_t temp_sensor_low_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
-{
-    unsigned int temp_index;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->get_main_board_temp_low);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    return g_temp_sensor_drv->get_main_board_temp_low(temp_index, buf, PAGE_SIZE);
-}
-
-static ssize_t temp_sensor_low_store(struct switch_obj *obj, struct switch_attribute *attr,
-                   const char* buf, size_t count)
-{
-    unsigned int temp_index;
-    int ret;
-
-    check_p(g_temp_sensor_drv);
-    check_p(g_temp_sensor_drv->set_main_board_temp_low);
-
-    temp_index = obj->index;
-    TEMP_SENSOR_DBG("temp index: %u\n", temp_index);
-    ret = g_temp_sensor_drv->set_main_board_temp_low(temp_index, buf, count);
-    if (ret < 0) {
-        TEMP_SENSOR_ERR("set temp%u low threshold failed, value: %s, count: %lu, ret: %d\n",
-            temp_index, buf, count, ret);
-        return ret;
-    }
-    TEMP_SENSOR_DBG("set temp%u low threshold success, value: %s, count: %lu, ret: %d\n",
-        temp_index, buf, count, ret);
-    return count;
+    tmp_attr = to_switch_device_attr(attr);
+    check_p(tmp_attr);
+    return g_temp_sensor_drv->get_temp_attr(temp_index, tmp_attr->type, buf, PAGE_SIZE);
 }
 
 static ssize_t temp_sensor_monitor_flag_show(struct switch_obj *obj, struct switch_attribute *attr, char *buf)
@@ -249,24 +91,24 @@ static struct attribute_group temp_sensor_root_attr_group = {
 };
 
 /*******************************temp1 temp2 dir and attrs*******************************************/
-static struct switch_attribute temp_value_attr = __ATTR(value, S_IRUGO, temp_sensor_value_show, NULL);
-static struct switch_attribute temp_alias_attr = __ATTR(alias, S_IRUGO, temp_sensor_alias_show, NULL);
-static struct switch_attribute temp_type_attr = __ATTR(type, S_IRUGO, temp_sensor_type_show, NULL);
-static struct switch_attribute temp_max_attr = __ATTR(max, S_IRUGO | S_IWUSR, temp_sensor_max_show, temp_sensor_max_store);
-static struct switch_attribute temp_min_attr = __ATTR(min,  S_IRUGO | S_IWUSR, temp_sensor_min_show, temp_sensor_min_store);
-static struct switch_attribute temp_high_attr = __ATTR(high, S_IRUGO | S_IWUSR, temp_sensor_high_show, temp_sensor_high_store);
-static struct switch_attribute temp_low_attr = __ATTR(low,  S_IRUGO | S_IWUSR, temp_sensor_low_show, temp_sensor_low_store);
 static struct switch_attribute temp_monitor_flag_attr = __ATTR(monitor_flag,  S_IRUGO, temp_sensor_monitor_flag_show, NULL);
+static SWITCH_DEVICE_ATTR(value, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_INPUT);
+static SWITCH_DEVICE_ATTR(alias, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_ALIAS);
+static SWITCH_DEVICE_ATTR(type, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_TYPE);
+static SWITCH_DEVICE_ATTR(max, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_MAX);
+static SWITCH_DEVICE_ATTR(high, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_HIGH);
+static SWITCH_DEVICE_ATTR(low, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_LOW);
+static SWITCH_DEVICE_ATTR(min, S_IRUGO, temp_attr_show, NULL, WB_SENSOR_MIN);
 
 static struct attribute *temp_sensor_attrs[] = {
-    &temp_value_attr.attr,
-    &temp_alias_attr.attr,
-    &temp_type_attr.attr,
-    &temp_max_attr.attr,
-    &temp_min_attr.attr,
-    &temp_high_attr.attr,
-    &temp_low_attr.attr,
     &temp_monitor_flag_attr.attr,
+    &switch_dev_attr_value.switch_attr.attr,
+    &switch_dev_attr_alias.switch_attr.attr,
+    &switch_dev_attr_type.switch_attr.attr,
+    &switch_dev_attr_max.switch_attr.attr,
+    &switch_dev_attr_high.switch_attr.attr,
+    &switch_dev_attr_low.switch_attr.attr,
+    &switch_dev_attr_min.switch_attr.attr,
     NULL,
 };
 
@@ -328,7 +170,7 @@ static int temp_sensor_sub_create_kobj_and_attrs(struct kobject *parent, int tem
     }
     return 0;
 error:
-    for (i = temp_index; i > 0; i--) {
+    for (i = temp_index - 1; i > 0; i--) {
         temp_sensor_sub_single_remove_kobj_and_attrs(i);
     }
     kfree(g_temp_sensor.temp);

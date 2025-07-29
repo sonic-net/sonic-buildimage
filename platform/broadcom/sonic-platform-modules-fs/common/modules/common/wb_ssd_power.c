@@ -18,6 +18,14 @@
 
 #define SSD_POWER_MAX_NUM       (8)
 
+typedef struct  {
+    uint32_t addr;
+    uint32_t en_val;
+    uint32_t dis_val;
+    uint32_t mask;
+    uint32_t delay;
+} ssd_power_wr_pro_t;
+
 typedef struct {
     uint32_t port_id;
     const char *file_name;
@@ -31,6 +39,8 @@ typedef struct {
     struct device *dev;
     unsigned long write_intf_addr;
     unsigned long read_intf_addr;
+    bool need_wr_pro;
+    ssd_power_wr_pro_t wr_pro_info;
 } ssd_power_node_t;
 
 static ssd_power_node_t *g_ssd_power_n[SSD_POWER_MAX_NUM];
@@ -60,10 +70,61 @@ static int wb_logic_reg_read(ssd_power_node_t *node, uint32_t pos, uint8_t *val,
     return pfunc(node->file_name, pos, val, size);
 }
 
+static int wb_ssd_power_set_wr_pro(ssd_power_node_t *node, ssd_power_wr_pro_t *wr_pro_info, int on)
+{
+    uint8_t wr_pro_ops;
+    int ret;
+
+    if (!node->need_wr_pro) {
+        DEBUG_VERBOSE("do not need set wr pro.\n");
+        return 0;
+    }
+
+    /* read origin register value */
+    wr_pro_ops = 0;
+    ret = wb_logic_reg_read(node, wr_pro_info->addr, &wr_pro_ops, 1);
+    if (ret < 0) {
+        DEBUG_ERROR("read %s, addr: 0x%x failed, ret: %d\n", node->file_name,
+            wr_pro_info->addr, ret);
+        return -EIO;
+    }
+    DEBUG_VERBOSE("read %s addr 0x%x success, value: 0x%x\n",
+        node->file_name, wr_pro_info->addr, wr_pro_ops);
+
+    /* modify register value to ssd power control */
+    wr_pro_ops &= ~(wr_pro_info->mask);
+    if (on == 0) {
+        wr_pro_ops |= wr_pro_info->dis_val;
+    } else {
+        wr_pro_ops |= wr_pro_info->en_val;
+    }
+
+    /* write back to register */
+    ret = wb_logic_reg_write(node, wr_pro_info->addr, &wr_pro_ops, 1);
+    if (ret < 0) {
+        DEBUG_ERROR("write %s, addr: 0x%x failed, ret: %d write value: 0x%x\n",
+            node->file_name, wr_pro_info->addr, ret, wr_pro_ops);
+        return -EIO;
+    }
+    DEBUG_VERBOSE("write %s addr 0x%x value: 0x%x success\n",
+        node->file_name, wr_pro_info->addr, wr_pro_ops);
+
+    if (wr_pro_info->delay > 0) {
+        msleep(wr_pro_info->delay);
+    }
+    return 0;
+}
+
 static int wb_ssd_power_ctrl(ssd_power_node_t *node, int on)
 {
     uint8_t power_ops;
     int ret;
+
+    ret = wb_ssd_power_set_wr_pro(node, &node->wr_pro_info, 0);
+    if (ret != 0) {
+        dev_err(node->dev, "set wr pro failed, ret: %d\n", ret);
+        return ret;
+    }
 
     /* read origin register value */
     power_ops = 0;
@@ -85,7 +146,7 @@ static int wb_ssd_power_ctrl(ssd_power_node_t *node, int on)
     }
 
     /* write back to register */
-    ret =wb_logic_reg_write(node, node->addr, &power_ops, 1);
+    ret = wb_logic_reg_write(node, node->addr, &power_ops, 1);
     if (ret < 0) {
         DEBUG_ERROR("write %s, addr: 0x%x failed, ret: %d write value: 0x%x\n",
             node->file_name, node->addr, ret, power_ops);
@@ -127,7 +188,7 @@ static int wb_ssd_power_reset(unsigned int port_id)
         return ret;
     }
 
-    ret =wb_ssd_power_ctrl(node, 1);
+    ret = wb_ssd_power_ctrl(node, 1);
     if (ret != 0) {
         dev_err(node->dev, "SSD%u power on failed, ret: %d\n", port_id, ret);
         return ret;
@@ -153,6 +214,8 @@ static int wb_ssd_power_config_init(ssd_power_node_t *node)
     int ret;
     struct device *dev;
     ssd_power_device_t *ssd_power_device;
+    ssd_power_wr_pro_t *ssd_power_wr_pro;
+    ssd_power_wr_pro_device_t *ssd_power_wr_pro_device;
 
     dev = node->dev;
     if (dev->of_node) {
@@ -175,7 +238,9 @@ static int wb_ssd_power_config_init(ssd_power_node_t *node)
             DEBUG_ERROR("Failed to priv platform data \n");
             return -ENXIO;
         }
+        ssd_power_wr_pro = &node->wr_pro_info;
         ssd_power_device = node->dev->platform_data;
+        ssd_power_wr_pro_device = &ssd_power_device->wr_pro_info;
         node->port_id = ssd_power_device->port_id;
         node->addr = ssd_power_device->addr;
         node->power_on = ssd_power_device->power_on;
@@ -185,6 +250,14 @@ static int wb_ssd_power_config_init(ssd_power_node_t *node)
         node->power_off_delay = ssd_power_device->power_off_delay;
         node->file_name = ssd_power_device->file_name;
         node->reg_access_mode = ssd_power_device->reg_access_mode;
+        node->need_wr_pro = ssd_power_device->need_wr_pro;
+        if (node->need_wr_pro) {
+            ssd_power_wr_pro->addr = ssd_power_wr_pro_device->addr;
+            ssd_power_wr_pro->en_val = ssd_power_wr_pro_device->en_val;
+            ssd_power_wr_pro->dis_val = ssd_power_wr_pro_device->dis_val;
+            ssd_power_wr_pro->mask = ssd_power_wr_pro_device->mask;
+            ssd_power_wr_pro->delay = ssd_power_wr_pro_device->delay;
+        }
     }
 
     ret = find_intf_addr(&node->write_intf_addr, &node->read_intf_addr, node->reg_access_mode);

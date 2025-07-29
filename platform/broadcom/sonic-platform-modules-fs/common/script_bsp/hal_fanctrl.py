@@ -4,12 +4,15 @@ import subprocess
 import time
 import syslog
 import traceback
+import logging
 from plat_hal.interface import interface
 from plat_hal.baseutil import baseutil
 from algorithm.pid import pid
 from algorithm.openloop import openloop
 from algorithm.hysteresis import hysteresis
 from time import monotonic as _time
+from public.platform_common_config import DEFAULT_TEMP_CRIT_RECOVER_CMD
+from platform_util import setup_logger, BSP_COMMON_LOG_DIR, get_value
 
 SWITCH_TEMP = "SWITCH_TEMP"
 INLET_TEMP = "INLET_TEMP"
@@ -18,78 +21,66 @@ OUTLET_TEMP = "OUTLET_TEMP"
 CPU_TEMP = "CPU_TEMP"
 
 FAN_CONTRL_FILE = "/tmp/.fancontrol_factest_mode_en"
-FANCTROL_DEBUG_FILE = "/etc/.fancontrol_debug_flag"
+DEBUG_FILE = "/etc/.fancontrol_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "hal_fanctrl_debug.log"
+logger = setup_logger(LOG_FILE)
 # coordination with REBOOT_CAUSE_PARA
 OTP_SWITCH_REBOOT_JUDGE_FILE = "/etc/.otp_reboot_flag"
 OTP_OTHER_REBOOT_JUDGE_FILE = OTP_SWITCH_REBOOT_JUDGE_FILE
 
-FANCTROLERROR = 1
-FANCTROLDEBUG = 2
-FANAIRFLOWDEBUG = 4
-
-debuglevel = 0
-
 F2B_AIR_FLOW = "intake"
 B2F_AIR_FLOW = "exhaust"
+E2_F2B_AIR_FLOW = "F2B"
+E2_B2F_AIR_FLOW = "B2F"
 ONIE_E2_NAME = "ONIE_E2"
 
 TEMP_REBOOT_CRIT_SWITCH_FLAG = 1
 TEMP_REBOOT_CRIT_OTHER_FLAG = 2
 
 
-def fancontrol_debug(s):
-    if FANCTROLDEBUG & debuglevel:
-        syslog.openlog("FANCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
+def fancontrol_debug(s):
+    logger.debug(s)
 
 def fancontrol_error(s):
-    if FANCTROLERROR & debuglevel:
-        syslog.openlog("FANCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def fanairflow_debug(s):
-    if FANAIRFLOWDEBUG & debuglevel:
-        syslog.openlog("AIR_FLOW_MONITOR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
+    logger.debug(s)
 
+def fanairflow_info(s):
+    logger.info(s)
 
 def fancontrol_warn(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_WARNING, s)
-
+    logger.warning(s)
 
 def fancontrol_crit(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_CRIT, s)
-
+    logger.critical(s)
 
 def fancontrol_alert(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_ALERT, s)
-
+    logger.error(s)
 
 def fancontrol_emerg(s):
     syslog.openlog("FANCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_LOCAL1 | syslog.LOG_EMERG, s)
-
+    logger.error(s)
 
 def exec_os_cmd(cmd):
     status, output = subprocess.getstatusoutput(cmd)
     if status:
         print(output)
     return status, output
-
-
-def debug_init():
-    global debuglevel
-    try:
-        with open(FANCTROL_DEBUG_FILE, "r") as fd:
-            value = fd.read()
-        debuglevel = int(value)
-    except Exception:
-        debuglevel = 0
 
 error_temp = -9999  # get temp error
 invalid_temp = -10000  # get temp invalid
@@ -262,9 +253,12 @@ class fancontrol(object):
         self.__deal_fan_error_policy = self.__fancontrol_para.get("deal_fan_error", 0)
         self.__deal_fan_error_conf = self.__fancontrol_para.get("deal_fan_error_conf", {})
         self.__deal_fan_error_default_countdown = self.__deal_fan_error_conf.get("countdown", 0)
+        self.__check_crit_recover_cmd = self.__fancontrol_para.get("check_crit_recover_cmd", DEFAULT_TEMP_CRIT_RECOVER_CMD)
         self.__deal_over_temp_reboot_cmd = self.__fancontrol_para.get("deal_over_temp_reboot_cmd", [])
         self.__deal_over_temp_reboot_pwm = self.__fancontrol_para.get("deal_over_temp_reboot_pwm")
-
+        self.__manual_adjustment_mode = self.__fancontrol_para.get("manual_adjustment_mode", {})
+        self.__manual_adjustment_ratio = self.__fancontrol_para.get("manual_adjustment_ratio", {})
+        self.__manual_adjustment_pwm_def = self.__fancontrol_para.get("__manual_adjustment_pwm_def", 0x80)
         self.__deal_all_fan_error_method_flag = self.__fancontrol_para.get("deal_all_fan_error_method_flag", 0)
         if self.__deal_all_fan_error_method_flag:
             self.__all_fan_error_switch_temp_critical_temp = self.__fancontrol_para.get("all_fan_error_switch_temp_critical_temp", 100)
@@ -308,7 +302,7 @@ class fancontrol(object):
 
     @property
     def board_air_flow(self):
-        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW)
+        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW, E2_F2B_AIR_FLOW, E2_B2F_AIR_FLOW)
         if self.__board_air_flow not in air_flow_tuple:
             self.__board_air_flow = self.int_case.get_device_airflow(ONIE_E2_NAME)
             fanairflow_debug("board_air_flow: %s" % self.__board_air_flow)
@@ -519,6 +513,23 @@ class fancontrol(object):
             fancontrol_error(str(e))
         return 0
 
+    def over_temp_reboot_func(self):
+        if self.__deal_over_temp_reboot_cmd:
+            if self.__deal_over_temp_reboot_pwm:
+                fancontrol_debug("set pwm: %s" % self.__deal_over_temp_reboot_pwm)
+                self.set_all_fan_speed_pwm(self.__deal_over_temp_reboot_pwm)
+            for command in self.__deal_over_temp_reboot_cmd:
+                fancontrol_debug("run deal_over_temp_reboot_cmd: %s" % command)
+                ret, log = self.int_case.set_value(command)
+                if ret is False:
+                    fancontrol_error("do deal_over_temp_reboot_cmd: %s failed, msg: %s" % ( command, log))
+                    return False, log
+                msg = "deal_over_temp_reboot_cmd set success"
+                fancontrol_debug(msg)
+            return True, msg
+        else:
+            os.system(self.__check_crit_recover_cmd)
+
     def checkCritReboot(self):
         try:
             reboot_flag = self.checkTempRebootCrit()
@@ -539,7 +550,7 @@ class fancontrol(object):
                         "%%FANCONTROL-0-TEMP_EMERG: The temperature of device over reboot critical value, system is going to reboot now.")
                     for temp_threshold in self.__temps_threshold_config.values():
                         fancontrol_emerg(
-                            "%%FANCONTROL-TEMP_EMERG: %s temperature: %sC." %
+                            "%%FANCONTROL-0-TEMP_EMERG: %s temperature: %sC." %
                             (temp_threshold['name'], temp_threshold['temp']))
                     if reboot_flag == TEMP_REBOOT_CRIT_SWITCH_FLAG:
                         create_judge_file = "touch %s" % self.__otp_switch_reboot_judge_file
@@ -548,21 +559,7 @@ class fancontrol(object):
                     exec_os_cmd(create_judge_file)
                     exec_os_cmd("sync")
                     time.sleep(3)
-                    if self.__deal_over_temp_reboot_cmd:
-                        if self.__deal_over_temp_reboot_pwm:
-                            fancontrol_debug("set pwm: %s" % self.__deal_over_temp_reboot_pwm)
-                            self.set_all_fan_speed_pwm(self.__deal_over_temp_reboot_pwm)
-                        for command in self.__deal_over_temp_reboot_cmd:
-                            fancontrol_debug("run deal_over_temp_reboot_cmd: %s" % command)
-                            ret, log = self.int_case.set_value(command)
-                            if ret is False:
-                                fancontrol_error("do deal_over_temp_reboot_cmd: %s failed, msg: %s" % ( command, log))
-                                return False, log
-                            msg = "deal_over_temp_reboot_cmd set success"
-                            fancontrol_debug(msg)
-                        return True, msg
-                    else:
-                        exec_os_cmd("/sbin/reboot")
+                    self.over_temp_reboot_func()
         except Exception as e:
             fancontrol_error("%%policy: checkCritReboot failed")
             fancontrol_error(str(e))
@@ -614,21 +611,7 @@ class fancontrol(object):
                     exec_os_cmd(create_judge_file)
                     exec_os_cmd("sync")
                     time.sleep(3)
-                    if self.__deal_over_temp_reboot_cmd:
-                        if self.__deal_over_temp_reboot_pwm:
-                            fancontrol_debug("set pwm: %s" % self.__deal_over_temp_reboot_pwm)
-                            self.set_all_fan_speed_pwm(self.__deal_over_temp_reboot_pwm)
-                        for command in self.__deal_over_temp_reboot_cmd:
-                            fancontrol_debug("run deal_over_temp_reboot_cmd: %s" % command)
-                            ret, log = self.int_case.set_value(command)
-                            if ret is False:
-                                fancontrol_error("do deal_over_temp_reboot_cmd: %s failed, msg: %s" % ( command, log))
-                                return False, log
-                            msg = "deal_over_temp_reboot_cmd set success"
-                            fancontrol_debug(msg)
-                        return True, msg
-                    else:
-                        exec_os_cmd("/sbin/reboot")
+                    self.over_temp_reboot_func()
         except Exception as e:
             fancontrol_error("%%policy: checkEmergReboot failed")
             fancontrol_error(str(e))
@@ -963,7 +946,7 @@ class fancontrol(object):
 
     def check_board_air_flow(self):
         board_air_flow = self.board_air_flow
-        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW)
+        air_flow_tuple = (F2B_AIR_FLOW, B2F_AIR_FLOW, E2_F2B_AIR_FLOW, E2_B2F_AIR_FLOW)
         if board_air_flow not in air_flow_tuple:
             fanairflow_debug("get board air flow error, value [%s]" % board_air_flow)
             return False
@@ -1033,6 +1016,33 @@ class fancontrol(object):
             fanairflow_debug("air flow monitor not open, set psu_air_flow_inconsistent_flag False")
             self.psu_air_flow_inconsistent_flag = False
         return
+
+    def manual_mode_check(self):
+        if self.__manual_adjustment_mode is None:
+            return False
+
+        ret, manual_mode = get_value(self.__manual_adjustment_mode)
+        if not ret:
+            fancontrol_debug("manual_mode get fail: %s" % ret)
+            return False
+
+        if manual_mode != 0:
+            return True
+
+        return False
+
+    def manual_mode_get_pwm(self):
+        manual_pwm = self.__manual_adjustment_pwm_def
+        ret, manual_ratio = get_value(self.__manual_adjustment_ratio)
+        if not ret:
+            fancontrol_error("manual_adjustment_ratio get fail: %s" % ret)
+            return self.__manual_adjustment_pwm_def
+
+        if 0 <= manual_ratio <= 100:
+            manual_pwm = int(self.__max_pwm * manual_ratio / 100)
+
+        fancontrol_debug("manual adjustment pwm get success: (ratio %d, pwm 0x%x)" % (manual_ratio, manual_pwm))
+        return manual_pwm
 
     def do_fancontrol(self):
         pwm_list = []
@@ -1124,6 +1134,18 @@ class fancontrol(object):
         else:
             self.__pwm = max(pwm_list)
         fancontrol_debug("__pwm = 0x%x\n" % self.__pwm)
+
+        ret = self.manual_mode_check()
+        if ret == True:
+            # into manual mode 
+            fancontrol_debug("into manual mode\n")
+            psu_pwm_dict = self.get_psu_pwm_dict(self.__pwm)
+            self.__pwm = self.manual_mode_get_pwm()
+            fancontrol_debug("manual mode __pwm = 0x%x\n" % self.__pwm)
+            fan_pwm_dict = self.get_fan_pwm_dict(self.__pwm)
+            self.set_fan_pwm_independent(fan_pwm_dict, psu_pwm_dict)
+            return
+
         if self.air_flow_inconsistent_flag is True:
             fanairflow_debug("air flow inconsistent, set all fan speed pwm")
             self.set_all_fan_speed_pwm(self.__pwm)
@@ -1235,7 +1257,7 @@ class fancontrol(object):
 
 if __name__ == '__main__':
     debug_init()
-    fancontrol_debug("enter main")
+    fanairflow_info("enter main")
     fan_control = fancontrol()
     fan_control.fan_obj_init()
     fan_control.psu_obj_init()

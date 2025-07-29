@@ -5,10 +5,11 @@ import glob
 import time
 import click
 import shutil
-from platform_config import STARTMODULE, AIRFLOW_RESULT_FILE, MGMT_VERSION_PATH
+from platform_config import STARTMODULE, AIRFLOW_RESULT_FILE
 from platform_config import GLOBALINITPARAM, GLOBALINITCOMMAND, GLOBALINITPARAM_PRE, GLOBALINITCOMMAND_PRE
-from platform_util import wbpciwr, set_value, exec_os_cmd
-
+from platform_util import wbpciwr, set_value, supervisor_update, check_supervisor_ready, update_mgmt_version
+from public.platform_diff_util import platform_process_other_init, platform_process_other_init_pre
+from public.platform_common_config import CURRENT_LOAD_APP_WAY, LOAD_APP_BY_COMMON, UNLOAD_APP_BY_COMMON, LOAD_APP_BY_SUPERVISOR, UNLOAD_APP_BY_SUPERVISOR, MGMT_VERSION_PATH
 
 CONTEXT_SETTINGS = {"help_option_names": ['-h', '--help']}
 
@@ -31,6 +32,12 @@ module_to_script = {
     "pmon_syslog": "pmon_syslog.py",
     "sff_polling": "sff_polling.py",
     "get_mac_temperature": "get_mac_temperature.py",
+    "dfx_xdpe_monitor": "dfx_xdpe_monitor.py",
+    "dfx_reg_monitor": "dfx_reg_monitor.py",
+    "dfx_clock_monitor": "dfx_clock_monitor.py",
+    "dfx_blackbox_record": "dfx_blackbox_record.py",
+    "plugins_init": "plugins_init.py",
+    "platform_gpio": "platform_gpio.py",
 }
 
 PROCESS_APPLIST = [
@@ -53,29 +60,6 @@ class AliasedGroup(click.Group):
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
         return None
 
-
-def log_os_system(cmd):
-    status, output = subprocess.getstatusoutput(cmd)
-    if status:
-        print(output)
-    return status, output
-
-
-def write_sysfs_value(reg_name, value):
-    mb_reg_file = "/sys/bus/i2c/devices/" + reg_name
-    locations = glob.glob(mb_reg_file)
-    if len(locations) == 0:
-        print("%s not found" % mb_reg_file)
-        return False
-    sysfs_loc = locations[0]
-    try:
-        with open(sysfs_loc, 'w') as fd:
-            fd.write(value)
-    except Exception:
-        return False
-    return True
-
-
 def getPid(name):
     ret = []
     for dirname in os.listdir('/proc'):
@@ -90,28 +74,11 @@ def getPid(name):
             ret.append(dirname)
     return ret
 
-def Generate_mgmt_version():
-    cmd = "nohup platform_manufacturer.py -u > /dev/null 2>&1 &"
-    rets = getPid("platform_manufacturer.py")
-    if len(rets) == 0:
-        exec_os_cmd(cmd)
-
-def startGenerate_mgmt_version():
-    if STARTMODULE.get('generate_mgmt_version', 1) == 1: #default value 1 to generate
-        for i in range(10):
-            Generate_mgmt_version()
-            if os.path.exists(MGMT_VERSION_PATH):
-                #click.echo("%%WB_PLATFORM_PROCESS: generate mgmt_version success")
-                return
-            time.sleep(1)
-        click.echo("%%WB_PLATFORM_PROCESS: generate mgmt_version,failed, %s not exits" % MGMT_VERSION_PATH)
-    return
-
 def generate_air_flow():
     cmd = "nohup generate_airflow.py > /dev/null 2>&1 &"
     rets = getPid("generate_airflow.py")
     if len(rets) == 0:
-        exec_os_cmd(cmd)
+        os.system(cmd)
         time.sleep(1)
 
 def startGenerate_air_flow():
@@ -132,46 +99,17 @@ def stopGenerate_air_flow():
         rets = getPid("generate_airflow.py")
         for ret in rets:
             cmd = "kill " + ret
-            exec_os_cmd(cmd)
+            os.system(cmd)
 
 
 
 def otherinit():
-    for index in GLOBALINITPARAM:
-        if isinstance(index, dict):
-            loc = index.get("loc", None)
-            value = index.get("value", None)
-            if loc and value:
-                write_sysfs_value(loc, value)
-            else:
-                click.echo("%%WB_PLATFORM_PROCESS: failed to initialize the parameter, loc or value is None, config %s" % index)
-        else:
-            click.echo("%%WB_PLATFORM_PROCESS: failed to initialize the parameter, the config %s is not a dict type" % index)
-
-    for index in GLOBALINITCOMMAND:
-        if isinstance(index, dict):
-            set_value(index)
-        else:
-            log_os_system(index)
-
+    # Subsequent products disable the GLOBALINITPARAM configuration
+    platform_process_other_init(GLOBALINITPARAM, GLOBALINITCOMMAND)
 
 def otherinit_pre():
-    for index in GLOBALINITPARAM_PRE:
-        if isinstance(index, dict):
-            loc = index.get("loc", None)
-            value = index.get("value", None)
-            if loc and value:
-                write_sysfs_value(loc, value)
-            else:
-                click.echo("%%WB_PLATFORM_PROCESS: failed to initialize the parameter, loc or value is None, config %s" % index)
-        else:
-            click.echo("%%WB_PLATFORM_PROCESS: failed to initialize the parameter, the config %s is not a dict type" % index)
-
-    for index in GLOBALINITCOMMAND_PRE:
-        if isinstance(index, dict):
-            set_value(index)
-        else:
-            log_os_system(index)
+    # Subsequent products disable the GLOBALINITPARAM configuration
+    platform_process_other_init_pre(GLOBALINITPARAM_PRE, GLOBALINITCOMMAND_PRE)
 
 def copy_machineconf():
     try:
@@ -181,41 +119,52 @@ def copy_machineconf():
         return False
 
 
-def unload_apps():
+def unload_apps(unload_app_way):
     app_list = PROCESS_APPLIST
     #Reverse the list
     app_list = app_list[::-1]
     for app_config in app_list:
-        app_config["gettype"] = "unload_process"
+        app_config["gettype"] = unload_app_way
         script_name = app_config.get("script_name")
+        if unload_app_way == UNLOAD_APP_BY_SUPERVISOR:
+            app_config["script_name"] = script_name.split(".", 1)[0].strip()
         ret, log = set_value(app_config)
         if ret is not True:
             print("app:%s unload failed.log:%s" % (script_name, log))
         else:
-            print("app:%s unload success." % script_name)
+            print("app:%s unload success.log:%s" % (script_name, log))
 
-def load_apps():
+def load_apps(load_app_way):
     app_list = PROCESS_APPLIST
     for app_config in app_list:
-        app_config["gettype"] = "load_process"
+        app_config["gettype"] = load_app_way
         script_name = app_config.get("script_name")
+        if load_app_way == LOAD_APP_BY_SUPERVISOR:
+            app_config["script_name"] = script_name.split(".", 1)[0].strip()
         ret, log = set_value(app_config)
         if ret is not True:
             print("app:%s load failed.log:%s" % (script_name, log))
         else:
-            print("app:%s load success." % script_name)
+            print("app:%s load success.log:%s" % (script_name, log))
 
 def start_process():
     copy_machineconf()
     otherinit_pre()
     startGenerate_air_flow()
-    load_apps()
-    startGenerate_mgmt_version()
+    if CURRENT_LOAD_APP_WAY == LOAD_APP_BY_SUPERVISOR:
+        check_supervisor_ready()
+        supervisor_update()
+    load_apps(CURRENT_LOAD_APP_WAY)
+    update_mgmt_version(STARTMODULE.get('generate_mgmt_version', 0))
     otherinit()
 
 def stop_process():
     stopGenerate_air_flow()
-    unload_apps()
+    if CURRENT_LOAD_APP_WAY == LOAD_APP_BY_SUPERVISOR:
+        unload_app_way = UNLOAD_APP_BY_SUPERVISOR
+    else:
+        unload_app_way = UNLOAD_APP_BY_COMMON
+    unload_apps(unload_app_way)
 
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 def main():

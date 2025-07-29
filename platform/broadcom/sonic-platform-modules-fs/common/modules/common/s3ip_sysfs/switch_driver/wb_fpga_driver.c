@@ -17,11 +17,23 @@
 #include "dfd_cfg.h"
 #include "dfd_cfg_adapter.h"
 #include "dfd_cfg_info.h"
+#include "wb_fpga_driver.h"
 
 #define FPGA_REG_WIDTH_MAX            (4)
 
 int g_dfd_fpga_dbg_level = 0;
 module_param(g_dfd_fpga_dbg_level, int, S_IRUGO | S_IWUSR);
+
+dfd_sysfs_func_map_t fpga_func_table[DFD_FPGA_MAX_E] = {
+    [DFD_FPGA_NAME_E] = {dfd_get_fpga_name, NULL},
+    [DFD_FPGA_TYPE_E] = {dfd_get_fpga_type, NULL},
+    [DFD_FPGA_VENDOR_E] = {dfd_get_fpga_vendor, NULL},
+    [DFD_FPGA_FW_VERSION_E] = {dfd_get_fpga_fw_version, NULL},
+    [DFD_FPGA_HW_VERSION_E] = {dfd_get_fpga_hw_version, NULL},
+    [DFD_FPGA_SUPPORT_UPGRADE_E] = {dfd_get_fpga_support_upgrade, NULL},
+    [DFD_FPGA_UPGRADE_ACTIVE_TYPE_E] = {dfd_get_fpga_upgrade_active_type, NULL},
+    [DFD_FPGA_REG_TEST_TYPE_E] = {dfd_get_fpga_testreg_str, dfd_set_fpga_testreg},
+};
 
 /**
  * dfd_get_fpga_name - Get the FPGA name
@@ -32,7 +44,7 @@ module_param(g_dfd_fpga_dbg_level, int, S_IRUGO | S_IWUSR);
  * return: Success: Returns the length of buf
  *       : Failed: A negative value is returned
  */
-ssize_t dfd_get_fpga_name(uint8_t main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+ssize_t dfd_get_fpga_name(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
 {
     uint64_t key;
     char *fpga_name;
@@ -44,7 +56,7 @@ ssize_t dfd_get_fpga_name(uint8_t main_dev_id, unsigned int fpga_index, char *bu
     }
 
     if (count <= 0) {
-        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %lu, main_dev_id: %u, fpga index: %u\n",
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
             count, main_dev_id, fpga_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -63,7 +75,7 @@ ssize_t dfd_get_fpga_name(uint8_t main_dev_id, unsigned int fpga_index, char *bu
     return strlen(buf);
 }
 
-static ssize_t dfd_get_fpga_model(uint8_t main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+static ssize_t dfd_get_fpga_model(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
 {
     uint64_t key;
     int ret, fpga_model_val;
@@ -101,7 +113,7 @@ static ssize_t dfd_get_fpga_model(uint8_t main_dev_id, unsigned int fpga_index, 
  * return: Success: Returns the length of buf
  *       : Failed: A negative value is returned
  */
-ssize_t dfd_get_fpga_type(uint8_t main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+ssize_t dfd_get_fpga_type(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
 {
     uint64_t key;
     char *fpga_type;
@@ -114,7 +126,7 @@ ssize_t dfd_get_fpga_type(uint8_t main_dev_id, unsigned int fpga_index, char *bu
     }
 
     if (count <= 0) {
-        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %lu, main_dev_id: %u, fpga index: %u\n",
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
             count, main_dev_id, fpga_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -137,6 +149,46 @@ ssize_t dfd_get_fpga_type(uint8_t main_dev_id, unsigned int fpga_index, char *bu
 }
 
 /**
+ * dfd_get_fpga_vendor - Obtain the FPGA vendor
+ * @main_dev_id: Motherboard :0 Subcard :5
+ * @index:The number of the FPGA starts from 0
+ * @buf: Receive buf
+ * @count: Accept the buf length
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_fpga_vendor(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+{
+    uint64_t key;
+    char *fpga_vendor;
+
+    if (buf == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "param error, buf is NULL, main_dev_id: %u, fpga index: %u\n",
+            main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    if (count <= 0) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
+            count, main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    mem_clear(buf, count);
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_FPGA_VENDOR, main_dev_id, fpga_index);
+    fpga_vendor = dfd_ko_cfg_get_item(key);
+    if (fpga_vendor == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "main_dev_id: %u, fpga%u vendor config error, key_name: %s\n",
+            main_dev_id, fpga_index, key_to_name(DFD_CFG_ITEM_FPGA_VENDOR));
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+
+    DBG_FPGA_DEBUG(DBG_VERBOSE, "%s\n", fpga_vendor);
+    snprintf(buf, count, "%s\n", fpga_vendor);
+    return strlen(buf);
+}
+
+/**
  * dfd_get_fpga_fw_version - Obtain the FPGA firmware version
  * @main_dev_id: Motherboard :0 Subcard :5
  * @index:FPGA number, starting from 1
@@ -145,7 +197,7 @@ ssize_t dfd_get_fpga_type(uint8_t main_dev_id, unsigned int fpga_index, char *bu
  * return: Success: Returns the length of buf
  *       : Failed: A negative value is returned
  */
-ssize_t dfd_get_fpga_fw_version(uint8_t main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+ssize_t dfd_get_fpga_fw_version(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
 {
     uint64_t key;
     int rv;
@@ -157,7 +209,7 @@ ssize_t dfd_get_fpga_fw_version(uint8_t main_dev_id, unsigned int fpga_index, ch
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %lu, main_dev_id: %u, fpga index: %u\n",
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
             count, main_dev_id, fpga_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -173,7 +225,7 @@ ssize_t dfd_get_fpga_fw_version(uint8_t main_dev_id, unsigned int fpga_index, ch
 
     DBG_FPGA_DEBUG(DBG_VERBOSE, "main_dev_id: %u, fpga%u firmware version: %x\n",
         main_dev_id, fpga_index, value);
-    snprintf(buf, count, "0x%08x\n", value);
+    snprintf(buf, count, "%08x\n", value);
     return strlen(buf);
 }
 
@@ -186,7 +238,7 @@ ssize_t dfd_get_fpga_fw_version(uint8_t main_dev_id, unsigned int fpga_index, ch
  * return: Success: Returns the length of buf
  *       : Failed: A negative value is returned
  */
-ssize_t dfd_get_fpga_hw_version(uint8_t main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+ssize_t dfd_get_fpga_hw_version(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
 {
 
     if (buf == NULL) {
@@ -195,7 +247,7 @@ ssize_t dfd_get_fpga_hw_version(uint8_t main_dev_id, unsigned int fpga_index, ch
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %lu, main_dev_id: %u, fpga index: %u\n",
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
             count, main_dev_id, fpga_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -234,13 +286,20 @@ static int value_convert_to_buf(unsigned int value, uint8_t *buf, int len, int p
  * return: Success :0
  *       : Failed: A negative value is returned
  */
-int dfd_set_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, unsigned int value)
+int dfd_set_fpga_testreg(unsigned int main_dev_id, unsigned int fpga_index, void * val, unsigned int len)
 {
     uint64_t key;
     int ret;
     uint8_t wr_buf[FPGA_REG_WIDTH_MAX];
     info_ctrl_t *info_ctrl;
+    unsigned int *value;
 
+    if (val == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "val is NULL\n");
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    value = (unsigned int *)val;
     key = DFD_CFG_KEY(DFD_CFG_ITEM_FPGA_TEST_REG, main_dev_id, fpga_index);
     /* Get the configuration item read and write control variables */
     info_ctrl = dfd_ko_cfg_get_item(key);
@@ -249,7 +308,7 @@ int dfd_set_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, unsigned 
             main_dev_id, fpga_index, key_to_name(DFD_CFG_ITEM_FPGA_TEST_REG));
         return -DFD_RV_DEV_NOTSUPPORT;
     }
-    if (info_ctrl->fpath == NULL) {
+    if (info_ctrl->fpath[0] == '\0') {
         DBG_FPGA_DEBUG(DBG_VERBOSE, "main_dev_id: %u, fpga%u get fpath failed\n", main_dev_id,
             fpga_index);
          return -DFD_RV_INVALID_VALUE;
@@ -260,15 +319,15 @@ int dfd_set_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, unsigned 
         return -DFD_RV_INVALID_VALUE;
     }
 
-    ret = value_convert_to_buf(value, wr_buf, FPGA_REG_WIDTH_MAX, info_ctrl->pola);
+    ret = value_convert_to_buf(*value, wr_buf, FPGA_REG_WIDTH_MAX, info_ctrl->pola);
     if (ret < 0) {
         DBG_FPGA_DEBUG(DBG_ERROR, "value: 0x%x convert to buf failed, pola:%d, ret: %d\n",
-            value, info_ctrl->pola, ret);
+            *value, info_ctrl->pola, ret);
         return ret;
     }
 
     DBG_FPGA_DEBUG(DBG_VERBOSE, "main_dev_id: %u, fpga%u fpath: %s, addr: 0x%x, len: %d value: 0x%x\n",
-        main_dev_id, fpga_index, info_ctrl->fpath, info_ctrl->addr, info_ctrl->len, value);
+        main_dev_id, fpga_index, info_ctrl->fpath, info_ctrl->addr, info_ctrl->len, *value);
     ret = dfd_ko_write_file(info_ctrl->fpath, info_ctrl->addr, wr_buf, info_ctrl->len);
     if (ret < 0) {
         DBG_FPGA_DEBUG(DBG_ERROR, "set fpga test reg failed, ret: %d", ret);
@@ -285,7 +344,7 @@ int dfd_set_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, unsigned 
  * return: Success :0
  *       : Failed: A negative value is returned
  */
-int dfd_get_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, int *value)
+int dfd_get_fpga_testreg(unsigned int main_dev_id, unsigned int fpga_index, int *value)
 {
     uint64_t key;
     int ret;
@@ -309,7 +368,7 @@ int dfd_get_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, int *valu
  * return: Success: Returns the length of buf
  *       : Failed: A negative value is returned
  */
-ssize_t dfd_get_fpga_testreg_str(uint8_t main_dev_id, unsigned int fpga_index,
+ssize_t dfd_get_fpga_testreg_str(unsigned int main_dev_id, unsigned int fpga_index,
             char *buf, size_t count)
 {
     int ret, value;
@@ -320,7 +379,7 @@ ssize_t dfd_get_fpga_testreg_str(uint8_t main_dev_id, unsigned int fpga_index,
         return -DFD_RV_INVALID_VALUE;
     }
     if (count <= 0) {
-        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %lu, main_dev_id: %u, fpga index: %u\n",
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
             count, main_dev_id, fpga_index);
         return -DFD_RV_INVALID_VALUE;
     }
@@ -332,3 +391,86 @@ ssize_t dfd_get_fpga_testreg_str(uint8_t main_dev_id, unsigned int fpga_index,
     }
     return (ssize_t)snprintf(buf, count, "0x%08x\n", value);
 }
+
+/**
+ * dfd_get_fpga_support_upgrade - Obtain the FPGA support_upgrade
+ * @main_dev_id: Motherboard :0 Subcard :5
+ * @index:The number of the FPGA starts from 0
+ * @buf: Receive buf
+ * @count: Accept the buf length
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_fpga_support_upgrade(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+{
+    uint64_t key;
+    int fpga_support_upgrade;
+    int ret;
+
+    if (buf == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "param error, buf is NULL, main_dev_id: %u, fpga index: %u\n",
+            main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    if (count <= 0) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
+            count, main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    mem_clear(buf, count);
+    fpga_support_upgrade = 0;
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_FPGA_SUPPORT_UPGRADE, main_dev_id, fpga_index);
+    ret = dfd_info_get_int(key, &fpga_support_upgrade, NULL);
+    if (ret < 0) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "main_dev_id: %u, fpga%u support upgrade config error, key_name: %s\n",
+            main_dev_id, fpga_index, key_to_name(DFD_CFG_ITEM_FPGA_SUPPORT_UPGRADE));
+        return ret;
+    }
+
+    DBG_FPGA_DEBUG(DBG_VERBOSE, "%d\n", fpga_support_upgrade);
+    snprintf(buf, count, "%d\n", fpga_support_upgrade);
+    return strlen(buf);
+}
+
+/**
+ * dfd_get_fpga_upgrade_active_type - Obtain the FPGA upgrade active type
+ * @main_dev_id: Motherboard :0 Subcard :5
+ * @index:The number of the FPGA starts from 0
+ * @buf: Receive buf
+ * @count: Accept the buf length
+ * return: Success: Returns the length of buf
+ *       : Failed: A negative value is returned
+ */
+ssize_t dfd_get_fpga_upgrade_active_type(unsigned int main_dev_id, unsigned int fpga_index, char *buf, size_t count)
+{
+    uint64_t key;
+    char *fpga_upgrade_active_type;
+
+    if (buf == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "param error, buf is NULL, main_dev_id: %u, fpga index: %u\n",
+            main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    if (count <= 0) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "buf size error, count: %zu, main_dev_id: %u, fpga index: %u\n",
+            count, main_dev_id, fpga_index);
+        return -DFD_RV_INVALID_VALUE;
+    }
+
+    mem_clear(buf, count);
+    key = DFD_CFG_KEY(DFD_CFG_ITEM_FPGA_UPGRADE_ACTIVE_TYPE, main_dev_id, fpga_index);
+    fpga_upgrade_active_type = dfd_ko_cfg_get_item(key);
+    if (fpga_upgrade_active_type == NULL) {
+        DBG_FPGA_DEBUG(DBG_ERROR, "main_dev_id: %u, fpga%u upgrade active type config error, key_name: %s\n",
+            main_dev_id, fpga_index, key_to_name(DFD_CFG_ITEM_FPGA_UPGRADE_ACTIVE_TYPE));
+        return -DFD_RV_DEV_NOTSUPPORT;
+    }
+
+    DBG_FPGA_DEBUG(DBG_VERBOSE, "%s\n", fpga_upgrade_active_type);
+    snprintf(buf, count, "%s\n", fpga_upgrade_active_type);
+    return strlen(buf);
+}
+

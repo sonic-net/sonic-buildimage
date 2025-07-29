@@ -53,7 +53,7 @@
 
 /* using in is_valid_tlvinfo_header */
 static u_int32_t eeprom_size;
-
+static tlv_decode_value_t decode_value_buf;
 /*
  *  List of TLV codes and names.
  */
@@ -353,6 +353,7 @@ static bool tlvinfo_decode_tlv(u_int8_t *eeprom, u_int8_t tcode, tlv_decode_valu
     return false;
 }
 
+#if 0
 /*
  *  parse_tlv_eeprom
  *
@@ -364,7 +365,6 @@ int parse_tlv_eeprom(u_int8_t *eeprom, u_int32_t size)
     bool ret;
     tlvinfo_header_t *eeprom_hdr;
     //tlv_info_vec_t tlv_info;
-    tlv_decode_value_t decode_value;
     int j;
 
     eeprom_hdr = (tlvinfo_header_t *) eeprom;
@@ -381,25 +381,27 @@ int parse_tlv_eeprom(u_int8_t *eeprom, u_int32_t size)
     }
 
     for (i = 0; i < TLV_CODE_NUM; i++) {
-        mem_clear((void *)&decode_value, sizeof(tlv_decode_value_t));
-        ret = tlvinfo_decode_tlv(eeprom, tlv_code_list[i].m_code, &decode_value);
+        mem_clear((void *)&decode_value_buf, sizeof(tlv_decode_value_t));
+        ret = tlvinfo_decode_tlv(eeprom, tlv_code_list[i].m_code, &decode_value_buf);
         if (!ret) {
             DEBUG_ERROR("No found type: %s\n", tlv_code_list[i].m_name);
             continue;
         }
 
         DEBUG_VERBOSE("i: %d,Found type: %s tlv[%d]:%s\n", i, tlv_code_list[i].m_name, tlv_code_list[i].m_code,
-            decode_value.value);
-        for (j = 0; j < decode_value.length; j++) {
+            decode_value_buf.value);
+        for (j = 0; j < decode_value_buf.length; j++) {
             if ((j % 16) == 0) {
                 DEBUG_VERBOSE("\n");
             }
-            DEBUG_VERBOSE("%02x ", decode_value.value[j]);
+            DEBUG_VERBOSE("%02x ", decode_value_buf.value[j]);
         }
         DEBUG_VERBOSE("\n\n");
     }
     return 0;
 }
+#endif
+
 static int dfd_parse_tlv_eeprom(u_int8_t *eeprom, u_int32_t size, u_int8_t main_type, tlv_decode_value_t *decode_value)
 {
     bool ret;
@@ -486,7 +488,6 @@ static int tlvinfo_find_wb_ext_tlv(tlv_decode_value_t *ext_tlv_value, u_int8_t e
 
 int dfd_tlvinfo_get_e2prom_info(u_int8_t *eeprom, u_int32_t size, dfd_tlv_type_t *tlv_type, u_int8_t* buf, u_int8_t *buf_len)
 {
-    tlv_decode_value_t decode_value;
     int ret;
 
     if (eeprom == NULL || tlv_type == NULL || buf == NULL) {
@@ -494,23 +495,23 @@ int dfd_tlvinfo_get_e2prom_info(u_int8_t *eeprom, u_int32_t size, dfd_tlv_type_t
         return -1;
     }
 
-    mem_clear((void *)&decode_value, sizeof(tlv_decode_value_t));
-    ret = dfd_parse_tlv_eeprom(eeprom, size, tlv_type->main_type, &decode_value);
+    mem_clear((void *)&decode_value_buf, sizeof(tlv_decode_value_t));
+    ret = dfd_parse_tlv_eeprom(eeprom, size, tlv_type->main_type, &decode_value_buf);
     if (ret) {
         DEBUG_ERROR("dfd_parse_tlv_eeprom failed ret %d.\n", ret);
         return ret;
     }
 
     if (tlv_type->main_type != TLV_CODE_VENDOR_EXT) {
-        if (*buf_len >= decode_value.length) {
-            memcpy(buf, decode_value.value, decode_value.length);
-            *buf_len = decode_value.length;
+        if (*buf_len >= decode_value_buf.length) {
+            memcpy(buf, decode_value_buf.value, decode_value_buf.length);
+            *buf_len = decode_value_buf.length;
             return 0;
         }
-        DEBUG_ERROR("buf_len %d small than info_len %d.\n", *buf_len, decode_value.length);
+        DEBUG_ERROR("buf_len %d small than info_len %d.\n", *buf_len, decode_value_buf.length);
         return -1;
     }
-    DEBUG_VERBOSE("info_len %d.\n", decode_value.length);
+    DEBUG_VERBOSE("info_len %d.\n", decode_value_buf.length);
 
-    return tlvinfo_find_wb_ext_tlv(&decode_value, tlv_type->ext_type, buf, buf_len);
+    return tlvinfo_find_wb_ext_tlv(&decode_value_buf, tlv_type->ext_type, buf, buf_len);
 }

@@ -34,8 +34,9 @@ static int wb_get_main_board_cpld_number(void)
 }
 
 /*
- * wb_get_main_board_cpld_alias - Used to identify the location of cpld,
+ * wb_get_main_board_cpld_attr - Used to get the attr of cpld,
  * @cpld_index: start with 1
+ * @type: get type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -43,99 +44,14 @@ static int wb_get_main_board_cpld_number(void)
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_main_board_cpld_alias(unsigned int cpld_index, char *buf, size_t count)
+static ssize_t wb_get_main_board_cpld_attr(unsigned int cpld_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_main_board_cpld_alias);
+    check_p(g_drv->get_main_board_cpld_attr);
 
-    ret = g_drv->get_main_board_cpld_alias(cpld_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_cpld_type - Used to get cpld model name
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_cpld_type(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_cpld_type);
-
-    ret = g_drv->get_main_board_cpld_type(cpld_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_cpld_firmware_version - Used to get cpld firmware version,
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_cpld_firmware_version(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_cpld_firmware_version);
-
-    ret = g_drv->get_main_board_cpld_firmware_version(cpld_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_cpld_board_version - Used to get cpld board version,
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_cpld_board_version(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_cpld_board_version);
-
-    ret = g_drv->get_main_board_cpld_board_version(cpld_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_cpld_test_reg - Used to test cpld register read
- * filled the value to buf, value is hexadecimal, start with 0x
- * @cpld_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_cpld_test_reg(unsigned int cpld_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_cpld_test_reg);
-
-    ret = g_drv->get_main_board_cpld_test_reg(cpld_index, buf, count);
+    ret = g_drv->get_main_board_cpld_attr(cpld_index, type, buf, count);
     return ret;
 }
 
@@ -147,16 +63,17 @@ static ssize_t wb_get_main_board_cpld_test_reg(unsigned int cpld_index, char *bu
  * This function returns 0 on success,
  * otherwise it returns a negative value on failed.
  */
-static int wb_set_main_board_cpld_test_reg(unsigned int cpld_index, unsigned int value)
+static int wb_set_main_board_cpld_attr(unsigned int cpld_index, unsigned int type, unsigned int value)
 {
     int ret;
 
     check_p(g_drv);
-    check_p(g_drv->set_main_board_cpld_test_reg);
+    check_p(g_drv->set_main_board_cpld_attr);
 
-    ret = g_drv->set_main_board_cpld_test_reg(cpld_index, value);
+    ret = g_drv->set_main_board_cpld_attr(cpld_index, type, value);
     return ret;
 }
+
 /***************************************end of CPLD*******************************************/
 
 static struct s3ip_sysfs_cpld_drivers_s drivers = {
@@ -165,12 +82,8 @@ static struct s3ip_sysfs_cpld_drivers_s drivers = {
      * if not support the function, set corresponding hook to NULL.
      */
     .get_main_board_cpld_number = wb_get_main_board_cpld_number,
-    .get_main_board_cpld_alias = wb_get_main_board_cpld_alias,
-    .get_main_board_cpld_type = wb_get_main_board_cpld_type,
-    .get_main_board_cpld_firmware_version = wb_get_main_board_cpld_firmware_version,
-    .get_main_board_cpld_board_version = wb_get_main_board_cpld_board_version,
-    .get_main_board_cpld_test_reg = wb_get_main_board_cpld_test_reg,
-    .set_main_board_cpld_test_reg = wb_set_main_board_cpld_test_reg,
+    .get_main_board_cpld_attr = wb_get_main_board_cpld_attr,
+    .set_main_board_cpld_attr = wb_set_main_board_cpld_attr,
 };
 
 static int __init cpld_device_driver_init(void)

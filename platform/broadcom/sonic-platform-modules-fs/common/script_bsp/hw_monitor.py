@@ -1,48 +1,37 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 import sys
 import os
 import time
 import traceback
 import syslog
-from ruijieconfig import *
+import logging
+from platform_config import *
 from platform_util import *
 from time import monotonic as _time
 
-HW_DEBUG_FILE = "/etc/.hw_debug_flag"
-
-hw_debuglevel = 0
+DEBUG_FILE = "/etc/.hw_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "hw_monitor_debug.log"
+logger = setup_logger(LOG_FILE)
 
 STATUS_OK = 1
 STATUS_NOT_OK = 0
 STATUS_UNDEFINED = -1000
 
-def hw_debug_init():
-    global hw_debuglevel
-    if os.path.exists(HW_DEBUG_FILE):
-        hw_debuglevel = 1
+def debug_init():
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        hw_debuglevel = 0
-
+        logger.setLevel(logging.INFO)
 
 def hw_error(s):
-    #s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("HW_MONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def hw_info(s):
-    #s = s.decode('utf-8').encode('gb2312')
-    syslog.openlog("HW_MONITOR", syslog.LOG_PID)
-    syslog.syslog(syslog.LOG_NOTICE, s)
-
+    logger.info(s)
 
 def hw_debug(s):
-    #s = s.decode('utf-8').encode('gb2312')
-    if hw_debuglevel == 1:
-        syslog.openlog("HW_MONITOR", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 class Monitoring(object):
     def __init__(self, config, log_file_path):
@@ -65,7 +54,7 @@ class Monitoring(object):
                 tmp = 0
                 for stop_config in self.stop_monitor_condition:
                     name = stop_config.get("name", None)
-                    ret, log = check_value(stop_config)
+                    ret, log, value = check_value_and_get_value(stop_config)
                     if ret is not True:
                         hw_error("stop %s monitor point is not ok, doing monitor." % (name))
                         tmp = -1
@@ -125,7 +114,7 @@ class Monitoring(object):
             # after all action items are executed, verify whether the stop conditions are met
             for stop_config in self.stop_monitor_condition:
                 name = stop_config.get("name", None)
-                ret, log = check_value(stop_config)
+                ret, log, value = check_value_and_get_value(stop_config)
                 if ret is not True:
                     hw_error("stop %s result check failed. ret:%s, log:%s \n stop_config:%s"
                              % (name, ret, log, stop_config))
@@ -254,7 +243,7 @@ class Intelligent_Monitor(Monitoring):
                 for each_monitor_point_config in each_monitor_list:
                     name = each_monitor_point_config.get("name", None)
                     # get current status
-                    ret, log = check_value(each_monitor_point_config)
+                    ret, log, value = check_value_and_get_value(each_monitor_point_config)
                     if ret is True:
                         if log == CHECK_VALUE_OK:
                             #if one of monitor_point item is ok, set each_monitor_list status ok
@@ -331,7 +320,7 @@ class Intelligent_Monitor(Monitoring):
                 tmp = 0
                 for each_check_config in each_check_list:
                     name = each_check_config.get('name', None)
-                    ret, val = check_value(each_check_config)
+                    ret, val, value = check_value_and_get_value(each_check_config)
                     if ret is False:
                         hw_error("dev_ready_check %s check failed. \n config %s" % (name, each_check_config))
                         hw_error("error log: %s" % val)
@@ -360,7 +349,7 @@ class Intelligent_Monitor(Monitoring):
         start_time = _time()
         while True:
             try:
-                hw_debug_init()
+                debug_init()
                 if self.ready_timeout > 0 and _time() - start_time >= self.ready_timeout:
                     hw_error("wait_dev_ready check is timeout.")
                     for timeout_action_config in self.timeout_action_list:
@@ -386,7 +375,7 @@ class Intelligent_Monitor(Monitoring):
                 exit(-1)
 
     def run(self):
-        hw_debug_init()
+        debug_init()
         if self.init_delay > 0:
             hw_debug("run init_delay is %d, doing delay" % self.init_delay)
             time.sleep(self.init_delay)
@@ -397,7 +386,7 @@ class Intelligent_Monitor(Monitoring):
         start_time = _time()
         while True:
             try:
-                hw_debug_init()
+                debug_init()
                 if self.status_monitor_interval > 0 and self.status_monitor_interval < self.dev_monitor_interval:
                     if _time() - start_time >= self.dev_monitor_interval:
                         # time exceeds the device monitoring polling cycle, doing device monitor

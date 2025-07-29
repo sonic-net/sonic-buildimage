@@ -77,9 +77,10 @@ static ssize_t wb_get_main_board_vol_type(unsigned int vol_index, char *buf, siz
 }
 
 /*
- * wb_get_main_board_vol_max - Used to get the maximum threshold of voltage sensor
- * filled the value to buf, the value is integer with mV
+ * wb_get_main_board_vol_threshold - Used to get the threshold of volerature sensor
+ * filled the value to buf, the value is integer with millidegree Celsius
  * @vol_index: start with 1
+ * @type: threshold type
  * @buf: Data receiving buffer
  * @count: length of buf
  *
@@ -87,36 +88,14 @@ static ssize_t wb_get_main_board_vol_type(unsigned int vol_index, char *buf, siz
  * if not support this attributes filled "NA" to buf,
  * otherwise it returns a negative value on failed.
  */
-static ssize_t wb_get_main_board_vol_max(unsigned int vol_index, char *buf, size_t count)
+static ssize_t wb_get_main_board_vol_threshold(unsigned int vol_index, unsigned int type, char *buf, size_t count)
 {
     ssize_t ret;
 
     check_p(g_drv);
-    check_p(g_drv->get_main_board_vol_max);
+    check_p(g_drv->get_main_board_vol_threshold);
 
-    ret = g_drv->get_main_board_vol_max(vol_index, buf, count);
-    return ret;
-}
-
-/*
- * wb_get_main_board_vol_min - Used to get the minimum threshold of voltage sensor
- * filled the value to buf, the value is integer with mV
- * @vol_index: start with 1
- * @buf: Data receiving buffer
- * @count: length of buf
- *
- * This function returns the length of the filled buffer,
- * if not support this attributes filled "NA" to buf,
- * otherwise it returns a negative value on failed.
- */
-static ssize_t wb_get_main_board_vol_min(unsigned int vol_index, char *buf, size_t count)
-{
-    ssize_t ret;
-
-    check_p(g_drv);
-    check_p(g_drv->get_main_board_vol_min);
-
-    ret = g_drv->get_main_board_vol_min(vol_index, buf, count);
+    ret = g_drv->get_main_board_vol_threshold(vol_index, type, buf, count);
     return ret;
 }
 
@@ -215,8 +194,7 @@ static struct s3ip_sysfs_vol_sensor_drivers_s drivers = {
     .get_main_board_vol_number = wb_get_main_board_vol_number,
     .get_main_board_vol_alias = wb_get_main_board_vol_alias,
     .get_main_board_vol_type = wb_get_main_board_vol_type,
-    .get_main_board_vol_max = wb_get_main_board_vol_max,
-    .get_main_board_vol_min = wb_get_main_board_vol_min,
+    .get_main_board_vol_threshold = wb_get_main_board_vol_threshold,
     .get_main_board_vol_range = wb_get_main_board_vol_range,
     .get_main_board_vol_nominal_value = wb_get_main_board_vol_nominal_value,
     .get_main_board_vol_value = wb_get_main_board_vol_value,

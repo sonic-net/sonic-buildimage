@@ -7,14 +7,12 @@ import subprocess
 import time
 import syslog
 import traceback
-from ruijieutil import *
+import logging
+from platform_util import *
 
-AVSCTROL_DEBUG_FILE = "/etc/.avscontrol_debug_flag"
-
-AVSCTROLERROR = 1
-AVSCTROLDEBUG = 2
-
-debuglevel = 0
+DEBUG_FILE = "/etc/.avscontrol_debug_flag"
+LOG_FILE = BSP_COMMON_LOG_DIR + "xdpe_avscontrol_debug.log"
+logger = setup_logger(LOG_FILE)
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -34,35 +32,27 @@ class AliasedGroup(click.Group):
 
 
 def avscontrol_debug(s):
-    if AVSCTROLDEBUG & debuglevel:
-        syslog.openlog("AVSCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_DEBUG, s)
-
+    logger.debug(s)
 
 def avscontrol_error(s):
-    if AVSCTROLERROR & debuglevel:
-        syslog.openlog("AVSCONTROL", syslog.LOG_PID)
-        syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def avserror(s):
     # s = s.decode('utf-8').encode('gb2312')
     syslog.openlog("AVSCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_ERR, s)
-
+    logger.error(s)
 
 def avsinfo(s):
     syslog.openlog("AVSCONTROL", syslog.LOG_PID)
     syslog.syslog(syslog.LOG_INFO, s)
-
+    logger.info(s)
 
 def debug_init():
-    global debuglevel
-    if os.path.exists(AVSCTROL_DEBUG_FILE):
-        debuglevel = debuglevel | AVSCTROLDEBUG | AVSCTROLERROR
+    if os.path.exists(DEBUG_FILE):
+        logger.setLevel(logging.DEBUG)
     else:
-        debuglevel = debuglevel & ~(AVSCTROLDEBUG | AVSCTROLERROR)
-
+        logger.setLevel(logging.INFO)
 
 def byteTostr(val):
     strtmp = ''
@@ -245,7 +235,7 @@ def run():
             exit(0)
         index += 1
         if index >= 10:
-            avserror("%%DEV_MONITOR-AVS: MAC Voltage adjust failed.")
+            avserror("%%DEV_MONITOR-3-AVS: MAC Voltage adjust failed.")
             exit(-1)
         time.sleep(1)
 
@@ -264,4 +254,5 @@ def start():
 
 
 if __name__ == '__main__':
+    debug_init()
     main()
