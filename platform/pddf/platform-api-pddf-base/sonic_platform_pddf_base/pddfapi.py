@@ -885,10 +885,7 @@ class PddfApi():
         if attr['device_type'] == 'CURRENT_SENSOR':
             return self.current_sensor_parse(dev, ops)
 
-        if attr['device_type'] == 'SFP' or attr['device_type'] == 'QSFP' or \
-                attr['device_type'] == 'SFP+' or attr['device_type'] == 'QSFP+' or \
-                attr['device_type'] == 'SFP28' or attr['device_type'] == 'QSFP28' or \
-                attr['device_type'] == 'QSFP-DD':
+        if attr['device_type'] in ['SFP', 'SFP+', 'SFP28', 'QSFP', 'QSFP+', 'QSFP28', 'QSFP-DD', 'OSFP']:
             return self.optic_parse(dev, ops)
 
         if attr['device_type'] == 'CPLD':
