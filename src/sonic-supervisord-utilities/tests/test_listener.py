@@ -41,9 +41,23 @@ def mock_exists(path):
     return builtin_exists(path)
 
 
+class TimeMocker:
+    def __init__(self, start_time=time.time()):
+        self.current_time = start_time
+        self.call_count = 0
+
+    def __call__(self, *args, **kwargs):
+        return_time = self.current_time + self.call_count * 3600
+        self.call_count += 1
+        return return_time
+
+
+@mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})
+@mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_swss():
+def test_main_swss(mock_time):
+    mock_time.side_effect = TimeMocker()
     with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
         with mock.patch('sys.stdin', stdin_file):
             with pytest.raises(SystemExit) as excinfo:
@@ -53,9 +67,12 @@ def test_main_swss():
             main(["--container-name", "swss", "--use-unix-socket-path"])
 
 
+@mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic", "NAMESPACE_ID": "1"})
+@mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_snmp():
+def test_main_snmp(mock_time):
+    mock_time.side_effect = TimeMocker()
     with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
         with mock.patch('sys.stdin', stdin_file):
             main(["--container-name", "snmp"])

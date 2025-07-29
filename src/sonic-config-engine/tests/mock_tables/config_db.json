@@ -1,4 +1,8 @@
 {
+    "HEARTBEAT|orchagent": {
+        "heartbeat_interval"   : "10000",
+        "alert_interval"       : "60000"
+    },
     "FEATURE|bgp": {
         "auto_restart": "enabled",
         "check_up_status": "false",
