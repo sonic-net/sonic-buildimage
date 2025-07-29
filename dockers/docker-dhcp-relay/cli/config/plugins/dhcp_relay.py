@@ -223,7 +223,7 @@ def validate_source_interface(vlan_name, source_interface, db):
 @click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="VRF selection flag for DHCPv4 relay")
 @click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
 @click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
-@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "append", "replace"]),
               help="Set agent relay mode for DHCPv4 relay")
 @click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
 @click.argument("vlan_name", metavar="<VLAN_NAME>", required=True)
@@ -318,7 +318,7 @@ def update_dhcpv4_relay(db, vlan_name, dhcpv4_servers, source_interface, link_se
 @click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable VRF selection for DHCPv4 relay")
 @click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
 @click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
-@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "append", "replace"]),
               help="Set agent relay mode for DHCPv4 relay")
 @click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
 @click.argument("vlan_name", metavar="<VLAN_NAME>", required=True)
@@ -518,7 +518,7 @@ def dhcp_relay_ipv4_helper():
 @click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable VRF selection for DHCPv4 relay")
 @click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
 @click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
-@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "append", "replace"]),
               help="Set agent relay mode for DHCPv4 relay")
 @click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
 @clicommon.pass_db
@@ -545,7 +545,7 @@ def add_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers, source_interface, li
 @click.option("--vrf-selection", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable VRF selection for DHCPv4 relay")
 @click.option("--server-id-override", required=False, type=click.Choice(["enable", "disable"]), help="Enable/Disable server ID override for DHCPv4 relay")
 @click.option("--server-vrf", required=False, help="Server VRF name for DHCPv4 relay")
-@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "forward_and_append", "forward_and_replace", "forward_untouched"]),
+@click.option("--agent-relay-mode", required=False, type=click.Choice(["discard", "append", "replace"]),
               help="Set agent relay mode for DHCPv4 relay")
 @click.option("--max-hop-count", required=False, type=int, help="Maximum hop count for DHCPv4 relay")
 @clicommon.pass_db

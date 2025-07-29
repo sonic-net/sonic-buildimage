@@ -493,9 +493,8 @@ class TestConfigDhcpv4Relay(object):
 
         agent_relay_modes = [
             "discard",
-            "forward_and_append",
-            "forward_and_replace",
-            "forward_untouched"
+            "append",
+            "replace"
         ]
 
         for add_mode in agent_relay_modes:
