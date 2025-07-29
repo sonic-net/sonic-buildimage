@@ -125,7 +125,7 @@
         "support_syslog_rate_limit": "true"
     },
     "FEATURE|snmp": {
-        "auto_restart": "enabled",
+        "auto_restart": "disabled",
         "delayed": "True",
         "has_global_scope": "True",
         "has_per_asic_scope": "False",

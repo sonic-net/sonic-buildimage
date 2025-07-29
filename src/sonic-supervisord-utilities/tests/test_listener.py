@@ -41,17 +41,21 @@ def mock_exists(path):
     return builtin_exists(path)
 
 
-# Patch the stdin
-buildin_stdin = sys.stdin
-sys.stdin = open(os.path.join(test_path, "dev/stdin"))
-
-# @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
-# @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main():
-    with pytest.raises(SystemExit) as excinfo:
-        rc = main([])
-    assert excinfo.value.code == 1
+def test_main_swss():
+    with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
+        with mock.patch('sys.stdin', stdin_file):
+            with pytest.raises(SystemExit) as excinfo:
+                main([])
+            assert excinfo.value.code == 1
 
-    main(["--container-name", "snmp", "--use-unix-socket-path"])
+            main(["--container-name", "swss", "--use-unix-socket-path"])
+
+
+@mock.patch("builtins.open", mock_open)
+@mock.patch("os.path.exists", mock_exists)
+def test_main_snmp():
+    with open(os.path.join(test_path, "dev/stdin")) as stdin_file:
+        with mock.patch('sys.stdin', stdin_file):
+            main(["--container-name", "snmp"])
