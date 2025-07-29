@@ -162,17 +162,17 @@ class AggregateAddressMgr(Manager):
     def get_addresses_from_state_db(self, bbr_required_only=False):
         addresses = []
         for key in self.address_table.getKeys():
-            data = self.address_table.get(key)
+            data = self.get_address_from_state_db(key)
             if not bbr_required_only or data[BBR_REQUIRED_KEY] == COMMON_TRUE_STRING:
                 addresses.append((key, data))
         return addresses
 
     def get_address_from_state_db(self, key):
-        resp = self.address_table.get(key)
-        if not resp[0]:
+        (success, data) = self.address_table.get(key)
+        if not success:
             log_err("AggregateAddressMgr::Failed to get data from state db for key %s" % key)
             return {}
-        data = dict(resp[1])
+        data = dict(data)
         return data
 
     def remove_all_state_of_address(self):
@@ -183,6 +183,8 @@ class AggregateAddressMgr(Manager):
 
     def set_address_state(self, key, data, address_state):
         self.address_table.hset(key, BBR_REQUIRED_KEY, data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING))
+        self.address_table.hset(key, SUMMARY_ONLY_KEY, data.get(SUMMARY_ONLY_KEY, COMMON_FALSE_STRING))
+        self.address_table.hset(key, AS_SET_KEY, data.get(AS_SET_KEY, COMMON_FALSE_STRING))
         self.address_table.hset(key, AGGREGATE_ADDRESS_PREFIX_LIST_KEY, data.get(AGGREGATE_ADDRESS_PREFIX_LIST_KEY, ""))
         self.address_table.hset(key, CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY, data.get(CONTRIBUTING_ADDRESS_PREFIX_LIST_KEY, ""))
         self.address_table.hset(key, ADDRESS_STATE_KEY, address_state)
@@ -216,7 +218,7 @@ def generate_aggregate_address_commands(asn, prefix, is_v4, is_remove, summary_o
 
 def generate_prefix_list_commands(prefix_list_name, prefix, is_v4, is_con, is_remove):
     ret_cmds = []
-    prefix_list_cmd = "no" if is_remove else ""
+    prefix_list_cmd = "no " if is_remove else ""
     prefix_list_cmd += "ip" if is_v4 else "ipv6"
     prefix_list_cmd += " prefix-list %s" % prefix_list_name
     prefix_list_cmd += " permit %s" % prefix
