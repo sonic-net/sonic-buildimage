@@ -12,3 +12,5 @@ program:nbrmgrd
 program:vxlanmgrd
 program:coppmgrd
 program:tunnelmgrd
+group:dhcp-relay
+

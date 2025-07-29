@@ -1,3 +1,4 @@
+from .mock_tables.dbconnector import ConfigDBConnector, SonicDBConfig
 import copy
 import os
 import sys
@@ -8,9 +9,7 @@ from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch
 
-from .mock_connector import MockConnector
 
-swsscommon.SonicV2Connector = MockConnector
 swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,10 +49,9 @@ sys.stdin = open(os.path.join(test_path, "dev/stdin"))
 # @patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-@patch('swsscommon.swsscommon.ConfigDBConnector')
-def test_main(mock_config_db):
+def test_main():
     with pytest.raises(SystemExit) as excinfo:
         rc = main([])
     assert excinfo.value.code == 1
 
-    main(["--container-name", "snmp"])
+    main(["--container-name", "snmp", "--use-unix-socket-path"])
