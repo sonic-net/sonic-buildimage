@@ -97,9 +97,11 @@ def do_work():
 
     device_metadata = config_db.get_table("DEVICE_METADATA")
     # Enable Prefix List Manager and AsPath Manager for UpperSpineRouter/UpstreamLC
-    if ("localhost" in device_metadata and "type" in device_metadata["localhost"] and
-        (device_metadata["localhost"]["type"] == "SpineRouter" and "subtype" in device_metadata["localhost"] and device_metadata["localhost"]["subtype"] == "UpstreamLC" or
-         device_metadata["localhost"]["type"] == "UpperSpineRouter")):
+    is_upstream_lc = ("localhost" in device_metadata and "type" in device_metadata["localhost"] and "subtype" in device_metadata["localhost"] and
+                      device_metadata["localhost"]["type"] == "SpineRouter" and device_metadata["localhost"]["subtype"] == "UpstreamLC")
+    is_upper_spine_router = ("localhost" in device_metadata and "type" in device_metadata["localhost"] and
+                             device_metadata["localhost"]["type"] == "UpperSpineRouter")
+    if is_upstream_lc or is_upper_spine_router:
         # Prefix List Manager
         managers.append(PrefixListMgr(common_objs, "CONFIG_DB", "PREFIX_LIST"))
         managers.append(AsPathMgr(common_objs, "CONFIG_DB", "DEVICE_METADATA"))
