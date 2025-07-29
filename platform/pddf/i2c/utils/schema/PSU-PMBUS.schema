@@ -76,6 +76,18 @@
                     },
                     "attr_len": {
                       "type": "string"
+                    },
+                    "attr_data_format": {
+                      "type": "string"
+                    },
+                    "attr_m" : {
+                      "type": "string"
+                    },
+                    "attr_b" : {
+                      "type": "string"
+                    },
+                    "attr_r" : {
+                      "type": "string"
                     }
                   },
                   "required": [

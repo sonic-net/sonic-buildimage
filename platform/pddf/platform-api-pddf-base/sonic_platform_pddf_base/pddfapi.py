@@ -55,6 +55,13 @@ class PddfApi():
             print("%s -- command failed" % cmd)
         return rc
 
+    def get_cmd_output(self, cmd):
+        result = subprocess.run(['/bin/bash', '-c', cmd], capture_output=True)
+        if result.returncode != 0:
+            print("%s -- command failed" % cmd)
+
+        return result
+
     def get_dev_idx(self, dev, ops):
         parent = dev['dev_info']['virt_parent']
         pdev = self.data[parent]
@@ -110,6 +117,15 @@ class PddfApi():
             return 0
 
         return self.data[dev]['dev_attr']['num_psu_fans']
+
+    def get_num_psu_thermals(self, dev):
+        if dev not in self.data.keys():
+            return str(1)
+
+        if 'num_psu_thermals' not in self.data[dev]['dev_attr']:
+            return str(1)
+
+        return self.data[dev]['dev_attr']['num_psu_thermals']
 
     def get_led_path(self):
         return ("pddf/devices/led")
@@ -315,7 +331,7 @@ class PddfApi():
                     real_name = attr['attr_name']
 
                 dsysfs_path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                    "/%d-00%02x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
                                   int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
                     "/%s" % real_name
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -424,7 +440,7 @@ class PddfApi():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -467,7 +483,7 @@ class PddfApi():
                         real_dev = dev
 
                     dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                        "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                        "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                       int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                         "/%s" % real_name
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -526,7 +542,7 @@ class PddfApi():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -878,10 +894,7 @@ class PddfApi():
         if attr['device_type'] == 'CURRENT_SENSOR':
             return self.current_sensor_parse(dev, ops)
 
-        if attr['device_type'] == 'SFP' or attr['device_type'] == 'QSFP' or \
-                attr['device_type'] == 'SFP+' or attr['device_type'] == 'QSFP+' or \
-                attr['device_type'] == 'SFP28' or attr['device_type'] == 'QSFP28' or \
-                attr['device_type'] == 'QSFP-DD':
+        if attr['device_type'] in ['SFP', 'SFP+', 'SFP28', 'QSFP', 'QSFP+', 'QSFP28', 'QSFP-DD', 'OSFP']:
             return self.optic_parse(dev, ops)
 
         if attr['device_type'] == 'CPLD':

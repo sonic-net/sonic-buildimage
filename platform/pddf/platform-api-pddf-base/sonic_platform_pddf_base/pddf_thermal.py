@@ -74,7 +74,7 @@ class PddfThermal(ThermalBase):
     def get_temperature(self):
         if self.is_psu_thermal:
             device = "PSU{}".format(self.thermals_psu_index)
-            output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_input")
+            output = self.pddf_obj.get_attr_name_output(device, "psu_temp{}_input".format(self.thermal_index))
             if not output:
                 return None
 
@@ -112,7 +112,14 @@ class PddfThermal(ThermalBase):
             else:
                 return (attr_value/float(1000))
         else:
-            raise NotImplementedError
+            device = "PSU{}".format(self.thermals_psu_index)
+            output = self.pddf_obj.get_attr_name_output(device, "psu_temp{}_high_threshold".format(self.thermal_index))
+            if not output:
+                return None
+
+            temp1 = output['status']
+            # temperature returned is in milli celcius
+            return float(temp1)/1000
 
 
     def get_low_threshold(self):
