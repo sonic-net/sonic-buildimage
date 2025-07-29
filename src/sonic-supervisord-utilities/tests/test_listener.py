@@ -3,6 +3,7 @@ import copy
 import os
 import sys
 import pytest
+import signal
 from unittest import mock
 from imp import load_source
 from swsscommon import swsscommon
@@ -65,35 +66,41 @@ def mock_stdin_context():
 
 
 @mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic", "NAMESPACE_ID": "0"})
-@mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_swss_no_container(mock_time):
+@mock.patch('time.time')
+@mock.patch('os.kill')
+def test_main_swss_no_container(mock_os_kill, mock_time):
     mock_time.side_effect = TimeMocker()
     with mock_stdin_context() as stdin_mock:
         with mock.patch('sys.stdin', stdin_mock):
             with pytest.raises(SystemExit) as excinfo:
                 main([])
             assert excinfo.value.code == 1
+    mock_os_kill.assert_not_called()
 
 
 @mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})
-@mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_swss_success(mock_time):
+@mock.patch('time.time')
+@mock.patch('os.kill')
+def test_main_swss_success(mock_os_kill, mock_time):
     mock_time.side_effect = TimeMocker()
     with mock_stdin_context() as stdin_mock:
         with mock.patch('sys.stdin', stdin_mock):
             main(["--container-name", "swss", "--use-unix-socket-path"])
+    mock_os_kill.assert_called_once_with(os.getppid(), signal.SIGTERM)
 
 
 @mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic", "NAMESPACE_ID": "1"})
-@mock.patch('supervisor_proc_exit_listener.time.time')
 @mock.patch("builtins.open", mock_open)
 @mock.patch("os.path.exists", mock_exists)
-def test_main_snmp(mock_time):
+@mock.patch('time.time')
+@mock.patch('os.kill')
+def test_main_snmp(mock_os_kill, mock_time):
     mock_time.side_effect = TimeMocker()
     with mock_stdin_context() as stdin_mock:
         with mock.patch('sys.stdin', stdin_mock):
             main(["--container-name", "snmp"])
+    mock_os_kill.assert_not_called()
