@@ -288,7 +288,7 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['topo_info'], "pddf/devices/cpldmux", ops)
         if ret != 0:
             return create_ret.append(ret)
-        cmd = "echo '%s' > /sys/kernel/pddf/devices/mux/i2c_name" % (dev['dev_info']['device_name'])
+        cmd = "echo '%s' > /sys/kernel/pddf/devices/cpldmux/i2c_name" % (dev['dev_info']['device_name'])
         ret = self.runcmd(cmd)
         if ret != 0:
             return create_ret.append(ret)
