@@ -34,6 +34,12 @@ try:
 except ImportError as e:
     asicthermal_present = False
 
+component_present = True
+try:
+    from sonic_platform.component import Component
+except ImportError as e:
+    component_present = False
+
 class PddfChassis(ChassisBase):
     """
     PDDF Generic Chassis class
@@ -105,6 +111,12 @@ class PddfChassis(ChassisBase):
             for i in range(self.platform_inventory['num_asic_temps']):
                 asicthermal = AsicThermal(i, self.pddf_obj)
                 self._thermal_list.append(asicthermal)
+
+        if component_present:
+            # Components (Programmables)
+            for i in range(self.platform_inventory['num_components']):
+                component = Component(i, self.pddf_obj, self.plugin_data)
+                self._component_list.append(component)
 
 
     def get_name(self):
