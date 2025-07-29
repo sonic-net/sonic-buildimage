@@ -203,8 +203,8 @@ def
 {%- set port_names_list_extra_queues = [] %}
 {%- for port in PORT_ACTIVE %}
     {%- if ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) and
-            (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'ToRRouter') or
-            ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'LeafRouter')) %}
+            (('type' in DEVICE_METADATA['localhost'] and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and 'ToRRouter' in DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type) or
+            ('subtype' in DEVICE_METADATA['localhost'] and 'DualToR' in DEVICE_METADATA['localhost']['subtype'] and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and 'LeafRouter' in DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type)) %}
         {%- if port_names_list_extra_queues.append(port) %}{%- endif %}
     {%- endif %}
 {%- endfor %}
