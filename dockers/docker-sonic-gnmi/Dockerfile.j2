@@ -15,6 +15,7 @@ ENV IMAGE_VERSION=$image_version
 RUN apt-get update && \
     apt-get install -y python3-dev && \
     apt-get install -y build-essential && \
+    apt-get install -y libffi-dev && \
     apt-get install -y swig
 
 {% if docker_sonic_gnmi_debs.strip() -%}
@@ -25,7 +26,7 @@ RUN apt-get update && \
 {{ install_debian_packages(docker_sonic_gnmi_debs.split(' ')) }}
 {%- endif %}
 
-{% if docker_sonic_gnmi_whls.strip() %}
+{% if grep .strip() %}
 # Copy locally-built Python wheel dependencies
 {{ copy_files("python-wheels/", docker_sonic_gnmi_whls.split(' '), "/python-wheels/") }}
 
@@ -34,6 +35,7 @@ RUN apt-get update && \
 {% endif %}
 
 RUN apt-get remove -y swig && \
+    apt-get remove -y libffi-dev && \
     apt-get remove -y build-essential && \
     apt-get remove -y python3-dev && \
     apt-get clean -y      && \
