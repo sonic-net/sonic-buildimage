@@ -31,7 +31,8 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 ## docker engine version (with platform)
-DOCKER_VERSION=5:18.09.8~3-0~debian-$IMAGE_DISTRO
+DOCKER_VERSION=5:20.10.16~3-0~debian-$IMAGE_DISTRO
+CONTAINERD_IO_VERSION=1.6.4-1
 LINUX_KERNEL_VERSION=4.19.0-12-2
 
 ## Working directory to prepare the file system
@@ -211,17 +212,12 @@ if [[ $CONFIGURED_ARCH == armhf ]]; then
     # update ssl ca certificates for secure pem
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT c_rehash
 fi
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/docker.gpg -fsSL https://download.docker.com/linux/debian/gpg
-sudo LANG=C chroot $FILESYSTEM_ROOT apt-key add /tmp/docker.gpg
-sudo LANG=C chroot $FILESYSTEM_ROOT rm /tmp/docker.gpg
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/docker.asc -fsSL https://download.docker.com/linux/debian/gpg
+sudo LANG=C chroot $FILESYSTEM_ROOT mv /tmp/docker.asc /etc/apt/trusted.gpg.d/
 sudo LANG=C chroot $FILESYSTEM_ROOT add-apt-repository \
                                     "deb [arch=$CONFIGURED_ARCH] https://download.docker.com/linux/debian $IMAGE_DISTRO stable"
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get update
-if dpkg --compare-versions ${DOCKER_VERSION} ge "18.09"; then
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSION} docker-ce-cli=${DOCKER_VERSION}
-else
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSION}
-fi
+sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSION} docker-ce-cli=${DOCKER_VERSION} containerd.io=${CONTAINERD_IO_VERSION}
 
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y remove software-properties-common gnupg2
 
@@ -247,8 +243,6 @@ fi
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/docker.service.d/
 ## Note: $_ means last argument of last command
 sudo cp files/docker/docker.service.conf $_
-## Fix systemd race between docker and containerd
-sudo sed -i '/After=/s/$/ containerd.service/' $FILESYSTEM_ROOT/lib/systemd/system/docker.service
 
 ## Create default user
 ## Note: user should be in the group with the same name, and also in sudo/docker/redis groups
