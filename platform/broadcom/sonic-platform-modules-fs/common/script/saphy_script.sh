@@ -10,6 +10,9 @@ start() {
     def_sku=${DEVDIR}"/default_sku"
     cur_sku=${DEVDIR}"/current_sku"
     SKU=""
+    if [ ! -e "/usr/local/bin/saphy" ]; then
+        exit 0
+    fi
     if type config-hwsku.sh >/dev/null 2>&1; then
         SKU="$(config-hwsku.sh -p)"
         echo "config-hwsku.sh get sku:"${SKU}
