@@ -1,10 +1,10 @@
 # Xsight xpci
 
-XPCI_VERSION = 1.0
+XPCI_VERSION = 0.7.0
 
 export XPCI_VERSION
 
-XSIGHT_XPCI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/SONiC/main/aparkhomenko-dev/amd64/kernel/"
+XSIGHT_XPCI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/sonic-xsight-binaries/main/amd64/kernel/"
 XPCI = xpci-dkms_$(XPCI_VERSION)_amd64.deb
 $(XPCI)_URL = "$(XSIGHT_XPCI_URL_PREFIX)/$(XPCI)"
 SONIC_ONLINE_DEBS += $(XPCI)
