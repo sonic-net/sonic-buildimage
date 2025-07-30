@@ -98,6 +98,18 @@ EXPORT_SYMBOL(access_psu_temp1_input);
 PSU_SYSFS_ATTR_DATA access_psu_temp1_high_threshold = {PSU_TEMP1_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_temp1_high_threshold);
 
+PSU_SYSFS_ATTR_DATA access_psu_temp2_input = {PSU_TEMP2_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp2_input);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp2_high_threshold = {PSU_TEMP2_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp2_high_threshold);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp3_input = {PSU_TEMP3_INPUT, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp3_input);
+
+PSU_SYSFS_ATTR_DATA access_psu_temp3_high_threshold = {PSU_TEMP3_HIGH_THRESHOLD, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(access_psu_temp3_high_threshold);
+
 PSU_SYSFS_ATTR_DATA access_psu_v_in = {PSU_V_IN, S_IRUGO, psu_show_default, NULL, sonic_i2c_get_psu_word_default, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_psu_v_in);
 
@@ -124,6 +136,10 @@ PSU_SYSFS_ATTR_DATA_ENTRY psu_sysfs_attr_data_tbl[]=
 	{ "psu_fan1_speed_rpm" , &access_psu_fan1_speed_rpm},
 	{ "psu_temp1_input" , &access_psu_temp1_input},
 	{ "psu_temp1_high_threshold" , &access_psu_temp1_high_threshold},
+	{ "psu_temp2_input" , &access_psu_temp2_input},
+	{ "psu_temp2_high_threshold" , &access_psu_temp2_high_threshold},
+	{ "psu_temp3_input" , &access_psu_temp3_input},
+	{ "psu_temp3_high_threshold" , &access_psu_temp3_high_threshold},
 	{ "psu_v_in" , &access_psu_v_in},
 	{ "psu_i_in" , &access_psu_i_in},
 	{ "psu_p_in" , &access_psu_p_in}
@@ -143,6 +159,42 @@ void *get_psu_access_data(char *name)
 }
 EXPORT_SYMBOL(get_psu_access_data);
 
+static bool skip_unsupported_psu_attribute(PSU_DATA_ATTR *data_attr,
+					   struct psu_data *data)
+{
+	/* Only process temperature sensor attributes */
+	if (strncmp(data_attr->aname, "psu_temp", 8) != 0 ||
+	    data_attr->aname[8] == '\0') {
+		return false;
+	}
+
+	int temp_index = data_attr->aname[8] - '0';
+
+	/* Skip if this thermal sensor is not available */
+	if (temp_index > data->num_psu_thermals) {
+		pddf_dbg(PSU,
+			 KERN_INFO
+			 "%s: Skipping %s as num_psu_thermals is %d\n",
+			 __func__, data_attr->aname, data->num_psu_thermals);
+		return true;
+	}
+
+	/* Skip high threshold attributes if not supported by this thermal sensor */
+	if (strstr(data_attr->aname, "high_threshold") != NULL) {
+		/* Check if this thermal sensor supports high threshold using the bitmap */
+		if (!(data->psu_temp_high_thresh_bitmap &
+		      (1 << (temp_index - 1)))) {
+			pddf_dbg(
+				PSU,
+				KERN_INFO
+				"%s: Skipping %s as high threshold is not supported for thermal sensor %d\n",
+				__func__, data_attr->aname, temp_index);
+			return true;
+		}
+	}
+
+	return false;
+}
 
 static int psu_probe(struct i2c_client *client,
             const struct i2c_device_id *dev_id)
@@ -187,6 +239,8 @@ static int psu_probe(struct i2c_client *client,
 	num = psu_platform_data->len;
 	data->index = psu_platform_data->idx - 1;
 	data->num_psu_fans = psu_platform_data->num_psu_fans;
+	data->num_psu_thermals = psu_platform_data->num_psu_thermals;
+	data->psu_temp_high_thresh_bitmap = psu_platform_data->psu_temp_high_thresh_bitmap;
 	data->num_attr = num;
 
 
@@ -204,6 +258,11 @@ static int psu_probe(struct i2c_client *client,
 			continue;
 		}
 		
+		/* Skip unsupported PSU attributes */
+		if (skip_unsupported_psu_attribute(data_attr, data)) {
+			continue;
+		}
+
 		dy_ptr = (struct sensor_device_attribute *)kzalloc(sizeof(struct sensor_device_attribute)+ATTR_NAME_LEN, GFP_KERNEL);
 		dy_ptr->dev_attr.attr.name = (char *)&dy_ptr[1];
 		strcpy((char *)dy_ptr->dev_attr.attr.name, data_attr->aname);
