@@ -2392,6 +2392,14 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet55": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "8000",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2978,6 +2986,7 @@
         },
         "DASH_HA_GLOBAL_CONFIG": {
             "global": {
+                "vnet_name": "Vnet55",
                 "cp_data_channel_port": "11362",
                 "dp_channel_port": "11368",
                 "dp_channel_src_port_min": "49152",

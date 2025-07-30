@@ -416,9 +416,34 @@ class TestSmartSwitch:
 
     def test_dash_ha_global_config(self, yang_model):
         data = {
+            "sonic-vxlan:sonic-vxlan": {
+                "sonic-vxlan:VXLAN_TUNNEL": {
+                    "VXLAN_TUNNEL_LIST": [
+                        {
+                            "name": "vtep1",
+                            "src_ip": "1.2.3.4"
+                        }
+                    ]
+                }
+            },
+            "sonic-vnet:sonic-vnet": {
+                "sonic-vnet:VNET": {
+                    "VNET_LIST": [
+                        {
+                            "name": "Vnet55",
+                            "vxlan_tunnel": "vtep1",
+                            "vni": 8000,
+                            "scope": "default",
+                            "advertise_prefix": True,
+                            "overlay_dmac": "22:33:44:55:66:77"
+                        }
+                    ]
+                }
+            },
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
+                        "vnet_name": "Vnet55",
                         "cp_data_channel_port": 11234,
                         "dp_channel_port": 11235,
                         "dp_channel_src_port_min": 11236,

@@ -22,5 +22,10 @@
         "desc": "Load NEIGH missing PORTCHANNEL",
         "eStrKey": "InvalidValue",
         "eStr": ["port"]
+    },
+
+    "VALID_NEIGH_PORT": {
+        "desc": "Load valid PORT"
+ 
     }
 }

@@ -3386,6 +3386,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
+            "vnet_name": "Vnet55",
             "cp_data_channel_port": "11362",
             "dp_channel_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3398,6 +3399,8 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
     }
 }
 ```
+
+**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 
