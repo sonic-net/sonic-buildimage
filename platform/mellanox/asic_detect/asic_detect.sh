@@ -17,14 +17,15 @@
 # limitations under the License.
 #
 
-ERROR_CODE=-1
-RC=0
+SUCCESS_CODE=0
+RC=-1
 
 if [[ -f "/usr/bin/asic_detect/asic_type" ]]; then
     cat /usr/bin/asic_detect/asic_type
-    exit $RC
+    exit $SUCCESS_CODE
 fi
 
+# make sure that DEVICE_DICT keys are the same as values in DEVICE_ORDER
 declare -A DEVICE_DICT=(
     ["cb84"]="spc1"
     ["cf6c"]="spc2"
@@ -37,13 +38,20 @@ TYPE_UNKNOWN="unknown"
 VENDOR_ID="15b3"
 DEVICE_TYPE=$TYPE_UNKNOWN
 
-DEVICE_ID=$(lspci -n | awk -v vid="$VENDOR_ID" '$0 ~ vid {print $NF}' | cut -d: -f2)
-# Check if DEVICE_ID exists in the DEVICE_DICT
-if [[ -n "${DEVICE_DICT[$DEVICE_ID]}" ]]; then
-    DEVICE_TYPE="${DEVICE_DICT[$DEVICE_ID]}"
-else
-    DEVICE_TYPE=$TYPE_UNKNOWN
-    RC=$ERROR_CODE
+# bf3 should be the last device in the list
+DEVICE_ORDER=("cb84" "cf6c" "cf70" "cf80" "cf82" "a2dc")
+
+lspci_output=$(lspci -n 2>/dev/null)
+if [[ -n "$lspci_output" ]]; then
+    for key in "${DEVICE_ORDER[@]}"; do
+        if echo "$lspci_output" | grep "$VENDOR_ID:$key" &>/dev/null; then
+            DEVICE_TYPE="${DEVICE_DICT[$key]}"
+            RC=$SUCCESS_CODE
+            break
+        fi
+    done
+    if [[ -n "$DEVICE_TYPE" ]]; then
+        echo "$DEVICE_TYPE" | tee >( [[ "$DEVICE_TYPE" != "$TYPE_UNKNOWN" ]] && cat > /usr/bin/asic_detect/asic_type )
+    fi
+    exit $RC
 fi
-echo "$DEVICE_TYPE" | tee >( [[ "$DEVICE_TYPE" != "$TYPE_UNKNOWN" ]] && cat > /usr/bin/asic_detect/asic_type )
-exit $RC
