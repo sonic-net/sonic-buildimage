@@ -76,27 +76,6 @@
         "state": "enabled",
         "support_syslog_rate_limit": "true"
     },
-    "FEATURE|macsec": {
-        "auto_restart": "enabled",
-        "check_up_status": "False",
-        "delayed": "False",
-        "has_global_scope": "False",
-        "has_per_asic_scope": "True",
-        "high_mem_alert": "disabled",
-        "set_owner": "local",
-        "state": "disabled",
-        "support_syslog_rate_limit": "True"
-    },
-    "FEATURE|mux": {
-        "auto_restart": "enabled",
-        "delayed": "False",
-        "has_global_scope": "True",
-        "has_per_asic_scope": "False",
-        "high_mem_alert": "disabled",
-        "set_owner": "local",
-        "state": "always_disabled",
-        "support_syslog_rate_limit": "true"
-    },
     "FEATURE|pmon": {
         "auto_restart": "enabled",
         "check_up_status": "false",
@@ -164,26 +143,6 @@
         "delayed": "False",
         "has_global_scope": "False",
         "has_per_asic_scope": "True",
-        "high_mem_alert": "disabled",
-        "set_owner": "local",
-        "state": "enabled",
-        "support_syslog_rate_limit": "true"
-    },
-    "FEATURE|telemetry": {
-        "auto_restart": "enabled",
-        "delayed": "True",
-        "has_global_scope": "True",
-        "has_per_asic_scope": "False",
-        "high_mem_alert": "disabled",
-        "set_owner": "kube",
-        "state": "enabled",
-        "support_syslog_rate_limit": "true"
-    },
-    "FEATURE|vnet-monitor": {
-        "auto_restart": "enabled",
-        "delayed": "False",
-        "has_global_scope": "True",
-        "has_per_asic_scope": "False",
         "high_mem_alert": "disabled",
         "set_owner": "local",
         "state": "enabled",
