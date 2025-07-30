@@ -1,11 +1,11 @@
 # XSight SAI
 
-XSIGHT_LIBSAI_VERSION = 0.1
-XSIGHT_LIBSAI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/SONiC/main/amd64/sai-plugin"
+XSIGHT_LIBSAI_VERSION = 1.16.3-0
+XSIGHT_LIBSAI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/sonic-xsight-binaries/main/amd64/sai-plugin/master"
 
-XSIGHT_LIBSAI = xsai-main_$(XSIGHT_LIBSAI_VERSION)_all.deb
-XSIGHT_LIBSAI_DEV = xsai-main-dev_$(XSIGHT_LIBSAI_VERSION)_all.deb
-XSIGHT_XBM = xbm_$(XSIGHT_LIBSAI_VERSION)_all.deb
+XSIGHT_LIBSAI = xsai-main_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
+XSIGHT_LIBSAI_DEV = xsai-main-dev_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
+XSIGHT_XBM = xbm_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
 
 $(XSIGHT_LIBSAI)_URL = "$(XSIGHT_LIBSAI_URL_PREFIX)/$(XSIGHT_LIBSAI)"
 $(eval $(call add_derived_package,$(XSIGHT_LIBSAI),$(XSIGHT_LIBSAI_DEV)))
