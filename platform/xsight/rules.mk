@@ -7,8 +7,6 @@ include $(PLATFORM_PATH)/libsaithrift-dev.mk
 #include $(PLATFORM_PATH)/docker-ptf-xsight.mk
 include $(PLATFORM_PATH)/platform-modules-accton.mk
 include $(PLATFORM_PATH)/xplt.mk
-include $(PLATFORM_PATH)/onie.mk
-include $(PLATFORM_PATH)/kvm-image.mk
 include $(PLATFORM_PATH)/xpci.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
