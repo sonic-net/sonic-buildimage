@@ -1,0 +1,6 @@
+quicktrace (1.00) UNRELEASED; urgency=medium
+
+  [ Arista ]
+  * Initial release : based on https://github.com/aristanetworks/quicktrace-public
+
+ -- Arista <support@arista.com>  Mon, 31 Mar 2025 12:20:00 -0400
