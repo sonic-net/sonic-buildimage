@@ -1,7 +1,9 @@
-from .mock_tables.dbconnector import ConfigDBConnector, SonicDBConfig
-import copy
-import os
 import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'sonic-config-engine', 'tests')))
+import mock_tables
+from mock_tables.dbconnector import ConfigDBConnector, SonicDBConfig
+import copy
 import pytest
 import signal
 from contextlib import contextmanager
