@@ -17,11 +17,13 @@ setup(
         'eepromutil',
         'hal-config',
         'config',
+        'public',
     ],
     py_modules=[
         'hal_pltfm',
         'platform_util',
         'platform_intf',
+        'port_util',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
