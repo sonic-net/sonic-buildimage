@@ -2,7 +2,12 @@
 SPATH       := $($(IPROUTE2)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/iproute2.mk rules/iproute2.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
+DEP_FILES   += $(shell git ls-files $(SPATH) | grep -Ev '^src/iproute2/iproute2-4.9.0$$$$')
+
+IPROUTE2_SPATH   := $(SPATH)/iproute2-4.9.0
+SMDEP_FILES := $(addprefix $(IPROUTE2_SPATH)/,$(shell cd $(IPROUTE2_SPATH) && git ls-files \
+                       | grep -Ev -e 'debian/changelog$$$$' \
+                       ))
 
 $(IPROUTE2)_CACHE_MODE  := GIT_CONTENT_SHA 
 $(IPROUTE2)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)

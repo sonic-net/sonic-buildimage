@@ -1,0 +1,2235 @@
+36c36,40
+< 
+---
+> #include <netinet/icmp6.h>
+> #include <netinet/ip6.h>
+> #include <ifaddrs.h>
+> #include <hiredis/hiredis.h>
+> #include <errno.h>
+39a44,45
+> #include "cJSON.h"
+> #include <stdbool.h>
+46,49c52,62
+< int	ifnum;
+< int	*ifvec;
+< char	**ifnames;
+< 
+---
+> typedef struct {
+>     char *data;
+>     size_t size;
+> } JsonData;
+> struct ip_addr_t {
+>     uint8_t family;
+>     union {
+>         uint32_t ipv4_addr;
+>         __u32 ipv6_addr[4];
+>     } ip_addr;
+> };
+52c65
+< 	__u32	addr;
+---
+> 	struct ip_addr_t addr;
+54a68,87
+> struct nd_msg {
+> 	struct icmp6_hdr icmph;
+> 	struct in6_addr	target;
+> 	__u8		opt[0];
+> };
+> struct in_addr in_addr;
+> char g_ipv4_str[INET_ADDRSTRLEN];
+> char g_ipv6_str[INET6_ADDRSTRLEN];
+> __u32 ipv6_ll_addr[2];
+> char* pServerAddr = "127.0.0.1";
+> int nPort = 6379;//default db port
+> char* pSubChannel = "__keyspace@4__:CFG_ARPKEEPALIVE*";
+> char* pSubChannelPortInterface = "__keyspace@4__:INTERFACE|*|*";
+> char* pSubChannelVlanInterface = "__keyspace@4__:VLAN_INTERFACE|*|*";
+> char* pSubChannelPortChannelInterface = "__keyspace@4__:PORTCHANNEL_INTERFACE|*|*";
+> 
+> char* pArpKeepkeys = "CFG_ARPKEEPALIVE*";
+> char* pPortInterfacekeys = "INTERFACE|*";
+> char* pVlanInterfacekeys = "VLAN_INTERFACE|*";
+> char* pPortChannelInterfacekeys = "PORTCHANNEL_INTERFACE|*";
+60c93,104
+< 
+---
+> #define NEIGHBOUR_SOLICITATION	135
+> #define CONFIG_DB 4
+> #define APPL_DB 0
+> #define MAX_INTF_NUM 1024
+> #define MAX_ADDR_NUM 1024
+> #define IPV6_HOP_LIMIT 255
+> #define IPV6_PAYLOAD_LEN 32
+> #define ARP_HARDWARE_TYPE 1
+> #define MAX_INTERFACE_NAME_LEN 255
+> #define IPROUTE2_STATUS_SUCCESS 0x00000000L
+> #define IPROUTE2_STATUS_CODE(_S_) (-(_S_))
+> #define IPROUTE2_STATUS_FAILURE IPROUTE2_STATUS_CODE(0x00000001L)
+62,63c106,108
+< 
+< struct pollfd pset[2];
+---
+> struct rtnl_handle rth_link;
+> struct rtnl_handle rth_addr;
+> struct pollfd pset[5];
+65d109
+< 
+69c113,114
+< 
+---
+> volatile int do_ifrinfo;
+> bool dump_ipv6 = false;
+87a133,149
+> struct ifr_sock_info{
+> 	struct ifreq ifinfo;
+> 	int sock_id_v4;
+> 	int sock_id_v6;
+> 	int ipv4_addr_size;
+> 	struct sockaddr_in ipv4_addrs[MAX_ADDR_NUM];
+> 	__u8 ipv4_prefixlens[MAX_ADDR_NUM];
+> 	int ipv6_addr_size;
+> 	struct sockaddr_in6 ipv6_addrs[MAX_ADDR_NUM];
+> 	__u8 ipv6_prefixlens[MAX_ADDR_NUM];
+> 	struct  sockaddr if_hwaddr;
+> 	bool enable_keepalive; //enable/disable neighbor keep alive
+> 	bool enable_linklocal; //enable/disable linklocal neighbor keep alive
+> } ;
+> int	g_ifnum = 0;
+> struct ifr_sock_info ifrinfo[MAX_INTF_NUM];
+> 
+94a157
+> redisContext* table_context;
+98c161,165
+< 		"Usage: arpd [ -lkh? ] [ -a N ] [ -b dbase ] [ -B number ] [ -f file ] [ -n time ] [-p interval ] [ -R rate ] [ interfaces ]\n");
+---
+> 		"Usage: arpd [ -lkh? ] [ -a N ] [ -b dbase ] [ -B number ] [ -f file ] [ -n time ] [-p interval ] [ -R rate ]\n");
+> 	fprintf(stderr,
+> 		"kill -SIGUSR1 [arpd_pid]: print statics info in syslog\n");
+> 	fprintf(stderr,
+> 		"kill -SIGUSR2 [arpd_pid]: print ifr_info struct info in syslog\n");
+102c169
+< static int handle_if(int ifindex)
+---
+> static int get_enabled_if_index(int ifindex)
+106,107c173,194
+< 	if (ifnum == 0)
+< 		return 1;
+---
+> 	if (g_ifnum == 0)
+> 	{
+> 		syslog(LOG_DEBUG, "no config exists, just return, g_ifnum : %d", g_ifnum);
+> 		return 0;
+> 	}
+> 
+> 	for (i = 0; i < g_ifnum; i++)
+> 	{
+> 		if (ifrinfo[i].ifinfo.ifr_ifindex == ifindex)
+> 		{
+> 			syslog(LOG_DEBUG, "[arpd]in get_enabled_if_index ifrinfo[%d].ifinfo.ifr_ifindex:%d, ifrinfo[%d].ifinfo.ifr_name:%s, ifrinfo[%d].enable_keepalive: %d, ifrinfo[%d].enable_linklocal: %d, g_ifnum:%d, ifindex:%d", \
+> 					i, ifrinfo[i].ifinfo.ifr_ifindex, i, ifrinfo[i].ifinfo.ifr_name, i, ifrinfo[i].enable_keepalive, i, ifrinfo[i].enable_linklocal, g_ifnum, ifindex);
+> 			if (ifrinfo[i].enable_keepalive)
+> 			{
+> 				return i + 1;
+> 			}
+> 			else
+> 			{
+> 				return 0;
+> 			}
+> 		}
+> 	}
+109,111d195
+< 	for (i = 0; i < ifnum; i++)
+< 		if (ifvec[i] == ifindex)
+< 			return 1;
+115,117c199
+< int sysctl_adjusted;
+< 
+< static void do_sysctl_adjustments(void)
+---
+> static void do_sysctl_adjustments(char* ifname)
+119,122c201,202
+< 	int i;
+< 
+< 	if (!ifnum)
+< 		return;
+---
+> 	char buf[128];
+> 	FILE *fp;
+124,137c204,228
+< 	for (i = 0; i < ifnum; i++) {
+< 		char buf[128];
+< 		FILE *fp;
+< 
+< 		if (active_probing) {
+< 			sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/mcast_solicit", ifnames[i]);
+< 			if ((fp = fopen(buf, "w")) != NULL) {
+< 				if (no_kernel_broadcasts)
+< 					strcpy(buf, "0\n");
+< 				else
+< 					sprintf(buf, "%d\n", active_probing >= 2 ? 1 : 3-active_probing);
+< 				fputs(buf, fp);
+< 				fclose(fp);
+< 			}
+---
+> 	if (active_probing) {
+> 		syslog(LOG_DEBUG, "do_sysctl_adjustments ifname: %s enter", ifname);
+> 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/ucast_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			if (no_kernel_broadcasts)
+> 				strcpy(buf, "0\n");
+> 			else
+> 				sprintf(buf, "%d\n", active_probing >= 2 ? 1 : 120-active_probing);
+> 			fputs(buf, fp);
+> 			fclose(fp);
+> 		}
+> 		sprintf(buf, "/proc/sys/net/ipv6/neigh/%s/ucast_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			if (no_kernel_broadcasts)
+> 				strcpy(buf, "0\n");
+> 			else
+> 				sprintf(buf, "%d\n", active_probing >= 2 ? 1 : 120-active_probing);
+> 			fputs(buf, fp);
+> 			fclose(fp);
+> 		}
+> 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/app_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			sprintf(buf, "%d\n", active_probing <= 0 ? 0 : active_probing);
+> 			fputs(buf, fp);
+> 			fclose(fp);
+140c231
+< 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/app_solicit", ifnames[i]);
+---
+> 		sprintf(buf, "/proc/sys/net/ipv6/neigh/%s/app_solicit", ifname);
+142c233
+< 			sprintf(buf, "%d\n", active_probing <= 1 ? 1 : active_probing);
+---
+> 			sprintf(buf, "%d\n", active_probing <= 0 ? 0 : active_probing);
+147c238
+< 	sysctl_adjusted = 1;
+---
+> 
+150c241
+< static void undo_sysctl_adjustments(void)
+---
+> static void undo_sysctl_adjustments(char* ifname)
+152c243,244
+< 	int i;
+---
+> 	char buf[128];
+> 	FILE *fp;
+154,167c246,264
+< 	if (!sysctl_adjusted)
+< 		return;
+< 
+< 	for (i = 0; i < ifnum; i++) {
+< 		char buf[128];
+< 		FILE *fp;
+< 
+< 		if (active_probing) {
+< 			sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/mcast_solicit", ifnames[i]);
+< 			if ((fp = fopen(buf, "w")) != NULL) {
+< 				strcpy(buf, "3\n");
+< 				fputs(buf, fp);
+< 				fclose(fp);
+< 			}
+---
+> 	if (active_probing) {
+> 		syslog(LOG_DEBUG, "undo_sysctl_adjustments ifname: %s enter", ifname);
+> 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/ucast_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			strcpy(buf, "3\n");
+> 			fputs(buf, fp);
+> 			fclose(fp);
+> 		}
+> 		sprintf(buf, "/proc/sys/net/ipv6/neigh/%s/ucast_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			strcpy(buf, "3\n");
+> 			fputs(buf, fp);
+> 			fclose(fp);
+> 		}
+> 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/app_solicit", ifname);
+> 		if ((fp = fopen(buf, "w")) != NULL) {
+> 			strcpy(buf, "0\n");
+> 			fputs(buf, fp);
+> 			fclose(fp);
+169c266
+< 		sprintf(buf, "/proc/sys/net/ipv4/neigh/%s/app_solicit", ifnames[i]);
+---
+> 		sprintf(buf, "/proc/sys/net/ipv6/neigh/%s/app_solicit", ifname);
+176d272
+< 	sysctl_adjusted = 0;
+178a275,287
+> // calc checksum
+> static unsigned short cacl_check_sum(unsigned short *buf, int bufsz) {
+>     unsigned long sum = 0;
+> 
+>     while (bufsz > 1) {
+>         sum += *buf;
+>         buf++;
+>         bufsz -= 2;
+>     }
+> 
+>     if (bufsz == 1) {
+>         sum += *(unsigned char *)buf;
+>     }
+180c289,436
+< static int send_probe(int ifindex, __u32 addr)
+---
+>     sum = (sum >> 16) + (sum & 0xFFFF);
+>     sum += (sum >> 16);
+> 
+>     return (unsigned short)(~sum);
+> }
+> 
+> static int calc_netmask_len(void *netmask, int ip_family)
+> {
+> 	int prefixlen = 0;
+> 	if(ip_family == AF_INET)
+> 	{
+> 		struct sockaddr_in *ipv4_netmask = (struct sockaddr_in *)netmask;
+> 		uint32_t mask = ntohl(ipv4_netmask->sin_addr.s_addr);
+> 		uint32_t bit = 0x80000000;
+> 		while ((mask & bit) != 0)
+> 		{
+> 			prefixlen++;
+> 			bit >>= 1;
+> 		}
+> 	}
+> 	else if(ip_family == AF_INET6)
+> 	{
+> 		struct sockaddr_in6 *ipv6_netmask = (struct sockaddr_in6 *)netmask;
+> 		for (int i = 0; i < 16; i++)
+> 		{
+> 			if (ipv6_netmask->sin6_addr.s6_addr[i] == 0xFF)
+> 			{
+> 				prefixlen += 8;
+> 			} 
+> 			else
+> 			{
+> 				while (ipv6_netmask->sin6_addr.s6_addr[i])
+> 				{
+> 					ipv6_netmask->sin6_addr.s6_addr[i] <<= 1;
+> 					prefixlen++;
+> 				}
+> 				break;
+> 			}
+> 		}
+> 	}
+> 	return prefixlen;
+> }
+> 
+> static int fill_ifr_addr(struct ifr_sock_info *ifr)
+> {
+> 	struct ifaddrs *ifap, *ifa;
+>     struct sockaddr_in *sa4;
+>     struct sockaddr_in6 *sa6;
+> 	bool has_addr = false;
+> 	if (getifaddrs(&ifap) == -1) {
+> 		syslog(LOG_ERR, "get intf addrs failed, just return");
+> 		return -1;
+> 	}
+> 
+> 	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
+> 	{
+> 		bool has_same_addr = false;
+> 		if (ifa->ifa_addr == NULL)
+> 		{
+> 			continue;
+> 		}
+> 		if (ifa->ifa_addr->sa_family == AF_INET && strcmp(ifr->ifinfo.ifr_name, ifa->ifa_name) == 0)
+> 		{
+> 			if(ifr->ipv4_addr_size >= MAX_ADDR_NUM)
+> 			{
+> 				syslog(LOG_ERR, "ipv4 addr bind to %s, is over the max: %d", ifa->ifa_name, MAX_ADDR_NUM);
+> 				freeifaddrs(ifap);
+> 				return -1;
+> 			}
+> 			struct sockaddr_in ipv4_addr = *(struct sockaddr_in *)ifa->ifa_addr;
+> 			char ip4[INET_ADDRSTRLEN];
+> 			inet_ntop(AF_INET, &ipv4_addr.sin_addr, ip4, INET_ADDRSTRLEN);
+> 			struct sockaddr_in *ipv4_netmask = (struct sockaddr_in *)ifa->ifa_netmask;
+> 			// get ipv4 netmast length
+> 			int prefixlen = calc_netmask_len((void *)ipv4_netmask, AF_INET);
+> 			if(prefixlen <= 0)
+> 			{
+> 				syslog(LOG_ERR, "ipv4 addr:%s bind to %s, get prefixlen failed", ip4, ifa->ifa_name);
+> 				freeifaddrs(ifap);
+> 				return -1;
+> 			}
+> 			has_addr = true;
+> 			for (int i = 0; i < ifr->ipv4_addr_size; i++)
+> 			{		
+> 				if (memcmp(&ifr->ipv4_addrs[i], &ipv4_addr, sizeof(struct sockaddr_in)) == 0 && ifr->ipv4_prefixlens[i] == prefixlen)
+> 				{
+> 					syslog(LOG_DEBUG, "ipv4 addr %s bind to %s, already exists, ifr->ipv4_addr_size %d", ip4, ifa->ifa_name, ifr->ipv4_addr_size);
+> 					has_same_addr = true;
+> 					break;
+> 				}
+> 			}
+> 			if(!has_same_addr)
+> 			{
+> 				ifr->ipv4_prefixlens[ifr->ipv4_addr_size] = prefixlen;
+> 				memcpy(&ifr->ipv4_addrs[ifr->ipv4_addr_size], &ipv4_addr, sizeof(struct sockaddr_in));
+> 				syslog(LOG_DEBUG,"Interface: %s, IPv4 Address: %s, idx: %d, prefixlen %d\n", ifa->ifa_name, ip4, ifr->ipv4_addr_size, prefixlen);
+> 				ifr->ipv4_addr_size++;
+> 			}
+> 		} else if (ifa->ifa_addr->sa_family == AF_INET6 && strcmp(ifr->ifinfo.ifr_name, ifa->ifa_name) == 0)
+> 		{
+> 			if(ifr->ipv6_addr_size >= MAX_ADDR_NUM)
+> 			{
+> 				syslog(LOG_ERR, "ipv6 addr bind to %s, is over the max: %d", ifa->ifa_name, MAX_ADDR_NUM);
+> 				freeifaddrs(ifap);
+> 				return -1;
+> 			}
+> 			struct sockaddr_in6 ipv6_addr = *(struct sockaddr_in6 *)ifa->ifa_addr;
+> 			char ip6[INET6_ADDRSTRLEN];
+> 			inet_ntop(AF_INET6, &ipv6_addr.sin6_addr, ip6, INET6_ADDRSTRLEN);
+> 			struct sockaddr_in6 *ipv6_netmask = (struct sockaddr_in6 *)ifa->ifa_netmask;
+> 			// get ipv6 netmast length
+> 			int prefixlen = calc_netmask_len((void *)ipv6_netmask, AF_INET6);
+> 			if(prefixlen <= 0)
+> 			{
+> 				syslog(LOG_ERR, "ipv6 addr:%s bind to %s, get prefixlen failed", ip6, ifa->ifa_name);					
+> 				freeifaddrs(ifap);
+> 				return -1;
+> 			}
+> 			has_addr = true;
+> 			for (int i = 0; i < ifr->ipv6_addr_size; i++)
+> 			{		
+> 				if (memcmp(&ifr->ipv6_addrs[i], &ipv6_addr, sizeof(struct sockaddr_in6)) == 0 && ifr->ipv6_prefixlens[i] == prefixlen)
+> 				{
+> 					syslog(LOG_DEBUG, "ipv6 addr %s bind to %s, already exists, ifr->ipv6_addr_size:%d", ip6, ifa->ifa_name, ifr->ipv6_addr_size);
+> 					has_same_addr = true;
+> 					break;
+> 				}
+> 			}
+> 			if(!has_same_addr)
+> 			{
+> 				ifr->ipv6_prefixlens[ifr->ipv6_addr_size] = prefixlen;
+> 				memcpy(&ifr->ipv6_addrs[ifr->ipv6_addr_size], &ipv6_addr, sizeof(struct sockaddr_in6));
+> 				syslog(LOG_DEBUG,"Interface: %s, IPv6 Address: %s, idx: %d, prefixlen %d\n", ifa->ifa_name, ip6, ifr->ipv6_addr_size, prefixlen);
+> 				ifr->ipv6_addr_size++;
+> 			}
+> 		}
+> 
+> 	}
+> 	freeifaddrs(ifap);
+> 	if(!has_addr)
+> 	{
+> 		syslog(LOG_NOTICE, "intf addrs is not exists, just return");
+> 		return -1;
+> 	}
+> 	return 0;
+> }
+> 
+> static int fill_ifr_info(int ifindex, struct ifr_sock_info *ifr)
+182,187d437
+< 	struct ifreq ifr = { .ifr_ifindex = ifindex };
+< 	struct sockaddr_in dst = {
+< 		.sin_family = AF_INET,
+< 		.sin_port = htons(1025),
+< 		.sin_addr.s_addr = addr,
+< 	};
+190,198c440,442
+< 	struct arphdr *ah = (struct arphdr *)buf;
+< 	unsigned char *p = (unsigned char *)(ah+1);
+< 	struct sockaddr_ll sll = {
+< 		.sll_family = AF_PACKET,
+< 		.sll_ifindex = ifindex,
+< 		.sll_protocol = htons(ETH_P_ARP),
+< 	};
+< 
+< 	if (ioctl(udp_sock, SIOCGIFNAME, &ifr))
+---
+> 	ifr->ifinfo.ifr_ifindex = ifindex;
+> 	if (ioctl(udp_sock, SIOCGIFNAME, &ifr->ifinfo)){
+> 		syslog(LOG_ERR, "get ifr name failed");
+200c444,447
+< 	if (ioctl(udp_sock, SIOCGIFHWADDR, &ifr))
+---
+> 	}
+> 
+> 	if (ioctl(udp_sock, SIOCGIFHWADDR, &ifr->ifinfo)){
+> 		syslog(LOG_ERR, "get ifr hardware addr failed");
+202c449,452
+< 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER)
+---
+> 	}
+> 
+> 	if (ifr->ifinfo.ifr_hwaddr.sa_family != ARPHRD_ETHER){
+> 		syslog(LOG_ERR, "get ifr hardware ARPHRD_ETHER failed");
+204c454,458
+< 	if (setsockopt(udp_sock, SOL_SOCKET, SO_BINDTODEVICE, ifr.ifr_name, strlen(ifr.ifr_name)+1) < 0)
+---
+> 	}
+> 	memcpy(&ifr->if_hwaddr, &ifr->ifinfo.ifr_hwaddr, sizeof(struct  sockaddr));
+> 	if (ioctl(udp_sock, SIOCGIFINDEX, &ifr->ifinfo)){
+> 		perror("ioctl(SIOCGIFINDEX)");
+> 		syslog(LOG_ERR, "Error get intf index: %m");
+205a460,468
+> 	}
+> 	
+> 	syslog(LOG_DEBUG,"ifr->ifinfo.ifr_ifindex %d, name: %s, g_ifnum: %d", 
+> 		ifr->ifinfo.ifr_ifindex, ifr->ifinfo.ifr_name, g_ifnum);
+> 	if(fill_ifr_addr(ifr) < 0)
+> 	{
+> 		syslog(LOG_INFO, "get inf: %s addrs failed, maybe not l3 intf, just return", ifr->ifinfo.ifr_name);
+> 		return 0;
+> 	}
+207c470,485
+< 	if (connect(udp_sock, (struct sockaddr *)&dst, sizeof(dst)) < 0)
+---
+>     if (ifr->sock_id_v4)
+> 	{
+> 		syslog(LOG_INFO, "close sockv4");
+> 		close(ifr->sock_id_v4);
+> 	}
+> 	if (ifr->sock_id_v6)
+> 	{
+> 		syslog(LOG_INFO, "close sockv6");
+> 		close(ifr->sock_id_v6);
+> 	}
+> 	if ((ifr->sock_id_v4 = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+> 		perror("socket create failed");
+> 		return -1;
+> 	}
+> 	if ((ifr->sock_id_v6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+> 		perror("socket create failed");
+209,210c487,496
+< 	len = sizeof(dst);
+< 	if (getsockname(udp_sock, (struct sockaddr *)&dst, &len) < 0)
+---
+> 	}
+> 	syslog(LOG_DEBUG, "sockv4: %d, ifr->ifinfo.ifr_name %s", ifr->sock_id_v4, ifr->ifinfo.ifr_name);
+> 	if (setsockopt(ifr->sock_id_v4, SOL_SOCKET, SO_BINDTODEVICE, ifr->ifinfo.ifr_name, strlen(ifr->ifinfo.ifr_name) + 1) < 0){
+> 		perror("SO_BINDTODEVICE");
+> 		syslog(LOG_ERR, "Error SO_BINDTODEVICE: %m");
+> 		return -1;
+> 	}
+> 	if (setsockopt(ifr->sock_id_v6, SOL_SOCKET, SO_BINDTODEVICE, ifr->ifinfo.ifr_name, strlen(ifr->ifinfo.ifr_name) + 1) < 0){
+> 		perror("SO_BINDTODEVICE");
+> 		syslog(LOG_ERR, "Error SO_BINDTODEVICE: %m");
+211a498
+> 	}
+213,217c500,501
+< 	ah->ar_hrd = htons(ifr.ifr_hwaddr.sa_family);
+< 	ah->ar_pro = htons(ETH_P_IP);
+< 	ah->ar_hln = 6;
+< 	ah->ar_pln = 4;
+< 	ah->ar_op  = htons(ARPOP_REQUEST);
+---
+> 	return 0;
+> }
+219,220c503,521
+< 	memcpy(p, ifr.ifr_hwaddr.sa_data, ah->ar_hln);
+< 	p += ah->ar_hln;
+---
+> static int free_ifr_info(int ifn)
+> {
+> 	syslog(LOG_DEBUG, "free ifrinfo[%d], ifrinfo[%d].ifinfo.ifr_name: %s ", ifn, ifn, ifrinfo[ifn].ifinfo.ifr_name);
+> 	if (ifrinfo[ifn].sock_id_v4)
+> 	{
+> 		close(ifrinfo[ifn].sock_id_v4);
+> 	}
+> 	if (ifrinfo[ifn].sock_id_v6)
+> 	{
+> 		close(ifrinfo[ifn].sock_id_v6);
+> 	}
+> 	memset(&ifrinfo[ifn], 0, sizeof(ifrinfo[ifn]));
+> 	return 0;
+> }
+> 
+> static int ipv4_is_same_subnet_addr(struct sockaddr_in *addr1, struct sockaddr_in *addr2, int prefixlen) {
+>     uint32_t ip1 = ntohl(addr1->sin_addr.s_addr);
+>     uint32_t ip2 = ntohl(addr2->sin_addr.s_addr);
+> 	uint32_t mask = 0xFFFFFFFF << (32 - prefixlen);
+222,223c523,524
+< 	memcpy(p, &dst.sin_addr, 4);
+< 	p += 4;
+---
+>     return (ip1 & mask) == (ip2 & mask);
+> }
+225,227c526,541
+< 	memset(sll.sll_addr, 0xFF, sizeof(sll.sll_addr));
+< 	memcpy(p, &sll.sll_addr, ah->ar_hln);
+< 	p += ah->ar_hln;
+---
+> static int ipv6_is_same_subnet_addr(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2, int prefixlen) {
+>     uint8_t *ip1 = addr1->sin6_addr.s6_addr;
+>     uint8_t *ip2 = addr2->sin6_addr.s6_addr;
+>     uint8_t mask[16] = {0};
+>     int i;
+>     for (i = 0; i < prefixlen / 8; i++) {
+>         mask[i] = 0xFF;
+>     }
+>     if (prefixlen % 8 > 0) {
+>         mask[i] = 0xFF << (8 - prefixlen % 8);
+>     }
+>     for (int i = 0; i < 16; i++) {
+>         if ((ip1[i] & mask[i]) != (ip2[i] & mask[i])) {
+>             return 0;
+>         }
+>     }
+229,230c543,544
+< 	memcpy(p, &addr, 4);
+< 	p += 4;
+---
+>     return 1;
+> }
+232c546,582
+< 	if (sendto(pset[0].fd, buf, p-buf, 0, (struct sockaddr *)&sll, sizeof(sll)) < 0)
+---
+> static int ipv4_get_same_subnet_addr_index(struct sockaddr_in *addr, struct ifr_sock_info ifr)
+> {
+>     for (int i = 0; i < ifr.ipv4_addr_size; i++) {
+> 		char ip4[INET_ADDRSTRLEN];
+> 		inet_ntop(AF_INET, &ifr.ipv4_addrs[i].sin_addr, ip4, INET_ADDRSTRLEN);
+>         if (ipv4_is_same_subnet_addr(addr, &ifr.ipv4_addrs[i], ifr.ipv4_prefixlens[i])) {
+> 			return i;
+>         }
+>     }
+> 	return -1;
+> }
+> 
+> static int ipv6_get_same_subnet_addr_index(struct sockaddr_in6 *addr, struct ifr_sock_info ifr)
+> {
+>     for (int i = 0; i < ifr.ipv6_addr_size; i++) {
+>         if (ipv6_is_same_subnet_addr(addr, &ifr.ipv6_addrs[i], ifr.ipv6_prefixlens[i])) {
+> 			return i;
+>         }
+>     }
+> 	return -1;
+> }
+> static int send_probe(int ifindex, struct ip_addr_t addr, unsigned char	*mac, int ifr_index)
+> {
+> 	socklen_t len;
+> 	unsigned char buf[256];
+> 	struct sockaddr_ll sll = {
+> 		.sll_family = AF_PACKET,
+> 		.sll_ifindex = ifindex,
+> 	};
+> 	if(ifr_index < 1 || ifrinfo[ifr_index-1].ifinfo.ifr_ifindex == 0)
+> 	{
+> 		syslog(LOG_ERR, "ifr info get failed");
+> 		return -1;
+> 	}
+> 	if (mac == NULL)
+> 	{
+> 		syslog(LOG_ERR, "get mac failed");
+234c584,691
+< 	stats.probes_sent++;
+---
+> 	}
+> 	if(addr.family == AF_INET) {
+> 		struct sockaddr_in dst = {
+> 			.sin_family = addr.family,
+> 			.sin_port = htons(1025),
+> 		};
+> 		dst.sin_addr.s_addr = addr.ip_addr.ipv4_addr;
+> 		sll.sll_protocol = htons(ETH_P_ARP);
+> 		/* machdr is filled by sll, arp is begin with arphdr */
+> 		unsigned char  arp[256] = {
+> 		0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x01, 
+> 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+> 		0x00, 0x00, 0x00, 0x00
+> 		};
+> 		int addr_idx = ipv4_get_same_subnet_addr_index(&dst, ifrinfo[ifr_index-1]);
+> 		if( addr_idx == -1){
+> 			syslog(LOG_ERR, "Error in get if(index: %d) ipv4 src addr", ifindex);
+> 			return -1;
+> 		}
+> 
+> 		unsigned char *p = (unsigned char *)(arp + sizeof(struct arphdr));
+> 		unsigned char *mac = (unsigned char *)ifrinfo[ifr_index-1].if_hwaddr.sa_data;
+> 		syslog(LOG_DEBUG, "MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+> 		memcpy(p, ifrinfo[ifr_index-1].if_hwaddr.sa_data, 6);
+> 		p += 6;
+> 		memcpy(p, &ifrinfo[ifr_index-1].ipv4_addrs[addr_idx].sin_addr, 4);
+> 		p += 4;
+> 		memset(sll.sll_addr, 0xFF, sizeof(sll.sll_addr));
+> 		p += 6;
+> 		memcpy(p, &addr.ip_addr.ipv4_addr, 4);
+> 		p += 4;
+> 
+> 		memset(g_ipv4_str, 0, sizeof(g_ipv4_str));
+> 		in_addr.s_addr = addr.ip_addr.ipv4_addr;
+> 		inet_ntop(AF_INET, &in_addr, g_ipv4_str, INET_ADDRSTRLEN);
+> 		syslog(LOG_DEBUG, "ipv4 addr %s, in send probe", g_ipv4_str);
+> 		if (sendto(pset[0].fd, arp, p-arp, 0, (struct sockaddr *)&sll, sizeof(sll)) < 0)
+> 			return -1;
+> 		stats.probes_sent++;
+> 	}
+> 	else{
+> 		struct sockaddr_in6 dst = {
+> 			.sin6_family = addr.family,
+> 			.sin6_port = htons(1025),
+> 		};
+> 		/* machdr is filled by sll, icmpv6 is begin with v6hdr */
+> 		unsigned char  icmpv6[256] = {
+> 		0x60, 0x00, 0x00, 0x00, 0x00, 0x20, 0x3a, 0xff, 
+> 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+> 		0x00, 0x00, 0x00, 0x01, 0xff, 0x00, 0x00, 0x00,
+> 		0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+> 		0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+> 		};
+> 		memset(g_ipv6_str, 0, sizeof(g_ipv6_str));
+> 		inet_ntop(AF_INET6, (char *)addr.ip_addr.ipv6_addr, g_ipv6_str, INET6_ADDRSTRLEN);
+> 		if(!strcmp(g_ipv6_str, "::"))
+> 		{
+> 			return 0;
+> 		}
+> 
+> 		memcpy(&dst.sin6_addr.s6_addr32, addr.ip_addr.ipv6_addr, sizeof(addr.ip_addr.ipv6_addr));
+> 		sll.sll_protocol = htons(ETH_P_IPV6);
+> 		uint8_t* bytes = (uint8_t*)mac;
+> 		sll.sll_addr[0] = 0x33;
+> 		sll.sll_addr[1] = 0x33;
+> 		sll.sll_addr[2] = 0xff;
+> 		sll.sll_addr[3] = bytes[3];
+> 		sll.sll_addr[4] = bytes[4];
+> 		sll.sll_addr[5] = bytes[5];
+> 
+> 		int addr_idx = ipv6_get_same_subnet_addr_index(&dst, ifrinfo[ifr_index-1]);
+> 		if(addr_idx == -1){
+> 			syslog(LOG_ERR, "Error in get if(index: %d) ipv6 src addr", ifindex);
+> 			return -1;
+> 		}
+> 		
+> 		unsigned char *p = (unsigned char *)(icmpv6 + 8);
+> 		memcpy(p, &ifrinfo[ifr_index-1].ipv6_addrs[addr_idx].sin6_addr, sizeof(struct in6_addr));
+> 		p += (sizeof(struct in6_addr) + 13);
+> 		//change dst addr last 3 byte 
+> 		memcpy(p, &dst.sin6_addr.s6_addr[13], 3);
+> 		p += (3 + sizeof(struct icmp6_hdr));
+> 		memcpy(p, &dst.sin6_addr, sizeof(struct in6_addr));
+> 		p += (sizeof(struct in6_addr) + 2);
+> 		memcpy(p, ifrinfo[ifr_index-1].if_hwaddr.sa_data, ETH_ALEN);
+> 		p += ETH_ALEN;
+> 
+> 		unsigned char *cs_pkt = (unsigned char *)(icmpv6 + 40);
+> 		memcpy(cs_pkt + 32, &ifrinfo[ifr_index-1].ipv6_addrs[addr_idx].sin6_addr, sizeof(struct in6_addr));
+> 		memcpy(cs_pkt + 32 + sizeof(struct in6_addr), (unsigned char *)(icmpv6 + 24), sizeof(struct in6_addr));
+> 		char icmp_len[4] = {0x00, 0x00, 0x00, 0x20};
+> 		memcpy(cs_pkt + 32 + 2 * sizeof(struct in6_addr), icmp_len, 4);
+> 		char next_hdr[4] = {0x00, 0x00, 0x00, 0x3a};
+> 		memcpy(cs_pkt + 26 + ETH_ALEN + 2 * sizeof(struct in6_addr) + 4, next_hdr, 4);
+> 		uint16_t icmp6_cksum = cacl_check_sum((unsigned short *)(cs_pkt), 26 + ETH_ALEN + 2 * sizeof(struct in6_addr) + 8);
+> 		icmpv6[42] = (icmp6_cksum & 0xFF);
+> 		icmpv6[43] = (icmp6_cksum >> 8) & 0xFF;
+> 		syslog(LOG_DEBUG, "v6 addr %s, cksum %d, in send probe", g_ipv6_str, icmp6_cksum);
+> 		if (sendto(pset[0].fd, icmpv6, p-icmpv6, 0, (struct sockaddr *)&sll, sizeof(sll)) < 0)
+> 			return -1;
+> 		stats.probes_sent++;
+> 	}
+> 
+240c697
+< static int queue_active_probe(int ifindex, __u32 addr)
+---
+> static int queue_active_probe(int ifindex, struct ip_addr_t addr, unsigned char *mac, int ifr_index)
+243d699
+< 	static int buckets;
+246,258c702,703
+< 	gettimeofday(&now, NULL);
+< 	if (prev.tv_sec) {
+< 		int diff = (now.tv_sec-prev.tv_sec)*1000+(now.tv_usec-prev.tv_usec)/1000;
+< 
+< 		buckets += diff;
+< 	} else {
+< 		buckets = broadcast_burst;
+< 	}
+< 	if (buckets > broadcast_burst)
+< 		buckets = broadcast_burst;
+< 	if (buckets >= broadcast_rate && !send_probe(ifindex, addr)) {
+< 		buckets -= broadcast_rate;
+< 		prev = now;
+---
+> 	if (!send_probe(ifindex, addr, mac, ifr_index))
+> 	{
+261,262c706,712
+< 	stats.probes_suppressed++;
+< 	return -1;
+---
+> 	else
+> 	{
+> 		stats.probes_suppressed++;
+> 		syslog(LOG_ERR,"set send_probe failed");
+> 		return -1;
+> 	}
+> 
+265c715
+< static int respond_to_kernel(int ifindex, __u32 addr, char *lla, int llalen)
+---
+> static int respond_to_kernel(int ifindex, struct ip_addr_t addr, char *lla, int llalen)
+275c725
+< 		.ndm.ndm_family = AF_INET,
+---
+> 		.ndm.ndm_family = addr.family,
+280,282c730,779
+< 
+< 	addattr_l(&req.n, sizeof(req), NDA_DST, &addr, 4);
+< 	addattr_l(&req.n, sizeof(req), NDA_LLADDR, lla, llalen);
+---
+> 	if(!lla)
+> 	{
+> 		syslog(LOG_ERR, "MAC is not exits, just return");
+> 		return -1;
+> 	}
+> 	syslog(LOG_DEBUG, "respond_to_kernel, change state to stale, addr.family %d", addr.family);
+> 	if(addr.family == AF_INET) {
+> 		addattr_l(&req.n, sizeof(req), NDA_DST, &addr.ip_addr.ipv4_addr, 4);
+> 		addattr_l(&req.n, sizeof(req), NDA_LLADDR, lla, llalen);
+> 	} else {
+> 		addattr_l(&req.n, sizeof(req), NDA_DST, addr.ip_addr.ipv6_addr, 16);
+> 		addattr_l(&req.n, sizeof(req), NDA_LLADDR, lla, llalen);
+> 	}
+> 	return rtnl_send(&rth, &req, req.n.nlmsg_len) <= 0;
+> }
+> /*
+> 	.n.nlmsg_flags = NLM_F_REQUEST,//netlink 一般从用户空间向内核空间发起
+> 	.n.nlmsg_type = RTM_NEWNEIGH,//rtnl_register(PF_UNSPEC, RTM_NEWNEIGH, neigh_add, NULL, 0);触发内核状态更新流程
+> 	.ndm.ndm_state = NUD_DELAY,//neigh_update  neigh->nud_state = new;
+> */
+> static int change_stale_to_delay_to_kernel(int ifindex, struct ip_addr_t addr, char *lla, int llalen)
+> {
+> 	struct {
+> 		struct nlmsghdr	n;
+> 		struct ndmsg		ndm;
+> 		char			buf[256];
+> 	} req = {
+> 		.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg)),
+> 		.n.nlmsg_flags = NLM_F_REQUEST,//netlink 一般从用户空间向内核空间发起
+> 		.n.nlmsg_type = RTM_NEWNEIGH,//rtnl_register(PF_UNSPEC, RTM_NEWNEIGH, neigh_add, NULL, 0);
+> 		.ndm.ndm_family = addr.family,
+> 		.ndm.ndm_state = NUD_DELAY,
+> 		.ndm.ndm_ifindex = ifindex,
+> 		.ndm.ndm_flags = NTF_USE,
+> 		.ndm.ndm_type = RTN_UNICAST,
+> 	};
+> 	if(!lla)
+> 	{
+> 		syslog(LOG_ERR, "MAC is not exits, just return");
+> 		return -1;
+> 	}
+> 	syslog(LOG_DEBUG, "change_stale_to_delay_to_kernel, addr.family %d", addr.family);
+> 	if(addr.family == AF_INET) {
+> 		addattr_l(&req.n, sizeof(req), NDA_DST, &addr.ip_addr.ipv4_addr, 4);
+> 		addattr_l(&req.n, sizeof(req), NDA_LLADDR, lla, llalen);
+> 	} else {
+> 		addattr_l(&req.n, sizeof(req), NDA_DST, addr.ip_addr.ipv6_addr, 16);
+> 		addattr_l(&req.n, sizeof(req), NDA_LLADDR, lla, llalen);
+> 	}
+> 	
+302a800,804
+> 	void* rta_data;
+> 	char	*lladdr;
+> 	int  llalen;
+> 	int  ifr_index = 0;
+> 	struct ip_addr_t ip_address_info;
+304d805
+< 	int do_acct = 0;
+305a807,808
+> 	int do_acct = 0;
+> 	int ret = 0;
+308d810
+< 
+312c814,823
+< 		do_sysctl_adjustments();
+---
+> 		if (!dump_ipv6)
+> 		{
+> 			if (rtnl_wilddump_request(&rth, AF_INET6, RTM_GETNEIGH) < 0) {
+> 				perror("dump request ipv6 failed");
+> 				exit(1);
+> 			}
+> 			dump_ipv6 = true;
+> 			return 0;
+> 		}
+> 		syslog(LOG_DEBUG, "dump done, active_probing : %d", active_probing);
+323,325c834,836
+< 	if (ndm->ndm_family != AF_INET ||
+< 	    (ifnum && !handle_if(ndm->ndm_ifindex)) ||
+< 	    ndm->ndm_flags ||
+---
+> 	if ((ndm->ndm_family != AF_INET && ndm->ndm_family != AF_INET6)||
+> 	    ((ifr_index = get_enabled_if_index(ndm->ndm_ifindex)) == 0) ||
+> 	    (ndm->ndm_flags != NTF_ROUTER && ndm->ndm_flags)||
+328c839,841
+< 		return 0;
+---
+> 		{
+> 			return 0;
+> 		}
+334d846
+< 
+336,338c848,867
+< 	memcpy(&key.addr, RTA_DATA(tb[NDA_DST]), 4);
+< 	dbkey.data = &key;
+< 	dbkey.size = sizeof(key);
+---
+> 	if(ndm->ndm_family == AF_INET) {
+> 		key.addr.family = AF_INET;
+> 		memcpy(&key.addr.ip_addr.ipv4_addr, RTA_DATA(tb[NDA_DST]), 4);
+> 		dbkey.data = &key;
+> 		dbkey.size = sizeof(key);
+> 		ip_address_info.family = AF_INET;
+> 		ip_address_info.ip_addr.ipv4_addr = key.addr.ip_addr.ipv4_addr;
+> 
+> 		if (dbase->get(dbase, &dbkey, &dbdat, 0) != 0) {
+> 			dbdat.data = 0;
+> 			dbdat.size = 0;
+> 		}
+> 		if(tb[NDA_LLADDR])
+> 		{
+> 			lladdr = RTA_DATA(tb[NDA_LLADDR]);
+> 			llalen = RTA_PAYLOAD(tb[NDA_LLADDR]);
+> 		}
+> 		memset(g_ipv4_str, 0, sizeof(g_ipv4_str));
+> 		in_addr.s_addr = ip_address_info.ip_addr.ipv4_addr;
+> 		inet_ntop(AF_INET, &in_addr, g_ipv4_str, INET_ADDRSTRLEN);
+340,342c869,885
+< 	if (dbase->get(dbase, &dbkey, &dbdat, 0) != 0) {
+< 		dbdat.data = 0;
+< 		dbdat.size = 0;
+---
+> 	} else {
+> 		key.addr.family = AF_INET6;
+> 		ip_address_info.family = AF_INET6;
+> 		memcpy(ip_address_info.ip_addr.ipv6_addr, RTA_DATA(tb[NDA_DST]), 16);
+> 		memcpy(key.addr.ip_addr.ipv6_addr, RTA_DATA(tb[NDA_DST]), 16);
+> 		memcpy(ipv6_ll_addr, RTA_DATA(tb[NDA_DST]) + tb[NDA_DST]->rta_len, 8);
+> 		dbkey.data = &key;
+> 		dbkey.size = sizeof(key);
+> 		lladdr = ipv6_ll_addr;
+> 		llalen = 8;
+> 		if (dbase->get(dbase, &dbkey, &dbdat, 0) != 0) {
+> 			dbdat.data = 0;
+> 			dbdat.size = 0;
+> 		}
+> 
+> 		memset(g_ipv6_str, 0, sizeof(g_ipv6_str));
+> 		inet_ntop(AF_INET6, (char *)ip_address_info.ip_addr.ipv6_addr, g_ipv6_str, INET6_ADDRSTRLEN);
+345,347c888,908
+< 	if (n->nlmsg_type == RTM_GETNEIGH) {
+< 		if (!(n->nlmsg_flags&NLM_F_REQUEST))
+< 			return 0;
+---
+> 	/* Ignore IPv6 link-local addresses as neighbors, if ipv6 link local mode is disabled */
+>     if (ndm->ndm_family == AF_INET6 && IN6_IS_ADDR_LINKLOCAL(ip_address_info.ip_addr.ipv6_addr) && !ifrinfo[ifr_index-1].enable_linklocal)
+> 	{
+> 		syslog(LOG_DEBUG, "n->nlmsg_type: %d, neigh state:%d, intf index %d, linklocal ip: %s, just return", 
+> 			n->nlmsg_type, ndm->ndm_state, key.iface, ndm->ndm_family == AF_INET ? g_ipv4_str : g_ipv6_str);
+> 		return 0;
+> 	}
+> 
+>     /* Ignore IPv6 multicast link-local addresses as neighbors */
+>     if (ndm->ndm_family == AF_INET6 && IN6_IS_ADDR_MC_LINKLOCAL(ip_address_info.ip_addr.ipv6_addr))
+> 	{
+> 		syslog(LOG_DEBUG, "n->nlmsg_type: %d, neigh state:%d, intf index %d, multicast linklocal ip: %s, just return", 
+> 			n->nlmsg_type, ndm->ndm_state, key.iface, ndm->ndm_family == AF_INET ? g_ipv4_str : g_ipv6_str);
+> 		return 0;
+> 	}
+> 
+> 	syslog(LOG_DEBUG, "n->nlmsg_type: %d, n->nlmsg_flags %d, neigh state:%d, intf index %d, ip: %s", 
+> 			n->nlmsg_type, n->nlmsg_flags, ndm->ndm_state, key.iface, ndm->ndm_family == AF_INET ? g_ipv4_str : g_ipv6_str);
+> 	if (ndm->ndm_state&NUD_STALE) {
+> 	   change_stale_to_delay_to_kernel(key.iface, ip_address_info, lladdr, llalen);
+> 	}
+348a910
+> 	if (n->nlmsg_type == RTM_GETNEIGH) {
+353c915
+< 
+---
+> 		
+371c933
+< 				respond_to_kernel(key.iface, key.addr, dbdat.data, dbdat.size);
+---
+> 				respond_to_kernel(key.iface, ip_address_info, dbdat.data, dbdat.size);
+380d941
+< 					return 0;
+385d945
+< 
+387,388c947,948
+< 		    queue_active_probe(ndm->ndm_ifindex, key.addr) == 0 &&
+< 		    do_acct) {
+---
+> 			queue_active_probe(ndm->ndm_ifindex, ip_address_info, lladdr, ifr_index) == 0 &&
+> 			do_acct) {
+408a969
+> 
+418a980
+> 			syslog(LOG_DEBUG, "neigh state:%d, type: %d(28:new, 30:get) ip: %s, put it in db",ndm->ndm_state, n->nlmsg_type, ndm->ndm_family == AF_INET ? g_ipv4_str : g_ipv6_str);
+433d994
+< 
+438c999
+< 	int status;
+---
+> 	int msg_len;
+453c1014
+< 	status = recvmsg(rth.fd, &msg, MSG_DONTWAIT);
+---
+> 	msg_len = recvmsg(rth.fd, &msg, MSG_DONTWAIT);
+455c1016,1018
+< 	if (status <= 0)
+---
+> 	if (msg_len <= 0)
+> 	{
+> 		syslog(LOG_ERR, "recv neigh msg failed, wrong msg len: %d", msg_len);
+456a1020,1021
+> 	}
+> 
+458a1024,1025
+> 	{
+> 		syslog(LOG_ERR, "recv neigh msg failed, wrong address data len: %d", msg.msg_namelen);
+459a1027,1028
+> 	}
+> 
+464c1033
+< 	for (h = (struct nlmsghdr *)buf; status >= sizeof(*h); ) {
+---
+> 	for (h = (struct nlmsghdr *)buf; msg_len >= sizeof(*h); ) {
+468c1037,1039
+< 		if (l < 0 || len > status)
+---
+> 		if (l < 0 || len > msg_len)
+> 		{
+> 			syslog(LOG_ERR, "recv neigh msg failed, l: %d, len: %d, msg_len: %d", l, len, msg_len);
+470c1041
+< 
+---
+> 		}
+474c1045,1257
+< 		status -= NLMSG_ALIGN(len);
+---
+> 		msg_len -= NLMSG_ALIGN(len);
+> 		h = (struct nlmsghdr *)((char *)h + NLMSG_ALIGN(len));
+> 	}
+> }
+> /*
+> struct ifinfomsg {
+>     unsigned char ifi_family; // Address family of interface 
+>     unsigned char ifi_pad;    // Pad to size of ifi_change 
+>     unsigned short ifi_type;  // Type of interface 
+>     int ifi_index;            // Index of interface 
+>     unsigned ifi_flags;       // Flags from SIOCGIFFLAGS 
+>     unsigned ifi_change;      // Change mask 
+> };
+> */
+> static int process_link_msg(struct nlmsghdr *n)
+> {
+> 	char ifName[IFNAMSIZ]; 
+> 	struct ifinfomsg *ifinfo = (struct ifinfomsg *)NLMSG_DATA(n);
+> 	if (n->nlmsg_type != RTM_NEWLINK && n->nlmsg_type != RTM_DELLINK)
+> 	{
+> 		syslog(LOG_INFO,"[arpd] process_link_msg, n->nlmsg_type: %d, just return", n->nlmsg_type);
+> 		return 0;
+> 	}
+> 	syslog(LOG_INFO, "[arpd] process_link_msg, n->nlmsg_type: %d, ifinfo->ifi_index %d, ifinfo->ifi_family %d", n->nlmsg_type, ifinfo->ifi_index, ifinfo->ifi_family);
+> 
+> 	if (n->nlmsg_type == RTM_NEWLINK && ifinfo->ifi_family == PF_UNSPEC)
+> 	{
+> 		char *ifaceName = if_indextoname(ifinfo->ifi_index, ifName);
+> 		if (ifaceName)
+> 		{
+> 			syslog(LOG_INFO, "[arpd] process_link_msg, g_ifnum: %d, Interface %s (Index: %d) has changed", g_ifnum, ifName, ifinfo->ifi_index);
+> 			for (int i = 0; i < g_ifnum; i++)
+> 			{
+> 				if ((strcmp(ifrinfo[i].ifinfo.ifr_name, ifName) == 0))
+> 				{
+> 					if(ifrinfo[i].enable_keepalive)
+> 					{
+> 						do_sysctl_adjustments(ifName);
+> 					}
+> 					else
+> 					{
+> 						undo_sysctl_adjustments(ifName);
+> 					}
+> 
+> 					if(fill_ifr_info(ifinfo->ifi_index, &ifrinfo[i]))
+> 					{
+> 						syslog(LOG_ERR, "[arpd] process_link_msg, fill_ifr_info return failed, ifrinfo[%d].enable_keepalive: %d", i, ifrinfo[i].enable_keepalive);
+> 						free_ifr_info(i);
+> 						undo_sysctl_adjustments(ifName);
+> 						syslog(LOG_ERR, "get intf ifr failed, just recover conf return");
+> 						return 0;
+> 					}
+> 				}
+> 			}
+> 		}
+> 	}
+> 	else if(n->nlmsg_type == RTM_DELLINK && ifinfo->ifi_family == PF_UNSPEC)
+> 	{
+> 		for(int i = 0; i < g_ifnum; i++)
+> 		{
+> 			/* dellink ifname is not exists and should not decrease g_ifnum,
+> 			 newlink will used, just clear config
+> 			*/
+> 			if (ifrinfo[i].ifinfo.ifr_name != NULL && ifinfo->ifi_index != 0 && ifrinfo[i].ifinfo.ifr_ifindex == ifinfo->ifi_index)
+> 			{
+> 				syslog(LOG_DEBUG,"[arpd] process_link_msg, n->nlmsg_type:RTM_DELLINK, ifrinfo[%d].ifinfo.ifr_name: %s, ifinfo->ifi_index %d", i, ifrinfo[i].ifinfo.ifr_name, ifinfo->ifi_index);
+> 				undo_sysctl_adjustments(ifrinfo[i].ifinfo.ifr_name);
+> 			}
+> 		}
+> 	
+> 	}
+> 	return 0;
+> }
+> 
+> static int process_addr_info(struct nlmsghdr *n)
+> {
+> 	struct rtattr *rta;
+> 	struct ifaddrmsg *ifamsg = (struct ifaddrmsg *)NLMSG_DATA(n);
+> 	char addr_str[INET6_ADDRSTRLEN];
+> 	char ifName[IFNAMSIZ]; 
+> 	syslog(LOG_DEBUG, "process_addr_info, n->nlmsg_type: %d, ifinfo->ifi_index %d, ifinfo->ifi_family %d", n->nlmsg_type, ifamsg->ifa_index, ifamsg->ifa_family);
+> 	char *ifaceName = if_indextoname(ifamsg->ifa_index, ifName);
+> 	if (!ifaceName){
+> 		syslog(LOG_INFO,"ifamsg->ifa_index: %d, get ifname failed", ifamsg->ifa_index);
+> 		return -1;
+> 	}
+> 	if (ifamsg->ifa_family != AF_INET && ifamsg->ifa_family != AF_INET6)
+> 	{
+> 		syslog(LOG_ERR,"ifamsg->ifa_family: %d, not expect ifa msg", ifamsg->ifa_family);
+> 		return -1;
+> 	}
+> 	if (n->nlmsg_type != RTM_NEWADDR && n->nlmsg_type != RTM_DELADDR)
+> 	{
+> 		syslog(LOG_ERR,"msg_type: %d, not expect type", n->nlmsg_type);
+> 		return -1;
+> 	}
+> 
+> 	for (int i = 0; i < g_ifnum; i++)
+> 	{
+> 		if (strcmp(ifrinfo[i].ifinfo.ifr_name, ifName) == 0)
+> 		{
+> 			syslog(LOG_DEBUG, "process_addr_info, ifName: %s, ifinfo->ifi_index %d, new addr", ifName, ifamsg->ifa_index);
+> 			if(fill_ifr_info(ifamsg->ifa_index, &ifrinfo[i]))
+> 			{
+> 				free_ifr_info(i);
+> 				undo_sysctl_adjustments(ifName);
+> 				syslog(LOG_ERR, "process_addr_info, get intf ifr failed, just recover conf return");
+> 				return -1;
+> 			}
+> 		}
+> 	}
+> 	return 0;
+> }
+> 
+> static void get_link_msg(void)
+> {
+> 	int msg_len;
+> 	struct nlmsghdr *h;
+> 	struct sockaddr_nl nladdr = {};
+> 	struct iovec iov;
+> 	char   buf[8192];
+> 	struct msghdr msg = {
+> 		(void *)&nladdr, sizeof(nladdr),
+> 		&iov,	1,
+> 		NULL,	0,
+> 		0
+> 	};
+> 
+> 	iov.iov_base = buf;
+> 	iov.iov_len = sizeof(buf);
+> 	msg_len = recvmsg(rth_link.fd, &msg, MSG_DONTWAIT);
+> 
+> 	if (msg_len <= 0)
+> 	{
+> 		syslog(LOG_ERR, "recv link msg failed, wrong msg len: %d", msg_len);
+> 		return;
+> 	}
+> 
+> 
+> 	if (msg.msg_namelen != sizeof(nladdr))
+> 	{
+> 		syslog(LOG_ERR, "recv link msg failed, wrong address data len: %d", msg.msg_namelen);
+> 		return;
+> 	}
+> 
+> 	if (nladdr.nl_pid)
+> 		return;
+> 
+> 	for (h = (struct nlmsghdr *)buf; msg_len >= sizeof(*h); ) {
+> 		int len = h->nlmsg_len;
+> 		int l = len - sizeof(*h);
+> 
+> 		if (l < 0 || len > msg_len)
+> 		{
+> 			syslog(LOG_ERR, "recv link msg failed, l: %d, len: %d, msg_len: %d", l, len, msg_len);
+> 			return;
+> 		}
+> 		if (process_link_msg(h) < 0)
+> 			return;
+> 
+> 		msg_len -= NLMSG_ALIGN(len);
+> 		h = (struct nlmsghdr *)((char *)h + NLMSG_ALIGN(len));
+> 	}
+> }
+> 
+> static void get_addr_msg(void)
+> {
+> 	int msg_len;
+> 	struct nlmsghdr *h;
+> 	struct sockaddr_nl nladdr = {};
+> 	struct iovec iov;
+> 	char   buf[8192];
+> 	struct msghdr msg = {
+> 		(void *)&nladdr, sizeof(nladdr),
+> 		&iov,	1,
+> 		NULL,	0,
+> 		0
+> 	};
+> 
+> 	iov.iov_base = buf;
+> 	iov.iov_len = sizeof(buf);
+> 	msg_len = recvmsg(rth_addr.fd, &msg, MSG_DONTWAIT);
+> 
+> 	if (msg_len <= 0)
+> 	{
+> 		syslog(LOG_ERR, "recv addr msg failed, wrong msg len: %d", msg_len);
+> 		return;
+> 	}
+> 
+> 
+> 	if (msg.msg_namelen != sizeof(nladdr))
+> 	{
+> 		syslog(LOG_ERR, "recv addr msg failed, wrong address data len: %d", msg.msg_namelen);
+> 		return;
+> 	}
+> 
+> 	if (nladdr.nl_pid)
+> 		return;
+> 
+> 	for (h = (struct nlmsghdr *)buf; msg_len >= sizeof(*h); ) {
+> 		int len = h->nlmsg_len;
+> 		int l = len - sizeof(*h);
+> 
+> 		if (l < 0 || len > msg_len)
+> 		{
+> 			syslog(LOG_ERR, "recv addr msg failed, l: %d, len: %d, msg_len: %d", l, len, msg_len);
+> 			return;
+> 		}
+> 
+> 		if (process_addr_info(h) < 0)
+> 			return;
+> 
+> 		msg_len -= NLMSG_ALIGN(len);
+478a1262
+> 
+498c1282
+< 	if (ifnum && !handle_if(sll.sll_ifindex))
+---
+> 	if (g_ifnum && !get_enabled_if_index(sll.sll_ifindex))
+513c1297
+< 	memcpy(&key.addr, (char *)(a+1) + a->ar_hln, 4);
+---
+> 	memcpy(&(key.addr.ip_addr.ipv4_addr), (char *)(a+1) + a->ar_hln, 4);
+516c1300
+< 	if (key.addr == 0)
+---
+> 	if (key.addr.ip_addr.ipv4_addr == 0)
+570a1355,1396
+> static void sig_ifrinfo(int signo)
+> {
+> 	do_ifrinfo = 1;
+> 	if (in_poll)
+> 		siglongjmp(env, 1);
+> }
+> 
+> static void send_ifrinfo(void)
+> {
+> 	syslog(LOG_INFO,"g_ifnum: %d", g_ifnum);
+> 	for(int i=0;i<g_ifnum;i++)
+> 	{
+> 		syslog(LOG_INFO,"%-8s %-12s %-10s %s", "#Ifindex", "Ifname", "NeighKeepalive","LinklocalKeepalive");
+> 		syslog(LOG_INFO,"%-8d %-12s %-15s %-15s\n",
+> 				ifrinfo[i].ifinfo.ifr_ifindex,
+> 				ifrinfo[i].ifinfo.ifr_name,
+> 				ifrinfo[i].enable_keepalive ? "Enabled" : "Disabled",
+> 				ifrinfo[i].enable_linklocal ? "Enabled" : "Disabled");
+> 		unsigned char *mac = (unsigned char *)ifrinfo[i].if_hwaddr.sa_data;
+> 		syslog(LOG_INFO,"MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+> 		if(ifrinfo[i].ipv4_addr_size != 0)
+> 		{
+> 			for (int size=0;size<ifrinfo[i].ipv4_addr_size;size++)
+> 			{
+> 				char ip4[INET_ADDRSTRLEN];
+> 				inet_ntop(AF_INET, &ifrinfo[i].ipv4_addrs[size].sin_addr, ip4, INET_ADDRSTRLEN);
+> 				syslog(LOG_INFO,"Ipv4 Address[%d] %s\n", size, ip4);
+> 			}
+> 		}
+> 		if(ifrinfo[i].ipv6_addr_size != 0)
+> 		{
+> 			for (int size=0;size<ifrinfo[i].ipv6_addr_size;size++)
+> 			{
+> 				char ip6[INET6_ADDRSTRLEN];
+> 				inet_ntop(AF_INET6, &ifrinfo[i].ipv6_addrs[size].sin6_addr, ip6, INET6_ADDRSTRLEN);
+> 				syslog(LOG_INFO,"Ipv6 Address[%d] %s\n", size, ip6);
+> 			}
+> 		}
+> 	}
+> 	do_ifrinfo = 0;
+> }
+> 
+586a1413,2208
+> static char* get_spec_str(const char *input, const char *delimiter)
+> {
+>     const char *prefixPtr = strstr(input, delimiter);
+>     if (prefixPtr)
+> 	{
+>         prefixPtr += strlen(delimiter);
+> 		syslog(LOG_DEBUG,"find specific str:%s", prefixPtr);
+> 		return prefixPtr;
+>        
+>     }
+>     return NULL;
+> }
+> 
+> /*  Check if there are two delimiters in the input string. If there are,
+>     copy the string between the two delimiters to the output buffer and return 0.
+>     Otherwise, set the first character of the output buffer to '\0' and return 1. */
+> static int get_spec_str_between_two_delimiters(const char *input, const char *delimiter, char *ptr_buf, unsigned int *ptr_buf_size)
+> {
+>     const char *prefixPtr = strstr(input, delimiter);
+>     if (prefixPtr)
+>     {
+>         prefixPtr += strlen(delimiter);
+>         const char *secondDelimiter = strstr(prefixPtr, delimiter);
+>         if (secondDelimiter)
+>         {
+> 			if ((secondDelimiter - prefixPtr) > MAX_INTERFACE_NAME_LEN)
+> 			{
+> 				syslog(LOG_ERR, "the source string length is larger than the destination max buffer size, please check.");
+>                 return -1;
+>             }
+>             strncpy(ptr_buf, prefixPtr, secondDelimiter - prefixPtr);
+>             ptr_buf[secondDelimiter - prefixPtr] = '\0';
+>             *ptr_buf_size = secondDelimiter - prefixPtr;
+>             syslog(LOG_DEBUG, "find specific str:%s", ptr_buf);
+>             return 0;
+>         }
+>         else
+>         {
+>             ptr_buf[0] = '\0';
+>             *ptr_buf_size = 0;
+>             return -1;
+>         }
+>     }
+>     else
+>     {
+>         ptr_buf[0] = '\0';
+>         *ptr_buf_size = 0;
+>         return -1;
+>     }
+> }
+> 
+> static int readJsonFile(const char *filename, JsonData *jsonData)
+> {
+>     FILE *file = fopen(filename, "r");
+>     if (!file)
+> 	{
+>         return -1;
+>     }
+> 
+>     fseek(file, 0, SEEK_END);
+>     jsonData->size = ftell(file);
+>     fseek(file, 0, SEEK_SET);
+> 
+>     jsonData->data = (char *)malloc(jsonData->size + 1);
+>     fread(jsonData->data, 1, jsonData->size, file);
+>     jsonData->data[jsonData->size] = '\0';
+> 
+>     fclose(file);
+> 	return 0;
+> }
+> 
+> static int findInstanceForDB(const char *json, char *db_instance)
+> {
+>     cJSON *root = cJSON_Parse(json);
+> 	int ret = nPort;
+>     if (root == NULL) {
+>         const char *error_ptr = cJSON_GetErrorPtr();
+>         if (error_ptr != NULL) {
+>             fprintf(stderr, "Error before: %s\n", error_ptr);
+>         }
+>         return ret;
+>     }
+> 
+>     cJSON *databases = cJSON_GetObjectItemCaseSensitive(root, "DATABASES");
+>     if (cJSON_IsObject(databases))
+> 	{
+>         cJSON *db = cJSON_GetObjectItemCaseSensitive(databases, db_instance);
+>         if (cJSON_IsObject(db))
+> 		{
+>             cJSON *instance = cJSON_GetObjectItemCaseSensitive(db, "instance");
+>             if (cJSON_IsString(instance))
+> 			{
+>                 char *port = get_spec_str(instance->valuestring, "_");
+> 				syslog(LOG_INFO, "port: %s", port);
+> 				if(port != NULL)
+> 				{
+> 					ret = atoi(port);
+> 				}
+> 				else
+> 				{
+> 					ret = nPort;
+> 				}
+>             }
+>         }
+>     }
+> 
+>     cJSON_Delete(root);
+> 	return ret;
+> }
+> 
+> static int get_db_port(char *db_instance)
+> {
+> 	int ret = 0;
+>     JsonData jsonData;
+>     ret = readJsonFile("/var/run/redis/sonic-db/database_config.json", &jsonData);
+> 	if (ret != 0)
+> 	{
+> 		syslog(LOG_NOTICE, "Failed to open JSON file");
+> 		ret = nPort;
+> 	}
+>     return findInstanceForDB(jsonData.data, db_instance);
+> }
+> 
+> static redisReply* redis_info_get(char* table, redisContext* context, int DB)
+> {
+> 	redisReply* reply;
+> 	reply = (redisReply*)redisCommand(context, "SELECT %i", DB);
+> 	if (NULL == reply)
+> 	{
+> 		syslog(LOG_ERR, "Could not execute SELECT command");;
+> 		return NULL;
+> 	}
+> 	freeReplyObject(reply);
+> 
+> 	reply = (redisReply *)redisCommand(context, "KEYS %s", table);
+>     if (NULL == reply) {
+>         syslog(LOG_ERR, "Could not execute KEYS command");
+>         return NULL;
+>     }
+> 	return reply;
+> }
+> 
+> static bool check_neighbor_keepalive_enable(const char *key, redisContext *context, int DB, bool *enable_keepalive, bool *enable_linklocal)
+> {
+> 	bool ret = false;
+> 	redisReply* reply_select = NULL;
+> 	*enable_keepalive = true;
+> 	*enable_linklocal = false;
+> 
+> 	if ((NULL == key) || (NULL == context) || (NULL == enable_keepalive) || (NULL == enable_linklocal))
+> 	{
+> 		syslog(LOG_ERR, "Invalid input paremeters");
+> 		goto do_end;
+> 	}
+> 
+> 	reply_select = (redisReply*)redisCommand(context, "SELECT %i", DB);
+> 	if (NULL == reply_select)
+> 	{
+> 		syslog(LOG_ERR, "Could not execute SELECT command");
+> 		goto do_end;
+> 	}
+> 
+> 	redisReply* reply_get = NULL;
+> 	reply_get = (redisReply *)redisCommand(context, "HGETALL %s", key);
+> 	if (NULL == reply_get)
+> 	{
+> 		syslog(LOG_ERR, "Could not execute HGETALL %s", key);
+> 		goto do_end;
+> 	}
+> 
+> 	if ((!reply_get->elements) || (reply_get->elements & 1) || (reply_get->type != REDIS_REPLY_ARRAY))
+> 	{
+> 		syslog(LOG_ERR,"hgetall %s invaild, get %zu elements, type is %d", key, reply_get->elements, reply_get->type);
+> 		goto do_end;
+> 	}
+> 
+> 	for (size_t i = 0; i < reply_get->elements; i += 2)
+> 	{
+> 		syslog(LOG_DEBUG, "field is (%s), value is (%s)", reply_get->element[i]->str, reply_get->element[i+1]->str);
+> 		if ((!strncmp(reply_get->element[i]->str, "status", strlen(reply_get->element[i]->str))) && (!strncmp(reply_get->element[i + 1]->str, "enable", strlen(reply_get->element[i + 1]->str))))
+> 		{
+> 			*enable_keepalive = true;
+> 			ret = true;
+> 			continue;
+> 		}
+> 		else if((!strncmp(reply_get->element[i]->str, "status", strlen(reply_get->element[i]->str))) && (!strncmp(reply_get->element[i + 1]->str, "disable", strlen(reply_get->element[i + 1]->str))))
+> 		{
+> 			*enable_keepalive = false;
+> 			ret = true;
+> 			continue;
+> 		}
+> 		else if((!strncmp(reply_get->element[i]->str, "linklocal_status", strlen(reply_get->element[i]->str))) && (!strncmp(reply_get->element[i + 1]->str, "enable", strlen(reply_get->element[i + 1]->str))))
+> 		{
+> 			*enable_linklocal = true;
+> 			ret = true;
+> 			continue;
+> 		}
+> 		else if((!strncmp(reply_get->element[i]->str, "linklocal_status", strlen(reply_get->element[i]->str))) && (!strncmp(reply_get->element[i + 1]->str, "disable", strlen(reply_get->element[i + 1]->str))))
+> 		{
+> 			*enable_linklocal = false;
+> 			ret = true;
+> 			continue;
+> 		}
+> 	}
+> 
+> do_end:
+> 	if (NULL != reply_select)
+> 	{
+> 		freeReplyObject(reply_select);
+> 	}
+> 	if (NULL != reply_get)
+> 	{
+> 		freeReplyObject(reply_get);
+> 	}
+> 	return ret;
+> }
+> 
+> static int redis_get_all_l3_intf_conf(redisContext* context, char* table_key)
+> {
+> 	redisReply* reply = redis_info_get(table_key, context, CONFIG_DB);
+> 	if (NULL == reply)
+>     {
+> 		syslog(LOG_ERR, "Could not get keys: %s", table_key);
+>         return -1;
+>     }
+> 
+> 	char buff[MAX_INTERFACE_NAME_LEN];
+> 	unsigned int buf_size = 0;
+> 
+>     if (reply->type == REDIS_REPLY_ARRAY)
+> 	{
+>         for (size_t i = 0; i < reply->elements; i++)
+> 		{
+> 			bool already_enabled_intf = false;
+> 			memset(buff, 0, sizeof(buff));
+> 			buf_size = 0;
+> 			syslog(LOG_INFO, "redis_get_all_l3_intf_conf, Key %zu: %s, g_ifnum %d\n", i + 1, reply->element[i]->str, g_ifnum);
+> 			if (g_ifnum >= MAX_INTF_NUM)
+> 			{
+> 				syslog(LOG_ERR,"enabled intf num %d, is over the max: %d", g_ifnum, MAX_INTF_NUM);
+> 				freeReplyObject(reply);
+> 				return -1;
+> 			}
+> 
+> 			int rv = get_spec_str_between_two_delimiters(reply->element[i]->str, "|", buff, &buf_size);
+> 			if(0 != rv)
+> 			{
+> 				syslog(LOG_DEBUG,"Could not get l3 Interface iface from %s continue process", reply->element[i]->str);
+> 				continue;
+> 			}
+> 			else
+> 			{
+> 				syslog(LOG_DEBUG,"get l3 Interface iface from %s sucessful, buff: %s, buf_size: %d", reply->element[i]->str, buff, buf_size);
+> 			}
+> 
+> 			if((buf_size == 0) || (buf_size >= MAX_INTERFACE_NAME_LEN))
+> 			{
+> 				syslog(LOG_ERR, "get iface from %s failed, because of buf_size value is 0 or exceeds the maximum value", reply->element[i]->str);
+> 				continue;
+> 			}
+> 
+> 			if (buff[0] == '\0')
+> 			{
+> 				syslog(LOG_ERR,"get iface from %s failed, because of buff is NULL", reply->element[i]->str);
+> 				continue;
+> 			}
+> 
+> 			char *ifacename = buff;
+> 			char *table_key = reply->element[i]->str;
+> 			for (int i = 0; i < g_ifnum; i++)
+> 			{
+> 				if (strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 				{
+> 					ifrinfo[i].enable_keepalive = true;
+> 					ifrinfo[i].enable_linklocal = false;
+> 					syslog(LOG_INFO, "this l3 intf already enabled, iface is %s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, ifrinfo[%d].enable_keepalive:%u, ifrinfo[%d].enable_linkloca:%u. just break", \
+> 							ifacename, i, ifrinfo[i].ifinfo.ifr_ifindex, i, ifrinfo[i].enable_keepalive, i, ifrinfo[i].enable_linklocal);
+> 					already_enabled_intf = true;
+> 					break;
+> 				}
+> 			}
+> 
+> 			/* First, get cfgdb the l3 interface and set the default values: enable_keepalive=true, enable_linklocal=false. Then, save ifr.ifr_ifindex in the global data ifrinfo[g_ifnum]. */
+> 			if(!already_enabled_intf)
+> 			{
+> 				struct ifreq ifr = {};
+> 				strncpy(ifr.ifr_name, ifacename, IFNAMSIZ);
+> 				if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+> 					if(errno == 19)
+> 					{
+> 						syslog(LOG_NOTICE, "redis_get_all_l3_intf_conf, intf %s is not ready, no such device", ifacename);
+> 						freeReplyObject(reply);
+> 						return -2;
+> 					}
+> 					perror("ioctl(SIOCGIFINDEX)");
+> 					syslog(LOG_ERR, "redis_get_all_l3_intf_conf, Error get intf index: %m");
+> 					break;
+> 				}
+> 
+> 				if(fill_ifr_info(ifr.ifr_ifindex, &ifrinfo[g_ifnum]))
+> 				{
+> 					free_ifr_info(g_ifnum);
+> 					syslog(LOG_ERR, "redis_get_all_l3_intf_conf, get intf ifr failed, just recover conf return");
+> 					freeReplyObject(reply);
+> 					return -1;
+> 				}
+> 				ifrinfo[g_ifnum].enable_keepalive = true;
+> 				ifrinfo[g_ifnum].enable_linklocal = false;
+> 				syslog(LOG_INFO, "redis_get_all_l3_intf_conf, insert l3 iface is %s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, ifrinfo[%d].enable_keepalive:%u, ifrinfo[%d].enable_linkloca:%u. at first", \
+> 						ifacename, g_ifnum, ifrinfo[g_ifnum].ifinfo.ifr_ifindex, g_ifnum, ifrinfo[g_ifnum].enable_keepalive, g_ifnum, ifrinfo[g_ifnum].enable_linklocal);
+> 				g_ifnum++;
+> 			}
+>         }
+>     }
+> 
+>     freeReplyObject(reply);
+> 	return 0;
+> }
+> 
+> static int redis_get_all_arp_conf(redisContext* context)
+> {
+> 	redisReply* reply = redis_info_get(pArpKeepkeys, context, CONFIG_DB);
+> 	if (NULL == reply)
+>     {
+> 		syslog(LOG_ERR, "Could not get keys: %s", pArpKeepkeys);
+>         return -1;
+>     }
+> 
+>     if (reply->type == REDIS_REPLY_ARRAY)
+> 	{
+>         for (size_t i = 0; i < reply->elements; i++)
+> 		{
+> 			bool already_enabled_intf = false;
+> 			syslog(LOG_INFO, "Key %zu: %s, g_ifnum %d\n", i + 1, reply->element[i]->str, g_ifnum);
+> 			char *ifacename = get_spec_str(reply->element[i]->str, "|");
+> 			if(ifacename == NULL)
+> 			{
+> 				syslog(LOG_ERR,"get iface from %s failed", reply->element[i]->str);
+> 				continue;
+> 			}
+> 			if (g_ifnum >= MAX_INTF_NUM)
+> 			{
+> 				syslog(LOG_ERR,"enabled intf num %d, is over the max: %d", g_ifnum, MAX_INTF_NUM);
+> 				freeReplyObject(reply);
+> 				return -1;
+> 			}
+> 			char *table_key = reply->element[i]->str;
+> 			for (int i = 0; i < g_ifnum; i++)
+> 			{
+> 				if (strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 				{
+> 					bool enable_keepalive = false;
+> 					bool enable_linklocal = false;
+> 
+> 					/* update the global data ifrinfo[g_ifnum] if get redis arp conf, this l3 intf already enabled*/
+> 					if (check_neighbor_keepalive_enable(table_key, table_context, CONFIG_DB, &enable_keepalive, &enable_linklocal))
+> 					{
+> 						ifrinfo[i].enable_keepalive = enable_keepalive;
+> 						ifrinfo[i].enable_linklocal = enable_linklocal;
+> 					}
+> 					syslog(LOG_INFO, "redis_get_all_arp_conf, this l3 intf already enabled, iface is %s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, ifrinfo[%d].enable_keepalive:%u, ifrinfo[%d].enable_linkloca:%u. just break", \
+> 							ifacename, i, ifrinfo[i].ifinfo.ifr_ifindex, i, ifrinfo[i].enable_keepalive, i, ifrinfo[i].enable_linklocal);
+> 					already_enabled_intf = true;
+> 					break;
+> 				}
+> 			}
+> 
+> 			/* First, get cfgdb the interface arp conf and parse the status and linklocal_status fields in the cofnigdb table: CFG_ARPKEEPALIVE|interface_name, update ifr_sock_info. */
+> 			if(!already_enabled_intf)
+> 			{
+> 				struct ifreq ifr = {};
+> 				strncpy(ifr.ifr_name, ifacename, IFNAMSIZ);
+> 				if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+> 					if(errno == 19)
+> 					{
+> 						syslog(LOG_NOTICE, "redis_get_all_arp_conf, intf %s is not ready, no such device", ifacename);
+> 						freeReplyObject(reply);
+> 						return -2;
+> 					}
+> 					perror("ioctl(SIOCGIFINDEX)");
+> 					syslog(LOG_ERR, "redis_get_all_arp_conf, Error get intf index: %m");
+> 					break;
+> 				}
+> 
+> 				if(fill_ifr_info(ifr.ifr_ifindex, &ifrinfo[g_ifnum]))
+> 				{
+> 					free_ifr_info(g_ifnum);
+> 					syslog(LOG_ERR, "redis_get_all_arp_conf ,get intf ifr failed, just recover conf return");
+> 					freeReplyObject(reply);
+> 					return -1;
+> 				}
+> 
+> 				bool enable_keepalive = false;
+> 				bool enable_linklocal = false;
+> 				if (check_neighbor_keepalive_enable(table_key, table_context, CONFIG_DB, &enable_keepalive, &enable_linklocal))
+> 				{
+> 					ifrinfo[g_ifnum].enable_keepalive = enable_keepalive;
+> 					ifrinfo[g_ifnum].enable_linklocal = enable_linklocal;
+> 				}
+> 				syslog(LOG_INFO, "redis_get_all_arp_conf, insert l3 iface is %s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, ifrinfo[%d].enable_keepalive:%u, ifrinfo[%d].enable_linkloca:%u. at first", \
+> 						ifacename, g_ifnum, ifrinfo[g_ifnum].ifinfo.ifr_ifindex, g_ifnum, ifrinfo[g_ifnum].enable_keepalive, g_ifnum, ifrinfo[g_ifnum].enable_linklocal);
+> 
+> 				g_ifnum++;
+> 			}
+>         }
+>     }
+> 
+>     freeReplyObject(reply);
+> 	return 0;
+> }
+> 
+> static void clxs_set_kern_inerface_neighbor_keepalive_cfg_enable(void)
+> {
+> 	for (int i = 0; i < g_ifnum; i++)
+> 	{
+> 		if(ifrinfo[i].enable_keepalive)
+> 		{
+> 			if(NULL == ifrinfo[i].ifinfo.ifr_name)
+> 			{
+> 				syslog(LOG_ERR,"get ifrinfo[%d].ifinfo.ifr_name:%s failed", i, ifrinfo[i].ifinfo.ifr_name);
+> 				continue;
+> 			}
+> 			do_sysctl_adjustments(ifrinfo[i].ifinfo.ifr_name);
+> 		}
+> 		else
+> 		{
+> 			if(NULL == ifrinfo[i].ifinfo.ifr_name)
+> 			{
+> 				syslog(LOG_ERR,"get ifrinfo[%d].ifinfo.ifr_name:%s failed", i, ifrinfo[i].ifinfo.ifr_name);
+> 				continue;
+> 			}
+> 			undo_sysctl_adjustments(ifrinfo[i].ifinfo.ifr_name);
+> 		}
+> 	}
+> 
+> 	return ;
+> }
+> 
+> static int clxs_get_all_intf_and_arp_conf(redisContext* context)
+> {
+>     int ret = IPROUTE2_STATUS_SUCCESS;
+> 
+> 	ret = redis_get_all_l3_intf_conf(context, pPortInterfacekeys);
+>     if (ret != IPROUTE2_STATUS_SUCCESS)
+>     {
+>         syslog(LOG_ERR,"the function redis_get_all_l3_intf_conf pPortInterfacekeys return failed, ret = %d", ret);
+>         return ret;
+>     }
+> 
+>     ret = redis_get_all_l3_intf_conf(context, pVlanInterfacekeys);
+>     if (ret != IPROUTE2_STATUS_SUCCESS)
+>     {
+>         syslog(LOG_ERR,"the function redis_get_all_l3_intf_conf pVlanInterfacekeys return failed, ret = %d", ret);
+>         return ret;
+>     }
+> 
+>     ret = redis_get_all_l3_intf_conf(context, pPortChannelInterfacekeys);
+>     if (ret != IPROUTE2_STATUS_SUCCESS)
+>     {
+>         syslog(LOG_ERR,"the function redis_get_all_l3_intf_conf pPortChannelInterfacekeys return failed, ret = %d", ret);
+>         return ret;
+>     }
+> 
+>     ret = redis_get_all_arp_conf(context);
+>     if (ret != IPROUTE2_STATUS_SUCCESS)
+>     {
+>         syslog(LOG_ERR,"the function redis_get_all_arp_conf return failed, ret = %d", ret);
+>         return ret;
+>     }
+> 
+> 	ret = redis_get_all_arp_conf(context);
+>     if (ret != IPROUTE2_STATUS_SUCCESS)
+>     {
+>         syslog(LOG_ERR,"the function redis_get_all_arp_conf return failed, ret = %d", ret);
+>         return ret;
+>     }
+> 
+> 	clxs_set_kern_inerface_neighbor_keepalive_cfg_enable();
+> 
+> 	syslog(LOG_DEBUG,"clxs_get_all_intf_and_arp_conf return sucsuess, ret = %d", ret);
+>     return ret;
+> }
+> 
+> static void redis_info_process(redisContext* context)
+> {
+> 	redisReply* reply;
+> 	char buff[MAX_INTERFACE_NAME_LEN];
+> 	unsigned int buf_size = 0;
+> 	while (redisGetReply(context, &reply) == REDIS_OK && reply != NULL)
+> 	{
+> 		switch (reply->type)
+> 		{
+> 			case REDIS_REPLY_ERROR:
+> 			case REDIS_REPLY_STRING:
+> 			case REDIS_REPLY_NIL:
+> 			case REDIS_REPLY_INTEGER:
+> 			case REDIS_REPLY_STATUS:
+> 				break;
+> 			case REDIS_REPLY_ARRAY:
+> 				{
+> 					if(reply->elements != 4)
+> 					{
+> 						syslog(LOG_ERR,"redis reply elements error:%d", reply->elements);
+> 						break;
+> 					}
+> 					if(strcmp(reply->element[0]->str, "pmessage") == 0 && strcmp(reply->element[1]->str, pSubChannel) == 0)
+> 					{
+> 						char *ifacename = get_spec_str(reply->element[2]->str, "|");
+> 						if(ifacename == NULL)
+> 						{
+> 							syslog(LOG_ERR,"key:%s, get iface failed", reply->element[2]->str);
+> 							break;
+> 						}
+> 						if(strcmp(reply->element[3]->str, "del") == 0)
+> 						{
+> 							syslog(LOG_DEBUG,"redis_arp_keepalive_info_process, opt: %s ", reply->element[3]->str);
+> 							for (int i = 0; i < g_ifnum; i++)
+> 							{
+> 								syslog(LOG_DEBUG,"ifnames[%d] is %s, %s", i, ifrinfo[i].ifinfo.ifr_name, ifacename);
+> 								if (ifrinfo[i].ifinfo.ifr_name != NULL && strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 								{
+> 									/* Changing global data ifrinfo[i] to default values: enable_keepalive=true, enable_linklocal=false and set kern inerface neighbor keepalive cfg enable*/
+> 									ifrinfo[i].enable_keepalive = true;
+> 									ifrinfo[i].enable_linklocal = false;
+> 									do_sysctl_adjustments(ifacename);
+> 									goto do_continue;
+> 								}
+> 							}
+> 						}
+> 						else if(strcmp(reply->element[3]->str, "hset") == 0)
+> 						{
+> 							syslog(LOG_DEBUG,"redis_arp_keepalive_info_process, opt: %s ", reply->element[3]->str);
+> 							if (g_ifnum >= MAX_INTF_NUM)
+> 							{
+> 								freeReplyObject(reply);
+> 								syslog(LOG_ERR,"enabled intf num %d, is over the max: %d", g_ifnum, MAX_INTF_NUM);
+> 								return;
+> 							}
+> 
+> 							char *table_key = get_spec_str(reply->element[2]->str, ":");
+> 							if (table_key == NULL)
+> 							{
+> 								syslog(LOG_ERR,"get table key from (%s) failed", reply->element[2]->str);
+> 								break;
+> 							}
+> 							for (int i = 0; i < g_ifnum; i++)
+> 							{
+> 								syslog(LOG_DEBUG,"ifnames[%d] is %s, %s", i, ifrinfo[i].ifinfo.ifr_name, ifacename);
+> 								if (ifrinfo[i].ifinfo.ifr_name != NULL && strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 								{
+> 									/* after swss reboot, intf's index and sysctl info will update，need update those info */
+> 									syslog(LOG_INFO, "this intf already enabled, just update and return");
+> 									struct ifreq ifr = {};
+> 									strncpy(ifr.ifr_name, ifacename, IFNAMSIZ);
+> 									if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+> 										freeReplyObject(reply);
+> 										perror("ioctl(SIOCGIFINDEX)");
+> 										syslog(LOG_ERR, "Error get intf index: %m");
+> 										return;
+> 									}
+> 									if(fill_ifr_info(ifr.ifr_ifindex, &ifrinfo[i]))
+> 									{
+> 										free_ifr_info(i);
+> 										undo_sysctl_adjustments(ifacename);
+> 										freeReplyObject(reply);
+> 										syslog(LOG_ERR, "get intf ifr failed, just recover conf return");
+> 										return;
+> 									}
+> 
+> 									bool enable_keepalive_prev = ifrinfo[i].enable_keepalive;
+> 									bool enable_keepalive;
+> 									bool linklocal_prev = ifrinfo[i].enable_linklocal;
+> 									bool enable_linklocal;
+> 									if (check_neighbor_keepalive_enable(table_key, table_context, CONFIG_DB, &enable_keepalive, &enable_linklocal))
+> 									{
+> 										ifrinfo[i].enable_keepalive = enable_keepalive;
+> 										ifrinfo[i].enable_linklocal = enable_linklocal;
+> 									}
+> 									if (ifrinfo[i].enable_keepalive)
+> 									{
+> 										do_sysctl_adjustments(ifacename);
+> 									}
+> 									else
+> 									{
+> 										undo_sysctl_adjustments(ifacename);
+> 									}
+> 									syslog(LOG_INFO,"redis_arp_keepalive_info_process, interface %s neighbor keep_alive mode from %u to %u, neighbor keep_alive mode from %u to %u.", \
+> 										ifacename, enable_keepalive_prev, ifrinfo[i].enable_keepalive, linklocal_prev, ifrinfo[i].enable_linklocal);
+> 									goto do_continue;
+> 								}
+> 							}
+> 
+> 							struct ifreq ifr = {};
+> 							strncpy(ifr.ifr_name, ifacename, IFNAMSIZ);
+> 							if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+> 								freeReplyObject(reply);
+> 								perror("ioctl(SIOCGIFINDEX)");
+> 								syslog(LOG_ERR, "Error get intf index: %m");
+> 								return;
+> 							}
+> 							if(fill_ifr_info(ifr.ifr_ifindex, &ifrinfo[g_ifnum]))
+> 							{
+> 								free_ifr_info(g_ifnum);
+> 								undo_sysctl_adjustments(ifacename);
+> 								freeReplyObject(reply);
+> 								syslog(LOG_ERR, "get intf ifr failed, just recover conf return");
+> 								return;
+> 							}
+> 							bool enable_keepalive_prev = ifrinfo[g_ifnum].enable_keepalive;
+> 							bool enable_keepalive;
+> 							bool linklocal_prev = ifrinfo[g_ifnum].enable_linklocal;
+> 							bool enable_linklocal;
+> 							if (check_neighbor_keepalive_enable(table_key, table_context, CONFIG_DB, &enable_keepalive, &enable_linklocal))
+> 							{
+> 								ifrinfo[g_ifnum].enable_keepalive = enable_keepalive;
+> 								ifrinfo[g_ifnum].enable_linklocal = enable_linklocal;
+> 							}
+> 							if (ifrinfo[g_ifnum].enable_keepalive)
+> 							{
+> 								do_sysctl_adjustments(ifacename);
+> 							}
+> 							else
+> 							{
+> 								undo_sysctl_adjustments(ifacename);
+> 							}
+> 							syslog(LOG_INFO,"redis_arp_keepalive_info_process, insert iface value:%s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, neighbor keep_alive mode from %u to %u, linklocal neighbor keep_alive mode from %u to %u", \
+> 								ifacename, g_ifnum, ifrinfo[g_ifnum].ifinfo.ifr_ifindex, enable_keepalive_prev, ifrinfo[g_ifnum].enable_keepalive, linklocal_prev, ifrinfo[g_ifnum].enable_linklocal);
+> 							g_ifnum++;
+> 						}
+> 						else
+> 						{
+> 							syslog(LOG_INFO,"unknow msg type");
+> 						}
+> 					}
+> 					else if((strcmp(reply->element[0]->str, "pmessage") == 0 && strcmp(reply->element[1]->str, pSubChannelPortInterface) == 0) ||
+> 							(strcmp(reply->element[0]->str, "pmessage") == 0 && strcmp(reply->element[1]->str, pSubChannelVlanInterface) == 0) ||
+> 							(strcmp(reply->element[0]->str, "pmessage") == 0 && strcmp(reply->element[1]->str, pSubChannelPortChannelInterface) == 0))
+> 
+> 					{
+> 						memset(buff, 0, sizeof(buff));
+> 						buf_size = 0;
+> 						int rv = get_spec_str_between_two_delimiters(reply->element[2]->str, "|", buff, &buf_size);
+> 						if(0 != rv)
+> 						{
+> 							syslog(LOG_ERR,"Could not get l3 Interface iface from %s continue process", reply->element[2]->str);
+> 							break;
+> 						}
+> 						if((buf_size == 0) || (buf_size >= MAX_INTERFACE_NAME_LEN))
+> 						{
+> 							syslog(LOG_ERR, "get iface from %s failed, because of buf_size value is 0 or exceeds the maximum value", reply->element[2]->str);
+> 							break;
+> 						}
+> 
+> 						if (buff[0] == '\0')
+> 						{
+> 							syslog(LOG_ERR,"get iface from %s failed, because of buff is NULL", reply->element[2]->str);
+> 							break;
+> 						}
+> 						syslog(LOG_INFO,"get Port Interface iface from %s sucessful, buff: %s, buf_size: %d", reply->element[2]->str, buff, buf_size);
+> 
+> 						char *ifacename = buff;
+> 						if(ifacename == NULL)
+> 						{
+> 							syslog(LOG_ERR,"get iface from %s failed, because of ifacename is NULL", reply->element[2]->str);
+> 							break;
+> 						}
+> 						if(strcmp(reply->element[3]->str, "del") == 0)
+> 						{
+> 							syslog(LOG_INFO,"redis_l3_interface_info_process, key: %s, opt: %s ", reply->element[2]->str, reply->element[3]->str);
+> 
+> 							for (int i = 0; i < g_ifnum; i++)
+> 							{
+> 								syslog(LOG_DEBUG,"ifnames[%d] is %s, %s", i, ifrinfo[i].ifinfo.ifr_name, ifacename);
+> 								if (ifrinfo[i].ifinfo.ifr_name != NULL && strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 								{
+> 									undo_sysctl_adjustments(ifacename);
+> 									//put last one in del site, and del last one
+> 									memcpy(&ifrinfo[i], &ifrinfo[g_ifnum - 1], sizeof(struct ifr_sock_info));
+> 									free_ifr_info(g_ifnum - 1);
+> 									syslog(LOG_INFO,"redis_l3_interface_info_process, del iface value:%s", ifacename);
+> 									g_ifnum--;
+> 									goto do_continue;
+> 								}
+> 							}
+> 						}
+> 						else if(strcmp(reply->element[3]->str, "hset") == 0)
+> 						{
+> 							syslog(LOG_INFO,"redis_l3_interface_info_process, opt: %s ", reply->element[3]->str);
+> 							if (g_ifnum >= MAX_INTF_NUM)
+> 							{
+> 								freeReplyObject(reply);
+> 								syslog(LOG_ERR,"enabled intf num %d, is over the max: %d", g_ifnum, MAX_INTF_NUM);
+> 								return;
+> 							}
+> 							syslog(LOG_DEBUG,"key:%s, add l3 interface ip address, just parse CFGDB ifacename", reply->element[2]->str);
+> 							char *table_key = get_spec_str(reply->element[2]->str, ":");
+> 							if (table_key == NULL)
+> 							{
+> 								syslog(LOG_ERR,"get table key from (%s) failed", reply->element[2]->str);
+> 								break;
+> 							}
+> 
+> 							for (int i = 0; i < g_ifnum; i++)
+> 							{
+> 								syslog(LOG_DEBUG,"ifnames[%d] is %s, %s", i, ifrinfo[i].ifinfo.ifr_name, ifacename);
+> 								if (ifrinfo[i].ifinfo.ifr_name != NULL && strcmp(ifrinfo[i].ifinfo.ifr_name, ifacename) == 0)
+> 								{
+> 									/* sudo config interface ip add interface_name interface_name, if found the the interface_name already exists just return else add do_sysctl_adjustments and fill_ifr_info process */
+> 									syslog(LOG_DEBUG, "redis_l3_interface_info_process, this intf already enabled, just return, interface %s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, ifrinfo[%d].enable_keepalive is %u, ifrinfo[%d].enable_linklocal is %u", \
+> 											ifacename, i, ifrinfo[i].ifinfo.ifr_ifindex, i, ifrinfo[i].enable_keepalive, i, ifrinfo[i].enable_linklocal);
+> 									goto do_continue;
+> 								}
+> 							}
+> 
+> 							struct ifreq ifr = {};
+> 							strncpy(ifr.ifr_name, ifacename, IFNAMSIZ);
+> 							if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+> 								freeReplyObject(reply);
+> 								perror("ioctl(SIOCGIFINDEX)");
+> 								syslog(LOG_ERR, "Error get intf index: %m");
+> 								return;
+> 							}
+> 							if(fill_ifr_info(ifr.ifr_ifindex, &ifrinfo[g_ifnum]))
+> 							{
+> 								free_ifr_info(g_ifnum);
+> 								undo_sysctl_adjustments(ifacename);
+> 								freeReplyObject(reply);
+> 								syslog(LOG_ERR, "get intf ifr failed, just recover conf return");
+> 								return;
+> 							}
+> 							bool enable_keepalive_prev = ifrinfo[g_ifnum].enable_keepalive;
+> 							bool enable_keepalive;
+> 							bool linklocal_prev = ifrinfo[g_ifnum].enable_linklocal;
+> 							bool enable_linklocal;
+> 							if (check_neighbor_keepalive_enable(table_key, table_context, CONFIG_DB, &enable_keepalive, &enable_linklocal))
+> 							{
+> 								ifrinfo[g_ifnum].enable_keepalive = enable_keepalive;
+> 								ifrinfo[g_ifnum].enable_linklocal = enable_linklocal;
+> 							}
+> 							else
+> 							{
+> 								ifrinfo[g_ifnum].enable_keepalive = true;
+> 								ifrinfo[g_ifnum].enable_linklocal = false;
+> 							}
+> 
+> 							if (ifrinfo[g_ifnum].enable_keepalive)
+> 							{
+> 								do_sysctl_adjustments(ifacename);
+> 							}
+> 							syslog(LOG_INFO,"redis_l3_interface_info_process, insert iface value:%s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, neighbor keep_alive mode from %u to %u", \
+> 								ifacename, g_ifnum, ifrinfo[g_ifnum].ifinfo.ifr_ifindex, enable_keepalive_prev, ifrinfo[g_ifnum].enable_keepalive);
+> 							syslog(LOG_INFO,"redis_l3_interface_info_process, insert iface value:%s, ifrinfo[%d].ifinfo.ifr_ifindex is %d, linklocal neighbor keep_alive mode from %u to %u", \
+> 								ifacename, g_ifnum, ifrinfo[g_ifnum].ifinfo.ifr_ifindex, linklocal_prev, ifrinfo[g_ifnum].enable_linklocal);
+> 							g_ifnum++;
+> 						}
+> 						else
+> 						{
+> 							syslog(LOG_INFO,"unknow msg type");
+> 						}
+> 					}
+> 				}
+> 				break;
+> 			default:
+> 				break;
+> 		}
+> 
+> 		do_continue:
+> 			freeReplyObject(reply);
+> 	}
+> 	return;
+> }
+> 
+> static void redis_sub_channel(redisContext* context, char* channel)
+> {
+> 	redisReply *reply = (redisReply *)redisCommand(context, "PSUBSCRIBE %s",channel);
+> 	if (reply == NULL)
+> 	{
+> 		syslog(LOG_ERR, "connect redis server:%s, port:%d, PSUBSCRIBE channel:%s FAILED", pServerAddr, nPort, pSubChannel);
+> 		return;
+> 	}
+> 
+> 	freeReplyObject(reply);
+> 	return;
+> }
+> 
+> static void recover_sys_config()
+> {
+> 	for(int i = 0; i < g_ifnum; i++)
+> 	{
+> 		if (ifrinfo[i].ifinfo.ifr_name != NULL)
+> 		{
+> 			syslog(LOG_DEBUG, "recover config of %s", ifrinfo[i].ifinfo.ifr_name);
+> 			undo_sysctl_adjustments(ifrinfo[i].ifinfo.ifr_name);
+> 		}
+> 	}
+> }
+592a2215
+> 	int ret = -1;
+644,655d2266
+< 	argc -= optind;
+< 	argv += optind;
+< 
+< 	if (argc > 0) {
+< 		ifnum = argc;
+< 		ifnames = argv;
+< 		ifvec = malloc(argc*sizeof(int));
+< 		if (!ifvec) {
+< 			perror("malloc");
+< 			exit(-1);
+< 		}
+< 	}
+662,675d2272
+< 	if (ifnum) {
+< 		int i;
+< 		struct ifreq ifr = {};
+< 
+< 		for (i = 0; i < ifnum; i++) {
+< 			strncpy(ifr.ifr_name, ifnames[i], IFNAMSIZ);
+< 			if (ioctl(udp_sock, SIOCGIFINDEX, &ifr)) {
+< 				perror("ioctl(SIOCGIFINDEX)");
+< 				exit(-1);
+< 			}
+< 			ifvec[i] = ifr.ifr_ifindex;
+< 		}
+< 	}
+< 
+737a2335,2346
+> 			char ipv6_str[INET6_ADDRSTRLEN];
+> 			char *ipv4_str;
+> 			if(key->addr.family == AF_INET)
+> 			{
+> 				ipv4_str = inet_ntoa(*(struct in_addr *)&key->addr.ip_addr.ipv4_addr);
+> 			}
+> 			else
+> 			{
+> 				inet_ntop(AF_INET6, (char *)(struct in6_addr *)&key->addr.ip_addr.ipv6_addr, ipv6_str, INET6_ADDRSTRLEN);
+> 			}
+> 			if (!IS_NEG(dbdat.data)) {
+> 				char b1[18];
+739,752c2348,2356
+< 			if (handle_if(key->iface)) {
+< 				if (!IS_NEG(dbdat.data)) {
+< 					char b1[18];
+< 
+< 					printf("%-8d %-15s %s\n",
+< 					       key->iface,
+< 					       inet_ntoa(*(struct in_addr *)&key->addr),
+< 					       ll_addr_n2a(dbdat.data, 6, ARPHRD_ETHER, b1, 18));
+< 				} else {
+< 					printf("%-8d %-15s FAILED: %dsec ago\n",
+< 					       key->iface,
+< 					       inet_ntoa(*(struct in_addr *)&key->addr),
+< 					       NEG_AGE(dbdat.data));
+< 				}
+---
+> 				printf("%-8d %-46s %s\n",
+> 						key->iface,
+> 						key->addr.family == AF_INET ? ipv4_str : ipv6_str,
+> 						ll_addr_n2a(dbdat.data, 6, ARPHRD_ETHER, b1, 18));
+> 			} else {
+> 				printf("%-8d %-46s FAILED: %dsec ago\n",
+> 						key->iface,
+> 						key->addr.family == AF_INET ? ipv4_str : ipv6_str,
+> 						NEG_AGE(dbdat.data));
+770c2374
+< 			.sll_ifindex = (ifnum == 1 ? ifvec[0] : 0),
+---
+> 			.sll_ifindex = (g_ifnum == 1 ? ifrinfo[0].ifinfo.ifr_ifindex : 0),
+785c2389,2390
+< 	load_initial_table();
+---
+> 	/* set all ifrinfo[i].enable_keepalive = false, ifrinfo[i].enable_linklocal = false */
+> 	memset(ifrinfo, 0x00, sizeof(ifrinfo));
+787,788c2392,2419
+< 	if (daemon(0, 0)) {
+< 		perror("arpd: daemon");
+---
+> 	int cfgdb_port = get_db_port("CONFIG_DB");
+> 	syslog(LOG_INFO, "connect redis server:%s, port:%d, PSUBSCRIBE channel:%s", pServerAddr, cfgdb_port, pSubChannel);
+> 	redisContext* context = redisConnect(pServerAddr, cfgdb_port);
+> 	table_context = redisConnect(pServerAddr, cfgdb_port);
+> 
+> 	ret = clxs_get_all_intf_and_arp_conf(context);
+> 	int wait_port_ready_cnt = 0;
+> 	while (ret == -2){
+> 		ret = clxs_get_all_intf_and_arp_conf(context);
+> 		if(ret != -2 || wait_port_ready_cnt >= 90){
+> 			syslog(LOG_NOTICE, "connect redis db:%d, get keys %s, ret: %d, wait_port_ready_cnt: %d",
+> 					CONFIG_DB, pArpKeepkeys, ret, wait_port_ready_cnt);
+>             break;
+>         }
+> 		sleep(1);
+> 		wait_port_ready_cnt++;
+> 		syslog(LOG_NOTICE, "connect redis db:%d, get keys %s, ret: %d, wait_port_ready_cnt: %d",
+> 				CONFIG_DB, pArpKeepkeys, ret, wait_port_ready_cnt);
+> 	}
+> 
+> 	redis_sub_channel(context, pSubChannel);
+> 	redis_sub_channel(context, pSubChannelPortInterface);
+> 	redis_sub_channel(context, pSubChannelVlanInterface);
+> 	redis_sub_channel(context, pSubChannelPortChannelInterface);
+> 	pset[2].fd = context->fd;
+> 	load_initial_table();
+> 	if (rtnl_open(&rth_link, RTMGRP_LINK) < 0) {
+> 		perror("rtnl_open");
+791c2422
+< 
+---
+>     pset[3].fd = rth_link.fd;
+796a2428
+> 	catch_signal(SIGUSR2, sig_ifrinfo);
+797a2430,2434
+> 	if (rtnl_open(&rth_addr, RTMGRP_IPV4_IFADDR|RTMGRP_IPV6_IFADDR ) < 0) {
+> 		perror("rtnl_open");
+> 		goto do_abort;
+> 	}
+> 	pset[4].fd = rth_addr.fd;
+802a2440,2445
+> 	pset[2].events = EVENTS;
+> 	pset[2].revents = 0;
+> 	pset[3].events = EVENTS;
+> 	pset[3].revents = 0;
+> 	pset[4].events = EVENTS;
+> 	pset[4].revents = 0;
+808d2450
+< 
+811,816d2452
+< 		if (do_sync) {
+< 			in_poll = 0;
+< 			dbase->sync(dbase, 0);
+< 			do_sync = 0;
+< 			in_poll = 1;
+< 		}
+819c2455,2457
+< 		if (poll(pset, 2, poll_timeout) > 0) {
+---
+> 		if (do_ifrinfo)
+> 			send_ifrinfo();
+> 		if (poll(pset, 5, poll_timeout) > 0) {
+825,826c2463,2468
+< 		} else {
+< 			do_sync = 1;
+---
+> 			if (pset[2].revents&EVENTS)
+> 				redis_info_process(context);
+> 			if (pset[3].revents&EVENTS)
+> 				get_link_msg();
+> 			if (pset[4].revents&EVENTS)
+> 				get_addr_msg();
+828a2471,2472
+> 	recover_sys_config();
+> 	redisFree(context);
+830d2473
+< 	undo_sysctl_adjustments();
+835a2479
+> 	recover_sys_config();

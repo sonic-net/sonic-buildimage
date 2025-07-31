@@ -11,8 +11,8 @@
 /var/log/debug
 /var/log/messages
 {
-    size 10k
-    rotate 1
+    size 10M
+    rotate 10
     missingok
     notifempty
     compress
@@ -27,14 +27,15 @@
 /var/log/cron.log
 /var/log/syslog
 /var/log/teamd.log
+/var/log/iproute.log
 /var/log/telemetry.log
 /var/log/frr/bgpd.log
 /var/log/frr/zebra.log
 /var/log/swss/sairedis*.rec
 /var/log/swss/swss*.rec
 {
-    size 1M
-    rotate 5000
+    size 10M
+    rotate 10
     missingok
     notifempty
     compress

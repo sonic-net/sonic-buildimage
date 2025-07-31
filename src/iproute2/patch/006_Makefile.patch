@@ -1,0 +1,5 @@
+52c52,53
+< LDLIBS += $(LIBNETLINK)
+---
+> LDFLAGS := -L/usr/lib/x86_64-linux-gnu/ 
+> LDLIBS += $(LIBNETLINK) -lhiredis

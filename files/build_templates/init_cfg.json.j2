@@ -26,6 +26,7 @@
                    ("radv", "enabled", false, "enabled"),
                    ("snmp", "enabled", true, "enabled"),
                    ("swss", "enabled", false, "enabled"),
+                   ("iproute", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled"),
                    ("teamd", "enabled", false, "enabled")] %}
 {%- if sonic_asic_platform == "vs" %}{% do features.append(("gbsyncd", "enabled", false, "enabled")) %}{% endif %}

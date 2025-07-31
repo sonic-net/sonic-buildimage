@@ -1,0 +1,4 @@
+c36c36
+< 	$(QUIET_CC)$(CC) $(CFLAGS) -I$(DBM_INCLUDE) $(LDFLAGS) -o arpd arpd.c $(LIBNETLINK) -ldb -lpthread
+---
+> 	$(QUIET_CC)$(CC) $(CFLAGS) -I$(DBM_INCLUDE) $(LDFLAGS) -o arpd arpd.c cJSON.c $(LIBNETLINK) -ldb -lpthread  -lhiredis
