@@ -38,7 +38,7 @@ check_spine_router() {
     subtype=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype)
 
     # only supported on UpstreamLC or UpperSpineRouter
-    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]
+    if [[ ("$type" == "SpineRouter" && "$subtype" == "UpstreamLC") || "$type" == "UpperSpineRouter" ]]; then
         exit 0
     fi
 

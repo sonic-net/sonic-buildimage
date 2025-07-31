@@ -179,6 +179,10 @@ def main(argv):
         if len(file_descriptor_list) > 0:
             line = file_descriptor_list[0].readline()
             headers = childutils.get_headers(line)
+            # Check if 'len' exists before using it
+            if 'len' not in headers:
+                syslog.syslog(syslog.LOG_WARNING, "Missing 'len' in headers: {}, line: {}".format(headers, line))
+                continue
             payload = sys.stdin.read(int(headers['len']))
 
             # Handle the PROCESS_STATE_EXITED event
@@ -218,7 +222,7 @@ def main(argv):
                 # update process heart beat time
                 if (process_name in watch_process_list):
                     process_heart_beat_info[process_name]["last_heart_beat"] = time.time()
-            
+
             # Transition from BUSY to ACKNOWLEDGED
             childutils.listener.ok()
 
