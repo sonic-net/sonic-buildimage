@@ -61,16 +61,16 @@ class AggregateAddressMgr(Manager):
         data = dict(data)
         bbr_status = self.directory.get(CONFIG_DB_NAME, BGP_BBR_TABLE_NAME, BGP_BBR_STATUS_KEY)
         if bbr_status not in (BGP_BBR_STATUS_ENABLED, BGP_BBR_STATUS_DISABLED):
-            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address")
+            log_info("AggregateAddressMgr::BBR state is unknown. Skip the address %s" % key2prefix(key))
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         elif bbr_status == BGP_BBR_STATUS_DISABLED and data.get(BBR_REQUIRED_KEY, COMMON_FALSE_STRING) == COMMON_TRUE_STRING:
-            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address")
+            log_info("AggregateAddressMgr::BBR is disabled and bbr-required is set to true. Skip the address %s" % key2prefix(key))
             self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         else:
             if self.address_set_handler(key, data):
                 self.set_address_state(key, data, ADDRESS_ACTIVE_STATE)
             else:
-                log_info("AggregateAddressMgr::set address %s failed" % key)
+                log_info("AggregateAddressMgr::set address %s failed" % key2prefix(key))
                 self.set_address_state(key, data, ADDRESS_INACTIVE_STATE)
         return True
 
