@@ -527,8 +527,8 @@ phy_chain_tx_polarity_flip_physical{76.0}=0x0
 
 #FC19
 
-dport_map_port_64=64
-portmap_64=81:10:m
-phy_chain_rx_polarity_flip_physical{81.0}=0x1
-phy_chain_tx_polarity_flip_physical{81.0}=0x1
+#dport_map_port_64=64
+#portmap_64=81:10:m
+#phy_chain_rx_polarity_flip_physical{81.0}=0x1
+#phy_chain_tx_polarity_flip_physical{81.0}=0x1
 
