@@ -290,9 +290,11 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 
 	fpga_data->dev = dev;
 
-	fpga_data->attrs.attr_dev_ops = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		dev_ops, S_IWUSR | S_IRUGO, NULL, dev_operation,
 		PDDF_CHAR, NAME_SIZE, NULL, NULL);
+
+	fpga_data->attrs.attr_dev_ops = attr_dev_ops;
 
 	struct attribute *attrs_fpgapci[] = {
 		&fpga_data->attrs.attr_dev_ops.dev_attr.attr,
