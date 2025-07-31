@@ -112,8 +112,8 @@
 {%- set port_names_list_extra_queues = [] %}
 {%- for port in PORT_ACTIVE %}
 {% if ((generate_dscp_to_tc_map is defined) and tunnel_qos_remap_enable) and 
-(('type' in DEVICE_METADATA['localhost'] and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and 'ToRRouter' in DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type) or
-('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and 'LeafRouter' in DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type)) %}
+(('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'ToRRouter') or
+('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name].type == 'LeafRouter')) %}
         {%- if port_names_list_extra_queues.append(port) %}{%- endif %}
 {% endif %}
 {%- endfor %}
@@ -401,7 +401,7 @@
 {% else %}
 {# Apply separated DSCP_TO_TC_MAP to uplink ports on ToR and Leaf #}
 {% if different_dscp_to_tc_map and tunnel_qos_remap_enable %}
-{% if ('type' in DEVICE_METADATA['localhost']) and ('LeafRouter' in DEVICE_METADATA['localhost']['type']) and (port not in port_names_list_extra_queues) %}
+{% if ('type' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['type'] == 'LeafRouter') and (port not in port_names_list_extra_queues) %}
             "dscp_to_tc_map"  : "AZURE_UPLINK",
 {% elif ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'] == 'DualToR') and (port in port_names_list_extra_queues) %}
             "dscp_to_tc_map"  : "AZURE_UPLINK",
