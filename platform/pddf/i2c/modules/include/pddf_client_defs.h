@@ -65,7 +65,6 @@ typedef struct pddf_data_attribute{
           .data = _data }
 
 
-
 enum attribute_data_type {
     PDDF_CHAR,
     PDDF_UCHAR,
