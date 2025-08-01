@@ -8,6 +8,12 @@
   {% set is_broadcom = true %}
 {% endif %}
 
+{# Check if the hwsku is Cisco #}
+{% set is_cisco = false %}
+{% if "cisco" in DEVICE_METADATA['localhost']['hwsku']|lower %}
+  {% set is_cisco = true %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -79,7 +85,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-{% if is_broadcom %}
+{% if is_broadcom or is_cisco %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -105,7 +111,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if is_broadcom %}
+{% if is_broadcom or is_cisco %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -138,7 +144,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
-{% if is_broadcom %}
+{% if is_broadcom or is_cisco %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
@@ -164,7 +170,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-{% if is_broadcom %}
+{% if is_broadcom or is_cisco %}
             "dscp_mode":"uniform",
 {% else %}
             "dscp_mode":"pipe",
