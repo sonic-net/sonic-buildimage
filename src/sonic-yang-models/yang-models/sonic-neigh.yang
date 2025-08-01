@@ -14,6 +14,10 @@ module sonic-neigh {
 	import sonic-portchannel {
 		prefix lag;
 	}
+
+	import sonic-port {
+		prefix port;
+	}
 	// TODO: Uncomment the following lines when sonic-vlan.yang is available
 	// import sonic-vlan {
 	// 	prefix svlan;
@@ -39,6 +43,9 @@ module sonic-neigh {
 					type union {
 						type leafref {
 							path /lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name;
+						}
+						type leafref {
+							path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
 						}
 						type string {
 							pattern "Vlan[0-9]+";

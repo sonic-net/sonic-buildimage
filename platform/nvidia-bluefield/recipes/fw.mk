@@ -1,6 +1,5 @@
 #
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +19,7 @@ DPU_NIC_FW_BASE_URL =
 DPU_NIC_FW_VERSION =
 BF3_FW_BASE_URL =
 
-BF3_FW_VERSION = 45.0322
+BF3_FW_VERSION = 45.1020
 
 BF3_FW_FILE = fw-BlueField-3-rel-32_$(subst .,_,$(BF3_FW_VERSION)).mfa
 

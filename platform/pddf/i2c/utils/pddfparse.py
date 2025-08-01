@@ -101,6 +101,15 @@ class PddfParse():
 
         return self.data[dev]['dev_attr']['num_psu_fans']
 
+    def get_num_psu_thermals(self, dev):
+        if dev not in self.data.keys():
+            return str(1)
+
+        if 'num_psu_thermals' not in self.data[dev]['dev_attr']:
+            return str(1)
+
+        return self.data[dev]['dev_attr']['num_psu_thermals']
+
     def get_led_path(self):
         return ("pddf/devices/led")
 
@@ -147,6 +156,15 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
             cmd = "echo '%s'  > /sys/kernel/pddf/devices/psu/i2c/psu_idx" % (self.get_dev_idx(dev, ops))
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/psu/i2c/psu_thermals" % (self.get_num_psu_thermals(dev['dev_info']['virt_parent']))
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+            cmd = "echo '%s' > /sys/kernel/pddf/devices/psu/i2c/psu_temp_high_thresh_bitmap" % (self.get_psu_temp_high_thresh_bitmap(dev['dev_info']['device_name'],
+                                                                                                    int(self.get_num_psu_thermals(dev['dev_info']['virt_parent']))))
             ret = self.runcmd(cmd)
             if ret != 0:
                 return create_ret.append(ret)
@@ -288,7 +306,7 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['topo_info'], "pddf/devices/cpldmux", ops)
         if ret != 0:
             return create_ret.append(ret)
-        cmd = "echo '%s' > /sys/kernel/pddf/devices/mux/i2c_name" % (dev['dev_info']['device_name'])
+        cmd = "echo '%s' > /sys/kernel/pddf/devices/cpldmux/i2c_name" % (dev['dev_info']['device_name'])
         ret = self.runcmd(cmd)
         if ret != 0:
             return create_ret.append(ret)
@@ -337,6 +355,11 @@ class PddfParse():
                     ret = self.runcmd(cmd)
                     if ret != 0:
                         return create_ret.append(ret)
+                    if inst['active_low'] == "1" :
+                        cmd = "echo %s >/sys/class/gpio/gpio%d/active_low" % (inst['active_low'], port_no)
+                        ret = self.runcmd(cmd)
+                        if ret != 0:
+                            return create_ret.append(ret)
                     if inst['value'] != "":
                         for i in inst['value'].split(','):
                             cmd = "echo %s >/sys/class/gpio/gpio%d/value" % (i.rstrip(), port_no)
@@ -373,6 +396,9 @@ class PddfParse():
     def create_xcvr_i2c_device(self, dev, ops):
         create_ret = []
         ret = 0
+        # Check if topo_info is present otherwise return from here
+        if "topo_info" not in dev['i2c']:
+            return create_ret.append(ret)
         if dev['i2c']['topo_info']['dev_type'] in self.data['PLATFORM']['pddf_dev_types']['PORT_MODULE']:
             self.create_device(dev['i2c']['topo_info'], "pddf/devices/xcvr/i2c", ops)
             cmd = "echo '%s' > /sys/kernel/pddf/devices/xcvr/i2c/i2c_name" % (dev['dev_info']['device_name'])
@@ -409,9 +435,9 @@ class PddfParse():
                 cmd = "echo {} > /sys/bus/i2c/devices/{}-00{:02x}/port_name".format(
                     dev['dev_info']['virt_parent'].lower(), int(dev['i2c']['topo_info']['parent_bus'], 0),
                     int(dev['i2c']['topo_info']['dev_addr'], 0))
-            ret = self.runcmd(cmd)
-            if ret != 0:
-                return create_ret.append(ret)
+                ret = self.runcmd(cmd)
+                if ret != 0:
+                    return create_ret.append(ret)
 
         return create_ret.append(ret)
 
@@ -635,7 +661,7 @@ class PddfParse():
                     real_name = attr['attr_name']
 
                 dsysfs_path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                    "/%d-00%02x" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
                                   int(dev['i2c']['topo_info']['dev_addr'], 0)) + \
                     "/%s" % real_name
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -694,7 +720,7 @@ class PddfParse():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -738,7 +764,7 @@ class PddfParse():
                         real_dev = dev
 
                     dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                        "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                        "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                       int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                         "/%s" % real_name
                     if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -760,7 +786,7 @@ class PddfParse():
         for attr in attr_list:
             if attr_name == attr['attr_name'] or attr_name == 'all':
                 path = self.show_device_sysfs(dev, ops) + \
-                    "/%d-00%x/" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
+                    "/%d-00%02x/" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
                                    int(dev['i2c']['topo_info']['dev_addr'], 0))
                 if 'drv_attr_name' in attr.keys():
                     real_name = attr['drv_attr_name']
@@ -827,7 +853,7 @@ class PddfParse():
                             real_dev = dev
 
                         dsysfs_path = self.show_device_sysfs(real_dev, ops) + \
-                            "/%d-00%x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
+                            "/%d-00%02x" % (int(real_dev['i2c']['topo_info']['parent_bus'], 0),
                                           int(real_dev['i2c']['topo_info']['dev_addr'], 0)) + \
                             "/%s" % real_name
                         if dsysfs_path not in self.data_sysfs_obj[KEY]:
@@ -1107,7 +1133,7 @@ class PddfParse():
 
 
     def validate_xcvr_device(self, dev, ops):
-        devtype_list = ['optoe1', 'optoe2']
+        devtype_list = ['optoe1', 'optoe2', 'optoe3']
         dev_attribs = ['xcvr_present', 'xcvr_reset', 'xcvr_intr_status', 'xcvr_lpmode']
         ret_val = "xcvr validation failed"
 
@@ -1699,9 +1725,7 @@ class PddfParse():
         if attr['device_type'] == 'TEMP_SENSOR':
             return self.temp_sensor_parse(dev, ops)
 
-        if attr['device_type'] == 'SFP' or attr['device_type'] == 'SFP+' or attr['device_type'] == 'SFP28' or \
-                attr['device_type'] == 'QSFP' or attr['device_type'] == 'QSFP+' or attr['device_type'] == 'QSFP28' or \
-                attr['device_type'] == 'QSFP-DD':
+        if attr['device_type'] in ['SFP', 'SFP+', 'SFP28', 'QSFP', 'QSFP+', 'QSFP28', 'QSFP-DD', 'OSFP']:
             return self.optic_parse(dev, ops)
 
         if attr['device_type'] == 'FPGAI2C':
@@ -1827,6 +1851,37 @@ class PddfParse():
         self.populate_pddf_sysfsobj()
         v_ops = {'cmd': 'validate', 'target': 'all', 'attr': 'all'}
         self.dev_parse(self.data['SYSTEM'], v_ops)
+
+    def get_psu_temp_high_thresh_bitmap(self, psu_pmbus_device, num_psu_thermals):
+        """
+        Check which PSU thermal sensors have high threshold support
+
+        Args:
+            psu_pmbus_device (str): PSU PMBUS device name (e.g. "PSU1-PMBUS")
+            num_psu_thermals (int): Number of thermal sensors in the PSU
+
+        Returns:
+            int: Bitmap where each bit represents whether a thermal sensor supports high threshold
+                 Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+                 A bit value of 1 means the sensor supports high threshold, 0 means it doesn't
+        """
+        bitmap = 0
+
+        # Get the set of attribute names for this device (if it exists)
+        attr_names = set()
+        if psu_pmbus_device in self.data:
+            device_data = self.data[psu_pmbus_device]
+            if "i2c" in device_data and "attr_list" in device_data["i2c"]:
+                attr_names = {attr.get("attr_name") for attr in device_data["i2c"]["attr_list"]}
+
+        # Check each thermal sensor's high threshold attribute and set corresponding bit
+        for thermal_idx in range(1, num_psu_thermals + 1):
+            attr_name = f"psu_temp{thermal_idx}_high_threshold"
+            if attr_name in attr_names:
+                # Set the bit corresponding to this thermal sensor (0-indexed)
+                bitmap |= (1 << (thermal_idx - 1))
+
+        return bitmap
 
     ##################################################################################################################
     #   BMC APIs 
