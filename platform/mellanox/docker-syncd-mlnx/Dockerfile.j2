@@ -64,7 +64,6 @@ RUN apt-get purge -y         \
         python3-pip
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
 

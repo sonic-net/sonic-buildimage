@@ -26,7 +26,6 @@ RUN apt-get update        \
 COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["restore_nat_entries.py", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE
