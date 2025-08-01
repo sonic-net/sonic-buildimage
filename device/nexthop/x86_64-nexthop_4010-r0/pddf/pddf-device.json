@@ -167,10 +167,9 @@
   "MULTIFPGAPCIESYSTEM0": {
     "dev_info": {
       "device_type": "MULTIFPGAPCIESYSTEM",
-      "device_name": "MULTIFPGAPCIESYSTEM0",
-      "device_parent": null
+      "device_name": "MULTIFPGAPCIESYSTEM0"
     },
-    "i2c": {
+    "dev_attr": {
       "PCI_DEVICE_IDS": [
         {
           "vendor": "0x10ee",
