@@ -32,6 +32,9 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 
+#define __STDC_WANT_LIB_EXT1__ 1
+#include <linux/string.h>
+
 #define MAX_FAN_DUTY_CYCLE 100
 
 /* Addresses scanned
@@ -43,7 +46,9 @@ enum chips {
 	YM2401,
 	YM2851,
 	YM1401A,
-	YPEB1200AM
+	YPEB1200AM,
+	UMEC_UPD150SA,
+	UMEC_UP1K21R
 };
 
 /* Each client has this additional data
@@ -62,7 +67,7 @@ struct ym2651y_data {
     u16  i_out;          /* Register value */
     u16  p_out;          /* Register value */
     u8   vout_mode;      /* Register value */
-    u16  temp;           /* Register value */
+    u16  temp_input[3];  /* Register value */
     u16  fan_speed;      /* Register value */
     u16  fan_duty_cycle[2];  /* Register value */
     u8   fan_dir[4];     /* Register value */
@@ -112,6 +117,8 @@ enum ym2651y_sysfs_attributes {
     PSU_P_OUT,
     PSU_P_OUT_UV,     /*In Unit of microVolt, instead of mini.*/
     PSU_TEMP1_INPUT,
+    PSU_TEMP2_INPUT,
+    PSU_TEMP3_INPUT,
     PSU_FAN1_SPEED,
     PSU_FAN1_DUTY_CYCLE,
     PSU_PMBUS_REVISION,
@@ -141,6 +148,8 @@ static SENSOR_DEVICE_ATTR(psu_v_out,       S_IRUGO, show_vout,    NULL, PSU_V_OU
 static SENSOR_DEVICE_ATTR(psu_i_out,       S_IRUGO, show_linear,    NULL, PSU_I_OUT);
 static SENSOR_DEVICE_ATTR(psu_p_out,       S_IRUGO, show_linear,    NULL, PSU_P_OUT);
 static SENSOR_DEVICE_ATTR(psu_temp1_input, S_IRUGO, show_linear,    NULL, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(psu_temp2_input, S_IRUGO, show_linear,    NULL, PSU_TEMP2_INPUT);
+static SENSOR_DEVICE_ATTR(psu_temp3_input, S_IRUGO, show_linear,    NULL, PSU_TEMP3_INPUT);
 static SENSOR_DEVICE_ATTR(psu_fan1_speed_rpm, S_IRUGO, show_linear, NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(psu_fan1_duty_cycle_percentage, S_IWUSR | S_IRUGO, show_linear, set_fan_duty_cycle, PSU_FAN1_DUTY_CYCLE);
 static SENSOR_DEVICE_ATTR(psu_fan_dir,     S_IRUGO, show_ascii,     NULL, PSU_FAN_DIRECTION);
@@ -164,8 +173,12 @@ static SENSOR_DEVICE_ATTR(in3_input, S_IRUGO, show_vout,    NULL, PSU_V_OUT);
 static SENSOR_DEVICE_ATTR(curr2_input, S_IRUGO, show_linear,    NULL, PSU_I_OUT);
 static SENSOR_DEVICE_ATTR(power2_input, S_IRUGO, show_linear,    NULL, PSU_P_OUT_UV);
 static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, show_linear,    NULL, PSU_TEMP1_INPUT);
+static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, show_linear,    NULL, PSU_TEMP2_INPUT);
+static SENSOR_DEVICE_ATTR(temp3_input, S_IRUGO, show_linear,    NULL, PSU_TEMP3_INPUT);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, show_linear, NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(temp1_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
+static SENSOR_DEVICE_ATTR(temp2_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
+static SENSOR_DEVICE_ATTR(temp3_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
 
 static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_power_on.dev_attr.attr,
@@ -177,6 +190,8 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_i_out.dev_attr.attr,
     &sensor_dev_attr_psu_p_out.dev_attr.attr,
     &sensor_dev_attr_psu_temp1_input.dev_attr.attr,
+    &sensor_dev_attr_psu_temp2_input.dev_attr.attr,
+    &sensor_dev_attr_psu_temp3_input.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_speed_rpm.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_duty_cycle_percentage.dev_attr.attr,
     &sensor_dev_attr_psu_fan_dir.dev_attr.attr,
@@ -199,8 +214,12 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_in3_input.dev_attr.attr,
     &sensor_dev_attr_power2_input.dev_attr.attr,
     &sensor_dev_attr_temp1_input.dev_attr.attr,
+    &sensor_dev_attr_temp2_input.dev_attr.attr,
+    &sensor_dev_attr_temp3_input.dev_attr.attr,
     &sensor_dev_attr_fan1_input.dev_attr.attr,
     &sensor_dev_attr_temp1_fault.dev_attr.attr,
+    &sensor_dev_attr_temp2_fault.dev_attr.attr,
+    &sensor_dev_attr_temp3_fault.dev_attr.attr,
     NULL
 };
 
@@ -293,7 +312,9 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
         value = data->p_out;
         break;
     case PSU_TEMP1_INPUT:
-        value = data->temp;
+    case PSU_TEMP2_INPUT:
+    case PSU_TEMP3_INPUT:
+        value = data->temp_input[attr->index - PSU_TEMP1_INPUT];
         break;
     case PSU_FAN1_SPEED:
         value = data->fan_speed;
@@ -496,7 +517,6 @@ static void ym2651y_remove(struct i2c_client *client)
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &ym2651y_group);
     kfree(data);
-
 }
 
 static const struct i2c_device_id ym2651y_id[] = {
@@ -505,6 +525,8 @@ static const struct i2c_device_id ym2651y_id[] = {
     { "ym2851", YM2851 },
     { "ym1401a",YM1401A},
     { "ype1200am", YPEB1200AM },
+    { "umec_upd150sa", UMEC_UPD150SA },
+    { "umec_up1k21r", UMEC_UP1K21R },
     {}
 };
 MODULE_DEVICE_TABLE(i2c, ym2651y_id);
@@ -585,7 +607,9 @@ static struct ym2651y_data *ym2651y_update_device(struct device *dev)
             {0x8b, &data->v_out},
             {0x8c, &data->i_out},
             {0x96, &data->p_out},
-            {0x8d, &data->temp},
+            {0x8d, &(data->temp_input[0])},
+            {0x8e, &(data->temp_input[1])},
+            {0x8f, &(data->temp_input[2])},
             {0x3b, &(data->fan_duty_cycle[0])},
             {0x3c, &(data->fan_duty_cycle[1])},
             {0x90, &data->fan_speed},
@@ -619,10 +643,18 @@ static struct ym2651y_data *ym2651y_update_device(struct device *dev)
 
         /* Read word data */
         for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
+            /* To prevent hardware errors,
+               access to temp2_input and temp3_input should be skipped
+               if the chip ID is not in the following list. */
+            if (regs_word[i].reg == 0x8e || regs_word[i].reg == 0x8f) {
+                if (data->chip != UMEC_UPD150SA &&
+                    data->chip != UMEC_UP1K21R) {
+                    continue;
+                }
+            }
             status = ym2651y_read_word(client, regs_word[i].reg);
 
-            if (status < 0)
-            {
+            if (status < 0) {
                 dev_dbg(&client->dev, "reg %d, err %d\n",
                         regs_word[i].reg, status);
                 *(regs_word[i].value) = 0;
@@ -642,7 +674,11 @@ static struct ym2651y_data *ym2651y_update_device(struct device *dev)
             goto exit;
         }
 
+        #ifdef __STDC_LIB_EXT1__
+        strncpy_s(data->fan_dir, sizeof(data->fan_dir), fan_dir + 1, ARRAY_SIZE(data->fan_dir) - 1);
+        else
         strncpy(data->fan_dir, fan_dir+1, ARRAY_SIZE(data->fan_dir)-1);
+        #endif
         data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
 
         /* Read mfr_id */
@@ -666,7 +702,7 @@ static struct ym2651y_data *ym2651y_update_device(struct device *dev)
         status = ym2651y_read_block(client, command, data->mfr_model, buf+1);
 
         if ((buf+1) >= (ARRAY_SIZE(data->mfr_model)-1))
-        {            
+        {
             data->mfr_model[ARRAY_SIZE(data->mfr_model)-1] = '\0';
         }
         else
@@ -739,5 +775,3 @@ module_i2c_driver(ym2651y_driver);
 MODULE_AUTHOR("Brandon Chuang <brandon_chuang@accton.com.tw>");
 MODULE_DESCRIPTION("3Y Power YM-2651Y driver");
 MODULE_LICENSE("GPL");
-
-
