@@ -167,7 +167,8 @@
   "MULTIFPGAPCIESYSTEM0": {
     "dev_info": {
       "device_type": "MULTIFPGAPCIESYSTEM",
-      "device_name": "MULTIFPGAPCIESYSTEM0"
+      "device_name": "MULTIFPGAPCIESYSTEM0",
+      "device_parent": null
     },
     "dev_attr": {
       "PCI_DEVICE_IDS": [
