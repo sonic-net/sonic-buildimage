@@ -825,19 +825,6 @@ class PddfApi():
                         val.extend(ret)
         return val
 
-    def multifpgapcisystem_parse(self, dev, ops):
-        val = []
-        for d in dev['i2c']['DEVICES']:
-            ret = self.dev_parse(self.data[d['dev']], ops)
-            if ret:
-                if str(ret[0]).isdigit():
-                    if ret[0] != 0:
-                        # in case if 'create' functions
-                        return ret
-                else:
-                    val.extend(ret)
-        return val
-
     def multifpgapci_parse(self, dev, ops):
         val = []
         ret = getattr(self, ops['cmd']+"_multifpgapci_device")(dev, ops)
@@ -907,9 +894,6 @@ class PddfApi():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
-
-        if attr['device_type'] == 'MULTIFPGAPCIESYSTEM':
-            return self.multifpgapcisystem_parse(dev, ops)
 
         if attr['device_type'] == 'MULTIFPGAPCIE':
             return self.multifpgapci_parse(dev, ops)
