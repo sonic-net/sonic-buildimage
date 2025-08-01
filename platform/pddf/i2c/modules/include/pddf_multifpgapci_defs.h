@@ -51,7 +51,6 @@ struct pddf_multi_fpgapci_ops_t {
 
 extern struct pddf_multi_fpgapci_ops_t pddf_multi_fpgapci_ops;
 
-struct pci_dev *multifpgapci_get_pci_dev(const char *bdf);
 extern int (*ptr_multifpgapci_readpci)(struct pci_dev *, uint32_t, uint32_t *);
 extern int (*ptr_multifpgapci_writepci)(struct pci_dev *, uint32_t, uint32_t);
 
