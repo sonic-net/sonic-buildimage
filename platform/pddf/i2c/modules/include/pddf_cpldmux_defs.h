@@ -42,7 +42,6 @@ typedef struct CPLDMUX_DATA
     int chan_cache;
     uint32_t cpld_addr;
     char cpld_name[32];
-    char bdf[32]; // identifies the FPGA when dev_type is multifpgapci_mux
     PDDF_CPLDMUX_CHAN_DATA chan_data[MAX_CPLDMUX_CHAN];
 }PDDF_CPLDMUX_DATA;
 
@@ -61,7 +60,7 @@ typedef struct CPLDMUX_PDATA
     PDDF_CPLDMUX_DEV_TYPE dev_type;
     struct i2c_client *cpld;
     struct pci_dev
-        *fpga_pci_dev; // identifies the FPGA when dev_type is multifpgapci_mux
+        *fpga_pci_dev; // identifies the FPGA when dev_type is MULTIFPGAPCI_MUX
     PDDF_CPLDMUX_CHAN_DATA *chan_data;
 }PDDF_CPLDMUX_PDATA;
 

@@ -28,11 +28,11 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dmi.h>
+#include <linux/pci.h>
 #include <linux/platform_device.h>
 #include <linux/kobject.h>
 #include "pddf_client_defs.h"
 #include "pddf_cpldmux_defs.h"
-#include "pddf_multifpgapci_defs.h"
 
 PDDF_CPLDMUX_DATA pddf_cpldmux_data={0};
 PDDF_CPLDMUX_CHAN_DATA pddf_cpldmux_chan_data={0};
@@ -52,7 +52,6 @@ PDDF_DATA_ATTR(base_chan, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF
 PDDF_DATA_ATTR(num_chan, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&pddf_cpldmux_data.num_chan, NULL);
 PDDF_DATA_ATTR(chan_cache, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&pddf_cpldmux_data.chan_cache, NULL);
 PDDF_DATA_ATTR(cpld_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&pddf_cpldmux_data.cpld_name, NULL);
-PDDF_DATA_ATTR(bdf, S_IWUSR | S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void *)&pddf_cpldmux_data.bdf, NULL);
 PDDF_DATA_ATTR(chan, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&pddf_cpldmux_chan_data.chan_num, NULL);
 PDDF_DATA_ATTR(dev, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 128, (void*)&pddf_cpldmux_chan_data.chan_device, NULL);
 PDDF_DATA_ATTR(cpld_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_HEX, sizeof(int), (void*)&pddf_cpldmux_chan_data.cpld_devaddr, NULL);
@@ -67,7 +66,6 @@ static struct attribute *cpldmux_attributes[] = {
     &attr_num_chan.dev_attr.attr,
     &attr_chan_cache.dev_attr.attr,
     &attr_cpld_name.dev_attr.attr,
-    &attr_bdf.dev_attr.attr,
     &attr_chan.dev_attr.attr,
     &attr_dev.dev_attr.attr,
     &attr_cpld_devaddr.dev_attr.attr,
@@ -106,7 +104,8 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     PDDF_CPLDMUX_DATA *cpldmux_data = (PDDF_CPLDMUX_DATA *)(ptr->addr);
     PDDF_CPLDMUX_PDATA *cpldmux_platform_data = NULL;
     struct platform_device *plat_dev = NULL;
-	struct i2c_client *client_ptr = NULL;
+    struct i2c_client *client_ptr = NULL;
+    struct pci_dev *pci_dev = NULL;
     int ret=0, i=0;
 
 	if (strncmp(buf, "add", strlen(buf)-1)==0)
@@ -166,14 +165,17 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 		} else if (strncmp(device_ptr->dev_type, "multifpgapci_mux",
 				   strlen("multifpgapci_mux")) == 0) {
 			cpldmux_platform_data->dev_type = MULTIFPGAPCI_MUX;
-			cpldmux_platform_data->fpga_pci_dev =
-				pci_dev_get(multifpgapci_get_pci_dev(cpldmux_data->bdf));
-			if (!cpldmux_platform_data->fpga_pci_dev) {
-				pddf_dbg(MULTIFPGA,
-					KERN_ERR "No matching fpga pci_dev\n",
-					__FUNCTION__);
+			pci_dev = (struct pci_dev *)get_device_table(
+				cpldmux_data->cpld_name
+			);
+			if (pci_dev == NULL) {
+				printk(KERN_ERR
+				       "PDDF_XCVR: Unable to get pci_dev of %s for %s\n",
+				       cpldmux_data->cpld_name,
+				       device_ptr->i2c_name);
 				goto free_data;
 			}
+			cpldmux_platform_data->fpga_pci_dev = pci_dev_get(pci_dev);
 		} else {
 			printk(KERN_ERR
 			       "%s: Unsupported type of cpldmux - unable to add i2c client\n",
@@ -207,9 +209,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 		{
 			pddf_dbg(CPLDMUX, KERN_ERR "Removing %s device: 0x%p\n", device_ptr->i2c_name, (void *)plat_dev);
 			pddf_dbg(CPLDMUX, KERN_ERR "Freeing the memory held by device: 0x%p\n", (void *)plat_dev);
-			pci_dev_put(((PDDF_CPLDMUX_PDATA *)
-					     plat_dev->dev.platform_data)
-					    ->fpga_pci_dev);
+			pci_dev_put(((PDDF_CPLDMUX_PDATA *)plat_dev->dev.platform_data)->fpga_pci_dev);
 			platform_device_del(plat_dev);
 			delete_device_table(device_ptr->i2c_name);
 		}

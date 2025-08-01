@@ -86,8 +86,6 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
     PDDF_CPLDMUX_PDATA *pdata = NULL;
     PDDF_CPLDMUX_CHAN_DATA *sdata = NULL;
     int ret = 0;
-    int original_val = 0;
-    int new_val = 0;
 
     /* Select the chan_data based upon the chan */
     pdata = &private->data;
@@ -139,8 +137,6 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
     PDDF_CPLDMUX_PDATA *pdata = NULL;
     PDDF_CPLDMUX_CHAN_DATA *sdata = NULL;
     int ret = 0;
-    int original_val = 0;
-    int new_val = 0;
 
     /* Select the chan_data based upon the chan */
     pdata = &private->data;
