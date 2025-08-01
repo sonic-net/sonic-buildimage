@@ -67,6 +67,8 @@ extern ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, 
 extern ssize_t show_pddf_s3ip_data(struct device *dev, struct device_attribute *da, char *buf);
 extern ssize_t store_pddf_s3ip_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
+extern void* get_device_table(char *name);
+
 static LED_STATUS find_state_index(const char* state_str) {
     int index;
     char *ptr = (char *)state_str;
@@ -169,6 +171,42 @@ static void print_led_data(LED_OPS_DATA *ptr, LED_STATUS state)
     }
 }
 
+int led_multifpgapci_read(LED_OPS_DATA *ops_ptr, uint32_t *output) {
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL) {
+        printk(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
+        return -1;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(ops_ptr->attr_devname);
+    if (pci_dev == NULL) {
+      printk(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
+             ops_ptr->attr_devname, ops_ptr->device_name);
+      return -1;
+    }
+    return ptr_multifpgapci_readpci(
+        pci_dev, ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset, output);
+}
+
+int led_multifpgapci_write(LED_OPS_DATA *ops_ptr, uint32_t val) {
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
+        printk(KERN_ERR "PDDF_LED: pddf_multifpgapci_module is not loaded");
+        return -1;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(ops_ptr->attr_devname);
+    if (pci_dev == NULL) {
+      printk(KERN_ERR "PDDF_LED: Unable to get pci_dev of %s for %s\n",
+             ops_ptr->attr_devname, ops_ptr->device_name);
+      return -1;
+    }
+    return ptr_multifpgapci_writepci(
+        pci_dev, val, ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset);
+}
+
 ssize_t get_status_led(struct device_attribute *da)
 {
     int ret=0;
@@ -207,19 +245,7 @@ ssize_t get_status_led(struct device_attribute *da)
             return sys_val;
         }
     } else if (strcmp(ops_ptr->attr_devtype, "multifpgapci") == 0) {
-        if (ptr_multifpgapci_readpci == NULL) {
-            pddf_dbg(
-                LED,
-                KERN_ERR
-                "PDDF_LED ERROR %s: MULTIFPGAPCIE read/write failed because pddf_multifpgapci_module is not loaded",
-                __func__);
-            return (-1);
-        }
-
-        ret = ptr_multifpgapci_readpci(
-            ops_ptr->fpga_pci_dev,
-            ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset,
-            &sys_val);
+        ret = led_multifpgapci_read(ops_ptr, &sys_val);
         if (ret)
             goto ret;
     } else {
@@ -297,19 +323,7 @@ ssize_t set_status_led(struct device_attribute *da)
             if (sys_val < 0)
                 return sys_val;
         } else if (strcmp(ops_ptr->attr_devtype, "multifpgapci") == 0) {
-            if (ptr_multifpgapci_readpci == NULL) {
-                pddf_dbg(
-                    LED,
-                    KERN_ERR
-                    "PDDF_LED ERROR %s: MULTIFPGAPCIE read/write failed because pddf_multifpgapci_module is not loaded",
-                    __func__);
-                goto ret;
-            }
-
-            ret = ptr_multifpgapci_readpci(
-                ops_ptr->fpga_pci_dev,
-                ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset,
-                &sys_val);
+            ret = led_multifpgapci_read(ops_ptr, &sys_val);
             if (ret)
                 goto ret;
         } else {
@@ -334,27 +348,10 @@ ssize_t set_status_led(struct device_attribute *da)
         ret = board_i2c_fpga_write(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset, (uint8_t)new_val);
         read_val = board_i2c_fpga_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
     } else if (strcmp(ops_ptr->attr_devtype, "multifpgapci") == 0) {
-        if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
-            pddf_dbg(
-                LED,
-                KERN_ERR
-                "PDDF_LED ERROR %s: MULTIFPGAPCIE read/write failed because pddf_multifpgapci_module is not loaded",
-                __func__);
-            ret = -1;
-            goto ret;
-        }
-
-        ret = ptr_multifpgapci_writepci(
-            ops_ptr->fpga_pci_dev,
-            new_val,
-            ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset);
+        ret = led_multifpgapci_write(ops_ptr, new_val);
         if (ret)
           goto ret;
-
-        ret = ptr_multifpgapci_readpci(
-            ops_ptr->fpga_pci_dev,
-            ops_ptr->swpld_addr + ops_ptr->swpld_addr_offset,
-            &read_val);
+        ret = led_multifpgapci_read(ops_ptr, &read_val);
         if (ret)
           goto ret;
     } else {
@@ -613,21 +610,10 @@ static int load_led_ops_data(struct device_attribute *da, LED_STATUS state)
     memcpy(ops_ptr->data[state].attr_devname, ptr->attr_devname, sizeof(ops_ptr->data[state].attr_devname));
     memcpy(ops_ptr->attr_devtype, ptr->attr_devtype, sizeof(ops_ptr->attr_devtype));
     memcpy(ops_ptr->attr_devname, ptr->attr_devname, sizeof(ops_ptr->attr_devname));
-    memcpy(ops_ptr->bdf, ptr->bdf, sizeof(ops_ptr->bdf));
 #ifdef __STDC_LIB_EXT1__
     memset_s(ops_ptr->data[state].reg_values, sizeof(ops_ptr->data[state].reg_values), 0xff, sizeof(ops_ptr->data[state].reg_values));
 #else
     memset(ops_ptr->data[state].reg_values, 0xff, sizeof(ops_ptr->data[state].reg_values));
-    if (strcmp(ptr->attr_devtype, "multifpgapci") == 0) {
-       ops_ptr->fpga_pci_dev = pci_dev_get(multifpgapci_get_pci_dev(ptr->bdf));
-       if (!ops_ptr->fpga_pci_dev) {
-          pddf_dbg(LED,
-              KERN_ERR
-             "PDDF_LED ERROR %s cannot find FPGA with bdf: %s\n",
-             __func__, ptr->bdf);
-          return(-1);
-       }
-    }
 #endif
     value_ptr = kzalloc(sizeof(ops_ptr->data[state].value), GFP_KERNEL);
     if (value_ptr) {
@@ -794,8 +780,6 @@ PDDF_LED_DATA_ATTR(dev, attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data,
             store_pddf_data, PDDF_CHAR, NAME_SIZE, (void*)&temp_data.attr_devtype);
 PDDF_LED_DATA_ATTR(dev, attr_devname, S_IWUSR|S_IRUGO, show_pddf_data,
             store_pddf_data, PDDF_CHAR, NAME_SIZE, (void*)&temp_data.attr_devname);
-PDDF_LED_DATA_ATTR(dev, attr_bdf, S_IWUSR|S_IRUGO, show_pddf_data,
-            store_pddf_data, PDDF_CHAR, NAME_SIZE, (void*)&temp_data.bdf);
 PDDF_LED_DATA_ATTR(dev, index, S_IWUSR|S_IRUGO, show_pddf_data,
             store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&temp_data.index);
 PDDF_LED_DATA_ATTR(dev, swpld_addr, S_IWUSR|S_IRUGO, show_pddf_data,
@@ -809,7 +793,6 @@ struct attribute* attrs_dev[] = {
     &pddf_dev_dev_attr_device_name.dev_attr.attr,
     &pddf_dev_dev_attr_attr_devtype.dev_attr.attr,
     &pddf_dev_dev_attr_attr_devname.dev_attr.attr,
-    &pddf_dev_dev_attr_attr_bdf.dev_attr.attr,
     &pddf_dev_dev_attr_index.dev_attr.attr,
     &pddf_dev_dev_attr_swpld_addr.dev_attr.attr,
     &pddf_dev_dev_attr_swpld_addr_offset.dev_attr.attr,
@@ -950,35 +933,8 @@ static int __init led_init(void) {
     return (0);
 }
 
-void led_ops_put(LED_OPS_DATA *data) {
-    if (strcmp(data->attr_devtype, "multifpgapci") == 0 ) {
-        pci_dev_put(data->fpga_pci_dev);
-    }
-}
-
-void free_dev_list(void) {
-    int i;
-
-    led_ops_put(&sys_led_ops_data[0]);
-
-    for (i = 0; i < MAX_PSU_NUM; i++)
-        led_ops_put(&psu_led_ops_data[i]);
-
-    led_ops_put(&diag_led_ops_data[0]);
-    led_ops_put(&fan_led_ops_data[0]);
-    led_ops_put(&loc_led_ops_data[0]);
-    led_ops_put(&bmc_led_ops_data[0]);
-
-    for (i = 0; i < MAX_FANTRAY_NUM; i++)
-        led_ops_put(&fantray_led_ops_data[i]);
-
-    for (i = 0; i < MAX_PORT_NUM; i++)
-        led_ops_put(&port_led_ops_data[i]);
-}
-
 static void __exit led_exit(void) {
     pddf_dbg(LED, "PDDF GENERIC LED MODULE exit..\n");
-    free_dev_list();
     free_kobjs();
 }
 
