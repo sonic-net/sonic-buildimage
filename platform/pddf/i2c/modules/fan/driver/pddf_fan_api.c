@@ -554,6 +554,7 @@ int fan_multifpgapci_read(FAN_DATA_ATTR *udata, int *output)
 {
     int status = 0;
     uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL) {
         printk(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
@@ -561,8 +562,14 @@ int fan_multifpgapci_read(FAN_DATA_ATTR *udata, int *output)
         goto ret;
     }
 
+    pci_dev = (struct pci_dev *)get_device_table(udata->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n", udata->devname, udata->aname);
+        status = -1;
+        goto ret;
+    }
     offset = udata->devaddr + udata->offset;
-    status = ptr_multifpgapci_readpci(udata->fpga_pci_dev, offset, output);
+    status = ptr_multifpgapci_readpci(pci_dev, offset, output);
 
 ret:
     if (status)
@@ -577,20 +584,26 @@ int fan_multifpgapci_write(FAN_DATA_ATTR *udata, uint32_t val)
     uint32_t curr_val = 0;
     uint32_t masked_val = 0;
     uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
         printk(KERN_ERR "PDDF_FAN: pddf_multifpgapci_module is not loaded");
         return -1;
     }
 
+    pci_dev = (struct pci_dev *)get_device_table(udata->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_FAN: Unable to get pci_dev of %s for %s\n", udata->devname, udata->aname);
+        status = -1;
+        goto ret;
+    }
     offset = udata->devaddr + udata->offset;
-    status = ptr_multifpgapci_readpci(udata->fpga_pci_dev, offset, &curr_val);
+    status = ptr_multifpgapci_readpci(pci_dev, offset, &curr_val);
     if (status)
         goto ret;
     masked_val =  curr_val & ~udata->mask;
 
-    status = ptr_multifpgapci_writepci(
-        udata->fpga_pci_dev, val | masked_val, offset);
+    status = ptr_multifpgapci_writepci(pci_dev, val | masked_val, offset);
 
 ret:
     if (status)

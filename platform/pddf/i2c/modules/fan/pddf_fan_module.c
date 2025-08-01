@@ -16,7 +16,6 @@
  * A pddf kernel module to create I2C client for FAN controller 
  */
 
-#include "pddf_multifpgapci_defs.h"
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
@@ -48,7 +47,6 @@ FAN_DATA fan_data = {0};
 PDDF_DATA_ATTR(num_fantrays, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&fan_data.num_fantrays, NULL);
 
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&fan_data.fan_attr.aname, NULL);
-PDDF_DATA_ATTR(attr_bdf, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&fan_data.fan_attr.bdf, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&fan_data.fan_attr.devtype, NULL);
 PDDF_DATA_ATTR(attr_devname, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&fan_data.fan_attr.devname, NULL);
 PDDF_DATA_ATTR(attr_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&fan_data.fan_attr.devaddr, NULL);
@@ -66,7 +64,6 @@ PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*
 static struct attribute *fan_attributes[] = {
     &attr_num_fantrays.dev_attr.attr,
     &attr_attr_name.dev_attr.attr,
-    &attr_attr_bdf.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
     &attr_attr_devname.dev_attr.attr,
     &attr_attr_devaddr.dev_attr.attr,
@@ -125,30 +122,7 @@ struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *fdata, NEW_DEV_ATTR *cda
 
         for (i=0;i<num;i++)
         {
-            FAN_DATA_ATTR *pdata = &fan_platform_data->fan_attrs[i];
-            FAN_SYSFS_DATA *sysfs_data = &fdata->fan_attrs[i];
-            strscpy(pdata->aname, sysfs_data->aname, ATTR_NAME_LEN);
-            strscpy(pdata->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
-            strscpy(pdata->devname, sysfs_data->devname, DEV_TYPE_LEN);
-            if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
-                pdata->fpga_pci_dev =
-                    pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));
-                if (!pdata->fpga_pci_dev) {
-                    pddf_dbg(LED,
-                        KERN_ERR
-                       "PDDF_LED ERROR %s cannot find FPGA with bdf: %s\n",
-                       __func__, sysfs_data->bdf);
-                    return NULL;
-                }
-            }
-            pdata->devaddr = sysfs_data->devaddr;
-            pdata->offset = sysfs_data->offset;
-            pdata->mask = sysfs_data->mask;
-            pdata->cmpval = sysfs_data->cmpval;
-            pdata->len = sysfs_data->len;
-            pdata->mult = sysfs_data->mult;
-            pdata->is_divisor = sysfs_data->is_divisor;
-            pdata->access_data = sysfs_data->access_data;
+            fan_platform_data->fan_attrs[i] = fdata->fan_attrs[i];
         }
 
         board_info = (struct i2c_board_info) {
@@ -207,18 +181,6 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         if (client_ptr)
         {
             pddf_dbg(FAN, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-            if (client_ptr->dev.platform_data) {
-                FAN_PDATA *pdata = client_ptr->dev.platform_data;
-                if (pdata) {
-                    int i;
-                    for (i = 0; i < pdata->len; i++)
-                    {
-                        FAN_DATA_ATTR *data = &pdata->fan_attrs[i];
-                        if(strcmp(data->devtype, "multifpgapci") == 0)
-                            pci_dev_put(data->fpga_pci_dev);
-                    }
-                }
-            }
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
         }
