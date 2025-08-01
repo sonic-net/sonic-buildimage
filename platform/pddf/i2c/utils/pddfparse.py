@@ -470,7 +470,7 @@ class PddfParse():
     def create_multifpgapcisystem_device(self, dev, ops):
         create_ret = []
         ret = 0
-        for i in dev['i2c']['PCI_DEVICE_IDS']:
+        for i in dev['dev_attr']['PCI_DEVICE_IDS']:
             cmd = "echo '{} {}' > /sys/kernel/pddf/devices/multifpgapci/register_pci_device_id".format(i['vendor'], i['device'])
             ret = self.runcmd(cmd)
             if ret != 0:
