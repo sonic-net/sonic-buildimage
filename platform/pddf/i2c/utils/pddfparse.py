@@ -490,6 +490,12 @@ class PddfParse():
         if ret != 0:
             return create_ret.append(ret)
 
+        # PDDF client data store
+        cmd = "echo '{}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c_name".format(dev['dev_info']['device_name'], bdf)
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+
         # I2C specific data store
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
@@ -631,7 +637,12 @@ class PddfParse():
         return
 
     def delete_multifpgapci_device(self, dev, ops):
-        return
+        bdf = dev['dev_info']['device_bdf']
+
+        cmd = "echo '{}' > /sys/kernel/pddf/devices/multifpgapci/{}/i2c_name".format(dev['dev_info']['device_name'], bdf)
+        self.runcmd(cmd)
+        cmd = "echo 'fpgapci_deinit' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
+        self.runcmd(cmd)
 
     #################################################################################################################################
     #   SHOW ATTRIBIUTES DEFS

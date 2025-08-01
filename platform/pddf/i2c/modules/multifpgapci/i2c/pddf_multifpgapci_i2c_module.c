@@ -152,34 +152,35 @@ int pddf_multifpgapci_i2c_module_init(struct pci_dev *pci_dev,
 	memset(i2c_privdata->i2c_adapter_registered, 0,
 	       sizeof(i2c_privdata->i2c_adapter_registered));
 
-	i2c_privdata->attrs.attr_virt_bus = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		virt_bus, S_IWUSR | S_IRUGO, show_pddf_data, store_pddf_data,
 		PDDF_UINT32, sizeof(uint32_t),
 		(void *)&i2c_privdata->temp_sysfs_vals.virt_bus, NULL);
-
-	i2c_privdata->attrs.attr_ch_base_offset = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		ch_base_offset, S_IWUSR | S_IRUGO, show_pddf_data,
 		store_pddf_data, PDDF_UINT32, sizeof(uint32_t),
 		(void *)&i2c_privdata->temp_sysfs_vals.ch_base_offset, NULL);
-
-	i2c_privdata->attrs.attr_ch_size = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		ch_size, S_IWUSR | S_IRUGO, show_pddf_data, store_pddf_data,
 		PDDF_UINT32, sizeof(uint32_t),
 		(void *)&i2c_privdata->temp_sysfs_vals.ch_size, NULL);
-
-	i2c_privdata->attrs.attr_num_virt_ch = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		num_virt_ch, S_IWUSR | S_IRUGO, show_pddf_data, store_pddf_data,
 		PDDF_UINT32, sizeof(uint32_t),
 		(void *)&i2c_privdata->temp_sysfs_vals.num_virt_ch, NULL);
-
-	i2c_privdata->attrs.attr_new_i2c_adapter = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		new_i2c_adapter, S_IWUSR | S_IRUGO, show_pddf_data,
 		new_i2c_adapter, PDDF_CHAR, NAME_SIZE, (void *)pci_dev, NULL);
-
-	i2c_privdata->attrs.attr_del_i2c_adapter =
-		PDDF_DATA_ATTR_VAL(del_i2c_adapter, S_IWUSR | S_IRUGO,
-				   show_pddf_data, del_i2c_adapter, PDDF_CHAR,
-				   NAME_SIZE, (void *)i2c_privdata, NULL);
+	PDDF_DATA_ATTR(
+		del_i2c_adapter, S_IWUSR | S_IRUGO, show_pddf_data,
+		del_i2c_adapter, PDDF_CHAR, NAME_SIZE, (void *)i2c_privdata, NULL);
+	
+	i2c_privdata->attrs.attr_virt_bus = attr_virt_bus;
+	i2c_privdata->attrs.attr_ch_base_offset = attr_ch_base_offset;
+	i2c_privdata->attrs.attr_ch_size = attr_ch_size;
+	i2c_privdata->attrs.attr_num_virt_ch = attr_num_virt_ch;
+	i2c_privdata->attrs.attr_new_i2c_adapter = attr_new_i2c_adapter;
+	i2c_privdata->attrs.attr_del_i2c_adapter = attr_del_i2c_adapter;
 
 	// All the attributes are added in above step are put into here to be
 	// put in sysfs group
