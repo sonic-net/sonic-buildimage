@@ -54,12 +54,17 @@
 #include "pddf_multifpgapci_i2c_defs.h"
 
 #define BDF_NAME_SIZE 32
+#define DEVICE_NAME_SIZE 32
 #define DEBUG 0
 #define DRIVER_NAME "pddf_multifpgapci"
 #define MAX_PCI_NUM_BARS 6
 #define KOBJ_FREE(obj) \
 	if (obj)       \
 		kobject_put(obj);
+
+extern void add_device_table(char *name, void *ptr);
+extern void* get_device_table(char *name);
+extern void delete_device_table(char *name);
 
 static bool driver_registered = false;
 struct pci_driver pddf_multifpgapci_driver;
@@ -87,6 +92,7 @@ EXPORT_SYMBOL(pddf_multi_fpgapci_ops);
 
 struct fpga_data_node {
 	char bdf[BDF_NAME_SIZE];
+	char dev_name[DEVICE_NAME_SIZE]; // device_name as defined in pddf-device.json.
 	struct kobject *kobj;
 	struct pci_dev *dev;
 	struct pddf_attrs attrs;
@@ -162,6 +168,11 @@ void free_pci_drvdata(struct pci_dev *pci_dev)
 	pci_set_drvdata(pci_dev, NULL);
 }
 
+void free_sysfs_attr_groups(struct fpga_data_node *node)
+{
+	sysfs_remove_group(node->kobj, &pddf_clients_data_group);
+}
+
 void delete_fpga_data_node(const char *bdf)
 {
 	struct fpga_data_node *node, *tmp;
@@ -173,6 +184,7 @@ void delete_fpga_data_node(const char *bdf)
 			KOBJ_FREE(node->kobj);
 
 			free_pci_drvdata(node->dev);
+			free_sysfs_attr_groups(node);
 
 			list_del(&node->list);
 			kfree(node);
@@ -193,6 +205,7 @@ void delete_all_fpga_data_nodes(void)
 		KOBJ_FREE(node->kobj);
 
 		free_pci_drvdata(node->dev);
+		free_sysfs_attr_groups(node);
 
 		list_del(&node->list);
 		kfree(node);
@@ -219,17 +232,6 @@ struct fpga_data_node *get_fpga_data_node(const char *bdf)
 
 	return found_node;
 }
-
-struct pci_dev *multifpgapci_get_pci_dev(const char *bdf)
-{
-	struct fpga_data_node *node = get_fpga_data_node(bdf);
-
-	if (node)
-		return node->dev;
-
-	return NULL;
-}
-EXPORT_SYMBOL(multifpgapci_get_pci_dev);
 
 void __iomem *get_fpga_ctl_addr_impl(const char *bdf)
 {
@@ -290,9 +292,11 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 
 	fpga_data->dev = dev;
 
-	fpga_data->attrs.attr_dev_ops = PDDF_DATA_ATTR_VAL(
+	PDDF_DATA_ATTR(
 		dev_ops, S_IWUSR | S_IRUGO, NULL, dev_operation,
-		PDDF_CHAR, NAME_SIZE, NULL, NULL);
+		PDDF_CHAR, NAME_SIZE, NULL, (void *)&pddf_data);
+
+	fpga_data->attrs.attr_dev_ops = attr_dev_ops;
 
 	struct attribute *attrs_fpgapci[] = {
 		&fpga_data->attrs.attr_dev_ops.dev_attr.attr,
@@ -316,7 +320,18 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 		return ret;
 	}
 
+	ret = sysfs_create_group(fpga_data->kobj, &pddf_clients_data_group);
+	if (ret) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR "[%s] sysfs_create_group failed: %d\n",
+			 __FUNCTION__, ret);
+		goto free_fpga_attr_group;
+	}
+
 	return 0;
+
+free_fpga_attr_group:
+	sysfs_remove_group(fpga_data->kobj, &attr_group_fpgapci);
 
 free_i2c_kobj:
 	kobject_put(pci_drvdata->i2c_kobj);
@@ -333,6 +348,10 @@ free_fpga_data:
 ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 		      const char *buf, size_t count)
 {
+	PDDF_ATTR *ptr = (PDDF_ATTR *)da;
+	NEW_DEV_ATTR *cdata = (NEW_DEV_ATTR *)(ptr->data);
+	struct pci_dev *pci_dev = NULL;
+
 	if (strncmp(buf, "fpgapci_init", strlen("fpgapci_init")) == 0) {
 		int err = 0;
 		struct pddf_multifpgapci_drvdata *pci_privdata = 0;
@@ -345,8 +364,19 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 				 __FUNCTION__);
 			return -ENODEV;
 		}
+		if (cdata->i2c_name[0] == 0) {
+			pddf_dbg(MULTIFPGA,
+				 KERN_ERR "[%s] no i2c_name specified\n",
+				 __FUNCTION__);
+			return -EINVAL;
+		}
 
-		struct pci_dev *pci_dev = fpga_node->dev;
+		pddf_dbg(MULTIFPGA, KERN_INFO "Initializing %s as %s\n", cdata->i2c_name, bdf);
+		strscpy(fpga_node->dev_name, cdata->i2c_name, sizeof(fpga_node->dev_name));
+
+		// Save pci_dev to hash table for clients to use.
+		pci_dev = fpga_node->dev;
+		add_device_table(fpga_node->dev_name, (void *)pci_dev_get(pci_dev));
 
 		pci_privdata =
 			(struct pddf_multifpgapci_drvdata *)dev_get_drvdata(
@@ -371,6 +401,19 @@ ssize_t dev_operation(struct device *dev, struct device_attribute *da,
 					"[%s] post_device_operation failed with error %d\n",
 					__FUNCTION__, err);
 			}
+		}
+	} else if (strncmp(buf, "fpgapci_deinit", strlen("fpgapci_deinit")) == 0) {
+		if (cdata->i2c_name[0] == 0) {
+			pddf_dbg(MULTIFPGA,
+				 KERN_ERR "[%s] no i2c_name specified\n",
+				 __FUNCTION__);
+			return -EINVAL;
+		}
+
+		pci_dev = (struct pci_dev *)get_device_table(cdata->i2c_name);
+		if (pci_dev) {
+			delete_device_table(cdata->i2c_name);
+			pci_dev_put(pci_dev);
 		}
 	}
 
