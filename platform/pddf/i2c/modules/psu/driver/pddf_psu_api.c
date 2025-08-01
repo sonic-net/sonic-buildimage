@@ -16,7 +16,6 @@
  *  Description of various APIs related to PSU component
  */
 
-#include "pddf_multifpgapci_defs.h"
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/jiffies.h>
@@ -30,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 #include <linux/kobject.h>
+#include "pddf_multifpgapci_defs.h"
 #include "pddf_psu_defs.h"
 #include "pddf_psu_driver.h"
 
@@ -41,6 +41,7 @@
 #define psu_dbg(...)
 #endif
 
+extern void* get_device_table(char *name);
 
 void get_psu_duplicate_sysfs(int idx, char *str)
 {
@@ -299,6 +300,22 @@ exit:
     return count;
 }
 
+int psu_multifpgapci_read(PSU_DATA_ATTR *adata, int *output) {
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL) {
+        printk(KERN_ERR "PDDF_PSU: pddf_multifpgapci_module is not loaded");
+        return -1;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(adata->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_PSU: Unable to get pci_dev of %s for %s\n", adata->devname, adata->aname);
+        return -1;
+    }
+    return ptr_multifpgapci_readpci(pci_dev, adata->offset, output);
+}
+
 int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
     int status = 0;
@@ -314,7 +331,7 @@ int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *dat
     }
     else if (strncmp(adata->devtype, "multifpgapci", strlen("multifpgapci")) == 0)
     {
-        status = ptr_multifpgapci_readpci(adata->fpga_pci_dev, adata->offset, &val);
+        status = psu_multifpgapci_read(adata, &val);
         if (status)
           goto ret;
     }

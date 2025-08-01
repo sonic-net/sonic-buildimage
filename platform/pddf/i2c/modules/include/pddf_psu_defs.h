@@ -26,31 +26,15 @@
 #define ATTR_NAME_LEN 32
 #define STR_ATTR_SIZE 32
 #define DEV_TYPE_LEN 32
-#define BDF_NAME_SIZE 32
 
 /* Each client has this additional data 
  */
 
-typedef struct PSU_SYSFS_DATA
+typedef struct PSU_DATA_ATTR
 {
     char aname[ATTR_NAME_LEN];                    // attr name, taken from enum psu_sysfs_attributes
     char devtype[DEV_TYPE_LEN];       // either a 'eeprom' or 'cpld', or 'pmbus' attribute
     char devname[DEV_TYPE_LEN];       // Name of the device from where this sysfs attr is read
-    char bdf[BDF_NAME_SIZE]; // Specifies the FPGA when devtype == multifpgapci
-    uint32_t devaddr;
-    uint32_t offset;
-    uint32_t mask;
-    uint32_t cmpval;
-    uint32_t len;
-    void *access_data;
-}PSU_SYSFS_DATA;
-
-typedef struct PSU_DATA_ATTR
-{
-    char aname[ATTR_NAME_LEN];
-    char devtype[DEV_TYPE_LEN];
-    char devname[DEV_TYPE_LEN];
-    struct pci_dev *fpga_pci_dev; // Set iff devtype == multifpgapci
     uint32_t devaddr;
     uint32_t offset;
     uint32_t mask;
@@ -86,9 +70,9 @@ typedef struct PSU_DATA
 {
     int idx;    // psu index
     int num_psu_fans;
-    PSU_SYSFS_DATA psu_attr;
+    PSU_DATA_ATTR psu_attr;
     int len;             // no of valid attributes for this psu client
-    PSU_SYSFS_DATA psu_attrs[MAX_PSU_ATTRS]; 
+    PSU_DATA_ATTR psu_attrs[MAX_PSU_ATTRS]; 
 }PSU_DATA;
 
 typedef struct PSU_PDATA

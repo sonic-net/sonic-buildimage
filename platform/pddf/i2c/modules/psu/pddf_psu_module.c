@@ -30,7 +30,6 @@
 #include <linux/dmi.h>
 #include <linux/kobject.h>
 #include "pddf_client_defs.h"
-#include "pddf_multifpgapci_defs.h"
 #include "pddf_psu_defs.h"
 
 
@@ -51,7 +50,6 @@ PDDF_DATA_ATTR(psu_fans, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_
 PDDF_DATA_ATTR(attr_name, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.aname, NULL);
 PDDF_DATA_ATTR(attr_devtype, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devtype, NULL);
 PDDF_DATA_ATTR(attr_devname, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 8, (void*)&psu_data.psu_attr.devname, NULL);
-PDDF_DATA_ATTR(attr_bdf, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_CHAR, 32, (void*)&psu_data.psu_attr.bdf, NULL);
 PDDF_DATA_ATTR(attr_devaddr, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.devaddr, NULL);
 PDDF_DATA_ATTR(attr_offset, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.offset, NULL);
 PDDF_DATA_ATTR(attr_mask, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.mask, NULL);
@@ -69,7 +67,6 @@ static struct attribute *psu_attributes[] = {
     &attr_attr_name.dev_attr.attr,
     &attr_attr_devtype.dev_attr.attr,
     &attr_attr_devname.dev_attr.attr,
-    &attr_attr_bdf.dev_attr.attr,
     &attr_attr_devaddr.dev_attr.attr,
     &attr_attr_offset.dev_attr.attr,
     &attr_attr_mask.dev_attr.attr,
@@ -128,28 +125,7 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
 
         for (i=0;i<num;i++)
         {
-            PSU_DATA_ATTR *data = &psu_platform_data->psu_attrs[i];
-            PSU_SYSFS_DATA *sysfs_data = &pdata->psu_attrs[i];
-            strscpy(data->aname, sysfs_data->aname, ATTR_NAME_LEN);
-            strscpy(data->devtype, sysfs_data->devtype, DEV_TYPE_LEN);
-            strscpy(data->devname, sysfs_data->devname, DEV_TYPE_LEN);
-            if(strcmp(sysfs_data->devtype, "multifpgapci") == 0) {
-                data->fpga_pci_dev =
-                    pci_dev_get(multifpgapci_get_pci_dev(sysfs_data->bdf));
-                if (!data->fpga_pci_dev) {
-                    pddf_dbg(PSU,
-                        KERN_ERR
-                        "PDDF_PSU ERROR %s cannot find FPGA with bdf: %s\n",
-                        __func__, sysfs_data->bdf);
-                    return NULL;
-                }
-            }
-            data->devaddr = sysfs_data->devaddr;
-            data->offset = sysfs_data->offset;
-            data->mask = sysfs_data->mask;
-            data->cmpval = sysfs_data->cmpval;
-            data->len = sysfs_data->len;
-            data->access_data = sysfs_data->access_data;
+            psu_platform_data->psu_attrs[i] = pdata->psu_attrs[i];
         }
 
         board_info = (struct i2c_board_info) {
@@ -209,18 +185,6 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         if (client_ptr)
         {
             pddf_dbg(PSU, KERN_ERR "Removing %s client: 0x%p\n", cdata->i2c_name, (void *)client_ptr);
-            if (client_ptr->dev.platform_data) {
-                PSU_PDATA *pdata = client_ptr->dev.platform_data;
-                if (pdata) {
-                    int i;
-                    for (i = 0; i < pdata->len; i++)
-                    {
-                        PSU_DATA_ATTR *data = &pdata->psu_attrs[i];
-                        if(strcmp(data->devtype, "multifpgapci") == 0)
-                            pci_dev_put(data->fpga_pci_dev);
-                    }
-                }
-            }
             i2c_unregister_device(client_ptr);
             delete_device_table(cdata->i2c_name);
         }
