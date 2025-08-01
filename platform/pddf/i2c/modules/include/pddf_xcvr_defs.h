@@ -23,29 +23,12 @@
 
 #define MAX_NUM_XCVR 5
 #define MAX_XCVR_ATTRS 20
-#define ATTR_NAME_LEN 32
-#define DEV_TYPE_LEN 32
-#define BDF_NAME_SIZE 32
-
-
-typedef struct XCVR_SYSFS_DATA
-{
-    char aname[ATTR_NAME_LEN]; // attr name, taken from enum xcvr_sysfs_attributes
-    char devtype[DEV_TYPE_LEN]; // either a 'eeprom' or 'cpld', or 'pmbus' attribute
-    char devname[DEV_TYPE_LEN]; // name of the device from where this sysfs is to be read
-    char bdf[BDF_NAME_SIZE]; // bus/domain/function of the pci device (if applicable)
-    uint32_t devaddr;
-    uint32_t offset;
-    uint32_t mask;
-    uint32_t cmpval;
-    uint32_t len;
-}XCVR_SYSFS_DATA;
 
 typedef struct XCVR_ATTR
 {
-    char aname[ATTR_NAME_LEN];
-    char devtype[DEV_TYPE_LEN];
-    char devname[DEV_TYPE_LEN];
+    char aname[32];                    // attr name, taken from enum xcvr_sysfs_attributes
+    char devtype[32];       // either a 'eeprom' or 'cpld', or 'pmbus' attribute
+    char devname[32];       // name of the device from where this sysfs is to be read
     struct pci_dev *fpga_pci_dev;
     uint32_t devaddr;
     uint32_t offset;
@@ -63,9 +46,9 @@ typedef struct XCVR_ATTR
 typedef struct XCVR_DATA
 {
     int idx;                    // xcvr index
-    XCVR_SYSFS_DATA xcvr_attr;
+    XCVR_ATTR xcvr_attr;
     int len;             // no of valid attributes for this xcvr client
-    XCVR_SYSFS_DATA xcvr_attrs[MAX_XCVR_ATTRS];
+    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS];
 }XCVR_DATA;
 
 typedef struct XCVR_PDATA

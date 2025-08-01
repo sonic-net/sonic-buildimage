@@ -298,6 +298,7 @@ int xcvr_multifpgapci_read(XCVR_ATTR *info, int *output)
 {
     int status = 0;
     uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL) {
         printk(KERN_ERR "PDDF_XCVR: Doesn't support MULTIFPGAPCI read yet");
@@ -305,8 +306,15 @@ int xcvr_multifpgapci_read(XCVR_ATTR *info, int *output)
         goto ret;
     }
 
+    pci_dev = (struct pci_dev *)get_device_table(info->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        status = -1;
+        goto ret;
+    }
+
     offset = info->devaddr + info->offset;
-    status = ptr_multifpgapci_readpci(info->fpga_pci_dev, offset, output);
+    status = ptr_multifpgapci_readpci(pci_dev, offset, output);
 
 ret:
     if (status)
@@ -320,6 +328,7 @@ int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
     int status = 0;
     uint32_t reg, val_mask = 0, dnd_value = 0, reg_val;
     uint32_t offset = 0;
+    struct pci_dev *pci_dev = NULL;
 
     if (ptr_multifpgapci_readpci == NULL || ptr_multifpgapci_writepci == NULL) {
         printk(KERN_ERR
@@ -327,9 +336,16 @@ int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
         return (-1);
     }
 
+    pci_dev = (struct pci_dev *)get_device_table(info->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Unable to get pci_dev of %s for %s\n", info->devname, info->aname);
+        status = -1;
+        goto ret;
+    }
+
     offset = info->devaddr + info->offset;
     val_mask = BIT_INDEX(info->mask);
-    status = ptr_multifpgapci_readpci(info->fpga_pci_dev, offset, &reg_val);
+    status = ptr_multifpgapci_readpci(pci_dev, offset, &reg_val);
     if (status)
       goto ret;
     dnd_value =  reg_val & ~val_mask;
@@ -342,7 +358,7 @@ int xcvr_multifpgapci_write(XCVR_ATTR *info, uint32_t val)
          reg = dnd_value;
     }
 
-    status = ptr_multifpgapci_writepci(info->fpga_pci_dev, reg, offset);
+    status = ptr_multifpgapci_writepci(pci_dev, reg, offset);
     if (status)
       goto ret;
 
