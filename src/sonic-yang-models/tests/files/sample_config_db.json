@@ -1612,7 +1612,8 @@
             "Ethernet9": {
                "action": "drop",
                "detection_time": "100",
-               "restoration_time": "400"
+               "restoration_time": "400",
+               "pfc_stat_history": "enable"
             }
         },
         "PFC_WD": {
