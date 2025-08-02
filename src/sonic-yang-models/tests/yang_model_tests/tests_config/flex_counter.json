@@ -70,6 +70,10 @@
                 "SRV6": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 1000
+                },
+                "SWITCH": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 1000
                 }
             }
         }

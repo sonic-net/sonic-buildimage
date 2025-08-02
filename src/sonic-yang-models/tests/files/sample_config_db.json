@@ -1556,6 +1556,10 @@
             "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "SWITCH": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "60000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {

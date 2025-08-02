@@ -32,7 +32,6 @@ $(DOCKER_FPM_FRR)_RUN_OPT += -t --cap-add=NET_ADMIN --cap-add=SYS_ADMIN
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
-$(DOCKER_FPM_FRR)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += vtysh:/usr/bin/vtysh
 $(DOCKER_FPM_FRR)_BASE_IMAGE_FILES += rvtysh:/usr/bin/rvtysh
