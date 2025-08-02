@@ -7,6 +7,8 @@
 {% endblock banner %}
 !
 {% block fpm %}
+! Force disable next hop group support
+no zebra nexthop kernel enable
 {% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group' in  DEVICE_METADATA['localhost']) and
         (DEVICE_METADATA['localhost']['nexthop_group'] == 'enabled') ) %}
 ! enable next hop group support
