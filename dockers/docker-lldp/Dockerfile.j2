@@ -39,7 +39,6 @@ COPY ["lldpd.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["lldpdSysDescr.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["lldpd", "/etc/default/"]
 COPY ["lldpmgrd", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE

@@ -68,7 +68,6 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN rm -rf /tmp/*
 
 COPY ["supervisord.conf", "/etc/supervisor/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]

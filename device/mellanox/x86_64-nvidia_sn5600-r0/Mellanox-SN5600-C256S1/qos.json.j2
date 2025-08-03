@@ -205,10 +205,10 @@
         else 'ToRRouter'
     ) %}
 
-    {%- if router_type == 'ToRRouter' %}
+    {%- if 'ToRRouter' in router_type %}
         {# ToR Router thresholds - only override if different from defaults #}
         {%- set max_threshold = "282624" %}
-    {%- elif router_type == 'LeafRouter' %}
+    {%- elif 'LeafRouter' in router_type %}
         {# Leaf Router thresholds - only override if different from defaults #}
         {%- set max_threshold = "239616" %}
     {%- endif %}
@@ -399,14 +399,14 @@
 {%- if traffic_config.traffic_classification_enable %}
     "TC_TO_DSCP_MAP": {
         {% if 'type' in DEVICE_METADATA['localhost'] %}
-            {%- if DEVICE_METADATA['localhost']['type'] == 'ToRRouter' -%}
+            {%- if 'ToRRouter' in DEVICE_METADATA['localhost']['type'] -%}
                 "AZURE_DOWNLINK_BT0": {
                     "8": "21"
                 },
                 "AZURE_UPLINK_BT0": {
                     "8": "11"
                 }
-            {%- elif DEVICE_METADATA['localhost']['type'] == 'LeafRouter' -%}
+            {%- elif 'LeafRouter' in DEVICE_METADATA['localhost']['type'] -%}
                 "AZURE_DOWNLINK_BT1": {
                     "8": "11"
                 }
@@ -424,13 +424,13 @@
             "pfc_enable"      : "",
             "pfcwd_sw_enable" : "",
             {% if traffic_config.traffic_classification_enable %}
-                {% if direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                {% if direction == 'downlink' and 'ToRRouter' in DEVICE_METADATA['localhost']['type'] %}
                     "tc_to_pg_map": "AZURE",
                     "tc_to_dscp_map": "AZURE_DOWNLINK_BT0"
-                {% elif direction == 'uplink' and DEVICE_METADATA['localhost']['type'] == 'ToRRouter' %}
+                {% elif direction == 'uplink' and 'ToRRouter' in DEVICE_METADATA['localhost']['type'] %}
                     "tc_to_pg_map": "AZURE",
                     "tc_to_dscp_map": "AZURE_UPLINK_BT0"
-                {% elif direction == 'downlink' and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}
+                {% elif direction == 'downlink' and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] %}
                     "tc_to_pg_map": "AZURE",
                     "tc_to_dscp_map": "AZURE_DOWNLINK_BT1"
                 {% else %}

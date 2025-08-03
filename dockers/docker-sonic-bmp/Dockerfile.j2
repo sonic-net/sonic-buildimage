@@ -34,7 +34,6 @@ RUN mkdir -p /etc/bmp
 
 COPY ["bmp.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 RUN chmod +x /usr/bin/bmp.sh

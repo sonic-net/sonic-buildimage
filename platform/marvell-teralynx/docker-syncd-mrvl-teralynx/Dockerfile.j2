@@ -29,7 +29,6 @@ RUN pip3 install yamlordereddictloader
 COPY ["start.sh", "/usr/bin/"]
 COPY ["ivm_start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 FROM $BASE
