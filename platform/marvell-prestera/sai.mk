@@ -1,6 +1,6 @@
 # Marvell SAI
 
-BRANCH = master
+BRANCH = 202505
 ifeq ($(CONFIGURED_ARCH),arm64)
 MRVL_SAI_VERSION = 1.16.1-2
 else ifeq ($(CONFIGURED_ARCH),armhf)
