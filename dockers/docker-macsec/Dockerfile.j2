@@ -19,7 +19,6 @@ RUN apt-get update
 {%- endif %}
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/wpa_supplicant.conf", "/etc/wpa_supplicant.conf"]
 COPY ["cli", "/cli/"]
