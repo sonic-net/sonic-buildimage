@@ -185,7 +185,7 @@ stages:
         pool:
           type: linux
           isCustom: true
-          name: sonic-arm64
+          name: sonicms1ES-arm64
         variables:
           ob_artifactBaseName: sonic-buildimage.nvidia-bluefield
         steps:
