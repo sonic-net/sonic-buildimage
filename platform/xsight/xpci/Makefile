@@ -2,33 +2,34 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-XPCI_DEB = xpci-modules-$(KVERSION)_$(XPCI_VERSION)_amd64.deb
-XPCI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/SONiC/main/amd64/kernel"
-REPACKED_XPCI_NAME = xpci-$(XPCI_VERSION)_amd64
+XPCI_NAME =  xpci-dkms_$(XPCI_VERSION)_amd64
+MOD_DEB_NAME = xpci-modules-$(KVERSION)
+MOD_DEB = $(MOD_DEB_NAME)_$(XPCI_VERSION)_amd64.deb
 
-XPCI_TMP := $(shell mktemp -u -d -t xpci.XXXXXXXXXX)
+MAIN_TARGET = $(MOD_DEB)
 
-# Need to remove dependencies on linux packages because our Linux image is unsigned
-# Also blaclisting xpci - it will be loaded later by platform start script
-$(addprefix $(DEST)/, $(XPCI_DEB)): $(DEST)/% :
-	rm -rf $(XPCI_DEB)
+DKMS_BMDEB = /var/lib/dkms/xpci/$(XPCI_VERSION)/bmdeb
+DKMS_TMP := $(shell mktemp -u -d -t dkms.XXXXXXXXXX)
 
-	wget $(XPCI_URL_PREFIX)/$(XPCI_DEB)
+$(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
-	# w/a: remove dependencies
-	mkdir -p $(XPCI_TMP)/DEBIAN
+	mkdir -p $(DKMS_TMP)/DEBIAN
+	mkdir -p $(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms
 
-	dpkg -e $(XPCI_DEB) $(XPCI_TMP)/DEBIAN
-	dpkg -x $(XPCI_DEB) $(XPCI_TMP)
+	export kversion="$(KVERSION)"
+	export xpci_version="$(XPCI_VERSION)"
+	export mod_deb_name="$(MOD_DEB_NAME)"
+	j2 templates/control.j2 > $(DKMS_TMP)/DEBIAN/control
+	j2 templates/postinst.j2 > $(DKMS_TMP)/DEBIAN/postinst
+	chmod +x $(DKMS_TMP)/DEBIAN/postinst
 
-	sed -i '/^Depends:/c\Depends:' $(XPCI_TMP)/DEBIAN/control
-	echo "echo 'blacklist xpci' >> /etc/modprobe.d/xpci.conf" >> $(XPCI_TMP)/DEBIAN/postinst
+	cp /lib/modules/$(KVERSION)/updates/dkms/xpci.ko $(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms
 
-	mkdir -p $(REPACKED_XPCI_NAME)/DEBS
-	pushd $(REPACKED_XPCI_NAME)/DEBS
-	dpkg -b $(XPCI_TMP) .
+	mkdir -p $(XPCI_NAME)/DEBS
+	pushd $(XPCI_NAME)/DEBS
+	dpkg -b $(DKMS_TMP) .
 	popd
 
-	rm -rf $(XPCI_TMP)
+	rm -rf $(DKMS_TMP)
 
-	cp $(REPACKED_XPCI_NAME)/DEBS/*.deb $(DEST)
+	cp $(XPCI_NAME)/DEBS/*.deb $(DEST)
