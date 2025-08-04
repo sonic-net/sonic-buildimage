@@ -1,11 +1,13 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python3_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
 
 # Enable -O for all Python calls
-ENV PYTHONOPTIMIZE 1
+ENV PYTHONOPTIMIZE=1
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,15 +32,6 @@ RUN apt-get update   && \
 {{ install_debian_packages(docker_snmp_debs.split(' ')) }}
 {%- endif %}
 
-# Fix for hiredis compilation issues for ARM
-# python will throw for missing locale
-RUN apt-get install -y locales
-RUN locale-gen "en_US.UTF-8"
-RUN dpkg-reconfigure --frontend noninteractive locales
-ENV LC_CTYPE=en_US.UTF-8
-RUN sed -i '/^#.* en_US.* /s/^#//' /etc/locale.gen
-RUN locale-gen
-
 # Install dependencies used by some plugins
 RUN pip3 install --no-cache-dir \
         hiredis                             \
@@ -59,22 +52,30 @@ RUN python3 -m sonic_ax_impl install
 RUN apt-get -y purge     \
         python3-dev      \
         gcc              \
-        make                && \
-    apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y --purge && \
-    find / | grep -E "__pycache__" | xargs rm -rf && \
-    rm -rf /debs /python-wheels ~/.cache
+        make
 
 COPY ["docker-snmp-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
 COPY ["snmp_yml_to_configdb.py", "/usr/bin/"]
 COPY ["*.j2", "/usr/share/sonic/templates/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 # Although exposing ports is not needed for host net mode, keep it for possible bridge mode
 EXPOSE 161/udp 162/udp
 
 RUN chmod +x /usr/bin/docker-snmp-init.sh
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Enable -O for all Python calls
+ENV PYTHONOPTIMIZE=1
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
 ENTRYPOINT ["/usr/bin/docker-snmp-init.sh"]

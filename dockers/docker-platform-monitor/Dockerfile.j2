@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -24,6 +26,7 @@ RUN apt-get update &&   \
         i2c-tools       \
         psmisc          \
         python3-jsonschema \
+        python3-netifaces \
         libpci3         \
         iputils-ping    \
         pciutils        \
@@ -46,8 +49,8 @@ RUN apt-get install -y -t bookworm-backports \
 RUN pip3 install grpcio==1.51.1 \
         grpcio-tools==1.51.1
 
-# Barefoot platform vendors' sonic_platform packages import these Python libraries
-RUN pip3 install thrift==0.13.0 netifaces
+# Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
+RUN pip3 install thrift==0.13.0
 
 # Ragile platform vendors' sonic_platform packages import these Python libraries
 RUN pip3 install requests
@@ -92,18 +95,11 @@ RUN pip3 install smbus2
 # Clean up
 RUN apt-get purge -y           \
         build-essential        \
-        python3-dev         && \
-    apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y   && \
-    rm -rf /debs               \
-           /python-wheels      \
-           ~/.cache
+        python3-dev
 
 COPY ["lm-sensors.sh", "/usr/bin/"]
 COPY ["docker-pmon.supervisord.conf.j2", "docker_init.j2", "/usr/share/sonic/templates/"]
 COPY ["ssd_tools/*", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 
@@ -112,4 +108,12 @@ RUN sonic-cfggen -a "{\"CONFIGURED_PLATFORM\":\"{{CONFIGURED_PLATFORM}}\"}" -t /
 RUN rm -f /usr/share/sonic/templates/docker_init.j2
 RUN chmod 755 /usr/bin/docker_init.sh
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/bin/docker_init.sh"]
