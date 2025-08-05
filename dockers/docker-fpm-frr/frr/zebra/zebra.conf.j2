@@ -9,12 +9,11 @@
 {% block zebra_nexthop %}
 {% if (('localhost' in DEVICE_METADATA) and ('zebra_nexthop' in DEVICE_METADATA['localhost']) and
        (DEVICE_METADATA['localhost']['zebra_nexthop'] == 'enabled')) %}
-! Force disable next hop group support
 zebra nexthop kernel enable
 {% else %}
+! Force disable next hop group support
 no zebra nexthop kernel enable
 {% endif %}
-!
 {% endblock zebra_nexthop %}
 !
 {% block fpm %}
