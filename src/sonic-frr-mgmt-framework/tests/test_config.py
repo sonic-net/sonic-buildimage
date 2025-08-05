@@ -129,6 +129,8 @@ bgp_globals_data = [
                                                                   'ibgp_route_distance': '115',
                                                                   'local_route_distance': '238'},
                        conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}distance bgp 100 115 238']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'autort': 'rfc8365-compatible'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}autort rfc8365-compatible']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-all-vni': 'true'},
                        conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-all-vni']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-svi-ip': 'true'},
