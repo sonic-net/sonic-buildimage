@@ -61,19 +61,19 @@ start)
         [ $found -eq 0 ] && echo "cannot find iSMT" && exit 1
 
         i2cset -y ${devnum} 0x70 0x10 0x00 0x01 i
-        sleep 1
+        sleep 0.1
 
         # Attach PCA9548 0x71 Channel Extender for Main Board
         echo pca9548 0x71 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
-        sleep 1
+        sleep 0.1
 
         # Attach PCA9548 0x73 Channel Extender for CPU Board
         echo pca9548 0x73 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
-        sleep 1
+        sleep 0.1
 
         # Attach PCA9548 0x77 Channel Extender for Fan's EEPROMs
         echo pca9548 0x77 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
-        sleep 1
+        sleep 0.1
 
         # Attach syseeprom
         echo 24lc64t 0x50 > /sys/bus/i2c/devices/i2c-12/new_device
@@ -106,7 +106,7 @@ start)
         echo pca9505 0x20 > /sys/bus/i2c/devices/i2c-17/new_device
 
         modprobe dx010_cpld
-        sleep 2
+        sleep 1
 
         # Export platform gpio sysfs
         export_gpio 10 "in" # Fan 1 present
@@ -147,16 +147,21 @@ start)
         sleep 0.1
         done
 
+	# Set pca9548 idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0071/idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0073/idle_state
+	echo -2 > /sys/bus/i2c/devices/i2c-${devnum}/${devnum}-0077/idle_state
+	sleep 0.1
+
 	bus_en=8
-	sleep 1
 	cfg_r=`i2cget -y -f 8 0x60 0xD1`
 	((cfg_w=$cfg_r+$bus_en))	
 	i2cset -y -f 8 0x60 0xD1 $cfg_w
-	sleep 1
+	sleep 0.1
 	cfg_r=`i2cget -y -f 9 0x20 0xD1`
 	((cfg_w=$cfg_r+$bus_en))	
 	i2cset -y -f 9 0x20 0xD1 $cfg_w
-	sleep 1
+	sleep 0.1
 
 	/bin/sh /usr/local/bin/platform_api_mgnt.sh init
 
