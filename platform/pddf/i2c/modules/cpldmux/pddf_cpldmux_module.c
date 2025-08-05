@@ -170,7 +170,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
 			);
 			if (pci_dev == NULL) {
 				printk(KERN_ERR
-				       "PDDF_XCVR: Unable to get pci_dev of %s for %s\n",
+				       "PDDF_CPLDMUX: Unable to get pci_dev of %s for %s\n",
 				       cpldmux_data->cpld_name,
 				       device_ptr->i2c_name);
 				goto free_data;
