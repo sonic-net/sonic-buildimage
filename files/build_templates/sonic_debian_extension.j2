@@ -530,6 +530,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
 
+# sonic-ctrmgrd-rs is required by container script
+install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
+
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
 #
@@ -577,9 +580,6 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 # kubelet service is controlled by ctrmgrd daemon.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
-# sonic-ctrmgrd-rs is required by container script
-install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
-
 # container script for docker commands, which is required as
 # all docker commands are replaced with container commands.
 # So just copy that file only.
