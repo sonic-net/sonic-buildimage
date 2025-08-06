@@ -71,14 +71,14 @@
         {%- for port in PORT_ACTIVE %}
             {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR[port].name is defined and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
                 {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
-                {%- if 'LeafRouter' in local_router_type %}
-                    {%- if 'ToRRouter' in neighbor_info.type %}
+                {%- if local_router_type == 'LeafRouter' %}
+                    {%- if neighbor_info.type == 'ToRRouter' %}
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
-                    {%- elif 'SpineRouter' in neighbor_info.type %}
+                    {%- elif neighbor_info.type == 'SpineRouter' %}
                         {%- if PORT_UPLINK.append(port) %}{%- endif %}
                     {%- endif %}
-                {%- elif 'ToRRouter' in local_router_type %}
-                    {%- if 'LeafRouter' in neighbor_info.type %}
+                {%- elif local_router_type == 'ToRRouter' %}
+                    {%- if neighbor_info.type == 'LeafRouter' %}
                         {%- if PORT_UPLINK.append(port) %}{%- endif %}
                     {%- else %}
                         {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
