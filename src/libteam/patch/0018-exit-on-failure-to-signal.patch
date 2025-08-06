@@ -1,0 +1,41 @@
+Exit if signalling the parent process fails
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: 2025-08-04 23:22:58 -0700
+
+When the teamd daemon initialization completes, if signalling the parent
+process fails, then immediately exit. For SONiC's purposes, if the
+signalling fails, then teamdmgr will assume it to have failed and will
+bring it down anyways. However, if teamd initialization completes, other
+processes may assume that the port channel has been created and begin
+configuration, which will fail and cause issues later.
+
+To avoid this, don't start the processing loop and exit as soon as
+possible.
+---
+ teamd/teamd.c |   12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/teamd/teamd.c b/teamd/teamd.c
+index 5220ae2..aa5cf6b 100644
+--- a/teamd/teamd.c
++++ b/teamd/teamd.c
+@@ -1594,11 +1594,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+ 	}
+ 	*p_ret = TEAMD_EXIT_RUNTIME_FAILURE;
+ 
+-	daemon_retval_send(0);
+-
+-	teamd_log_info(PACKAGE_VERSION" successfully started.");
+-
+-	err = teamd_run_loop_run(ctx);
++	err = daemon_retval_send(0);
++	if (err) {
++		teamd_log_err("unable to send response, likely timed out.");
++	} else {
++		teamd_log_info(PACKAGE_VERSION" successfully started.");
++		err = teamd_run_loop_run(ctx);
++	}
+ 
+ 	teamd_log_info("Exiting...");
+ 
