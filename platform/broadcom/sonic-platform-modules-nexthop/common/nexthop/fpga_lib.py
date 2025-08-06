@@ -41,6 +41,8 @@ def get_resource_0_path(pci_address: str, root="") -> str:
 
 
 def write_32(pci_address: str, offset: int, val: int, root=""):
+    if offset % 4 != 0:
+        raise ValueError(f"Offset ({offset}) must be 32-bit aligned.")
     file_path = get_resource_0_path(pci_address, root)
     with open(file_path, "r+b") as f:
         page_size = mmap.PAGESIZE
@@ -55,9 +57,55 @@ def write_32(pci_address: str, offset: int, val: int, root=""):
 
 
 def read_32(pci_address: str, offset: int, root="") -> int:
+    if offset % 4 != 0:
+        raise ValueError(f"Offset ({offset}) must be 32-bit aligned.")
     file_path = get_resource_0_path(pci_address, root)
     with open(file_path, "r+b") as f:
-        mm = mmap.mmap(
+        with mmap.mmap(
             f.fileno(), length=os.path.getsize(file_path), access=mmap.ACCESS_READ
+        ) as mm:
+            return int.from_bytes(mm[offset : offset + 4], byteorder="little")
+
+
+def compute_bitmask(start: int, end: int) -> int:
+    "Returns a bitmask with 1s from `start` (inclusive) to `end` (inclusive)."
+    if start > end:
+        raise ValueError(f"Start bit ({start}) can't be greater than end bit ({end}).")
+    # Create a mask with 'num_bits' ones at the rightmost position
+    num_bits = end - start + 1
+    mask_of_ones = (1 << num_bits) - 1
+    # Shift the mask to the desired starting position
+    return mask_of_ones << start
+
+
+def get_field(reg_val: int, bit_range: tuple[int, int]) -> int:
+    "Returns the value of the field positioned at `bit_range` in the 32-bit register."
+    start, end = bit_range
+    mask = compute_bitmask(start, end)
+    return (reg_val & mask) >> start
+
+
+def max_value_for_bit_range(bit_range: tuple[int, int]) -> int:
+    "Returns the max value that can be represented within `bit_range`."
+    start, end = bit_range
+    num_bits = end - start + 1
+    return (1 << num_bits) - 1
+
+
+def overwrite_field(reg_val: int, bit_range: tuple[int, int], field_val: int) -> int:
+    "Returns the `reg_val` where the field at `bit_range` is being overwritten with `field_val`."
+    if field_val > (max_field_val := max_value_for_bit_range(bit_range)):
+        raise ValueError(
+            f"field_value (0x{field_val:0x}) must be smaller than or equal to (0x{max_field_val:0x})."
         )
-        return int.from_bytes(mm[offset : offset + 4], byteorder="little")
+    start, end = bit_range
+
+    # Clear the existing field in the register value.
+    bitmask_ignore_field = ctypes.c_uint32(~compute_bitmask(start, end)).value
+    cleared_reg = reg_val & bitmask_ignore_field
+
+    # Position the new field value.
+    positioned_field_val = field_val << start
+
+    # Combine the cleared register value with the new field value.
+    return cleared_reg | positioned_field_val
