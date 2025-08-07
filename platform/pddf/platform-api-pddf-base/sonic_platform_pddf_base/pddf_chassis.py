@@ -28,6 +28,12 @@ try:
 except ImportError as e:
     current_sensor_present = False
 
+asicthermal_present = True
+try:
+    from sonic_platform.asic_thermal import AsicThermal
+except ImportError as e:
+    asicthermal_present = False
+
 component_present = True
 try:
     from sonic_platform.component import Component
@@ -99,6 +105,12 @@ class PddfChassis(ChassisBase):
             for i in range(self.platform_inventory['num_current_sensors']):
                 current = CurrentSensor(i, self.pddf_obj, self.plugin_data)
                 self._current_sensor_list.append(current)
+
+        if asicthermal_present:
+            # ASIC Thermal
+            for i in range(self.platform_inventory['num_asic_temps']):
+                asicthermal = AsicThermal(i, self.pddf_obj)
+                self._thermal_list.append(asicthermal)
 
         if component_present:
             # Components (Programmables)
