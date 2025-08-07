@@ -1,6 +1,7 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/sonic-net/sonic-swss-common
+	url = https://github.com/liuh-80/sonic-swss-common
+	branch = dev/liuh/fix_gnmi_zmq_retry
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
@@ -105,7 +106,8 @@
 	url = https://github.com/sonic-net/sonic-host-services
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
+	url = https://github.com/liuh-80/sonic-gnmi.git
+	branch = dev/liuh/fix_gnmi_zmq_retry
 [submodule "src/sonic-bmp"]
 	path = src/sonic-bmp
 	url = https://github.com/sonic-net/sonic-bmp.git
