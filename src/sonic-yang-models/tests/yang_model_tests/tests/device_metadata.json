@@ -48,6 +48,9 @@
     "DEVICE_METADATA_TYPE_FABRIC_SPINEROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as FabricSpineRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerSpineRouter for Type field"
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },

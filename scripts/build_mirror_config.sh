@@ -25,7 +25,7 @@ if [ "$ARCHITECTURE" == "armhf" ]; then
     DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
 fi
 
-if [ "$DISTRIBUTION" == "buster" ]; then
+if [ "$DISTRIBUTION" == "buster" ] || [ "$DISTRIBUTION" == "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
