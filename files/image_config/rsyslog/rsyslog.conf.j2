@@ -123,9 +123,9 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
 
-# update rsyslog counter
 {% if syslog_counter and syslog_counter == "true" %}
-action(type="omprog" binary="/usr/bin/syslog_counter.py" output="/var/log/syslog_counter.log" confirmMessages="on")
+# update rsyslog counter
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on")
 {% endif%}
 
 #

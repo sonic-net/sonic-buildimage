@@ -59,8 +59,9 @@ fn update_counter_db(counter: Arc<Mutex<u64>>) {
             info!("Initialized counter to {}", initial_value);
         }
         Err(e) => {
-            error!("Failed to read initial count: {}", e);
-            exit(1);
+            info!("Failed to read initial count: {}, set count to 0", e);
+            let mut count = counter.lock().unwrap();
+            *count = 0;
         }
     }
 

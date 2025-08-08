@@ -1,8 +1,0 @@
-
-#!/usr/bin/make -f
-
-override_dh_auto_test:
-    cargo test
-
-%:
-    dh $@ --buildsystem=cargo
