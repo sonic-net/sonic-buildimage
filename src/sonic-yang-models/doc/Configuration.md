@@ -1126,6 +1126,11 @@ instance is supported in SONiC.
 ```
 {
 "DHCP_RELAY": {
+    "dhcp_servers": [
+        "192.168.0.1",
+        "192.168.0.2"
+    ],
+    "server_vrf": "Vrf11",
     "dhcpv6_servers": [
         "fc02:2000::1",
         "fc02:2000::2",
