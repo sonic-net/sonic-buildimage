@@ -4,6 +4,9 @@ LOCKFD=200
 LOCKFILE="/var/run/nexthop-asic-init.lock"
 FPGA_BDF="0000:04:00.0"
 LOG_TAG="asic_init"
+ASIC_PCI_VENDOR_ID="14e4"
+LOG_PRIO="user.info"
+LOG_ERR="user.err"
 
 fpga_write() {
   local offset="$1"
@@ -17,7 +20,7 @@ fpga_write() {
   fi
 
   if [ $? -ne 0 ]; then
-    logger -t $LOG_TAG -p error "Error writing $value to reg $offset on fpga $FPGA_BDF"
+    logger -t $LOG_TAG -p $LOG_ERR "Error writing $value to reg $offset on fpga $FPGA_BDF"
     exit 1
   fi
 }
@@ -27,18 +30,18 @@ function acquire_lock() {
     touch $LOCKFILE
   fi
 
-  logger -t $LOG_TAG "Acquiring ${LOCKFILE}"
+  logger -t $LOG_TAG -p $LOG_PRIO "Acquiring ${LOCKFILE}"
 
   exec {LOCKFD}>${LOCKFILE}
   /usr/bin/flock -x ${LOCKFD}
   trap "/usr/bin/flock -u ${LOCKFD}" EXIT
 
-  logger -t $LOG_TAG "Acquired ${LOCKFILE}"
+  logger -t $LOG_TAG -p $LOG_PRIO "Acquired ${LOCKFILE}"
 }
 
 function release_lock() {
   /usr/bin/flock -u ${LOCKFD}
-  logger -t $LOG_TAG "Released ${LOCKFILE}"
+  logger -t $LOG_TAG -p $LOG_PRIO "Released ${LOCKFILE}"
 }
 
 function clear_sticky_bits() {
@@ -82,6 +85,7 @@ function clear_sticky_bits() {
 
 if [ -f /disable_asic ]; then
   logger -p user.warning -t $LOG_TAG "ASIC init disabled due to /disable_asic file"
+  release_lock
   exit 0
 fi
 
@@ -90,10 +94,49 @@ acquire_lock
 # Per HW, do this right before taking the ASIC out of reset.
 clear_sticky_bits
 
-# Take the asic out of reset
-logger -t $LOG_TAG "NH-4010-r1 asic init, releasing reset"
+# Take the asic out of reset, first we'll set the reset bit, then clear it
+# Setting the reset bit should be a no-op as the FPGA default for this bit is 0.
+logger -t $LOG_TAG -p $LOG_PRIO "NH-4010-r1 asic init, putting ASIC into reset, then releasing reset"
+fpga_write 0x8 0x0 "10:10"
+sleep 0.1
 fpga_write 0x8 0x1 "10:10"
+
+# We need to wait for the asic to come up
+sleep 1
+
+# Check if switch ASIC is up
+lspci -n | grep -q "$ASIC_PCI_VENDOR_ID"
+if [ $? -eq 0 ]; then
+  logger -t $LOG_TAG -p $LOG_PRIO "Switch ASIC is up"
+  release_lock
+  exit 0
+fi
+
+logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not present, power cycling"
+
+# Try power cycling, up to two times, or until Switch ASIC chip is found
+for attempt in {1..2}; do
+  # Powercycle the asic, then take it out of reset
+  fpga_write 0x8 0x1 "3:3"
+  sleep 2
+  fpga_write 0x8 0x0 "3:3"
+  sleep 0.2
+  fpga_write 0x8 0x1 "10:10"
+
+  # We need to wait for the asic to come up
+  sleep 1
+
+  # Check if switch ASIC is up
+  lspci -n | grep -q "$ASIC_PCI_VENDOR_ID"
+  if [ $? -eq 0 ]; then
+    logger -t $LOG_TAG -p $LOG_PRIO "Switch ASIC is up after power cycle attempt $attempt"
+    release_lock
+    exit 0
+  fi
+done
+
+logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempt $attempt, giving up."
 
 release_lock
 
-exit 0
+exit 1
