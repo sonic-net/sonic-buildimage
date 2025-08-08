@@ -59,6 +59,11 @@ RUN apt-get update          \
         libwrap0-dev          \
         libthrift-dev         \
         python3-thrift        \
+        libprotobuf-dev       \
+        protobuf-compiler     \
+        libgrpc++-dev         \
+        libgrpc-dev           \
+        protobuf-compiler-grpc \
 {% endif %}
         less                \
         git                 \
@@ -105,6 +110,17 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pdb pdb /usr/bin/pdb3 1 \
     && update-alternatives --install /usr/bin/pydoc pydoc /usr/bin/pydoc3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
+
+# Install p4lang packages for DASH SAI support
+RUN cd /tmp \
+    && wget -q http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15_amd64.deb \
+    && wget -q http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7_amd64.deb \
+    && wget -q http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2_amd64.deb \
+    && dpkg -i --force-depends p4lang-pi_0.1.0-15_amd64.deb || true \
+    && dpkg -i --force-depends p4lang-bmv2_1.15.0-7_amd64.deb || true \
+    && dpkg -i --force-depends p4lang-p4c_1.2.4.2-2_amd64.deb || true \
+    && apt-get install -f -y \
+    && rm -f *.deb
 {% endif %}
 
 COPY openbfdd-patches/ /root/openbfdd-patches/
