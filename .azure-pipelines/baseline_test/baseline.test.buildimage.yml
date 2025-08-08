@@ -66,7 +66,6 @@ stages:
   - stage: Test_round_1
     dependsOn: BuildVS
     condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
-    variables:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
@@ -79,7 +78,6 @@ stages:
     dependsOn:
     - Test_round_1
     condition: succeededOrFailed('Test_round_1')
-    variables:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
@@ -92,7 +90,6 @@ stages:
     dependsOn:
     - Test_round_2
     condition: succeededOrFailed('Test_round_2')
-    variables:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
@@ -105,7 +102,6 @@ stages:
     dependsOn:
     - Test_round_3
     condition: succeededOrFailed('Test_round_3')
-    variables:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
