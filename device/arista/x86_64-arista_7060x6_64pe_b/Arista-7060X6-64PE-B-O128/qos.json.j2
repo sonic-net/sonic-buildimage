@@ -1,3 +1,8 @@
+{%- if DEVICE_METADATA is defined and 'lowerspinerouter' in DEVICE_METADATA['localhost']['type'].lower() -%}
+
+{# Do nothing for lt2 #}
+
+{%-     else %}
 {%- macro generate_dscp_to_tc_map_per_sku() -%}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -157,5 +162,7 @@
         }
     },
 {%- endmacro -%}
+
+{%-     endif %}
 
 {%- include 'qos_config.j2' %}
