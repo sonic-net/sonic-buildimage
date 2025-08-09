@@ -49,8 +49,8 @@ setup(
         'wheel'
     ],
     include_package_data=True,
-    keywords=['sonic-smartswitch-azs', 'link_state_tracker', 'periodic-config-saver'],
-    name='sonic-smartswitch-azs',
+    keywords=['sonic-session-monitor', 'link_state_tracker', 'bgp_session_tracker', 'periodic-config-saver'],
+    name='sonic-session-monitor',
     py_modules=['link_state_tracker','bgp_session_tracker', 'mock_modules', 'periodic_config_saver'],
     packages=find_packages(),
     version='1.0',

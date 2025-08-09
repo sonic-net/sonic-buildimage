@@ -1,6 +1,6 @@
-# smartswitch-azs python wheel
+# session-monitor python wheel
 
-SESSION_MONITOR_PY3 = sonic_SESSION_MONITOR-1.0-py3-none-any.whl
+SESSION_MONITOR_PY3 = sonic_session_monitor-1.0-py3-none-any.whl
 $(SESSION_MONITOR_PY3)_SRC_PATH = $(SRC_PATH)/session-monitor
 $(SESSION_MONITOR_PY3)_PYTHON_VERSION = 3
 
