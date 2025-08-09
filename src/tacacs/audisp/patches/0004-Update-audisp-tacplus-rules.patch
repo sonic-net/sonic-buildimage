@@ -1,0 +1,94 @@
+From dd51d24146abb364a856093e10636d82b8435eed Mon Sep 17 00:00:00 2001
+From: Mai Bui <maibui@microsoft.com>
+Date: Mon, 14 Jul 2025 18:37:29 +0000
+Subject: [PATCH] Update audisp-tacplus rules
+
+Signed-off-by: Mai Bui <maibui@microsoft.com>
+---
+ audisp-tacplus.rules => 30-audisp-tacplus.rules | 5 ++---
+ 31-process_audit.rules                          | 2 ++
+ Makefile.am                                     | 3 ++-
+ Makefile.in                                     | 3 ++-
+ debian/audisp-tacplus.postinst                  | 4 +++-
+ 5 files changed, 11 insertions(+), 6 deletions(-)
+ rename audisp-tacplus.rules => 30-audisp-tacplus.rules (89%)
+ create mode 100644 31-process_audit.rules
+
+diff --git a/audisp-tacplus.rules b/30-audisp-tacplus.rules
+similarity index 89%
+rename from audisp-tacplus.rules
+rename to 30-audisp-tacplus.rules
+index 573638a..481ee83 100644
+--- a/audisp-tacplus.rules
++++ b/30-audisp-tacplus.rules
+@@ -22,8 +22,8 @@
+ # We assume here that user 1000 is the first local user, and therefore
+ # should not be looked up for tacacs.  You may need to change this for
+ # your local configuration
+--a always,exit -F arch=b32 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+--a always,exit -F arch=b64 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
++-a always,exit -F arch=b32 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
++-a always,exit -F arch=b64 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+ 
+ # In newer distributions (such as debian jessie), a number of auditing events
+ # are logged by default even after the -D initialization.  If you are using
+@@ -36,7 +36,6 @@
+ -a exclude,always -F msgtype=CRED_REFR
+ -a exclude,always -F msgtype=CWD
+ -a exclude,always -F msgtype=LOGIN
+--a exclude,always -F msgtype=PATH
+ -a exclude,always -F msgtype=PROCTITLE
+ -a exclude,always -F msgtype=SERVICE_START
+ -a exclude,always -F msgtype=SERVICE_STOP
+diff --git a/31-process_audit.rules b/31-process_audit.rules
+new file mode 100644
+index 0000000..743d1b8
+--- /dev/null
++++ b/31-process_audit.rules
+@@ -0,0 +1,2 @@
++-a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus
++-a always,exit -F arch=b32 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus
+diff --git a/Makefile.am b/Makefile.am
+index 3588525..9b804a1 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -28,5 +28,6 @@ install-data-hook:
+ 	${INSTALL} -d $(DESTDIR)$(sysconfdir)/audit/plugins.d
+ 	${INSTALL} -d $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 	${INSTALL} -m 644 audisp-tacplus.conf $(DESTDIR)$(sysconfdir)/audit/plugins.d
+-	${INSTALL} -m 644 -o 0 audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
++	${INSTALL} -m 644 -o 0 30-audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
++	${INSTALL} -m 644 -o 0 31-process_audit.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 
+diff --git a/Makefile.in b/Makefile.in
+index 5482a9a..1dee098 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -928,7 +928,8 @@ install-data-hook:
+ 	${INSTALL} -d $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 	${INSTALL} -m 600 audisp-tac_plus.conf $(DESTDIR)$(sysconfdir)/audisp/
+ 	${INSTALL} -m 644 audisp-tacplus.conf $(DESTDIR)$(sysconfdir)/audisp/plugins.d
+-	${INSTALL} -m 644 -o 0 audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
++	${INSTALL} -m 644 -o 0 30-audisp-tacplus.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
++	${INSTALL} -m 644 -o 0 31-process_audit.rules $(DESTDIR)$(sysconfdir)/audit/rules.d
+ 
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.
+diff --git a/debian/audisp-tacplus.postinst b/debian/audisp-tacplus.postinst
+index abbb72c..5366a9e 100644
+--- a/debian/audisp-tacplus.postinst
++++ b/debian/audisp-tacplus.postinst
+@@ -12,7 +12,9 @@ case "$1" in
+         file -L /bin/sh | grep -q 32-bit
+         if [ $? -eq 0 ]; then
+             sed -i '/^-a.*arch=b64/s/^/# No 64bit support /' \
+-              /etc/audit/rules.d/audisp-tacplus.rules
++              /etc/audit/rules.d/30-audisp-tacplus.rules
++            sed -i '/^-a.*arch=b64/s/^/# No 64bit support /' \
++              /etc/audit/rules.d/31-process_audit.rules
+         fi
+         exit 0)
+     ;;
+-- 
+2.34.1
+
