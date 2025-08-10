@@ -274,6 +274,19 @@ QSFP_monitor()
                 else
                     cpld_path="/sys/bus/i2c/devices/0-0062/"
                 fi
+                
+                pre_present=$(cat $cpld_path"module_present_"$i | awk '{printf $1}')
+                if [ $is_presence -eq 0 ];then
+                    if [ $pre_present -eq 0 ];then
+                        ethid=`expr $idx \* 8`
+                        logger -i -t sonic-qsfp-monitor "Ethernet$ethid: Transceiver is inserted" --priority user.info
+                    fi
+                else
+                    if [ $pre_present -eq 1 ];then
+                        ethid=`expr $idx \* 8`
+                        logger -i -t sonic-qsfp-monitor "Ethernet$ethid: Transceiver is removed" --priority user.info
+                    fi
+                fi
 
                 if [ $is_presence -eq 0 ];then
                     bmc_qsfp_eeprom_read $i
