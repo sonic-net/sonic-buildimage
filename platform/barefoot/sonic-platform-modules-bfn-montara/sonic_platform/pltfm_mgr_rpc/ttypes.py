@@ -16,24 +16,6 @@ from thrift.transport import TTransport
 all_structs = []
 
 
-class qsfp_eeprom_page_t(object):
-    PAGE0_LOWER = 0
-    PAGE0_UPPER = 1
-    PAGE3 = 2
-
-    _VALUES_TO_NAMES = {
-        0: "PAGE0_LOWER",
-        1: "PAGE0_UPPER",
-        2: "PAGE3",
-    }
-
-    _NAMES_TO_VALUES = {
-        "PAGE0_LOWER": 0,
-        "PAGE0_UPPER": 1,
-        "PAGE3": 2,
-    }
-
-
 class pltfm_mgr_sys_tmp_t(object):
     """
     Attributes:

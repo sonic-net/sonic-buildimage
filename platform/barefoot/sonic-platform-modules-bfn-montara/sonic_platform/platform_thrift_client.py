@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
 try:
-    import os
-    import sys
     import time
-    import importlib
 
-    sys.path.append(os.path.dirname(__file__))
+    from sonic_platform.pltfm_mgr_rpc.pltfm_mgr_rpc import Client
+    from sonic_platform.pltfm_mgr_rpc.pltfm_mgr_rpc import InvalidPltfmMgrOperation
 
     from thrift.transport import TSocket
     from thrift.transport import TTransport
@@ -25,9 +23,8 @@ class ThriftClient(object):
         self.transport = TTransport.TBufferedTransport(self.transport)
         bprotocol = TBinaryProtocol.TBinaryProtocol(self.transport)
 
-        self.pltfm_mgr_module = importlib.import_module(".".join(["pltfm_mgr_rpc", "pltfm_mgr_rpc"]))
         pltfm_mgr_protocol = TMultiplexedProtocol.TMultiplexedProtocol(bprotocol, "pltfm_mgr_rpc")
-        self.pltfm_mgr = self.pltfm_mgr_module.Client(pltfm_mgr_protocol)
+        self.pltfm_mgr = Client(pltfm_mgr_protocol)
 
         self.transport.open()
         return self
@@ -59,7 +56,7 @@ def pltfm_mgr_try(func, default=None, thrift_attempts=35):
     def pm_cb_run(client):
        try:
            return (None, func(client.pltfm_mgr))
-       except client.pltfm_mgr_module.InvalidPltfmMgrOperation as ouch:
+       except InvalidPltfmMgrOperation as ouch:
            return (ouch.code, default)
 
     return thrift_try(pm_cb_run)

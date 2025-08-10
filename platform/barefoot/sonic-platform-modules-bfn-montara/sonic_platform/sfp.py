@@ -3,6 +3,10 @@
 try:
     import os
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.mem_maps.public.cmis import CmisMemMap
+    from sonic_platform_base.sonic_xcvr.codes.public.cmis import CmisCodes
+    from sonic_platform_base.sonic_xcvr.xcvr_eeprom import XcvrEeprom
+    from sonic_platform_base.sonic_xcvr.fields import consts
     from sonic_platform.platform_thrift_client import thrift_try
     from sonic_platform.platform_thrift_client import pltfm_mgr_try
 except ImportError as e:
@@ -11,29 +15,45 @@ except ImportError as e:
 SFP_TYPE = "SFP"
 QSFP_TYPE = "QSFP"
 QSFP_DD_TYPE = "QSFP_DD"
+EEPROM_PAGE_SIZE = 128
 
+def get_eeprom_cached_api_support():
+    try:
+        from thrift.Thrift import TApplicationException
+
+        def cached_num_bytes_get(client):
+            return client.pltfm_mgr.pltfm_mgr_qsfp_cached_num_bytes_get(1, 0, 0, 0)
+        thrift_try(cached_num_bytes_get, 1)
+        return True
+    except TApplicationException as e:
+        # New api is not supported, need to use old
+        pass
+    except Exception as e:
+        # syncd may not be up, service is not available at this moment
+        print(e.__doc__)
+        print(e.message)
+    return False
 
 class Sfp(SfpOptoeBase):
     """
     BFN Platform-specific SFP class
     """
 
-    SFP_EEPROM_PATH = "/var/run/platform/sfp/"
-
     def __init__(self, port_num):
         SfpOptoeBase.__init__(self)
         self.index = port_num
         self.port_num = port_num
         self.sfp_type = QSFP_TYPE
+        self.SFP_EEPROM_PATH = "/var/run/platform/sfp/"
 
-        if not os.path.exists(self.SFP_EEPROM_PATH):
-            try:
-                os.makedirs(self.SFP_EEPROM_PATH)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
-
-        self.eeprom_path = self.SFP_EEPROM_PATH + "sfp{}-eeprom-cache".format(self.index)
+        if not get_eeprom_cached_api_support():
+            if not os.path.exists(self.SFP_EEPROM_PATH):
+                try:
+                    os.makedirs(self.SFP_EEPROM_PATH)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise
+            self.eeprom_path = self.SFP_EEPROM_PATH + "sfp{}-eeprom-cache".format(self.index)
 
     def get_presence(self):
         """
@@ -47,7 +67,7 @@ class Sfp(SfpOptoeBase):
         try:
             presence = thrift_try(qsfp_presence_get)
         except Exception as e:
-            print( e.__doc__)
+            print(e.__doc__)
             print(e.message)
 
         return presence
@@ -75,14 +95,47 @@ class Sfp(SfpOptoeBase):
         def qsfp_info_get(client):
             return client.pltfm_mgr.pltfm_mgr_qsfp_info_get(self.index)
 
-        if self.get_presence():
-            eeprom_hex = thrift_try(qsfp_info_get)
-            eeprom_raw = bytearray.fromhex(eeprom_hex)
-            with open(self.eeprom_path, 'wb') as fp:
-                fp.write(eeprom_raw)
-            return self.eeprom_path
+        eeprom_hex = thrift_try(qsfp_info_get)
+        eeprom_raw = bytearray.fromhex(eeprom_hex)
+        with open(self.eeprom_path, 'wb') as fp:
+            fp.write(eeprom_raw)
+        return self.eeprom_path
 
-        return None
+    def read_eeprom(self, offset, num_bytes):
+        if not self.get_presence():
+            return None
+
+        if not get_eeprom_cached_api_support():
+            return super().read_eeprom(offset, num_bytes)
+
+
+        # TODO: remove when memory model is verified before requesting page that may not be supported
+        #
+        # If memory model is flat - the requested page can only be 00_LOWER or 00_UPPER,
+        # SONiC Cmis implementation, CmisCdbApi constructor reads consts.CDB_SUPPORT field
+        # which is located on PAGE1 without verifying whether memory supports it or not.
+        if offset >= EEPROM_PAGE_SIZE * 2:
+            id_byte_raw = self.read_eeprom(0, 1)
+            if id_byte_raw is None:
+                return None
+            id_byte = id_byte_raw[0]
+            if id_byte == 0x18 or id_byte == 0x19 or id_byte == 0x1e:
+                eeprom_wrapper = XcvrEeprom(self.read_eeprom, None, CmisMemMap(CmisCodes))
+                if eeprom_wrapper.read(consts.FLAT_MEM_FIELD) is True:
+                    return bytearray(num_bytes)
+
+        def cached_num_bytes_get(page, offset, num_bytes):
+            def qsfp_cached_num_bytes_get(client):
+                return client.pltfm_mgr.pltfm_mgr_qsfp_cached_num_bytes_get(self.index, page, offset, num_bytes)
+            return bytearray.fromhex(thrift_try(qsfp_cached_num_bytes_get))
+
+        page_offset = offset % EEPROM_PAGE_SIZE
+        if page_offset + num_bytes > EEPROM_PAGE_SIZE:
+            curr_page_num_bytes_left = EEPROM_PAGE_SIZE - page_offset
+            curr_page_bytes = cached_num_bytes_get(offset // EEPROM_PAGE_SIZE, page_offset, curr_page_num_bytes_left)
+            return curr_page_bytes + self.read_eeprom(offset + curr_page_num_bytes_left, num_bytes - curr_page_num_bytes_left)
+
+        return cached_num_bytes_get(offset // EEPROM_PAGE_SIZE, page_offset, num_bytes)
 
     def write_eeprom(self, offset, num_bytes, write_buffer):
         # Not supported at the moment
