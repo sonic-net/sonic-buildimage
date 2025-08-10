@@ -24,6 +24,7 @@ ext_tcam_freq
 force_core_pll
 fpem_mem_entries
 higig2_hdr_mode
+ifp_inports_support_enable
 ipmc_do_vlan
 ipv6_lpm_128b_enable
 knet_filter_persist
@@ -96,6 +97,7 @@ phy_tx_polarity_flip
 phy_xaui_rx_polarity_flip
 phy_xaui_tx_polarity_flip
 physical_ports
+port_flex_enable
 port_init_autoneg
 port_init_cl72
 port_init_speed
@@ -116,6 +118,8 @@ schan_intr_enable
 schan_timeout_usec
 serdes_automed
 serdes_automedium
+serdes_core_rx_polarity_flip_physical
+serdes_core_tx_polarity_flip_physical
 serdes_driver_current
 serdes_fiber_pref
 serdes_firmware_mode

@@ -226,6 +226,11 @@ platform_specific() {
         flash_size=28000
         echo "hugepages=128" >> /tmp/append
     fi
+    if [ "$sid" = "Lodoga" ] || [ "$sid" = "LodogaSsd" ]; then
+        aboot_machine=arista_7050cx3_32s
+        flash_size=3700
+        echo "amd_iommu=off" >> /tmp/append
+    fi
     if [ "$platform" = "rook" ]; then
         echo "iommu=on intel_iommu=on tsc=reliable pcie_ports=native" >>/tmp/append
         echo "rhash_entries=1 usb-storage.delay_use=0" >>/tmp/append

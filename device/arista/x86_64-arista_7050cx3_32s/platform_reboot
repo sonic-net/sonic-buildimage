@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+# Copyright (c) 2018 Arista Networks, Inc.  All rights reserved.
+# Arista Networks, Inc. Confidential and Proprietary.
+
+# Reboot script for 7050CX3-32S
+
+from __future__ import print_function
+
+import smbus
+
+def main():
+   print( "Rebooting" )
+   bus = smbus.SMBus( 1 )
+   bus.write_byte_data( 0x23, 0x04, 0xde )
+   print( "REBOOTED" )
+
+if __name__ == "__main__":
+   main()
