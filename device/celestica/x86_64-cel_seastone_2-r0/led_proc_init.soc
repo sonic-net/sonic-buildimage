@@ -1,0 +1,14 @@
+#Enable all ports
+port all en=1
+sleep 6
+#linkscan 250000; port xe,ce linkscan=on
+
+#Load LED
+linkscan off
+led auto off
+led stop
+m0 load 0 0x0 /usr/share/sonic/platform/linkscan_fw.bin
+m0 load 0 0x3800 /usr/share/sonic/platform/custom.bin
+led auto on
+led start
+linkscan on

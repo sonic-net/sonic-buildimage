@@ -1,0 +1,854 @@
+<DeviceMiniGraph xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="Microsoft.Search.Autopilot.Evolution">
+  <CpgDec>
+    <IsisRouters xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    <PeeringSessions>
+      <BGPSession>
+        <StartRouter>ARISTA01T0</StartRouter>
+        <StartPeer>10.0.0.33</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.32</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.0</StartPeer>
+        <EndRouter>ARISTA01T2</EndRouter>
+        <EndPeer>10.0.0.1</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA02T0</StartRouter>
+        <StartPeer>10.0.0.35</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.34</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.2</StartPeer>
+        <EndRouter>ARISTA02T2</EndRouter>
+        <EndPeer>10.0.0.3</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA03T0</StartRouter>
+        <StartPeer>10.0.0.37</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.36</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.4</StartPeer>
+        <EndRouter>ARISTA03T2</EndRouter>
+        <EndPeer>10.0.0.5</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA04T0</StartRouter>
+        <StartPeer>10.0.0.39</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.38</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.6</StartPeer>
+        <EndRouter>ARISTA04T2</EndRouter>
+        <EndPeer>10.0.0.7</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA05T0</StartRouter>
+        <StartPeer>10.0.0.41</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.40</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.8</StartPeer>
+        <EndRouter>ARISTA05T2</EndRouter>
+        <EndPeer>10.0.0.9</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA06T0</StartRouter>
+        <StartPeer>10.0.0.43</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.42</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.10</StartPeer>
+        <EndRouter>ARISTA06T2</EndRouter>
+        <EndPeer>10.0.0.11</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA07T0</StartRouter>
+        <StartPeer>10.0.0.45</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.44</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.12</StartPeer>
+        <EndRouter>ARISTA07T2</EndRouter>
+        <EndPeer>10.0.0.13</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA08T0</StartRouter>
+        <StartPeer>10.0.0.47</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.46</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.14</StartPeer>
+        <EndRouter>ARISTA08T2</EndRouter>
+        <EndPeer>10.0.0.15</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA09T0</StartRouter>
+        <StartPeer>10.0.0.49</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.48</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.16</StartPeer>
+        <EndRouter>ARISTA09T2</EndRouter>
+        <EndPeer>10.0.0.17</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA10T0</StartRouter>
+        <StartPeer>10.0.0.51</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.50</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.18</StartPeer>
+        <EndRouter>ARISTA10T2</EndRouter>
+        <EndPeer>10.0.0.19</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA11T0</StartRouter>
+        <StartPeer>10.0.0.53</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.52</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.20</StartPeer>
+        <EndRouter>ARISTA11T2</EndRouter>
+        <EndPeer>10.0.0.21</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA12T0</StartRouter>
+        <StartPeer>10.0.0.55</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.54</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.22</StartPeer>
+        <EndRouter>ARISTA12T2</EndRouter>
+        <EndPeer>10.0.0.23</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA13T0</StartRouter>
+        <StartPeer>10.0.0.57</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.56</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.24</StartPeer>
+        <EndRouter>ARISTA13T2</EndRouter>
+        <EndPeer>10.0.0.25</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA14T0</StartRouter>
+        <StartPeer>10.0.0.59</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.58</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.26</StartPeer>
+        <EndRouter>ARISTA14T2</EndRouter>
+        <EndPeer>10.0.0.27</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA15T0</StartRouter>
+        <StartPeer>10.0.0.61</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.60</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.28</StartPeer>
+        <EndRouter>ARISTA15T2</EndRouter>
+        <EndPeer>10.0.0.29</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>ARISTA16T0</StartRouter>
+        <StartPeer>10.0.0.63</StartPeer>
+        <EndRouter>sonic</EndRouter>
+        <EndPeer>10.0.0.62</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>sonic</StartRouter>
+        <StartPeer>10.0.0.30</StartPeer>
+        <EndRouter>ARISTA16T2</EndRouter>
+        <EndPeer>10.0.0.31</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+    </PeeringSessions>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:BGPRouterDeclaration>
+        <a:ASN>65100</a:ASN>
+        <a:Hostname>sonic</a:Hostname>
+        <a:Peers>
+          <BGPPeer>
+            <Address>10.0.0.33</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.1</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.35</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.3</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.37</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.5</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.39</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.7</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.41</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.9</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.43</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.11</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.45</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.13</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.47</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.15</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.49</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.17</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.51</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.19</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.53</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.21</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.55</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.23</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.57</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.25</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.59</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.27</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.61</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.29</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.63</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+          <BGPPeer>
+            <Address>10.0.0.31</Address>
+            <RouteMapIn i:nil="true"/>
+            <RouteMapOut i:nil="true"/>
+          </BGPPeer>
+        </a:Peers>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64001</a:ASN>
+        <a:Hostname>ARISTA01T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA01T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64002</a:ASN>
+        <a:Hostname>ARISTA02T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA02T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64003</a:ASN>
+        <a:Hostname>ARISTA03T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA03T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64004</a:ASN>
+        <a:Hostname>ARISTA04T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA04T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64005</a:ASN>
+        <a:Hostname>ARISTA05T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA05T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64006</a:ASN>
+        <a:Hostname>ARISTA06T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA06T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64007</a:ASN>
+        <a:Hostname>ARISTA07T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA07T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64008</a:ASN>
+        <a:Hostname>ARISTA08T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA08T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64009</a:ASN>
+        <a:Hostname>ARISTA09T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA09T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64010</a:ASN>
+        <a:Hostname>ARISTA10T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA10T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64011</a:ASN>
+        <a:Hostname>ARISTA11T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA11T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64012</a:ASN>
+        <a:Hostname>ARISTA12T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA12T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64013</a:ASN>
+        <a:Hostname>ARISTA13T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA13T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64014</a:ASN>
+        <a:Hostname>ARISTA14T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA14T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64015</a:ASN>
+        <a:Hostname>ARISTA15T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA15T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>64016</a:ASN>
+        <a:Hostname>ARISTA16T0</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+      <a:BGPRouterDeclaration>
+        <a:ASN>65200</a:ASN>
+        <a:Hostname>ARISTA16T2</a:Hostname>
+        <a:RouteMaps/>
+      </a:BGPRouterDeclaration>
+    </Routers>
+  </CpgDec>
+  <DpgDec>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.1.0.32/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.1.0.32/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      </ManagementIPInterfaces>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>sonic</Hostname>
+      <PortChannelInterfaces/>
+      <VlanInterfaces/>
+      <IPInterfaces>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP1</AttachTo>
+          <Prefix>10.0.0.0/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP2</AttachTo>
+          <Prefix>10.0.0.2/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP3</AttachTo>
+          <Prefix>10.0.0.4/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP4</AttachTo>
+          <Prefix>10.0.0.6/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP5</AttachTo>
+          <Prefix>10.0.0.8/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP6</AttachTo>
+          <Prefix>10.0.0.10/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP7</AttachTo>
+          <Prefix>10.0.0.12/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP8</AttachTo>
+          <Prefix>10.0.0.14/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP9</AttachTo>
+          <Prefix>10.0.0.16/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP10</AttachTo>
+          <Prefix>10.0.0.18/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP11</AttachTo>
+          <Prefix>10.0.0.20/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP12</AttachTo>
+          <Prefix>10.0.0.22/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP13</AttachTo>
+          <Prefix>10.0.0.24/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP14</AttachTo>
+          <Prefix>10.0.0.26/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP15</AttachTo>
+          <Prefix>10.0.0.28/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP16</AttachTo>
+          <Prefix>10.0.0.30/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP17</AttachTo>
+          <Prefix>10.0.0.32/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP18</AttachTo>
+          <Prefix>10.0.0.34/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP19</AttachTo>
+          <Prefix>10.0.0.36/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP20</AttachTo>
+          <Prefix>10.0.0.38/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP21</AttachTo>
+          <Prefix>10.0.0.40/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP22</AttachTo>
+          <Prefix>10.0.0.42/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP23</AttachTo>
+          <Prefix>10.0.0.44/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP24</AttachTo>
+          <Prefix>10.0.0.46/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP25</AttachTo>
+          <Prefix>10.0.0.48/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP26</AttachTo>
+          <Prefix>10.0.0.50/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP27</AttachTo>
+          <Prefix>10.0.0.52/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP28</AttachTo>
+          <Prefix>10.0.0.54/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP29</AttachTo>
+          <Prefix>10.0.0.56/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP30</AttachTo>
+          <Prefix>10.0.0.58/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP31</AttachTo>
+          <Prefix>10.0.0.60/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>QSFP32</AttachTo>
+          <Prefix>10.0.0.62/31</Prefix>
+        </IPInterface>     
+
+      </IPInterfaces>
+      <DataAcls/>
+      <AclInterfaces/>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+    </DeviceDataPlaneInfo>
+  </DpgDec>
+  <PngDec>
+    <Devices>
+      <Device i:type="LeafRouter">
+        <Hostname>sonic</Hostname>
+        <HwSku>Seastone_2</HwSku>
+      </Device>
+    </Devices>
+  </PngDec>
+  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>sonic</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>DhcpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value></a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>NtpResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>0.debian.pool.ntp.org;1.debian.pool.ntp.org;2.debian.pool.ntp.org;3.debian.pool.ntp.org</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SyslogResources</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value></a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ErspanDestinationIpv4</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>2.2.2.2</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>
+  <Hostname>sonic</Hostname>
+  <HwSku>Seastone_2</HwSku>
+</DeviceMiniGraph>

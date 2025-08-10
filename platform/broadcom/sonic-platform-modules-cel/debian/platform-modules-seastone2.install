@@ -1,0 +1,4 @@
+seastone2/cfg/seastone2-modules.conf etc/modules-load.d
+seastone2/systemd/platform-modules-seastone2.service lib/systemd/system
+seastone2/modules/sonic_platform-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-cel_seastone_2-r0
+services/platform_api/platform_api_mgnt.sh usr/local/bin

@@ -1,0 +1,5 @@
+depmod -a
+systemctl enable platform-modules-seastone2.service
+systemctl start platform-modules-seastone2.service
+
+/usr/local/bin/platform_api_mgnt.sh install

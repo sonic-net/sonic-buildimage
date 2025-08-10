@@ -1,0 +1,52 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup seastone2 board.
+### END INIT INFO
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+
+    # Add driver to support HW
+    modprobe i2c-dev
+    modprobe ipmi_devintf
+    modprobe ipmi_si
+    modprobe baseboard_cpld
+    modprobe switchboard_fpga
+    modprobe mc24lc64t
+        
+    # Add driver to support TLV - EEPROM
+    for devnum in 0 1; do
+        devname=`cat /sys/bus/i2c/devices/i2c-${devnum}/name`
+        if [[ $devname == 'SMBus iSMT adapter at '* ]]; then
+            echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
+        break
+        fi
+    done
+    sleep 1
+    echo "done."
+    ;;
+
+stop)
+    echo "done."
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/platform-modules-seastone2.init {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
