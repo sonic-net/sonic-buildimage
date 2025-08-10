@@ -38,13 +38,15 @@ PSU_CPLD_I2C_MAPPING = {
     },
 }
 
+THERMAL_NAME_LIST = ["Temp sensor 1", "Temp sensor 2", 
+                     "Temp sensor 3", "Temp sensor 4"] 
+                     
+PSU_THERMAL_NAME_LIST = ["PSU-1 temp sensor 1", "PSU-2 temp sensor 1"]
+
+SYSFS_PATH = "/sys/bus/i2c/devices"
 
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
-
-    THERMAL_NAME_LIST = []
-    PSU_THERMAL_NAME_LIST = []
-    SYSFS_PATH = "/sys/bus/i2c/devices"
 
     def __init__(self, thermal_index=0, is_psu=False, psu_index=0):
         self.index = thermal_index
@@ -59,13 +61,7 @@ class Thermal(ThermalBase):
             psu_i2c_bus = PSU_CPLD_I2C_MAPPING[psu_index]["num"]
             psu_i2c_addr = PSU_CPLD_I2C_MAPPING[psu_index]["addr"]
             self.cpld_path = PSU_I2C_PATH.format(psu_i2c_bus, psu_i2c_addr)
-        # Add thermal name
-        self.THERMAL_NAME_LIST.append("Temp sensor 1")
-        self.THERMAL_NAME_LIST.append("Temp sensor 2")
-        self.THERMAL_NAME_LIST.append("Temp sensor 3")
-        self.PSU_THERMAL_NAME_LIST.append("PSU-1 temp sensor 1")
-        self.PSU_THERMAL_NAME_LIST.append("PSU-2 temp sensor 1")
-
+       
         # Set hwmon path
         i2c_path = {
             0: "18-004b/hwmon/hwmon*/", 
@@ -74,8 +70,8 @@ class Thermal(ThermalBase):
             3: "21-004a/hwmon/hwmon*/"
         }.get(self.index, None)
 
-        self.hwmon_path = "{}/{}".format(self.SYSFS_PATH, i2c_path)
-        self.ss_key = self.THERMAL_NAME_LIST[self.index]
+        self.hwmon_path = "{}/{}".format(SYSFS_PATH, i2c_path)
+        self.ss_key = THERMAL_NAME_LIST[self.index]
         self.ss_index = 1
 
     def __read_txt_file(self, file_path):
@@ -137,7 +133,7 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         if self.is_psu:
-            return 0
+            return 80
 
         temp_file = "temp{}_max".format(self.ss_index)
         return self.__get_temp(temp_file)
@@ -164,9 +160,9 @@ class Thermal(ThermalBase):
             string: The name of the thermal device
         """
         if self.is_psu:
-            return self.PSU_THERMAL_NAME_LIST[self.psu_index]
+            return PSU_THERMAL_NAME_LIST[self.psu_index]
         else:
-            return self.THERMAL_NAME_LIST[self.index]
+            return THERMAL_NAME_LIST[self.index]
 
     def get_presence(self):
         """
@@ -228,7 +224,7 @@ class Thermal(ThermalBase):
         Returns:
             integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
         """
-        return -1
+        return self.index+1
 
     def is_replaceable(self):
         """

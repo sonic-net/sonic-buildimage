@@ -74,11 +74,11 @@ class Component(ComponentBase):
     def __get_cpld_version(self):
         # Retrieves the CPLD firmware version
         cpld_version = dict()
-        for cpld_name in CPLD_ADDR_MAPPING:            
+        for cpld_name in CPLD_ADDR_MAPPING:
             try:
                 cpld_path = "{}{}{}".format(SYSFS_PATH, CPLD_ADDR_MAPPING[cpld_name], '/version')
                 cpld_version_raw= self._api_helper.read_txt_file(cpld_path)
-                cpld_version[cpld_name] = "{}".format(int(cpld_version_raw,16))
+                cpld_version[cpld_name] = "{}".format(int(cpld_version_raw,10))
             except Exception as e:
                 print('Get exception when read cpld')
                 cpld_version[cpld_name] = 'None'
@@ -100,7 +100,7 @@ class Component(ComponentBase):
             A string containing the description of the component
         """
         return COMPONENT_LIST[self.index][1]
-        #return "testhwsku"
+
 
     def get_firmware_version(self):
         """

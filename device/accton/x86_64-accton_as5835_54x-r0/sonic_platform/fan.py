@@ -277,7 +277,7 @@ class Fan(FanBase):
             integer: The 1-based relative physical position in parent device
             or -1 if cannot determine the position
         """
-        return (self.fan_tray_index+1) \
+        return (self.fan_index+1) \
             if not self.is_psu_fan else (self.psu_index+1)
 
     def is_replaceable(self):

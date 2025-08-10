@@ -20,7 +20,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
     EEPROM_DECODE_HEADLINES = 6
 
     def __init__(self):
-        self._eeprom_path = "/sys/bus/i2c/devices/0-0057/eeprom"
+        self._eeprom_path = "/sys/bus/i2c/devices/1-0057/eeprom"
         super(Tlv, self).__init__(self._eeprom_path, 0, '', True)
         self._eeprom = self._load_eeprom()
 
@@ -33,7 +33,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         for line in lines:
             try:
                 match = re.search(
-                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)', line)
+                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)(.+)', line)
                 if match is not None:
                     idx = match.group(1)
                     value = match.group(3).rstrip('\0')
@@ -129,3 +129,6 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
 
     def get_mac(self):
         return self._eeprom.get('0x24', NULL)
+    
+    def get_product_name(self):
+        return self._eeprom.get('0x21', NULL)
