@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Iterate over all detected network interfaces and configure them to use DHCP   
+interfaces=$(ip -o link show | awk -F': ' '{print $2}' | grep -E '^e')
+
+# Bring up each Ethernet interface
+for interface in $interfaces; do
+    ip link set dev $interface up
+    dhclient $interface
+done
+
+echo("All interfaces have been intialized and DHCP is enabled. Can be verified by command,  \"ip addr\"")
+ip addr
+

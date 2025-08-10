@@ -222,6 +222,13 @@ sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/ssd-upg
 sudo cp files/initramfs-tools/fsck-rootfs $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/fsck-rootfs
 sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/fsck-rootfs
 
+
+# Hook into initramfs: Initialize network interfaces on boot, useful for kdump kernel image
+sudo cp files/initramfs-tools/network-interface-preboot-init $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/network-interface-preboot-init
+sudo chmod +x $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/network-interface-preboot-init
+
+
+
 ## Hook into initramfs: after partition mount and loop file mount
 ## 1. Prepare layered file system
 ## 2. Bind-mount docker working directory (docker overlay storage cannot work over overlay rootfs)
