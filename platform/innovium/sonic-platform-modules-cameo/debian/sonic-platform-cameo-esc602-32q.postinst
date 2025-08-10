@@ -1,0 +1,8 @@
+#!/bin/sh
+
+depmod -a
+systemctl enable esc602-platform-init.service
+systemctl start esc602-platform-init.service
+
+
+/usr/local/bin/cameo_esc602_platform.sh

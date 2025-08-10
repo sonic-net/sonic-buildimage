@@ -1,0 +1,62 @@
+sku:               innovium.55200
+
+device_id:         0x1b59
+
+# Hardware constraint information
+hardware:
+        num_ibs:           2
+        ib_active:         0, 1
+
+        ports_per_ib:      64, 64
+        recirc_port_num:   64, 64
+        cpu_port_num:      65
+        cpu_port_ib:       0
+        mgmt_port_num:     65, 66
+        mgmt_port_ibs:     1, 1
+
+        pics_per_ib:       9, 9
+        pic_ports_per_pic: 8
+        max_serdes_speed:  25
+
+        num_shared_pics:   0
+
+        isg [0-7]:
+            ib: 0
+            pic_id: [0-7]
+
+        isg 8:
+            ib: 1
+            pic_id: 7
+
+        isg 9:
+            ib: 1
+            pic_id: 6
+
+        isg 10:
+            ib: 1
+            pic_id: 5
+
+        isg 11:
+            ib: 1
+            pic_id: 4
+
+        isg 12:
+            ib: 1
+            pic_id: 3
+
+        isg 13:
+            ib: 1
+            pic_id: 2
+
+        isg 14:
+            ib: 1
+            pic_id: 1
+
+        isg 15:
+            ib: 1
+            pic_id: 0
+
+        isg 16:
+            mode: 0:2
+            ib: 1
+            pic_id: 8

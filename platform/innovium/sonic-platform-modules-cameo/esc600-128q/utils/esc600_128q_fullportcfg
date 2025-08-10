@@ -1,0 +1,275 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2020 Cameo Network, Inc.
+
+import sys
+import json
+import subprocess
+import re
+import logging
+
+logging.basicConfig(level=logging.WARNING) 
+
+def _get_port_config():
+    GET_PORT_CONF_CMD = "sonic-cfggen --print-data -p -k esc600-128q"
+    p = subprocess.Popen(GET_PORT_CONF_CMD, shell=True, stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    return out.rstrip('\n')
+
+"""
+insert_newports(dict_target, dict_data):
+@: parameter dict_target - the target dictionary
+@: parameter dict_data - the dictionary of ports will be added
+Add the new elements of port table
+"""
+def insert_newports(dict_target, dict_data):
+    dict_target['PORT']=dict_data['PORT']
+    return dict_target
+
+"""
+delete_ports_from_othertables(dict_target, list_port):
+@: parameter dict_target - the target dictionary
+@: parameter list_port - the list of ports will be abandoned
+remove the port names from all possible table in dict_target
+"""
+def delete_ports_from_othertables(dict_target, list_port):
+
+    if len(list_port) == 0:
+        return dict_target
+
+#PORT_CHANNEL - Should we also delete the port channel without members?
+    try:
+        if dict_target.has_key('PORTCHANNEL'):
+            for portchannel in dict_target['PORTCHANNEL'].keys():
+                for port in dict_target['PORTCHANNEL'][portchannel]['members']:
+                    if port in list_port:
+                        dict_target['PORTCHANNEL'][portchannel]['members'].remove(port)
+                        logging.debug("PORTCHANNEL.{}.members.{} -> deleted".format(portchannel,port))
+                    if len(dict_target['PORTCHANNEL'][portchannel]['members']) == 0:
+                        logging.warning("Empty member of PORTCHANNEL.{}".format(portchannel))
+    except Exception:
+        logging.error("Parse PORTCHANNEL error", exc_info=True)
+
+#PORT_CHANNEL_MEMBER
+    try:
+        if dict_target.has_key('PORTCHANNEL_MEMBER'):
+            for member in dict_target['PORTCHANNEL_MEMBER'].keys():
+                portname=(member.split('|'))[1]
+                for port in list_port:
+                    if port == portname:
+                        dict_target['PORTCHANNEL_MEMBER'].pop(member)
+                        logging.debug("PORTCHANNEL_MEMEBER.{} -> deleted".format(member))
+    except Exception:
+        logging.error("Parse PORTCHANNEL_MEMBER error", exc_info=True)    
+
+#PORT_QOS_MAP
+    try:
+        if dict_target.has_key('PORT_QOS_MAP'):
+            for kstring in dict_target['PORT_QOS_MAP'].keys():
+                # delete port in key string
+                plist = list(kstring.split(","))
+                new_kstring = set(plist)-set(list_port)
+                if len(new_kstring) != 0:
+                    new_kstring=",".join(new_kstring)
+                    dict_target['PORT_QOS_MAP'][new_kstring]=dict_target['PORT_QOS_MAP'].pop(kstring)
+                    logging.debug("PORT_QOS_MAP.{} -> {}".format(kstring, new_kstring))
+                else:
+                    dict_target['PORT_QOS_MAP'].pop(kstring)
+                    logging.debug("PORT_QOS_MAP.{} -> deleted".format(kstring))
+    except Exception:
+        logging.error("Parse PORT_QOS_MAP error", exc_info=True) 
+
+#QUEUE
+    try:
+        if dict_target.has_key('QUEUE'):
+            for kstring in dict_target['QUEUE'].keys():
+                # delete port in key string
+                plist = list(re.split(",|\|",kstring))
+                tail_prio = plist.pop()
+                new_kstring = set(plist)-set(list_port)
+                if len(new_kstring) != 0:
+                    new_kstring=",".join(new_kstring)+"|"+tail_prio
+                    dict_target['QUEUE'][new_kstring]=dict_target['QUEUE'].pop(kstring)
+                    logging.debug("QUEUE.{} -> {}".format(kstring, new_kstring))
+                else:
+                    dict_target['QUEUE'].pop(kstring)
+                    logging.debug("QUEUE.{} -> deleted".format(kstring))
+    except Exception:
+        logging.error("Parse QUEUE error", exc_info=True) 
+
+#VLAN, should we delete the VLAN without members?
+    try:
+        if dict_target.has_key('VLAN'):
+            for vlan in dict_target['VLAN'].keys():
+                for port in dict_target['VLAN'][vlan]['members']:
+                   if port in list_port:
+                        dict_target['VLAN'][vlan]['members'].remove(port)
+                        logging.debug("VLAN.{}.members.{} -> deleted".format(vlan,port))
+                        if len(dict_target['VLAN'][vlan]['members']) == 0:
+                            logging.warning("Empty member of VLAN.{}".format(vlan))
+    except Exception:
+        logging.error("Parse VLAN error", exc_info=True)     
+
+#VLAN_MEMBER
+    try:
+        if dict_target.has_key('VLAN_MEMBER'):
+            for member in dict_target['VLAN_MEMBER'].keys():
+                portname=(member.split('|'))[1]
+                for port in list_port:
+                    if port == portname:
+                        dict_target['VLAN_MEMBER'].pop(member)
+                        logging.debug("VLAN_MEMBER.{} -> deleted".format(member))
+    except Exception:
+        logging.error("Parse VLAN_MEMBER error", exc_info=True)      
+
+#ACL_TABLE
+    try:
+        if dict_target.has_key('ACL_TABLE'):
+            for acl_rule in dict_target['ACL_TABLE'].keys():
+                if dict_target['ACL_TABLE'][acl_rule].has_key('ports'):
+                    dict_target['ACL_TABLE'][acl_rule]['ports']=\
+                        list(set(dict_target['ACL_TABLE'][acl_rule]['ports'])\
+                        - set(list_port))
+                    logging.debug("ACL_TABLE.{}.ports.{} -> deleted".format(acl_rule,port))
+                    if len(dict_target['ACL_TABLE'][acl_rule]['ports']) == 0:
+                        logging.warning("Empty member of ACL_TABLE.{}.ports".format(acl_rule))
+    except Exception:
+        logging.error("Parse ACL_TABLE error", exc_info=True)     
+
+#BUFFER_PG
+    try:
+        if dict_target.has_key('BUFFER_PG'):
+            for kstring in dict_target['BUFFER_PG'].keys():
+                # delete port in key string
+                plist = list(re.split(",|\|",kstring))
+                tail_prio = plist.pop()
+                new_kstring = set(plist)-set(list_port)
+                if len(new_kstring) != 0:
+                    new_kstring=",".join(new_kstring)+"|"+tail_prio
+                    dict_target['BUFFER_PG'][new_kstring]=dict_target['BUFFER_PG'].pop(kstring)
+                    logging.debug("BUFFER_PG.{} -> {}".format(kstring,new_kstring))
+                else:
+                    dict_target['BUFFER_PG'].pop(kstring)
+                    logging.debug("BUFFER_PG.{} -> deleted".format(kstring))
+    except Exception:
+        logging.error("Parse BUFFER_PG error", exc_info=True)       
+
+#BUFFER_QUEUE
+    try:
+        if dict_target.has_key('BUFFER_QUEUE'):
+            for kstring in dict_target['BUFFER_QUEUE'].keys():
+                # delete port in key string
+                plist = list(re.split(",|\|",kstring))
+                tail_prio = plist.pop()
+                new_kstring = set(plist)-set(list_port)
+                if len(new_kstring) != 0:
+                    new_kstring=",".join(new_kstring)+"|"+tail_prio
+                    dict_target['BUFFER_QUEUE'][new_kstring]=dict_target['BUFFER_QUEUE'].pop(kstring)
+                    logging.debug("BUFFER_QUEUE.{} -> {}".format(kstring,new_kstring))
+                else:
+                    dict_target['BUFFER_QUEUE'].pop(kstring)
+                    logging.debug("BUFFER_QUEUE.{} -> deleted".format(kstring))
+    except Exception:
+        logging.error("Parse BUFFER_QUEUE error", exc_info=True)
+
+#CABLE_LENGTH
+    try:
+        if dict_target.has_key('CABLE_LENGTH'):
+            for group in dict_target['CABLE_LENGTH']:
+                for port in  dict_target['CABLE_LENGTH'][group].keys():
+                    if port in list_port:
+                        dict_target['CABLE_LENGTH'][group].pop(port)
+                        logging.debug("CABLE_LENGTH.{}.{} -> deleted".format(group,port))
+    except Exception:
+        logging.error("Parse CABLE_LENGTH error", exc_info=True)    
+
+#INTERFACE
+    try:
+        if dict_target.has_key('INTERFACE'):
+            for intf in dict_target['INTERFACE'].keys():
+                portname=(intf.split('|'))[0]
+                for port in list_port:
+                    if port == portname:
+                        dict_target['INTERFACE'].pop(intf)
+                        logging.debug("INTERFACE.{} -> deleted".format(intf))
+    except Exception:
+        logging.error("Parse INTERFACE error", exc_info=True)      
+
+#DEVICE_NEIGHBOR
+    try:
+        if dict_target.has_key('DEVICE_NEIGHBOR'):
+            for port in list_port:
+                if dict_target['DEVICE_NEIGHBOR'].has_key(port):
+                    dict_target['DEVICE_NEIGHBOR'].pop(port)
+                    logging.debug("DEVICE_NEIGHBOR.{} -> deleted".format(port))
+    except Exception:
+        logging.error("Parse DEVICE_NEIGHBOR error", exc_info=True)        
+
+    return dict_target
+
+def main():
+
+    # get input parameters:
+    if len(sys.argv)<3:
+        sys.exit(1)
+
+    target_file = sys.argv[1]
+    source_file = sys.argv[2]
+
+    with open(source_file) as f:
+        cur_cfg = json.load(f)
+
+    port_cfg = json.loads(_get_port_config())
+
+    port_cfg.pop('DEVICE_METADATA')
+
+    newports = port_cfg['PORT'].keys()
+    curports = cur_cfg['PORT'].keys()
+
+    lostports = list(set(curports) - set(newports))
+    appendports = list(set(newports) - set(curports))
+
+    logging.debug("====== Input =======")
+    logging.debug(json.dumps(port_cfg, sort_keys=True, indent=4, separators=(',',': ')))
+
+    logging.debug("====cur ports====")
+    logging.debug(curports)
+    logging.debug("====new ports====")
+    logging.debug(newports)
+    logging.debug("====lost ports====")
+    logging.debug(lostports)
+    logging.debug("====append ports====")
+    logging.debug(appendports)
+
+    # remove all ports from port table
+    cur_cfg['PORT'].clear()
+
+    # remove ports from other table
+    # skip this handling with empty list
+    empty_list = list()
+    cur_cfg = delete_ports_from_othertables(cur_cfg, empty_list)
+
+    # append new ports
+    cur_cfg = insert_newports(cur_cfg, port_cfg)
+
+    for port in cur_cfg['PORT'].keys():
+        cur_cfg['PORT'][port]['admin_status']= 'up'
+
+    logging.debug("==== Result =====")
+    logging.debug(json.dumps(cur_cfg, sort_keys=True, indent=4, separators=(',',': ')))
+
+    # write to new config file
+    try:
+        cfg_file = open(target_file, 'w')
+    except Exception:
+        logging.error("Error: unable to create file: %s".format(target_file))
+        sys.exit(1)
+
+    json.dump(cur_cfg, cfg_file, sort_keys=True, indent=4, separators=(',',': '))
+
+    cfg_file.close()
+
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,26 @@
+Source: sonic-cameo-platform-modules
+Section: main
+Priority: extra
+Maintainer: yuchun_hsueh@cameo.com.tw
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-cameo-esc601-32q
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-cameo-esc600-128q
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-cameo-esqc610-56sq
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-cameo-esc602-32q
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-cameo-escc601-32q
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp

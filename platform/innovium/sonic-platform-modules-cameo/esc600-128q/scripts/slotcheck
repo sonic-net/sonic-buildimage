@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export SLOT_CHECK_WARNING="/tmp/slotcheckfail"
+
+if [ -f $SLOT_CHECK_WARNING ]; then
+    echo -e "\e[31m********************************* WARNING **********************************\e[0m"
+    echo -e "\e[31m*                                                                          *\e[0m"
+    echo -e "\e[31m*  The previous port_config.ini does not match with current physical       *\e[0m"
+    echo -e "\e[31m*  configuration. A new port_config.ini has been created and PORT_TABLE in *\e[0m"
+    echo -e "\e[31m*  /etc/sonic/config_db.json has been changed to match.                    *\e[0m"
+    echo -e "\e[31m*  Please modify your /etc/sonic/config_db.json and reload it if needed    *\e[0m"
+    echo -e "\e[31m*                                                                          *\e[0m"
+    echo -e "\e[31m****************************************************************************\e[0m"
+fi

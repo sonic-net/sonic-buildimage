@@ -1,0 +1,8 @@
+#!/bin/bash
+docker exec -i pmon sensors "$@"
+
+#To probe sensors not part of lm-sensors
+if [ -r /usr/local/bin/cameo_esc602_sensors.py ]; then
+        python3 /usr/local/bin/cameo_esc602_sensors.py fan_status
+        python3 /usr/local/bin/cameo_esc602_sensors.py sensor_status
+fi

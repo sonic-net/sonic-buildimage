@@ -1,0 +1,4 @@
+esc602-32q/scripts/* usr/bin
+esc602-32q/utils/* usr/local/bin
+esc602-32q/service/*.service lib/systemd/system
+esc602-32q/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cameo_esc602_32q-r0

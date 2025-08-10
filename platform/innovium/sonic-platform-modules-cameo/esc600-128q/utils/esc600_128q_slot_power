@@ -1,0 +1,70 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+# Filename : esc600_128q_slot_power.py
+import os
+import sys
+import logging
+import click
+import subprocess
+
+def run_command(command):  
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    return out.rstrip('\n')
+    
+def set_attr_value(attr_path,input_val):
+    cmd=''
+    if not os.path.isfile(attr_path):
+        return
+    cmd = "echo %s > %s" %(input_val,attr_path)
+    run_command(cmd)
+
+    
+def get_attr_value(attr_path):
+    retval = 'ERR'
+    if not os.path.isfile(attr_path):
+        return retval
+
+    try:
+        with open(attr_path, 'r') as fd:
+            retval = fd.read()
+    except Exception as error:
+        logging.error("Unable to open ", attr_path, " file !")
+
+    retval = retval.rstrip('\r\n')
+    fd.close()
+    return retval
+
+
+@click.command()
+@click.option('-c', '--card', 'card', help='Line card', type=click.IntRange(1, 8),required=True)
+@click.argument('power',metavar='<on/off>',nargs=1,required=True,type=str)
+
+def main(card,power):
+    retval = ''
+    if not(power == 'on' or power == 'off'):
+        print "Error: %s <on/off> -c <card>" %sys.argv[0]
+        sys.exit(0)
+    
+    filePath = '/sys/class/hwmon/hwmon2/device/ESC600_SYS/module_%d_enable'%card
+    
+
+    if os.path.exists(filePath):
+        retval = get_attr_value(filePath)
+        if retval == 'ERR':
+            print "Fail to get value."
+            sys.exit(0)                   
+        if power == 'on':
+            value = '1'
+        elif power == 'off':
+            value = '0'            
+        #print "0x%x" %(value) 
+        set_attr_value(filePath,value)
+
+    else:
+       print "Error!"
+       sys.exit(0)
+       
+       
+if __name__ == '__main__':
+    main()       

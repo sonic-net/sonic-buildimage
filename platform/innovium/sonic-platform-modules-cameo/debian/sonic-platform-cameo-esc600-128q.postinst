@@ -1,0 +1,7 @@
+depmod -a
+pip install --upgrade --target=/usr/local/lib/python2.7/dist-packages /usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600_128q-1.0-py2-none-any.whl
+systemctl enable esc600-platform-init.service
+systemctl start esc600-platform-init.service
+systemctl enable phy_module_init.service
+systemctl start phy_module_init.service
+/usr/local/bin/cameo_esc600_platform.sh

@@ -1,0 +1,11 @@
+[Unit]
+Description=Cameo PHY module initialization service
+After=esc600-platform-init.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/esc600_128q_dynamic_hotswap.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

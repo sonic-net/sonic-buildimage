@@ -1,0 +1,17 @@
+#!/bin/bash
+
+
+start() {
+    # load platform driver, native drivers
+    /usr/local/bin/cameo_esc601_util.py install
+}
+
+stop() {
+    /usr/local/bin/cameo_esc601_util.py clean
+}
+
+
+case $1 in 
+  start|stop) "$1" ;;
+esac
+

@@ -1,0 +1,82 @@
+#!/bin/bash
+
+export HW_CFG_PATH=/usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600-128q
+
+
+start() {
+    # Install esc600-128q python package
+    DEVICE="/usr/share/sonic/device"
+    PLATFORM=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+
+    if [ -e $DEVICE/$PLATFORM/sonic_platform-1.0-py2-none-any.whl ]; then
+        pip install $DEVICE/$PLATFORM/sonic_platform-1.0-py2-none-any.whl
+    fi
+
+    # load platform driver, native drivers
+    /usr/local/bin/cameo_esc600_util.py install
+
+    # compare physical configuration with port_cfg.ini
+    /usr/local/bin/esc600_128q_slot_check.py
+    check_result=$?
+    
+    # check if the old configs exists for firsttime boot
+    # rc.local-service create the temporary file that cause 
+    # updategraph.service to configure sonic with old_config/* .
+    # In this case, we aim on old_config/config_db.json,
+    # we do not support the old configuration from minigraph 
+    if [ -e /tmp/pending_config_migration ]; then
+        echo "firsttime boot with old_config"
+        /usr/local/bin/esc600_128q_autoconfig
+        cp /etc/esc600_autoconfig/config_128x100G_Cameo-esc600-128q.yaml $HW_CFG_PATH/config_128x100G_Cameo-esc600-128q.yaml
+        cp /etc/esc600_autoconfig/port_config.ini $HW_CFG_PATH/port_config.ini
+
+
+        if [ -e /etc/sonic/old_config/config_db.json ]; then
+            /usr/local/bin/esc600_128q_fullportcfg /etc/esc600_autoconfig/config_db.json /etc/sonic/old_config/config_db.json
+            portcfg_result=$?
+            if [ $portcfg_result -eq 0 ]; then
+                mv /etc/sonic/old_config/config_db.json /etc/sonic/old_config/config_db.json.bk
+                cp /etc/esc600_autoconfig/config_db.json /etc/sonic/old_config/config_db.json
+            fi
+        fi
+    # Within firsttime reboot
+    # rc.local-service create the temporary file that cause
+    # updategraph.service to configure sonic by hw_sku's default one
+    # we can just generate the two default files then updategraph.service will handle it.
+    elif [ -e /tmp/pending_config_initialization ]; then
+        echo "firsttime boot with default hw_sku"
+        /usr/local/bin/esc600_128q_autoconfig
+        cp /etc/esc600_autoconfig/config_128x100G_Cameo-esc600-128q.yaml $HW_CFG_PATH/config_128x100G_Cameo-esc600-128q.yaml
+        cp /etc/esc600_autoconfig/port_config.ini $HW_CFG_PATH/port_config.ini
+    else
+        echo "normal reboot"
+        # handle normal reboot, different configuration checked
+        # generate new confgurations to match the current phyical configuration
+        if [ $check_result -eq 2 ]; then
+            echo "difference of port configuration founded..."
+            echo "start autoconfig process..."
+            /usr/local/bin/esc600_128q_autoconfig
+            cp /etc/esc600_autoconfig/config_128x100G_Cameo-esc600-128q.yaml $HW_CFG_PATH/config_128x100G_Cameo-esc600-128q.yaml
+            cp /etc/esc600_autoconfig/port_config.ini $HW_CFG_PATH/port_config.ini
+            /usr/local/bin/esc600_128q_fullportcfg /etc/esc600_autoconfig/config_db.json /etc/sonic/config_db.json
+            portcfg_result=$?
+            if [ $portcfg_result -eq 0 ]; then
+                mv /etc/sonic/config_db.json /etc/sonic/config_db.json.bk
+                cp /etc/esc600_autoconfig/config_db.json /etc/sonic/config_db.json
+            fi
+        fi
+    fi
+    
+    # do phy module init - move to phy_module_init.service
+    #/usr/local/bin/esc600_128q_init_phymodule
+}
+
+stop() {
+    /usr/local/bin/cameo_esc600_util.py clean
+}
+
+
+case $1 in 
+  start|stop) "$1" ;;
+esac
+

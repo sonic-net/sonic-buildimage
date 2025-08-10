@@ -1,0 +1,13 @@
+[Unit]
+Description=Cameo Esqc610-56sq Platform initialization service
+After=local-fs.target innovium_platform_driver.service
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cameo_esqc610_startup start
+ExecStop=/usr/local/bin/cameo_esqc610_startup stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

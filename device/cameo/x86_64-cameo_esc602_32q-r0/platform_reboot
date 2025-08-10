@@ -1,0 +1,16 @@
+#!/bin/sh
+
+mr_reboot() {
+
+    sudo rmmod x86-64-cameo-esc602-32q
+    sudo i2cset -y 0 0x30 0xa1 0
+
+}
+
+if [ $# -eq 0 ] || [ $@ = "-f" ] || [ $@ = "--force" ] || [ $@ = "reboot" ]; then
+    mr_reboot
+elif [ $@ = "-p" ] ; then
+    sudo halt
+else
+    echo "unsupported option"
+fi

@@ -1,0 +1,9 @@
+#!/bin/sh
+NOKEXECFILE=/no-kexec-reboot
+
+/bin/rm -f $NOKEXECFILE
+touch $NOKEXECFILE
+
+rmmod x86-64-cameo-esc600-128q
+i2cset -y 0 0x30 0xa1 0
+

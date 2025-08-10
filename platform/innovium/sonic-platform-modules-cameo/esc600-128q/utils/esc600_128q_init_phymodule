@@ -1,0 +1,40 @@
+#!/bin/bash
+export CREDO_PATH=/lib/credo_sdk
+export CAMEOLIB=$CREDO_PATH/libcameo_mdio.so
+export CREDO_100G_PATH=${CREDO_PATH}
+export CREDO_400G_PATH=${CREDO_PATH}
+
+d1=$(date +"%s")
+# get the type of phy modules
+for ((i=1; i<=8; i++))
+do
+    result[i]=`cat /sys/bus/i2c/devices/${i}-0032/model`
+done
+
+#parse for credo phy module
+for ((i=1; i<=8; i++))
+do
+    if [ "${result[i]}" = "Credo 100G" ]; then
+        c[i]=1
+    elif [ "${result[i]}" = "Credo 400G" ]; then
+        c[i]=2
+    else
+        c[i]=0
+    fi
+done
+
+#parse for inphi phy module
+# not implement yet
+
+# reset phy modules
+i2cset -f -y 0 0x30 0xa2 0x0
+sleep 1
+i2cset -f -y 0 0x30 0xa2 0xff
+sleep 1
+
+# start init the credo phy modules
+credo_auto1357.sh ${c[1]} ${c[3]} ${c[5]} ${c[7]}
+credo_auto2468.sh ${c[2]} ${c[4]} ${c[6]} ${c[8]}
+
+d2=$(date +"%s")
+echo "initialize All Slots Done: "$((d2-d1))" sec"

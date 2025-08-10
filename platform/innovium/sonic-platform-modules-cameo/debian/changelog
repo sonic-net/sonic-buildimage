@@ -1,0 +1,6 @@
+sonic-cameo-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for ESC601 series
+
+ -- developer <developer@cameo.com>  Mon, 29 Jul 2019 11:00:00 +0800
+

@@ -1,0 +1,4 @@
+esqc610-56sq/scripts/* usr/bin
+esqc610-56sq/utils/* usr/local/bin
+esqc610-56sq/service/* lib/systemd/system
+esqc610-56sq/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cameo_esqc610_56sq-r0

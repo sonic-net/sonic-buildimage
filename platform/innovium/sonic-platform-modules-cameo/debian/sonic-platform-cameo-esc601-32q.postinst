@@ -1,0 +1,8 @@
+#!/bin/sh
+
+depmod -a
+systemctl enable esc601-platform-init.service
+systemctl start esc601-platform-init.service
+
+
+/usr/local/bin/cameo_esc601_platform.sh

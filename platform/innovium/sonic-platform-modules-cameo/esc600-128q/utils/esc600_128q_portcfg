@@ -1,0 +1,40 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+# Filename : esc600_128q_portcfg.py
+import json
+import subprocess
+
+def _get_port_config():
+    GET_PORT_CONF_CMD = "sonic-cfggen --print-data -p -k esc600-128q"
+    p = subprocess.Popen(GET_PORT_CONF_CMD, shell=True, stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    return out.rstrip('\n')
+    
+        
+def main():
+    cur_cfg  = json.load(open("/etc/sonic/config_db.json"))
+
+    port_cfg  = json.loads(_get_port_config())    
+    #remove DEVICE_METADATA
+    port_cfg.pop('DEVICE_METADATA')
+    for element1 in port_cfg['PORT'].copy():
+        if cur_cfg['PORT'].has_key(element1):
+            port_cfg['PORT'].pop(element1)
+    
+    for element1 in port_cfg['PORT'].copy():
+        port_cfg['PORT'][element1]['admin_status']= 'up'
+    # Output the updated file with pretty JSON
+    #file_name="updated-file.json"
+    #open(file_name, "w").write(
+    #        json.dumps(port_cfg, sort_keys=True, indent=4, separators=(',', ': '))
+    #)    
+    print(json.dumps(port_cfg, sort_keys=True, indent=4, separators=(',', ': ')))
+    #print "Loading new port config to current config..."    
+    #command = "config load {}".format(file_name)
+    #run_command(command,display_cmd=True)    
+    #print "Saving current config..."
+    #command = "config save"
+    #run_command(command,display_cmd=True)       
+    
+if __name__ == '__main__':
+    main()

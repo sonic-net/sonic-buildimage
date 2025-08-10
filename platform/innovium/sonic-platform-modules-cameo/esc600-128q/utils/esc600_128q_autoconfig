@@ -1,0 +1,477 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+# Filename : esc600_128q_autoconfig.py
+
+import os
+CAMEO_HWSKU_PATH='/usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600-128q'
+AUTOCONFIG_FILE_PATH='/etc/esc600_autoconfig'
+CAMEO_INNO_CFG=AUTOCONFIG_FILE_PATH+'/config_128x100G_Cameo-esc600-128q.yaml'
+CAMEO_PORT_CFG=AUTOCONFIG_FILE_PATH+'/port_config.ini'
+
+if not os.path.exists(AUTOCONFIG_FILE_PATH):
+    os.mkdir(AUTOCONFIG_FILE_PATH)
+    print "Create %s." %AUTOCONFIG_FILE_PATH
+else:
+    print "%s already exists." %AUTOCONFIG_FILE_PATH
+    
+f = open(CAMEO_INNO_CFG,'w')
+f2 = open(CAMEO_PORT_CFG,'w')
+
+def print_first():
+    f.write('ifcs:                                                          \n')
+    f.write('  options:                                                     \n')
+    f.write('    log_level: \"info\"                                        \n') 
+    f.write('nodes:                                                         \n')
+    f.write('- node_id: \"0\"                                               \n') 
+    f.write('  options:                                                     \n')
+    f.write('    sd_low_power_mode_global_default: "true"                   \n')
+    f.write('    sku: \"configs/sku/innovium.77700_A\"                      \n')
+    f.write('    netdev:                                                    \n')
+    f.write('    - auto_create: "no"                                        \n')
+    f.write('      multi_interface: "yes"                                   \n')
+    f.write('    buffer_management_mode: "api_driven"                       \n')
+    f.write('    max_lossless_tc: "2"                                       \n')
+    #f.write('    wred_cr_ip_proto_list: "17"                                \n')
+    f.write('    ilpm_enable: "1"                                           \n')
+    f.write('    forward_profile: "IFCS_FORWARD_PROFILE_ID_PROFILE_E"       \n')
+    f.write('    mac_clk: \"1340\"                                          \n')     
+    f.write('    sys_clk: \"1720\"                                          \n')     
+    f.write('    ifc_clk: \"1200\"                                          \n') 
+    f.write('    txring:                                                    \n')
+    f.write('    - txring_id: \"0\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n')
+    f.write('      netdev: \"true\"                                         \n')     
+    f.write('    - txring_id: \"1\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('    - txring_id: \"2\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('    - txring_id: \"3\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('    rxring:                                                    \n')
+    f.write('    - rxring_id: \"0\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('      queues: \"0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39\"\n') 
+    f.write('    - rxring_id: \"1\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('      queues: \"1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40\"\n') 
+    f.write('    - rxring_id: \"2\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      netdev: \"true\"                                         \n') 
+    f.write('      queues: \"2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 47\"\n') 
+    f.write('    - rxring_id: \"3\"                                         \n') 
+    f.write('      desc_count: \"1024\"                                     \n') 
+    f.write('      prio: \"1\"                                              \n') 
+    f.write('      queues: \"42, 43, 44, 45, 46\"                           \n') 
+    f.write('  devports:                                                    \n')
+    f.write('  - id: \"0\"                                                  \n') 
+    f.write('    sysport: \"1000\"                                          \n') 
+    f.write('    type: \"cpu\"                                              \n')
+    f2.write('# name              lanes                             alias       speed       index   mtu     fec\n')
+
+def print_end():
+    f.write('  isg:                              \n')
+    f.write('  - id: \"0\"                       \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"01100111\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"1\"                       \n')
+    f.write('    tx_polarity: \"00111011\"       \n')
+    f.write('    rx_polarity: \"01100111\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"2\"                       \n')
+    f.write('    tx_polarity: \"01100011\"       \n')
+    f.write('    rx_polarity: \"10100111\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"3\"                       \n')
+    f.write('    tx_polarity: \"01111011\"       \n')
+    f.write('    rx_polarity: \"00111000\"       \n')
+    f.write('    lane_swap: \"73614520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"4\"                       \n')
+    f.write('    tx_polarity: \"01100011\"       \n')
+    f.write('    rx_polarity: \"01100000\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"5\"                       \n')
+    f.write('    tx_polarity: \"00101011\"       \n')
+    f.write('    rx_polarity: \"01000111\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"6\"                       \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"10000001\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"7\"                       \n')
+    f.write('    tx_polarity: \"01101111\"       \n')
+    f.write('    rx_polarity: \"00011100\"       \n')
+    f.write('    lane_swap: \"71324065\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"8\"                       \n')
+    f.write('    tx_polarity: \"00000001\"       \n')
+    f.write('    rx_polarity: \"11000001\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"9\"                       \n')
+    f.write('    tx_polarity: \"01001001\"       \n')
+    f.write('    rx_polarity: \"01000101\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"10\"                      \n')
+    f.write('    tx_polarity: \"01000001\"       \n')
+    f.write('    rx_polarity: \"10000001\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"11\"                      \n')
+    f.write('    tx_polarity: \"00001101\"       \n')
+    f.write('    rx_polarity: \"01001101\"       \n')
+    f.write('    lane_swap: \"03215467\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"12\"                      \n')
+    f.write('    tx_polarity: \"00000001\"       \n')
+    f.write('    rx_polarity: \"00100001\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"13\"                      \n')
+    f.write('    tx_polarity: \"00000101\"       \n')
+    f.write('    rx_polarity: \"00101011\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"14\"                      \n')
+    f.write('    tx_polarity: \"00000001\"       \n')
+    f.write('    rx_polarity: \"10101001\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"15\"                      \n')
+    f.write('    tx_polarity: \"00001101\"       \n')
+    f.write('    rx_polarity: \"00001100\"       \n')
+    f.write('    lane_swap: \"01235467\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"16\"                      \n')
+    f.write('    tx_polarity: \"00000001\"       \n')
+    f.write('    rx_polarity: \"10100011\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"17\"                      \n')
+    f.write('    tx_polarity: \"01000101\"       \n')
+    f.write('    rx_polarity: \"00101011\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"18\"                      \n')
+    f.write('    tx_polarity: \"01000000\"       \n')
+    f.write('    rx_polarity: \"10100011\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"19\"                      \n')
+    f.write('    tx_polarity: \"00110111\"       \n')
+    f.write('    rx_polarity: \"01010110\"       \n')
+    f.write('    lane_swap: \"01235467\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"20\"                      \n')
+    f.write('    tx_polarity: \"01100101\"       \n')
+    f.write('    rx_polarity: \"01001011\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"21\"                      \n')
+    f.write('    tx_polarity: \"10111011\"       \n')
+    f.write('    rx_polarity: \"10101110\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"22\"                      \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"01101011\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"23\"                      \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"01011000\"       \n')
+    f.write('    lane_swap: \"01235467\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"24\"                      \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"11100111\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"25\"                      \n')
+    f.write('    tx_polarity: \"00101011\"       \n')
+    f.write('    rx_polarity: \"01100111\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"26\"                      \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"10100111\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"27\"                      \n')
+    f.write('    tx_polarity: \"01000111\"       \n')
+    f.write('    rx_polarity: \"00011101\"       \n')
+    f.write('    lane_swap: \"01235467\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"28\"                      \n')
+    f.write('    tx_polarity: \"01100011\"       \n')
+    f.write('    rx_polarity: \"11111101\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"29\"                      \n')
+    f.write('    tx_polarity: \"00111011\"       \n')
+    f.write('    rx_polarity: \"01101110\"       \n')
+    f.write('    lane_swap: \"71635420\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"30\"                      \n')
+    f.write('    tx_polarity: \"01110011\"       \n')
+    f.write('    rx_polarity: \"00100010\"       \n')
+    f.write('    lane_swap: \"71634520\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"31\"                      \n')
+    f.write('    tx_polarity: \"01010011\"       \n')
+    f.write('    rx_polarity: \"00110111\"       \n')
+    f.write('    lane_swap: \"71235460\"         \n')
+    f.write('    pre1: \"8, 8, 8, 8, 8, 8, 8, 8\"\n')
+    f.write('    pre2: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    pre3: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    attn: \"0, 0, 0, 0, 0, 0, 0, 0\"\n')
+    f.write('    post: \"2, 2, 2, 2, 2, 2, 2, 2\"\n')
+    f.write('  - id: \"32\"                      \n')
+    f.write('    tx_polarity: \"00000000\"       \n')
+    f.write('    rx_polarity: \"00000000\"       \n')
+    f.write('    lane_swap: \"01234567\"         \n') 
+    
+    
+def cameo_config_gen():
+    MAX_ISG_NUM=32
+    isg = [7,6,5,4,3,2,1,0,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8]
+    ISG_PER_SLOT=4
+    print_first()
+    port=0
+    count=0
+    slot_port=0
+    filepath=''
+    line_card = ['N/A','N/A','N/A','N/A','N/A','N/A','N/A','N/A']    
+    val=0
+    
+    for i in range(0,8): 
+        filepath = "/sys/bus/i2c/devices/%d-0032/model" %(i+1)
+        if os.path.exists(filepath):
+            with open(filepath) as fh:
+                for line in fh:
+                    get_str = line.strip()
+                    #val1 = get_str.find("Inphi");
+                    #val2 = get_str.find("Credo");
+                    #if (val1==-1 and val2==-1):
+                    #    continue
+                    
+                    val = get_str.find("100G");
+                    if val != -1:
+                        line_card[i]='100G'                    
+                        continue
+                    val = get_str.find("400G");
+                    if val != -1:
+                        line_card[i]='400G'  
+                        continue
+                        
+        #else:
+        #    print "open %s fail" %filepath
+            
+    for i in range(MAX_ISG_NUM):    
+        if (i%4==0):
+            card = (i/ISG_PER_SLOT)+1
+            slot_port=1;
+            
+            if line_card[card-1] is '400G':                
+                lane=8
+            elif line_card[card-1] is '100G':
+                lane=2
+            else:
+                lane=0
+            speed = lane*50; 
+    
+        if (lane==0):
+            continue;
+        
+        start_lane=0
+        #for (start_lane=0;start_lane<8;start_lane+=lane)
+        while start_lane < 8:
+        
+            #the global serdes # is “serdes_group” * 8 + start lane + 1 = 4*8 + 0  + 1 = 33.
+            id = isg[i]*8 + start_lane + 1;
+            f.write("  - fec: \"KPFEC\" \n")
+            f.write("    id: \"%d\" \n" % id)
+            f.write("    lanes: \"%d:%d\" \n" % (start_lane,lane))
+            f.write("    serdes_group: \"%d\" \n" % isg[i])
+            f.write("    speed: \"%dG\" \n" % speed)
+            f.write("    sysport: \"%d\" \n" % id)
+            f.write("    type: \"eth\" \n")
+            #f2.write("Ethernet%-12d" % port)
+            str = "%d-%d" %(card,slot_port)
+            f2.write("Ethernet%-12s" % str);                  
+            port += lane;
+
+            k=id            
+            lanestr=''
+            while k < id+lane:
+                lanestr="%s%d" %(lanestr,k)
+                if k+1 < id+lane:                
+                    lanestr="%s," %lanestr   
+                k+=1
+
+            f2.write("%-34s" %lanestr)            
+            f2.write("Eth%-9s" %str)
+            #f2.write("Eth%-9d" %(count+1))
+            f2.write("%-12d" %(speed*1000))
+            f2.write("%-8d" %count)
+            f2.write("%-8s" %"9126")
+            f2.write("%-8s\n" %"rs")
+            
+            count+=1
+            slot_port+=1
+            start_lane+=lane       
+    print_end()
+    f.close()
+    f2.close()
+  
+    print "This script will generate %s and %s." %(CAMEO_INNO_CFG,CAMEO_PORT_CFG)
+    print "Please copy them to %s to take effect." %CAMEO_HWSKU_PATH
+#/usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600-128q/port_config.ini
+#/usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600-128q/config_128x100G_Cameo-esc600-128q.yaml    
+
+if __name__ == '__main__':    
+    cameo_config_gen()

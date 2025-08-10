@@ -1,0 +1,9 @@
+esc600-128q/utils/* usr/local/bin
+esc600-128q/service/*.service lib/systemd/system
+esc600-128q/scripts/sensors usr/bin
+esc600-128q/scripts/slotcheck etc/update-motd.d
+esc600-128q/credo_baldeagle/bin/* usr/local/bin
+esc600-128q/credo_baldeagle/lib/*.so lib/credo_sdk
+esc600-128q/credo_baldeagle/credo_sdk_fw/* lib/credo_sdk
+esc600-128q/modules/esc600_128q-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-cameo_esc600_128q-r0
+esc600-128q/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cameo_esc600_128q-r0

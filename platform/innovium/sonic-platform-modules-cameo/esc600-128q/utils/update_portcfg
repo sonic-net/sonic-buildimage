@@ -1,0 +1,24 @@
+#!/bin/sh
+
+AUTOCONFIG_FILE_PATH="/etc/esc600_autoconfig"
+HW_CFG_PATH=/usr/share/sonic/device/x86_64-cameo_esc600_128q-r0/esc600-128q
+
+esc600_128q_autoconfig
+
+echo "import new configuration files:"
+echo "...$HW_CFG_PATH/config_128x100G_Cameo-esc600-128q.yaml"
+echo "...$HW_CFG_PATH/port_config.ini"
+
+cp $AUTOCONFIG_FILE_PATH/config_128x100G_Cameo-esc600-128q.yaml $HW_CFG_PATH/config_128x100G_Cameo-esc600-128q.yaml
+cp $AUTOCONFIG_FILE_PATH/port_config.ini $HW_CFG_PATH/port_config.ini
+
+esc600_128q_fullportcfg /etc/esc600_autoconfig/config_db.json /etc/sonic/config_db.json
+portcfg_result=$?
+if [ $portcfg_result -eq 0 ]; then
+    echo "New config_db.json is created:"
+    echo ".../etc/sonic/config_db.json -> /etc/sonic/config_db.json.bk"
+    echo ".../etc/esc600_autoconfig/config_db.json -> /etc/sonic/config_db.json"
+    mv /etc/sonic/config_db.json /etc/sonic/config_db.json.bk
+    cp /etc/esc600_autoconfig/config_db.json /etc/sonic/config_db.json
+fi 
+
