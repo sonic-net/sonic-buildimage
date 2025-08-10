@@ -313,6 +313,7 @@ class BreakoutCfg(object):
         self._indexes = properties ['index'].split(',')
         self._breakout_mode_entry = self._str_to_entries(bmode)
         self._breakout_capabilities = None
+        self._breakout_fec_mode = self._properties.get('fec_modes', {}).get(bmode, [])
 
         # Find specified breakout mode in port breakout mode capabilities
         for supported_mode in self._properties['breakout_modes']:
@@ -372,7 +373,11 @@ class BreakoutCfg(object):
 
             for port in range(entry.num_ports):
                 interface_name = PORT_STR + str(self._interface_base_id + lane_id)
-
+                self._breakout_fec_mode = self._breakout_fec_mode or []
+                if port < len(self._breakout_fec_mode):
+                    fec_mode = self._breakout_fec_mode[port]
+                else:
+                    fec_mode = "none"
                 lanes = self._lanes[lane_id:lane_id + lanes_per_port]
 
                 ports[interface_name] = {
@@ -380,6 +385,7 @@ class BreakoutCfg(object):
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
                     'index': self._indexes[lane_id],
+                    'fec': str(fec_mode),
                     'subport': "0" if total_num_ports == 1 else str(alias_id + 1)
                 }
 
