@@ -1,0 +1,13 @@
+[Unit]
+Description=Pegastron fn8656-bnf Platform initialization service
+Before=network.target
+DefaultDependencies=no
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pegaProcess/main.py install
+ExecStop=/usr/local/bin/pegatron_fn8656_bnf_util.py uninstall
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

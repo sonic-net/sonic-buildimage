@@ -1,0 +1,11 @@
+Source: sonic-pegatron-platform-modules
+Section: main
+Priority: extra
+Maintainer: Pegatron <Peter5_Lin@pegatroncorp.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-pegatron-fn8656-bnf
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+

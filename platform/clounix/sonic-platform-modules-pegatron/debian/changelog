@@ -1,0 +1,5 @@
+sonic-pegatron-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add fn8656-bnf
+
+ -- Pegatron <Maurice_Hsueh@pegatroncorp.com>  Wed, 13 May 2020 17:41:32 +0800

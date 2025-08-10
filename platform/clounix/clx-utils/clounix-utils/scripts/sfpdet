@@ -1,0 +1,2144 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Copyright (C) 2018 Clounix, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import sys
+import time
+import subprocess
+import re
+import logging
+import logging.handlers
+import imp
+import operator
+import timeit
+import threading
+import shutil
+import functools
+import collections
+import click
+import traceback
+from port_breakout import libpcfgparsing as cfg_parser
+from port_breakout.main import get_state_db, PORT_CFG_STATE_NAME, STATE_MODIFIED
+from tabulate import tabulate
+import itertools
+import json
+
+# python version
+if sys.version > '3':
+    import queue as que
+else:
+    import Queue as que
+
+#
+START_UP_CFG_FILE = '/etc/sonic/sfpdet_cfg.json'
+
+# platform path
+PLATFORM_ROOT_PATH = '/usr/share/sonic/device'
+PLATFORM_PLUGINS = 'plugins'
+PLATFORM_SPECIFIC_MODULE_NAME = 'sfputil'
+PLATFORM_SPECIFIC_CLASS_NAME = "SfpUtil"
+
+# Global platform-specific sfputil class instance
+g_platform_sfputil = None
+
+# port config file path
+PORT_MAP_FILE_NAME = 'port_map.ini.'
+PORT_CFG_FILE_NAME = 'port_config.ini'
+PORT_CFG_CLX_FILE_NAME = 'port_config.clx'
+
+# pre emphasis config filename extension
+PRE_EMPHASIS_FILENAME_EXT = '.dsh'
+
+# clounix default pre-emphasis config file name
+DEFAULT_PRE_EMPHASIS_OPT_CFG_FILE_NAME = 'clounix_opt' + PRE_EMPHASIS_FILENAME_EXT
+DEFAULT_PRE_EMPHASIS_DAC_CFG_FILE_NAME = 'clounix_dac' + PRE_EMPHASIS_FILENAME_EXT
+
+"""
+key:user logic lane num
+vlaue:phy port num
+"""
+g_logical_lane_2_phy_port_info = dict()
+
+"""
+key:user logic port name
+vlaue:phy port num
+"""
+g_user_port_2_phy_port_info = dict()
+
+"""
+key:clx_port=>(unit, port)
+vlaue:[laneObj1, laneObj2]
+"""
+g_clx_port_2_logical_lane_info = dict()
+
+"""
+key: logic lane
+vlaue:clx_port=>(unit, port)
+"""
+g_logical_lane_2_clx_port_info = dict()
+
+"""
+#global port info dict
+#key:physical port
+#value:{     
+        'user_port':{name:{
+                            'lanes':[logic_lane1, logic_lane2...],
+                            'alias':'',
+                            'clx_port':(unit, port)
+                            'max-speed':dd
+                            'media':'XRd'}
+                            'mdio':{(devad, addr):value}}
+        'lane_list': [logic_lane1, logic_lane2]                    
+        'present_sfp_info':{'Vendor Name':'', 
+                    'Vendor PN':'', 
+                    'Identifier':'', 
+                    'Connector':''
+                    'Complance Code'},
+        'pre_emphasis':{(sfp info key):{(unit, clx port, lane count, property): data)
+        'usr_config_media':'opt'/'dac'
+                }}
+        }        
+"""
+g_phy_port_info = dict()
+
+
+def key_2_str(key):
+    return str(key)
+
+
+KEY_PHY_PORT_INFO = key_2_str
+KEY_PHY_PORT_INFO_V_USER_PORT = cfg_parser.KEY_PHY_PORT_INFO_V_USER_PORT
+KEY_PHY_PORT_INFO_V_LANE_LIST = cfg_parser.KEY_PHY_PORT_INFO_V_LANE_LIST
+KEY_PHY_PORT_INFO_V_USER_PORT_V = key_2_str
+KEY_PHY_PORT_INFO_V_USER_PORT_V_ALIAS = cfg_parser.KEY_PHY_PORT_INFO_V_USER_PORT_V_ALIAS
+KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES = cfg_parser.KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES
+KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT = 'clx_port'
+KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA = 'media'
+KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO = 'mdio'
+KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES_V = key_2_str
+KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES_V_ETH_MACRO = 'eth_macro'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO = 'present_sfp_info'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_VENDOR_NAME = 'Vendor Name'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_VENDOR_PN = 'Vendor PN'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_IDENTIFIER = 'Identifier'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_CONNECTOR = 'Connector'
+KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_COMPLIANCE_CODE = 'Specification compliance'
+KEY_PHY_PORT_INFO_V_PRE_EMPHASIS = 'pre_emphasis'
+KEY_PHY_PORT_INFO_V_USR_CFG_MEDIA = 'usr_config_media'
+KEY_PHY_PORT_INFO_V_USR_CFG_DSH = 'usr_config_dsh'
+
+g_platform_name = ''
+g_hwsku_name = ''
+
+
+def _get_key_fuzzy_match_in_obj(key_str, obj):
+    """
+    case and space ignore match
+    :param key_str: a string key
+    :param obj: iterable obj
+    :return:
+    """
+    key_slice = str(key_str).lower().split(' ')
+    pt = re.compile(r'[\s\-_~.!@#%$&]*'.join(key_slice))
+
+    for key in obj:
+        if pt.search(key.lower()) is not None:
+            return key
+    return None
+
+
+def _get_func_meta():
+    import sys
+    try:
+        raise Exception()
+    except Exception:
+        exc_info = sys.exc_info()
+        trace_obj = exc_info[2]
+        trace_obj = trace_obj.tb_frame
+        up_frame = trace_obj.f_back
+
+    return __name__ + '-->' + up_frame.f_code.co_name + '(line ' + str(up_frame.f_lineno) + ')'
+
+
+def decro_timeit(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        worker_id = threading.current_thread().name
+        t0 = timeit.default_timer()
+        ret = func(*args, **kwargs)
+        t1 = timeit.default_timer()
+        g_sfp_logger.debug('of worker {} {} cost time: {}s\n'.format(
+            func.__name__, worker_id, t1 - t0))
+        g_sfp_logger.debug('args: {}s\n'.format(list(args) + list(kwargs)))
+
+        return ret
+
+    return wrapper
+
+
+g_sfp_logger = None
+
+
+@decro_timeit
+def _init_logging(logging_level=logging.INFO):
+    global g_sfp_logger
+
+    logger_file_name = '/var/log/transceiver.log'
+    logger_fize_size = 10
+    logger_file_num = 5
+
+    # init already, just return
+    if g_sfp_logger is None:
+        # create logger
+        logger_name = 'sfp_monitor_logger'
+        g_sfp_logger = logging.getLogger(logger_name)
+        g_sfp_logger.setLevel(logging_level)
+
+        # create file handler
+        fh = logging.handlers.RotatingFileHandler(logger_file_name, mode='a+', maxBytes=logger_fize_size * 1024 * 1024,
+                                                  backupCount=logger_file_num, delay=0)
+        fh.setLevel(logging_level)
+
+        # create formatter
+        fmt = "%(asctime)-15s %(levelname)s %(filename)s[%(lineno)d]: %(funcName)s - %(message)s"
+        # datefmt = "%a %d %b %Y %H:%M:%S"
+        formatter = logging.Formatter(fmt)
+
+        # add handler and formatter to _sys_logger
+        fh.setFormatter(formatter)
+        g_sfp_logger.addHandler(fh)
+
+
+@decro_timeit
+def _get_platform_and_hwsku():
+    """
+    get hardware sku
+    :return: (platform, hwsku)
+    """
+    global g_platform_name
+    global g_hwsku_name
+
+    if g_platform_name != '' and g_hwsku_name != '':
+        return g_platform_name, g_hwsku_name
+
+    platform = ""
+    hwsku = ""
+    cmd = ['show', 'platform', 'summary']
+    cmd_out = subprocess.check_output(cmd)
+    g_sfp_logger.debug(cmd_out)
+    pt = re.compile(r'^Platform:\s*([^\n\r\b]*).*HwSKU\s*:\s*([^\n\r\b]*)', re.I | re.M | re.S)
+    result = pt.search(cmd_out)
+    if result is not None:
+        g_sfp_logger.debug("type result:{}, result:{}\nmatch:{}\n".format(type(result), result, result.group()))
+        platform = result.group(1)
+        hwsku = result.group(2)
+
+    if platform == "":
+        cmd = ['show', 'platform', 'syseeprom']
+        cmd_out = subprocess.check_output(cmd)
+        g_sfp_logger.debug(cmd_out)
+        pt = re.compile(r'^Platform\s+Name\s+\w+\s+\d+\s+([^\n\r\b]*)', re.I | re.M | re.S)
+        result = pt.search(cmd_out)
+        if result is not None:
+            g_sfp_logger.debug("type result:{}, result:{}\nmatch:{}\n".format(type(result), result, result.group()))
+            platform = result.group(1)
+
+    g_platform_name, g_hwsku_name = platform, hwsku
+    return platform, hwsku
+
+
+def _get_path_to_platform_hwsku():
+    """
+    Returns path to platform and hwsku
+    :return: (path to platform, path to hwsku)
+    """
+    # Get platform and hwsku
+    (platform, hwsku) = _get_platform_and_hwsku()
+
+    # Load platform module from source
+    platform_path = "/".join([PLATFORM_ROOT_PATH, platform])
+    hwsku_path = "/".join([platform_path, hwsku])
+
+    return platform_path, hwsku_path
+
+
+@decro_timeit
+def _load_platform_sfputil():
+    """
+    Loads platform specific sfputil module from source
+    :return:
+    """
+    global g_platform_sfputil
+
+    # Get platform and hwsku path
+    (platform_path, hwsku_path) = _get_path_to_platform_hwsku()
+
+    try:
+        module_file = "/".join([platform_path, PLATFORM_PLUGINS, PLATFORM_SPECIFIC_MODULE_NAME + ".py"])
+        module = imp.load_source(PLATFORM_SPECIFIC_MODULE_NAME, module_file)
+    except IOError as e:
+        g_sfp_logger.error("Failed to load platform module '%s': %s" % (PLATFORM_SPECIFIC_MODULE_NAME, str(e)))
+        return -1
+
+    try:
+        platform_sfputil_class = getattr(module, PLATFORM_SPECIFIC_CLASS_NAME)
+        g_platform_sfputil = platform_sfputil_class()
+
+        # overwride _sfp_eeprom_present of baseclass for performance
+        def wrap_sfp_eeprom_present(sysfs_sfp_i2c_client_eeprompath, offset):
+            return True
+
+        g_platform_sfputil._sfp_eeprom_present = wrap_sfp_eeprom_present
+    except AttributeError as e:
+        g_sfp_logger.error("Failed to instantiate '%s' class: %s\n" % (PLATFORM_SPECIFIC_CLASS_NAME, str(e)))
+        return -2
+
+    return 0
+
+
+def _get_path_to_port_config_file():
+    """
+    Returns path to port config file
+    :return:
+    """
+    # Get platform and hwsku path
+    platform_path, hwsku_path = _get_path_to_platform_hwsku()
+
+    # First check for the presence of the new 'port_config.ini' file
+    port_config_file_path = os.path.join(hwsku_path, PORT_CFG_FILE_NAME)
+    if os.path.isfile(port_config_file_path):
+        return port_config_file_path
+    else:
+        return ''
+
+
+def _get_path_to_dflt_cfg_clx_file():
+    """
+        Returns path to default port config clx file
+        :return:
+        """
+    platform_path, hwsku_path = _get_path_to_platform_hwsku()
+    clx_cfg_full_path = os.path.join(hwsku_path, PORT_CFG_CLX_FILE_NAME)
+    if os.path.isfile(clx_cfg_full_path):
+        return clx_cfg_full_path
+    else:
+        return ''
+
+
+@decro_timeit
+def _valid_global_data():
+    global g_phy_port_info
+
+    for phy_port, phy_port_value in g_phy_port_info.items():
+        if KEY_PHY_PORT_INFO_V_USER_PORT not in phy_port_value \
+                or KEY_PHY_PORT_INFO_V_PRE_EMPHASIS not in phy_port_value\
+                or len(phy_port_value[phy_port_value]) == 0:
+            err_msg = "invalid phy_port_info[{}] = {}\n".format(phy_port, phy_port_value)
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+
+
+def _parse_pre_emphasis_info(dsh_file_path_list):
+    """
+    parse pre-emphasis info from dsh file, if dsh_file_path is None then parse default clounix dsh file
+    :param dsh_file_path_list:
+    :return:
+    """
+    global g_phy_port_info
+
+    # generate pre-emphasis cmd for every phy port, like
+    # phy set pre-emphasis portlist=44 lane-cnt=4 property=c0 data=0x1c.1c.1c.1c
+    def _my_udf_lane_data_cmp(kx, ky):
+        if int(kx[0]) < int(ky[0]):
+            return -1
+        elif int(kx[0]) == int(ky[0]):
+            return 0
+        else:
+            return 1
+
+    for dsh_file_path in dsh_file_path_list:
+        parsed_dsh_info = cfg_parser.parse_clx_dsh(dsh_file_path)
+        dsh_file_name = os.path.split(dsh_file_path)[1]
+
+        # init phy port pre-emphasis configuration
+        phy_port_emphasis_grouped_by_property = dict()
+        parsed_pre_emphasis = parsed_dsh_info[cfg_parser.KEY_PRE_EMPHASIS]
+        if cfg_parser.KEY_CPI_PORT_INFO in parsed_pre_emphasis:
+            parsed_pre_emphasis.pop(cfg_parser.KEY_CPI_PORT_INFO)
+        for (lane, prop), data in parsed_pre_emphasis.items():
+            if lane not in g_logical_lane_2_phy_port_info:
+                g_sfp_logger.info("{}: lane {} is not in any phy port".format(_get_func_meta(), lane))
+                continue
+
+            key_phy_port = g_logical_lane_2_phy_port_info[lane]
+            if key_phy_port not in phy_port_emphasis_grouped_by_property:
+                phy_port_emphasis_grouped_by_property[key_phy_port] = dict()
+            value_phy_port = phy_port_emphasis_grouped_by_property[key_phy_port]
+            if prop not in value_phy_port:
+                value_phy_port.update({prop: [(lane, data)]})
+            else:
+                value_phy_port[prop].append((lane, data))
+
+        for key_phy_port, value_prop_key_emphasis in phy_port_emphasis_grouped_by_property.items():
+            cur_phy_port_pre_emphasis_dict = {dsh_file_name: {}}
+            for prop, lane_data_list in value_prop_key_emphasis.items():
+                sort_lane_data_list = sorted(lane_data_list, key=functools.cmp_to_key(_my_udf_lane_data_cmp))
+                lane = sort_lane_data_list[0][0]
+                unit = g_logical_lane_2_clx_port_info[lane][0]
+                clx_port = g_logical_lane_2_clx_port_info[lane][1]
+                lane_cnt = len(sort_lane_data_list)
+                pre_data = '0x' + '.'.join([d[1] for d in sort_lane_data_list])
+                cur_phy_port_pre_emphasis_dict[dsh_file_name].update({(unit, clx_port, lane_cnt, prop): pre_data})
+
+            if KEY_PHY_PORT_INFO_V_PRE_EMPHASIS not in g_phy_port_info[key_phy_port]:
+                g_phy_port_info[key_phy_port][KEY_PHY_PORT_INFO_V_PRE_EMPHASIS] = dict()
+            g_phy_port_info[key_phy_port][KEY_PHY_PORT_INFO_V_PRE_EMPHASIS].update(cur_phy_port_pre_emphasis_dict)
+
+
+@decro_timeit
+def _parse_phy_port_info():
+    """
+    load sfputil module from device and init port phy2logic config mapping
+    :return:
+    """
+
+    global g_platform_sfputil
+    global g_logical_lane_2_phy_port_info
+    global g_user_port_2_phy_port_info
+    global g_clx_port_2_logical_lane_info
+    global g_logical_lane_2_clx_port_info
+    global g_phy_port_info
+
+    # clear global database
+    g_platform_sfputil = None
+    g_logical_lane_2_phy_port_info.clear()
+    g_user_port_2_phy_port_info.clear()
+    g_clx_port_2_logical_lane_info.clear()
+    g_phy_port_info.clear()
+
+    # load sfputil module
+    ret = _load_platform_sfputil()
+    if 0 != ret:
+        err_msg = "{}:fail({})\n".format(_get_func_meta(), ret)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # init phy port to sonic logical port mappnig of g_platform_sfputil
+    try:
+        port_config_file_path = _get_path_to_port_config_file()
+        g_platform_sfputil.read_porttab_mappings(port_config_file_path)
+    except Exception as e:
+        err_msg = "{}:read port config file fail({})".format(_get_func_meta(), str(e))
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # parse config.ini
+    try:
+        parsed_phy_port_info = cfg_parser.parse_port_config_ini(port_config_file_path)
+        if cfg_parser.KEY_PHY_PORT_INFO not in parsed_phy_port_info \
+                or len(parsed_phy_port_info[cfg_parser.KEY_PHY_PORT_INFO]) == 0:
+            raise Exception(cfg_parser.KEY_PHY_PORT_INFO + ' is not in ' + parsed_phy_port_info.keys())
+        if cfg_parser.KEY_LOGIC_LANE_2_PHY_PORT not in parsed_phy_port_info \
+                or len(parsed_phy_port_info[cfg_parser.KEY_LOGIC_LANE_2_PHY_PORT]) == 0:
+            raise Exception(cfg_parser.KEY_LOGIC_LANE_2_PHY_PORT + ' is not in ' + parsed_phy_port_info.keys())
+        if cfg_parser.KEY_USER_PORT_2_PHY_PORT not in parsed_phy_port_info \
+                or len(parsed_phy_port_info[cfg_parser.KEY_USER_PORT_2_PHY_PORT]) == 0:
+            raise Exception(cfg_parser.KEY_USER_PORT_2_PHY_PORT + ' is not in ' + parsed_phy_port_info.keys())
+    except Exception as e:
+        err_msg = "{}:parse {} fail({})".format(_get_func_meta(), port_config_file_path, e)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # update global phy port--logic user port -- lane database
+    g_phy_port_info.update(parsed_phy_port_info[cfg_parser.KEY_PHY_PORT_INFO])
+    g_logical_lane_2_phy_port_info.update(parsed_phy_port_info[cfg_parser.KEY_LOGIC_LANE_2_PHY_PORT])
+    g_user_port_2_phy_port_info.update(parsed_phy_port_info[cfg_parser.KEY_USER_PORT_2_PHY_PORT])
+
+    # parse config_clx
+    try:
+        parsed_dsh_info = cfg_parser.parse_clx_dsh(_get_path_to_dflt_cfg_clx_file())
+        if cfg_parser.KEY_CLX_PORT_2_LOGIC_LANE not in parsed_dsh_info \
+                or len(parsed_dsh_info[cfg_parser.KEY_CLX_PORT_2_LOGIC_LANE]) == 0:
+            raise Exception(cfg_parser.KEY_CLX_PORT_2_LOGIC_LANE + ' is not in ' + parsed_dsh_info.keys())
+        if cfg_parser.KEY_LOGIC_LANE_2_CLX_PORT not in parsed_dsh_info \
+                or len(parsed_dsh_info[cfg_parser.KEY_LOGIC_LANE_2_CLX_PORT]) == 0:
+            raise Exception(cfg_parser.KEY_LOGIC_LANE_2_CLX_PORT + ' is not in ' + parsed_dsh_info.keys())
+        if cfg_parser.KEY_PRE_EMPHASIS not in parsed_dsh_info \
+                or len(parsed_dsh_info[cfg_parser.KEY_PRE_EMPHASIS]) == 0:
+            raise Exception(cfg_parser.KEY_PRE_EMPHASIS + ' is not in ' + parsed_dsh_info.keys())
+    except Exception as e:
+        err_msg = "{}:parse {} fail({})".format(_get_func_meta(), _get_path_to_dflt_cfg_clx_file(), e)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+    g_clx_port_2_logical_lane_info.update(parsed_dsh_info[cfg_parser.KEY_CLX_PORT_2_LOGIC_LANE])
+    g_logical_lane_2_clx_port_info.update(parsed_dsh_info[cfg_parser.KEY_LOGIC_LANE_2_CLX_PORT])
+
+    # fill clx port for every user port
+    for clx_port, clx_port_lanes in g_clx_port_2_logical_lane_info.items():
+        # get clx port of every user port
+        clx_port_lane = clx_port_lanes[0]
+        phy_port = g_logical_lane_2_phy_port_info[clx_port_lane]
+        user_port_list = g_phy_port_info[phy_port][KEY_PHY_PORT_INFO_V_USER_PORT]
+        for user_port_name, user_port_value in user_port_list.items():
+            if clx_port_lane in user_port_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES]:
+                user_port_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT] = clx_port
+                user_port_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA] =\
+                    parsed_dsh_info[cfg_parser.KEY_MEDIUM_TYPE][clx_port]
+
+
+def decro_get_docker_exec(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        cmd = ['docker', 'exec', '-i', 'syncd', 'bash']
+        popen_obj = subprocess.Popen(cmd, bufsize=1024 * 1024, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+        exec_cmd = func(popen_obj, *args, **kwargs)
+        cmd_out = popen_obj.communicate()
+        if cmd_out[1] != '':
+            # cmd exec fail
+            err_msg = "cmd={} type cmd_out {}, cmd_out:{}\n".format(exec_cmd, type(cmd_out), cmd_out)
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+        else:
+            return exec_cmd, cmd_out[0]
+
+    return wrapper
+
+
+@decro_timeit
+def _get_port_sfp_present_status(phy_port):
+    """
+    get sfp present status of port
+    :param phy_port:
+    :return: True if present
+    """
+    global g_platform_sfputil
+
+    present = g_platform_sfputil.get_presence(phy_port)
+
+    return present
+
+
+def _get_phy_user_port_list(phy_port_value):
+    k = KEY_PHY_PORT_INFO_V_USER_PORT
+    if k not in phy_port_value:
+        g_sfp_logger.error("key {} is not in {}\n".format(k, phy_port_value))
+        return {}
+    return phy_port_value[k]
+
+
+@decro_timeit
+def _get_port_sfp_info(phy_port):
+    """
+    get eeprom sfp dict info from sfp moudule
+    :param phy_port:phy_port
+    :return: a sfp info dict
+    """
+    global g_platform_sfputil
+    sfp_info_data = {}
+
+    sfp_info_eeprom = g_platform_sfputil.get_eeprom_dict(phy_port)
+    if sfp_info_eeprom is None:
+        err_msg = "can't read sfp info of phy port {}\n".format(phy_port)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # vendor info, ref SFF-8024 Transceiver Management
+    if ('interface' not in sfp_info_eeprom) or ('data' not in sfp_info_eeprom['interface']):
+        err_msg = "unknown sfp info {} of phy port {}\n".format(sfp_info_data, phy_port)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    pat = re.compile(r'\s+')
+    sp_replace = '-'
+    sfp_info_eeprom_data = sfp_info_eeprom['interface']['data']
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_VENDOR_NAME
+    fuzzy_key = _get_key_fuzzy_match_in_obj(k, sfp_info_eeprom_data)
+    if fuzzy_key is not None:
+        sfp_info_data[k] = pat.sub(sp_replace, sfp_info_eeprom_data[fuzzy_key]).lower()
+    else:
+        g_sfp_logger.info("unknown sfp vendor name {} of phy port {}\n".format(sfp_info_data, phy_port))
+        sfp_info_data[k] = 'unknown'
+
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_VENDOR_PN
+    fuzzy_key = _get_key_fuzzy_match_in_obj(k, sfp_info_eeprom_data)
+    if fuzzy_key is not None:
+        sfp_info_data[k] = pat.sub(sp_replace, sfp_info_eeprom_data[fuzzy_key]).lower()
+    else:
+        g_sfp_logger.info("unknown sfp vendor pn {} of phy port {}\n".format(sfp_info_data, phy_port))
+        sfp_info_data[k] = 'unknown'
+
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_IDENTIFIER
+    fuzzy_key = _get_key_fuzzy_match_in_obj(k, sfp_info_eeprom_data)
+    if fuzzy_key is not None:
+        sfp_info_data[k] = pat.sub('', sfp_info_eeprom_data[fuzzy_key]).lower()
+    else:
+        g_sfp_logger.info("unknown sfp identifier {} of phy port {}\n".format(sfp_info_data, phy_port))
+        sfp_info_data[k] = 'unknown'
+
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_CONNECTOR
+    fuzzy_key = _get_key_fuzzy_match_in_obj(k, sfp_info_eeprom_data)
+    if fuzzy_key is not None:
+        sfp_info_data[k] = pat.sub('', sfp_info_eeprom_data[fuzzy_key]).lower()
+    else:
+        g_sfp_logger.info("unknown sfp connector {} of phy port {}\n".format(sfp_info_data, phy_port))
+        sfp_info_data[k] = 'unknown'
+
+    # {'10/40G Ethernet Compliance Code': '40GBASE-CR4'}
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_COMPLIANCE_CODE
+    fuzzy_key = _get_key_fuzzy_match_in_obj(k, sfp_info_eeprom_data)
+    if fuzzy_key is not None:
+        sfp_info_data[k] = str(sfp_info_eeprom_data[fuzzy_key]).lower()
+    else:
+        g_sfp_logger.info("unknown sfp specification compliance {} of phy port {}\n".format(sfp_info_data,
+                                                                                            phy_port))
+        sfp_info_data[k] = 'unknown'
+
+    return sfp_info_data
+
+
+def _get_sfp_type(sfp_info):
+    """
+    get sfp type from sfp eeprom info
+    :param sfp_info:
+    :return: 'dac'--copper; 'opt'--fiber
+    """
+
+    # default 'opt'
+    media_type = 'opt'
+
+    dac_connector_dict = {'copperpigtail': 'dac', "noseparableconnector": 'dac'}
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_CONNECTOR
+    if k in sfp_info:
+        connector_value = str(sfp_info[k]).lower().replace(' ', '')
+        if connector_value in dac_connector_dict:
+            media_type = dac_connector_dict[connector_value]
+
+    media_base = ''
+    k = KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO_COMPLIANCE_CODE
+    if k in sfp_info:
+        pt_str = r'.*-(?P<media_base>[ceskl]r)(?P<media_cnt>\d*)\s*'
+        pt = re.compile(pt_str, re.I)
+        result = pt.search(sfp_info[k])
+        if result is not None:
+            media_base = result.group('media_base')
+
+    # ??
+    if media_base.lower() == 'cr' and media_type == 'opt':
+        media_type = 'dac'
+    elif media_base.lower() == 'sr' and media_type == 'dac':
+        media_type = 'opt'
+
+    return media_type
+
+
+def _set_phy_port_media_mdio(phy_port_value, media_type='opt'):
+    """
+    set media and mdio to opt of given physical port
+    :param phy_port_value:
+    :param media_type:
+    :return:
+    """
+
+    if 'opt' == media_type:
+        media_config = 'sr'
+        mdio_config = {('0x1e', '0x2'): '0x8000'}
+    else:
+        media_config = 'cr'
+        mdio_config = {('0x1e', '0x2'): '0x0'}
+
+    # get phy_port_info->value->user_port
+    k = KEY_PHY_PORT_INFO_V_USER_PORT
+    all_user_port_value = phy_port_value[k]
+
+    for port in all_user_port_value:
+        k_lanes = KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES
+        port_lanes_cnt = len(all_user_port_value[port][k_lanes])
+        if port_lanes_cnt == 1:
+            media_value = media_config
+        else:
+            media_value = media_config + str(port_lanes_cnt)
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA
+        all_user_port_value[port][k] = media_value
+
+        # find current clx port and update mdio value
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO
+        all_user_port_value[port][k] = mdio_config
+
+
+@decro_timeit
+def _get_phy_port_admin_status(user_port_list):
+    """
+    get port status of user logic ports
+    :param user_port_list:
+    :return:
+    """
+    port_admin_status = dict()
+
+    cmd = ['show', 'interface', 'status']
+    pcmd = subprocess.Popen(cmd, bufsize=-1, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd_out = pcmd.communicate()
+    if cmd_out[1] != '':
+        # cmd exec fail
+        err_msg = "cmd={} cmd_out:\n {}\n".format(cmd, cmd_out)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # Interface    Lanes    Speed    MTU         Alias    Oper    Admin
+    # -----------  -------  -------  -----  ------------  ------  -------
+    # Ethernet12       20      10G   9100  Ethernet13/1      up       up
+    pt_str = r'''^\s* 
+             (?P<port_name>({}))\s+  #interface 
+             (?P<lanes>[\d,]+)\s+  #lanes 
+             [\w/]+\s+  #speed 
+             \d+\s+  #mtu 
+             (?P<alias>[\w/]+)\s+ 
+             [\w/]+\s+ 
+             (?P<admin>[\w/]+) 
+             .*$ 
+             '''
+    port_name_list = '{}'.format('|'.join(list(user_port_list)))
+    pt_str = pt_str.format(port_name_list)
+    pt = re.compile(pt_str, re.I | re.M | re.X)
+    result = pt.finditer(cmd_out[0])
+    if result is None:
+        err_msg = "port {} cmd={} search fail cmd_out={}\n".format(list(user_port_list), cmd, cmd_out[0])
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    for r in result:
+        user_port = r.group('port_name')
+        status = r.group('admin')
+        clx_port = user_port_list[user_port][KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT]
+        port_admin_status[user_port] = (status, clx_port)
+
+    return port_admin_status
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _admin_up_user_ports(popen_obj, port_admin_status):
+    exec_cmd = []
+
+    for user_port, (admin, (port_unit, port_index)) in port_admin_status.items():
+        if str(admin).lower() == 'up'.lower():
+            cmd_str = 'clx_diag port set property unit={} portlist={} admin=enable'.format(
+                port_unit, port_index)
+            popen_obj.stdin.write(cmd_str + '\n')
+            exec_cmd.append(cmd_str)
+            time.sleep(0.005)
+
+    return exec_cmd
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _admin_down_user_ports(popen_obj, user_port_list):
+    exec_cmd = []
+
+    for port in user_port_list:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        clx_port = user_port_list[port][k]
+        cmd_str = 'clx_diag port set property unit={} portlist={} admin=disable'.format(
+            clx_port[0], clx_port[1])
+        popen_obj.stdin.write(cmd_str + '\n')
+        exec_cmd.append(cmd_str)
+        time.sleep(0.005)
+
+    return exec_cmd
+
+
+def _get_phy_port_media(user_port_list):
+    media_config = dict()
+
+    for p in user_port_list:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        clx_port = user_port_list[p][k]
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA
+        media = user_port_list[p][k]
+        media_config[clx_port] = media
+
+    return media_config
+
+
+def _get_phy_port_mdio(user_port_list):
+    mdio_config = dict()
+
+    for p in user_port_list:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        clx_port = user_port_list[p][k]
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO
+        mdio = user_port_list[p][k]
+        mdio_config[clx_port] = mdio
+
+    return mdio_config
+
+
+# config order should be C2 -> CN1 -> C1 -> C0
+def _my_udf_pre_emphasis_cmp(kx, ky):
+    order_map = {'c2': 1, 'cn1': 2, 'c1': 3, 'c0': 4}
+    kx_priority = order_map[kx[3]]
+    ky_priority = order_map[ky[3]]
+    if kx_priority < ky_priority:
+        return -1
+    elif kx_priority == ky_priority:
+        return 0
+    else:
+        return 1
+
+
+@decro_timeit
+def _get_port_running_config_exec_cmd(popen_obj, pre_emphasis_config, user_port_list):
+    exec_cmd = []
+
+    # show media
+    for port_name in user_port_list:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        unit, port = user_port_list[port_name][k]
+        cmd_str = 'clx_diag port show property unit={0} portlist={1}\n'.format(
+            unit, port)
+        popen_obj.stdin.write(cmd_str)
+        exec_cmd.append(cmd_str)
+        time.sleep(0.005)
+
+    # show pre-emphasis
+    ordered_key_list = sorted(list(pre_emphasis_config), key=functools.cmp_to_key(_my_udf_pre_emphasis_cmp))
+    for (unit, clx_port, lane_cnt, property_data) in ordered_key_list:
+        cmd_str = 'clx_diag phy show pre-emphasis unit={0} portlist={1}' \
+                  ' lane-cnt={2} property={3}'.format(unit, clx_port, lane_cnt, property_data) + '\n'
+        popen_obj.stdin.write(cmd_str)
+        exec_cmd.append(cmd_str)
+        time.sleep(0.005)
+
+    return exec_cmd
+
+
+@decro_timeit
+def _get_port_running_config_mdio_exec_cmd(popen_obj, user_port_list):
+    exec_cmd = []
+
+    # show mdio
+    portlist_key_ol = sorted(list(user_port_list))
+    for port_name in portlist_key_ol:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        unit, port = user_port_list[port_name][k]
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO
+        mdio_config_ol = sorted(list(user_port_list[port_name][k]))
+        for devad, addr in mdio_config_ol:
+            cmd_str = 'clx_diag phy show mdio unit={0} portlist={1}' \
+                      ' devad={2} addr={3}'.format(unit, port, devad, addr) + '\n'
+            popen_obj.stdin.write(cmd_str)
+            exec_cmd.append(cmd_str)
+            time.sleep(0.005)
+
+    return exec_cmd
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _get_port_running_config_check_output(popen_obj, pre_emphasis_config, user_port_list):
+    return _get_port_running_config_exec_cmd(popen_obj, pre_emphasis_config, user_port_list)
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _get_port_running_config_mdio_check_output(popen_obj, user_port_list):
+    return _get_port_running_config_mdio_exec_cmd(popen_obj, user_port_list)
+
+
+@decro_timeit
+def _get_port_running_config(show_cmd_buf, pre_emphasis_config, user_port_list):
+    # get media
+    # port speed medium admin an  eee fec flow-ctrl status loopback cut-through
+    # ---- ----- ------ ----- --- --- --- --------- ------ -------- -----------
+    # 0    100g  sr4    en    dis dis dis dis       down   dis      dis
+    running_media = dict()
+    portlist = []
+    for port_name in user_port_list:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        portlist.append(user_port_list[port_name][k][1])
+    pt_str = r'''^\s*
+             (?P<port>{})\s+  #interface
+             (?P<speed>[^\s]+)\s+  #speed
+             (?P<media>\w+)\s+  #media
+             (?P<admin>\w+)\s+  #admin
+             .*$
+             '''
+    pt_str = pt_str.format('|'.join(portlist))
+    pt = re.compile(pt_str, re.I | re.M | re.X)
+    result = pt.finditer(show_cmd_buf)
+    for r in result:
+        k = ('0', r.group('port'))
+        running_media[k] = r.group('media')
+
+    # get pre-emphasis
+    # clx_diag phy show pre-emphasis unit={0} portlist={1}
+    #  lane-cnt={2} property={3}'
+    running_pre_emphasis = dict()
+    ordered_key_list = sorted(list(pre_emphasis_config), key=functools.cmp_to_key(_my_udf_pre_emphasis_cmp))
+    pt = re.compile(r'^.*\s+data\s*=\s*(?P<data>[\w.]+).*$', re.I | re.M)
+    running_pre_emphasis_ol = pt.findall(show_cmd_buf)
+    for i in range(0, len(running_pre_emphasis_ol)):
+        hl = [hex(y)[2:] for y in [int(x, 16) for x in running_pre_emphasis_ol[i].split('.')]]
+        uniform_data = '0x' + '.'.join(hl)
+        k = ordered_key_list[i]
+        running_pre_emphasis[k] = uniform_data
+
+    return running_media, running_pre_emphasis
+
+
+@decro_timeit
+def _get_port_running_config_mdio(show_cmd_buf, user_port_list):
+    # get mdio
+    # admin@switch:~$ _clx_diag phy show mdio unit=0 portlist=0 devad=0x1E addr=0x2
+    # port 000: data=0x0000
+    running_mdio = dict()
+
+    pt = re.compile(r'^.*\s+data\s*=\s*(?P<data>[\w.]+).*$', re.I | re.M)
+    portlist_key_ol = sorted(list(user_port_list))
+    rst_mdio_ol = pt.findall(show_cmd_buf)
+    for i in range(0, len(rst_mdio_ol)):
+        hl = [hex(y)[2:] for y in [int(x, 16) for x in rst_mdio_ol[i].split('.')]]
+        uniform_data = '0x' + '.'.join(hl)
+        port_name = portlist_key_ol[i]
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        unit, port = user_port_list[port_name][k]
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO
+        mdio_config_ol = sorted(list(user_port_list[port_name][k]))
+        k = (unit, port)
+        for devad, addr in mdio_config_ol:
+            if k in running_mdio:
+                running_mdio[k].update({(devad, addr): uniform_data})
+            else:
+                running_mdio[k] = {(devad, addr): uniform_data}
+
+    return running_mdio
+
+
+def _cmp_running_media_pre_emphasis(running_media,
+                                    media_config,
+                                    running_mdio,
+                                    mdio_config,
+                                    running_pre_emphasis,
+                                    pre_emphasis_config):
+    media_changed = 0
+    if operator.ne(running_media, media_config):
+        media_changed = 1
+
+    mdio_changed = 0
+    if operator.ne(running_mdio, mdio_config):
+        mdio_changed = 1
+
+    pre_emphasis_changed = 0
+    if operator.ne(running_pre_emphasis, pre_emphasis_config):
+        pre_emphasis_changed = 1
+
+    return media_changed, mdio_changed, pre_emphasis_changed
+
+
+@decro_timeit
+def _check_port_running_config(
+        media_config,
+        mdio_config,
+        pre_emphasis_config,
+        user_port_list):
+    exec_cmd, output = _get_port_running_config_check_output(pre_emphasis_config, user_port_list)
+    running_media, running_pre_emphasis = \
+        _get_port_running_config(output, pre_emphasis_config, user_port_list)
+
+    exec_cmd, output = _get_port_running_config_mdio_check_output(user_port_list)
+    running_mdio = \
+        _get_port_running_config_mdio(output, user_port_list)
+
+    if len(running_media) != len(media_config) \
+            or len(running_mdio) != len(mdio_config) \
+            or len(running_pre_emphasis) != len(pre_emphasis_config):
+        err_msg = "{}: geting running config failed\n".format(_get_func_meta())
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    media_changed, mdio_changed, pre_emphasis_changed = \
+        _cmp_running_media_pre_emphasis(running_media,
+                                        media_config,
+                                        running_mdio,
+                                        mdio_config,
+                                        running_pre_emphasis,
+                                        pre_emphasis_config)
+
+    return media_changed, mdio_changed, pre_emphasis_changed
+
+
+@decro_timeit
+def _set_port_running_media_pre_emphasis_exec_cmd(
+        popen_obj,
+        media_changed,
+        media_config,
+        pre_emphasis_changed,
+        pre_emphasis_config,
+        user_port_list):
+    cmd_change = []
+
+    if 0 != media_changed:
+        for (unit, clx_port), media in media_config.items():
+            # clx_diag port set property unit=0 portlist=26 medium-type=cr4
+            cmd_str = 'clx_diag port set property unit={0} portlist={1} medium-type={2}'.format(
+                unit, clx_port, media)
+            popen_obj.stdin.write(cmd_str + '\n')
+            time.sleep(0.005)
+            cmd_change.append(cmd_str)
+
+    if 0 != pre_emphasis_changed:
+        ordered_key_list = sorted(list(pre_emphasis_config), key=functools.cmp_to_key(_my_udf_pre_emphasis_cmp))
+        for (unit, clx_port, lane_cnt, property_data) in ordered_key_list:
+            data = pre_emphasis_config[(unit, clx_port, lane_cnt, property_data)]
+            cmd_str = 'clx_diag phy set pre-emphasis unit={0} portlist={1} lane-cnt={2} ' \
+                      'property={3} data={4}'.format(unit, clx_port, lane_cnt, property_data, data)
+            popen_obj.stdin.write(cmd_str + '\n')
+            time.sleep(0.005)
+            cmd_change.append(cmd_str)
+
+    _get_port_running_config_exec_cmd(popen_obj, pre_emphasis_config, user_port_list)
+
+    return cmd_change
+
+
+@decro_timeit
+def _set_port_running_mdio_exec_cmd(
+        popen_obj,
+        mdio_changed,
+        mdio_config,
+        user_port_list):
+    cmd_change = []
+
+    if 0 != mdio_changed:
+        for (unit, clx_port), mdio_values in mdio_config.items():
+            # clx_diag phy show mdio portlist=0 devad=0x1E addr=0x2 data=0x8000
+            for (devad, addr), v in mdio_values.items():
+                cmd_str = 'clx_diag phy set mdio unit={0} portlist={1} devad={2} addr={3} data={4}'.format(
+                    unit, clx_port, devad, addr, v)
+                popen_obj.stdin.write(cmd_str + '\n')
+                time.sleep(0.005)
+                cmd_change.append(cmd_str)
+
+    _get_port_running_config_mdio_exec_cmd(popen_obj, user_port_list)
+
+    return cmd_change
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _set_port_running_config_check_output(
+        popen_obj,
+        media_changed,
+        media_config,
+        pre_emphasis_changed,
+        pre_emphasis_config,
+        user_port_list):
+    # set pre-emphasis in chip
+    exec_cmd = _set_port_running_media_pre_emphasis_exec_cmd(popen_obj,
+                                                             media_changed,
+                                                             media_config,
+                                                             pre_emphasis_changed,
+                                                             pre_emphasis_config,
+                                                             user_port_list)
+
+    return exec_cmd
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _set_port_running_config_mdio_check_output(
+        popen_obj,
+        mdio_changed,
+        mdio_config,
+        user_port_list):
+    # set pre-emphasis in chip
+    exec_cmd = _set_port_running_mdio_exec_cmd(popen_obj, mdio_changed, mdio_config, user_port_list)
+
+    return exec_cmd
+
+
+@decro_timeit
+def _set_port_running_config_hw(media_changed,
+                                media_config,
+                                mdio_changed,
+                                mdio_config,
+                                pre_emphasis_changed,
+                                pre_emphasis_config,
+                                user_port_list):
+    # exec media and pre-emphasis config cmd
+    cmd_change_media_pre_emphasis, output = _set_port_running_config_check_output(media_changed,
+                                                                                  media_config,
+                                                                                  pre_emphasis_changed,
+                                                                                  pre_emphasis_config,
+                                                                                  user_port_list)
+    running_media, running_pre_emphasis = _get_port_running_config(output, pre_emphasis_config, user_port_list)
+
+    # exec mdio cmd
+    cmd_change_mdio, output = _set_port_running_config_mdio_check_output(mdio_changed, mdio_config, user_port_list)
+    running_mdio = _get_port_running_config_mdio(output, user_port_list)
+
+    check_media_changed, check_mdio_changed, check_pre_emphasis_changed = \
+        _cmp_running_media_pre_emphasis(running_media,
+                                        media_config,
+                                        running_mdio,
+                                        mdio_config,
+                                        running_pre_emphasis,
+                                        pre_emphasis_config)
+    cmd_change = cmd_change_media_pre_emphasis + cmd_change_mdio
+    ret = (cmd_change, check_media_changed, running_media, check_mdio_changed, running_mdio,
+           check_pre_emphasis_changed, running_pre_emphasis)
+    return ret
+
+
+@decro_timeit
+def _set_port_running_config(media_changed,
+                             media_config,
+                             mdio_changed,
+                             mdio_config,
+                             pre_emphasis_changed,
+                             pre_emphasis_config,
+                             user_port_list):
+
+    ret = _set_port_running_config_hw(media_changed,
+                                      media_config,
+                                      mdio_changed,
+                                      mdio_config,
+                                      pre_emphasis_changed,
+                                      pre_emphasis_config,
+                                      user_port_list)
+    cmd_change = ret[0]
+    check_media_changed = ret[1]
+    running_media = ret[2]
+    running_mdio = ret[4]
+    check_pre_emphasis_changed = ret[5]
+    running_pre_emphasis = ret[6]
+    if check_media_changed:
+        err_msg = "{}: change port {} media from {} to {} failed\n".format(
+            _get_func_meta(), user_port_list, running_media, media_config)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    if check_pre_emphasis_changed:
+        err_msg = "{}: change port {} pre-emphasis from {} to {} failed\n".format(
+            _get_func_meta(), user_port_list, running_pre_emphasis, pre_emphasis_config)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    if media_changed:
+        g_sfp_logger.critical("{}:  change port {} media from {} to {} succeed\n".format(
+            _get_func_meta(), user_port_list, running_media, media_config))
+
+    if mdio_changed:
+        g_sfp_logger.critical("{}:  change port {} mdio from {} to {} succeed\n".format(
+            _get_func_meta(), user_port_list, running_mdio, mdio_config))
+
+    if pre_emphasis_changed:
+        g_sfp_logger.critical("{}:  change port {} pre-emphasis from {} to {} succeed\n".format(
+            _get_func_meta(), user_port_list, running_pre_emphasis, pre_emphasis_config))
+
+    return cmd_change
+
+
+def update_phy_port_sfp_info(phy_port_value, sfp_info):
+    if len(phy_port_value) > 0:
+        phy_port_value[KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO] = sfp_info
+
+
+@decro_timeit
+def _update_phy_port_running_config(phy_port_value):
+    """
+    update media and pre-emphasis config of phy port according to sfp_info
+    :param phy_port_value:
+    :return:
+    """
+    user_port_list = _get_phy_user_port_list(phy_port_value)
+
+    # get phy port media config
+    port_media_config = _get_phy_port_media(user_port_list)
+
+    # get phy port mdio config
+    port_mdio_config = _get_phy_port_mdio(user_port_list)
+
+    # get phy port sfp specific pre-emphasis config
+    phy_port_all_pre_emphasis = phy_port_value[KEY_PHY_PORT_INFO_V_PRE_EMPHASIS]
+    dsh_file = phy_port_value[KEY_PHY_PORT_INFO_V_USR_CFG_DSH]
+    if dsh_file is not None:
+        port_pre_emphasis_config = phy_port_all_pre_emphasis[dsh_file]
+    else:
+        first_user_port = user_port_list.values()[0]
+        media_type = first_user_port[KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA]
+        if 'sr' in media_type:
+            port_pre_emphasis_config = phy_port_all_pre_emphasis[DEFAULT_PRE_EMPHASIS_OPT_CFG_FILE_NAME]
+        else:
+            port_pre_emphasis_config = phy_port_all_pre_emphasis[DEFAULT_PRE_EMPHASIS_DAC_CFG_FILE_NAME]
+
+    # check if running media and pre-emphasis in chip is need to set
+    media_changed, mdio_changed, pre_emphasis_changed = _check_port_running_config(
+        port_media_config, port_mdio_config, port_pre_emphasis_config, user_port_list)
+
+    # running config in chip is correct,
+    if (media_changed == 0) and (mdio_changed == 0) and (pre_emphasis_changed == 0):
+        g_sfp_logger.critical('{}: port {} are correctly set already\n'.format(_get_func_meta(),
+                                                                               user_port_list))
+        return []
+
+    # get and save user port admin status
+    user_port_admin_status = _get_phy_port_admin_status(user_port_list)
+
+    # shutdown user ports
+    try:
+        _admin_down_user_ports(user_port_list)
+    except Exception as e:
+        _admin_up_user_ports(user_port_admin_status)
+        raise e
+
+    # set port media of phy port
+    cmd_change = _set_port_running_config(media_changed,
+                                          port_media_config,
+                                          mdio_changed,
+                                          port_mdio_config,
+                                          pre_emphasis_changed,
+                                          port_pre_emphasis_config,
+                                          user_port_list)
+
+    # recover admin status of logical ports
+    _admin_up_user_ports(user_port_admin_status)
+
+    return cmd_change
+
+
+@decro_timeit
+def _is_sys_running():
+    """
+    check if swss docker is running
+    :return: True for running, false for not running
+    """
+
+    # check redis database to confirm it's running status
+    pcmd = subprocess.Popen(['redis-cli'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd_input = 'select 1\nHLEN HIDDEN\n'
+    cmd_out = pcmd.communicate(cmd_input)
+    if cmd_out[1] != '':
+        # cmd exec fail
+        err_msg = "{}: cmd={} fail: cmd_out:{}\n)".format(_get_func_meta(), cmd_input, cmd_out)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    pt = re.compile(r'OK.*(\d+).*', re.I | re.S)
+    result = pt.search(cmd_out[0])
+    if result is None:
+        err_msg = "{}: cmd={} match fail: cmd_out:{}\n)".format(_get_func_meta(), cmd_input, cmd_out[0])
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # check if interface is initialized
+    cmd = ['show', 'interface', 'status']
+    pcmd = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd_out = pcmd.communicate()
+    if cmd_out[1] != '':
+        # cmd exec fail
+        err_msg = "{}: cmd={} fail: cmd_out:{}\n)".format(_get_func_meta(), cmd, cmd_out)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # Interface    Lanes    Speed    MTU         Alias    Oper    Admin
+    # -----------  -------  -------  -----  ------------  ------  -------
+    # Ethernet12       20      10G   9100  Ethernet13/1      up       up
+    pt_str = r'''^\s*
+                 (?P<port_name>\w+)\s+  #interface
+                 (?P<lanes>[\d,]+)\s+  #lanes
+                 [\w/]+\s+  #speed
+                 \d+\s+  #mtu
+                 (?P<alias>[\w/]+)\s+
+                 (up|down)\s+
+                 (?P<admin>\w+)\s*
+                 .*$
+                 '''
+    pt = re.compile(pt_str, re.I | re.M | re.X)
+    result = pt.search(cmd_out[0])
+    if result is None:
+        err_msg = "{}: cmd={} match fail: cmd_out:{}\n)".format(_get_func_meta(), cmd, cmd_out[0])
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    return True
+
+
+def _get_pre_emphasis_change_cmd(cmd_queue):
+    """
+    get all change cmd from msg queue with none block method
+    :param cmd_queue:
+    :return:
+    """
+    all_change_cmd = []
+
+    if cmd_queue is None:
+        return all_change_cmd
+
+    # do not block!
+    while not cmd_queue.empty():
+        try:
+            change_cmd = cmd_queue.get(False)
+            all_change_cmd += change_cmd
+        except que.Empty:
+            pass
+    all_change_cmd = [cmd[len('clx_diag '):] for cmd in all_change_cmd]
+    return all_change_cmd
+
+
+def _partion_start_up_config(clx_cfg_full_path):
+    worker_id = threading.current_thread()
+
+    # split content of port_cfg.clx into n partions
+    pat_str = r'''^\s*port\s+set\s+property\s+     #property
+            ([\w]+\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0 
+            [\w]+\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0
+            medium-type\s*=\s*(?P<media>\w+)  #media-type=sr
+            .*$
+            '''
+    pat_pre_media = re.compile(pat_str, re.M | re.I | re.X)
+
+    pat_str = r'''^\s*phy\s+set\s+mdio\s+     #phy set mdio
+            ([\w]+\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0 
+            [\w]+\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0
+            [\w\-]+\s*=\s*(?P<devad>\w+)\s+ #devad
+            [\w]+\s*=\s*(?P<addr>\w+)\s+    #addr
+            .*$
+            '''
+    pat_pre_mdio = re.compile(pat_str, re.M | re.I | re.X)
+
+    pat_str = r'''^\s*phy\s+set\s+pre-emphasis\s+     #phy set pre-emphasis
+            ([\w]+\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0 
+            [\w]+\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0
+            [\w\-]+\s*=\s*(?P<lane_cnt>\d+)\s+ #lane-cnt=4
+            [\w]+\s*=\s*(?P<property>\w+)\s+    #property=cn1
+            .*$
+            '''
+    pat_pre_emphasis = re.compile(pat_str, re.M | re.I | re.X)
+
+    block_reg_dict = {'media': pat_pre_media, 'mdio': pat_pre_mdio, 'emphasis': pat_pre_emphasis}
+    block_index = {}
+
+    cfg_file_block_buf = []
+    with open(clx_cfg_full_path, mode='r') as clx_cfg_fp:
+        lines_buf = clx_cfg_fp.readlines()
+        cur_block_index = -1
+        last_block_type = 'NULL'
+        for line in lines_buf:
+            if line.strip() == '' and last_block_type != 'NULL':
+                'keep blank lines'
+                cur_block_type = last_block_type
+            else:
+                cur_block_type = 'other'
+                for k in block_reg_dict:
+                    result = block_reg_dict[k].search(line)
+                    if result is not None:
+                        cur_block_type = k
+                        break
+
+            if (cur_block_type != last_block_type) and \
+                    ((cur_block_type not in block_reg_dict) or (cur_block_type not in block_index)):
+                cur_block_index += 1
+                block_index[cur_block_type] = cur_block_index
+                cfg_file_block_buf.append(line)
+            else:
+                dst_index = block_index[cur_block_type]
+                cfg_file_block_buf[dst_index] += line
+
+            last_block_type = cur_block_type
+
+        for i in range(0, len(cfg_file_block_buf)):
+            g_sfp_logger.debug('worker {} split {} to {} parts part {} = {}\n'.format(
+                worker_id, clx_cfg_full_path, len(cfg_file_block_buf), i, cfg_file_block_buf[i]))
+
+    return cfg_file_block_buf, block_index
+
+
+def _update_media_cmd_of_startup_cfg(startup_cfg_buf, block_index, change_cmd_buf):
+    worker_id = threading.current_thread()
+
+    pat_str = r'''^\s*port\s+set\s+property\s+   
+            (unit\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0 
+            [\w]+\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0 
+            medium-type\s*=\s*(?P<media>\w+)  #media-type=sr 
+            .*$ 
+            '''
+    pat = re.compile(pat_str, re.M | re.I | re.X)
+    for cmd in change_cmd_buf:
+        result = pat.search(cmd)
+        if result is None:
+            continue
+        unit = result.group('unit')
+        if unit is None:
+            unit = 0
+        clx_port = result.group('portlist')
+        change_cmd_pat_str = r'''^\s*port\s+set\s+property\s+      
+                        (unit\s*=\s*{}\s+){}   #unit=0  
+                        portlist\s*=\s*{}\s+  #portlist=0 
+                        .*$ 
+                        '''
+        change_cmd_pat_str = change_cmd_pat_str.format(unit, '{0,1}', clx_port)
+        change_cmd_buf_pat = re.compile(change_cmd_pat_str, re.M | re.I | re.X)
+        startup_cfg_buf[block_index], sub_cnt = change_cmd_buf_pat.subn(cmd, startup_cfg_buf[block_index])
+        if sub_cnt == 0:
+            startup_cfg_buf[block_index] += cmd + '\n'
+            g_sfp_logger.debug('worker {} new cmd {} add in buffer\n'.format(worker_id, cmd))
+        else:
+            g_sfp_logger.debug('worker {} cmd {} updated in buffer\n'.format(worker_id, cmd))
+
+
+def _update_mdio_cmd_of_startup_cfg(startup_cfg_buf, block_index, change_cmd_buf):
+    worker_id = threading.current_thread()
+
+    pat_str = r'''^phy\s+set\s+mdio\s+     #phy set mdio 
+            (unit\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0  
+            portlist\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0 
+            devad\s*=\s*(?P<devad>\w+)\s+ #devad 
+            addr\s*=\s*(?P<addr>\w+)\s+    #addr 
+            .*$ 
+            '''
+    pat = re.compile(pat_str, re.M | re.I | re.X)
+    for cmd in change_cmd_buf:
+        result = pat.search(cmd)
+        if result is None:
+            continue
+        unit = result.group('unit')
+        if unit is None:
+            unit = 0
+        clx_port = result.group('portlist')
+        devad = result.group('devad')
+        addr = result.group('addr')
+
+        change_cmd_pat_str = r'''^phy\s+set\s+mdio\s+     #phy set mdio 
+                        (unit\s*=\s*{}\s+){}   #unit=0  
+                        portlist\s*=\s*{}\s+  #portlist=0 
+                        devad\s*=\s*{}\s+     #devad 
+                        addr\s*=\s*{}\s+    #addr 
+                        .*$ 
+                        '''
+        change_cmd_pat_str = change_cmd_pat_str.format(unit, '{0,1}', clx_port, devad, addr)
+        change_cmd_buf_pat = re.compile(change_cmd_pat_str, re.M | re.I | re.X)
+        startup_cfg_buf[block_index], sub_cnt = change_cmd_buf_pat.subn(cmd, startup_cfg_buf[block_index])
+        if sub_cnt == 0:
+            startup_cfg_buf[block_index] += cmd + '\n'
+            g_sfp_logger.debug('worker {} new cmd {} add in buffer\n'.format(worker_id, cmd))
+        else:
+            g_sfp_logger.debug('worker {} cmd {} updated in buffer\n'.format(worker_id, cmd))
+
+
+def _update_pre_emphasis_cmd_of_startup_cfg(startup_cfg_buf, block_index, change_cmd_buf):
+    worker_id = threading.current_thread()
+
+    pat_str = r'''^phy\s+set\s+pre-emphasis\s+     #phy set pre-emphasis 
+            (unit\s*=\s*(?P<unit>\d+)\s+){0,1}   #unit=0  
+            portlist\s*=\s*(?P<portlist>[\d\-]+)\s+  #portlist=0 
+            lane-cnt\s*=\s*(?P<lane_cnt>\d+)\s+ #lane-cnt=4 
+            property\s*=\s*(?P<property>\w+)\s+    #property=cn1 
+            .*$ 
+            '''
+    pat = re.compile(pat_str, re.M | re.I | re.X)
+    for cmd in change_cmd_buf:
+        result = pat.search(cmd)
+        if result is None:
+            continue
+        unit = result.group('unit')
+        if unit is None:
+            unit = 0
+        clx_port = result.group('portlist')
+        lane_cnt = result.group('lane_cnt')
+        property_data = result.group('property')
+
+        change_cmd_pat_str = r'''^phy\s+set\s+pre-emphasis\s+     #phy set pre-emphasis 
+                        (unit\s*=\s*{}\s+){}   #unit=0  
+                        portlist\s*=\s*{}\s+  #portlist=0 
+                        lane-cnt\s*=\s*{}\s+ #lane-cnt=4 
+                        property\s*=\s*{}\s+    #property=cn1 
+                        .*$ 
+                        '''
+        change_cmd_pat_str = change_cmd_pat_str.format(unit, '{0,1}', clx_port, lane_cnt, property_data)
+        change_cmd_buf_pat = re.compile(change_cmd_pat_str, re.M | re.I | re.X)
+        startup_cfg_buf[block_index], sub_cnt = change_cmd_buf_pat.subn(cmd, startup_cfg_buf[block_index])
+        if sub_cnt == 0:
+            startup_cfg_buf[block_index] += cmd + '\n'
+            g_sfp_logger.debug('worker {} new cmd {} add in buffer\n'.format(worker_id, cmd))
+        else:
+            g_sfp_logger.debug('worker {} cmd {} updated in buffer\n'.format(worker_id, cmd))
+
+
+@decro_timeit
+def _auto_save_startup_config(cmd_queue):
+    """
+    auto save change cmd in port_cfg.clx
+    :param cmd_queue:
+    :return:
+    """
+
+    worker_id = threading.current_thread()
+
+    # get all change cmds from msg queue
+    change_cmd = _get_pre_emphasis_change_cmd(cmd_queue)
+    if len(change_cmd) == 0:
+        return 0
+
+    platform_path, hwsku_path = _get_path_to_platform_hwsku()
+    clx_cfg_full_path = os.path.join(hwsku_path, PORT_CFG_CLX_FILE_NAME)
+    clx_cfg_exist = os.path.isfile(clx_cfg_full_path)
+    clx_cfg_backup_full_path = clx_cfg_full_path + '.backup'
+    backup_exist = os.path.isfile(clx_cfg_backup_full_path)
+
+    # check port_cfg.clx and backup file
+    if (clx_cfg_exist, backup_exist) == (True, True):
+        # perfect
+        g_sfp_logger.debug('worker {} {} and {} are exist.\n'.format(
+            worker_id, clx_cfg_full_path, clx_cfg_backup_full_path))
+    elif (clx_cfg_exist, backup_exist) == (True, False):
+        # backup port_config.clx
+        shutil.copy(clx_cfg_full_path, clx_cfg_backup_full_path)
+        g_sfp_logger.critical('worker {} backup {} to {}\n'.format(
+            worker_id, clx_cfg_full_path, clx_cfg_backup_full_path))
+    elif (clx_cfg_exist, backup_exist) == (False, True):
+        # restore port_config.clx from backup file
+        shutil.copy(clx_cfg_backup_full_path, clx_cfg_full_path)
+        g_sfp_logger.warning('worker {} {} is restored from {}\n'.format(
+            worker_id, clx_cfg_full_path, clx_cfg_backup_full_path))
+    elif (clx_cfg_exist, backup_exist) == (False, False):
+        # port_config.clx and backup are lost
+        g_sfp_logger.error('worker {} {} is lost\n'.format(worker_id, clx_cfg_full_path))
+        return -1
+
+    # update cmd in cfg file buf
+    cfg_file_block_buf, block_index = _partion_start_up_config(clx_cfg_full_path)
+    if 'media' not in block_index:
+        media_block_index = len(cfg_file_block_buf) - 1
+    else:
+        media_block_index = block_index['media']
+    _update_media_cmd_of_startup_cfg(cfg_file_block_buf, media_block_index, change_cmd)
+
+    if 'mdio' not in block_index:
+        mdio_block_index = len(cfg_file_block_buf) - 1
+    else:
+        mdio_block_index = block_index['mdio']
+    _update_mdio_cmd_of_startup_cfg(cfg_file_block_buf, mdio_block_index, change_cmd)
+
+    if 'emphasis' not in block_index:
+        pre_emphasis_block_index = len(cfg_file_block_buf) - 1
+    else:
+        pre_emphasis_block_index = block_index['emphasis']
+    _update_pre_emphasis_cmd_of_startup_cfg(cfg_file_block_buf, pre_emphasis_block_index, change_cmd)
+
+    # write new config to port_cfg.clx
+    clx_cfg_tmp_full_path = clx_cfg_full_path + '.tmp'
+    updated_cfg_content = ''
+    for buf_block in cfg_file_block_buf:
+        updated_cfg_content += buf_block
+
+    with open(clx_cfg_tmp_full_path, mode='w') as clx_cfg_tmp_fp:
+        clx_cfg_tmp_fp.write(updated_cfg_content)
+    g_sfp_logger.debug('worker {} write cmd to {}\n'.format(worker_id, clx_cfg_tmp_full_path))
+
+    os.remove(clx_cfg_full_path)
+    g_sfp_logger.debug('worker {} remove {}\n'.format(worker_id, clx_cfg_full_path))
+
+    os.rename(clx_cfg_tmp_full_path, clx_cfg_full_path)
+    g_sfp_logger.debug('worker {} rename {} to {}\n'.format(worker_id, clx_cfg_tmp_full_path, clx_cfg_full_path))
+
+    g_sfp_logger.critical('worker {} save cmd to {}\n'.format(worker_id, clx_cfg_full_path))
+
+
+@decro_timeit
+def _detect_config_by_port(phy_port_key, phy_port_value):
+    """
+
+    :param phy_port_key:
+    :param phy_port_value:
+    :return:
+    """
+    if KEY_PHY_PORT_INFO_V_USER_PORT not in phy_port_value:
+        err_msg = "{} : phy port has no user port {}\n".format(_get_func_meta(), phy_port_key)
+        g_sfp_logger.error(err_msg)
+        raise Exception(err_msg)
+
+    # check sfp info and set media and mdio config for phy port
+    user_cfg_meida = phy_port_value[KEY_PHY_PORT_INFO_V_USR_CFG_MEDIA]
+    if user_cfg_meida is None:
+        # 0 means sfp is not present, we can't auto detect
+        if 0 == len(phy_port_value[KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO]):
+            return []
+
+    # set media and pre-emphasis of port
+    cmd_change = _update_phy_port_running_config(phy_port_value)
+
+    return cmd_change
+
+
+@decro_timeit
+def _detect_config_by_phy_port(port_port_info_dict, msg_queue, debug_verbose):
+    """
+    check sfp type and set pre-emphasis of all ports
+    :param port_port_info_dict:
+    :param msg_queue:
+    :param debug_verbose:
+    :return:
+    """
+
+    all_changed_cmd = []
+    for phy_port_key, phy_port_value in port_port_info_dict.items():
+
+        # show port config detail info before detect and config
+        if debug_verbose > 0:
+            print('Running settings before detecting:')
+            _show_phy_port({phy_port_key: phy_port_value}, debug_verbose)
+
+        port_changed_cmd = _detect_config_by_port(phy_port_key, phy_port_value)
+        all_changed_cmd += port_changed_cmd
+
+        # show port config detail info after detect and config
+        if debug_verbose > 0:
+            print('Running settings after detecting:')
+            _show_phy_port({phy_port_key: phy_port_value}, debug_verbose)
+
+    # send sfp change cmd to auto save dynamic pre-emphasis config
+    if (msg_queue is not None) and (len(all_changed_cmd) != 0):
+        msg_queue.put(all_changed_cmd)
+        g_sfp_logger.info('{}: change pre-emphasis:\n{}\n'.format(_get_func_meta(), all_changed_cmd))
+
+
+def _parse_user_port_list(user_port_input=None):
+    """
+    parse user input user port group string like 'Ethernet1-4,Ethernet7' to a
+    phycial port list [0, 1, 2],
+    :param user_port_input:
+    :return:
+    """
+
+    phy_port_list = []
+    if user_port_input is None:
+        phy_port_list = sorted(g_phy_port_info.keys(), key=int)
+        return phy_port_list
+
+    user_port_list = []
+    for port_num_seg in [s.strip() for s in user_port_input.split(',')]:
+        seg_list = port_num_seg.split('-')
+        if len(seg_list) == 2:
+            user_port_list.extend(['Ethernet' + str(p) for p in range(int(seg_list[0].strip('Ethernet')),
+                                                                      int(seg_list[1].strip('Ethernet')) + 1)])
+        elif len(seg_list) == 1:
+            user_port_list.append('Ethernet' + seg_list[0].strip('Ethernet'))
+        else:
+            err_msg = "{}: invalid user port name {}\n".format(
+                _get_func_meta(), '-'.join(seg_list))
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+
+    for user_port in user_port_list:
+        if user_port not in g_user_port_2_phy_port_info:
+            err_msg = "{}: invalid user port {}\n".format(_get_func_meta(), user_port)
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+
+        phy_port = g_user_port_2_phy_port_info[user_port]
+        if phy_port not in g_phy_port_info:
+            err_msg = "{}: invalid user port {} has no valid phy port mapping entry {}\n".format(
+                _get_func_meta(), user_port, phy_port)
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+
+        phy_port_list.append(phy_port)
+
+    return phy_port_list
+
+
+def _parse_user_config_media_list(user_config_media):
+    """
+    get user config media list ['dac', 'opt'] from user input string 'dac,opt'
+    :param user_config_media:
+    :return:
+    """
+    if user_config_media is None:
+        target_user_config_media_list = [None]
+    else:
+        target_user_config_media_list = [m for m in user_config_media.split(',')]
+        for media in target_user_config_media_list:
+            if media != 'opt' and media != 'dac':
+                err_msg = "{}: invalid user port media type {}, it should be opt or dac\n".format(
+                    _get_func_meta(), media)
+                g_sfp_logger.error(err_msg)
+                raise Exception(err_msg)
+
+    return target_user_config_media_list
+
+
+@decro_timeit
+def get_dsh_file_list():
+    """
+    list all valid dsh file in device dir for user
+    :return:
+    """
+    dsh_file_list = []
+
+    platform_path, hwsku_path = _get_path_to_platform_hwsku()
+    for f in os.listdir(hwsku_path):
+        if os.path.splitext(f)[1] == '.dsh':
+            dsh_file_list.append(f)
+
+    return dsh_file_list
+
+
+def _parse_dsh_file_list(dsh_file_input=None):
+    """
+    parse user input dsh file string like oem_a.dsh,oem_b.dsh to a list [oem_a.dsh, oem_b.dsh]
+    :param dsh_file_input:
+    :return:
+    """
+
+    if dsh_file_input is None:
+        dsh_file_list = [None]
+    else:
+        dsh_file_list = [f.strip() for f in dsh_file_input.split(',')]
+        all_dsh_file = get_dsh_file_list()
+        diff_dsh_file = set(dsh_file_list) - set(all_dsh_file)
+        if len(diff_dsh_file) != 0:
+            err_msg = "{}: {} does not exist, all valid dsh files are {}\n".format(
+                _get_func_meta(), diff_dsh_file, all_dsh_file)
+            g_sfp_logger.error(err_msg)
+            raise Exception(err_msg)
+
+    return dsh_file_list
+
+
+def _get_dsh_file_path():
+    target_dsh_file = []
+
+    dsh_file_name_list = get_dsh_file_list()
+    platform_path, hwsku_path = _get_path_to_platform_hwsku()
+    for dsh_file in dsh_file_name_list:
+        target_dsh_file.append(os.path.join(hwsku_path, dsh_file))
+
+    return target_dsh_file
+
+
+@decro_timeit
+def _init_phy_port_info():
+    # first of all, we need to init logging
+    _init_logging()
+
+    # _is_sys_running()
+    # init global phy port info database form config.ini and port_config.clx
+    _parse_phy_port_info()
+
+    # get dsh file
+    target_dsh_file_list = _get_dsh_file_path()
+    _parse_pre_emphasis_info(target_dsh_file_list)
+
+    # set default media and mdio for port
+    for phy_port, phy_port_value in g_phy_port_info.items():
+        first_user_port = phy_port_value[KEY_PHY_PORT_INFO_V_USER_PORT].itervalues().next()
+        media_hw = first_user_port[KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA]
+        media = 'opt' if 'sr' in media_hw else 'dac'
+        _set_phy_port_media_mdio(phy_port_value, media)
+
+
+@decro_timeit
+def _init_detect_config_port(phy_port_media_dsh):
+    """
+    get phy port configuration of user port and valid dsh file
+    :phy_port_media_dsh:{'0': (None, 'clounix_dac.dsh')}
+    :return:
+    """
+    target_phy_port_info_dict = collections.OrderedDict()
+
+    # get target_phy_port_info_dict from key list
+    for phy_port, (media, dsh) in phy_port_media_dsh.items():
+        target_phy_port_info_dict[phy_port] = g_phy_port_info[phy_port]
+        target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_USR_CFG_MEDIA] = media
+        target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_USR_CFG_DSH] = dsh
+        user_port_name_list = ','.join(target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_USER_PORT].keys())
+        if target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_USR_CFG_MEDIA] is None:
+            if KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO not in target_phy_port_info_dict[phy_port]:
+                present = _get_port_sfp_present_status(int(phy_port))
+                if not present:
+                    target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO] = {}
+                    print('No transceiver is plugged into {}'.format(user_port_name_list))
+                else:
+                    target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO] = \
+                        _get_port_sfp_info(int(phy_port))
+            sfp_info = target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_PRESENT_SFP_INFO]
+            media_type = _get_sfp_type(sfp_info)
+            if len(sfp_info) != 0:
+                print('{} transceiver is plugged into port {}'.format(
+                    'opt(fiber)'.title() if media_type == 'opt' else 'dac(copper)'.title(),
+                    user_port_name_list))
+        else:
+            media_type = target_phy_port_info_dict[phy_port][KEY_PHY_PORT_INFO_V_USR_CFG_MEDIA]
+            print('{} transceiver is configured by user for port {}'.format(
+                'opt(fiber)'.title() if media_type == 'opt' else 'dac(copper)'.title(),
+                user_port_name_list))
+
+        _set_phy_port_media_mdio(target_phy_port_info_dict[phy_port], media_type)
+
+    return target_phy_port_info_dict
+
+
+@decro_timeit
+@decro_get_docker_exec
+def _get_port_raw_allin1_running_config(popen_obj, phy_port_value):
+    """
+    get raw running media, pre-emphasis, mdio config of given user port list,
+    this func depend on _init_phy_info, so call call _init_phy_info and then call
+    this func
+    :param popen_obj:
+    :param phy_port_value:
+    :return:
+    """
+    exec_cmd = []
+
+    phy_port_lane_cnt = len(phy_port_value[KEY_PHY_PORT_INFO_V_LANE_LIST])
+    user_port_list = phy_port_value[KEY_PHY_PORT_INFO_V_USER_PORT]
+    portlist_key_ol = sorted(list(user_port_list))
+    for user_port in portlist_key_ol:
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT
+        unit, clx_port = user_port_list[user_port][k]
+
+        # display media type of port
+        cmd_str = 'clx_diag port show property unit={0} portlist={1}\n'.format(
+            unit, clx_port)
+        popen_obj.stdin.write(cmd_str)
+        exec_cmd.append(cmd_str)
+        time.sleep(0.005)
+
+        # display pre-emphasis
+        if portlist_key_ol.index(user_port) == 0:
+            prop_list = ['c2', 'cn1', 'c1', 'c0']
+            for prop in prop_list:
+                cmd_str = 'clx_diag phy show pre-emphasis unit={0} portlist={1}' \
+                          ' lane-cnt={2} property={3}'.format(unit, clx_port, phy_port_lane_cnt, prop) + '\n'
+                popen_obj.stdin.write(cmd_str)
+                exec_cmd.append(cmd_str)
+                time.sleep(0.005)
+
+        # show mdio
+        k = KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO
+        mdio_config_ol = sorted(list(user_port_list[user_port][k]))
+        for dev, add in mdio_config_ol:
+            cmd_str = 'clx_diag phy show mdio unit={0} portlist={1}' \
+                      ' devad={2} addr={3}'.format(unit, clx_port, dev, add) + '\n'
+            popen_obj.stdin.write(cmd_str)
+            exec_cmd.append(cmd_str)
+            time.sleep(0.005)
+
+    return exec_cmd
+
+
+def _get_port_allin1_running_config(phy_port_value):
+    """
+    get hw running meida, pre-emphasis and mdio etc.
+    :param phy_port_value:
+    :return:
+    """
+    # get runnming settings of phy
+    # exec_cmd:
+    # 	clx_diag port show property unit=0 portlist=0
+    # 	clx_diag phy show pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c2
+    # 	clx_diag phy show pre-emphasis unit=0 portlist=0 lane-cnt=4 property=cn1
+    # 	clx_diag phy show pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c1
+    # 	clx_diag phy show pre-emphasis unit=0 portlist=0 lane-cnt=4 property=c0
+    # 	clx_diag phy show mdio unit=0 portlist=0 devad=0x1e addr=0x2
+    # output_line_list = output.split('\n'):
+    #    ['port speed medium admin an  eee fec flow-ctrl status loopback cut-through',
+    #     '---- ----- ------ ----- --- --- --- --------- ------ -------- -----------',
+    #     '0    100g  sr4    en    dis dis dis dis       down   dis      dis        ',
+    #     'port 000: data=0x0002.0002.0002.0002',
+    #     'port 000: data=0x0001.0001.0001.0001',
+    #     'port 000: data=0x0007.0007.0007.0007',
+    #     'port 000: data=0x001a.001a.001a.001a',
+    #     'port 000: data=0x8001', '']
+    exec_cmd, output = _get_port_raw_allin1_running_config(phy_port_value)
+    output_line_list = [l for l in output.split('\n') if len(l) > 0]
+    if len(output_line_list) < 8:
+        print('Get media failed: \nExec_cmd:\n{}\nCmd_output:\n{}\n'.format(exec_cmd, output))
+        return
+
+    media = [v for v in output_line_list[2].split(' ') if len(v) > 0][2].strip()
+    idx = output_line_list[3].find('0x')
+    pre_emphasis = 'c2:{}\n'.format(output_line_list[3][idx:])
+    pre_emphasis += 'cn1:{}\n'.format(output_line_list[4][idx:])
+    pre_emphasis += 'c1:{}\n'.format(output_line_list[5][idx:])
+    pre_emphasis += 'c0:{}\n'.format(output_line_list[6][idx:])
+    mdio = '{}\n'.format(output_line_list[7][idx:])
+
+    return {KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA: media,
+            KEY_PHY_PORT_INFO_V_PRE_EMPHASIS: pre_emphasis,
+            KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO: mdio}
+
+
+@decro_timeit
+def _show_phy_port(phy_port_info, debug_verbose):
+    """
+    This func depends on _init_phy_port_info.
+    Display phy port to user port mapping, and running meida, pre-emphasis
+    and mdio setting in chip of given ports.
+    :param phy_port_info:
+    :param debug_verbose:
+    :return:
+    """
+    fmt = 'simple'
+    table = []
+    headers = ['Logic port', 'Media']
+    if debug_verbose > 0:
+        headers.extend(['Pre-emphasis', 'MDIO', 'Phy port', 'Lanes', 'CLX Port'])
+
+    for phy_port, phy_port_value in phy_port_info.items():
+        for user_port, user_port_info_value in phy_port_value[KEY_PHY_PORT_INFO_V_USER_PORT].items():
+            if debug_verbose == 0:
+                media = user_port_info_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA]
+                media = 'dac(copper)' if 'cr' in media else 'opt(fiber)'
+                port_row = [user_port, media]
+            else:
+                running_config = _get_port_allin1_running_config(phy_port_value)
+                media = running_config[KEY_PHY_PORT_INFO_V_USER_PORT_V_MEDIA]
+                media = 'dac(copper)' if 'cr' in media else 'opt(fiber)'
+                pre_emphasis = running_config[KEY_PHY_PORT_INFO_V_PRE_EMPHASIS]
+                mdio = running_config[KEY_PHY_PORT_INFO_V_USER_PORT_V_MDIO]
+                port_row = [user_port, media, pre_emphasis, mdio, phy_port,
+                            user_port_info_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_LANES],
+                            user_port_info_value[KEY_PHY_PORT_INFO_V_USER_PORT_V_CLX_PORT]]
+            table.append(port_row)
+
+    print(tabulate(table, headers, tablefmt=fmt))
+
+
+@decro_timeit
+def _convert_user_port_to_phy_port(user_port_str=None,
+                                   user_config_media_str=None,
+                                   dsh_file_str=None):
+    """
+    get phy port tuple from user input
+    :param user_port_str:
+    :param user_config_media_str:
+    :param dsh_file_str:
+    :return:{'0': (None, None), '1': ('opt', None)]
+    """
+
+    # get phy port dict from user input list string like Ethernet1-4;Ethernet8
+    phy_port_list = _parse_user_port_list(user_port_str)
+
+    # broadcast last user config media value to all other ports, and update into g_phy_port_info
+    media_list = _parse_user_config_media_list(user_config_media_str)
+    media_list.extend(list(itertools.repeat(media_list[-1], len(phy_port_list) - len(media_list))))
+
+    # parse user input dsh file list
+    dsh_list = _parse_dsh_file_list(dsh_file_str)
+    dsh_list.extend(list(itertools.repeat(dsh_list[-1], len(phy_port_list) - len(dsh_list))))
+
+    target_phy_port_media_dsh = collections.OrderedDict()
+    for port in phy_port_list:
+        idx = phy_port_list.index(port)
+        target_phy_port_media_dsh.update({port: (media_list[idx], dsh_list[idx])})
+
+    return target_phy_port_media_dsh
+
+
+@decro_timeit
+def show_user_port(user_port_str=None, debug_verbose=0):
+    """
+    This func depends on _init_phy_port_info.
+    Display phy port to user port mapping, and running meida, pre-emphasis
+    and mdio setting in chip of given ports.
+        Phy port num: 0
+        Lanes:
+        User port list:
+            Ethernet0:
+                Lanes:
+                Clx port:
+        Transceiver info:
+        Transceiver media type: opt
+        Running media,pre-emphasis and mdio setting:
+        ...
+    :param user_port_str:
+    :param debug_verbose
+    :return:
+    """
+
+    _init_phy_port_info()
+
+    target_phy_port_info = collections.OrderedDict()
+    phy_port_media_dsh = _convert_user_port_to_phy_port(user_port_str)
+    for phy_port in phy_port_media_dsh:
+        target_phy_port_info[phy_port] = g_phy_port_info[phy_port]
+
+    _show_phy_port(target_phy_port_info, debug_verbose)
+
+
+@decro_timeit
+def show_dsh_file():
+    """
+    display dsh files list
+    :return:
+    """
+    _init_logging()
+
+    dsh_file_list = get_dsh_file_list()
+    for f in dsh_file_list:
+        print(f)
+
+
+@decro_timeit
+def detect_config_by_phy_port(config_file=START_UP_CFG_FILE,
+                              debug_verbose=0):
+    """
+    detect and get sfp Transceiver info, then config pre-emphasis, media, mdio value in chip,
+    this func should be called when system is booting up
+    :param phy_port_media_dsh:{'0': (None, 'clounix_dac.dsh')}
+    :param debug_verbose:
+    :return:
+    """
+    with open(config_file, 'r') as fp:
+        phy_port_media_dsh = json.load(fp, object_pairs_hook=collections.OrderedDict)
+    
+    _init_phy_port_info()
+
+    # get target phy port dict
+    phy_port_info_dict = _init_detect_config_port(phy_port_media_dsh)
+
+    # detect and config phy ports
+    msg_queue = que.Queue()
+    _detect_config_by_phy_port(phy_port_info_dict, msg_queue, debug_verbose)
+
+    # auto save or log port dynamic pre-emphasis config to port_config.clx
+    _auto_save_startup_config(msg_queue)
+
+
+@decro_timeit
+def detect_config_by_user_port(user_port_str=None,
+                               user_config_media_str=None,
+                               dsh_file_str=None,
+                               debug_verbose=0):
+    """
+    detect and get sfp Transceiver info, then config pre-emphasis, media, mdio value in chip
+    :param user_port_str:
+    :param user_config_media_str:
+    :param dsh_file_str:
+    :param debug_verbose:
+    :return:
+    """
+
+    _init_phy_port_info()
+
+    # get target phy port dict
+    phy_port_media_dsh = _convert_user_port_to_phy_port(user_port_str, user_config_media_str, dsh_file_str)
+
+    # get target phy port dict
+    phy_port_info_dict = _init_detect_config_port(phy_port_media_dsh)
+
+    # detect and config phy ports
+    msg_queue = que.Queue()
+    _detect_config_by_phy_port(phy_port_info_dict, msg_queue, debug_verbose)
+
+    # auto save or log port dynamic pre-emphasis config to port_config.clx
+    _auto_save_startup_config(msg_queue)
+
+    # if detect port succeed, update start up config(START_UP_CFG_FILE)
+    cfg = collections.OrderedDict()
+    with open(START_UP_CFG_FILE, mode='a+') as fp:
+        try:
+            cfg = json.load(fp, object_pairs_hook=collections.OrderedDict)
+        except ValueError as e:
+            err_msg = "{}: {} in {}\n".format(_get_func_meta(), e, START_UP_CFG_FILE)
+            g_sfp_logger.info(err_msg)
+            pass
+    cfg.update(phy_port_media_dsh)
+    with open(START_UP_CFG_FILE, mode='w') as fp:
+        json.dump(cfg, fp, indent=4)
+
+
+# This is our main entrypoint - the main 'sfputil' command
+@click.group()
+def cli():
+    """sfpdet - Command line utility for configuring port's MEDIA"""
+
+    if os.geteuid() != 0:
+        print "Root privileges are required for this operation"
+        sys.exit(1)
+    # Make sure user has reboot after use port-breakout cli!
+    if get_state_db(PORT_CFG_STATE_NAME) == STATE_MODIFIED: 
+        click.echo('Please reboot after port breakout!!')
+        sys.exit(1)
+
+
+# 'show' subgroup
+@cli.group()
+def show():
+    """Display status of SFP transceivers"""
+    pass
+
+
+# 'media' subcommand
+@show.command()
+@click.option('-p', '--port', metavar='<port_list>', help="Port list like Ethernet1;Ethernet3-5")
+@click.option('-v', '--verbose', metavar='<v>', count=True, default=0, help="Detail debug info")
+def media(port=None, verbose=0):
+    """Display all port info include physical, logical, clx port, transceiver and running media,
+    pre-emphasis and mdio phy setting info"""
+    try:
+        show_user_port(port, verbose)
+    except Exception as e:
+        print(traceback.format_exc(e))
+
+
+
+# 'dshfile' subcommand
+@show.command()
+def dshfile():
+    """Display available dsh files for transceiver."""
+    try:
+        show_dsh_file()
+    except Exception as e:
+        print(traceback.format_exc(e))
+
+
+def get_portcfg_state(self):
+    return get_state_db(PORT_CFG_STATE_NAME)
+
+# 'config' subcommand
+@cli.command()    
+@click.option('-p', '--port', metavar='<port_list>', help="Port list like Ethernet1,Ethernet3-5")
+@click.option('-m', '--media', metavar='<media>', help="Transceiver media type `opt` or `dac`")
+@click.option('-d', '--dsh', metavar='<dsh_file>', help=".dsh file list like vendor_an_opt.dsh,vendor_an_dac.dsh")
+@click.option('-v', '--verbose', metavar='<v/vv>', count=True, help="Detail debug info")
+def config(port=None, media=None, dsh=None, verbose=0):
+    """Auto detect and configure pre-emphasis, media and mdio for port."""
+    try:
+        detect_config_by_user_port(port, media, dsh, verbose)
+    except Exception as e:
+        print(traceback.format_exc(e))
+
+@cli.command('recover-from-json')
+@click.pass_context
+@click.option('-j', '--json-file', 
+              metavar='<json-file>', 
+              required=False,
+              default=START_UP_CFG_FILE)
+@click.option('-v', '--verbose', metavar='<v/vv>', count=True, help="detail debug info")
+def recover_from_json(ctx, json_file, verbose=0):
+    """Recover port MEDIA configuration from json."""
+    detect_config_by_phy_port(json_file, verbose)
+
+
+if __name__ == '__main__':
+    cli()

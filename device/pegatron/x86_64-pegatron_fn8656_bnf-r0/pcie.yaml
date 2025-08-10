@@ -1,0 +1,5 @@
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: '8579'
+  name: 'Ethernet controller: Device 1d9f:8579 (rev 01)'

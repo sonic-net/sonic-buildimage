@@ -1,0 +1,162 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export INSTALL_MOD_DIR:=extra
+
+PYTHON         ?= python2
+
+PACKAGE_PRE_NAME := sonic-platform-pegatron
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC := /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= fn8656-bnf
+MODULE_DIR := modules
+UTILS_DIR := utils
+SERVICE_DIR := service
+SCRIPTS_DIR := scripts
+BIOS_DIR := bios_bin
+CONF_DIR := conf
+PROCESS_DIR := pegaProcess
+IXGBE_VERSION := 5.9.4
+
+MODULE_CFLAGS:=-I$(MOD_SRC_DIR)/common/modules/pub
+# For fn8032-bnf/fn8032-bnf ixgbe driver, maurice
+
+%:
+	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+
+build:
+	# For fn8032-bnf ixgbe driver, maurice
+	make clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/common/modules; \
+	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/common/modules EXTRA_CFLAGS+=${MODULE_CFLAGS}; \
+	(for mod in $(MODULE_DIRS); do \
+		if [ $$mod = "fn8656-bnf" ]; then \
+			make clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules  EXTRA_CFLAGS+=${MODULE_CFLAGS}; \
+			cd $(MOD_SRC_DIR)/$${mod}; \
+			python2 setup.py build; \
+			python2 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
+			python3 setup.py build; \
+			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
+			cd $(MOD_SRC_DIR); \
+			cd $(MOD_SRC_DIR); \
+		fi; \
+		if [ $$mod = "fn8032-bnf" ]; then \
+			make clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules EXTRA_CFLAGS+=${MODULE_CFLAGS}; \
+			cd $(MOD_SRC_DIR)/$${mod}; \
+			python2 setup.py build; \
+			python2 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
+			python3 setup.py build; \
+			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
+			cd $(MOD_SRC_DIR); \
+			cd $(MOD_SRC_DIR); \
+		fi; \
+		if [ $$mod = "fn6254-dnf" ]; then \
+			# For fn6254-dnf ixgbe driver \
+			rm -rf ./ixgbe-$(IXGBE_VERSION); \
+			wget -O ixgbe.tar.gz "https://downloadmirror.intel.com/30240/eng/ixgbe-5.9.4.tar.gz"; \
+			tar xzf ixgbe.tar.gz; \
+			rm ixgbe-$(IXGBE_VERSION)/src/Makefile ixgbe-$(IXGBE_VERSION)/src/common.mk ixgbe-$(IXGBE_VERSION)/src/Module.supported; \
+			git init ixgbe-$(IXGBE_VERSION)/src; \
+			git --git-dir=./ixgbe-$(IXGBE_VERSION)/src/.git --work-tree=ixgbe-$(IXGBE_VERSION)/src add --all; \
+			git --git-dir=./ixgbe-$(IXGBE_VERSION)/src/.git --work-tree=ixgbe-$(IXGBE_VERSION)/src commit -m "unmodified ixgbe source"; \
+			cp ./fn6254-dnf/modules/pegatron_fn6254_dnf_ixgbe/*.patch ./ixgbe-$(IXGBE_VERSION)/src/; \
+			git --git-dir=./ixgbe-$(IXGBE_VERSION)/src/.git --work-tree=ixgbe-$(IXGBE_VERSION)/src am 0001-Add-clounix-porting-driver.patch; \
+			cp ./ixgbe-$(IXGBE_VERSION)/src/* $(MOD_SRC_DIR)/fn6254-dnf/$(MODULE_DIR)/pegatron_fn6254_dnf_ixgbe/; \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		fi; \
+	done)
+
+	# Build afulnx_64 for SONiC
+	(for mod in $(MODULE_DIRS); do \
+		cd $(MOD_SRC_DIR)/$${mod}/$(BIOS_DIR); \
+		./afulnx_64 /GENDRV KERNEL=$(KERNEL_SRC)/build .;\
+		./afulnx_64 /MAKEDRV KERNEL=$(KERNEL_SRC)/build .;\
+		make KERNEL=$(KERNEL_SRC)/build;\
+		cd $(MOD_SRC_DIR); \
+	done)
+
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch: 
+	# Nothing to do
+
+#install: build
+	#dh_testdir
+	#dh_testroot
+	#dh_clean -k 
+	#dh_installdirs
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Custom package commands
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin/${PROCESS_DIR}; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/common/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/${PROCESS_DIR}/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/${PROCESS_DIR}; \
+		if [ $$mod = "fn8656-bnf" ]; then \
+			dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/x86_64-pegatron_fn8656_bnf-r0; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/*.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-pegatron_fn8656_bnf-r0; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/platform_update_reboot_cause debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-pegatron_fn8656_bnf-r0; \
+			# Add bios upgrade tool to device(usr/local/bin), maurice 20201125 \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/platform_api_mgnt.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		fi; \
+		if [ $$mod = "fn8032-bnf" ]; then \
+			dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/x86_64-pegatron_fn8032_bnf-r0; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/*.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-pegatron_fn8032_bnf-r0; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SCRIPTS_DIR)/platform_update_reboot_cause debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-pegatron_fn8032_bnf-r0; \
+			# Add bios upgrade tool to device(usr/local/bin), maurice 20201125 \
+			cp -r $(MOD_SRC_DIR)/$${mod}/bios_bin debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/platform_api_mgnt.sh debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		fi; \
+		if [ $$mod = "fn6254-dnf" ]; then \
+			# For fn6254-dnf ixgbe driver \
+			cp $(MOD_SRC_DIR)/fn6254-dnf/$(MODULE_DIR)/pegatron_fn6254_dnf_ixgbe/pegatron_fn6254_dnf_ixgbe.ko debian/$(PACKAGE_PRE_NAME)-fn6254-dnf/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		fi; \
+	done)
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+.PHONY: build binary binary-arch binary-indep clean
