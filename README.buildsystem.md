@@ -62,6 +62,12 @@ Every **platform/[VENDOR]/** directory is a derived part of buildimage frontend,
 ### Build output
 **target/** is basically a build output. You can find all build artifacts there.  
 
+### SONiC Build Execution sequence
+A pictorial representation depicting the control flow during build execution sequence is shown as below,
+
+![image](./images/sonic_build_execution_sequence.png)
+
+
 ## Recipes and target groups
 Now let's go over a definition of recipes and target groups.  
 **Recipe** is a small makefile that defines a target and set of variables for building it.
