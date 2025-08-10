@@ -1,0 +1,9 @@
+--- net-snmp-5.7.3+dfsg/agent/mibgroup/etherlike-mib/data_access/dot3stats_linux.c.org	2020-09-03 19:09:26.241863000 -0700
++++ net-snmp-5.7.3+dfsg/agent/mibgroup/etherlike-mib/data_access/dot3stats_linux.c	2020-09-03 19:24:27.054098000 -0700
+@@ -465,6 +465,7 @@
+             done = 1;
+         }
+         kern_db = ke->next;
++        free(ke->name);
+         free(ke);
+     }
