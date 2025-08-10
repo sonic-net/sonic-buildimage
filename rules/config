@@ -121,7 +121,7 @@ DEFAULT_VS_PREPARE_MEM = yes
 INCLUDE_SYSTEM_TELEMETRY = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
-INCLUDE_ICCPD = n
+INCLUDE_ICCPD = y
 
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
