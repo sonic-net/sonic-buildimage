@@ -1,0 +1,308 @@
+#!/usr/bin/env python
+
+
+"""
+Usage: %(scriptName)s [options] command object
+
+options:
+    -h | --help     : this help message
+    -d | --debug    : run with debug mode
+    -f | --force    : ignore error during installation or clean
+command:
+    install     : install drivers and generate related sysfs nodes
+    clean       : uninstall drivers and remove related sysfs nodes
+    version     : show version
+"""
+
+import os
+import sys
+import getopt
+import logging
+import time
+
+PROJECT_NAME = 'aurora_715'
+verbose = False
+DEBUG = False
+FORCE = 0
+
+I2C_PREFIX = '/sys/bus/i2c/devices/'
+BASE_BUS = 'i2c-0'
+BASE_BUS_PATH = I2C_PREFIX + BASE_BUS
+
+switch_install_order = [
+    # 'PCA9548_0x73',
+    'PCA9548_0x71_1',
+    'PCA9548_0x71_2',
+    'PCA9548_0x71_3',
+    'PCA9548_0x71_4'
+    # 'PCA9548_0x75'
+]
+
+I2C_SWITCH_LIST = {
+    # i2c switches
+    'PCA9548_0x73': {
+        'parent': BASE_BUS,
+        'driver': 'pca9548',
+        'i2caddr': '0x73',
+        'path': '/sys/bus/i2c/devices/0-0073',
+        'bus_map': [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    'PCA9548_0x71_1': {
+        'parent': 'PCA9548_0x73',
+        'parent_ch': 4,
+        'driver': 'pca9548',
+        'i2caddr': '0x71',
+        'path': '/sys/bus/i2c/devices/5-0071',
+        'bus_map': [9, 10, 11, 12, 13, 14, 15, 16]
+    },
+    'PCA9548_0x71_2': {
+        'parent': 'PCA9548_0x73',
+        'parent_ch': 5,
+        'driver': 'pca9548',
+        'i2caddr': '0x71',
+        'path': '/sys/bus/i2c/devices/6-0071',
+        'bus_map': [17, 18, 19, 20, 21, 22, 23, 24]
+    },
+    'PCA9548_0x71_3': {
+        'parent': 'PCA9548_0x73',
+        'parent_ch': 6,
+        'driver': 'pca9548',
+        'i2caddr': '0x71',
+        'path': '/sys/bus/i2c/devices/7-0071',
+        'bus_map': [25, 26, 27, 28, 29, 30, 31, 32]
+    },
+    'PCA9548_0x71_4': {
+        'parent': 'PCA9548_0x73',
+        'parent_ch': 7,
+        'driver': 'pca9548',
+        'i2caddr': '0x71',
+        'path': '/sys/bus/i2c/devices/8-0071',
+        'bus_map': [33, 34, 35, 36, 37, 38, 39, 40]
+    }
+}
+
+SFP_GROUPS = {
+    'SFP-G01': {
+        'number': 8,
+        'parent': 'PCA9548_0x71_1',
+        'channels': [0, 1, 2, 3, 4, 5, 6, 7],
+        'driver': 'optoe1',
+        'i2caddr': '0x50',
+        'paths': []
+    },
+    'SFP-G02': {
+        'number': 8,
+        'parent': 'PCA9548_0x71_2',
+        'channels': [0, 1, 2, 3, 4, 5, 6, 7],
+        'driver': 'optoe1',
+        'i2caddr': '0x50',
+        'paths': []
+    },
+    'SFP-G03': {
+        'number': 8,
+        'parent': 'PCA9548_0x71_3',
+        'channels': [0, 1, 2, 3, 4, 5, 6, 7],
+        'driver': 'optoe1',
+        'i2caddr': '0x50',
+        'paths': []
+    },
+    'SFP-G04': {
+        'number': 8,
+        'parent': 'PCA9548_0x71_4',
+        'channels': [0, 1, 2, 3, 4, 5, 6, 7],
+        'driver': 'optoe1',
+        'i2caddr': '0x50',
+        'paths': []
+    }
+}
+
+
+def main():
+    global DEBUG
+    global args
+    global FORCE
+
+    options, args = getopt.getopt(sys.argv[1:], 'hdf', ['help',
+                                                        'debug',
+                                                        'force',
+                                                        ])
+    for opt, arg in options:
+        if opt in ('-d', '--debug'):
+            DEBUG = True
+            logging.basicConfig(level=logging.INFO)
+        elif opt in ('-f', '--force'):
+            FORCE = 1
+        else:
+            logging.info('no option')
+    for arg in args:
+        if arg == 'install':
+            do_install()
+        elif arg == 'clean':
+            do_uninstall()
+
+    return 0
+
+
+def driver_check():
+    with open('/proc/modules') as modules:
+        return 'x86_64_netberg_aurora' in modules.read()
+
+
+def driver_install():
+    print("Probbing modules...")
+    os.system('modprobe i2c_dev')
+    os.system('modprobe x86-64-netberg-aurora-715')
+    os.system('modprobe i2c_mux_pca954x force_deselect_on_exit=1')
+
+    return 0
+
+
+def driver_uninstall():
+    os.system('rmmod i2c_mux_pca954x')
+    os.system('rmmod x86-64-netberg-aurora-715')
+    os.system('rmmod i2c_dev')
+
+    return 0
+
+
+def install_i2c_switch():
+    print("Init root I2C switch...")
+
+    root_sw = I2C_SWITCH_LIST['PCA9548_0x73']
+    os.system(
+        "echo {} {} > {}/new_device".format(root_sw['driver'], root_sw['i2caddr'], BASE_BUS_PATH))
+
+    #  make sure the root switch for sfp is installed
+    time.sleep(2)
+
+    for switch_name in switch_install_order:
+        switch = I2C_SWITCH_LIST[switch_name]
+
+        install_path = I2C_SWITCH_LIST[switch['parent']]['path']
+        install_path = install_path+"/channel-{}".format(switch['parent_ch'])
+
+        cmd = "echo {} {} > {}/new_device".format(
+            switch['driver'], switch['i2caddr'], install_path)
+        print(cmd)
+        os.system(cmd)
+
+
+def install_sfp():
+    for sfp_group_name in SFP_GROUPS.keys():
+        sfp_group = SFP_GROUPS[sfp_group_name]
+        install_path = I2C_SWITCH_LIST[sfp_group['parent']]['path']
+
+        for n in range(0, sfp_group['number']):
+            sfp_install_path = install_path + \
+                "/channel-{}".format(sfp_group['channels'][n])
+            cmd = "echo {} {} > {}/new_device".format(
+                sfp_group['driver'], sfp_group['i2caddr'], sfp_install_path)
+            print(cmd)
+            os.system(cmd)
+
+            print("/sys/bus/i2c/devices/{}-00{}".format(
+                I2C_SWITCH_LIST[sfp_group['parent']]['bus_map'][sfp_group['channels'][n]], sfp_group['i2caddr'][-2:]))
+
+
+def uninstall_sfp():
+    for sfp_group_name in SFP_GROUPS.keys():
+        sfp_group = SFP_GROUPS[sfp_group_name]
+
+        uninst_path = I2C_SWITCH_LIST[sfp_group['parent']]['path']
+
+        for n in range(0, sfp_group['number']):
+            sfp_uninst_path = uninst_path + \
+                "/channel-{}".format(sfp_group['channels'][n])
+            cmd = "echo {} > {}/delete_device".format(
+                sfp_group['i2caddr'], sfp_uninst_path)
+            print(cmd)
+            os.system(cmd)
+
+
+def uninstall_i2c_switch():
+    for switch_name in reversed(switch_install_order):
+        switch = I2C_SWITCH_LIST[switch_name]
+        uninst_path = I2C_SWITCH_LIST[switch['parent']
+                                      ]['path'] + "/channel-{}".format(switch['parent_ch'])
+
+        cmd = "echo {} > {}/delete_device".format(
+            switch['i2caddr'], uninst_path)
+
+        print(cmd)
+        os.system(cmd)
+
+    print("Uninstall root switch...")
+    root_sw = I2C_SWITCH_LIST['PCA9548_0x73']
+    cmd = "echo {} > {}/delete_device".format(
+        root_sw['i2caddr'], BASE_BUS_PATH)
+    print(cmd)
+    os.system(cmd)
+
+
+def set_led_control():
+    cmd = "echo 1 > /sys/class/hwmon/hwmon2/device/NBA715_LED/led_fiber"
+    print(cmd)
+    os.system(cmd)
+
+
+def device_install():
+    print('Base bus is {}'.format(BASE_BUS))
+
+    set_led_control()
+
+    install_i2c_switch()
+
+    # delay to make sure all switches are installed completely,
+    time.sleep(1)
+
+    install_sfp()
+    return 0
+
+
+def device_uninstall():
+    global SFP_GROUPS
+    global I2C_SWITCH_LIST
+
+    uninstall_sfp()
+    uninstall_i2c_switch()
+    return 0
+
+
+def do_install():
+    print("Drivers installing....")
+    status = driver_install()
+    print("Devices installing....")
+    status = device_install()
+    return 0
+
+
+def do_uninstall():
+    print("Checking system...")
+    if not device_exist():
+        print(PROJECT_NAME.upper() + " has no device installed.")
+    else:
+        print("Removing device...")
+        status = device_uninstall()
+        if status:
+            if FORCE == 0:
+                return status
+
+    if driver_check() == False:
+        print(PROJECT_NAME.upper() + " has no driver installed.")
+    else:
+        print("Removing installed driver...")
+        status = driver_uninstall()
+        if status:
+            if FORCE == 0:
+                return status
+
+    return
+
+
+def device_exist():
+    print("Checking devices...")
+    return os.path.isdir("/sys/bus/i2c/devices/0-0056/")
+
+
+if __name__ == "__main__":
+    main()

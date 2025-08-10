@@ -1,0 +1,4 @@
+aurora-715/scripts/* usr/bin
+aurora-715/utils/* usr/local/bin
+aurora-715/service/*.service lib/systemd/system
+aurora-715/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-netberg_aurora_715-r0

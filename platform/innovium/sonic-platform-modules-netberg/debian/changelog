@@ -1,0 +1,6 @@
+sonic-netberg-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for Netberg Aurora 715
+
+ -- developer <support@netbergtw.com>  Mon, 29 Jul 2019 11:00:00 +0800
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=Netberg Aurora 615 Platform initialization service
+After=local-fs.target innovium_platform_driver.service
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/netberg_nba615_startup start
+ExecStop=/usr/local/bin/netberg_nba615_startup stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
