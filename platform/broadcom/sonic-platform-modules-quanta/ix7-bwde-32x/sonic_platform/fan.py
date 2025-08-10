@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# Quanta IX7
+# Quanta IX7_BDE
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the FAN information
@@ -11,6 +11,7 @@
 try:
     import logging
     import os
+    import glob
     from sonic_platform_base.fan_base import FanBase
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -19,9 +20,7 @@ except ImportError as e:
 ###############
 # Global
 ###############
-HWMON_DIR = "/sys/class/hwmon/hwmon2/"
-FAN_INDEX_START = 18
-NUM_FANTRAYS = 6
+HWMON_IPMI_DIR = "/sys/devices/platform/quanta_hwmon_ipmi/hwmon/hwmon*/"
 FANS_PERTRAY = 2
 
 class Fan(FanBase):
@@ -30,29 +29,45 @@ class Fan(FanBase):
     def __init__(self, index, is_psu_fan=False):
         self.is_psu_fan = is_psu_fan
         self.fan_index = index
-        self.psu_fan_index_mapping = {
-            1:37,
-            2:47,
-        }
-        self.psu_index_mapping = {
-            1:39,
-            2:49,
-        }
+        hwmon_dir=glob.glob(HWMON_IPMI_DIR)[0]
+
         if self.is_psu_fan:
-            self.fan_presence_attr = "power{}_present".format(self.psu_index_mapping[index])
-            self.fan_pwm_attr = "fan{}_pwm".format(self.psu_fan_index_mapping[index])
-            self.fan_rpm_attr = "fan{}_input".format(self.psu_fan_index_mapping[index])
-            self.fan_direction_attr = "fan{}_direction".format(self.psu_fan_index_mapping[index])
+            power_out_prefix = self.__get_hwmon_attr_prefix(hwmon_dir, "PSU{}_POWER_OUT".format(self.fan_index), 'power')
+            fan_prefix = self.__get_hwmon_attr_prefix(hwmon_dir, "PSU{}_Fan".format(self.fan_index), 'fan')
+            self.fan_presence_attr = power_out_prefix + 'present'
+            self.fan_pwm_attr = fan_prefix + 'pwm'
+            self.fan_rpm_attr = fan_prefix + 'input'
+            self.fan_direction_attr = fan_prefix + 'direction'
         else:
-            self.fan_presence_attr = "fan{}_present".format(FAN_INDEX_START+(index-1))
-            self.fan_pwm_attr = "fan{}_pwm".format(FAN_INDEX_START+(index-1))
-            self.fan_rpm_attr = "fan{}_input".format(FAN_INDEX_START+(index-1))
-            self.fan_direction_attr = "fan{}_direction".format(FAN_INDEX_START+(index-1))
+            fantray_index = (self.fan_index-1)//FANS_PERTRAY+1
+            fan_index_intray = self.fan_index - ((fantray_index-1)*FANS_PERTRAY)
+            fan_prefix = self.__get_hwmon_attr_prefix(hwmon_dir, "Fan_SYS_{}_{}".format(fantray_index, fan_index_intray), 'fan')
+            self.fan_presence_attr = fan_prefix + 'present'
+            self.fan_pwm_attr = fan_prefix + 'pwm'
+            self.fan_rpm_attr = fan_prefix + 'input'
+            self.fan_direction_attr = fan_prefix + 'direction'
 
 
 #######################
 # private function
 #######################
+
+    def __get_hwmon_attr_prefix(self, dir, label, type):
+
+        retval = 'ERR'
+        if not os.path.isdir(dir):
+            return retval
+
+        try:
+            for filename in os.listdir(dir):
+                if filename[-5:] == 'label' and type in filename:
+                    file_path = os.path.join(dir, filename)
+                    if os.path.isfile(file_path) and label == self.__get_attr_value(file_path):
+                        return file_path[0:-5]
+        except Exception as error:
+            logging.error("Error when getting {} label path: {}".format(label, error))
+
+        return retval
 
     def __get_attr_value(self, attr_path):
 
@@ -64,7 +79,7 @@ class Fan(FanBase):
             with open(attr_path, 'r') as fd:
                 retval = fd.read()
         except Exception as error:
-            logging.error("Unable to open " + attr_path + " file !")
+            logging.error("Unable to open {} file: {}".format(attr_path, error))
 
         retval = retval.rstrip(' \t\n\r')
         return retval
@@ -95,8 +110,7 @@ class Fan(FanBase):
         Returns:
             bool: True if device is present, False if not
         """
-        attr_path = HWMON_DIR + self.fan_presence_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        attr_rv = self.__get_attr_value(self.fan_presence_attr)
         if (attr_rv != 'ERR'):
             if (attr_rv == '1'):
                 return True
@@ -112,11 +126,13 @@ class Fan(FanBase):
         Returns:
             A boolean value, True if device is operating properly, False if not
         """
-        attr_path = HWMON_DIR + self.fan_rpm_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        if self.get_presence():
+            attr_rv = self.__get_attr_value(self.fan_rpm_attr)
 
-        if (attr_rv != 'ERR' and attr_rv != '0.0'):
-            return True
+            if (attr_rv != 'ERR' and attr_rv != '0.0'):
+                return True
+            else:
+                return False
         else:
             return False
 
@@ -132,8 +148,7 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
-        attr_path = HWMON_DIR + self.fan_direction_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        attr_rv = self.__get_attr_value(self.fan_direction_attr)
 
         if attr_rv == '2':
             return self.FAN_DIRECTION_INTAKE
@@ -148,13 +163,15 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0 (off)
                  to 100 (full speed)
         """
-        attr_path = HWMON_DIR + self.fan_pwm_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        if self.get_presence():
+            attr_rv = self.__get_attr_value(self.fan_pwm_attr)
 
-        if (attr_rv != 'ERR'):
-            return int(float(attr_rv))
+            if (attr_rv != 'ERR'):
+                return int(float(attr_rv))
+            else:
+                return False
         else:
-            return False
+            return 0
 
     def get_speed_rpm(self):
         """
@@ -163,8 +180,7 @@ class Fan(FanBase):
         Returns:
             An integer, speed of the fan in RPM
         """
-        attr_path = HWMON_DIR + self.fan_rpm_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        attr_rv = self.__get_attr_value(self.fan_rpm_attr)
 
         if (attr_rv != 'ERR'):
             return int(float(attr_rv))
@@ -179,8 +195,7 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0 (off)
                  to 100 (full speed)
         """
-        attr_path = HWMON_DIR + self.fan_pwm_attr
-        attr_rv = self.__get_attr_value(attr_path)
+        attr_rv = self.__get_attr_value(self.fan_pwm_attr)
 
         if (attr_rv != 'ERR'):
             return int(float(attr_rv))

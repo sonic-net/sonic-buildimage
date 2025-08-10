@@ -141,9 +141,9 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[0] = i2c_new_device(adapter, &ix9_i2c_devices[0]);		// pca9546_1 - Address: 0x72
-		g_client[1] = i2c_new_device(adapter, &ix9_i2c_devices[1]);		// pca9548_1 - Address: 0x77
-		g_client[2] = i2c_new_device(adapter, &ix9_i2c_devices[11]);	// CPU Linking Board at CPU's I2C Bus - Address: 0x22
+		g_client[0] = i2c_new_client_device(adapter, &ix9_i2c_devices[0]);		// pca9546_1 - Address: 0x72
+		g_client[1] = i2c_new_client_device(adapter, &ix9_i2c_devices[1]);		// pca9548_1 - Address: 0x77
+		g_client[2] = i2c_new_client_device(adapter, &ix9_i2c_devices[11]);	// CPU Linking Board at CPU's I2C Bus - Address: 0x22
 		i2c_put_adapter(adapter);
 	}
 
@@ -154,8 +154,8 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[3] = i2c_new_device(adapter, &ix9_i2c_devices[8]);		// CPLD-IO #2 - Address: 0x38
-		g_client[4] = i2c_new_device(adapter, &ix9_i2c_devices[9]);		// CPLD-LED #4 - Address: 0x39
+		g_client[3] = i2c_new_client_device(adapter, &ix9_i2c_devices[8]);		// CPLD-IO #2 - Address: 0x38
+		g_client[4] = i2c_new_client_device(adapter, &ix9_i2c_devices[9]);		// CPLD-LED #4 - Address: 0x39
 		i2c_put_adapter(adapter);
 	}
 
@@ -166,8 +166,8 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[5] = i2c_new_device(adapter, &ix9_i2c_devices[8]);		// CPLD-IO #3 - Address: 0x38
-		g_client[6] = i2c_new_device(adapter, &ix9_i2c_devices[9]);		// CPLD-LED #5 - Address: 0x39
+		g_client[5] = i2c_new_client_device(adapter, &ix9_i2c_devices[8]);		// CPLD-IO #3 - Address: 0x38
+		g_client[6] = i2c_new_client_device(adapter, &ix9_i2c_devices[9]);		// CPLD-LED #5 - Address: 0x39
 		i2c_put_adapter(adapter);
 	}
 
@@ -178,7 +178,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[7] = i2c_new_device(adapter, &ix9_i2c_devices[3]);		// MB_BOARDINFO_EEPROM - Address: 0x54
+		g_client[7] = i2c_new_client_device(adapter, &ix9_i2c_devices[3]);		// MB_BOARDINFO_EEPROM - Address: 0x54
 		i2c_put_adapter(adapter);
 	}
 
@@ -189,7 +189,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[8] = i2c_new_device(adapter, &ix9_i2c_devices[2]);		// tca9539_1 Board ID and QSFP-DD PW EN/PG - Address: 0x74
+		g_client[8] = i2c_new_client_device(adapter, &ix9_i2c_devices[2]);		// tca9539_1 Board ID and QSFP-DD PW EN/PG - Address: 0x74
 		i2c_put_adapter(adapter);
 	}
 
@@ -200,7 +200,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[9] = i2c_new_device(adapter, &ix9_i2c_devices[4]);		// pca9548 #1 QSFPDD - Address: 0x73
+		g_client[9] = i2c_new_client_device(adapter, &ix9_i2c_devices[4]);		// pca9548 #1 QSFPDD - Address: 0x73
 		i2c_put_adapter(adapter);
 	}
 
@@ -211,7 +211,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[10] = i2c_new_device(adapter, &ix9_i2c_devices[5]);		// pca9548 #2 QSFPDD - Address: 0x73
+		g_client[10] = i2c_new_client_device(adapter, &ix9_i2c_devices[5]);		// pca9548 #2 QSFPDD - Address: 0x73
 		i2c_put_adapter(adapter);
 	}
 
@@ -222,7 +222,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[11] = i2c_new_device(adapter, &ix9_i2c_devices[6]);		// pca9548 #3 QSFPDD - Address: 0x73
+		g_client[11] = i2c_new_client_device(adapter, &ix9_i2c_devices[6]);		// pca9548 #3 QSFPDD - Address: 0x73
 		i2c_put_adapter(adapter);
 	}
 
@@ -233,7 +233,7 @@ static int __init ix9_platform_init(void)
 	}
 	else
 	{
-		g_client[12] = i2c_new_device(adapter, &ix9_i2c_devices[7]);		// pca9548 #4 QSFPDD - Address: 0x73
+		g_client[12] = i2c_new_client_device(adapter, &ix9_i2c_devices[7]);		// pca9548 #4 QSFPDD - Address: 0x73
 		i2c_put_adapter(adapter);
 	}
 
@@ -246,7 +246,7 @@ static int __init ix9_platform_init(void)
 		}
 		else
 		{
-			g_client_port[i - 13] = i2c_new_device(adapter, &ix9_i2c_devices[10]);		// eeprom for loopback module - Address: 0x50
+			g_client_port[i - 13] = i2c_new_client_device(adapter, &ix9_i2c_devices[10]);		// eeprom for loopback module - Address: 0x50
 			i2c_put_adapter(adapter);
 		}
 	}

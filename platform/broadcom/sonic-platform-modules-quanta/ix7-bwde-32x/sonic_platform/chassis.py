@@ -8,6 +8,7 @@
 try:
     import sys
     import time
+    import syslog
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.psu import Psu
@@ -70,6 +71,13 @@ class Chassis(ChassisBase):
 
         for index in range(1, self.__num_of_ports + 1):
             self.__xcvr_presence[index] = self._sfp_list[index-1].get_presence()
+
+        # Initialize components
+        from sonic_platform.component import ComponentBIOS, ComponentBMC, ComponentCPLD, ComponentPCIE
+        self._component_list.append(ComponentBIOS())
+        self._component_list.append(ComponentBMC())
+        self._component_list.extend(ComponentCPLD.get_component_list())
+        self._component_list.append(ComponentPCIE())
 
 ##############################################
 # Device methods
@@ -178,6 +186,39 @@ class Chassis(ChassisBase):
         """
         return self._eeprom.system_eeprom_info()
 
+    def get_reboot_cause(self):
+        """
+        Retrieves the cause of the previous reboot
+        Returns:
+            A tuple (string, string) where the first element is a string
+            containing the cause of the previous reboot. This string must be
+            one of the predefined strings in this class. If the first string
+            is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
+            to pass a description of the reboot cause.
+        """
+        return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Invalid Reason")
+
+    ##############################################
+    # Other methods
+    ##############################################
+    def get_watchdog(self):
+        """
+        Retreives hardware watchdog device on this chassis
+
+        Returns:
+            An object derived from WatchdogBase representing the hardware
+            watchdog device
+        """
+        try:
+            if self._watchdog is None:
+                from sonic_platform.watchdog import Watchdog
+                # Create the watchdog Instance
+                self._watchdog = Watchdog()
+
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, "Fail to load watchdog due to {}".format(e))
+        return self._watchdog
+
     def get_change_event(self, timeout=0):
         """
         Currently only support transceiver change events
@@ -193,10 +234,10 @@ class Chassis(ChassisBase):
                 cur_xcvr_presence = self._sfp_list[index-1].get_presence()
                 if cur_xcvr_presence != self.__xcvr_presence[index]:
                     if cur_xcvr_presence is True:
-                        xcvr_change_event_dict[str(index)] = '1'
+                        xcvr_change_event_dict[index] = '1'
                         self.__xcvr_presence[index] = True
                     elif cur_xcvr_presence is False:
-                        xcvr_change_event_dict[str(index)] = '0'
+                        xcvr_change_event_dict[index] = '0'
                         self.__xcvr_presence[index] = False
                     event = True
 
