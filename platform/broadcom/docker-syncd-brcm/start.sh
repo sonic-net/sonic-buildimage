@@ -9,6 +9,7 @@ SYNCD_SOCKET_FILE=/var/run/sswsyncd/sswsyncd.socket
 wait_syncd() {
     while true; do
         if [ -e ${SYNCD_SOCKET_FILE} ]; then
+            socket_created=true
             break
         fi
         sleep 1
@@ -38,8 +39,14 @@ fi
 
 supervisorctl start syncd
 
+# If this platform has a pre_emphasis setting file, load it
+if [[ -r $HWSKU_DIR/pre-emphasis_PAM4_optics.soc && ! -f /var/warmboot/warm-starting ]]; then
+    wait_syncd
+    /usr/bin/bcmcmd -t 60 "rcload $HWSKU_DIR/pre-emphasis_PAM4_optics.soc"
+fi
+
 # If this platform has an initialization file for the Broadcom LED microprocessor, load it
 if [[ -r ${PLATFORM_DIR}/led_proc_init.soc && ! -f /var/warmboot/warm-starting ]]; then
-    wait_syncd
+    [[ -z "$socket_created" ]] && wait_syncd
     supervisorctl start ledinit
 fi

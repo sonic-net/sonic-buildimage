@@ -1,0 +1,49 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup SilverStone board.
+### END INIT INFO
+
+
+case "$1" in
+start)
+        echo -n "Setting up board... "
+
+        modprobe i2c-dev
+        modprobe baseboard-lpc
+        modprobe switchboard
+        modprobe mc24lc64t
+        modprobe ipmi_devintf
+
+        # Instantiate TLV EEPROM device on I801 bus 
+        devname=`cat /sys/bus/i2c/devices/i2c-0/name`
+        if [[ $devname == 'SMBus I801 adapter at '* ]]; then
+                echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
+        fi
+        decode-syseeprom --init 2> /dev/null &
+
+        echo "done."
+        ;;
+
+stop)
+        echo "done."
+        ;;
+
+force-reload|restart)
+        echo "Not supported"
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/platform-modules-silverstone.init {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0

@@ -1,1 +1,1 @@
-platform drivers for Celestica DX010 and Haliburton for the SONiC project
+platform drivers of Celestica network switchs for the SONiC project

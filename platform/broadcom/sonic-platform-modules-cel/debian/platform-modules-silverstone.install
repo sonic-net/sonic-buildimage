@@ -1,0 +1,6 @@
+silverstone/scripts/sensors usr/bin
+silverstone/scripts/platform_sensors.py usr/local/bin
+silverstone/cfg/silverstone-modules.conf etc/modules-load.d
+silverstone/systemd/platform-modules-silverstone.service lib/systemd/system
+silverstone/modules/sonic_platform-1.0-py2-none-any.whl usr/share/sonic/device/x86_64-cel_silverstone-r0
+services/platform_api/platform_api_mgnt.sh usr/local/bin

@@ -1,0 +1,1 @@
+obj-m := baseboard-lpc.o mc24lc64t.o switchboard.o

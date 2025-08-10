@@ -1,0 +1,7 @@
+#The Port LED of Silverstone SONIC can't work well, after the issue is fixed by SAI, The led will start. 
+#led auto on; led start
+linkscan off
+m0 load 0 0x3800 /usr/share/sonic/platform/custom.bin
+sleep 10
+led auto on; led start
+linkscan on

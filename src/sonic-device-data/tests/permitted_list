@@ -13,6 +13,7 @@ bcm56340_config
 cdma_timeout_usec
 core_clock_frequency
 ctr_evict_enable
+device_clock_frequency
 dma_desc_timeout_usec
 dport_map_direct
 dport_map_enable
@@ -96,6 +97,8 @@ phy_tx_polarity_flip
 phy_xaui_rx_polarity_flip
 phy_xaui_tx_polarity_flip
 physical_ports
+pll_bypass
+port_flex_enable
 port_init_autoneg
 port_init_cl72
 port_init_speed
@@ -116,6 +119,8 @@ schan_intr_enable
 schan_timeout_usec
 serdes_automed
 serdes_automedium
+serdes_core_rx_polarity_flip_physical
+serdes_core_tx_polarity_flip_physical
 serdes_driver_current
 serdes_fiber_pref
 serdes_firmware_mode
@@ -141,3 +146,9 @@ xgxs_lcpll_xtal_refclk
 xgxs_pdetect
 xgxs_rx_lane_map
 xgxs_tx_lane_map
+ccm_dma_enable
+ccmdma_intr_enable
+phy_enable
+init_all_modules
+dpr_clock_frequency
+port_fec
