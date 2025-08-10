@@ -1,0 +1,37 @@
+{
+    "chassis": {
+        "M2-W6510-48V8C": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "",
+                    "version": "27190516"
+                },
+                "CONNECT_CPLD": {
+                    "firmware": "",
+                    "version": "49191230"
+                },
+                "CONNECT_CPLD-FAN": {
+                    "firmware": "",
+                    "version": "49191230"
+                },
+                "MAC_CPLD1": {
+                    "firmware" : "",
+                    "version" : "16190108"
+                },
+                "MAC_CPLD2": {
+                    "firmware" : "",
+                    "version" : "17200110"
+                },
+                "FPGA": {
+                    "firmware": "",
+                    "version": "7a150016"
+                },
+                "BIOS": {
+                    "firmware" : "",
+                    "version" : "5.11(3BARB029)"
+                }
+            }
+        }
+    }
+}
+
