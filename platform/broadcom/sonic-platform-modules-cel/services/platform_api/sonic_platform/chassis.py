@@ -11,7 +11,7 @@
 try:
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
-    from common import Common
+    from sonic_platform.common import Common
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -106,7 +106,7 @@ class Chassis(ChassisBase):
         self._eeprom = Tlv(self._config)
 
     def __initialize_components(self):
-        from component import Component
+        from sonic_platform.component import Component
 
         component_config_path = self._api_common.get_config_path(
             self.COMPONENT_CONFIG)
