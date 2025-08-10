@@ -1,0 +1,19 @@
+{
+    "chassis": {
+        "Midstone-100x": {
+        "component": {
+            "FPGA": {},
+            "SYSCPLD": {},
+            "SWCPLD1": {},
+            "SWCPLD2": {},
+            "SWCPLD3": {},
+            "SWCPLD4": {},
+            "Main_BIOS": {},
+            "Backup_BIOS": {},
+            "Main_BMC": {},
+            "Backup_BMC": {},
+            "COMeCPLD": {}
+        }
+        }
+    }
+}

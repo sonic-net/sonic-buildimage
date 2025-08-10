@@ -8,3 +8,7 @@ Standards-Version: 3.9.3
 Package: platform-modules-midstone-200i
 Architecture: amd64
 Description: kernel modules for platform devices
+
+Package: platform-modules-midstone-100x
+Architecture: amd64
+Description: kernel modules for platform devices

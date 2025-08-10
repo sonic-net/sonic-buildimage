@@ -5,7 +5,7 @@ export INSTALL_MOD_DIR:=extra
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= midstone-200i
+MODULE_DIRS:= midstone-200i midstone-100x
 
 %:
 	dh $@
@@ -13,6 +13,9 @@ MODULE_DIRS:= midstone-200i
 override_dh_auto_build:
 	(for mod in $(MODULE_DIRS); do \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3.9 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+		cd $(MOD_SRC_DIR); \
 	done)
 
 override_dh_auto_install:

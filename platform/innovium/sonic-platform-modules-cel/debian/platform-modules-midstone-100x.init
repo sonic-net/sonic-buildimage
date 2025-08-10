@@ -1,0 +1,94 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup SilverStone-x board.
+### END INIT INFO
+
+
+case "$1" in
+start)
+    echo -n "Setting up board... "
+    depmod
+    modprobe i2c-dev
+    modprobe ipmi_devintf
+    modprobe fpga_device
+    modprobe fpga_i2c_ocores
+    modprobe fpga_system
+    modprobe i2c_switchcpld
+    modprobe lpc_basecpld
+    modprobe mc24lc64t
+    modprobe optoe
+    modprobe xcvr-cls
+
+    # Instantiate TLV EEPROM device on I801 bus 
+    devname=`cat /sys/bus/i2c/devices/i2c-0/name`
+    if [[ $devname == 'SMBus'* ]]; then
+            echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
+    fi
+    devname=`cat /sys/bus/i2c/devices/i2c-10/name`
+    if [[ $devname == 'ocores-i2c-cls' ]]; then
+        echo switchboard 0x30 > /sys/bus/i2c/devices/i2c-10/new_device
+        echo switchboard 0x31 > /sys/bus/i2c/devices/i2c-10/new_device
+        echo switchboard 0x32 > /sys/bus/i2c/devices/i2c-10/new_device
+        echo switchboard 0x33 > /sys/bus/i2c/devices/i2c-10/new_device
+    fi
+
+    for i in {16..79}; do
+        devname=`cat /sys/bus/i2c/devices/i2c-$i/name`
+        if [[ $devname == *'mux'* ]]; then
+            echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-"$i"/new_device
+            port='expr $i - 15'
+            echo QSFP$port > /sys/bus/i2c/devices/i2c-"$i"/"$i"-0050/port_name
+        fi    
+    done
+    devname=`cat /sys/bus/i2c/devices/i2c-13/name`
+    if [[ $devname == *'ocores-i2c-cls'* ]]; then
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-13/new_device
+        echo SFP1 > /sys/bus/i2c/devices/i2c-13/13-0050/port_name
+    fi
+    devname=`cat /sys/bus/i2c/devices/i2c-14/name`
+    if [[ $devname == *'ocores-i2c-cls'* ]]; then    
+        echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-14/new_device
+        echo SFP2 > /sys/bus/i2c/devices/i2c-14/14-0050/port_name
+    fi
+
+    decode-syseeprom --init 2> /dev/null &
+
+    /bin/sh /usr/local/bin/platform_api_mgnt.sh init
+
+    echo "done."
+    ;;
+
+stop)
+	rmmod ipmi_devintf
+	rmmod xcvr-cls
+	rmmod optoe
+	rmmod mc24lc64t
+	rmmod lpc_basecpld
+	rmmod i2c_switchcpld
+	rmmod fpga_system
+	rmmod fpga_i2c_ocores
+	rmmod fpga_device
+    rmmod cls-i2c-mux-pca954x
+	echo 0x56 > /sys/bus/i2c/devices/i2c-0/delete_device
+	echo "done."
+	;;
+
+force-reload|restart)
+	echo "Not supported"
+	;;
+
+*)
+	echo "Usage: /etc/init.d/platform-modules-midstone-100x.init {start|stop}"
+	exit 1
+	;;
+esac
+
+exit 0
