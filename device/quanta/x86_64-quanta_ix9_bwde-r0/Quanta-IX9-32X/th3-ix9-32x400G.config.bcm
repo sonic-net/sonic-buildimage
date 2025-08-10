@@ -56,8 +56,10 @@ portmap_148=241:400
 portmap_152=249:400
 
 # datapath port
-portmap_38=257:10
-portmap_118=258:10
+#Hide these to prevent SAI from initializing them...they are physically not on system
+#front panel
+#portmap_38=257:10
+#portmap_118=258:10
 
 # loopback port
 portmap_19=260:10

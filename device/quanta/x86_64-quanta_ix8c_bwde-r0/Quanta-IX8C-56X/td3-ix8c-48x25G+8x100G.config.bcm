@@ -90,8 +90,10 @@ portmap_123=121:100
 portmap_127=125:100
 
 # datapath port -- MerlinCore
-portmap_66=129:10:m
-portmap_130=128:10:m
+#Hide these to prevent SAI from initializing them...they are physically not on system
+#front panel
+#portmap_66=129:10:m
+#portmap_130=128:10:m
 
 # loopback port
 portmap_65=130:10
