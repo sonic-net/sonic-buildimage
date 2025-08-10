@@ -25,6 +25,10 @@ endif
 
 $(DOCKER_TELEMETRY)_CONTAINER_NAME = telemetry
 $(DOCKER_TELEMETRY)_RUN_OPT += --privileged -t
+$(DOCKER_TELEMETRY)_RUN_OPT += --memory 450m
+$(DOCKER_TELEMETRY)_RUN_OPT += --memory-swap 450m
+$(DOCKER_TELEMETRY)_RUN_OPT += --cpus 0.3
+$(DOCKER_TELEMETRY)_RUN_OPT += --oom-kill-disable
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /usr/share/sonic/scripts:/usr/share/sonic/scripts:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
