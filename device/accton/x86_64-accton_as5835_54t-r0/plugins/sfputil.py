@@ -88,7 +88,7 @@ class SfpUtil(SfpUtilBase):
         cage_num = port_num
         if (port_num >= self.PORT_START):
             cage_num = (port_num - self.PORT_START)/4
-            cage_num = cage_num + self.PORT_START
+            cage_num = int(cage_num + self.PORT_START)
 
         return cage_num
 
@@ -179,7 +179,7 @@ class SfpUtil(SfpUtilBase):
             # Fill in write buffer
             regval = 0x3 if lpmode else 0x1  # 0x3:Low Power Mode, 0x1:High Power Mode
             buffer = create_string_buffer(1)
-            buffer[0] = chr(regval)
+            buffer[0] = regval
 
             # Write to eeprom
             eeprom = open(self.port_to_eeprom_mapping[port_num], mode="r+b", buffering=0)
@@ -202,7 +202,7 @@ class SfpUtil(SfpUtilBase):
         path = "/sys/bus/i2c/devices/3-0062/module_reset_{0}"
         port_ps = path.format(cage_num)
         try:
-            reg_file = open(port_ps, mode="w", buffering=0)
+            reg_file = open(port_ps, mode="w")
         except IOError as e:
             print("Error: unable to open file: %s" % str(e))
             return False

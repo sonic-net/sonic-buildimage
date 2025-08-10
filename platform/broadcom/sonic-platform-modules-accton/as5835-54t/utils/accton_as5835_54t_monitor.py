@@ -92,11 +92,11 @@ class accton_as5835_54t_monitor(object):
         thermal = ThermalUtil()
         fan = FanUtil()
 
-        temp2 = thermal.get_thermal_2_val()
+        temp2 = thermal._get_thermal_val(2)
         if temp2 is None:
             return False
 
-        temp3 = thermal.get_thermal_3_val()
+        temp3 = thermal._get_thermal_val(3)
         if temp3 is None:
             return False
 
