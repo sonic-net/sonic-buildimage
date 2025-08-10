@@ -83,6 +83,12 @@
   name: 'PCI bridge: Intel Corporation 8 Series/C220 Series Chipset Family PCI Express
     Root Port #1 (rev d5)'
 - bus: '00'
+  dev: 1c
+  fn: '1'
+  id: 8c12
+  name: 'PCI bridge: Intel Corporation 8 Series/C220 Series Chipset Family PCI Express
+    Root Port #2 (rev d5)'
+- bus: '00'
   dev: 1d
   fn: '0'
   id: 8c26
@@ -109,9 +115,8 @@
 - bus: '01'
   dev: '00'
   fn: '0'
-  id: '1533'
-  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
-    03)'
+  id: b873
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device b873 (rev 01)'
 - bus: '03'
   dev: '00'
   fn: '0'
@@ -149,8 +154,14 @@
 - bus: '07'
   dev: '00'
   fn: '0'
-  id: b873
-  name: 'Ethernet controller: Broadcom Limited Device b873 (rev 01)'
+  id: '1537'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Backplane Connection
+    (rev 03)'
+- bus: 08
+  dev: '00'
+  fn: '0'
+  id: '7022'
+  name: 'Memory controller: Xilinx Corporation Device 7022'
 - bus: ff
   dev: 0b
   fn: '0'
