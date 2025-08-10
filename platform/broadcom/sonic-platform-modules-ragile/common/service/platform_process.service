@@ -1,0 +1,16 @@
+[Unit]
+Description= Global Load process.
+After=platform_driver.service
+Before=determine-reboot-cause.service
+Requires=platform_driver.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_process.py start
+ExecStop=/usr/local/bin/platform_process.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

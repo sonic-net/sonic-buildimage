@@ -1,3 +1,8 @@
+scache_filename=/var/warmboot/wbscache
+stable_size=0x55000000
+stable_location=3
+warmboot_knet_shutdown_mode=1
+
 core_clock_frequency=1700
 dpp_clock_ratio=2:3
 table_dma_enable=1
@@ -144,6 +149,8 @@ l3_mem_entries=49152
 l2_mem_entries=32768
 l3_alpm_enable=2
 ipv6_lpm_128b_enable=1
+svi_my_station_optimization=1
+sai_nbr_bcast_ifp_optimized=2
 
 l2xmsg_mode=0
 
@@ -974,3 +981,6 @@ ing_origin_id_device_id_mask=0x7FFF80
 egr_origin_id_device_id_mask=0x7FFF80
 port_count_in_pb_stream=1
 
+#RDMA
+sai_pfc_defaults_disable=1
+sai_optimized_mmu=1
