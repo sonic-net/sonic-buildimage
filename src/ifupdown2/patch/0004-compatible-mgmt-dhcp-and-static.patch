@@ -1,0 +1,93 @@
+diff -Naurp ifupdown2-3.0.0-1_old/ifupdown2/addons/dhcp.py ifupdown2-3.0.0-1_new/ifupdown2/addons/dhcp.py
+--- ifupdown2-3.0.0-1_old/ifupdown2/addons/dhcp.py	2024-01-18 13:57:12.535130784 +0800
++++ ifupdown2-3.0.0-1_new/ifupdown2/addons/dhcp.py	2024-01-18 14:03:35.688502945 +0800
+@@ -170,7 +170,10 @@ class dhcp(Addon, moduleBase):
+                 dhclient_cmd_prefix = '%s %s' %(self.vrf_exec_cmd_prefix, 'default')
+                 self.logger.info('detected mgmt vrf context starting dhclient in default vrf context')
+ 
+-            if 'inet' in ifaceobj.addr_family:
++            if ifaceobj.name == "eth0" and ifaceobj.eth0_addr_method_dict.get('inet') == 'static':
++                # Handle IPv4 static IP
++                pass
++            elif 'inet' in ifaceobj.addr_family:
+                 if dhclient4_running:
+                     self.logger.info('dhclient4 already running on %s. '
+                                      'Not restarting.' % ifaceobj.name)
+@@ -190,7 +193,10 @@ class dhcp(Addon, moduleBase):
+                         cmd_prefix=dhclient_cmd_prefix
+                     )
+ 
+-            if 'inet6' in ifaceobj.addr_family:
++            if ifaceobj.name == "eth0" and ifaceobj.eth0_addr_method_dict.get('inet6') == 'static':
++                # Handle IPv6 static IP
++                pass
++            elif 'inet6' in ifaceobj.addr_family:
+                 if dhclient6_running:
+                     self.logger.info('dhclient6 already running on %s. '
+                                      'Not restarting.' % ifaceobj.name)
+@@ -322,13 +328,17 @@ class dhcp(Addon, moduleBase):
+         op_handler = self._run_ops.get(operation)
+         if not op_handler:
+             return
+-        try:
+-            if (operation != 'query-running' and
+-                   (ifaceobj.addr_method != 'dhcp' and
+-                       ifaceobj.addr_method != 'dhcp6')):
++        if ifaceobj.name == "eth0":
++            if ifaceobj.eth0_addr_method_dict.get('inet') == 'static' and ifaceobj.eth0_addr_method_dict.get('inet6') == 'static':
++                return
++        else:
++            try:
++                if (operation != 'query-running' and
++                    (ifaceobj.addr_method != 'dhcp' and
++                        ifaceobj.addr_method != 'dhcp6')):
++                    return
++            except Exception:
+                 return
+-        except Exception:
+-            return
+         if not self.is_dhcp_allowed_on(ifaceobj, syntax_check=False):
+             return
+ 
+diff -Naurp ifupdown2-3.0.0-1_old/ifupdown2/ifupdown/iface.py ifupdown2-3.0.0-1_new/ifupdown2/ifupdown/iface.py
+--- ifupdown2-3.0.0-1_old/ifupdown2/ifupdown/iface.py	2024-01-18 13:57:12.535130784 +0800
++++ ifupdown2-3.0.0-1_new/ifupdown2/ifupdown/iface.py	2024-01-18 14:00:42.536820000 +0800
+@@ -446,6 +446,8 @@ class iface():
+         self.dependency_type = ifaceDependencyType.UNKNOWN
+         self.blacklisted = False
+ 
++        self.eth0_addr_method_dict = {}
++
+     def _set_attrs_from_dict(self, attrdict):
+         self.auto = attrdict.get('auto', False)
+         self.name = attrdict.get('name')
+@@ -644,6 +646,11 @@ class iface():
+         # we now support inet and inet6 together
+         self.addr_family.extend(newifaceobj.addr_family)
+         # if auto %ifacename is not part of the first stanza
++
++        if newifaceobj.name == "eth0" and self.name == "eth0":
++            if newifaceobj.addr_family[0] in ['inet', 'inet6']:
++                self.eth0_addr_method_dict[newifaceobj.addr_family[0]] = newifaceobj.addr_method
++
+         # we need to squash it
+         if not self.auto and newifaceobj.auto:
+             self.auto = True
+diff -Naurp ifupdown2-3.0.0-1_old/ifupdown2/ifupdown/networkinterfaces.py ifupdown2-3.0.0-1_new/ifupdown2/ifupdown/networkinterfaces.py
+--- ifupdown2-3.0.0-1_old/ifupdown2/ifupdown/networkinterfaces.py	2024-01-18 13:57:12.535130784 +0800
++++ ifupdown2-3.0.0-1_new/ifupdown2/ifupdown/networkinterfaces.py	2024-01-18 14:00:47.083022000 +0800
+@@ -324,7 +324,14 @@ class networkInterfaces():
+ 
+     def process_iface(self, lines, cur_idx, lineno):
+         ifaceobj = iface()
++        ifaceobj.eth0_addr_method_dict={}
++
+         lines_consumed = self.parse_iface(lines, cur_idx, lineno, ifaceobj)
++        try:
++            if ifaceobj.name == "eth0" and ifaceobj.addr_family[0] in ['inet', 'inet6']:
++                ifaceobj.eth0_addr_method_dict[ifaceobj.addr_family[0]] = ifaceobj.addr_method
++        except AttributeError as error_message:
++            print(f"An error occurred: {error_message}")
+ 
+         range_val = utils.parse_iface_range(ifaceobj.name)
+         if range_val:
