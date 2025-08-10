@@ -12,6 +12,8 @@ class HardwareChecker(HealthChecker):
     ASIC_TEMPERATURE_KEY = 'TEMPERATURE_INFO|ASIC'
     FAN_TABLE_NAME = 'FAN_INFO'
     PSU_TABLE_NAME = 'PSU_INFO'
+    VOLTAGE_SENSOR_KEY = 'VOLTAGE_INFO'
+    CURRENT_SENSOR_KEY = 'CURRENT_INFO'
 
     def __init__(self):
         HealthChecker.__init__(self)
@@ -26,6 +28,7 @@ class HardwareChecker(HealthChecker):
         self._check_asic_status(config)
         self._check_fan_status(config)
         self._check_psu_status(config)
+        self._check_sensors_status(config)
 
     def _check_asic_status(self, config):
         """
@@ -269,6 +272,34 @@ class HardwareChecker(HealthChecker):
                     continue
 
             self.set_object_ok('PSU', name)
+
+    def _check_sensors_status(self, config):
+        """
+        Check if sensors are in valid range.
+        :param config: Health checker configuration
+        :return:
+        """
+        if config.ignore_devices and 'sensors' in config.ignore_devices:
+            return
+
+        sensor_key_list = self._db.keys(self._db.STATE_DB,
+                                                  HardwareChecker.VOLTAGE_SENSOR_KEY + '*')
+        sensor_key_list += self._db.keys(self._db.STATE_DB,
+                                                  HardwareChecker.CURRENT_SENSOR_KEY + '*')
+        for key in sensor_key_list:
+            data_dict = self._db.get_all(self._db.STATE_DB, key)
+            sensor_table_name, sensor_name = key.split('|')
+            sensor_type = sensor_table_name.split('_')[0].lower()
+            if data_dict['warning_status'] == 'True':
+                self.set_object_not_ok(sensor_type, sensor_name,
+                    '{} sensor {} measurement {} {} out of range ({},{})'.format(
+                    sensor_type.capitalize(), sensor_name,
+                    data_dict[sensor_type],
+                    data_dict['unit'],
+                    data_dict['low_threshold'],
+                    data_dict['high_threshold']))
+            else:
+                self.set_object_ok(sensor_type, sensor_name)
 
     def reset(self):
         self._info = {}
