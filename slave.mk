@@ -357,8 +357,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_ONLINE_DEBS)) : $(DEBS_PATH)/% : .platform \
 	# Load the target deb from DPKG cache
 	$(call LOAD_CACHE,$*,$@)
 
-	# Skip building the target if it is already loaded from cache
-	if [ -z '$($*_CACHE_LOADED)' ] ; then
+	# Skip building the target if it is already loaded from cache or exists in target/ directory
+	if [ -z '$($*_CACHE_LOADED)' ] && [ ! -e $(DEBS_PATH)/$* ] ; then
 
 		$(foreach deb,$* $($*_DERIVED_DEBS), \
 			{ curl -L -f -o $(DEBS_PATH)/$(deb) $($(deb)_CURL_OPTIONS) $($(deb)_URL) $(LOG) || { exit 1 ; } } ; )
