@@ -1,0 +1,591 @@
+{
+    "chassis": {
+        "name": "Silverstone",
+        "status_led": {
+            "controllable": false,
+            "colors": ["green", "off"]
+        },
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            },
+            {
+                "name": "SWITCH_CPLD"
+            },
+            {
+                "name": "BASE_CPLD"
+            },
+            {
+                "name": "FPGA"
+            }
+        ],
+        "fans": [
+            {
+                "name": "FAN-1F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-1R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-2F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-2R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-3F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-3R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-4F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-4R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-5F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-5R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-6F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-6R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-7F",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            },
+            {
+                "name": "FAN-7R",
+                "speed": {
+                    "controllable": false
+                },
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                }
+            }
+        ],
+        "fan_drawers": [
+            {
+                "name": "Drawer1",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-1F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-1R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer2",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-2F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-2R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer3",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-3F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-3R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer4",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-4F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-4R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer5",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-5F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-5R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer6",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-6F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-6R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Drawer7",
+                "max_consumed_power": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "FAN-7F",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    },
+                    {
+                        "name": "FAN-7R",
+                        "status_led": {
+                            "controllable": false,
+                            "colors": ["green", "amber","off"]
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU-1",
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "PSU-1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "PSU-2",
+                "current": false,
+                "power": false,
+                "max_power": false,
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "temperature": false,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["green", "amber","off"]
+                },
+                "fans": [
+                    {
+                        "name": "PSU-2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "TEMP_FAN_U52",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_FAN_U17",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_SW_U52",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_SW_U16",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_BB_U3",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_CPU",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "TEMP_SW_Internal",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SW_U04_Temp",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SW_U14_Temp",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "SW_U4403_Temp",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet4"
+            },
+            {
+                "name": "Ethernet8"
+            },
+            {
+                "name": "Ethernet12"
+            },
+            {
+                "name": "Ethernet16"
+            },
+            {
+                "name": "Ethernet20"
+            },
+            {
+                "name": "Ethernet24"
+            },
+            {
+                "name": "Ethernet28"
+            },
+            {
+                "name": "Ethernet32"
+            },
+            {
+                "name": "Ethernet36"
+            },
+            {
+                "name": "Ethernet40"
+            },
+            {
+                "name": "Ethernet44"
+            },
+            {
+                "name": "Ethernet48"
+            },
+            {
+                "name": "Ethernet52"
+            },
+            {
+                "name": "Ethernet56"
+            },
+            {
+                "name": "Ethernet60"
+            },
+            {
+                "name": "Ethernet64"
+            },
+            {
+                "name": "Ethernet68"
+            },
+            {
+                "name": "Ethernet72"
+            },
+            {
+                "name": "Ethernet76"
+            },
+            {
+                "name": "Ethernet80"
+            },
+            {
+                "name": "Ethernet84"
+            },
+            {
+                "name": "Ethernet88"
+            },
+            {
+                "name": "Ethernet92"
+            },
+            {
+                "name": "Ethernet96"
+            },
+            {
+                "name": "Ethernet100"
+            },
+            {
+                "name": "Ethernet104"
+            },
+            {
+                "name": "Ethernet108"
+            },
+            {
+                "name": "Ethernet112"
+            },
+            {
+                "name": "Ethernet116"
+            },
+            {
+                "name": "Ethernet120"
+            },
+            {
+                "name": "Ethernet124"
+            }
+        ]
+    },
+    "interfaces": {}
+}

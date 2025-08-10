@@ -1,5 +1,5 @@
 #############################################################################
-# Celestica Silverstone
+# Celestica Seastone-DX010
 #
 # Platform and model specific eeprom subclass, inherits from the base class,
 # and provides the followings:
@@ -8,26 +8,22 @@
 #############################################################################
 
 try:
-    import glob
     import os
     import sys
     import re
-    from array import array
 
     if sys.version_info.major == 3:
         from io import StringIO
     else:
         from cStringIO import StringIO
 
-    from sonic_platform_base.sonic_eeprom import eeprom_dts
     from sonic_platform_base.sonic_eeprom import eeprom_tlvinfo
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 CACHE_ROOT = '/var/cache/sonic/decode-syseeprom'
 CACHE_FILE = 'syseeprom_cache'
-TLV_EEPROM_I2C_BUS = 0
-TLV_EEPROM_I2C_ADDR = 56
+NULL = 'N/A'
 
 
 class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
@@ -35,8 +31,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
     EEPROM_DECODE_HEADLINES = 6
 
     def __init__(self):
-        self._eeprom_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-00{1}/eeprom".format(
-            TLV_EEPROM_I2C_BUS, TLV_EEPROM_I2C_ADDR)
+        self._eeprom_path = "/sys/class/i2c-adapter/i2c-0/0-0056/eeprom"
         super(Tlv, self).__init__(self._eeprom_path, 0, '', True)
         self._eeprom = self._load_eeprom()
 
@@ -55,7 +50,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
                     value = match.group(3).rstrip('\0')
 
                 _eeprom_info_dict[idx] = value
-            except:
+            except BaseException:
                 pass
         return _eeprom_info_dict
 
@@ -64,7 +59,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         sys.stdout = StringIO()
         try:
             self.read_eeprom_db()
-        except:
+        except BaseException:
             decode_output = sys.stdout.getvalue()
             sys.stdout = original_stdout
             return self.__parse_output(decode_output)
@@ -76,7 +71,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         if not os.path.exists(CACHE_ROOT):
             try:
                 os.makedirs(CACHE_ROOT)
-            except:
+            except BaseException:
                 pass
 
         #
@@ -85,7 +80,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         #
         try:
             self.set_cache_name(os.path.join(CACHE_ROOT, CACHE_FILE))
-        except:
+        except BaseException:
             pass
 
         e = self.read_eeprom()
@@ -94,7 +89,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
 
         try:
             self.update_cache(e)
-        except:
+        except BaseException:
             pass
 
         self.decode_eeprom(e)
@@ -107,11 +102,40 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
 
         return self.__parse_output(decode_output)
 
+    def _valid_tlv(self, eeprom_data):
+        tlvinfo_type_codes_list = [
+            self._TLV_CODE_PRODUCT_NAME,
+            self._TLV_CODE_PART_NUMBER,
+            self._TLV_CODE_SERIAL_NUMBER,
+            self._TLV_CODE_MAC_BASE,
+            self._TLV_CODE_MANUF_DATE,
+            self._TLV_CODE_DEVICE_VERSION,
+            self._TLV_CODE_LABEL_REVISION,
+            self._TLV_CODE_PLATFORM_NAME,
+            self._TLV_CODE_ONIE_VERSION,
+            self._TLV_CODE_MAC_SIZE,
+            self._TLV_CODE_MANUF_NAME,
+            self._TLV_CODE_MANUF_COUNTRY,
+            self._TLV_CODE_VENDOR_NAME,
+            self._TLV_CODE_DIAG_VERSION,
+            self._TLV_CODE_SERVICE_TAG,
+            self._TLV_CODE_VENDOR_EXT,
+            self._TLV_CODE_CRC_32
+        ]
+
+        for code in tlvinfo_type_codes_list:
+            code_str = "0x{:X}".format(code)
+            eeprom_data[code_str] = eeprom_data.get(code_str, NULL)
+        return eeprom_data
+
     def get_eeprom(self):
-        return self._eeprom
+        return self._valid_tlv(self._eeprom)
+
+    def get_pn(self):
+        return self._eeprom.get('0x22', NULL)
 
     def get_serial(self):
-        return self._eeprom.get('0x23', "Undefined.")
+        return self._eeprom.get('0x23', NULL)
 
     def get_mac(self):
-        return self._eeprom.get('0x24', "Undefined.")
+        return self._eeprom.get('0x24', NULL)

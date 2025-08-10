@@ -96,7 +96,7 @@ class Fan(FanBase):
         max_rpm = MAX_OUTLET if self.fan_index % 2 == 0 else MAX_INLET
         fan1_ss_start = FAN1_FRONT_SS_ID if self.fan_index % 2 == 0 else FAN1_REAR_SS_ID
 
-        ss_id = hex(int(fan1_ss_start, 16) + self.fan_tray_index) if not self.psu_index else hex(
+        ss_id = hex(int(fan1_ss_start, 16) + self.fan_tray_index) if not self.is_psu_fan else hex(
             int(PSU_FAN1_FRONT_SS_ID, 16) + self.fan_tray_index)
         status, raw_ss_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_FAN_SPEED_CMD.format(ss_id))
@@ -120,8 +120,7 @@ class Fan(FanBase):
             0   : when PWM mode is use
             pwm : when pwm mode is not use
         """
-        target = 0
-        return target
+        return "N/A"
 
     def get_speed_tolerance(self):
         """
@@ -224,6 +223,10 @@ class Fan(FanBase):
 
         return status_led
 
+    ##############################################################
+    ###################### Device methods ########################
+    ##############################################################
+
     def get_name(self):
         """
         Retrieves the name of the device
@@ -299,3 +302,24 @@ class Fan(FanBase):
             A boolean value, True if device is operating properly, False if not
         """
         return self.get_presence() and self.get_speed() > 0
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return (self.fan_tray_index*2 + self.fan_index + 1) \
+            if not self.is_psu_fan else (self.fan_index+1)
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True if not self.is_psu_fan else False

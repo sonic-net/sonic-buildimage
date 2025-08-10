@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "Silverstone": {
+            "component": {
+                "BIOS": {},
+                "BMC": {},
+                "SWITCH_CPLD": {},
+                "BASE_CPLD": {},
+                "FPGA": {}
+            }
+        }
+    }
+}

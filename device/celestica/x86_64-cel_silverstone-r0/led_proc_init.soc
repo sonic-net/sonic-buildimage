@@ -4,4 +4,4 @@ linkscan off
 m0 load 0 0x3800 /usr/share/sonic/platform/custom.bin
 sleep 10
 led auto on; led start
-linkscan on
+linkscan force=all on

@@ -96,6 +96,29 @@ class Component(ComponentBase):
 
         return fw_version
 
+    def get_available_firmware_version(self, image_path):
+        """
+        Retrieves the available firmware version of the component
+        Note: the firmware version will be read from image
+        Args:
+            image_path: A string, path to firmware image
+        Returns:
+            A string containing the available firmware version of the component
+        """
+        return "N/A"
+
+    def get_firmware_update_notification(self, image_path):
+        """
+        Retrieves a notification on what should be done in order to complete
+        the component firmware update
+        Args:
+            image_path: A string, path to firmware image
+        Returns:
+            A string containing the component firmware update notification if required.
+            By default 'None' value will be used, which indicates that no actions are required
+        """
+        return "None"
+
     def install_firmware(self, image_path):
         """
         Install firmware to module
@@ -117,3 +140,72 @@ class Component(ComponentBase):
         # print(install_command)
         status = self._api_helper.run_interactive_command(install_command)
         return status
+
+    def update_firmware(self, image_path):
+        """
+        Updates firmware of the component
+        This API performs firmware update: it assumes firmware installation and loading in a single call.
+        In case platform component requires some extra steps (apart from calling Low Level Utility)
+        to load the installed firmware (e.g, reboot, power cycle, etc.) - this will be done automatically by API
+        Args:
+            image_path: A string, path to firmware image
+        Raises:
+            RuntimeError: update failed
+        """
+        return False
+
+    ##############################################################
+    ###################### Device methods ########################
+    ##############################################################
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the FAN
+        Returns:
+            bool: True if FAN is present, False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return 'N/A'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return 'N/A'
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the device
+        Returns:
+            A boolean value, True if device is operating properly, False if not
+        """
+        return True
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False

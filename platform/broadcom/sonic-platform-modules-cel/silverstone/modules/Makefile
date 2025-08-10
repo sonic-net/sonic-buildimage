@@ -1,1 +1,1 @@
-obj-m := baseboard-lpc.o mc24lc64t.o switchboard.o
+obj-m := baseboard-lpc.o mc24lc64t.o cls-switchboard.o xcvr-cls.o switch_cpld.o

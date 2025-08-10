@@ -6,10 +6,8 @@
 #
 #############################################################################
 
-import os
 import re
 import math
-import sonic_platform
 
 try:
     from sonic_platform_base.psu_base import PsuBase
@@ -36,12 +34,12 @@ PSU_LED_AMBER_CMD = "0x02"
 PSU1_VOUT_SS_ID = "0x36"
 PSU1_COUT_SS_ID = "0x37"
 PSU1_POUT_SS_ID = "0x38"
-PSU1_STATUS_REG = "0x39"
+PSU1_STATUS_REG = "0x2f"
 
 PSU2_VOUT_SS_ID = "0x40"
 PSU2_COUT_SS_ID = "0x41"
 PSU2_POUT_SS_ID = "0x42"
-PSU2_STATUS_REG = "0x2f"
+PSU2_STATUS_REG = "0x39"
 
 PSU1_FRU_ID = 3
 
@@ -161,6 +159,55 @@ class Psu(PsuBase):
 
         return status_led
 
+    # def get_temperature(self):
+    #     """
+    #     Retrieves current temperature reading from PSU
+    #     Returns:
+    #         A float number of current temperature in Celsius up to nearest thousandth
+    #         of one degree Celsius, e.g. 30.125
+    #     """
+    #     raise NotImplementedError
+
+    # def get_temperature_high_threshold(self):
+    #     """
+    #     Retrieves the high threshold temperature of PSU
+    #     Returns:
+    #         A float number, the high threshold temperature of PSU in Celsius
+    #         up to nearest thousandth of one degree Celsius, e.g. 30.125
+    #     """
+    #     raise NotImplementedError
+
+    # def get_voltage_high_threshold(self):
+    #     """
+    #     Retrieves the high threshold PSU voltage output
+    #     Returns:
+    #         A float number, the high threshold output voltage in volts,
+    #         e.g. 12.1
+    #     """
+    #     raise NotImplementedError
+
+    # def get_voltage_low_threshold(self):
+    #     """
+    #     Retrieves the low threshold PSU voltage output
+    #     Returns:
+    #         A float number, the low threshold output voltage in volts,
+    #         e.g. 12.1
+    #     """
+    #     raise NotImplementedError
+
+    # def get_maximum_supplied_power(self):
+    #     """
+    #     Retrieves the maximum supplied power by PSU
+    #     Returns:
+    #         A float number, the maximum power output in Watts.
+    #         e.g. 1200.1
+    #     """
+    #     raise NotImplementedError
+
+    ##############################################################
+    ###################### Device methods ########################
+    ##############################################################
+
     def get_name(self):
         """
         Retrieves the name of the device
@@ -232,10 +279,26 @@ class Psu(PsuBase):
         status, raw_status_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_pstatus_key))
         status_byte = self.find_value(raw_status_read)
-
         if status:
             failure_detected = (int(status_byte, 16) >> 1) & 1
             input_lost = (int(status_byte, 16) >> 3) & 1
             psu_status = False if (input_lost or failure_detected) else True
 
         return psu_status
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True

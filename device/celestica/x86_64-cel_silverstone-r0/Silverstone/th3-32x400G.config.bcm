@@ -15,7 +15,18 @@ pll_bypass=1
 
 init_all_modules=0
 
+sai_tunnel_global_sip_mask_enable=1
 
+# disables bcmALPMDH (ALPM distributed hitbit) thread.  This thread is purely for debug purpose
+l3_alpm_hit_skip=1
+
+l3_max_ecmp_mode.0=1
+l3_alpm_enable=2
+l3_alpm_ipv6_128b_bkt_rsvd=1
+l2_mem_entries=40960
+l3_mem_entries=40960
+
+bcm_tunnel_term_compatible_mode.0=1
 
 #portmap_38=257:10
 #portmap_118=258:10

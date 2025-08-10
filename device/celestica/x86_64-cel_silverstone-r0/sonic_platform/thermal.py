@@ -31,20 +31,34 @@ class Thermal(ThermalBase):
         self._api_helper = APIHelper()
         self.index = thermal_index
         self.THERMAL_LIST = [
-            ('TEMP_FAN_U52',        'Fan Tray Middle Temperature Sensor',         '0x00'),
-            ('TEMP_FAN_U17',        'Fan Tray Right Temperature Sensor',          '0x01'),
-            ('TEMP_SW_U52',         'Switchboard Left Inlet Temperature Sensor',  '0x02'),
-            ('TEMP_SW_U16',         'Switchboard Right Inlet Temperature Sensor', '0x03'),
-            ('TEMP_BB_U3',          'Baseboard Temperature Sensor',               '0x04'),
-            ('TEMP_CPU',            'CPU Internal Temperature Sensor',            '0x05'),
-            ('TEMP_SW_Internal',    'ASIC Internal Temperature Sensor',           '0x61'),
-            ('SW_U04_Temp',         'IR3595 Chip Left Temperature Sensor',        '0x4F'),
-            ('SW_U14_Temp',         'IR3595 Chip Right Temperature Sensor',       '0x56'),
-            ('SW_U4403_Temp',       'IR3584 Chip Temperature Sensor',             '0x5D'),
+            ('TEMP_FAN_U52',        'Fan Tray Middle Temperature Sensor',
+             '0x00',    'cpu'),
+            ('TEMP_FAN_U17',        'Fan Tray Right Temperature Sensor',
+             '0x01',    'cpu'),
+            ('TEMP_SW_U52',
+             'Switchboard Left Inlet Temperature Sensor',  '0x02',    'asic'),
+            ('TEMP_SW_U16',
+             'Switchboard Right Inlet Temperature Sensor', '0x03',    'asic'),
+            ('TEMP_BB_U3',          'Baseboard Temperature Sensor',
+             '0x04',    'cpu'),
+            ('TEMP_CPU',            'CPU Internal Temperature Sensor',
+             '0x05',    'cpu'),
+            ('TEMP_SW_Internal',    'ASIC Internal Temperature Sensor',
+             '0x61',    'asic'),
+            ('SW_U04_Temp',         'IR3595 Chip Left Temperature Sensor',
+             '0x4F',    'asic'),
+            ('SW_U14_Temp',         'IR3595 Chip Right Temperature Sensor',
+             '0x56',    'asic'),
+            ('SW_U4403_Temp',       'IR3584 Chip Temperature Sensor',
+             '0x5D',    'asic'),
         ]
         self.sensor_id = self.THERMAL_LIST[self.index][0]
         self.sensor_des = self.THERMAL_LIST[self.index][1]
         self.sensor_reading_addr = self.THERMAL_LIST[self.index][2]
+        self.position = self.THERMAL_LIST[self.index][3]
+
+        self.minimum_thermal = self.get_temperature()
+        self.maximum_thermal = self.get_temperature()
 
     def __set_threshold(self, key, value):
         print('{} {}'.format(key, value))
@@ -97,7 +111,8 @@ class Thermal(ThermalBase):
         Returns:
             A boolean, True if threshold is set successfully, False if not
         """
-        status, ret_txt = self._api_helper.ipmi_set_ss_thres(self.sensor_id, HIGH_TRESHOLD_SET_KEY, temperature)
+        status, ret_txt = self._api_helper.ipmi_set_ss_thres(
+            self.sensor_id, HIGH_TRESHOLD_SET_KEY, temperature)
         return status
 
     def set_low_threshold(self, temperature):
@@ -110,6 +125,49 @@ class Thermal(ThermalBase):
             A boolean, True if threshold is set successfully, False if not
         """
         return False
+
+    def get_high_critical_threshold(self):
+        """
+        Retrieves the high critical threshold temperature of thermal
+        Returns:
+            A float number, the high critical threshold temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        high_critical_threshold = 0.0
+        status, raw_up_thres_read = self._api_helper.ipmi_raw(
+            IPMI_SENSOR_NETFN, IPMI_SS_THRESHOLD_CMD.format(self.sensor_reading_addr))
+        if status and len(raw_up_thres_read.split()) > 6:
+            ss_read = raw_up_thres_read.split()[5]
+            high_critical_threshold = float(int(ss_read, 16))
+        return high_critical_threshold
+
+    def get_minimum_recorded(self):
+        """
+        Retrieves the minimum recorded temperature of thermal
+        Returns:
+            A float number, the minimum recorded temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        tmp = self.get_temperature()
+        if tmp < self.minimum_thermal:
+            self.minimum_thermal = tmp
+        return self.minimum_thermal
+
+    def get_maximum_recorded(self):
+        """
+        Retrieves the maximum recorded temperature of thermal
+        Returns:
+            A float number, the maximum recorded temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        tmp = self.get_temperature()
+        if tmp > self.maximum_thermal:
+            self.maximum_thermal = tmp
+        return self.maximum_thermal
+
+    ##############################################################
+    ###################### Device methods ########################
+    ##############################################################
 
     def get_name(self):
         """
@@ -150,3 +208,21 @@ class Thermal(ThermalBase):
             A boolean value, True if device is operating properly, False if not
         """
         return self.get_presence()
+
+    def is_replaceable(self):
+        """
+        Retrieves whether thermal module is replaceable
+        Returns:
+            A boolean value, True if replaceable, False if not
+        """
+        return False
+
+    def get_position_in_parent(self):
+        """
+        Retrieves the thermal position information
+        Returns:
+            A int value, 0 represent ASIC thermal, 1 represent CPU thermal info
+        """
+        if self.position == "cpu":
+            return 1
+        return 0
