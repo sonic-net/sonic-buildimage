@@ -15,21 +15,54 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+PSU_I2C_PATH = "/sys/bus/i2c/devices/{}-00{}/"
+
+PSU_HWMON_I2C_MAPPING = {
+    0: {
+        "num": 50,
+        "addr": "5b"
+    },
+    1: {
+        "num": 49,
+        "addr": "58"
+    },
+}
+
+PSU_CPLD_I2C_MAPPING = {
+    0: {
+        "num": 50,
+        "addr": "53"
+    },
+    1: {
+        "num": 49,
+        "addr": "50"
+    },
+}
+
+THERMAL_NAME_LIST = ["Temp sensor 1", "Temp sensor 2", "Temp sensor 3", 
+                     "Temp sensor 4", "Temp sensor 5"]
+                     
+PSU_THERMAL_NAME_LIST = ["PSU-1 temp sensor 1", "PSU-2 temp sensor 1"]
+
+SYSFS_PATH = "/sys/bus/i2c/devices"
 
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
 
-    THERMAL_NAME_LIST = []
-    SYSFS_PATH = "/sys/bus/i2c/devices"
-
-    def __init__(self, thermal_index=0):
+    def __init__(self, thermal_index=0, is_psu=False, psu_index=0):
         self.index = thermal_index
-        # Add thermal name
-        self.THERMAL_NAME_LIST.append("Temp sensor 1")
-        self.THERMAL_NAME_LIST.append("Temp sensor 2")
-        self.THERMAL_NAME_LIST.append("Temp sensor 3")
-        self.THERMAL_NAME_LIST.append("Temp sensor 4")
-        self.THERMAL_NAME_LIST.append("Temp sensor 5")
+        self.is_psu = is_psu
+        self.psu_index = psu_index
+
+        if self.is_psu:
+            psu_i2c_bus = PSU_HWMON_I2C_MAPPING[psu_index]["num"]
+            psu_i2c_addr = PSU_HWMON_I2C_MAPPING[psu_index]["addr"]
+            self.psu_hwmon_path = PSU_I2C_PATH.format(psu_i2c_bus,
+                                                      psu_i2c_addr)
+            psu_i2c_bus = PSU_CPLD_I2C_MAPPING[psu_index]["num"]
+            psu_i2c_addr = PSU_CPLD_I2C_MAPPING[psu_index]["addr"]
+            self.cpld_path = PSU_I2C_PATH.format(psu_i2c_bus, psu_i2c_addr)
+       
 
         # Set hwmon path
         i2c_path = {
@@ -39,9 +72,9 @@ class Thermal(ThermalBase):
             3: "55-004b/hwmon/hwmon*/",
             4: "54-004c/hwmon/hwmon*/"
         }.get(self.index, None)
-          
-        self.hwmon_path = "{}/{}".format(self.SYSFS_PATH, i2c_path)
-        self.ss_key = self.THERMAL_NAME_LIST[self.index]
+
+        self.hwmon_path = "{}/{}".format(SYSFS_PATH, i2c_path)
+        self.ss_key = THERMAL_NAME_LIST[self.index]
         self.ss_index = 1
 
     def __read_txt_file(self, file_path):
@@ -56,7 +89,10 @@ class Thermal(ThermalBase):
         return None
         
     def __get_temp(self, temp_file):
-        temp_file_path = os.path.join(self.hwmon_path, temp_file)
+        if not self.is_psu:
+            temp_file_path = os.path.join(self.hwmon_path, temp_file)
+        else:
+            temp_file_path = temp_file
         raw_temp = self.__read_txt_file(temp_file_path)
         if raw_temp is not None:
             return float(raw_temp)/1000
@@ -64,6 +100,8 @@ class Thermal(ThermalBase):
             return 0        
 
     def __set_threshold(self, file_name, temperature):
+        if self.is_psu:
+            return True
         temp_file_path = os.path.join(self.hwmon_path, file_name)
         for filename in glob.glob(temp_file_path):
             try:
@@ -72,6 +110,7 @@ class Thermal(ThermalBase):
                 return True
             except IOError as e:
                 print("IOError")
+                return False
 
 
     def get_temperature(self):
@@ -81,7 +120,10 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to nearest thousandth
             of one degree Celsius, e.g. 30.125
         """
-        temp_file = "temp{}_input".format(self.ss_index)
+        if not self.is_psu:
+            temp_file = "temp{}_input".format(self.ss_index)
+        else:
+            temp_file = self.psu_hwmon_path + "psu_temp1_input"
         return self.__get_temp(temp_file)
 
     def get_high_threshold(self):
@@ -91,6 +133,9 @@ class Thermal(ThermalBase):
             A float number, the high threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
+        if self.is_psu:
+            return 80
+
         temp_file = "temp{}_max".format(self.ss_index)
         return self.__get_temp(temp_file)
 
@@ -115,7 +160,10 @@ class Thermal(ThermalBase):
             Returns:
             string: The name of the thermal device
         """
-        return self.THERMAL_NAME_LIST[self.index]
+        if self.is_psu:
+            return PSU_THERMAL_NAME_LIST[self.psu_index]
+        else:
+            return THERMAL_NAME_LIST[self.index]
 
     def get_presence(self):
         """
@@ -123,6 +171,9 @@ class Thermal(ThermalBase):
         Returns:
             bool: True if Thermal is present, False if not
         """
+        if self.is_psu:
+            val = self.__read_txt_file(self.cpld_path + "psu_present")
+            return int(val, 10) == 1
         temp_file = "temp{}_input".format(self.ss_index)
         temp_file_path = os.path.join(self.hwmon_path, temp_file)
         raw_txt = self.__read_txt_file(temp_file_path)
@@ -143,5 +194,39 @@ class Thermal(ThermalBase):
         raw_txt = self.__read_txt_file(file_path)
         if raw_txt is None:
             return False
-        else:     
+        else:
             return int(raw_txt) != 0
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+
+        return "N/A"
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return "N/A"
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.index+1
+
+    def is_replaceable(self):
+        """
+        Retrieves whether thermal module is replaceable
+        Returns:
+            A boolean value, True if replaceable, False if not
+        """
+        return False

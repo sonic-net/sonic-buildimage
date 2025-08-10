@@ -1,42 +1,49 @@
 try:
     import time
-    from .helper import APIHelper
     from sonic_py_common.logger import Logger
 except ImportError as e:
     raise ImportError(repr(e) + " - required module not found")
 
+POLL_INTERVAL_IN_SEC = 1
 
 class SfpEvent:
     ''' Listen to insert/remove sfp events '''
    
     def __init__(self, sfp_list):
-        self._api_helper = APIHelper()
         self._sfp_list = sfp_list
         self._logger = Logger()
+        self._sfp_change_event_data = {'present': 0}
 
-    sfp_change_event_data = {'valid': 0, 'last': 0, 'present': 0}
-    def get_sfp_event(self, timeout=2000):
-        now = time.time()
-        port_dict = {}
-        change_dict = {}
-        change_dict['sfp'] = port_dict
-
-        if timeout < 1000:
-            timeout = 1000
-        timeout = timeout / float(1000)  # Convert to secs
-
-        if now < (self.sfp_change_event_data['last'] + timeout) and self.sfp_change_event_data['valid']:
-            return True, change_dict
-        
+    def get_presence_bitmap(self):
         bitmap = 0
         for sfp in self._sfp_list:
             modpres = sfp.get_presence()
             i=sfp.port_num-1
             if modpres:
                 bitmap = bitmap | (1 << i)
+        return bitmap
 
-        changed_ports = self.sfp_change_event_data['present'] ^ bitmap
-        if changed_ports:
+    def get_sfp_event(self, timeout=2000):
+        port_dict = {}
+        change_dict = {}
+        change_dict['sfp'] = port_dict
+
+        if timeout < 1000:
+            cd_ms = 1000
+        else:
+            cd_ms = timeout
+
+        while cd_ms > 0:
+            bitmap = self.get_presence_bitmap()
+            changed_ports = self._sfp_change_event_data['present'] ^ bitmap
+            if changed_ports != 0:
+                break
+            time.sleep(POLL_INTERVAL_IN_SEC)
+            # timeout=0 means wait for event forever
+            if timeout != 0:
+                cd_ms = cd_ms - POLL_INTERVAL_IN_SEC * 1000
+
+        if changed_ports != 0:
             for sfp in self._sfp_list:
                 i=sfp.port_num-1
                 if (changed_ports & (1 << i)):
@@ -47,9 +54,7 @@ class SfpEvent:
 
 
             # Update the cache dict
-            self.sfp_change_event_data['present'] = bitmap
-            self.sfp_change_event_data['last'] = now
-            self.sfp_change_event_data['valid'] = 1
+            self._sfp_change_event_data['present'] = bitmap
             return True, change_dict
         else:
             return True, change_dict

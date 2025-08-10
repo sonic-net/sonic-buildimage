@@ -51,7 +51,7 @@ class APIHelper():
 
     def read_txt_file(self, file_path):
         try:
-            with open(file_path, 'r') as fd:
+            with open(file_path, 'r', errors='replace') as fd:
                 data = fd.read()
                 return data.strip()
         except IOError:

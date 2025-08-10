@@ -72,6 +72,7 @@ QSFP_CHANNL_TX_FAULT_STATUS_OFFSET = 4
 QSFP_CHANNL_TX_FAULT_STATUS_WIDTH = 1
 QSFP_POWEROVERRIDE_OFFSET = 93
 QSFP_POWEROVERRIDE_WIDTH = 1
+QSFP_PAGE03_OFFSET = 384
 QSFP_MODULE_THRESHOLD_OFFSET = 128
 QSFP_MODULE_THRESHOLD_WIDTH = 24
 QSFP_CHANNEL_THRESHOLD_OFFSET = 176
@@ -124,7 +125,7 @@ class Sfp(SfpBase):
     # Path to sysfs
     PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
     PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = "which systemctl > /dev/null 2>&1"
         
     PLATFORM = "x86_64-accton_as7726_32x-r0"
     HWSKU = "Accton-AS7726-32X"
@@ -618,10 +619,11 @@ class Sfp(SfpBase):
             if not self.get_presence() or not sfpd_obj:
                 return {}
     
+            offset = QSFP_PAGE03_OFFSET
             transceiver_dom_threshold_dict = dict.fromkeys(
                 self.threshold_dict_keys, 'N/A')
             dom_thres_raw = self.__read_eeprom_specific_bytes(
-                QSFP_MODULE_THRESHOLD_OFFSET, QSFP_MODULE_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
+                offset + QSFP_MODULE_THRESHOLD_OFFSET, QSFP_MODULE_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
     
             if dom_thres_raw:
                 module_threshold_values = sfpd_obj.parse_module_threshold_values(
@@ -638,7 +640,7 @@ class Sfp(SfpBase):
                     transceiver_dom_threshold_dict['vcclowwarning'] = module_threshold_data['VccLowWarning']['value']
     
             dom_thres_raw = self.__read_eeprom_specific_bytes(
-                QSFP_CHANNEL_THRESHOLD_OFFSET, QSFP_CHANNEL_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
+                offset + QSFP_CHANNEL_THRESHOLD_OFFSET, QSFP_CHANNEL_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
             channel_threshold_values = sfpd_obj.parse_channel_threshold_values(
                 dom_thres_raw, 0)
             channel_threshold_data = channel_threshold_values.get('data')
@@ -1108,7 +1110,8 @@ class Sfp(SfpBase):
                 fd.seek(QSFP_POWEROVERRIDE_OFFSET)
                 fd.write(buffer[0])
                 time.sleep(0.01)
-        except Exception:
+
+        except IOError as e:
             print ('Error: unable to open file: ', str(e))
             return False
 
@@ -1164,3 +1167,20 @@ class Sfp(SfpBase):
             A boolean value, True if device is operating properly, False if not
         """
         return self.get_presence() and self.get_transceiver_bulk_status()
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.port_num
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
