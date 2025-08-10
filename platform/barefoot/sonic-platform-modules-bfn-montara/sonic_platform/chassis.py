@@ -160,7 +160,8 @@ class Chassis(ChassisBase):
             exclude_cpu_port = [
                 "x86_64-accton_as9516_32d-r0",
                 "x86_64-accton_as9516bf_32d-r0",
-                "x86_64-accton_wedge100bf_32x-r0"
+                "x86_64-accton_wedge100bf_32x-r0",
+                "x86_64-accton_wedge100bf_32qs-r0"
             ]
             if platform in exclude_cpu_port:
                 self.QSFP_PORT_END -= 1
