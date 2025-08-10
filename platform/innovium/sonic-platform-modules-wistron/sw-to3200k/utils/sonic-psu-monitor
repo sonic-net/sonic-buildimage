@@ -2,6 +2,8 @@
 
 result=0
 debug_flag=0
+psu1_pg="unknown"
+psu2_pg="unknown"
 bmc_fan_duty_cycle_ctrl()
 {
     #control PSU 1
@@ -205,9 +207,31 @@ get_PSU_information()
 	    #PSU 1 2 PSU power good
 	    byte_read 43
 	    echo $Value > /sys/bus/i2c/devices/0-0052/psu_power_good
+	    if [ $Value -eq 1 ];then
+                if [ $psu1_pg != "good" ];then
+                    logger -i -t sonic-psu-monitor "PSU1: Power Good" --priority user.info
+                    psu1_pg="good"
+                fi
+            else
+                if [ $psu1_pg != "fail" ];then
+                    logger -i -t sonic-psu-monitor "PSU1: Out of Power" --priority user.info
+                    psu1_pg="fail"
+                fi
+            fi
 
 	    byte_read 44
 	    echo $Value > /sys/bus/i2c/devices/0-0051/psu_power_good
+	    if [ $Value -eq 1 ];then
+                if [ $psu2_pg != "good" ];then
+                    logger -i -t sonic-psu-monitor "PSU2: Power Good" --priority user.info
+                    psu2_pg="good"
+                fi
+            else
+                if [ $psu2_pg != "fail" ];then
+                    logger -i -t sonic-psu-monitor "PSU2: Out of Power" --priority user.info
+                    psu2_pg="fail"
+                fi
+            fi
    	fi
 #____________________________________________________________________________
 
