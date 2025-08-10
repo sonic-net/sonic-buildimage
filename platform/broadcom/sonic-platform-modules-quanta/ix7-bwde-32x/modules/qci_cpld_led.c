@@ -51,7 +51,7 @@ static struct class *cpld_class = NULL;
 
 struct cpld_data {
 	struct i2c_client *cpld_client;
-	char name[8];
+	char name[16];
 	u8 cpld_id;
 };
 
