@@ -51,7 +51,9 @@ jobs:
           ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$(PLATFORM_AZP) PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
         displayName: 'Make configure'
     postSteps:
-      - script: mv target $(Build.ArtifactStagingDirectory)/
+      - script: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/target
+          mv target/*.bin $(Build.ArtifactStagingDirectory)/target/
         displayName: Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)

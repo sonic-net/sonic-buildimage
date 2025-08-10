@@ -179,7 +179,7 @@ value_extract() {
 
 program_console_speed()
 {
-    speed=$(cat /proc/cmdline | grep -Eo 'console=ttyS[0-9]+,[0-9]+' | cut -d "," -f2)
+    speed=$(cat /proc/cmdline | grep -Eo 'console=tty.*[0-9],[0-9]+' | cut -d "," -f2)
     if [ -z "$speed" ]; then
         CONSOLE_SPEED=9600
     else

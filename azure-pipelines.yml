@@ -43,97 +43,11 @@ stages:
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin ENABLE_DOCKER_BASE_PULL=y SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker SONIC_DPKG_CACHE_METHOD=rcache SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/centec-arm64 SONIC_BUILD_JOBS=$(nproc)'
       jobGroups:
-      - name: broadcom
-        variables:
-          swi_image: yes
-      - name: mellanox
-      - name: marvell-armhf
-        pool: sonicbld-armhf
+      - name: centec-arm64
+        pool: sonicbld-arm64
         timeoutInMinutes: 1200
         variables:
-          PLATFORM_ARCH: armhf
+          PLATFORM_ARCH: arm64
 
-- stage: Test
-  dependsOn: BuildVS
-  condition: and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'))
-  variables:
-  - name: inventory
-    value: veos_vtb
-  - name: testbed_file
-    value: vtestbed.csv
-
-  jobs:
-  - job:
-    pool: sonictest
-    displayName: "vstest"
-    timeoutInMinutes: 60
-    steps:
-    - checkout: self
-      clean: true
-      submodules: recursive
-      displayName: 'Checkout code'
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        source: specific
-        project: build
-        pipeline: 9
-        artifact: sonic-swss-common.amd64.ubuntu20_04
-        runVersion: 'latestFromBranch'
-        runBranch: 'refs/heads/master'
-      displayName: "Download sonic swss common deb packages"
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: sonic-buildimage.vs
-      displayName: "Download sonic-buildimage.vs artifact"
-
-    - script: |
-        set -x
-        sudo dpkg -i --force-confask,confnew ../libswsscommon_1.0.0_amd64.deb
-        sudo dpkg -i ../python3-swsscommon_1.0.0_amd64.deb
-        sudo docker load -i ../target/docker-sonic-vs.gz
-        docker tag docker-sonic-vs:latest docker-sonic-vs:$(Build.BuildNumber)
-        username=$(id -un)
-
-        trap "docker ps; docker images; ip netns list; \
-              docker rmi docker-sonic-vs:$(Build.BuildNumber); \
-              ip netns list | grep -E [-]srv[0-9]+ | awk '{print $1}' | xargs -I {} sudo ip netns delete {}; \
-              sudo chown -R ${username}.${username} .; \
-              sudo chown -R ${username}.${username} $(System.DefaultWorkingDirectory)" EXIT
-        pushd platform/vs/tests
-        sudo py.test -v --junitxml=tr.xml --imgname=docker-sonic-vs:$(Build.BuildNumber)
-      displayName: "Run vs tests"
-
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFiles: '**/tr.xml'
-        testRunTitle: vstest
-
-  - job:
-    pool: sonictest
-    displayName: "kvmtest-t0"
-    timeoutInMinutes: 360
-
-    steps:
-    - template: .azure-pipelines/run-test-template.yml
-      parameters:
-        dut: vlab-01
-        tbname: vms-kvm-t0
-        ptf_name: ptf_vms6-1
-        tbtype: t0
-
-  - job:
-    pool: sonictest-t1-lag
-    displayName: "kvmtest-t1-lag"
-    timeoutInMinutes: 240
-
-    steps:
-    - template: .azure-pipelines/run-test-template.yml
-      parameters:
-        dut: vlab-03
-        tbname: vms-kvm-t1-lag
-        ptf_name: ptf_vms6-2
-        tbtype: t1-lag
