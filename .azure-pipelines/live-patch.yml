@@ -1,0 +1,54 @@
+pr: none
+trigger: none
+
+stages:
+- stage: build
+  jobs:
+  - job: build
+    timeoutInMinutes: 600
+    pool: sonicbld
+    steps:
+    - checkout: self
+      submodules: recursive
+      clean: true
+    - script: |
+        set -ex
+        echo $(PATCHFILE)
+        if [ -z $(grep $(PATCHFILE) src/sonic-linux-kernel/patch/series) ];then
+          echo "variable PATCHFILE not found in src/sonic-linux-kernel/patch/series"
+          exit 1
+        fi
+        sed -i "s/$(PATCHFILE)//g" src/sonic-linux-kernel/patch/series
+        git config --global user.email "local@example.com"
+        git config --global user.name "local"
+
+        pushd src/sonic-linux-kernel/
+        git add .
+        git commit -m "remove patch file in series"
+        popd
+        git add .
+        git commit -m "update submodule linux-kernel commit ID"
+        make configure PLATFORM=vs ENABLE_DOCKER_BASE_PULL=y
+        make target/debs/stretch/linux-headers-4.9.0-14-2-amd64_4.9.246-2_amd64.deb ENABLE_DOCKER_BASE_PULL=y SONIC_CONFIG_PRINT_DEPENDENCIES=y SONIC_BUILD_JOBS=$(nproc)
+      displayName: "Build linux kernel"
+    - script: |
+        set -ex
+        git clone https://github.com/dynup/kpatch.git
+        pushd kpatch
+        git checkout v0.9.0
+        popd
+        SONIC_RUN_CMDS="cd kpatch && make" make sonic-slave-run NOJESSIE=1
+
+        KVERSION_SHORT=$(grep "KVERSION_SHORT =" rules/linux-kernel.mk | cut -d' ' -f 3)
+        KERNEL_VERSION=$(grep "KERNEL_VERSION =" rules/linux-kernel.mk | cut -d' ' -f 3)
+        SONIC_RUN_CMDS="./kpatch/kpatch-build/kpatch-build -t vmlinux -v src/sonic-linux-kernel/linux-${KERNEL_VERSION}/debian/linux-image-${KVERSION_SHORT}-amd64-dbg/usr/lib/debug/boot/vmlinux-${KVERSION_SHORT}-amd64 -s src/sonic-linux-kernel/linux-${KERNEL_VERSION}/ -c src/sonic-linux-kernel/linux-${KERNEL_VERSION}/debian/build/build_amd64_none_amd64/.config src/sonic-linux-kernel/patch/$(PATCHFILE) || cat ~/.kpatch/build.log" make sonic-slave-run NOJESSIE=1
+
+        for f in $(ls *.ko)
+        do
+          cp $f $(Build.ArtifactStagingDirectory)/
+          md5sum $f > $(Build.ArtifactStagingDirectory)/${f}.md5sum
+        done
+      displayName: "Build kernel live patch"
+    - publish: $(Build.ArtifactStagingDirectory)/
+      artifact: sonic-buildimage.live-patch
+      displayName: "Archive live patch kernel module"

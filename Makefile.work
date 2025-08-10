@@ -242,6 +242,9 @@ sonic-slave-bash :
 	    $(DOCKER_BUILD) ; }
 	@$(DOCKER_RUN) -t $(SLAVE_IMAGE):$(SLAVE_TAG) bash
 
+sonic-slave-run:
+	@$(DOCKER_RUN) $(SLAVE_IMAGE):$(SLAVE_TAG) bash -c "$(SONIC_RUN_CMDS)"
+
 showtag:
 	@echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	@echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
