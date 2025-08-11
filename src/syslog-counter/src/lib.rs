@@ -17,15 +17,45 @@ pub fn convert_to_u64(opt: Option<&CxxString>) -> Option<u64> {
     })
 }
 
+pub trait DbConnectorTrait: Send  {
+    fn new_named(
+        db_name: impl Into<String>,
+        is_tcp_conn: bool,
+        timeout_ms: u32,
+    ) -> Result<Box<dyn DbConnectorTrait + Send + 'static>>
+    where
+        Self: Sized;
+
+    fn hget(&self, key: &str, field: &str) -> Result<Option<CxxString>>;
+    fn hset(&self, key: &str, field: &str, value: &CxxStr) -> Result<()>;
+}
+
+impl DbConnectorTrait for DbConnector {
+    fn new_named(
+        db_name: impl Into<String>,
+        is_tcp_conn: bool,
+        timeout_ms: u32,
+    ) -> Result<Box<dyn DbConnectorTrait + Send + 'static>> {
+        DbConnector::new_named(db_name, is_tcp_conn, timeout_ms)
+            .map(|conn| Box::new(conn) as Box<dyn DbConnectorTrait + Send + 'static>)
+    }
+
+    fn hget(&self, key: &str, field: &str) -> Result<Option<CxxString>> {
+        self.hget(key, field)
+    }
+
+    fn hset(&self, key: &str, field: &str, value: &CxxStr) -> Result<()> {
+        self.hset(key, field, value)
+    }
+}
+
 pub struct CountersDb {
-    pub connector: DbConnector,
+    pub connector: Box<dyn DbConnectorTrait + Send + 'static>,
 }
 
 impl CountersDb {
-    pub fn connect() -> Result<Self, String> {
-        DbConnector::new_named("COUNTERS_DB", false, 0)
-            .map(|connector| Self { connector })
-            .map_err(|e| format!("Failed to connect to COUNTERS_DB: {:?}", e))
+    pub fn new(connector: Box<dyn DbConnectorTrait + Send + 'static>) -> Self {
+        Self { connector }
     }
 
     pub fn get_count(&self) -> Result<u64, String> {
@@ -43,15 +73,7 @@ impl CountersDb {
     }
 }
 
-fn update_counter_db(counter: Arc<Mutex<u64>>) {
-    let db = match CountersDb::connect() {
-        Ok(db) => db,
-        Err(e) => {
-            error!("Initialization error: {}", e);
-            exit(1);
-        }
-    };
-
+fn update_counter_db(counter: Arc<Mutex<u64>>, db: CountersDb) {
     match db.get_count() {
         Ok(initial_value) => {
             let mut count = counter.lock().unwrap();
@@ -81,15 +103,15 @@ fn update_counter_db(counter: Arc<Mutex<u64>>) {
     }
 }
 
-pub fn plugin_main() {
-    env_logger::init();
+pub fn plugin_main(connector: Box<dyn DbConnectorTrait>) {
     info!("Syslog counter plugin started");
 
     let counter = Arc::new(Mutex::new(0u64));
     let counter_clone = Arc::clone(&counter);
+    let db = CountersDb::new(connector);
 
     thread::spawn(move || {
-        update_counter_db(counter_clone);
+        update_counter_db(counter_clone, db);
     });
 
     println!("OK");
