@@ -446,6 +446,13 @@ module sonic-bgp-global {
                     description "Maximum duration to suppress a stable route";
                 }
 
+                leaf autort {
+                    type enumeration {
+                        enum rfc8365-compatible;
+                    }
+                    description "L2VPN derive route targets as per rfc8365 for interoperability with other implementations.";
+                }
+
                 leaf advertise-all-vni {
                     type boolean;
                     description "L2VPN advertise all VNIs";

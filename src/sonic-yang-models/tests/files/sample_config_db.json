@@ -1837,7 +1837,8 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
-                "advertise-svi-ip": "true"
+                "advertise-svi-ip": "true",
+                "autort": "rfc8365-compatible"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
