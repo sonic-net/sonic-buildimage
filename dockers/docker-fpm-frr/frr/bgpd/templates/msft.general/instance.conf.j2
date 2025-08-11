@@ -7,7 +7,7 @@
                           'admin_status' not in bgp_session and
                           'default_bgp_status' in CONFIG_DB__DEVICE_METADATA['localhost'] and
                           CONFIG_DB__DEVICE_METADATA['localhost']['default_bgp_status'] == 'down' and
-                          CONFIG_DB__DEVICE_METADATA.localhost.type in ['LeafRouter', 'BackEndLeafRouter', 'SpineRouter', 'UpperSpineRouter', 'FabricSpineRouter'] %}
+                          CONFIG_DB__DEVICE_METADATA.localhost.type in ['LeafRouter', 'BackEndLeafRouter', 'SpineRouter', 'UpperSpineRouter', 'FabricSpineRouter', 'LowerSpineRouter'] %}
 {% from "bgpd/templates/msft.general/router.j2" import general_routing with context %}
 {{ general_routing("instance") }}
 !
