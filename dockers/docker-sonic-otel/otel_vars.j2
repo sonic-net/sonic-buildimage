@@ -1,0 +1,69 @@
+{%- set device_metadata = DEVICE_METADATA | default({}) -%}
+{%- set hostname = device_metadata.localhost.hostname | default('sonic-switch') -%}
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 10
+
+  filter/ports:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          - port\..*
+
+  filter/buffers:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          - buffer_pool\..*
+
+exporters:
+  influxdb/ports:
+    endpoint: http://influxdb-a:8086
+    org: docs
+    bucket: ports
+    token: mytoken123456789
+    timeout: 10s
+
+  influxdb/buffers:
+    endpoint: http://influxdb-b:8086
+    org: docs
+    bucket: buffers
+    token: mytoken123456789
+    timeout: 10s
+
+  debug:
+    verbosity: detailed
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    metrics/ports:
+      receivers: [otlp]
+      processors: [batch, filter/ports]
+      exporters: [debug, influxdb/ports]
+    metrics/buffers:
+      receivers: [otlp]
+      processors: [batch, filter/buffers]
+      exporters: [debug, influxdb/buffers]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
