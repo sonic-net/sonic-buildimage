@@ -682,6 +682,7 @@ start() {
         -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
         -v /var/run/hw-management:/var/run/hw-management:rw \
@@ -695,6 +696,11 @@ start() {
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
 {%- endif %}
+{%- endif %}
+{%- endif %}
+{%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "syncd" %}
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
