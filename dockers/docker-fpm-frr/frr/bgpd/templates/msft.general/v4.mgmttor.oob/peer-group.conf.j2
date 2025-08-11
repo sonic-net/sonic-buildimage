@@ -1,14 +1,14 @@
 !
 ! template: bgpd/templates/msft.general/v4.mgmttor.oob/peer-group.conf.j2
 !
-  neighbor VPN_OOB_V4 peer-group
+  neighbor MB_PATH_V4 peer-group
   address-family ipv4 unicast
-    neighbor VPN_OOB_V4 activate
-    neighbor VPN_OOB_V4 soft-reconfiguration inbound
-    neighbor VPN_OOB_V4 route-map FROM_VPN_OOB_V4 in
-    neighbor VPN_OOB_V4 route-map TO_VPN_OOB_V4 out
-    neighbor VPN_OOB_V4 send-community
-    neighbor VPN_OOB_V4 maximum-prefix 4000 90 warning-only
+    neighbor MB_PATH_V4 activate
+    neighbor MB_PATH_V4 soft-reconfiguration inbound
+    neighbor MB_PATH_V4 route-map FROM_MB_PATH_V4 in
+    neighbor MB_PATH_V4 route-map TO_MB_PATH_V4 out
+    neighbor MB_PATH_V4 send-community
+    neighbor MB_PATH_V4 maximum-prefix 4000 90 warning-only
   exit-address-family
 !
 ! end of template: bgpd/templates/msft.general/v4.mgmttor.oob/peer-group.conf.j2

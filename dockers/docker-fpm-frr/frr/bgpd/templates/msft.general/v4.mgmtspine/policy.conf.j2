@@ -3,10 +3,6 @@
 !
 ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
 !
-ip prefix-list LOOPBACK0_V4 seq 1 permit 127.0.0.1/32
-ip prefix-list LOOPBACK0_V4 seq 5 permit $Loopback0PrefixV4$
-ip prefix-list LOOPBACK0_V4 seq 15 permit $SecondaryLoopback0PrefixV4$
-!
 ip prefix-list AGGREGATE_ROUTES_V4 seq 5 permit 127.0.0.1/32
 !
 ip prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V4 seq 5 permit 127.0.0.1/32
@@ -15,6 +11,9 @@ bgp as-path access-list LOCALROUTES permit ^$
 !
 route-map TO_{{ peer_group_type }} permit 100
   match ip address prefix-list DEFAULT_IPV4
+!
+route-map TO_{{ peer_group_type }} permit 105
+  match ip address prefix-list PL_LoopbackV4
 !
 {% if neighbor_type in ['SpineTs'] %}
 route-map TO_{{ peer_group_type }} permit 110

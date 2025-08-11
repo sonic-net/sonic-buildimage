@@ -5,10 +5,7 @@ ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
 !
 bgp as-path access-list LOCALROUTES permit ^$
 !
-route-map TO_{{ peer_group_type }} permit 100
-  match ip address prefix-list DEFAULT_IPV4
-!
-route-map TO_{{ peer_group_type }} deny 1000
+route-map TO_{{ peer_group_type }} permit 1000
 !
 route-map FROM_{{ peer_group_type }} permit 1000
 !

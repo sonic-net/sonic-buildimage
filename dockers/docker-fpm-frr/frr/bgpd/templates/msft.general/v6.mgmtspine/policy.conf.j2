@@ -14,6 +14,9 @@ ipv6 prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V6 seq 5 permit ::1/128
 route-map TO_{{ peer_group_type }} permit 100
   match ipv6 address prefix-list DEFAULT_IPV6
 !
+route-map TO_{{ peer_group_type }} permit 105
+  match ipv6 address prefix-list PL_LoopbackV6
+!
 {% if neighbor_type in ['SpineTs'] %}
 route-map TO_{{ peer_group_type }} permit 110
   match ipv6 address prefix-list AGGREGATE_ROUTES_V6
