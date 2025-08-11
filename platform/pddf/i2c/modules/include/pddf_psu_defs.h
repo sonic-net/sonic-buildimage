@@ -46,7 +46,6 @@ typedef struct PSU_DATA_ATTR
     int b;
     int r;
     void *access_data;
-
 }PSU_DATA_ATTR;
 
 typedef struct PSU_SYSFS_ATTR_DATA

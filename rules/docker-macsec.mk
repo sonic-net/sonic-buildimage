@@ -51,4 +51,3 @@ $(DOCKER_MACSEC)_CLI_CONFIG_PLUGIN = /cli/config/plugins/macsec.py
 $(DOCKER_MACSEC)_CLI_SHOW_PLUGIN = /cli/show/plugins/show_macsec.py
 $(DOCKER_MACSEC)_CLI_CLEAR_PLUGIN = /cli/clear/plugins/clear_macsec_counter.py
 
-$(DOCKER_MACSEC)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
