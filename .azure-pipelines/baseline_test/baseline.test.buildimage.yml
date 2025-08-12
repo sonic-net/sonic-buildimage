@@ -8,8 +8,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
+    name: xwjiang-ms/sonic-mgmt
+    ref: add_checkout_step_for_other_repo
     endpoint: sonic-net
   - repository: buildimage
     type: github
@@ -34,6 +34,10 @@ parameters:
     type: string
     default: "False"
 
+  - name: CHECKOUT_SONIC_MGMT
+    type: boolean
+    default: true
+
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml
 - template: ../template-variables.yml
@@ -52,9 +56,6 @@ variables:
     value: $(System.PullRequest.TargetBranch)
   ${{ else }}:
     value: $(Build.SourceBranchName)
-
-steps:
-- checkout: sonic-mgmt
 
 stages:
   - stage: BuildVS
@@ -76,6 +77,7 @@ stages:
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_2
     dependsOn:
@@ -88,6 +90,7 @@ stages:
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_3
     dependsOn:
@@ -100,6 +103,7 @@ stages:
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_4
     dependsOn:
@@ -112,3 +116,4 @@ stages:
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
