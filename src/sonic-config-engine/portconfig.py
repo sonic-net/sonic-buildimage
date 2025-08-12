@@ -170,9 +170,10 @@ def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=No
 
 def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     config_db = db_connect_configdb(asic_name)
+    
+    config_db_hwsku = device_info.get_localhost_info('hwsku', config_db=config_db)
     # If available, Read from CONFIG DB first
-    if config_db is not None and port_config_file is None:
-
+    if config_db is not None and port_config_file is None and (hwsku is None or config_db_hwsku == hwsku):
         port_data = config_db.get_table("PORT")
         if bool(port_data):
             ports = ast.literal_eval(json.dumps(port_data))
