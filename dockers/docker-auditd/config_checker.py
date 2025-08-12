@@ -19,8 +19,8 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "default": "13499a4607b27085d30bc3603ef2d53e9868a13d",
-        "nokia": "ae6bb0ae2b12c422849f0bc5ea64c229518ad4e9"
+        "default": "99aa7d071a15eb1f2b9d5f1cce75a37cf6a2483d",
+        "nokia": "b70e0ec6b71b70c2282585685fbe53f5d00f1cd0"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
