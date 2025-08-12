@@ -1,0 +1,39 @@
+[package]
+name = "sonic-supervisord-utilities-rs"
+version = "1.0.0"
+edition = "2021"
+authors = ["SONiC Team <linuxnetdev@microsoft.com>"]
+description = "SONiC supervisord utilities in Rust"
+license = "Apache-2.0"
+homepage = "https://github.com/Azure/sonic-buildimage"
+repository = "https://github.com/Azure/sonic-buildimage"
+keywords = ["sonic", "supervisord", "networking"]
+
+[[bin]]
+name = "supervisor-proc-exit-listener-rs"
+path = "src/bin/supervisor_proc_exit_listener.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+regex = "1.5"
+libc = "0.2"
+nix = { version = "0.27", features = ["signal", "process"] }
+thiserror = "1.0"
+anyhow = "1.0"
+injectorpp = "0.4"
+swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+
+[dev-dependencies]
+tempfile = "3.0"
+assert_matches = "1.5"
+tokio-test = "0.4"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
