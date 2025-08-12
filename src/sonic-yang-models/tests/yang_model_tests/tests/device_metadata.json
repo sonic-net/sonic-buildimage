@@ -218,6 +218,9 @@
     "DEVICE_METADATA_VALID_SLICE_TYPE": {
         "desc": "Verifying valid slice_type configuration."
     },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "desc": "Verifying nexthop_group configuration."
+    },
     "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
         "desc": "Verifying valid t2_group_asns."
     },
