@@ -54,10 +54,16 @@ class PddfAsicThermal(ThermalBase):
         return float(data_dict["temperature_{}".format(self.sensor_db_index)])
 
     def get_high_threshold(self):
-        return self.high_threshold
+        val = self.high_threshold
+        if val:
+            return float(val)
+        return None
 
     def get_high_critical_threshold(self):
-        return self.high_crit_threshold
+        val = self.high_crit_threshold
+        if val:
+            return float(val)
+        return None
 
     def get_low_threshold(self):
         raise NotImplementedError
