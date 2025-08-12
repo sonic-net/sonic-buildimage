@@ -15,13 +15,14 @@ class PddfAsicThermal(ThermalBase):
 
     ASIC_TEMP_INFO = "ASIC_TEMPERATURE_INFO"
 
+    def get_thermal_obj_name(self):
+        return "ASIC_TEMP{}".format(self.thermal_index)
+
     def __init__(self, index, pddf_data=None):
         self.thermal_index = index + 1
         # The sensors are 0-indexed in the DB.
         self.sensor_db_index = index
-        thermal_obj_name = "ASIC_TEMP{}".format(self.thermal_index)
-
-        thermal_obj = pddf_data.data[thermal_obj_name]
+        thermal_obj = pddf_data.data[self.get_thermal_obj_name()]
 
         self.thermal_name = thermal_obj['dev_attr']['display_name']
         self.high_threshold = thermal_obj['dev_attr']['temp1_high_threshold']
