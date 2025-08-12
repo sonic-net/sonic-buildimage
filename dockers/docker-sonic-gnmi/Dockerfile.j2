@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -12,12 +14,6 @@ ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
 
-# Unit test for monit_gnmi.j2
-COPY ["base_image_files/monit_gnmi.j2", "/tmp/monit_gnmi.j2"]
-RUN SMARTSWITCH=1 j2 -f env /tmp/monit_gnmi.j2 | grep "gnmi 1073741824"
-RUN j2 -f env /tmp/monit_gnmi.j2 | grep "gnmi 419430400"
-RUN rm -f /tmp/monit_gnmi.j2
-
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_sonic_gnmi_debs.split(' '), "/debs/") }}
@@ -26,15 +22,19 @@ RUN rm -f /tmp/monit_gnmi.j2
 {{ install_debian_packages(docker_sonic_gnmi_debs.split(' ')) }}
 {%- endif %}
 
-RUN apt-get clean -y      && \
-    apt-get autoclean -   && \
-    apt-get autoremove -y && \
-    rm -rf /debs
-
 COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

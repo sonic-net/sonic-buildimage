@@ -2,6 +2,12 @@
    "chassis": {
       "DCS-7280DR3AM-36": {
          "component": {
+             "Aboot()": {},
+             "Scd(addr=0000:00:18.7)": {},
+             "Adm1266(addr=10-004f)": {},
+             "Ucd90320(addr=14-0011)": {},
+             "Scd(addr=0000:01:00.0)": {},
+             "CormorantSysCpld(addr=13-0023)": {}
          }
       }
    }
