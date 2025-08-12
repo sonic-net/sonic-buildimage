@@ -31,7 +31,7 @@ jobs:
     jobFilters: ${{ parameters.jobFilters }}
     jobVariables: ${{ parameters.jobVariables }}
     preSteps:
-      - template: .azure-pipelines/cleanup.yml@buildimage
+      - template: cleanup.yml
       - ${{ parameters.preSteps }}
       - script: |
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
@@ -111,6 +111,6 @@ jobs:
             artifactName: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
             publishPrefix: '$(Build.DefinitionName)/$(Build.SourceBranchName)/$(GROUP_NAME)'
       - ${{ parameters.postSteps }}
-      - template: .azure-pipelines/cleanup.yml@buildimage
+      - template: cleanup.yml
     jobGroups: ${{ parameters.jobGroups }}
     buildSteps: ${{ parameters.buildSteps }}
