@@ -58,17 +58,17 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
-  - stage: BuildVS
-    pool: sonicbld-1es
-    jobs:
-    - template: ../azure-pipelines-build.yml
-      parameters:
-        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
-        jobGroups:
-        - name: vs
+  # - stage: BuildVS
+  #   pool: sonicbld-1es
+  #   jobs:
+  #   - template: ../azure-pipelines-build.yml
+  #     parameters:
+  #       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
+  #       jobGroups:
+  #       - name: vs
 
   - stage: Test_round_1
-    dependsOn: BuildVS
+    # dependsOn: BuildVS
     condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
