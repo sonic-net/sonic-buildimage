@@ -1,0 +1,16 @@
+[Unit]
+Description=Accton AS4625-54P Platform Monitoring service
+Before=pmon.service
+After=as4625-54p-platform-init.service
+Requires=as4625-54p-platform-init.service
+
+[Service]
+ExecStart=/usr/local/bin/accton_as4625_54p_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

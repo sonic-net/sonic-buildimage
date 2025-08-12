@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "4625-54T-O-AC-F": {
+            "component": {
+                "MB_CPLD": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
