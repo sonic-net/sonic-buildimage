@@ -19,6 +19,11 @@ PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 
+# Supported hwmon access types:
+# - i2c (construct sysfs path based on i2c parameters)
+# - sysfs (raw path to the device is provided)
+HWMON_ACCESS_TYPES = {'i2c', 'sysfs'}
+
 class PddfApi():
     def __init__(self):
         if not os.path.exists("/usr/share/sonic/platform"):
@@ -359,11 +364,19 @@ class PddfApi():
         return ret
 
     def show_attr_hwmon_device(self, dev, ops, data_sysfs_key):
+        def _path_expand(*path):
+            full_path = glob.glob(os.path.join(*path))
+            if not full_path:
+                raise ValueError(f'{full_path} does not exist')
+            return full_path[0]
+
         ret = []
-        if 'i2c' not in dev.keys():
+        access_type_set = set(dev.keys()).intersection(HWMON_ACCESS_TYPES)
+        if len(access_type_set) != 1:
             return ret
+        access_type = access_type_set.pop()
         attr_name = ops['attr']
-        attr_list = dev['i2c']['attr_list'] if 'i2c' in dev else []
+        attr_list = dev[access_type]['attr_list']
         KEY = data_sysfs_key
         dsysfs_path = ""
 
@@ -372,9 +385,9 @@ class PddfApi():
 
         # Current/Voltage sensors are oftentimes rails that are part of a DPM/DCDC
         if "virt_parent" in dev['dev_info']:
-            i2c_dev = self.data[dev['dev_info']['virt_parent']]
+            hw_dev = self.data[dev['dev_info']['virt_parent']]
         else:
-            i2c_dev = dev
+            hw_dev = dev
 
         for attr in attr_list:
             if attr_name == attr['attr_name'] or attr_name == 'all':
@@ -383,15 +396,20 @@ class PddfApi():
                 else:
                     real_name = attr['attr_name']
 
-                if 'topo_info' in i2c_dev['i2c']:
-                    path = self.show_device_sysfs(i2c_dev, ops)+"/%d-00%02x/"%(int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
-                            int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
-                    if (os.path.exists(path)):
-                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
-                elif 'path_info' in i2c_dev['i2c']:
-                    path = i2c_dev['i2c']['path_info']['sysfs_base_path']
-                    if (os.path.exists(path)):
-                        full_path = "/".join([path, real_name])
+                if access_type == 'i2c':
+                    if 'topo_info' in hw_dev['i2c']:
+                       path = self.show_device_sysfs(hw_dev, ops)+"/%d-00%02x/"%(int(hw_dev['i2c']['topo_info']['parent_bus'], 0),
+                               int(hw_dev['i2c']['topo_info']['dev_addr'], 0))
+                       full_path = _path_expand(path, 'hwmon', 'hwmon*', real_name)
+                    elif 'path_info' in hw_dev['i2c']:
+                       path = hw_dev['i2c']['path_info']['sysfs_base_path']
+                       full_path = _path_expand(path, real_name)
+                elif access_type == 'sysfs':
+                    # A lot of code in this module assumes hardcoded i2c access (e.g., show_device_sysfs). For now,
+                    # non-i2c access for raw sysfs is only added for hwmon devices. Therefore, handle sysfs path
+                    # construction directly in here. Refactor in the future when support is needed in other APIs.
+                    full_path = _path_expand('/sys/devices/pci0000:00', hw_dev['dev_info']['device_bdf'], 'hwmon',
+                                             'hwmon*', real_name)
 
                 dsysfs_path = full_path
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:
