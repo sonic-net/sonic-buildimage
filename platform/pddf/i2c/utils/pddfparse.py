@@ -244,6 +244,10 @@ class PddfParse():
     def create_temp_sensor_device(self, dev, ops):
         return self.create_non_pddf_i2c_device(dev, ops)
 
+    def create_asic_temp_sensor_device(self, dev, ops):
+        # NO-OP
+        return [0]
+
     def create_dpm_device(self, dev, ops):
         return self.create_non_pddf_i2c_device(dev, ops)
 
@@ -626,6 +630,10 @@ class PddfParse():
     def delete_temp_sensor_device(self, dev, ops):
         return self.delete_non_pddf_i2c_device(dev, ops)
 
+    def delete_asic_temp_sensor_device(self, dev, ops):
+        # NO-OP
+        return
+
     def delete_dpm_device(self, dev, ops):
         return self.delete_non_pddf_i2c_device(dev, ops)
 
@@ -861,6 +869,10 @@ class PddfParse():
                     ret.append(full_path)
         return ret
 
+    def show_attr_asic_temp_sensor_device(self, dev, ops):
+        # NO-OP
+        return []
+
     def show_attr_sysstatus_device(self, dev, ops):
         ret = []
         attr_name = ops['attr']
@@ -1092,6 +1104,9 @@ class PddfParse():
     def show_temp_sensor_device(self, dev, ops):
         return
 
+    def show_asic_temp_sensor_device(self, dev, ops):
+        return
+
     def show_sysstatus_device(self, dev, ops):
         KEY = 'sysstatus'
         if not KEY in self.sysfs_obj:
@@ -1287,6 +1302,16 @@ class PddfParse():
                 for attr in dev['i2c']['attr_list']:
                     if attr.get("attr_name") in dev_attribs:
                         ret_val = "tempsensor success"
+        print(ret_val)
+
+    def validate_asic_temp_sensor_device(self, dev, ops):
+        dev_attribs = ['display_name', 'temp1_high_threshold', 'temp1_high_crit_threshold']
+        ret_val = "asic temp sensor failed"
+
+        if dev['dev_info']['device_type'] == "ASIC_TEMP_SENSOR":
+            for attr in dev['dev_attr'].keys():
+                if attr in dev_attribs:
+                    ret_val = "asic temp sensor success"
         print(ret_val)
 
     def validate_fan_device(self, dev, ops):
@@ -1514,6 +1539,17 @@ class PddfParse():
                 if ret[0] != 0:
                     # in case if 'create' functions
                     print("{}_temp_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
+
+        return ret
+
+    def asic_temp_sensor_parse(self, dev, ops):
+        ret = []
+        ret = getattr(self, ops['cmd']+"_asic_temp_sensor_device")(dev, ops)
+        if ret:
+            if str(ret[0]).isdigit():
+                if ret[0] != 0:
+                    # in case if 'create' functions
+                    print("{}_asic_temp_sensor_device failed for {}".format(ops['cmd'], dev['dev_info']['device_name']))
 
         return ret
 
@@ -1842,6 +1878,9 @@ class PddfParse():
 
         if attr['device_type'] == 'TEMP_SENSOR':
             return self.temp_sensor_parse(dev, ops)
+
+        if attr['device_type'] == 'ASIC_TEMP_SENSOR':
+            return self.asic_temp_sensor_parse(dev, ops)
 
         if attr['device_type'] in ['SFP', 'SFP+', 'SFP28', 'QSFP', 'QSFP+', 'QSFP28', 'QSFP-DD', 'OSFP']:
             return self.optic_parse(dev, ops)
