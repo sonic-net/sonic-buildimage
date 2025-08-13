@@ -28,6 +28,7 @@ CONFIG_HASHES = {
 # Command definitions
 RULES_HASH_CMD = f"sh -c \"find {RULES_DIR} -name '*.rules' -type f | sort | xargs cat 2>/dev/null | sha1sum\""
 AUDIT_CONF_HASH_CMD = "cat {} | sha1sum".format(AUDIT_CONF)
+NSENTER_CMD = "nsenter --target 1 --pid --mount --uts --ipc --net "
 
 
 def run_command(cmd):
@@ -47,7 +48,7 @@ def run_command(cmd):
 
 
 def get_hwsku():
-    hwsku_cmd = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
+    hwsku_cmd = NSENTER_CMD + "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
     rc, out = run_command(hwsku_cmd)
     return out.rstrip('\n')
 
@@ -94,7 +95,7 @@ def is_auditd_service_configured():
 
 def check_rules_syntax():
     logger.log_info("Checking auditd rules syntax...")
-    rc, out = run_command("nsenter --target 1 --pid --mount --uts --ipc --net auditctl -R /etc/audit/audit.rules")
+    rc, out = run_command(NSENTER_CMD + "auditctl -R /etc/audit/audit.rules")
     if rc != 0:
         logger.log_error("auditctl -R failed: {}".format(out))
         return False
@@ -137,8 +138,8 @@ def main():
     # If configuration has been modified, restart service
     if not is_configured:
         logger.log_info("Configuration changed, restarting auditd service...")
-        run_command("nsenter --target 1 --pid --mount --uts --ipc --net systemctl daemon-reload")
-        run_command("nsenter --target 1 --pid --mount --uts --ipc --net systemctl restart auditd")
+        run_command(NSENTER_CMD + "systemctl daemon-reload")
+        run_command(NSENTER_CMD + "systemctl restart auditd")
         logger.log_info("auditd service restart completed")
 
         # check rules syntax by reload all rules file
