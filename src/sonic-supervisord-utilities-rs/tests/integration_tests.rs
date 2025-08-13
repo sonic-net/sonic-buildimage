@@ -47,20 +47,20 @@ fn test_get_group_and_process_list() {
 fn test_supervisor_protocol_complete_workflow() {
     // Test parsing headers
     let header_line = "ver:3.0 server:supervisor serial:54 pool:supervisor-proc-exit-listener poolserial:19 eventname:PROCESS_STATE_EXITED len:78";
-    let headers = childutils::get_headers(header_line).unwrap();
-    assert_eq!(headers.eventname, "PROCESS_STATE_EXITED");
-    assert_eq!(headers.ver, "3.0");
-    assert_eq!(headers.serial, 54);
-    assert_eq!(headers.len, 78);
+    let headers = childutils::get_headers(header_line);
+    assert_eq!(headers.get("eventname"), Some(&"PROCESS_STATE_EXITED".to_string()));
+    assert_eq!(headers.get("ver"), Some(&"3.0".to_string()));
+    assert_eq!(headers.get("serial"), Some(&"54".to_string()));
+    assert_eq!(headers.get("len"), Some(&"78".to_string()));
 
     // Test parsing payload
     let payload = "processname:orchagent groupname:bgp from_state:RUNNING expected:0 pid:1234\n";
-    let (process_headers, payload_data) = childutils::eventdata(payload).unwrap();
-    assert_eq!(process_headers.processname, "orchagent");
-    assert_eq!(process_headers.groupname, "bgp");
-    assert_eq!(process_headers.from_state, "RUNNING");
-    assert_eq!(process_headers.expected, 0);
-    assert_eq!(process_headers.pid, Some(1234));
+    let (process_headers, payload_data) = childutils::eventdata(payload);
+    assert_eq!(process_headers.get("processname"), Some(&"orchagent".to_string()));
+    assert_eq!(process_headers.get("groupname"), Some(&"bgp".to_string()));
+    assert_eq!(process_headers.get("from_state"), Some(&"RUNNING".to_string()));
+    assert_eq!(process_headers.get("expected"), Some(&"0".to_string()));
+    assert_eq!(process_headers.get("pid"), Some(&"1234".to_string()));
     assert_eq!(payload_data, "");
 }
 
@@ -137,19 +137,15 @@ fn test_error_conditions() {
 
     // Test invalid supervisor protocol headers
     let invalid_header_line = "invalid header format";
-    let result = childutils::get_headers(invalid_header_line);
-    // Should succeed but return empty/default values
-    assert!(result.is_ok());
-    let headers = result.unwrap();
-    assert!(headers.eventname.is_empty());
+    let headers = childutils::get_headers(invalid_header_line);
+    // Should succeed but return empty headers for invalid format
+    assert!(headers.get("eventname").unwrap_or(&String::new()).is_empty());
 
     // Test invalid event payload
     let invalid_payload = "invalid payload format";
-    let result = childutils::eventdata(invalid_payload);
+    let (process_headers, _) = childutils::eventdata(invalid_payload);
     // Should succeed but return default values
-    assert!(result.is_ok());
-    let (process_headers, _) = result.unwrap();
-    assert!(process_headers.processname.is_empty());
+    assert!(process_headers.get("processname").unwrap_or(&String::new()).is_empty());
 }
 
 #[test]

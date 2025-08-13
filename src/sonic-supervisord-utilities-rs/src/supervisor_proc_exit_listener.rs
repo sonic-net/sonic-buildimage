@@ -1,5 +1,3 @@
-#!/usr/bin/env rust
-
 // Supervisor process exit listener - Single file Rust implementation
 // Mirrors the Python version structure and function names
 
@@ -297,7 +295,7 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
     info!("Initialized events publisher: {}", EVENTS_PUBLISHER_SOURCE);
 
     // Transition from ACKNOWLEDGED to READY
-    childutils::listener::ready().map_err(|e| SupervisorError::System(format!("Failed to send READY: {}", e)))?;
+    childutils::listener::ready();
 
     // Main event loop
     loop {
@@ -312,23 +310,19 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
             }
             Ok(_) => {
                 // Parse supervisor protocol headers
-                let headers = match childutils::get_headers(&buffer) {
-                    Ok(h) => h,
-                    Err(e) => {
-                        warn!("Failed to parse headers: {} from line: {}", e, buffer.trim());
-                        continue;
-                    }
+                let headers = childutils::get_headers(&buffer);
+
+                // Check if 'len' is missing - if so, log and continue
+                let len = if let Some(len_str) = headers.get("len") {
+                    len_str.parse::<usize>().unwrap_or(0)
+                } else {
+                    warn!("Missing 'len' in headers: {:?}", headers);
+                    continue;
                 };
 
-                // Check if 'len' exists before using it
-                if headers.len == 0 && !headers.eventname.is_empty() {
-                    warn!("Missing 'len' in headers: {:?}, line: {}", headers, buffer.trim());
-                    continue;
-                }
-
                 // Read payload
-                let mut payload = vec![0u8; headers.len];
-                if headers.len > 0 {
+                let mut payload = vec![0u8; len];
+                if len > 0 {
                     match stdin_reader.read_exact(&mut payload) {
                         Ok(_) => {},
                         Err(e) => {
@@ -340,31 +334,24 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
                 let payload = String::from_utf8_lossy(&payload);
 
                 // Handle different event types
-                match headers.eventname.as_str() {
+                let eventname = headers.get("eventname").cloned().unwrap_or_default();
+                match eventname.as_str() {
                     "PROCESS_STATE_EXITED" => {
                         // Handle the PROCESS_STATE_EXITED event
-                        let (payload_headers, _payload_data) = match childutils::eventdata(&(payload.to_string() + "\n")) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                warn!("Failed to parse event data: {}", e);
-                                childutils::listener::ok().ok();
-                                childutils::listener::ready().ok();
-                                continue;
-                            }
-                        };
+                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
 
-                        let expected = payload_headers.expected;
-                        let process_name = &payload_headers.processname;
-                        let group_name = &payload_headers.groupname;
+                        let expected = payload_headers.get("expected").and_then(|s| s.parse().ok()).unwrap_or(0);
+                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+                        let group_name = payload_headers.get("groupname").cloned().unwrap_or_default();
 
                         // Check if critical process and handle
-                        if (critical_process_list.contains(process_name) || critical_group_list.contains(group_name)) && expected == 0 {
+                        if (critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name)) && expected == 0 {
                             let is_auto_restart = match get_autorestart_state(&container_name, config_db) {
                                 Ok(state) => state,
                                 Err(e) => {
                                     error!("Failed to get auto-restart state: {}", e);
-                                    childutils::listener::ok().ok();
-                                    childutils::listener::ready().ok();
+                                    childutils::listener::ok();
+                                    childutils::listener::ready();
                                     continue;
                                 }
                             };
@@ -376,7 +363,7 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
                                 info!("{}", msg);
                                 
                                 // Publish events
-                                publish_events(&events_handle, process_name, &container_name).ok();
+                                publish_events(&events_handle, &process_name, &container_name).ok();
                                 
                                 // Deinit publisher
                                 events_handle.deinit().ok();
@@ -398,40 +385,24 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
 
                     "PROCESS_STATE_RUNNING" => {
                         // Handle the PROCESS_STATE_RUNNING event
-                        let (payload_headers, _payload_data) = match childutils::eventdata(&(payload.to_string() + "\n")) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                warn!("Failed to parse event data: {}", e);
-                                childutils::listener::ok().ok();
-                                childutils::listener::ready().ok();
-                                continue;
-                            }
-                        };
+                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
 
-                        let process_name = &payload_headers.processname;
+                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
 
                         // Remove from alerting if it was there
-                        if process_under_alerting.contains_key(process_name) {
-                            process_under_alerting.remove(process_name);
+                        if process_under_alerting.contains_key(&process_name) {
+                            process_under_alerting.remove(&process_name);
                         }
                     }
 
                     "PROCESS_COMMUNICATION_STDOUT" => {
                         // Handle the PROCESS_COMMUNICATION_STDOUT event
-                        let (payload_headers, _payload_data) = match childutils::eventdata(&(payload.to_string() + "\n")) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                warn!("Failed to parse event data: {}", e);
-                                childutils::listener::ok().ok();
-                                childutils::listener::ready().ok();
-                                continue;
-                            }
-                        };
+                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
 
-                        let process_name = &payload_headers.processname;
+                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
 
                         // Update process heart beat time
-                        if watch_process_list.contains(process_name) {
+                        if watch_process_list.contains(&process_name) {
                             let mut heartbeat_info = HashMap::new();
                             heartbeat_info.insert("last_heart_beat".to_string(), get_current_time());
                             process_heart_beat_info.insert(process_name.clone(), heartbeat_info);
@@ -440,15 +411,15 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
 
                     _ => {
                         // Unknown event type - just acknowledge
-                        warn!("Unknown event type: {}", headers.eventname);
+                        warn!("Unknown event type: {}", eventname);
                     }
                 }
 
                 // Transition from BUSY to ACKNOWLEDGED
-                childutils::listener::ok().map_err(|e| SupervisorError::System(format!("Failed to send OK: {}", e)))?;
+                childutils::listener::ok();
 
                 // Transition from ACKNOWLEDGED to READY
-                childutils::listener::ready().map_err(|e| SupervisorError::System(format!("Failed to send READY: {}", e)))?;
+                childutils::listener::ready();
             }
             Err(e) => {
                 error!("Failed to read from stdin: {}", e);
