@@ -1,0 +1,47 @@
+[zebra] Fix evpn access-vlan dangling entry causes bgp docker crash.
+
+From: Sandy Wu <sandywu5133@gmail.com>
+
+
+---
+ zebra/interface.c |   24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/zebra/interface.c b/zebra/interface.c
+index e64e8271f..4c96b85e0 100644
+--- a/zebra/interface.c
++++ b/zebra/interface.c
+@@ -1828,21 +1828,21 @@ static void interface_bridge_vlan_update(struct zebra_dplane_ctx *ctx,
+ 
+ 	/* Could we have multiple bridge vlan infos? */
+ 	bvarray = dplane_ctx_get_ifp_bridge_vlan_info_array(ctx);
+-	if (!bvarray)
+-		return;
+-
+-	for (i = 0; i < bvarray->count; i++) {
+-		bvinfo = bvarray->array[i];
++	if (bvarray)
++	{
++		for (i = 0; i < bvarray->count; i++) {
++			bvinfo = bvarray->array[i];
+ 
+-		if (bvinfo.flags & DPLANE_BRIDGE_VLAN_INFO_RANGE_BEGIN) {
+-			vid_range_start = bvinfo.vid;
+-			continue;
+-		}
++			if (bvinfo.flags & DPLANE_BRIDGE_VLAN_INFO_RANGE_BEGIN) {
++				vid_range_start = bvinfo.vid;
++				continue;
++			}
+ 
+-		if (!(bvinfo.flags & DPLANE_BRIDGE_VLAN_INFO_RANGE_END))
+-			vid_range_start = bvinfo.vid;
++			if (!(bvinfo.flags & DPLANE_BRIDGE_VLAN_INFO_RANGE_END))
++				vid_range_start = bvinfo.vid;
+ 
+-		zebra_vlan_bitmap_compute(ifp, vid_range_start, bvinfo.vid);
++			zebra_vlan_bitmap_compute(ifp, vid_range_start, bvinfo.vid);
++		}
+ 	}
+ 
+ 	zebra_vlan_mbr_re_eval(ifp, old_vlan_bitmap);
