@@ -30,6 +30,7 @@ start()
 
 stop()
 {
+    /usr/bin/ip addr flush dev Ethernet0
     return 0
 }
 

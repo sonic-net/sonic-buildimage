@@ -7,7 +7,10 @@ export FLASHROM_VERSION_FULL
 
 FLASHROM = flashrom_$(FLASHROM_VERSION_FULL)_amd64.deb
 $(FLASHROM)_SRC_PATH = $(SRC_PATH)/flashrom
-
 SONIC_MAKE_DEBS += $(FLASHROM)
 
-export FLASHROM
+FLASHROM_DBG = flashrom-dbgsym_$(FLASHROM_VERSION_FULL)_amd64.deb
+$(FLASHROM_DBG)_RDEPENDS += $(FLASHROM)
+$(eval $(call add_derived_package,$(FLASHROM),$(FLASHROM_DBG)))
+
+export FLASHROM FLASHROM_DBG

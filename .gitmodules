@@ -139,3 +139,6 @@
 [submodule "src/sonic-sysmgr/gnoi"]
 	path = src/sonic-sysmgr/gnoi
 	url = https://github.com/openconfig/gnoi
+[submodule "platform/marvell-teralynx/mrvl-teralynx"]
+	path = platform/marvell-teralynx/mrvl-teralynx
+	url = https://github.com/Marvell-switching/mrvl-teralynx.git

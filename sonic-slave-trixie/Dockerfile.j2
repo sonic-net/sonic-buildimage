@@ -121,6 +121,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         jq \
         cron \
         debootstrap \
+        e2fsprogs \
 # For sonic-swss-common
         nlohmann-json3-dev \
         libhiredis-dev \
@@ -332,6 +333,9 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For initramfs
         shellcheck \
         bash-completion \
+# For installing the linux image for kernel module builds
+        tiny-initramfs \
+        linux-base \
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
@@ -423,8 +427,18 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libgirepository1.0-dev \
         libsystemd-dev \
         pkg-config \
+        python3-dbus \
+        python3-systemd \
+        python3-gi \
 # For sonic-utilities build
         python3-cryptography \
+        python3-deepdiff \
+        python3-natsort \
+        python3-netifaces \
+        python3-paramiko \
+        python3-scp \
+        python3-enlighten \
+        python3-requests \
 # For audisp-tacplus
         libauparse-dev \
         auditd \
@@ -450,6 +464,14 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         dmidecode \
         usbutils \
         xmlstarlet \
+# For fips
+        python3-cheetah \
+        python3-docs-theme \
+        ss-dev \
+        liblmdb-dev \
+        libverto-dev \
+        systemtap-sdt-dev \
+        xvfb \
 # For nvidia-bluefield sdk compilation
         cython3 \
         pandoc \
