@@ -246,6 +246,8 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 
 	ex mst start
 
+        cp -R $sonic_fs_mountpoint/usr/bin/asic_detect/ /usr/bin/
+
 	if function_exists bfb_pre_fw_install; then
 		log "Running bfb_pre_fw_install from bf.cfg"
 		bfb_pre_fw_install
