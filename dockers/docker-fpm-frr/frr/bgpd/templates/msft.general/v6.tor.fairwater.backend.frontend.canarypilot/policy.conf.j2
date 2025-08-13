@@ -9,11 +9,11 @@ ipv6 prefix-list BE_LOOPBACKS_V6_AGG seq 30 permit 2603:10b0:12e:a400::/64
 ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
 !
 route-map FROM_FE_TIER0_V6 permit 100
-   match ipv6 address prefix-list DEFAULT_IPV6
-!
-route-map FROM_FE_TIER0_V6 permit 110
    set ipv6 next-hop prefer-global
    on-match next
+!
+route-map FROM_FE_TIER0_V6 permit 110
+   match ipv6 address prefix-list DEFAULT_IPV6
 !
 route-map FROM_FE_TIER0_V6 deny 200
 !
