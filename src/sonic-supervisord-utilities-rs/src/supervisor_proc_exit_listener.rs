@@ -459,11 +459,6 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
     }
 }
 
-/// Main function
-pub fn main() -> Result<()> {
-    main_with_args(None)
-}
-
 // Helper function to terminate supervisor - extracted from main loop logic
 fn terminate_supervisor() -> Result<()> {
     let parent_pid = getppid();
