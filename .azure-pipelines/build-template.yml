@@ -91,7 +91,8 @@ jobs:
             mv target/sonic-vs.img.gz target/sonic-vs-dbg.img.gz
         fi
 
-        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) BLDENV=bookworm target/docker-ptf.gz
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
