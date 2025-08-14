@@ -62,6 +62,8 @@ def is_auditd_rules_configured():
         EXPECTED_HASH = CONFIG_HASHES["rules"]["32bit"]
     elif "amd64" in arch or "x86_64" in arch:
         EXPECTED_HASH = CONFIG_HASHES["rules"]["64bit"]
+    else:
+        EXPECTED_HASH = "unexpected"
 
     rc, out = run_command(RULES_HASH_CMD)
     is_configured = EXPECTED_HASH in out
@@ -113,11 +115,17 @@ def main():
     # Check rules configuration
     if not is_auditd_rules_configured():
         logger.log_info("Updating auditd rules...")
-        run_command("rm -f {}/*.rules".format(RULES_DIR))
-        run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         if "armmp" in arch:
             logger.log_info("Installing 32bit rules")
+            run_command("rm -f {}/*.rules".format(RULES_DIR))
+            run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
             run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
+        elif "x86_64" in arch or "amd64" in arch:
+            logger.log_info("Installing 64bit rules")
+            run_command("rm -f {}/*.rules".format(RULES_DIR))
+            run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
+        else:
+            logger.log_error("Unknown architecture")
         is_configured = False
 
     # Check syslog configuration
