@@ -299,9 +299,6 @@ sudo LANG=C chroot $FILESYSTEM_ROOT sed -i '/# Required-Start:/ s/$/ networking.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl stop nslcd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl mask nslcd.service
 
-# Install syslog counter plugin
-install_deb_package $debs_path/syslog-counter_*.deb
-
 # Install pam-tacplus and nss-tacplus
 install_deb_package $debs_path/libtac2_*.deb
 install_deb_package $debs_path/libpam-tacplus_*.deb
@@ -1199,3 +1196,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unho
 {% if ENABLE_MULTIDB == "y" %}
 sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 {% endif %}
+
+# Install syslog counter plugin
+install_deb_package $debs_path/syslog-counter_*.deb
