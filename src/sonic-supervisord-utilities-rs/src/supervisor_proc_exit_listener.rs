@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::process;
 use std::sync::{Mutex, OnceLock};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
 use thiserror::Error;
 use tracing::{error, info, warn};
@@ -237,12 +237,11 @@ pub fn publish_events(events_handle: &EventPublisher, process_name: &str, contai
     Ok(())
 }
 
-/// Get current time as Unix timestamp - helper function
+/// Get current monotonic time as seconds since an arbitrary epoch - helper function
 pub fn get_current_time() -> f64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs_f64()
+    static START_TIME: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    let start = START_TIME.get_or_init(|| Instant::now());
+    start.elapsed().as_secs_f64()
 }
 
 /// Main function with testable parameters
