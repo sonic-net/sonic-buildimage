@@ -19,8 +19,8 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "default": "99aa7d071a15eb1f2b9d5f1cce75a37cf6a2483d",
-        "nokia": "b70e0ec6b71b70c2282585685fbe53f5d00f1cd0"
+        "64bit": "99aa7d071a15eb1f2b9d5f1cce75a37cf6a2483d",
+        "32bit": "b70e0ec6b71b70c2282585685fbe53f5d00f1cd0"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
@@ -47,18 +47,21 @@ def run_command(cmd):
     return p.returncode, error
 
 
-def get_hwsku():
-    hwsku_cmd = NSENTER_CMD + "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
-    rc, out = run_command(hwsku_cmd)
+def get_arch():
+    arch_cmd = NSENTER_CMD + "uname -m"
+    rc, out = run_command(arch_cmd)
+    if rc != 0:
+        logger.log_error("Failed to get architecture")
+        sys.exit(1)
     return out.rstrip('\n')
 
 
 def is_auditd_rules_configured():
-    hwsku = get_hwsku()
-    if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
-        EXPECTED_HASH = CONFIG_HASHES["rules"]["nokia"]
-    else:
-        EXPECTED_HASH = CONFIG_HASHES["rules"]["default"]
+    arch = get_arch()
+    if "armmp" in arch:
+        EXPECTED_HASH = CONFIG_HASHES["rules"]["32bit"]
+    elif "amd64" in arch or "x86_64" in arch:
+        EXPECTED_HASH = CONFIG_HASHES["rules"]["64bit"]
 
     rc, out = run_command(RULES_HASH_CMD)
     is_configured = EXPECTED_HASH in out
@@ -105,15 +108,15 @@ def check_rules_syntax():
 
 def main():
     is_configured = True
-    hwsku = get_hwsku()
+    arch = get_arch()
 
     # Check rules configuration
     if not is_auditd_rules_configured():
         logger.log_info("Updating auditd rules...")
         run_command("rm -f {}/*.rules".format(RULES_DIR))
         run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
-        if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
-            logger.log_info("Installing Nokia-specific rules")
+        if "armmp" in arch:
+            logger.log_info("Installing 32bit rules")
             run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         is_configured = False
 
