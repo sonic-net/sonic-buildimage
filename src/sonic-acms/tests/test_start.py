@@ -133,16 +133,15 @@ class TestStart(TestCase):
     @mock.patch("dSMS_config_modifier.get_device_cloudtype")
     @mock.patch("dSMS_config_modifier.update_config")
     @mock.patch("dSMS_config_modifier.fix_endpoint_for_cloud")
-    @mock.patch("sys.exit")
-    def test_acms_config_05(self, mock_exit, mock_fix_endpoint, mock_update_config, mock_cloud_type):
+    def test_acms_config_05(self, mock_fix_endpoint, mock_update_config, mock_cloud_type):
         '''
         Update acms config when cloud type is mooncake, and fix_endpoint failed
-        Should exit
+        Should return True to support unknown cloud type
         '''
         mock_fix_endpoint.return_value = False
         mock_cloud_type.return_value = 'Mooncake'
-        start.update_acms_config("test.cert")
-        self.assertEqual(mock_exit.call_args_list, [mock.call(1)])
+        ret = start.update_acms_config("test.cert")
+        self.assertEqual(ret, True)
 
     def test_cmd_01(self):
         '''

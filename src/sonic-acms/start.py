@@ -67,7 +67,6 @@ def update_acms_config(bootstrap_cert):
     if cloud.lower() != "Public".lower():
         if not dSMS_config_modifier.fix_endpoint_for_cloud(cloud):
             sonic_logger.log_error("start: update_acms_config: Fixing endpoint for cloudtype "+cloud+" failed!")
-            sys.exit(1)
     dSMS_config_modifier.update_config(bootstrap_cert)
     sonic_logger.log_info("start: update_acms_config: ACMS Config update complete")
     return True

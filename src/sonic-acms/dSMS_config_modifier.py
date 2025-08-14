@@ -60,6 +60,12 @@ def fix_endpoint_for_cloud(cloud):
         url_pattern = "https://region-dsms.dsms.core.eaglex.ic.gov"
     elif cloud.lower() == "USSec".lower():
         url_pattern = "https://region-dsms.dsms.core.microsoft.scloud"
+    elif cloud.lower() == "Bleu".lower():
+        url_pattern = "https://region-dsms.dsms.identity.sovcloud-core.fr"
+    elif cloud.lower() == "Delos".lower():
+        url_pattern = "https://region-dsms.dsms.identity.sovcloud-core.de"
+    elif cloud.lower() == "GovSG".lower():
+        url_pattern = "https://region-dsms.dsms.identity.sovcloud-core.sg"
     else:
         sonic_logger.log_error("CloudType "+cloud+" not listed!")
         return False
