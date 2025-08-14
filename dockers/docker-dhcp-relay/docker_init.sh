@@ -4,7 +4,7 @@
 mkdir -p /etc/supervisor/conf.d/
 
 # Generate the following files from templates:
-# 1. supervisord configuration 
+# 1. supervisord configuration
 # 2. wait_for_intf.sh, which waits for all interfaces to come up
 # 3. port-to-alias name map
 CFGGEN_PARAMS=" \
@@ -12,7 +12,6 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/docker-dhcp-relay.supervisord.conf.j2,/etc/supervisor/conf.d/docker-dhcp-relay.supervisord.conf \
     -t /usr/share/sonic/templates/wait_for_intf.sh.j2,/usr/bin/wait_for_intf.sh \
     -t /usr/share/sonic/templates/port-name-alias-map.txt.j2,/tmp/port-name-alias-map.txt \
-    -t /usr/share/sonic/templates/dnsmasq-fixed.conf.j2,/etc/dnsmasq.d/fixed.conf \
 "
 sonic-cfggen $CFGGEN_PARAMS
 

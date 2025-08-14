@@ -26,9 +26,7 @@ RUN pip3 install psutil
 {{ install_debian_packages(docker_dhcp_relay_debs.split(' ')) }}
 {%- endif %}
 
-RUN apt-get install -y dnsmasq gcc python3-dev
-# Indicate we have installed dnsmasq in dhcp_relay container, it requires NET_ADMIN permission added to container.
-ENV include_dnsmasq y
+RUN apt-get install -y gcc python3-dev
 
 RUN pip3 install psutil
 
@@ -49,8 +47,6 @@ RUN apt-get remove -y build-essential     \
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["docker-dhcp-relay.supervisord.conf.j2", "port-name-alias-map.txt.j2", "wait_for_intf.sh.j2", "/usr/share/sonic/templates/"]
 COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv6-relay.agents.j2", "dhcp-relay.monitors.j2", "/usr/share/sonic/templates/"]
-COPY ["dnsmasq-fixed.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["updateHostAddresses.py", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["cli", "/cli/"]
 

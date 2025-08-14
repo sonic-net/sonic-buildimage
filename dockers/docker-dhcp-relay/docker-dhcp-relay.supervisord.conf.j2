@@ -57,34 +57,6 @@ dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 {% endfor %}
 
-{% if 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] and ('dhcp_server' not in FEATURE or 'state' not in FEATURE['dhcp_server'] or FEATURE['dhcp_server']['state'] != 'enabled') %}
-[group:dhcp-server]
-programs=dnsmasq,host-monitor
-
-[program:dnsmasq]
-command=/usr/sbin/dnsmasq -p 0 --conf-dir=/etc/dnsmasq.d/ -d
-priority=3
-autostart=false
-autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
-dependent_startup=true
-dependent_startup_wait_for=start:exited
-
-[program:host-monitor]
-command=/usr/bin/updateHostAddresses.py --update-every=10
-priority=3
-autostart=false
-autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
-dependent_startup=true
-dependent_startup_wait_for=start:exited
-{% else %}
-[group:dhcp-server]
-programs=
-{% endif %}
-
 {# If one or more of the VLANs require a DHCP relay agent... #}
 {% if ipv4_num_relays.count > 0 or ipv6_num_relays.count > 0 %}
 {% include 'dhcp-relay.programs.j2' %}
@@ -94,19 +66,16 @@ programs=
 {% set relay_for_ipv6 = { 'flag': False } %}
 {% set added_vlan = []%}
 {% for (vlan_name, prefix) in VLAN_INTERFACE|pfx_filter %}
-    {%- if prefix | ipv4 and vlan_name not in added_vlan and ('dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server']) %}
+    {%- if prefix | ipv4 and vlan_name not in added_vlan  %}
         {%- include 'dhcpv4-relay.agents.j2' %}
         {%- set _ = added_vlan.append(vlan_name) %}
     {%- endif %}
 {% endfor %}
 
 {% include 'dhcpv6-relay.agents.j2' %}
-{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] %}
 {% include 'dhcp-relay.monitors.j2' %}
 {% endif %}
 {% endif %}
-{% endif %}
-{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] or ('dhcp_server' in FEATURE and 'state' in FEATURE['dhcp_server'] and FEATURE['dhcp_server']['state'] == 'enabled')%}
 [program:dhcprelayd]
 command=/usr/local/bin/dhcprelayd
 priority=3
@@ -118,4 +87,3 @@ stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=start:exited
-{%- endif %}
