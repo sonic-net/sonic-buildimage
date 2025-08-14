@@ -23,6 +23,9 @@
 {% elif DEVICE_METADATA.localhost.cloudtype == "Delos" %}
         "10.7.0.5": {},
         "fd35:eef3:4000:0::5": {}
+{% elif DEVICE_METADATA.localhost.cloudtype == "GovSG" %}
+        "10.7.0.5": {},
+        "fd35:eef4:4100:0::5": {}
 {% elif DEVICE_METADATA.localhost.cloudtype == "USNat" %}
         "10.1.12.0": {}
 {% elif DEVICE_METADATA.localhost.cloudtype == "USSec" %}
