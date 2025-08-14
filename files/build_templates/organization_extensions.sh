@@ -50,5 +50,9 @@ echo "Executing SONIC Organization Extensions"
 sudo cp files/scripts/th5_ber.sh $FILESYSEM_ROOT/usr/local/bin/th5_ber.sh
 sudo chmod +x $FILESYSEM_ROOT/usr/local/bin/th5_ber.sh
 
+# FDB aging script
+sudo cp files/scripts/fdb_aging_update.py ${FILESYSTEM_ROOT}/usr/local/bin/fdb_aging_update.py
+sudo chmod +x ${FILESYSTEM_ROOT}/usr/local/bin/fdb_aging_update.py
+
 echo "SONIC Organization Extensions - Done"
 
