@@ -1,14 +1,79 @@
-.ONESHELL:
-SHELL = /bin/bash
-.SHELLFLAGS += -e
+# Makefile for sonic-supervisord-utilities-rs
 
-MAIN_TARGET = syslog-counter_$(SYSLOG_COUNTER_VERSION)_$(CONFIGURED_ARCH).deb
+.PHONY: all build test test-coverage clean install lint format check doc
 
-$(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	# build debian package with cargo deb
-	cargo install cargo-deb
-    # sonic install rust and cargo with rustup, so can't build debian package with dpkg-buildpackage
+# Default target
+all: build test
+
+# Build the project
+build:
+	cargo build --release
+
+# Run tests
+test:
 	cargo test
-	cargo deb
-	
-	mv ./target/debian/$(MAIN_TARGET) $(DEST)/
+
+# Run tests with coverage
+test-coverage:
+	cargo install cargo-tarpaulin || true
+	cargo tarpaulin --out Html --output-dir target/coverage --timeout 120 --all-features
+
+# Clean build artifacts
+clean:
+	cargo clean
+
+# Install the binary
+install: build
+	cargo install --path .
+
+# Run linting
+lint:
+	cargo clippy -- -D warnings
+
+# Format code
+format:
+	cargo fmt
+
+# Check formatting and linting
+check: format lint
+
+# Generate documentation
+doc:
+	cargo doc --no-deps --open
+
+# Run all quality checks
+ci: check test test-coverage
+
+# Quick development check
+dev: format
+	cargo check
+	cargo test
+
+# Profile release build
+profile:
+	cargo build --release
+	@echo "Binary size:"
+	@ls -lh target/release/syslog-counter
+
+# Run benchmarks (if any)
+bench:
+	cargo bench
+
+# Show help
+help:
+	@echo "Available targets:"
+	@echo "  all          - Build and test (default)"
+	@echo "  build        - Build the project"
+	@echo "  test         - Run tests"
+	@echo "  test-coverage- Run tests with coverage report"
+	@echo "  clean        - Clean build artifacts"
+	@echo "  install      - Install the binary"
+	@echo "  lint         - Run linting (clippy)"
+	@echo "  format       - Format code"
+	@echo "  check        - Check formatting and linting"
+	@echo "  doc          - Generate documentation"
+	@echo "  ci           - Run all quality checks"
+	@echo "  dev          - Quick development check"
+	@echo "  profile      - Show release binary size"
+	@echo "  bench        - Run benchmarks"
+	@echo "  help         - Show this help"
