@@ -477,6 +477,7 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(DOCKER_SLAVE_BASE_PULL_REGISTRY); \
 	} || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Building... ; \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
@@ -492,6 +493,7 @@ DOCKER_SLAVE_USER_INSPECT = \
 SONIC_SLAVE_USER_BUILD = \
 	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
 		$(DOCKER_USER_BUILD) ; \
 	}
