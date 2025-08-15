@@ -47,20 +47,28 @@ def run_command(cmd):
     return p.returncode, error
 
 
-def get_arch():
-    arch_cmd = NSENTER_CMD + "uname -m"
-    rc, out = run_command(arch_cmd)
+def get_bitness():
+    cmd = NSENTER_CMD + "file -L /bin/sh"
+    rc, out = run_command(cmd)
     if rc != 0:
-        logger.log_error("Failed to get architecture")
+        logger.log_error("Failed to get bitness")
         sys.exit(1)
-    return out.rstrip('\n')
+
+    out = out.strip()
+    if "64-bit" in out:
+        return "64-bit"
+    elif "32-bit" in out:
+        return "32-bit"
+    else:
+        logger.log_error(f"Unknown bitness from output: {out}")
+        sys.exit(1)
 
 
 def is_auditd_rules_configured():
-    arch = get_arch()
-    if "armmp" in arch:
+    bitness = get_bitness()
+    if "32-bit" in bitness:
         EXPECTED_HASH = CONFIG_HASHES["rules"]["32bit"]
-    elif "amd64" in arch or "x86_64" in arch:
+    elif "64-bit" in bitness:
         EXPECTED_HASH = CONFIG_HASHES["rules"]["64bit"]
     else:
         EXPECTED_HASH = "unexpected"
@@ -110,22 +118,22 @@ def check_rules_syntax():
 
 def main():
     is_configured = True
-    arch = get_arch()
+    bitness = get_bitness()
 
     # Check rules configuration
     if not is_auditd_rules_configured():
         logger.log_info("Updating auditd rules...")
-        if "armmp" in arch:
+        if "32-bit" in bitness:
             logger.log_info("Installing 32bit rules")
             run_command("rm -f {}/*.rules".format(RULES_DIR))
             run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
             run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
-        elif "x86_64" in arch or "amd64" in arch:
+        elif "64-bit" in bitness:
             logger.log_info("Installing 64bit rules")
             run_command("rm -f {}/*.rules".format(RULES_DIR))
             run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         else:
-            logger.log_error("Unknown architecture")
+            logger.log_error("Unknown system bitness")
         is_configured = False
 
     # Check syslog configuration
