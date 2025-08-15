@@ -1,4 +1,4 @@
-# Makefile for sonic-supervisord-utilities-rs
+# Makefile for syslog-counter
 
 .PHONY: all build test test-coverage clean install lint format check doc
 

@@ -8,14 +8,3 @@ edition = "2021"
 env_logger = "0.11.8"
 log = "0.4.27"
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }
-
-[package.metadata.deb]
-maintainer = "Liu Hua <liuh@microsoft.com>"
-copyright = "2025, microsoft"
-extended-description = """SONiC syslog counter"""
-depends = "$auto"
-section = "utility"
-priority = "optional"
-assets = [
- ["target/release/syslog-counter", "usr/bin/", "755"],
-]

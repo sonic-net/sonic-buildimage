@@ -1,9 +1,0 @@
-Package: syslog-counter
-Version: 1.0.0
-Architecture: amd64
-Maintainer: Liu Hua <liuh@microsoft.com>
-Installed-Size: 2037
-Depends: libc6 (>= 2.34), libgcc-s1 (>= 4.2), libswsscommon (>= 1.0.0)
-Section: utils
-Priority: optional
-Description: SONiC syslog counter
