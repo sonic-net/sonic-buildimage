@@ -19,7 +19,7 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "64bit": "99aa7d071a15eb1f2b9d5f1cce75a37cf6a2483d",
+        "64bit": "1c532e73fdd3f7366d9c516eb712102d3063bd5a",
         "32bit": "b70e0ec6b71b70c2282585685fbe53f5d00f1cd0"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
@@ -124,12 +124,12 @@ def main():
     if not is_auditd_rules_configured():
         logger.log_info("Updating auditd rules...")
         if "32-bit" in bitness:
-            logger.log_info("Installing 32bit rules")
+            logger.log_info("Installing 32-bit rules")
             run_command("rm -f {}/*.rules".format(RULES_DIR))
             run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
             run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         elif "64-bit" in bitness:
-            logger.log_info("Installing 64bit rules")
+            logger.log_info("Installing 64-bit rules")
             run_command("rm -f {}/*.rules".format(RULES_DIR))
             run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
         else:
