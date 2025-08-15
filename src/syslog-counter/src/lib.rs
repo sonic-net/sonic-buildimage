@@ -6,15 +6,15 @@ use log::{error, info};
 use std::process::exit;
 use swss_common::*;
 
-pub fn convert_to_CxxString(opt: Option<u64>) -> Option<CxxString> {
-    opt.map(|num| CxxString::new(num.to_string()))
+pub fn convert_to_CxxString(num: u64) -> CxxString {
+    CxxString::new(num.to_string())
 }
 
-pub fn convert_to_u64(opt: Option<&CxxString>) -> Option<u64> {
-    opt.and_then(|s| match s.to_str() {
-        Ok(text) => text.parse::<u64>().ok(),
-        Err(_) => None,
-    })
+pub fn convert_to_u64(str: CxxString) -> Result<u64, String> {
+    match str.to_str() {
+        Ok(text) => text.parse::<u64>().map_err(|e| format!("Parse error: {}", e)),
+        Err(_) => Err("Failed to convert CxxString to &str".to_string()),
+    }
 }
 
 pub trait DbConnectorTrait: Send  {
@@ -59,16 +59,16 @@ impl CountersDb {
     }
 
     pub fn get_count(&self) -> Result<u64, String> {
-        let raw = self.connector.hget("SYSLOG_COUNTER", "COUNT")
-            .map_err(|e| format!("Failed to hget COUNT: {:?}", e))?;
-        convert_to_u64(raw.as_ref())
-            .ok_or_else(|| "Failed to parse COUNT as u64".to_string())
+        match self.connector.hget("SYSLOG_COUNTER", "COUNT") {
+            Ok(Some(cxx_str)) => convert_to_u64(cxx_str),
+            Ok(None) => Err("COUNT was None".to_string()),
+            Err(e) => Err(format!("Failed to hget COUNT: {:?}", e)),
+        }
+
     }
 
     pub fn set_count(&self, count: u64) -> Result<(), String> {
-        let cxx_val = convert_to_CxxString(Some(count))
-            .ok_or_else(|| "Failed to convert count to CxxString".to_string())?;
-        self.connector.hset("SYSLOG_COUNTER", "COUNT", cxx_val.as_cxx_str())
+        self.connector.hset("SYSLOG_COUNTER", "COUNT", &convert_to_CxxString(count))
             .map_err(|e| format!("Failed to set COUNT: {:?}", e))
     }
 }

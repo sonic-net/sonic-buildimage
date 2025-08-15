@@ -30,7 +30,7 @@ mod tests {
         }
 
         fn hget(&self, key: &str, field: &str) -> Result<Option<CxxString>> {
-            Ok(convert_to_CxxString(Some(42)))
+            Ok(Some(convert_to_CxxString(42)))
         }
 
         fn hset(&self, key: &str, field: &str, value: &CxxStr) -> Result<()> {
@@ -41,16 +41,15 @@ mod tests {
 
     #[test]
     fn test_convert_to_CxxString() {
-        let result = convert_to_CxxString(Some(123));
-        assert!(result.is_some());
-        assert_eq!(result.unwrap().to_str().unwrap(), "123");
+        let result = convert_to_CxxString(123);
+        assert_eq!(result.to_str().unwrap(), "123");
     }
 
     #[test]
     fn test_convert_to_u64() {
         let cxx = CxxString::new("456".to_string());
-        let result = convert_to_u64(Some(&cxx));
-        assert_eq!(result, Some(456));
+        let result = convert_to_u64(cxx);
+        assert_eq!(result, Ok(456));
     }
 
     #[test]
