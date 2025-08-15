@@ -118,7 +118,7 @@ stages:
     timeoutInMinutes: 60
     steps:
     - template: .azure-pipelines/cleanup.yml
-    - checkout: self
+    - checkout: buildimage
       clean: true
       submodules: recursive
       displayName: 'Checkout code'

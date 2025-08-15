@@ -43,7 +43,7 @@ jobs:
           echo $BUILD_OPTIONS
           echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"
         displayName: "Set cache options"
-      - checkout: self
+      - checkout: buildimage
         submodules: recursive
         fetchDepth: 0
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
