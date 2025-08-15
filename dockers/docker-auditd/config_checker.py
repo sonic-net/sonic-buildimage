@@ -20,7 +20,7 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 CONFIG_HASHES = {
     "rules": {
         "64bit": "1c532e73fdd3f7366d9c516eb712102d3063bd5a",
-        "32bit": "b70e0ec6b71b70c2282585685fbe53f5d00f1cd0"
+        "32bit": "ac45b13d45de02f08e12918e38b4122206859555"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
