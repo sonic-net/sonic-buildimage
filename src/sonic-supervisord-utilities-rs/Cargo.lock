@@ -220,8 +220,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "injectorpp"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d377a64bbe42f7a086ed630fbc66d84b43944f278ef42de53af79aaec6c21687"
+source = "git+https://github.com/microsoft/injectorppforrust.git?rev=c7317906a1d514ef99bf2fbd4c943908c265d280#c7317906a1d514ef99bf2fbd4c943908c265d280"
 dependencies = [
  "libc",
 ]
