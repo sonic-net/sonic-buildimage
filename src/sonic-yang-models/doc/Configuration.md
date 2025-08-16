@@ -82,6 +82,7 @@
   * [Versions](#versions)
   * [VLAN](#vlan)
   * [VLAN_MEMBER](#vlan_member)
+  * [SAG](#sag)
   * [VNET](#vnet)
   * [VNET_ROUTE_TUNNEL](#vnet_route_tunnel)
   * [VOQ Inband Interface](#voq-inband-interface)
@@ -2733,6 +2734,19 @@ channel name as object key, and tagging mode as attributes.
 	},
 	"Vlan2000|PortChannel47": {
 		"tagging_mode": "tagged"
+	}
+  }
+}
+```
+
+### SAG
+The SAG table defines the global mac address configureation for static-anycast-gateway. 
+```
+{
+
+"SAG": {
+	"GLOBAL": {
+		"gateway_mac": "00:11:22:33:44:55"
 	}
   }
 }
