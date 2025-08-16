@@ -40,6 +40,7 @@ COMMANDS_FOR_ACTUAL = {
     "HW_MANAGEMENT": [["dpkg", "-l"], ["grep", "hw"], ".*1\\.mlnx\\.([0-9.]*)"],
     "SDK": [["docker", "exec", "-it", "syncd", "bash", "-c", 'dpkg -l | grep sdk'], ".*1\\.mlnx\\.([0-9.]*)"],
     "SAI": [["docker", "exec", "-it", "syncd", "bash", "-c", 'dpkg -l | grep mlnx-sai'], ".*1\\.mlnx\\.([A-Za-z0-9.]*)"],
+    "SAI_API_HEADERS": [["docker", "exec", "-it", "syncd", "bash", "-c", 'grep -E "SAI_MAJOR|SAI_MINOR|SAI_REVISION" /usr/include/sai/saiversion.h'], "SAI_MAJOR\\s+(\\d+).*SAI_MINOR\\s+(\\d+).*SAI_REVISION\\s+(\\d+)"],
     "FW": [["mlxfwmanager", "--query"], "FW * [0-9]{2}\\.([0-9.]*)"],
     "KERNEL": [["uname", "-r"], "([0-9][0-9.-]*)-.*"]
 }
@@ -48,6 +49,7 @@ UNAVAILABLE_COMPILED_VERSIONS = {
     "SDK": "N/A",
     "FW": "N/A",
     "SAI": "N/A",
+    "SAI_API_HEADERS": "N/A",
     "HW_MANAGEMENT": "N/A",
     "MFT": "N/A",
     "KERNEL": "N/A",
