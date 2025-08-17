@@ -25,6 +25,13 @@ parameters:
 - name: COMMIT_ID
   type: string
   default: ''
+- name: REMOTE_URL
+  type: string
+  default: ''
+- name: REMOTE_BRANCH
+  type: string
+  default: ''
+
 jobs:
 - template: azure-pipelines-job-groups.yml
   parameters:
@@ -53,8 +60,11 @@ jobs:
             if [ -n "${{ parameters.SUBMODULE }}" ]; then
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE }}
-              if [ -n $(System.PullRequest.TargetBranch) ]; then
-                git fetch origin $(System.PullRequest.TargetBranch)
+              if [ -n "${{ parameters.REMOTE_URL }}" ]; then
+                git remote set-url origin ${{ parameters.REMOTE_URL }}
+              fi
+              if [ -n "${{ parameters.REMOTE_BRANCH }}" ]; then
+                git fetch origin ${{ parameters.REMOTE_BRANCH }}
               fi
             fi
             git checkout ${{ parameters.COMMIT_ID }}
