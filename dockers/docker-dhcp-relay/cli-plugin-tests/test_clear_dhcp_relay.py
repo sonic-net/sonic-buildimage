@@ -257,6 +257,7 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
          patch.object(clear_dhcp_relay, "clear_dhcpv4_db_counters") as mock_clear, \
          patch.object(clear_dhcp_relay, "is_vlan_interface_valid", return_value=True), \
          patch.object(clear_dhcp_relay, "get_failed_vlans", return_value=failed_vlans), \
+         patch.object(clear_dhcp_relay, "clear_writing_state_db_flag") as mock_clear_writing_state_db_flag, \
          patch.object(click, "get_current_context") as mock_get_ctx:
         mock_ctx = MagicMock()
         mock_get_ctx.return_value = mock_ctx
@@ -273,6 +274,10 @@ def test_clear_dhcp_relay_ipv4_counters(patch_import_module, interface, dir, typ
         mock_clear.assert_called_once_with(ANY, dir, type, paused_vlans)
         if failed_vlans:
             mock_ctx.fail.assert_called_once()
+        mock_clear_writing_state_db_flag.assert_has_calls([
+            call(ANY),
+            call(ANY)
+        ])
 
 
 @pytest.mark.parametrize("mock_get_result", ["done", ""])
