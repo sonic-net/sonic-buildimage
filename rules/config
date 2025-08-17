@@ -243,7 +243,7 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
 SECURE_UPGRADE_DEV_SIGNING_KEY ?= 
 SECURE_UPGRADE_SIGNING_CERT ?= 
-SECURE_UPGRADE_MODE = "no_sign"
+SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 # PACKAGE_URL_PREFIX - the package url prefix
