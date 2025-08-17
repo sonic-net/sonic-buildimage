@@ -3,18 +3,21 @@
 
 use crate::childutils;
 use clap::Parser;
+use log::{error, info, warn};
+use mio::{Events, Interest, Poll, Token};
+use mio::unix::SourceFd;
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
 use std::collections::HashMap;
+use std::collections::HashMap as StdHashMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Read};
+use std::os::unix::io::AsRawFd;
 use std::process;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
 use thiserror::Error;
-use log::{error, info, warn};
-use std::collections::HashMap as StdHashMap;
 
 // File paths
 const WATCH_PROCESSES_FILE: &str = "/etc/supervisor/watchdog_processes";
@@ -25,7 +28,7 @@ const FEATURE_TABLE_NAME: &str = "FEATURE";
 const HEARTBEAT_TABLE_NAME: &str = "HEARTBEAT";
 
 // Timing constants
-const SELECT_TIMEOUT_SECS: f64 = 1.0;
+const SELECT_TIMEOUT_SECS: u64 = 1;
 pub const ALERTING_INTERVAL_SECS: u64 = 60;
 
 // Events configuration
@@ -247,10 +250,8 @@ pub fn get_current_time() -> f64 {
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
     // Initialize syslog logging to match Python version behavior
-    syslog::init_unix(
-        syslog::Facility::LOG_USER,
-        log::LevelFilter::Info
-    ).map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
+    syslog::init_unix(syslog::Facility::LOG_USER, log::LevelFilter::Info)
+        .map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
@@ -264,17 +265,15 @@ pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
 
 /// Main function with parsed arguments - uses stdin by default
 pub fn main_with_parsed_args(args: Args) -> Result<()> {
-    let stdin = io::stdin();
-    let reader = stdin.lock();
     let config_db = ConfigDBConnector::new(args.use_unix_socket_path, None)
         .map_err(|e| SupervisorError::Database(format!("Failed to create ConfigDB connector: {}", e)))?;
     config_db.connect(true, false)
         .map_err(|e| SupervisorError::Database(format!("Failed to connect to ConfigDB: {}", e)))?;
-    main_with_parsed_args_and_stdin(args, reader, CRITICAL_PROCESSES_FILE, WATCH_PROCESSES_FILE, &config_db)
+    main_with_parsed_args_and_stdin(args, CRITICAL_PROCESSES_FILE, WATCH_PROCESSES_FILE, &config_db)
 }
 
 /// Main function with parsed arguments and custom stdin - allows for easy testing
-pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader: R, critical_processes_file: &str, watch_processes_file: &str, config_db: &dyn ConfigDBTrait) -> Result<()> {
+pub fn main_with_parsed_args_and_stdin(args: Args, critical_processes_file: &str, watch_processes_file: &str, config_db: &dyn ConfigDBTrait) -> Result<()> {
     let container_name = args.container_name;
 
     // Get critical processes and groups
@@ -299,133 +298,163 @@ pub fn main_with_parsed_args_and_stdin<R: BufRead>(args: Args, mut stdin_reader:
     // Transition from ACKNOWLEDGED to READY
     childutils::listener::ready();
 
-    // Main event loop
+    // Set up non-blocking I/O with mio for timeout-based reading
+    let mut poll = Poll::new().map_err(|e| SupervisorError::Io(e))?;
+    let mut events = Events::with_capacity(128);
+    const STDIN_TOKEN: Token = Token(0);
+    
+    // Register stdin for reading
+    let stdin_fd = io::stdin().as_raw_fd();
+    let mut stdin_source = SourceFd(&stdin_fd);
+    poll.registry().register(&mut stdin_source, STDIN_TOKEN, Interest::READABLE)
+        .map_err(|e| SupervisorError::Io(e))?;
+
+    let timeout = Duration::from_secs(SELECT_TIMEOUT_SECS);
+
+    // Create buffered reader for stdin
+    let stdin = io::stdin();
+    let mut stdin_reader = stdin.lock();
+
+    // Main event loop with timeout
     loop {
-        // Read from stdin with timeout
-        let mut buffer = String::new();
-        
-        // Try to read a line (this would be done with select() timeout in production)
-        match stdin_reader.read_line(&mut buffer) {
-            Ok(0) => {
-                // EOF - supervisor shut down
-                return Ok(());
-            }
-            Ok(_) => {
-                // Parse supervisor protocol headers
-                let headers = childutils::get_headers(&buffer);
+        // Poll for events with timeout
+        poll.poll(&mut events, Some(timeout)).map_err(|e| SupervisorError::Io(e))?;
 
-                // Check if 'len' is missing - if so, log and continue
-                let len = if let Some(len_str) = headers.get("len") {
-                    len_str.parse::<usize>().unwrap_or(0)
-                } else {
-                    warn!("Missing 'len' in headers: {:?}", headers);
-                    continue;
-                };
-
-                // Read payload
-                let mut payload = vec![0u8; len];
-                if len > 0 {
-                    match stdin_reader.read_exact(&mut payload) {
-                        Ok(_) => {},
-                        Err(e) => {
-                            error!("Failed to read payload: {}", e);
-                            continue;
-                        }
-                    }
+        let mut stdin_ready = false;
+        for event in events.iter() {
+            match event.token() {
+                STDIN_TOKEN => {
+                    stdin_ready = true;
                 }
-                let payload = String::from_utf8_lossy(&payload);
+                _ => unreachable!(),
+            }
+        }
 
-                // Handle different event types
-                let eventname = headers.get("eventname").cloned().unwrap_or_default();
-                match eventname.as_str() {
-                    "PROCESS_STATE_EXITED" => {
-                        // Handle the PROCESS_STATE_EXITED event
-                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+        if stdin_ready {
+            // Read from stdin
+            let mut buffer = String::new();
+            match stdin_reader.read_line(&mut buffer) {
+                Ok(0) => {
+                    // EOF - supervisor shut down
+                    return Ok(());
+                }
+                Ok(_) => {
+                    // Parse supervisor protocol headers
+                    let headers = childutils::get_headers(&buffer);
 
-                        let expected = payload_headers.get("expected").and_then(|s| s.parse().ok()).unwrap_or(0);
-                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
-                        let group_name = payload_headers.get("groupname").cloned().unwrap_or_default();
+                    // Check if 'len' is missing - if so, log and continue
+                    let len = if let Some(len_str) = headers.get("len") {
+                        len_str.parse::<usize>().unwrap_or(0)
+                    } else {
+                        warn!("Missing 'len' in headers: {:?}", headers);
+                        continue;
+                    };
 
-                        // Check if critical process and handle
-                        if (critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name)) && expected == 0 {
-                            let is_auto_restart = match get_autorestart_state(&container_name, config_db) {
-                                Ok(state) => state,
-                                Err(e) => {
-                                    error!("Failed to get auto-restart state: {}", e);
-                                    childutils::listener::ok();
-                                    childutils::listener::ready();
-                                    continue;
-                                }
-                            };
-
-                            if is_auto_restart != "disabled" {
-                                // Process exited unexpectedly - terminate supervisor
-                                let msg = format!("Process '{}' exited unexpectedly. Terminating supervisor '{}'", 
-                                                process_name, container_name);
-                                info!("{}", msg);
-                                
-                                // Publish events
-                                publish_events(&events_handle, &process_name, &container_name).ok();
-                                
-                                // Deinit publisher
-                                events_handle.deinit().ok();
-                                
-                                // Terminate supervisor
-                                if let Err(e) = terminate_supervisor() {
-                                    error!("Failed to terminate supervisor: {}", e);
-                                }
-                                return Ok(());
-                            } else {
-                                // Add to alerting processes
-                                let mut process_info = HashMap::new();
-                                process_info.insert("last_alerted".to_string(), get_current_time());
-                                process_info.insert("dead_minutes".to_string(), 0.0);
-                                process_under_alerting.insert(process_name.clone(), process_info);
+                    // Read payload
+                    let mut payload = vec![0u8; len];
+                    if len > 0 {
+                        match stdin_reader.read_exact(&mut payload) {
+                            Ok(_) => {},
+                            Err(e) => {
+                                error!("Failed to read payload: {}", e);
+                                continue;
                             }
                         }
                     }
+                    let payload = String::from_utf8_lossy(&payload);
 
-                    "PROCESS_STATE_RUNNING" => {
-                        // Handle the PROCESS_STATE_RUNNING event
-                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+                    // Handle different event types
+                    let eventname = headers.get("eventname").cloned().unwrap_or_default();
+                    match eventname.as_str() {
+                        "PROCESS_STATE_EXITED" => {
+                            // Handle the PROCESS_STATE_EXITED event
+                            let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
 
-                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+                            let expected = payload_headers.get("expected").and_then(|s| s.parse().ok()).unwrap_or(0);
+                            let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+                            let group_name = payload_headers.get("groupname").cloned().unwrap_or_default();
 
-                        // Remove from alerting if it was there
-                        if process_under_alerting.contains_key(&process_name) {
-                            process_under_alerting.remove(&process_name);
+                            // Check if critical process and handle
+                            if (critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name)) && expected == 0 {
+                                let is_auto_restart = match get_autorestart_state(&container_name, config_db) {
+                                    Ok(state) => state,
+                                    Err(e) => {
+                                        error!("Failed to get auto-restart state: {}", e);
+                                        childutils::listener::ok();
+                                        childutils::listener::ready();
+                                        continue;
+                                    }
+                                };
+
+                                if is_auto_restart != "disabled" {
+                                    // Process exited unexpectedly - terminate supervisor
+                                    let msg = format!("Process '{}' exited unexpectedly. Terminating supervisor '{}'", 
+                                        process_name, container_name);
+                                    info!("{}", msg);
+
+                                    // Publish events
+                                    publish_events(&events_handle, &process_name, &container_name).ok();
+
+                                    // Deinit publisher
+                                    events_handle.deinit().ok();
+
+                                    // Terminate supervisor
+                                    if let Err(e) = terminate_supervisor() {
+                                        error!("Failed to terminate supervisor: {}", e);
+                                    }
+                                    return Ok(());
+                                } else {
+                                    // Add to alerting processes
+                                    let mut process_info = HashMap::new();
+                                    process_info.insert("last_alerted".to_string(), get_current_time());
+                                    process_info.insert("dead_minutes".to_string(), 0.0);
+                                    process_under_alerting.insert(process_name.clone(), process_info);
+                                }
+                            }
+                        }
+
+                        "PROCESS_STATE_RUNNING" => {
+                            // Handle the PROCESS_STATE_RUNNING event
+                            let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+
+                            let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+
+                            // Remove from alerting if it was there
+                            if process_under_alerting.contains_key(&process_name) {
+                                process_under_alerting.remove(&process_name);
+                            }
+                        }
+
+                        "PROCESS_COMMUNICATION_STDOUT" => {
+                            // Handle the PROCESS_COMMUNICATION_STDOUT event
+                            let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+
+                            let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
+
+                            // Update process heart beat time
+                            if watch_process_list.contains(&process_name) {
+                                let mut heartbeat_info = HashMap::new();
+                                heartbeat_info.insert("last_heart_beat".to_string(), get_current_time());
+                                process_heart_beat_info.insert(process_name.clone(), heartbeat_info);
+                            }
+                        }
+
+                        _ => {
+                            // Unknown event type - just acknowledge
+                            warn!("Unknown event type: {}", eventname);
                         }
                     }
 
-                    "PROCESS_COMMUNICATION_STDOUT" => {
-                        // Handle the PROCESS_COMMUNICATION_STDOUT event
-                        let (payload_headers, _payload_data) = childutils::eventdata(&(payload.to_string() + "\n"));
+                    // Transition from BUSY to ACKNOWLEDGED
+                    childutils::listener::ok();
 
-                        let process_name = payload_headers.get("processname").cloned().unwrap_or_default();
-
-                        // Update process heart beat time
-                        if watch_process_list.contains(&process_name) {
-                            let mut heartbeat_info = HashMap::new();
-                            heartbeat_info.insert("last_heart_beat".to_string(), get_current_time());
-                            process_heart_beat_info.insert(process_name.clone(), heartbeat_info);
-                        }
-                    }
-
-                    _ => {
-                        // Unknown event type - just acknowledge
-                        warn!("Unknown event type: {}", eventname);
-                    }
+                    // Transition from ACKNOWLEDGED to READY
+                    childutils::listener::ready();
                 }
-
-                // Transition from BUSY to ACKNOWLEDGED
-                childutils::listener::ok();
-
-                // Transition from ACKNOWLEDGED to READY
-                childutils::listener::ready();
-            }
-            Err(e) => {
-                error!("Failed to read from stdin: {}", e);
-                return Err(SupervisorError::Io(e));
+                Err(e) => {
+                    error!("Failed to read from stdin: {}", e);
+                    return Err(SupervisorError::Io(e));
+                }
             }
         }
 

@@ -208,7 +208,7 @@ impl TestSupervisorListener {
         let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
         let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
         // Use our MockConfigDB instead of real ConfigDBConnector
-        let result = main_with_parsed_args_and_stdin(args, stdin_reader, &critical_path, &watch_path, &self.mock_configdb);
+        let result = main_with_parsed_args_and_stdin(args, &critical_path, &watch_path, &self.mock_configdb);
         
         // The main function should process the stdin data and load the test files correctly
         // However, it will fail when trying to connect to ConfigDB or initialize EventPublisher
@@ -300,7 +300,7 @@ impl TestSupervisorListener {
         let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
         let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
         // Use our MockConfigDB instead of real ConfigDBConnector
-        let result = main_with_parsed_args_and_stdin(args, stdin_reader, &critical_path, &watch_path, &self.mock_configdb);
+        let result = main_with_parsed_args_and_stdin(args, &critical_path, &watch_path, &self.mock_configdb);
         
         // The main function should process the stdin data but NOT call kill() for snmp
         // since snmp has auto-restart disabled - it should add to alerting instead
