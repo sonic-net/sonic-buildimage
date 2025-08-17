@@ -25,10 +25,10 @@ parameters:
 - name: COMMIT_ID
   type: string
   default: ''
-- name: REMOTE_URL
+- name: SUBMODULE_PR_ID
   type: string
   default: ''
-- name: REMOTE_BRANCH
+- name: SUBMODULE_BRANCH
   type: string
   default: ''
 
@@ -60,11 +60,9 @@ jobs:
             if [ -n "${{ parameters.SUBMODULE }}" ]; then
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE }}
-              if [ -n "${{ parameters.REMOTE_URL }}" ]; then
-                git remote set-url origin ${{ parameters.REMOTE_URL }}
-              fi
-              if [ -n "${{ parameters.REMOTE_BRANCH }}" ]; then
-                git fetch origin ${{ parameters.REMOTE_BRANCH }}
+              if [ -n "${{ parameters.SUBMODULE_PR_ID }}" ] && [ -n "${{ parameters.SUBMODULE_BRANCH }}" ]; then
+                git fetch origin pull/${{ parameters.SUBMODULE_PR_ID }}/head:${{ parameters.SUBMODULE_BRANCH }}
+                git checkout ${{ parameters.SUBMODULE_BRANCH }}
               fi
             fi
             git checkout ${{ parameters.COMMIT_ID }}

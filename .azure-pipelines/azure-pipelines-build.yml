@@ -25,7 +25,7 @@ parameters:
 - name: COMMIT_ID
   type: string
   default: ''
-- name: REMOTE_URL
+- name: SUBMODULE_PR_ID
   type: string
   default: ''
 - name: REMOTE_BRANCH
@@ -40,8 +40,8 @@ jobs:
     postSteps: ${{ parameters.postSteps }}
     SUBMODULE: ${{ parameters.SUBMODULE }}
     COMMIT_ID: ${{ parameters.COMMIT_ID }}
-    REMOTE_URL: ${{ parameters.REMOTE_URL }}
-    REMOTE_BRANCH: ${{ parameters.REMOTE_BRANCH }}
+    SUBMODULE_PR_ID: ${{ parameters.SUBMODULE_PR_ID }}
+    SUBMODULE_BRANCH: ${{ parameters.SUBMODULE_BRANCH }}
     jobVariables:
       PLATFORM_AZP: $(GROUP_NAME)
       PLATFORM_ARCH: amd64
