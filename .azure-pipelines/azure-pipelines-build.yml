@@ -28,7 +28,7 @@ parameters:
 - name: SUBMODULE_PR_ID
   type: string
   default: ''
-- name: REMOTE_BRANCH
+- name: SUBMODULE_BRANCH
   type: string
   default: ''
 
