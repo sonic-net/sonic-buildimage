@@ -53,8 +53,8 @@ jobs:
             if [ -n "${{ parameters.SUBMODULE }}" ]; then
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE }}
-              if [ -n ${{ variables['System.PullRequest.SourceBranch'] }} ]; then
-                git fetch origin ${{ variables['System.PullRequest.SourceBranch'] }}
+              if [ -n $(System.PullRequest.TargetBranch) ]; then
+                git fetch origin $(System.PullRequest.TargetBranch)
               fi
             fi
             git checkout ${{ parameters.COMMIT_ID }}
