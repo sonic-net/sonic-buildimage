@@ -26,7 +26,7 @@ steps:
       exit 0
     continueOnError: true
     displayName: Log Scan
-  - ${{ if eq(variables['Build.DefinitionName'], 'Networking-acs-buildimage-Official-OneBranch') }}:
+  - ${{ if eq(variables['System.DefinitionId'], 372481) }}:
     # Only enable BinSkim on VS platform, because they share same way of compiling
     # Only enable on VS platform can maximum reduce the affection to current build logic
     - ${{ if eq(parameters.PLATFORM_NAME, 'vs') }}:
