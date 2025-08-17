@@ -15,8 +15,8 @@ path = "src/bin/supervisor_proc_exit_listener.rs"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+log = "0.4"
+syslog = "6.0"
 nix = { version = "0.27", features = ["signal", "process"] }
 thiserror = "1.0"
 swss-common = { path = "../sonic-swss-common/crates/swss-common" }

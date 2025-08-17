@@ -13,14 +13,14 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
 use thiserror::Error;
-use tracing::{error, info, warn};
+use log::{error, info, warn};
 use std::collections::HashMap as StdHashMap;
 
 // File paths
 const WATCH_PROCESSES_FILE: &str = "/etc/supervisor/watchdog_processes";
 const CRITICAL_PROCESSES_FILE: &str = "/etc/supervisor/critical_processes";
 
-// Table names  
+// Table names
 const FEATURE_TABLE_NAME: &str = "FEATURE";
 const HEARTBEAT_TABLE_NAME: &str = "HEARTBEAT";
 
@@ -146,7 +146,7 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
     // Log with appropriate priority (matching syslog levels)
     match priority {
         3 => error!("{}", message),    // LOG_ERR
-        4 => warn!("{}", message),     // LOG_WARNING  
+        4 => warn!("{}", message),     // LOG_WARNING
         6 => info!("{}", message),     // LOG_INFO
         _ => error!("{}", message),
     }
@@ -246,8 +246,11 @@ pub fn get_current_time() -> f64 {
 
 /// Main function with testable parameters
 pub fn main_with_args(args: Option<Vec<String>>) -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    // Initialize syslog logging to match Python version behavior
+    syslog::init_unix(
+        syslog::Facility::LOG_USER,
+        log::LevelFilter::Info
+    ).map_err(|e| SupervisorError::Parse(format!("Failed to initialize syslog: {}", e)))?;
 
     // Parse command line arguments
     let parsed_args = if let Some(args) = args {
