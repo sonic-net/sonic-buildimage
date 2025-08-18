@@ -28,9 +28,6 @@ parameters:
 - name: SUBMODULE_PR_ID
   type: string
   default: ''
-- name: SUBMODULE_BRANCH
-  type: string
-  default: ''
 
 jobs:
 - template: azure-pipelines-job-groups.yml
@@ -60,9 +57,9 @@ jobs:
             if [ -n "${{ parameters.SUBMODULE }}" ]; then
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE }}
-              if [ -n "${{ parameters.SUBMODULE_PR_ID }}" ] && [ -n "${{ parameters.SUBMODULE_BRANCH }}" ]; then
-                git fetch origin pull/${{ parameters.SUBMODULE_PR_ID }}/head:${{ parameters.SUBMODULE_BRANCH }}
-                git checkout ${{ parameters.SUBMODULE_BRANCH }}
+              if [ -n "${{ parameters.SUBMODULE_PR_ID }}" ]; then
+                git fetch --depth 1 origin pull/${{ parameters.SUBMODULE_PR_ID }}/merge
+                git checkout --progress --force FETCH_HEAD
               fi
             fi
             git checkout ${{ parameters.COMMIT_ID }}
