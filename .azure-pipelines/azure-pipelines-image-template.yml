@@ -53,16 +53,17 @@ jobs:
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
       - script: |
-          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
-            if [ -n "${{ parameters.SUBMODULE }}" ]; then
-              git submodule update --init --recursive
-              cd src/${{ parameters.SUBMODULE }}
-              if [ -n "${{ parameters.SUBMODULE_PR_ID }}" ]; then
-                git fetch --depth 1 origin pull/${{ parameters.SUBMODULE_PR_ID }}/merge
-                git checkout --progress --force FETCH_HEAD
-              fi
+          if [ -n "${{ parameters.SUBMODULE }}" ]; then
+            git submodule update --init --recursive
+            cd src/${{ parameters.SUBMODULE }}
+            if [ -n "${{ parameters.SUBMODULE_PR_ID }}" ]; then
+              git fetch --depth 1 origin pull/${{ parameters.SUBMODULE_PR_ID }}/merge
+              git checkout --progress --force FETCH_HEAD
             fi
+          fi
+          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
             git checkout ${{ parameters.COMMIT_ID }}
+          fi
           else
             echo "No specific commit id provided, checkout to latest commit"
           fi
