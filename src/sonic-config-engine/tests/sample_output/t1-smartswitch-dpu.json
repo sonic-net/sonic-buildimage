@@ -78,6 +78,16 @@
             "dash_ipv6_acl_rule_high_threshold": "85"
         }
     },
+    "NTP": {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    },
     "NTP_SERVER": {
         "169.254.200.254": {
             "iburst": "on"

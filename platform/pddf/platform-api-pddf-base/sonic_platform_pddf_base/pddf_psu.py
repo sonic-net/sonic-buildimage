@@ -54,7 +54,7 @@ class PddfPsu(PsuBase):
             psu_fan = Fan(0, psu_fan_idx, pddf_data, pddf_plugin_data, True, self.psu_index)
             self._fan_list.append(psu_fan)
 
-        self.num_psu_thermals = 1 # Fixing it 1 for now
+        self.num_psu_thermals = int(self.pddf_obj.get_num_psu_thermals('PSU{}'.format(index+1)))
         for psu_thermal_idx in range(self.num_psu_thermals):
             psu_thermal = Thermal(psu_thermal_idx, pddf_data, pddf_plugin_data, True, self.psu_index)
             self._thermal_list.append(psu_thermal)
@@ -272,7 +272,7 @@ class PddfPsu(PsuBase):
         result, color = self.pddf_obj.get_system_led_color(psu_led_device)
         return (color)
 
-    def get_temperature(self):
+    def get_temperature(self, thermal_index=1):
         """
         Retrieves current temperature reading from PSU
 
@@ -281,7 +281,7 @@ class PddfPsu(PsuBase):
             of one degree Celsius, e.g. 30.125
         """
         device = "PSU{}".format(self.psu_index)
-        output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_input")
+        output = self.pddf_obj.get_attr_name_output(device, "psu_temp{}_input".format(thermal_index))
         if not output:
             return 0.0
 
@@ -341,7 +341,7 @@ class PddfPsu(PsuBase):
         # power is returned in micro watts
         return float(p_in)/1000000
 
-    def get_temperature_high_threshold(self):
+    def get_temperature_high_threshold(self, thermal_index=1):
         """
         Retrieves the high threshold temperature of PSU
         Returns:
@@ -349,7 +349,7 @@ class PddfPsu(PsuBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         device = "PSU{}".format(self.psu_index)
-        output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_high_threshold")
+        output = self.pddf_obj.get_attr_name_output(device, "psu_temp{}_high_threshold".format(thermal_index))
         if not output:
             return 0.0
 

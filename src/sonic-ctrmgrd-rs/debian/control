@@ -1,0 +1,11 @@
+Source: sonic
+Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 12), autotools-dev
+Standards-Version: 1.0.0
+
+Package: sonic-ctrmgrd-rs
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Container management in Rust

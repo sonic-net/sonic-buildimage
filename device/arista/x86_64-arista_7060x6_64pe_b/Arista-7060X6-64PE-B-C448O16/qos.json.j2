@@ -3,55 +3,55 @@
         "AZURE": {
             "0" : "0",
             "1" : "1",
-            "2" : "2",
-            "3" : "3",
-            "4" : "4",
-            "5" : "4",
-            "6" : "4",
+            "2" : "1",
+            "3" : "2",
+            "4" : "2",
+            "5" : "3",
+            "6" : "3",
             "7" : "0",
             "8" : "0",
             "9" : "0",
-            "10": "5",
-            "11": "0",
-            "12": "0",
-            "13": "0",
-            "14": "0",
-            "15": "0",
-            "16": "0",
-            "17": "0",
-            "18": "0",
-            "19": "0",
-            "20": "0",
-            "21": "0",
-            "22": "0",
-            "23": "0",
-            "24": "0",
-            "25": "0",
-            "26": "0",
-            "27": "0",
-            "28": "0",
-            "29": "0",
-            "30": "0",
-            "31": "0",
-            "32": "0",
-            "33": "0",
-            "34": "0",
-            "35": "0",
-            "36": "0",
-            "37": "0",
-            "38": "0",
-            "39": "0",
-            "40": "0",
-            "41": "0",
-            "42": "0",
-            "43": "0",
-            "44": "0",
-            "45": "0",
-            "46": "0",
-            "47": "0",
-            "48": "0",
-            "49": "0",
-            "50": "0",
+            "10": "0",
+            "11": "4",
+            "12": "4",
+            "13": "4",
+            "14": "4",
+            "15": "4",
+            "16": "4",
+            "17": "4",
+            "18": "4",
+            "19": "4",
+            "20": "4",
+            "21": "4",
+            "22": "4",
+            "23": "4",
+            "24": "4",
+            "25": "4",
+            "26": "4",
+            "27": "4",
+            "28": "4",
+            "29": "4",
+            "30": "4",
+            "31": "4",
+            "32": "4",
+            "33": "4",
+            "34": "4",
+            "35": "4",
+            "36": "4",
+            "37": "4",
+            "38": "4",
+            "39": "4",
+            "40": "4",
+            "41": "5",
+            "42": "5",
+            "43": "5",
+            "44": "5",
+            "45": "5",
+            "46": "5",
+            "47": "5",
+            "48": "5",
+            "49": "5",
+            "50": "5",
             "51": "0",
             "52": "0",
             "53": "0",
@@ -69,75 +69,238 @@
     },
 {%- endmacro -%}
 
-{%- macro generate_tc_to_queue_map_per_sku() -%}
-    "TC_TO_QUEUE_MAP": {
-        "AZURE": {
-            "0": "0",
-            "1": "1",
-            "2": "2",
-            "3": "3",
-            "4": "4",
-            "5": "5",
-            "6": "6",
-            "7": "7",
-            "8": "8",
-            "9": "9"
+{%- macro generate_port_qos_map_per_sku(ports, direction) -%}
+{%- for port in ports.split(',') %}
+        "{{ port }}": {
+            "dscp_to_tc_map": "AZURE",
+            {% if direction == 'downlink' %}
+            "tc_to_dscp_map": "AZURE_DOWNLINK_BT1",
+            {% endif %}
+            "tc_to_pg_map": "AZURE",
+            "tc_to_queue_map": "AZURE"
+        }{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- macro generate_direction_based_queue_per_sku(port, direction) -%}
+        "{{ port }}|0": {
+            "scheduler": "scheduler_Q0_{{ direction.upper() }}"
+        },
+        "{{ port }}|1": {
+            "scheduler": "scheduler_Q1_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q1"
+        },
+        "{{ port }}|2": {
+            "scheduler": "scheduler_Q2_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q2"
+        },
+        "{{ port }}|3": {
+            "scheduler": "scheduler_Q3_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q3"
+        },
+        "{{ port }}|4": {
+            "scheduler": "scheduler_Q4_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q4"
+        },
+        "{{ port }}|5": {
+            "scheduler": "scheduler_Q5_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q5"
+        },
+        "{{ port }}|6": {
+            "scheduler": "scheduler_Q6_{{ direction.upper() }}",
+            "wred_profile": "AZURE_LOSSY_{{ direction.upper() }}_Q6"
         }
-    },
 {%- endmacro -%}
 
 {%- macro generate_scheduler_per_sku() -%}
     "SCHEDULER": {
-        "scheduler.0": {
-            "type"  : "DWRR",
-            "weight": "1"
+        "scheduler_Q0_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "4"
         },
-        "scheduler.1": {
-            "type"  : "DWRR",
-            "weight": "10"
+        "scheduler_Q1_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "8"
         },
-        "scheduler.2": {
-            "type"  : "DWRR",
-            "weight": "20"
+        "scheduler_Q2_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "18"
         },
-        "scheduler.3": {
-            "type"  : "DWRR",
-            "weight": "30"
+        "scheduler_Q3_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q4_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q5_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q6_DOWNLINK": {
+            "type": "DWRR",
+            "weight": "4"
+        },
+        "scheduler_Q0_UPLINK": {
+            "type": "DWRR",
+            "weight": "4"
+        },
+        "scheduler_Q1_UPLINK": {
+            "type": "DWRR",
+            "weight": "8"
+        },
+        "scheduler_Q2_UPLINK": {
+            "type": "DWRR",
+            "weight": "18"
+        },
+        "scheduler_Q3_UPLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q4_UPLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q5_UPLINK": {
+            "type": "DWRR",
+            "weight": "22"
+        },
+        "scheduler_Q6_UPLINK": {
+            "type": "DWRR",
+            "weight": "4"
         }
     },
 {%- endmacro -%}
 
-{%- macro generate_single_queue_per_sku(port) -%}
-        "{{ port }}|0": {
-            "scheduler": "scheduler.0"
-        },
-        "{{ port }}|1": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|2": {
-            "scheduler": "scheduler.2"
-        },
-        "{{ port }}|3": {
-            "scheduler": "scheduler.3"
-        },
-        "{{ port }}|4": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|5": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|6": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|7": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|8": {
-            "scheduler": "scheduler.1"
-        },
-        "{{ port }}|9": {
-            "scheduler": "scheduler.1"
+{%- macro generate_tc_to_dscp_map_per_sku() %}
+    "TC_TO_DSCP_MAP": {
+        "AZURE_DOWNLINK_BT1": {
+            "8": "11"
         }
+    },
+{%- endmacro %}
+
+{%- macro generate_tc_to_pg_map_per_sku() -%}
+    "TC_TO_PRIORITY_GROUP_MAP": {
+        "AZURE": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0"
+        }
+    },
+{%- endmacro -%}
+
+{%- macro generate_wred_profiles() -%}
+    "WRED_PROFILE": {
+        "AZURE_LOSSY_DOWNLINK_Q1": {
+            {% block azure_lossy_q1 %}
+            "ecn": "ecn_all",
+            "green_drop_probability": "5",
+            "green_max_threshold": "282624",
+            "green_min_threshold": " 166912",
+            "red_drop_probability": "5",
+            "red_max_threshold": "282624",
+            "red_min_threshold": "166912",
+            "wred_green_enable": "true",
+            "wred_red_enable": "true",
+            "wred_yellow_enable": "true",
+            "yellow_drop_probability": "5",
+            "yellow_max_threshold": "282624",
+            "yellow_min_threshold": "166912"
+            {% endblock %}
+        },
+        "AZURE_LOSSY_DOWNLINK_Q2": {
+            {% block azure_lossy_q2 %}
+            "ecn": "ecn_all",
+            "green_drop_probability": "5",
+            "green_max_threshold": "282624",
+            "green_min_threshold": " 166912",
+            "red_drop_probability": "5",
+            "red_max_threshold": "282624",
+            "red_min_threshold": "166912",
+            "wred_green_enable": "true",
+            "wred_red_enable": "true",
+            "wred_yellow_enable": "true",
+            "yellow_drop_probability": "5",
+            "yellow_max_threshold": "282624",
+            "yellow_min_threshold": "166912"
+            {% endblock %}
+        },
+        "AZURE_LOSSY_DOWNLINK_Q3": {
+            {% block azure_lossy_q3 %}
+            "ecn": "ecn_all",
+            "green_drop_probability": "5",
+            "green_max_threshold": "282624",
+            "green_min_threshold": " 166912",
+            "red_drop_probability": "5",
+            "red_max_threshold": "282624",
+            "red_min_threshold": "166912",
+            "wred_green_enable": "true",
+            "wred_red_enable": "true",
+            "wred_yellow_enable": "true",
+            "yellow_drop_probability": "5",
+            "yellow_max_threshold": "282624",
+            "yellow_min_threshold": "166912"
+            {% endblock %}
+        },
+        "AZURE_LOSSY_DOWNLINK_Q4": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q5": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        },
+        "AZURE_LOSSY_DOWNLINK_Q6": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        },
+        "AZURE_LOSSY_UPLINK_Q1": {
+            {{ self.azure_lossy_q1() }}
+        },
+        "AZURE_LOSSY_UPLINK_Q2": {
+            {{ self.azure_lossy_q2() }}
+        },
+        "AZURE_LOSSY_UPLINK_Q3": {
+            {{ self.azure_lossy_q3() }}
+        },
+        "AZURE_LOSSY_UPLINK_Q4": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        },
+        "AZURE_LOSSY_UPLINK_Q5": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        },
+        "AZURE_LOSSY_UPLINK_Q6": {
+            "ecn": "ecn_green",
+            "green_drop_probability": "0",
+            "green_max_threshold": "266338050",
+            "green_min_threshold": "266338050",
+            "wred_green_enable": "false"
+        }
+    },
 {%- endmacro -%}
 
 {%- include 'qos_config.j2' %}

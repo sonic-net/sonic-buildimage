@@ -3,15 +3,16 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = socat_$(SOCAT_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = socat-dbgsym_$(SOCAT_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files
 	rm -rf ./socat-1.7.4.1
 
 	# Get source package
-	wget -NO socat_$(SOCAT_VERSION).dsc "https://sonicstorage.blob.core.windows.net/public/debian/socat_1.7.4.1-3.dsc"
-	wget -NO socat_$(SOCAT_VERSION).debian.tar.xz "https://sonicstorage.blob.core.windows.net/public/debian/socat_1.7.4.1-3.debian.tar.xz"
-	wget -NO socat_1.7.4.1.orig.tar.gz "https://sonicstorage.blob.core.windows.net/public/debian/socat_1.7.4.1.orig.tar.gz"
+	wget -NO socat_$(SOCAT_VERSION).dsc "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1-3.dsc"
+	wget -NO socat_$(SOCAT_VERSION).debian.tar.xz "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1-3.debian.tar.xz"
+	wget -NO socat_1.7.4.1.orig.tar.gz "https://packages.trafficmanager.net/public/debian/socat_1.7.4.1.orig.tar.gz"
 
 	dpkg-source -x socat_$(SOCAT_VERSION).dsc
 

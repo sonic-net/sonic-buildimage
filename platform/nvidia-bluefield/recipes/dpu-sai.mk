@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-DPU_SAI_VERSION = SAIBuild0.0.41.0
+DPU_SAI_VERSION = SAIBuild0.0.44.0
 
 # Place here URL where SAI sources exist
 DPU_SAI_SOURCE_BASE_URL=

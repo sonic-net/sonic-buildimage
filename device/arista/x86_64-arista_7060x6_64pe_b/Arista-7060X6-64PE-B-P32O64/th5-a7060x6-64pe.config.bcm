@@ -1263,7 +1263,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0
+            sai_stats_support_mask: 0x80
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -1328,7 +1328,7 @@ device:
                 SHARED_RESUME_OFFSET_CELLS: 0
                 YELLOW_OFFSET_CELLS: 0
                 RED_OFFSET_CELLS: 0
-        
+
         # Ingress headroom pool
         TM_ING_THD_HEADROOM_POOL:
             ?
@@ -1336,7 +1336,7 @@ device:
                 TM_HEADROOM_POOL_ID: [[0,3]]
             :
                 LIMIT_CELLS: 0
-        
+
 ...
 # Ingress priority to PG mappings
 ---
@@ -1368,7 +1368,7 @@ device:
                 TM_ING_SERVICE_POOL_ID: 0
                 TM_HEADROOM_POOL_ID: 0
 
-        # PFC generation: Priority group(s) 
+        # PFC generation: Priority group(s)
         TM_PFC_PRI_TO_PRI_GRP_MAP:
             ?
                 TM_PFC_PRI_TO_PRI_GRP_MAP_ID: [0,7]
@@ -1396,7 +1396,7 @@ device:
                 RED_SHARED_LIMIT_CELLS: 0
                 RED_SHARED_RESUME_LIMIT_CELLS: 0
 
-        # Egress multicast CQE pool        
+        # Egress multicast CQE pool
         TM_THD_MC_EGR_SERVICE_POOL:
             ?
                 BUFFER_POOL: [0,1]
@@ -1417,7 +1417,7 @@ device:
                 TM_EGR_SERVICE_POOL_ID: [0,3]
             :
                 MARGIN: [8256,16513,24769,33026,41282,49539,57795,66052,82565,99078]
-        
+
 ...
 #Per Port Registers
 #Input Port Thresholds
@@ -1433,28 +1433,28 @@ device:
                 PFC: 0
                 LOSSLESS: 0
                 ING_MIN_MODE: USE_PRI_GRP_MIN
-        
+
         TM_ING_PORT:
             ?
                 PORT_ID: [[0,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
             :
-                # Pause enable bit, 
+                # Pause enable bit,
                 PAUSE: 0
                 # Ingress priority profile select, maps to priority group
                 ING_PRI_MAP_ID: 0
                 #Priority group profile select, maps to service pool
                 PRI_GRP_MAP_ID: 0
-        
+
         # Ingress port Level to Service Pool limits
-        TM_ING_THD_PORT_SERVICE_POOL: 
+        TM_ING_THD_PORT_SERVICE_POOL:
             ?
-               PORT_ID: [[0,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543] 
+               PORT_ID: [[0,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
                TM_ING_SERVICE_POOL_ID: [[0,3]]
             :
                 MIN_GUARANTEE_CELLS: 0
                 SHARED_LIMIT_CELLS: 0
                 RESUME_LIMIT_CELLS: 0
-         
+
         # Port level PG limits
         TM_ING_THD_PORT_PRI_GRP:
             ?
@@ -1471,9 +1471,9 @@ device:
                 EARLY_PFC_XOFF_OFFSET_CELLS: 0
                 EARLY_PFC_XON_OFFSET_CELLS: 0
                 EARLY_PFC_FLOOR_CELLS: 0
-        
+
 ...
-# Output Port Thresholds -2 
+# Output Port Thresholds -2
 # Per Unicast Queue Thresholds
 ---
 device:
@@ -1491,7 +1491,7 @@ device:
                 TM_UC_Q_ID: [[0,7]]
             :
                 USE_QGROUP_MIN: 0
-        
+
         TM_THD_UC_Q:
             ?
                 PORT_ID: [[1,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
@@ -1501,7 +1501,7 @@ device:
                 SHARED_LIMITS: 1
                 DYNAMIC_SHARED_LIMITS: 0
                 SHARED_LIMIT_CELLS_STATIC: 0
-        
+
         TM_PORT_MC_Q_TO_SERVICE_POOL:
             ?
                 PORT_ID: [[1,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
@@ -1535,7 +1535,7 @@ device:
             :
                 UC_Q_GRP_MIN_GUARANTEE_CELLS: 0
                 MC_Q_GRP_MIN_GUARANTEE_CELLS: 0
-        
+
         TM_EGR_THD_UC_PORT_SERVICE_POOL:
             ?
                 PORT_ID: [[1,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
@@ -1628,15 +1628,15 @@ device:
                 SHARED_LIMIT_CELLS: 605
                 SHARED_RESUME_OFFSET_CELLS: 74
                 COLOR_SPECIFIC_LIMITS: 0
-        
-        
+
+
 # Ingress Headroom Pool Thresholds
         TM_ING_THD_HEADROOM_POOL:
             ?
                 BUFFER_POOL: [0,1]
                 TM_HEADROOM_POOL_ID: 0
             :
-                LIMIT_CELLS: 66320        
+                LIMIT_CELLS: 66320
 ...
 ---
 device:
@@ -1675,7 +1675,7 @@ device:
                 ING_PRI: [[8,15]]
             :
                 TM_PRI_GRP_ID: 0
-        
+
 # MC Traffic Priority to PG mapping
         TM_ING_NONUC_ING_PRI_MAP:
             ?
@@ -1710,7 +1710,7 @@ device:
                 ING_PRI: [[8,15]]
             :
                 TM_PRI_GRP_ID: 0
-        
+
 # PG to Headroom Pool Mapping
         TM_PRI_GRP_POOL_MAP:
             ?
@@ -1723,7 +1723,7 @@ device:
                 TM_PRI_GRP_ID: 7
             :
                 TM_HEADROOM_POOL_ID: 1
-        
+
 # PG to Service Pool Mapping
         TM_PRI_GRP_POOL_MAP:
             ?
@@ -1736,7 +1736,7 @@ device:
                 TM_PRI_GRP_ID: 7
             :
                 TM_ING_SERVICE_POOL_ID: 1
-        
+
 # Ingress PG to PFC priority mapping
 # TM_PFC_PRI_TO_PRI_GRP_MAP is mapped to MMU_THDI_PFCPRI_PG_PROFILE in physical table. There are 8 profiles to configure the PFC to priority group mappings. For exmple, you could map multiple PG to a PFC.  This is needed to generate PFC when a PG is hitting the limits.
         TM_PFC_PRI_TO_PRI_GRP_MAP:
@@ -1772,7 +1772,7 @@ device:
             :
                 PFC: 1
                 LOSSLESS: 1
-        
+
 # ING_PRI_MAP_ID is the ingress priority PG profile select, which maps to the Priority Group
 # PRI_GRP_MAP_ID is the Priority Group profile select, which maps to service pool
         TM_ING_PORT:
@@ -1806,7 +1806,7 @@ device:
             :
                 ING_PRI_MAP_ID: 1
                 PRI_GRP_MAP_ID: 0
-        
+
 ...
 ######################################
 ---
@@ -1821,7 +1821,7 @@ device:
                 MIN_GUARANTEE_CELLS: 0
                 SHARED_LIMIT_CELLS: 325520
                 RESUME_LIMIT_CELLS: 325520
-        
+
 # Per input Port PG Thresholds
         TM_ING_THD_PORT_PRI_GRP:
             ?
@@ -2001,7 +2001,7 @@ device:
                 TM_EGR_SERVICE_POOL_ID: [0]
             :
                 MARGIN: [16513, 33026, 49539, 66052, 82565, 99078, 115591, 132104, 148617, 165130]
-        
+
 ...
 ---
 device:
@@ -2025,7 +2025,7 @@ device:
             :
                 USE_QGROUP_MIN: 0
                 TM_EGR_SERVICE_POOL_ID: 1
-        
+
         TM_PORT_MC_Q_TO_SERVICE_POOL:
             ?
                 PORT_ID: [0]
@@ -2167,8 +2167,7 @@ device:
                 RESUME_OFFSET_CELLS: 2
             ?
                 PORT_ID: [[1,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
-                TM_MC_Q_ID: [0,3]
-                SHARED_LIMIT_DYNAMIC: ALPHA_2
+                TM_MC_Q_ID: [[0,3]]
             :
                 SHARED_LIMITS: 1
                 DYNAMIC_SHARED_LIMITS: 1
@@ -2178,7 +2177,7 @@ device:
                 YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
                 RED_LIMIT_DYNAMIC: PERCENTAGE_625
                 RESUME_OFFSET_CELLS: 2
-        
+
 #Egress Port Thresholds.
         TM_EGR_THD_UC_PORT_SERVICE_POOL:
             ?
@@ -2203,7 +2202,7 @@ device:
                 RED_SHARED_RESUME_LIMIT_CELLS: 45
                 YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
                 SHARED_RESUME_LIMIT_CELLS: 73
-        
+
         TM_EGR_THD_MC_PORT_SERVICE_POOL:
             ?
                 PORT_ID: [[0,2], [17,18], [33,35], [51,52], [67,69], [85,86], [101,103], [119,120], [135,137], [153,154], [169,171], [187,188], [203,205], [221,222], [237,239], [255,256], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
@@ -2241,13 +2240,13 @@ device:
             :
                 PAUSE_TX: 0
                 PAUSE_RX: 0
-        
+
         TM_PFC_EGR:
             ?
                 PORT_ID: [[272,275], [289,292]]
             :
                 TM_PFC_PRI_PROFILE_ID: 0
-        
+
         TM_PFC_EGR:
             ?
                 PORT_ID: [[306,309], [323,326], [340,343], [357,360], [374,377], [391,394], [408,411], [425,428], [442,445], [459,462], [476,479], [493,496], [510,513], [527,530]]
@@ -2263,7 +2262,7 @@ device:
 ---
 device:
     0:
-# TM_PFC_PRI_PROFILE is mapped to MMU_INTFI_PFCRPI_PROFILE in physical table. There are 8 profiles to configure the PFC value to COS/priorities mapping. For example, you could map multiple coses to a PFC. This mapping is needed when receiving PFC frames and stopping queues(coses) according to the PFC frame received.      
+# TM_PFC_PRI_PROFILE is mapped to MMU_INTFI_PFCRPI_PROFILE in physical table. There are 8 profiles to configure the PFC value to COS/priorities mapping. For example, you could map multiple coses to a PFC. This mapping is needed when receiving PFC frames and stopping queues(coses) according to the PFC frame received.
         TM_PFC_PRI_PROFILE:
             ?
                 TM_PFC_PRI_PROFILE_ID: 0
@@ -2278,7 +2277,7 @@ device:
                 PFC: 1
                 COS_LIST: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
 
-        
+
 # enable the MAC's PFC controls.
         PC_PFC:
             ?
@@ -2286,14 +2285,14 @@ device:
             :
                 ENABLE_RX: 1
                 ENABLE_TX: 1
-                
+
         PC_PFC:
             ?
                 PORT_ID: [[306,309], [323,326], [340,343], [357,360], [374,377], [391,394], [408,411], [425,428], [442,445], [459,462], [476,479], [493,496], [510,513], [527,530]]
             :
                 ENABLE_RX: 1
                 ENABLE_TX: 1
-                
+
         PC_PFC:
             ?
                 PORT_ID: [[1,2], [17,18], [34,35], [51,52], [68,69], [85,86], [102,103], [119,120], [136,137], [153,154], [170,171], [187,188], [204,205], [221,222], [238,239], [255,256]]
@@ -2307,7 +2306,7 @@ device:
     0:
         TM_MIRROR_ON_DROP_CONTROL:
             RESERVED_LIMIT_CELLS: 0
-        
+
         TM_MIRROR_ON_DROP_PROFILE:
             ?
                 TM_MIRROR_ON_DROP_PROFILE_ID: 0
@@ -2318,8 +2317,8 @@ device:
                 PERCENTAGE_75_100: 65535
                 INGRESS_LIMIT: 0
                 SHARED_LIMIT: 0
-        
-        TM_MIRROR_ON_DROP_DESTINATION: 
+
+        TM_MIRROR_ON_DROP_DESTINATION:
             ?
                 TM_MIRROR_ON_DROP_DESTINATION_ID: 0
             :
@@ -2462,7 +2461,7 @@ device:
                 LOSSY_MAX_BYTES: 100224
                 LOSSLESS0_MAX_BYTES: 502528
                 LOSSLESS1_MAX_BYTES: 502528
-        
+
         TM_OBM_THD_PORT_FLOW_CTRL:
             ?
                 PORT_ID: [[272,275], [289,292]]
@@ -2494,7 +2493,7 @@ device:
                 LOSSLESS0_XON_BYTES: 4672
                 LOSSLESS1_XOFF_BYTES: 5184
                 LOSSLESS1_XON_BYTES: 4672
-        
+
         TM_OBM_PORT_FLOW_CTRL:
             ?
                 PORT_ID: [[272,275], [289,292]]
@@ -2573,6 +2572,6 @@ device:
                 PKT_PRI: [3,4]
             :
                 TRAFFIC_CLASS: OBM_TC_LOSSLESS0
-        
+
 ...
 

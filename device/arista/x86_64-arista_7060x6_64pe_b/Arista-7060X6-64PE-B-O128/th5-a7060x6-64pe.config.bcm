@@ -42,6 +42,7 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 4096
             sai_mmu_custom_config: 1
+            stat_custom_receive0_management_mode: 1
 ---
 device:
     0:
@@ -1330,14 +1331,6 @@ device:
                 PORT_ID: 530
             :
                 PC_PHYS_PORT_ID: 509
-            ?
-                PORT_ID: 118
-            :
-                PC_PHYS_PORT_ID: 513
-            ?
-                PORT_ID: 254
-            :
-                PC_PHYS_PORT_ID: 514
 ...
 ---
 device:
@@ -1382,13 +1375,6 @@ device:
                 NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: [118, 254]
-            :
-                ENABLE: 0
-                SPEED: 10000
-                NUM_LANES: 1
-                MAX_FRAME_SIZE: 9416
 ...
 ---
 bcm_device:
@@ -1396,7 +1382,7 @@ bcm_device:
         global:
             ftem_mem_entries: 65536
             #enable port queue drop stats
-            sai_stats_support_mask: 0
+            sai_stats_support_mask: 0x80
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -2229,8 +2215,7 @@ device:
                 RESUME_OFFSET_CELLS: 2
             ?
                 PORT_ID: [[1,4], [17,20], [33,37], [51,54], [67,71], [85,88], [101,105], [118,122], [135,139], [153,156], [169,173], [187,190], [203,207], [221,224], [237,241], [254,258], [271,275], [288,292], [305,309], [323,326], [339,343], [357,360], [373,377], [391,394], [407,411], [424,428], [441,445], [459,462], [475,479], [493,496], [509,513], [527,530], 543]
-                TM_MC_Q_ID: [0,3]
-                SHARED_LIMIT_DYNAMIC: ALPHA_2
+                TM_MC_Q_ID: [[0,3]]
             :
                 SHARED_LIMITS: 1
                 DYNAMIC_SHARED_LIMITS: 1

@@ -1,0 +1,41 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "type": "SmartSwitchDPU",
+            "subtype": "SmartSwitch"
+        }
+    },
+
+    "NTP_SERVER": {
+        "169.254.200.254": {
+            "iburst": "on"
+        }
+    },
+    "NTP": {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    },
+    "NTP_KEY": {
+        "1": {
+            "type": "md5",
+            "trusted": "no",
+            "value": "blabla"
+        },
+        "42": {
+            "type": "sha1",
+            "trusted": "yes",
+            "value": "the_answer"
+        }
+    },
+    "INTERFACE": {
+        "Ethernet0": {},
+        "Ethernet0|10.0.0.0/31": {},
+        "Ethernet0|192.168.0.122/24": {}
+    }
+}
