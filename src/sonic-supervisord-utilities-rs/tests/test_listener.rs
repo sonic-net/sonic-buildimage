@@ -9,11 +9,12 @@ use swss_common::ConfigDBConnector;
 use injectorpp::interface::injector::*;
 use injectorpp::interface::injector::InjectorPP;
 use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
+use nix::unistd::{Pid, pipe, write, close};
 use std::sync::Once;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write, Cursor};
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -49,6 +50,116 @@ pub fn get_mock_time() -> f64 {
              counter + 1, start_time, counter, result_time);
     
     result_time
+}
+
+/// Mock implementation for testing polling
+pub struct MockPoller {
+    // Always simulate that stdin is ready
+}
+
+impl MockPoller {
+    pub fn new() -> Self {
+        MockPoller {}
+    }
+}
+
+impl sonic_supervisord_utilities_rs::supervisor_proc_exit_listener::Poller for MockPoller {
+    fn poll(&mut self, events: &mut mio::Events, _timeout: Option<std::time::Duration>) -> std::io::Result<()> {
+        // We need to actually add an event to make the main loop detect stdin_ready = true
+        // Since mio::Event is not easily constructible, we'll use a different approach
+        
+        // Create a temporary pipe just to generate a real mio event
+        let (read_fd, write_fd) = nix::unistd::pipe()?;
+        let mut source = mio::unix::SourceFd(&read_fd);
+        
+        // Write something to the pipe to make it readable
+        nix::unistd::write(write_fd, &[1])?;
+        nix::unistd::close(write_fd)?;
+        
+        // Create a temporary registry and poll to generate a real event
+        let mut temp_poll = mio::Poll::new()?;
+        temp_poll.registry().register(&mut source, mio::Token(0), mio::Interest::READABLE)?;
+        
+        // Poll the temporary poll to get real events
+        temp_poll.poll(events, Some(std::time::Duration::from_millis(1)))?;
+        
+        // Clean up
+        nix::unistd::close(read_fd)?;
+        
+        Ok(())
+    }
+    
+    fn register(&self, _stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()> {
+        // Mock registration always succeeds
+        Ok(())
+    }
+}
+
+/// Mock stdin for testing that implements both Read and AsRawFd
+/// Similar to Python StdinMockWrapper, reads only one line at a time
+pub struct MockStdin {
+    lines: std::io::Lines<BufReader<std::fs::File>>,
+    current_line: Option<String>,
+    line_pos: usize,
+    file: std::fs::File, // Keep separate file for AsRawFd
+}
+
+impl MockStdin {
+    pub fn from_file(file_path: &str) -> std::io::Result<Self> {
+        let file_for_reading = std::fs::File::open(file_path)?;
+        let buf_reader = BufReader::new(file_for_reading);
+        let lines = buf_reader.lines();
+        let file = std::fs::File::open(file_path)?; // Separate file for AsRawFd
+        
+        Ok(Self { 
+            lines,
+            current_line: None,
+            line_pos: 0,
+            file,
+        })
+    }
+}
+
+impl std::io::Read for MockStdin {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        // If no current line, try to get the next line
+        if self.current_line.is_none() {
+            match self.lines.next() {
+                Some(Ok(line)) => {
+                    self.current_line = Some(format!("{}\n", line)); // Add newline back
+                    self.line_pos = 0;
+                }
+                Some(Err(e)) => return Err(e),
+                None => return Ok(0), // EOF - no more lines
+            }
+        }
+        
+        // Read from current line
+        if let Some(ref line) = self.current_line {
+            let line_bytes = line.as_bytes();
+            let remaining = line_bytes.len() - self.line_pos;
+            let to_copy = std::cmp::min(buf.len(), remaining);
+            
+            buf[..to_copy].copy_from_slice(&line_bytes[self.line_pos..self.line_pos + to_copy]);
+            self.line_pos += to_copy;
+            
+            // If we've read the entire line, clear it
+            if self.line_pos >= line_bytes.len() {
+                self.current_line = None;
+                self.line_pos = 0;
+            }
+            
+            Ok(to_copy)
+        } else {
+            Ok(0) // EOF
+        }
+    }
+}
+
+impl std::os::unix::io::AsRawFd for MockStdin {
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.file.as_raw_fd()
+    }
 }
 
 /// Mock ConfigDB for testing
@@ -185,15 +296,14 @@ impl TestSupervisorListener {
                 returns: get_mock_time() // This will be called each time and return progressive time
             ));
         
+        
         // Set environment - matches @mock.patch.dict(os.environ, {"NAMESPACE_PREFIX": "asic"})
         std::env::set_var("NAMESPACE_PREFIX", "asic");
         
-        // Read the original Python test stdin data - matches the actual test file
-        let stdin_data = std::fs::read_to_string("tests/dev/stdin")
-            .map_err(|e| format!("Failed to read stdin test file: {}", e))?;
-        
-        // Create mock stdin reader from the prepared data
-        let stdin_reader = std::io::Cursor::new(stdin_data);
+        // Create mock stdin reader directly from the test file
+        let stdin_path = format!("{}/tests/dev/stdin", env!("CARGO_MANIFEST_DIR"));
+        let stdin_reader = MockStdin::from_file(&stdin_path)
+            .map_err(|e| format!("Failed to open stdin test file: {}", e))?;
         
         // Parse arguments like the original test
         let args = Args {
@@ -208,7 +318,8 @@ impl TestSupervisorListener {
         let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
         let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
         // Use our MockConfigDB instead of real ConfigDBConnector
-        let result = main_with_parsed_args_and_stdin(args, &critical_path, &watch_path, &self.mock_configdb);
+        let mock_poller = MockPoller::new();
+        let result = main_with_parsed_args_and_stdin(args, stdin_reader, &critical_path, &watch_path, &self.mock_configdb, mock_poller);
         
         // The main function should process the stdin data and load the test files correctly
         // However, it will fail when trying to connect to ConfigDB or initialize EventPublisher
@@ -283,12 +394,10 @@ impl TestSupervisorListener {
         // Set environment
         std::env::set_var("NAMESPACE_PREFIX", "asic");
         
-        // Read the original Python test stdin data - matches the actual test file
-        let stdin_data = std::fs::read_to_string("tests/dev/stdin")
-            .map_err(|e| format!("Failed to read stdin test file: {}", e))?;
-        
-        // Create mock stdin reader from the prepared data
-        let stdin_reader = std::io::Cursor::new(stdin_data);
+        // Create mock stdin reader directly from the test file
+        let stdin_path = format!("{}/tests/dev/stdin", env!("CARGO_MANIFEST_DIR"));
+        let stdin_reader = MockStdin::from_file(&stdin_path)
+            .map_err(|e| format!("Failed to open stdin test file: {}", e))?;
         
         // Parse arguments like the original test - snmp container
         let args = Args {
@@ -300,7 +409,8 @@ impl TestSupervisorListener {
         let critical_path = format!("{}/tests/etc/supervisor/critical_processes", env!("CARGO_MANIFEST_DIR"));
         let watch_path = format!("{}/tests/etc/supervisor/watchdog_processes", env!("CARGO_MANIFEST_DIR"));
         // Use our MockConfigDB instead of real ConfigDBConnector
-        let result = main_with_parsed_args_and_stdin(args, &critical_path, &watch_path, &self.mock_configdb);
+        let mock_poller = MockPoller::new();
+        let result = main_with_parsed_args_and_stdin(args, stdin_reader, &critical_path, &watch_path, &self.mock_configdb, mock_poller);
         
         // The main function should process the stdin data but NOT call kill() for snmp
         // since snmp has auto-restart disabled - it should add to alerting instead

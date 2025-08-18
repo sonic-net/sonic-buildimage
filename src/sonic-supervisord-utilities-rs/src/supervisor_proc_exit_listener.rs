@@ -55,6 +55,36 @@ pub enum SupervisorError {
 
 type Result<T> = std::result::Result<T, SupervisorError>;
 
+/// Trait for polling operations - allows for mocking in tests
+pub trait Poller {
+    fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()>;
+    fn register(&self, stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()>;
+}
+
+/// Production implementation using mio::Poll
+pub struct MioPoller(mio::Poll);
+
+impl MioPoller {
+    pub fn new() -> std::io::Result<Self> {
+        Ok(MioPoller(mio::Poll::new()?))
+    }
+    
+    pub fn registry(&self) -> &mio::Registry {
+        self.0.registry()
+    }
+}
+
+impl Poller for MioPoller {
+    fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()> {
+        self.0.poll(events, timeout)
+    }
+    
+    fn register(&self, stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()> {
+        let mut stdin_source = mio::unix::SourceFd(&stdin_fd);
+        self.0.registry().register(&mut stdin_source, mio::Token(0), mio::Interest::READABLE)
+    }
+}
+
 /// Trait for ConfigDB operations - allows for both real ConfigDBConnector and mocks
 pub trait ConfigDBTrait {
     /// Get table data from database
@@ -269,11 +299,12 @@ pub fn main_with_parsed_args(args: Args) -> Result<()> {
         .map_err(|e| SupervisorError::Database(format!("Failed to create ConfigDB connector: {}", e)))?;
     config_db.connect(true, false)
         .map_err(|e| SupervisorError::Database(format!("Failed to connect to ConfigDB: {}", e)))?;
-    main_with_parsed_args_and_stdin(args, CRITICAL_PROCESSES_FILE, WATCH_PROCESSES_FILE, &config_db)
+    let poller = MioPoller::new().map_err(|e| SupervisorError::Io(e))?;
+    main_with_parsed_args_and_stdin(args, io::stdin(), CRITICAL_PROCESSES_FILE, WATCH_PROCESSES_FILE, &config_db, poller)
 }
 
 /// Main function with parsed arguments and custom stdin - allows for easy testing
-pub fn main_with_parsed_args_and_stdin(args: Args, critical_processes_file: &str, watch_processes_file: &str, config_db: &dyn ConfigDBTrait) -> Result<()> {
+pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args, stdin: S, critical_processes_file: &str, watch_processes_file: &str, config_db: &dyn ConfigDBTrait, mut poller: P) -> Result<()> {
     let container_name = args.container_name;
 
     // Get critical processes and groups
@@ -299,26 +330,22 @@ pub fn main_with_parsed_args_and_stdin(args: Args, critical_processes_file: &str
     childutils::listener::ready();
 
     // Set up non-blocking I/O with mio for timeout-based reading
-    let mut poll = Poll::new().map_err(|e| SupervisorError::Io(e))?;
     let mut events = Events::with_capacity(128);
     const STDIN_TOKEN: Token = Token(0);
     
-    // Register stdin for reading
-    let stdin_fd = io::stdin().as_raw_fd();
-    let mut stdin_source = SourceFd(&stdin_fd);
-    poll.registry().register(&mut stdin_source, STDIN_TOKEN, Interest::READABLE)
-        .map_err(|e| SupervisorError::Io(e))?;
+    // Register stdin for reading using the poller
+    let stdin_fd = stdin.as_raw_fd();
+    poller.register(stdin_fd).map_err(|e| SupervisorError::Io(e))?;
 
     let timeout = Duration::from_secs(SELECT_TIMEOUT_SECS);
 
-    // Create buffered reader for stdin
-    let stdin = io::stdin();
-    let mut stdin_reader = stdin.lock();
+    // Create buffered reader from the provided stdin
+    let mut stdin_reader = BufReader::new(stdin);
 
     // Main event loop with timeout
     loop {
         // Poll for events with timeout
-        poll.poll(&mut events, Some(timeout)).map_err(|e| SupervisorError::Io(e))?;
+        poller.poll(&mut events, Some(timeout)).map_err(|e| SupervisorError::Io(e))?;
 
         let mut stdin_ready = false;
         for event in events.iter() {
