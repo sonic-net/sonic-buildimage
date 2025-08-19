@@ -2512,6 +2512,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             #Add the Recirc ports to the INTERFACES table to make it routed intf
             results['INTERFACE'].update({port : {}})
 
+    # Set the "admin_status" of ports not defined in minigraph.xml to "down"
+    # Ensure any "admin_status" "up" handling is done before this loop
+    for port, port_attributes in ports.items():
+        if 'admin_status' not in port_attributes:
+            ports[port]['admin_status'] = 'down'
+
     results['PORT'] = ports
     results['CONSOLE_PORT'] = console_ports
 
