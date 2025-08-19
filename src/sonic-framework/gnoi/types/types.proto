@@ -1,0 +1,77 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package gnoi.types;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/openconfig/gnoi/types";
+
+// Define a protobuf FileOption that defines the gNOI service version.
+extend google.protobuf.FileOptions {
+  // The gNOI service semantic version.
+  string gnoi_version = 1002;
+}
+
+// Generic Layer 3 Protocol enumeration.
+enum L3Protocol {
+  UNSPECIFIED = 0;
+  IPV4 = 1;
+  IPV6 = 2;
+}
+
+// HashType defines the valid hash methods for data verification.  UNSPECIFIED
+// should be treated an error.
+message HashType {
+  enum HashMethod {
+    UNSPECIFIED = 0;
+    SHA256 = 1;
+    SHA512 = 2;
+    MD5 = 3;
+  }
+  HashMethod method = 1;
+  // hash is the raw byte string returned by the hash function.
+  // It is not an hex encoded string or other representation.
+  bytes hash = 2;
+}
+
+// Path encodes a data tree path as a series of repeated strings, with
+// each element of the path representing a data tree node name and the
+// associated attributes.
+// Reference: gNMI Specification Section 2.2.2.
+message Path {
+  string origin = 2;                              // Label to disambiguate path.
+  repeated PathElem elem = 3;                     // Elements of the path.
+}
+
+// PathElem encodes an element of a gNMI path, along with any attributes (keys)
+// that may be associated with it.
+// Reference: gNMI Specification Section 2.2.2.
+message PathElem {
+  string name = 1;                    // The name of the element in the path.
+  map<string, string> key = 2;        // Map of key (attribute) name to value.
+}
+
+// Credentials defines credentials needed to perform authentication on a device.
+message Credentials {
+  string username = 1;
+  oneof password {
+    string cleartext = 2;
+    HashType hashed = 3;
+  }
+}

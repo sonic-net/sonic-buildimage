@@ -1,0 +1,52 @@
+//
+// Copyright 2018 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package gnoi.common;
+
+import "types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/common";
+
+// RemoteDownload defines the details for a device to initiate a file transfer
+// from or to a remote location.
+message RemoteDownload {
+  // The path information containing where to download the data from or to.
+  // For HTTP(S), this will be the URL (i.e. foo.com/file.tbz2).
+  // For SFTP and SCP, this will be the address:/path/to/file
+  // (i.e. host.foo.com:/bar/baz).
+  string path = 1;
+
+  enum Protocol {
+    UNKNOWN = 0;
+    SFTP = 1;
+    HTTP = 2;
+    HTTPS = 3;
+    SCP = 4;
+  }
+  Protocol protocol = 2;
+
+  types.Credentials credentials = 3;
+
+  // Optional source address used to initiate connections from the device.
+  // It can be either an IPv4 address or an IPv6 address, depending on the
+  // connection's destination address.
+  string source_address = 4;
+
+  // Optional source vrf used to initiate connections from the device.
+  string source_vrf = 5;
+}
