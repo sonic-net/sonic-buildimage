@@ -125,7 +125,7 @@ action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }
 
 {% if syslog_counter and syslog_counter == "true" %}
 # update rsyslog counter
-action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on")
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on" signalOnClose="on")
 {% endif%}
 
 #
