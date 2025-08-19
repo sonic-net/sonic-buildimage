@@ -1,4 +1,5 @@
 {
+    "features_to_ignore": [],
     "services_to_ignore": [],
     "devices_to_ignore": [],
     "user_defined_checkers": [],
