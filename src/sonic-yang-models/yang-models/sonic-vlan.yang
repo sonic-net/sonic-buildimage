@@ -47,6 +47,10 @@ module sonic-vlan {
 
 	description "VLAN yang Module for SONiC OS";
 
+	revision 2025-04-22 {
+		description "Add SAG support";
+	}
+
 	revision 2025-03-06 {
 		description "Add leaf vnet_name";
 	}
@@ -135,6 +139,12 @@ module sonic-vlan {
 					description "Enable/Disable IPv6 link local address on vlan interface";
 					type stypes:mode-status;
 					default disable;
+				}
+
+				leaf static_anycast_gateway {
+					description "Enable/disable static anycast gateway for the vlan interface";
+					type boolean;
+					default false;
 				}
 
 				leaf mac_addr {
