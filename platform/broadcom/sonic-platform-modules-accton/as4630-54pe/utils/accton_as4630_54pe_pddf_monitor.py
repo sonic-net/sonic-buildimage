@@ -207,14 +207,24 @@ class device_monitor(object):
                     fan_fail_list[i] = 0
 
         if sum(fan_fail_list) == NUM_FANS:
+            logging.critical(
+                'Alarm for all fan faulty/absent is detected, disable PoE')
+            cmd_str = ["i2cset", "-f", "-y", "16", "0x20", "0x06", "0x0", "0x0", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xFE", "i"]
+            getstatusoutput_noshell(cmd_str) # Disable PoE
+
             # Critical: Either all the fans are faulty or they are removed, shutdown the system
             logging.critical('Alarm for all fan faulty/absent is detected')
-            logging.critical("Alarm for all fan faulty/absent is detected, reset DUT")
-            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0xE4"]
+            logging.critical("Alarm for all fan faulty/absent is detected, shutdown DUT")
+
+            # Sync log buffer to disk
+            cmd_str = ["sync"]
+            getstatusoutput_noshell(cmd_str)
+            cmd_str = ["/sbin/fstrim", "-av"]
+            getstatusoutput_noshell(cmd_str)
+            time.sleep(3)
+
+            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0x74"]
             time.sleep(2)
-            getstatusoutput_noshell('sync')
-            getstatusoutput_noshell('sync')
-            getstatusoutput_noshell('sync')
             getstatusoutput_noshell(cmd_str)
         elif sum(fan_fail_list) != 0:
             # Set the 100% speed only for first fan failure detection
@@ -243,8 +253,13 @@ class device_monitor(object):
 
         if temp[0] >= 70000:  # LM77-48
             # critical case*/
+            logging.critical(
+                'Alarm-Critical for temperature critical is detected, disable PoE')
+            cmd_str = ["i2cset", "-f", "-y", "16", "0x20", "0x06", "0x0", "0x0", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xff", "0xFE", "i"]
+            getstatusoutput_noshell(cmd_str) # Disable PoE
+
             logging.critical('Alarm for temperature critical is detected')
-            logging.critical("Alarm-Critical for temperature critical is detected, reset DUT")
+            logging.critical("Alarm-Critical for temperature critical is detected, shutdown DUT")
             # Update the reboot cause file to reflect that critical temperature
             # has been crossed. Upon next boot, the contents of this file will
             # be used to determine the cause of the previous reboot
@@ -255,10 +270,14 @@ class device_monitor(object):
             if status:
                 logging.warning('Reboot cause file not updated. {}'.format(output))
 
-            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0xE4"]
-            getstatusoutput_noshell('sync')
-            getstatusoutput_noshell('sync')
-            getstatusoutput_noshell('sync')
+            # Sync log buffer to disk
+            cmd_str = ["sync"]
+            getstatusoutput_noshell(cmd_str)
+            cmd_str = ["/sbin/fstrim", "-av"]
+            getstatusoutput_noshell(cmd_str)
+            time.sleep(3)
+
+            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0x74"]
             time.sleep(3)
             getstatusoutput_noshell(cmd_str)
 
