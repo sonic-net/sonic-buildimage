@@ -23,7 +23,6 @@
 try:
     import getopt
     import sys
-    import subprocess
     import logging
     import logging.config
     import logging.handlers
@@ -32,6 +31,7 @@ try:
     import traceback    
     from tabulate import tabulate    
     from minipack.pimutil import PimUtil
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -75,7 +75,7 @@ def log_os_system(cmd):
     logging.info('Run :'+cmd)
     status = 1
     output = ""
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     if status:
         logging.info('Failed :'+cmd)
     return  status, output
@@ -140,9 +140,8 @@ def qsfp_eeprom_sys(pim_idx, i2c_bus_order, create):
     return 0
 
 def check_pca_active( i2c_addr, bus):
-    cmd = "i2cget -y -f %d 0x%x 0x0"
-    cmd =  cmd %(bus, i2c_addr)
-    status, output = subprocess.getstatusoutput(cmd)
+    cmd = ["i2cget", "-y", "-f", str(bus), "0x" + "%x" % i2c_addr, "0x0"]
+    status, output = getstatusoutput_noshell(cmd)
     return status
 
 def set_pim_port_use_bus(pim_idx):
@@ -170,15 +169,13 @@ def device_remove():
     cmd1 = "echo 0x%x > /sys/bus/i2c/devices/i2c-%d/delete_device"    
     
     for bus in range(2, 10):        
-        #ret=check_pca_active(0x72, bus)
-        #if ret==0:
+        cmdm = ["echo", "0x%x" % 0x72, ">", "/sys/bus/i2c/devices/i2c-%d/delete_device" % bus]
+        status, output = getstatusoutput_noshell(cmdm)
+        print("Remove %d-0072 i2c device" % bus)
         
-        cmdm= cmd1 % (0x72, bus)        
-        status, output = subprocess.getstatusoutput(cmdm)
-        print("Remove %d-0072 i2c device"%bus)
-        cmdm= cmd1 % (0x71, bus)
-        status, output = subprocess.getstatusoutput(cmdm)
-        print("Remove %d-0071 i2c device"%bus)
+        cmdm = ["echo", "0x%x" % 0x71, ">", "/sys/bus/i2c/devices/i2c-%d/delete_device" % bus]
+        status, output = getstatusoutput_noshell(cmdm)
+        print("Remove %d-0071 i2c device" % bus)
 
     cmd="rm -f /usr/local/bin/minipack_qsfp/port*"
     status, output=log_os_system(cmd)
