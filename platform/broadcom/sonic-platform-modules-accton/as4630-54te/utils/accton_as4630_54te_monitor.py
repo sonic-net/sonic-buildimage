@@ -20,12 +20,14 @@
 # ------------------------------------------------------------------
 
 try:
+    import os
     import sys
     import getopt
     import logging
     import logging.config
     import logging.handlers
     import time
+    import subprocess
     from as4630_54te.fanutil import FanUtil
     from as4630_54te.thermalutil import ThermalUtil
 except ImportError as e:
@@ -87,6 +89,9 @@ class device_monitor(object):
 
     def __init__(self, log_file, log_level):
         """Needs a logger and a logger level."""
+
+        self.thermal = ThermalUtil()
+        self.fan = FanUtil()
         # set up logging to file
         logging.basicConfig(
             filename=log_file,
@@ -138,8 +143,8 @@ class device_monitor(object):
             LEVEL_TEMP_CRITICAL: [100, 16, 240000, 300000],
         }
         temp = [0, 0, 0]
-        thermal = ThermalUtil()
-        fan = FanUtil()
+        thermal = self.thermal
+        fan = self.fan
         ori_duty_cycle = fan.get_fan_duty_cycle()
         new_duty_cycle = 0
 
@@ -192,11 +197,19 @@ class device_monitor(object):
         if temp[0] >= 70000:  # LM75-48
             # critical case*/
             logging.critical(
-                'Alarm-Critical for temperature critical is detected, reset DUT')
-            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0xE4"]
+                'Alarm-Critical for temperature critical is detected, shutdown DUT')
+
+            # Sync log buffer to disk
+            cmd_str="sync"
+            status, output = subprocess.getstatusoutput(cmd_str)
+            cmd_str="/sbin/fstrim -av"
+            status, output = subprocess.getstatusoutput(cmd_str)
+            time.sleep(3)
+
+            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0x74"]
             time.sleep(2)
             return_value = subprocess.call(cmd_str)
-            logging.warning('Fan set: i2cset -y -f 3 0x60 0x4 0xE4, status is %d', return_value)
+            logging.warning('Fan set: i2cset -y -f 3 0x60 0x4 0x74, status is %d', return_value)
 
         #logging.debug('ori_state=%d, current_state=%d, temp_val=%d\n\n',ori_state, fan_policy_state, temp_val)
 
