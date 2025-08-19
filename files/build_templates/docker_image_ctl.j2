@@ -117,6 +117,17 @@ function preStartAction()
         echo "Cannot fetch system eeprom information. Setting chassis serial number to N/A."
         $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number "N/A"
     fi
+{%- elif docker_container_name == "syncd" %}
+    # Clear the portstat counters
+    for file in `ls /tmp/portstat*/*`
+    do
+      sed -i "s|S'[0-9]*'|S'0'|g" $file
+    done
+    # Clear the pfcstat counters
+    for file in `ls /tmp/pfcstat*/*`
+    do
+      sed -i "s|S'[0-9]*'|S'0'|g" $file
+    done
 {%- else %}
     : # nothing
 {%- endif %}
