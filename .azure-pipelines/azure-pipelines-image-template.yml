@@ -35,7 +35,7 @@ jobs:
     jobFilters: ${{ parameters.jobFilters }}
     jobVariables: ${{ parameters.jobVariables }}
     preSteps:
-      - template: cleanup.yml
+      - template: .azure-pipelines/cleanup.yml@buildimage
       - ${{ parameters.preSteps }}
       - script: |
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
@@ -47,7 +47,7 @@ jobs:
           echo $BUILD_OPTIONS
           echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"
         displayName: "Set cache options"
-      - checkout: buildimage
+      - checkout: self
         submodules: recursive
         fetchDepth: 0
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
@@ -119,6 +119,6 @@ jobs:
             artifactName: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
             publishPrefix: '$(Build.DefinitionName)/$(Build.SourceBranchName)/$(GROUP_NAME)'
       - ${{ parameters.postSteps }}
-      - template: cleanup.yml
+      - template: .azure-pipelines/cleanup.yml@buildimage
     jobGroups: ${{ parameters.jobGroups }}
     buildSteps: ${{ parameters.buildSteps }}

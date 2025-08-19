@@ -40,6 +40,15 @@ parameters:
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
   default: 480
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
+- name: SUBMODULE_PR_ID
+  type: string
+  default: ''
 
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
@@ -63,6 +72,9 @@ stages:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
+      SUBMODULE: ${{ parameters.SUBMODULE }}
+      COMMIT_ID: ${{ parameters.COMMIT_ID }}
+      SUBMODULE_PR_ID: ${{ parameters.SUBMODULE_PR_ID }}
 
 - stage: Build
   pool: sonicbld-1es
@@ -95,6 +107,9 @@ stages:
           PLATFORM_NAME: marvell-prestera
           PLATFORM_ARCH: armhf
           INCLUDE_RESTAPI: y
+      SUBMODULE: ${{ parameters.SUBMODULE }}
+      COMMIT_ID: ${{ parameters.COMMIT_ID }}
+      SUBMODULE_PR_ID: ${{ parameters.SUBMODULE_PR_ID }}
 
 - stage: Test
   dependsOn: BuildVS
@@ -118,7 +133,7 @@ stages:
     timeoutInMinutes: 60
     steps:
     - template: .azure-pipelines/cleanup.yml
-    - checkout: buildimage
+    - checkout: self
       clean: true
       submodules: recursive
       displayName: 'Checkout code'

@@ -145,8 +145,8 @@ jobs:
             dbg_image: yes
 
     buildSteps:
-      - template: template-skipvstest.yml
-      - template: template-daemon.yml
+      - template: .azure-pipelines/template-skipvstest.yml@buildimage
+      - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
           if [ $(GROUP_NAME) == pensando ]; then
@@ -216,7 +216,7 @@ jobs:
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
-      - template: check-dirty-version.yml
+      - template: .azure-pipelines/check-dirty-version.yml@buildimage
       - task: ManifestGeneratorTask@0
         condition: ne(variables.SKIP_MG, 'y')
         timeoutInMinutes: 60

@@ -66,7 +66,7 @@ jobs:
   timeoutInMinutes: ${{ parameters.timeout }}
   steps:
   - template: cleanup.yml
-  - checkout: buildimage
+  - checkout: self
     clean: true
     submodules: recursive
     displayName: 'Checkout code'

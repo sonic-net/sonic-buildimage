@@ -49,7 +49,7 @@ stages:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       preSteps:
       - template: azure-pipelines-download-certificate.yml
-      - checkout: buildimage
+      - checkout: self
         submodules: recursive
         path: s
         displayName: 'Checkout code'
