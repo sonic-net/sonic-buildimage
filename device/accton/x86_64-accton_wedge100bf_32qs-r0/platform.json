@@ -1,6 +1,14 @@
 {
     "chassis": {
         "name": "Wedge100BF-32QS-O-AC-F-BF",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            }
+        ],
         "fans": [
             {
                 "name": "counter-rotating-fan-1"
@@ -50,43 +58,49 @@
         ],
         "thermals": [
             {
-                "name": "com_e_driver-i2c-4-33:memory-temp"
-            },
-            {
                 "name": "com_e_driver-i2c-4-33:cpu-temp"
             },
             {
-                "name": "pfe1100-i2c-7-59:temp1"
+                "name": "com_e_driver-i2c-4-33:memory-temp"
             },
             {
-                "name": "pfe1100-i2c-7-59:temp2"
+                "name": "psu_driver-i2c-7-59:psu2-temp1"
             },
             {
-                "name": "pfe1100-i2c-7-5a:temp1"
+                "name": "psu_driver-i2c-7-59:psu2-temp2"
             },
             {
-                "name": "pfe1100-i2c-7-5a:temp2"
+                "name": "psu_driver-i2c-7-5a:psu1-temp1"
             },
             {
-                "name": "tmp75-i2c-3-48:outlet-middle-temp"
+                "name": "psu_driver-i2c-7-5a:psu1-temp2"
             },
             {
-                "name": "tmp75-i2c-3-49:inlet-middle-temp"
+                "name": "tmp75-i2c-3-48:chip-temp"
             },
             {
-                "name": "tmp75-i2c-3-4a:inlet-left-temp"
+                "name": "tmp75-i2c-3-49:exhaust2-temp"
             },
             {
-                "name": "tmp75-i2c-3-4b:switch-temp"
+                "name": "tmp75-i2c-3-4a:exhaust-temp"
             },
             {
-                "name": "tmp75-i2c-3-4c:inlet-right-temp"
+                "name": "tmp75-i2c-3-4b:intake-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4c:tofino-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4d:intake2-temp"
             },
             {
                 "name": "tmp75-i2c-8-48:outlet-right-temp"
             },
             {
                 "name": "tmp75-i2c-8-49:outlet-left-temp"
+            },
+            {
+                "name": "pch_haswell-virtual-0:temp1"
             },
             {
                 "name": "coretemp-isa-0000:package-id-0"
@@ -104,7 +118,16 @@
                 "name": "coretemp-isa-0000:core-3"
             },
             {
-                "name": "pch_haswell-virtual-0:temp1"
+                "name": "coretemp-isa-0000:core-4"
+            },
+            {
+                "name": "coretemp-isa-0000:core-5"
+            },
+            {
+                "name": "coretemp-isa-0000:core-6"
+            },
+            {
+                "name": "coretemp-isa-0000:core-7"
             }
         ],
         "sfps": [
