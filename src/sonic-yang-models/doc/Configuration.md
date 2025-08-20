@@ -44,6 +44,7 @@
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
+  * [RECORDER](#recorder)
   * [Kubernetes Master](#kubernetes-master)
   * [L2 Neighbors](#l2-neighbors)
   * [L3 Interfaces](#l3-interfaces)
@@ -1497,6 +1498,28 @@ The configuration is applied globally for each ECMP and LAG on a switch.
 }
 
 ```
+### RECORDER
+
+Redis recorder service configuration is stored in the **RECORDER** table. This table controls the state of the Redis recorder service which is used for recording Redis database operations for debugging and analysis purposes.
+
+```
+{
+    "RECORDER": {
+        "config_db": {
+            "state": "enabled"
+        },
+        "state_db": {
+            "state": "enabled"
+        }
+    }
+}
+```
+
+The RECORDER table uses database type identifiers as keys (e.g., "config_db", "state_db", "app_db", "asic_db", etc.). Each database type directly contains a `state` field that controls whether the recorder service is active:
+- `"enabled"`: Redis recorder service is active and recording database operations
+- `"disabled"`: Redis recorder service is inactive
+
+**Note**: The `state` field is configurable and defaults to `"disabled"`. Database type identifiers are extensible and allow for future database types to be added without modifying the YANG model. Each database type can have its own recorder state configuration.
 
 ### Kubernetes Master
 

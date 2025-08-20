@@ -3246,6 +3246,20 @@
                 "guard_time": "2",
                 "ber_threshold": "12"
             }
+        },
+        "RECORDER": {
+            "config_db": {
+                "state": "enabled"
+            },
+            "state_db": {
+                "state": "enabled"
+            },
+            "app_db": {
+                "state": "disabled"
+            },
+            "asic_db": {
+                "state": "enabled"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

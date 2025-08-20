@@ -1,0 +1,49 @@
+{
+    "RECORDER_WITH_CORRECT_VALUES": {
+        "sonic-recorder:sonic-recorder": {
+            "sonic-recorder:RECORDER": {
+                "sonic-recorder:RECORDER_LIST": [
+                    {
+                        "name": "config_db",
+                        "state": "enabled"
+                    },
+                    {
+                        "name": "state_db",
+                        "state": "enabled"
+                    },
+                    {
+                        "name": "app_db",
+                        "state": "disabled"
+                    },
+                    {
+                        "name": "asic_db",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "RECORDER_WITH_INVALID_STATE": {
+        "sonic-recorder:sonic-recorder": {
+            "sonic-recorder:RECORDER": {
+                "sonic-recorder:RECORDER_LIST": [
+                    {
+                        "name": "config_db",
+                        "state": "invalid_state"
+                    }
+                ]
+            }
+        }
+    },
+    "RECORDER_WITH_MISSING_DATABASE": {
+        "sonic-recorder:sonic-recorder": {
+            "sonic-recorder:RECORDER": {
+                "sonic-recorder:RECORDER_LIST": [
+                    {
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    }
+}

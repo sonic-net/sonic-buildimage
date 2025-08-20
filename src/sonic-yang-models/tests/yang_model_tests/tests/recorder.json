@@ -1,0 +1,13 @@
+{
+    "RECORDER_WITH_CORRECT_VALUES": {
+        "desc": "RECORDER TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "RECORDER_WITH_INVALID_STATE": {
+        "desc": "Referring invalid recorder state values.",
+        "eStrKey": "InvalidValue"
+    },
+    "RECORDER_WITH_MISSING_DATABASE": {
+        "desc": "Config recorder table without database field",
+        "eStrKey": "ListKey"
+    }
+}
