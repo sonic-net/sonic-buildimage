@@ -145,7 +145,7 @@
      "PORT_INVALID_SUBPORT_NUMBER": {
          "desc": "Out of range subport number",
          "eStrKey": "Range",
-         "eStr": "0..8"
+         "eStr": "0..12"
      },
      "PORT_VALID_DOM_POLLING": {
         "desc": "PORT_VALID_DOM_POLLING no failure."

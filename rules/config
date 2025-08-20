@@ -166,6 +166,9 @@ endif
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
 
+# INCLUDE_VS_DASH_SAI - build dash-sai for VS
+INCLUDE_VS_DASH_SAI ?= y
+
 # ENABLE_AUTO_TECH_SUPPORT - Enable the configuration for event-driven techsupport & coredump mgmt feature
 ENABLE_AUTO_TECH_SUPPORT = y
 

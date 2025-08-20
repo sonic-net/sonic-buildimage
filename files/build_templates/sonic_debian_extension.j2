@@ -1066,6 +1066,7 @@ declare -rA FW_FILE_MAP=( \
     [$MLNX_SPC2_FW_FILE]="fw-SPC2.mfa" \
     [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
     [$MLNX_SPC4_FW_FILE]="fw-SPC4.mfa" \
+    [$MLNX_SPC5_FW_FILE]="fw-SPC5.mfa" \
 )
 sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
@@ -1095,6 +1096,8 @@ sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
+sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
+sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
@@ -1131,6 +1134,8 @@ done
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
+sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
+sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 install_pip_package {{platform_api_py3_wheel_path}}
 

@@ -2861,7 +2861,8 @@
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
             },
             "str-8102-t1-dpu1": {
                 "state": "down",
@@ -2873,7 +2874,62 @@
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
-                "orchagent_zmq_port": "50"
+                "orchagent_zmq_port": "50",
+                "swbus_port": "23607"
+            }
+        },
+        "REMOTE_DPU": {
+            "str-8103-t1-dpu0": {
+                "type": "typeA",
+                "pa_ipv4": "192.168.2.1",
+                "pa_ipv6": "2001:db8::30",
+                "npu_ipv4": "192.168.2.10",
+                "npu_ipv6": "2001:db8::40",
+                "dpu_id": "0",
+                "swbus_port": "23606"
+            },
+            "str-8103-t1-dpu1": {
+                "type": "typeB",
+                "pa_ipv4": "192.168.2.2",
+                "pa_ipv6": "2001:db8::50",
+                "npu_ipv4": "192.168.2.20",
+                "npu_ipv6": "2001:db8::60",
+                "dpu_id": "1",
+                "swbus_port": "23607"
+            }
+        },
+        "VDPU": {
+            "vdpu0": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu0"]
+            },
+            "vdpu1": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu1"]
+            },
+            "vdpu2": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu2"]
+            },
+            "vdpu3": {
+                "profile": "none",
+                "tier": "none",
+                "main_dpu_ids": ["dpu3"]
+            }
+        },
+        "DASH_HA_GLOBAL_CONFIG": {
+            "global": {
+                "cp_data_channel_port": "11362",
+                "dp_channel_port": "11368",
+                "dp_channel_src_port_min": "49152",
+                "dp_channel_src_port_max": "53247",
+                "dp_channel_probe_interval_ms": "100",
+                "dp_channel_probe_fail_threshold": "3",
+                "dpu_bfd_probe_interval_in_ms": "100",
+                "dpu_bfd_probe_multiplier": "3"
             }
         },
 	"XCVRD_LOG": {

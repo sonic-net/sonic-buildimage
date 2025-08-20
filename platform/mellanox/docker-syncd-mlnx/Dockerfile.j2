@@ -71,7 +71,7 @@ COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
 
 RUN mkdir -p /etc/mlnx/
-COPY ["sai-common.profile", "/etc/mlnx/"]
+COPY sai-*.profile /etc/mlnx/
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
