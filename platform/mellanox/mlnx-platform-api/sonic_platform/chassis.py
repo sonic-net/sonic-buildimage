@@ -501,7 +501,7 @@ class Chassis(ChassisBase):
                     s.on_event(event)
                     
                 if s.in_stable_state():
-                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], wait_time=5)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:

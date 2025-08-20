@@ -1067,7 +1067,15 @@ class SFP(NvidiaSFPCommon):
         Returns:
             enum: software control or firmware control
         """
-        api = self.get_xcvr_api()
+        retry_count = 5
+        api = None
+        while retry_count > 0:
+            api = self.get_xcvr_api()
+            if api:
+                break
+            retry_count -= 1
+            time.sleep(1)
+
         if not api:
             logger.log_error(f'Failed to get api object for SFP {self.sdk_index}, probably module EEPROM is not ready')
             return SFP_FW_CONTROL
@@ -1557,7 +1565,7 @@ class SFP(NvidiaSFPCommon):
                 logger.log_error(f'SFP {index} is not in stable state after initializing, state={s.state}')
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
-        cls.wait_sfp_eeprom_ready(sfp_list, 2)
+        cls.wait_sfp_eeprom_ready(sfp_list, 5)
         
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
