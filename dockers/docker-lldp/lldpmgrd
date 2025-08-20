@@ -68,7 +68,7 @@ class LldpManager(daemon_base.DaemonBase):
                                               False)
         
         self.pending_cmds = {}
-        self.hostname = "None"
+        self.hostname = None
         self.mgmt_ip = "None"
 
         self.device_table = swsscommon.Table(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
