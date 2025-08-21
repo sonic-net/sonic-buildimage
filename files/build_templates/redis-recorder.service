@@ -5,7 +5,7 @@ StartLimitIntervalSec=1200
 StartLimitBurst=3
 
 [Service]
-ExecStart=python /usr/bin/redis_record.py
+ExecStart=/usr/bin/sonic-db-rec
 
 [Install]
 WantedBy=multi-user.target

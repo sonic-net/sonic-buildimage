@@ -76,7 +76,7 @@
                 pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
             fi
         elif [ $(echo $1 | grep -c "/var/log/record/") -gt 0 ]; then
-            REDIS_REC=$(pgrep -fx 'python /usr/bin/redis_record.py')
+            REDIS_REC=$(pgrep -x sonic-db-rec)
             if [ -n "$REDIS_REC" ]; then 
                 /bin/kill -HUP $REDIS_REC 2>/dev/null || true
             fi
