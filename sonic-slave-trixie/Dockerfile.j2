@@ -91,6 +91,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         pigz \
         git \
         build-essential \
+        rustc \
+        cargo \
         remake \
         libtool \
         lintian \
@@ -744,6 +746,15 @@ RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install pycairo
 RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && eatmydata dpkg --force-all -i libpcsclite-dev*
 # Install python3-dev for frr (/usr/bin/python3-config for $arch) using download because regular install removes amd64 python package
 RUN apt-get download python3.13-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
+
+# Configure rust for cross-compilation
+RUN eatmydata apt-get install -y libstd-rust-dev:$arch
+{% if CONFIGURED_ARCH == "armhf" %}
+RUN echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+{% if CONFIGURED_ARCH == "arm64" %}
+RUN echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"aarch64-linux-gnu-gcc\"" >> /.cargo/config.toml
+{% endif -%}
 {% endif %}
 
 # Tell azure pipeline to use node.js in the docker
@@ -758,15 +769,3 @@ RUN eatmydata apt install -y python-is-python3
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
 {% endif -%}
-
-# Install Rust
-ARG RUST_ROOT=/usr/.cargo
-RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
-{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
-RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
-{% endif -%}
-{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "arm64" %}
-RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-gnu && echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"aarch64-linux-gnu-gcc\"" >> /.cargo/config.toml
-{% endif -%}
-ENV RUSTUP_HOME=$RUST_ROOT
-ENV PATH=$PATH:$RUST_ROOT/bin
