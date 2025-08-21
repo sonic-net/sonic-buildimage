@@ -1,0 +1,11 @@
+[Unit]
+Description=Redis-Recorder service
+Before=database.service
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+ExecStart=python /usr/bin/redis_record.py
+
+[Install]
+WantedBy=multi-user.target

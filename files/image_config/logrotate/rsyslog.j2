@@ -37,6 +37,7 @@
 /var/log/frr/zebra.log
 /var/log/swss/sairedis*.rec
 /var/log/swss/swss*.rec
+/var/log/record/*.rec
 /var/log/swss/responsepublisher.rec
 /var/log/syslog
 {
@@ -73,6 +74,11 @@
             else
                 logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $1"
                 pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
+            fi
+        elif [ $(echo $1 | grep -c "/var/log/record/") -gt 0 ]; then
+            REDIS_REC=$(pgrep -fx 'python /usr/bin/redis_record.py')
+            if [ -n "$REDIS_REC" ]; then 
+                /bin/kill -HUP $REDIS_REC 2>/dev/null || true
             fi
         else
             if [ -f /var/run/rsyslogd.pid ]; then
