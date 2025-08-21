@@ -2,7 +2,7 @@
 # $Copyright: (c) 2022 Broadcom.
 # Broadcom Proprietary and Confidential. All rights reserved.$
 #
-# BCM78900 28x800g 72x400g port configuration.
+# BCM78900 64x800g port configuration.
 #
 # configuration yaml file
 #   device:
@@ -39,12 +39,10 @@ bcm_device:
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 1
-            sai_tunnel_support: 2
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 0
-            l3_ecmp_member_secondary_mem_size: 0
+            l3_ecmp_member_first_lkup_mem_size: 12288
             stat_custom_receive0_management_mode: 1
-
 ---
 device:
     0:
@@ -940,15 +938,7 @@ device:
             ?
                 PORT_ID: 239
             :
-                PC_PHYS_PORT_ID: 229
-            ?
-                PORT_ID: 240
-            :
                 PC_PHYS_PORT_ID: 233
-            ?
-                PORT_ID: 241
-            :
-                PC_PHYS_PORT_ID: 237
             ?
                 PORT_ID: 255
             :
@@ -956,15 +946,7 @@ device:
             ?
                 PORT_ID: 256
             :
-                PC_PHYS_PORT_ID: 245
-            ?
-                PORT_ID: 257
-            :
                 PC_PHYS_PORT_ID: 249
-            ?
-                PORT_ID: 258
-            :
-                PC_PHYS_PORT_ID: 253
             ?
                 PORT_ID: 272
             :
@@ -972,15 +954,31 @@ device:
             ?
                 PORT_ID: 273
             :
-                PC_PHYS_PORT_ID: 261
+                PC_PHYS_PORT_ID: 259
             ?
                 PORT_ID: 274
             :
-                PC_PHYS_PORT_ID: 265
+                PC_PHYS_PORT_ID: 261
             ?
                 PORT_ID: 275
             :
+                PC_PHYS_PORT_ID: 263
+            ?
+                PORT_ID: 276
+            :
+                PC_PHYS_PORT_ID: 265
+            ?
+                PORT_ID: 277
+            :
+                PC_PHYS_PORT_ID: 267
+            ?
+                PORT_ID: 278
+            :
                 PC_PHYS_PORT_ID: 269
+            ?
+                PORT_ID: 279
+            :
+                PC_PHYS_PORT_ID: 271
             ?
                 PORT_ID: 289
             :
@@ -988,15 +986,31 @@ device:
             ?
                 PORT_ID: 290
             :
-                PC_PHYS_PORT_ID: 277
+                PC_PHYS_PORT_ID: 275
             ?
                 PORT_ID: 291
             :
-                PC_PHYS_PORT_ID: 281
+                PC_PHYS_PORT_ID: 277
             ?
                 PORT_ID: 292
             :
+                PC_PHYS_PORT_ID: 279
+            ?
+                PORT_ID: 293
+            :
+                PC_PHYS_PORT_ID: 281
+            ?
+                PORT_ID: 294
+            :
+                PC_PHYS_PORT_ID: 283
+            ?
+                PORT_ID: 295
+            :
                 PC_PHYS_PORT_ID: 285
+            ?
+                PORT_ID: 296
+            :
+                PC_PHYS_PORT_ID: 287
             ?
                 PORT_ID: 306
             :
@@ -1004,15 +1018,31 @@ device:
             ?
                 PORT_ID: 307
             :
-                PC_PHYS_PORT_ID: 293
+                PC_PHYS_PORT_ID: 291
             ?
                 PORT_ID: 308
             :
-                PC_PHYS_PORT_ID: 297
+                PC_PHYS_PORT_ID: 293
             ?
                 PORT_ID: 309
             :
+                PC_PHYS_PORT_ID: 295
+            ?
+                PORT_ID: 310
+            :
+                PC_PHYS_PORT_ID: 297
+            ?
+                PORT_ID: 311
+            :
+                PC_PHYS_PORT_ID: 299
+            ?
+                PORT_ID: 312
+            :
                 PC_PHYS_PORT_ID: 301
+            ?
+                PORT_ID: 313
+            :
+                PC_PHYS_PORT_ID: 303
             ?
                 PORT_ID: 323
             :
@@ -1020,15 +1050,31 @@ device:
             ?
                 PORT_ID: 324
             :
-                PC_PHYS_PORT_ID: 309
+                PC_PHYS_PORT_ID: 307
             ?
                 PORT_ID: 325
             :
-                PC_PHYS_PORT_ID: 313
+                PC_PHYS_PORT_ID: 309
             ?
                 PORT_ID: 326
             :
+                PC_PHYS_PORT_ID: 311
+            ?
+                PORT_ID: 327
+            :
+                PC_PHYS_PORT_ID: 313
+            ?
+                PORT_ID: 328
+            :
+                PC_PHYS_PORT_ID: 315
+            ?
+                PORT_ID: 329
+            :
                 PC_PHYS_PORT_ID: 317
+            ?
+                PORT_ID: 330
+            :
+                PC_PHYS_PORT_ID: 319
             ?
                 PORT_ID: 340
             :
@@ -1036,15 +1082,31 @@ device:
             ?
                 PORT_ID: 341
             :
-                PC_PHYS_PORT_ID: 325
+                PC_PHYS_PORT_ID: 323
             ?
                 PORT_ID: 342
             :
-                PC_PHYS_PORT_ID: 329
+                PC_PHYS_PORT_ID: 325
             ?
                 PORT_ID: 343
             :
+                PC_PHYS_PORT_ID: 327
+            ?
+                PORT_ID: 344
+            :
+                PC_PHYS_PORT_ID: 329
+            ?
+                PORT_ID: 345
+            :
+                PC_PHYS_PORT_ID: 331
+            ?
+                PORT_ID: 346
+            :
                 PC_PHYS_PORT_ID: 333
+            ?
+                PORT_ID: 347
+            :
+                PC_PHYS_PORT_ID: 335
             ?
                 PORT_ID: 357
             :
@@ -1052,15 +1114,31 @@ device:
             ?
                 PORT_ID: 358
             :
-                PC_PHYS_PORT_ID: 341
+                PC_PHYS_PORT_ID: 339
             ?
                 PORT_ID: 359
             :
-                PC_PHYS_PORT_ID: 345
+                PC_PHYS_PORT_ID: 341
             ?
                 PORT_ID: 360
             :
+                PC_PHYS_PORT_ID: 343
+            ?
+                PORT_ID: 361
+            :
+                PC_PHYS_PORT_ID: 345
+            ?
+                PORT_ID: 362
+            :
+                PC_PHYS_PORT_ID: 347
+            ?
+                PORT_ID: 363
+            :
                 PC_PHYS_PORT_ID: 349
+            ?
+                PORT_ID: 364
+            :
+                PC_PHYS_PORT_ID: 351
             ?
                 PORT_ID: 374
             :
@@ -1068,15 +1146,31 @@ device:
             ?
                 PORT_ID: 375
             :
-                PC_PHYS_PORT_ID: 357
+                PC_PHYS_PORT_ID: 355
             ?
                 PORT_ID: 376
             :
-                PC_PHYS_PORT_ID: 361
+                PC_PHYS_PORT_ID: 357
             ?
                 PORT_ID: 377
             :
+                PC_PHYS_PORT_ID: 359
+            ?
+                PORT_ID: 378
+            :
+                PC_PHYS_PORT_ID: 361
+            ?
+                PORT_ID: 379
+            :
+                PC_PHYS_PORT_ID: 363
+            ?
+                PORT_ID: 380
+            :
                 PC_PHYS_PORT_ID: 365
+            ?
+                PORT_ID: 381
+            :
+                PC_PHYS_PORT_ID: 367
             ?
                 PORT_ID: 391
             :
@@ -1084,15 +1178,31 @@ device:
             ?
                 PORT_ID: 392
             :
-                PC_PHYS_PORT_ID: 373
+                PC_PHYS_PORT_ID: 371
             ?
                 PORT_ID: 393
             :
-                PC_PHYS_PORT_ID: 377
+                PC_PHYS_PORT_ID: 373
             ?
                 PORT_ID: 394
             :
+                PC_PHYS_PORT_ID: 375
+            ?
+                PORT_ID: 395
+            :
+                PC_PHYS_PORT_ID: 377
+            ?
+                PORT_ID: 396
+            :
+                PC_PHYS_PORT_ID: 379
+            ?
+                PORT_ID: 397
+            :
                 PC_PHYS_PORT_ID: 381
+            ?
+                PORT_ID: 398
+            :
+                PC_PHYS_PORT_ID: 383
             ?
                 PORT_ID: 408
             :
@@ -1100,15 +1210,31 @@ device:
             ?
                 PORT_ID: 409
             :
-                PC_PHYS_PORT_ID: 389
+                PC_PHYS_PORT_ID: 387
             ?
                 PORT_ID: 410
             :
-                PC_PHYS_PORT_ID: 393
+                PC_PHYS_PORT_ID: 389
             ?
                 PORT_ID: 411
             :
+                PC_PHYS_PORT_ID: 391
+            ?
+                PORT_ID: 412
+            :
+                PC_PHYS_PORT_ID: 393
+            ?
+                PORT_ID: 413
+            :
+                PC_PHYS_PORT_ID: 395
+            ?
+                PORT_ID: 414
+            :
                 PC_PHYS_PORT_ID: 397
+            ?
+                PORT_ID: 415
+            :
+                PC_PHYS_PORT_ID: 399
             ?
                 PORT_ID: 425
             :
@@ -1116,15 +1242,31 @@ device:
             ?
                 PORT_ID: 426
             :
-                PC_PHYS_PORT_ID: 405
+                PC_PHYS_PORT_ID: 403
             ?
                 PORT_ID: 427
             :
-                PC_PHYS_PORT_ID: 409
+                PC_PHYS_PORT_ID: 405
             ?
                 PORT_ID: 428
             :
+                PC_PHYS_PORT_ID: 407
+            ?
+                PORT_ID: 429
+            :
+                PC_PHYS_PORT_ID: 409
+            ?
+                PORT_ID: 430
+            :
+                PC_PHYS_PORT_ID: 411
+            ?
+                PORT_ID: 431
+            :
                 PC_PHYS_PORT_ID: 413
+            ?
+                PORT_ID: 432
+            :
+                PC_PHYS_PORT_ID: 415
             ?
                 PORT_ID: 442
             :
@@ -1132,15 +1274,31 @@ device:
             ?
                 PORT_ID: 443
             :
-                PC_PHYS_PORT_ID: 421
+                PC_PHYS_PORT_ID: 419
             ?
                 PORT_ID: 444
             :
-                PC_PHYS_PORT_ID: 425
+                PC_PHYS_PORT_ID: 421
             ?
                 PORT_ID: 445
             :
+                PC_PHYS_PORT_ID: 423
+            ?
+                PORT_ID: 446
+            :
+                PC_PHYS_PORT_ID: 425
+            ?
+                PORT_ID: 447
+            :
+                PC_PHYS_PORT_ID: 427
+            ?
+                PORT_ID: 448
+            :
                 PC_PHYS_PORT_ID: 429
+            ?
+                PORT_ID: 449
+            :
+                PC_PHYS_PORT_ID: 431
             ?
                 PORT_ID: 459
             :
@@ -1148,15 +1306,31 @@ device:
             ?
                 PORT_ID: 460
             :
-                PC_PHYS_PORT_ID: 437
+                PC_PHYS_PORT_ID: 435
             ?
                 PORT_ID: 461
             :
-                PC_PHYS_PORT_ID: 441
+                PC_PHYS_PORT_ID: 437
             ?
                 PORT_ID: 462
             :
+                PC_PHYS_PORT_ID: 439
+            ?
+                PORT_ID: 463
+            :
+                PC_PHYS_PORT_ID: 441
+            ?
+                PORT_ID: 464
+            :
+                PC_PHYS_PORT_ID: 443
+            ?
+                PORT_ID: 465
+            :
                 PC_PHYS_PORT_ID: 445
+            ?
+                PORT_ID: 466
+            :
+                PC_PHYS_PORT_ID: 447
             ?
                 PORT_ID: 476
             :
@@ -1164,15 +1338,31 @@ device:
             ?
                 PORT_ID: 477
             :
-                PC_PHYS_PORT_ID: 453
+                PC_PHYS_PORT_ID: 451
             ?
                 PORT_ID: 478
             :
-                PC_PHYS_PORT_ID: 457
+                PC_PHYS_PORT_ID: 453
             ?
                 PORT_ID: 479
             :
+                PC_PHYS_PORT_ID: 455
+            ?
+                PORT_ID: 480
+            :
+                PC_PHYS_PORT_ID: 457
+            ?
+                PORT_ID: 481
+            :
+                PC_PHYS_PORT_ID: 459
+            ?
+                PORT_ID: 482
+            :
                 PC_PHYS_PORT_ID: 461
+            ?
+                PORT_ID: 483
+            :
+                PC_PHYS_PORT_ID: 463
             ?
                 PORT_ID: 493
             :
@@ -1180,15 +1370,31 @@ device:
             ?
                 PORT_ID: 494
             :
-                PC_PHYS_PORT_ID: 469
+                PC_PHYS_PORT_ID: 467
             ?
                 PORT_ID: 495
             :
-                PC_PHYS_PORT_ID: 473
+                PC_PHYS_PORT_ID: 469
             ?
                 PORT_ID: 496
             :
+                PC_PHYS_PORT_ID: 471
+            ?
+                PORT_ID: 497
+            :
+                PC_PHYS_PORT_ID: 473
+            ?
+                PORT_ID: 498
+            :
+                PC_PHYS_PORT_ID: 475
+            ?
+                PORT_ID: 499
+            :
                 PC_PHYS_PORT_ID: 477
+            ?
+                PORT_ID: 500
+            :
+                PC_PHYS_PORT_ID: 479
             ?
                 PORT_ID: 510
             :
@@ -1196,15 +1402,31 @@ device:
             ?
                 PORT_ID: 511
             :
-                PC_PHYS_PORT_ID: 485
+                PC_PHYS_PORT_ID: 483
             ?
                 PORT_ID: 512
             :
-                PC_PHYS_PORT_ID: 489
+                PC_PHYS_PORT_ID: 485
             ?
                 PORT_ID: 513
             :
+                PC_PHYS_PORT_ID: 487
+            ?
+                PORT_ID: 514
+            :
+                PC_PHYS_PORT_ID: 489
+            ?
+                PORT_ID: 515
+            :
+                PC_PHYS_PORT_ID: 491
+            ?
+                PORT_ID: 516
+            :
                 PC_PHYS_PORT_ID: 493
+            ?
+                PORT_ID: 517
+            :
+                PC_PHYS_PORT_ID: 495
             ?
                 PORT_ID: 527
             :
@@ -1212,20 +1434,59 @@ device:
             ?
                 PORT_ID: 528
             :
-                PC_PHYS_PORT_ID: 501
+                PC_PHYS_PORT_ID: 499
             ?
                 PORT_ID: 529
             :
-                PC_PHYS_PORT_ID: 505
+                PC_PHYS_PORT_ID: 501
             ?
                 PORT_ID: 530
             :
+                PC_PHYS_PORT_ID: 503
+            ?
+                PORT_ID: 531
+            :
+                PC_PHYS_PORT_ID: 505
+            ?
+                PORT_ID: 532
+            :
+                PC_PHYS_PORT_ID: 507
+            ?
+                PORT_ID: 533
+            :
                 PC_PHYS_PORT_ID: 509
+            ?
+                PORT_ID: 534
+            :
+                PC_PHYS_PORT_ID: 511
 ...
 ---
 device:
     0:
         PC_PORT:
+            ?
+                PORT_ID: [[272, 279],
+                          [289, 296],
+                          [306, 313],
+                          [323, 330],
+                          [340, 347],
+                          [357, 364],
+                          [374, 381],
+                          [391, 398],
+                          [408, 415],
+                          [425, 432],
+                          [442, 449],
+                          [459, 466],
+                          [476, 483],
+                          [493, 500],
+                          [510, 517],
+                          [527, 534]]
+            :
+                ENABLE: 0
+                SPEED: 200000
+                NUM_LANES: 2
+                FEC_MODE: PC_FEC_RS544_2XN
+                MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: [[1, 2],
                           [17, 18],
@@ -1240,36 +1501,13 @@ device:
                           [170, 171],
                           [187, 188],
                           [204, 205],
-                          [221, 222]]
+                          [221, 222],
+                          [238, 239],
+                          [255, 256]]
             :
                 ENABLE: 0
                 SPEED: 800000
                 NUM_LANES: 8
-                FEC_MODE: PC_FEC_RS544_2XN
-                MAX_FRAME_SIZE: 9416
-            ?
-                PORT_ID: [[238, 241],
-                          [255, 258],
-                          [272, 275],
-                          [289, 292],
-                          [306, 309],
-                          [323, 326],
-                          [340, 343],
-                          [357, 360],
-                          [374, 377],
-                          [391, 394],
-                          [408, 411],
-                          [425, 428],
-                          [442, 445],
-                          [459, 462],
-                          [476, 479],
-                          [493, 496],
-                          [510, 513],
-                          [527, 530]]
-            :
-                ENABLE: 0
-                SPEED: 400000
-                NUM_LANES: 4
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
 ...

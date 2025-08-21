@@ -102,6 +102,7 @@ class DpuCtlPlat():
         self.boot_prog_state = None
         self.shtdn_state = None
         self.dpu_ready_state = None
+        self.dpu_force_pwr_state = None
         self.setup_logger()
         self.pci_dev_path = []
         self.verbosity = False
@@ -375,12 +376,22 @@ class DpuCtlPlat():
             self.log_error(f"Could not update dpu_shtdn_ready for DPU")
             raise e
 
+    def dpu_force_pwr_update(self):
+        """Monitor and read changes to dpu_shtdn_ready sysfs file and map it to corresponding indication"""
+        try:
+            self.dpu_force_pwr_state = self.read_force_power_path()
+            self.dpu_force_pwr_indication = f"{False if self.dpu_force_pwr_state == 1 else True if self.dpu_force_pwr_state == 0 else str(self.dpu_force_pwr_state)+' - N/A'}"
+        except Exception as e:
+            self.log_error(f"Could not update dpu_force_pwr_state for DPU")
+            raise e
+
     def dpu_status_update(self):
         """Update status for all the three relevant sysfs files for DPU monitoring"""
         try:
             self.dpu_boot_prog_update()
             self.dpu_ready_update()
             self.dpu_shtdn_ready_update()
+            self.dpu_force_pwr_update()
         except Exception as e:
             self.log_error(f"Could not obtain status of DPU")
             raise e
