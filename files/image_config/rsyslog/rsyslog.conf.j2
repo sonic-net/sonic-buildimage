@@ -14,7 +14,10 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
+{% if (include_system_eventd == "y" and build_reduce_image_size != "y") 
+      or (syslog_counter and syslog_counter == "true") %}
 $ModLoad omprog
+{% endif %}
 
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
