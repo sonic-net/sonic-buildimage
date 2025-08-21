@@ -127,4 +127,15 @@ class Psu(PddfPsu):
 
         # power is returned in micro watts
         return float(p_out)/1000
+    def get_voltage_high_threshold(self):
+        if self.get_model()=='UP1K21R-1085G':
+            return 56.135
+        
+        return super().get_voltage_high_threshold()
+
+    def get_voltage_low_threshold(self):
+        if self.get_model()=='UP1K21R-1085G':
+            return 52.865
+
+        return super().get_voltage_low_threshold()
 
