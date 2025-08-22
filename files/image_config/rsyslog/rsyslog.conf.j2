@@ -14,6 +14,9 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
+{% if syslog_counter and syslog_counter == "true" %}
+$ModLoad omprog
+{% endif %}
 
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
@@ -121,6 +124,11 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 *.{{ severity }}
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
+
+{% if syslog_counter and syslog_counter == "true" %}
+# update rsyslog counter
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on" signalOnClose="on")
+{% endif%}
 
 #
 # Set the default permissions for all log files.
