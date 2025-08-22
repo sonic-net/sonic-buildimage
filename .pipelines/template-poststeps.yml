@@ -84,7 +84,7 @@ steps:
         readyTimeout: '20000'
         inline: |
           echo "Make link for pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)"
-          mv $(FOLDER_PATH)/latest_build $(FOLDER_PATH)/prev_build || true
+          [ -e $(FOLDER_PATH)/latest_build ] && mv $(FOLDER_PATH)/latest_build $(FOLDER_PATH)/prev_build
           echo $(Build.BuildId) > $(FOLDER_PATH)/latest_build
           LINK_FOLDERNAMES=.
           [[ "$(SONIC_VERSION)" == "$(LATEST_TAG)" ]] && LINK_FOLDERNAMES=". tagged"
@@ -95,7 +95,7 @@ steps:
             BRANCH_NAME=$(BRANCH)
             [[ "${{ parameters.BRANCH_FOLDER }}" != 'default' ]] && BRANCH_NAME=${{ parameters.BRANCH_FOLDER }}
             link_path=/data/pipelines/Networking-acs-buildimage-Official/${{ parameters.PLATFORM_NAME }}/$BRANCH_NAME/$link_foldername
-            [ -e $link_path/latest ] && LATEST_VERSION=$(cat $link_path/latest/target/sonic.version)
+            [ -e $link_path/latest/target/sonic.version ] && LATEST_VERSION=$(cat $link_path/latest/target/sonic.version)
             mkdir -p $link_path
    
             # Skip the change if the latest version is existed
@@ -108,7 +108,7 @@ steps:
             prev_link_path=$(realpath $link_path/latest)
             # If the latest version in the storage account is the same as the current build version, not update the prev link
             if [ -e $prev_link_path ] && [ "$LATEST_VERSION" != "$(SONIC_VERSION)" ]; then
-              [ -L $link_path/prev ] && PREVIOUS_VERSION=$(cat $link_path/prev/target/sonic.version)
+              [ -e $link_path/prev/target/sonic.version ] && PREVIOUS_VERSION=$(cat $link_path/prev/target/sonic.version)
               ln -nsf "$prev_link_path" "$link_path/prev"
             fi
    
