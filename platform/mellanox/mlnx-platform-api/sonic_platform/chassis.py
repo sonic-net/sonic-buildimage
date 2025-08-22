@@ -50,7 +50,7 @@ HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
 #reboot cause related definitions
 REBOOT_CAUSE_ROOT = HWMGMT_SYSTEM_ROOT
-REBOOT_CAUSE_MAX_ = 45
+REBOOT_CAUSE_MAX_WAIT_TIME = 45
 REBOOT_CAUSE_CHECK_INTERVAL = 5
 REBOOT_CAUSE_READY_FILE = '/run/hw-management/config/reset_attr_ready'
 
