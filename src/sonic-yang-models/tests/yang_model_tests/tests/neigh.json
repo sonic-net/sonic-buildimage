@@ -5,7 +5,7 @@
 
     "NEIGH_MISSING_IP": {
         "desc": "Load NEIGH missing IP address",
-        "eStr": ["Invalid JSON data"]
+        "eStrKey": "ListKey"
     },
 
     "NEIGH_INVALID_VLAN": {
@@ -22,5 +22,10 @@
         "desc": "Load NEIGH missing PORTCHANNEL",
         "eStrKey": "InvalidValue",
         "eStr": ["port"]
+    },
+
+    "VALID_NEIGH_PORT": {
+        "desc": "Load valid PORT"
+ 
     }
 }

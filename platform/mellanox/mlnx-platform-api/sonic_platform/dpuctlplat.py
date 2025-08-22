@@ -102,6 +102,7 @@ class DpuCtlPlat():
         self.boot_prog_state = None
         self.shtdn_state = None
         self.dpu_ready_state = None
+        self.dpu_force_pwr_state = None
         self.setup_logger()
         self.pci_dev_path = []
         self.verbosity = False
@@ -258,8 +259,8 @@ class DpuCtlPlat():
                 if os.path.exists(remove_path):
                     self.write_file(remove_path, OperationType.SET.value)
             return True
-        except Exception:
-            self.log_info(f"Failed PCI Removal!")
+        except Exception as e:
+            self.log_error(f"Failed PCI Removal with error {e}")
         return False
 
     def dpu_pci_scan(self):
@@ -268,11 +269,11 @@ class DpuCtlPlat():
             pci_scan_path = "/sys/bus/pci/rescan"
             self.write_file(pci_scan_path, OperationType.SET.value)
             return True
-        except Exception:
-            self.log_info(f"Failed to rescan")
+        except Exception as e:
+            self.log_error(f"Failed to rescan with error {e}")
         return False
 
-    def dpu_power_on(self, forced=False):
+    def dpu_power_on(self, forced=False, skip_pre_post=False):
         """Per DPU Power on API"""
         with self.boot_prog_context():
             self.log_info(f"Power on with force = {forced}")
@@ -286,13 +287,15 @@ class DpuCtlPlat():
                 return_value = self._power_on_force()
             else:
                 return_value = self._power_on()
-            self.dpu_post_startup()
+            if not skip_pre_post:
+                self.dpu_post_startup()
             return return_value
 
-    def dpu_power_off(self, forced=False):
+    def dpu_power_off(self, forced=False, skip_pre_post=False):
         """Per DPU Power off API"""
         with self.boot_prog_context():
-            self.dpu_pre_shutdown()
+            if not skip_pre_post:
+                self.dpu_pre_shutdown()
             self.log_info(f"Power off with force = {forced}")
             if self.read_boot_prog() == BootProgEnum.RST.value:
                 self.log_info(f"Skipping DPU power off as DPU is already powered off")
@@ -373,12 +376,22 @@ class DpuCtlPlat():
             self.log_error(f"Could not update dpu_shtdn_ready for DPU")
             raise e
 
+    def dpu_force_pwr_update(self):
+        """Monitor and read changes to dpu_shtdn_ready sysfs file and map it to corresponding indication"""
+        try:
+            self.dpu_force_pwr_state = self.read_force_power_path()
+            self.dpu_force_pwr_indication = f"{False if self.dpu_force_pwr_state == 1 else True if self.dpu_force_pwr_state == 0 else str(self.dpu_force_pwr_state)+' - N/A'}"
+        except Exception as e:
+            self.log_error(f"Could not update dpu_force_pwr_state for DPU")
+            raise e
+
     def dpu_status_update(self):
         """Update status for all the three relevant sysfs files for DPU monitoring"""
         try:
             self.dpu_boot_prog_update()
             self.dpu_ready_update()
             self.dpu_shtdn_ready_update()
+            self.dpu_force_pwr_update()
         except Exception as e:
             self.log_error(f"Could not obtain status of DPU")
             raise e

@@ -553,7 +553,6 @@ class TestSfp:
         sfp = SFP(0)
         sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
         sfp.is_sw_control = mock.MagicMock(return_value=False)
-        sfp.is_sw_control.return_value = False
         mock_api = mock.MagicMock()
         mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=True)
         mock_api.xcvr_eeprom = mock.MagicMock()
@@ -567,31 +566,19 @@ class TestSfp:
 
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
-        with mock.patch('os.path.exists', mock.MagicMock(return_value=False)):
-            assert sfp.get_temperature_info() == (None, None, None)
+        assert sfp.get_temperature_info() == (False, None, None, None)
 
-        with mock.patch('os.path.exists', mock.MagicMock(return_value=True)):
-            mock_read_int.return_value = None
-            assert sfp.get_temperature_info() == (None, None, None)
-            
-            mock_read_int.return_value = 0.0
-            assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)
-
-            mock_read_int.return_value = 448
-            assert sfp.get_temperature_info() == (56.0, 75.0, 85.0)
-        
-        
         sfp.is_sw_control.return_value = True
         mock_super_get_temperature.return_value = 58.0
-        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
         
         mock_api.get_transceiver_thresholds_support.return_value = None
-        assert sfp.get_temperature_info() == (58.0, None, None)
+        assert sfp.get_temperature_info() == (True, 58.0, None, None)
         
         mock_api.get_transceiver_thresholds_support.return_value = False
-        assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 0.0, 0.0)
         
         sfp.reinit_if_sn_changed.return_value = False
-        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')
-        assert sfp.get_temperature_info() == (0.0, 0.0, 0.0)
+        assert sfp.get_temperature_info() == (False, None, None, None)

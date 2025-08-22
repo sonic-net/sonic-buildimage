@@ -158,11 +158,6 @@ export DEFAULT_CONTAINER_REGISTRY
 export MIRROR_URLS
 export MIRROR_SECURITY_URLS
 
-ifeq ($(SONIC_SMARTSWITCH),1)
-SMARTSWITCH = 1
-export SMARTSWITCH
-endif
-
 ifeq ($(SONIC_ENABLE_PFCWD_ON_START),y)
 ENABLE_PFCWD_ON_START = y
 endif
@@ -232,6 +227,10 @@ endif
 
 ifeq ($(SONIC_INCLUDE_MACSEC),y)
 INCLUDE_MACSEC = y
+endif
+
+ifeq ($(SONIC_INCLUDE_STP),y)
+INCLUDE_STP = y
 endif
 
 ifneq ($(SONIC_INCLUDE_TEAMD),)
@@ -444,7 +443,6 @@ $(info "BUILD_LOG_TIMESTAMP"             : "$(BUILD_LOG_TIMESTAMP)")
 $(info "SONIC_IMAGE_VERSION"             : "$(SONIC_IMAGE_VERSION)")
 $(info "BLDENV"                          : "$(BLDENV)")
 $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
-$(info "SMARTSWITCH"                     : "$(SMARTSWITCH)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
 $(info "INCLUDE_STP"                     : "$(INCLUDE_STP)")
@@ -459,6 +457,7 @@ $(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
 $(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
 $(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
 $(info "INCLUDE_P4RT"                    : "$(INCLUDE_P4RT)")
+$(info "INCLUDE_VS_DASH_SAI"             : "$(INCLUDE_VS_DASH_SAI)")
 $(info "INCLUDE_KUBERNETES"              : "$(INCLUDE_KUBERNETES)")
 $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
 $(info "INCLUDE_MACSEC"                  : "$(INCLUDE_MACSEC)")
@@ -524,13 +523,6 @@ ifeq ($(filter clean,$(MAKECMDGOALS)),)
 $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
 endif
 include Makefile.cache
-
-ifeq ($(SONIC_USE_DOCKER_BUILDKIT),y)
-$(warning "Using SONIC_USE_DOCKER_BUILDKIT will produce larger installable SONiC image because of a docker bug (more details: https://github.com/moby/moby/issues/38903)")
-export DOCKER_BUILDKIT=1
-else
-export DOCKER_BUILDKIT=0
-endif
 
 
 ###############################################################################
@@ -980,7 +972,7 @@ else
 		}
 endif
 		# clean up
-		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi
+		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
 		mv -f $($*_SRC_PATH)/dist/$* $(PYTHON_WHEELS_PATH) $(LOG)
 
@@ -1039,7 +1031,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build --squash --no-cache \
+	docker build --no-cache \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1197,7 +1189,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build --no-cache $$( [[ "$($*.gz_SQUASH)" != n ]] && echo --squash)\
+		docker build --no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1267,7 +1259,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build \
-			$(if $($*.gz_DBG_DEPENDS), --squash --no-cache, --no-cache) \
+			--no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1404,6 +1396,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(SONIC_NETTOOLS) \
                 $(SONIC_RSYSLOG_PLUGIN) \
                 $(SONIC_UTILITIES_DATA) \
+                $(SONIC_CTRMGRD_RS) \
                 $(SONIC_HOST_SERVICES_DATA) \
                 $(BASH) \
                 $(BASH_TACPLUS) \
@@ -1455,7 +1448,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
-	export smartswitch="$(SMARTSWITCH)"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
 	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
@@ -1472,7 +1464,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
 	export include_dash_ha="$(INCLUDE_DASH_HA)"
-	export include_stpd="$(INCLUDE_STP)"
+	export include_stp="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
@@ -1586,12 +1578,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	)
 	export installer_services="$(SERVICES)"
 
-	# Render the base image files templates
-	$(foreach docker, $($*_DOCKERS),\
-		$(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES_J2), \
-			j2 -f env $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file) > $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(basename $(file))
-		)
-	)
 	export installer_extra_files="$(foreach docker, $($*_DOCKERS), $(foreach file, $($(docker:-dbg.gz=.gz)_BASE_IMAGE_FILES), $($(docker:-dbg.gz=.gz)_PATH)/base_image_files/$(file)))"
 
 	j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
@@ -1759,4 +1745,4 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
 
 ## To build some commonly used libs. Some submodules depend on these libs.
 ## It is used in component pipelines. For example: swss needs libnl, libyang
-lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG) $(PROTOBUF) $(LIB_SONIC_DASH_API))
+lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG) $(LIBYANG3) $(PROTOBUF) $(LIB_SONIC_DASH_API))

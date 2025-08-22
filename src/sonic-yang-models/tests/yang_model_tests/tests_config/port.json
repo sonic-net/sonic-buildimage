@@ -180,7 +180,7 @@
                         "lanes": "65",
                         "speed": 25000,
                         "tpid": "0x8100",
-                        "autoneg": 0,
+                        "autoneg": "invalid",
                         "mode":"trunk"
                     }
                 ]
@@ -583,7 +583,7 @@
                         "lanes": "65",
                         "speed": 25000,
                         "tpid": "0x8100",
-                        "link_training": 0
+                        "link_training": "invalid"
                     }
                 ]
             }
@@ -655,7 +655,7 @@
                          "alias": "etp1a",
                          "lanes": "60, 61",
                          "speed": 100000,
-                         "subport": 9,
+                         "subport": 13,
                          "mode":"trunk"
                      }
                  ]

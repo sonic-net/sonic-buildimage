@@ -1773,7 +1773,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
-                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit', ['true', 'false']),
+                      ('sid_vpn_per_vrf_export_explicit',               '{no:no-prefix}sid vpn per-vrf export explicit {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
