@@ -317,6 +317,12 @@ module sonic-device_metadata {
                     description "Enable syslog with OS version feature.";
                     default "false";
                 }
+
+                leaf syslog_counter {
+                    type boolean;
+                    description "Enable syslog counter feature.";
+                    default "false";
+                }
             }
             /* end of container localhost */
         }
