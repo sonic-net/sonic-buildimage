@@ -62,28 +62,18 @@ steps:
         BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
         ManifestDirPath: 'target/'
         BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-    - ${{ if in(parameters.PLATFORM_NAME, 'pensando', 'nvidia-bluefield') }}:
-      - task: AzureCLI@2
-        inputs:
-          azureSubscription: 'sonic-sub-prod'
-          scriptType: 'bash'
-          scriptLocation: 'inlineScript'
-          inlineScript: |
-            az login --identity
-            az storage blob upload-batch --auth-mode login \
-              -d https://sonicstorageinternal.blob.core.windows.net/images/ \
-              -s target \
-              --destination-path pipelines/Networking-acs-buildimage-Official/$(BRANCH)/${{ parameters.PLATFORM_NAME }}/$(Build.BuildId)/target
-    - ${{ else }}:
-      - script: |
-          set -ex
-
-          export AZCOPY_LOG_LOCATION=$(pwd)/azcopy
-          export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
-          PUBLISH_PLATFORM_URL="https://sonicstorageinternal.blob.core.windows.net/images/pipelines/Networking-acs-buildimage-Official/$(BRANCH)/${{ parameters.PLATFORM_NAME }}"
-          PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)"
-          azcopy copy target $PUBLISH_URL --recursive=true --put-md5
-        displayName: "Publish to Azure Storage"
+    - task: AzureCLI@2
+      displayName: Publish to Azure Storage by task
+      inputs:
+        azureSubscription: 'sonic-sub-prod'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az login --identity
+          az storage blob upload-batch --auth-mode login \
+            -d https://sonicstorageinternal.blob.core.windows.net/images/ \
+            -s target \
+            --destination-path pipelines/Networking-acs-buildimage-Official/$(BRANCH)/${{ parameters.PLATFORM_NAME }}/$(Build.BuildId)/target
     - task: SSH@0
       displayName: "Make soft links for trusty8"
       retryCountOnTaskFailure: 5
