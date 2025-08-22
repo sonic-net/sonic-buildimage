@@ -1568,7 +1568,7 @@ class SFP(NvidiaSFPCommon):
                 logger.log_error(f'SFP {index} is not in stable state after initializing, state={s.state}')
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
-        cls.wait_sfp_eeprom_ready(sfp_list, 5)
+        cls.wait_sfp_eeprom_ready(sfp_list, wait_time=SFP_EEPROM_MAX_RETRY_COUNT)
         
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
