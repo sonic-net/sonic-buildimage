@@ -1,0 +1,62 @@
+module sonic-recorder {
+
+    namespace  "http://github.com/sonic-net/sonic-recorder";
+    yang-version 1.1;
+    prefix recorder;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "RECORDER YANG module for SONiC OS";
+
+    revision 2024-01-01 {
+        description "Initial version - Added RECORDER table for Redis recorder service management";
+    }
+
+    container sonic-recorder {
+
+        container RECORDER {
+
+            list RECORDER_LIST {
+                key "name";
+
+                description "RECORDER table for Redis recorder service management";
+
+                leaf name {
+                    description "Database type identifier (e.g., 'config_db', 'state_db', 'app_db', 'asic_db', etc.)";
+                    type string {
+                        length 1..64;
+                    }
+                }
+
+                leaf state {
+                    description "Recorder service state for the specified database";
+                    type enumeration {
+                        enum enabled {
+                            description "Redis recorder service is enabled";
+                        }
+                        enum disabled {
+                            description "Redis recorder service is disabled";
+                        }
+                    }
+                    default disabled;
+                }
+
+            } /* end of list RECORDER_LIST */
+
+        } /* end of container RECORDER */
+
+    } /* end of container sonic-recorder */
+
+} /* end of module sonic-recorder */
