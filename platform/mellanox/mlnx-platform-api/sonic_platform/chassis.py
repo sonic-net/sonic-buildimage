@@ -50,7 +50,7 @@ HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
 #reboot cause related definitions
 REBOOT_CAUSE_ROOT = HWMGMT_SYSTEM_ROOT
-REBOOT_CAUSE_MAX_WAIT_TIME = 45
+REBOOT_CAUSE_MAX_ = 45
 REBOOT_CAUSE_CHECK_INTERVAL = 5
 REBOOT_CAUSE_READY_FILE = '/run/hw-management/config/reset_attr_ready'
 
@@ -501,7 +501,7 @@ class Chassis(ChassisBase):
                     s.on_event(event)
                     
                 if s.in_stable_state():
-                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], wait_time=5)
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], wait_time=SFP_EEPROM_MAX_RETRY_COUNT)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
