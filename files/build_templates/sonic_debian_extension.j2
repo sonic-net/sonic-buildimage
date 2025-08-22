@@ -791,6 +791,13 @@ sudo cp $IMAGE_CONFIGS/pcie-check/pcie-check.service $FILESYSTEM_ROOT_USR_LIB_SY
 echo "pcie-check.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/pcie-check/pcie-check.sh $FILESYSTEM_ROOT/usr/bin/
 
+# Install redis-recorder service if enabled
+if [ "$enable_redis_recorder" == "y" ]; then
+    sudo cp $BUILD_TEMPLATES/redis-recorder.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+    echo "redis-recorder.service" | sudo tee -a $GENERATED_SERVICE_FILE
+    sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable redis-recorder.service
+fi
+
 ## Install package without starting service
 ## ref: https://wiki.debian.org/chroot
 sudo tee -a $FILESYSTEM_ROOT/usr/sbin/policy-rc.d > /dev/null <<EOF
