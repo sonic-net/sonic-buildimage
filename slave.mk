@@ -106,8 +106,6 @@ export FILES_PATH
 export PROJECT_ROOT
 export PTF_ENV_PY_VER
 
-
-
 ###############################################################################
 ## Utility rules
 ## Define configuration, help etc.
