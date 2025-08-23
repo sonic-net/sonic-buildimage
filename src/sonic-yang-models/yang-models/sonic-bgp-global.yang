@@ -445,6 +445,11 @@ module sonic-bgp-global {
                     }
                     description "Maximum duration to suppress a stable route";
                 }
+
+                leaf advertise-all-vni {
+                    type boolean;
+                    description "L2VPN advertise all VNIs";
+                }
             }
         }
 
