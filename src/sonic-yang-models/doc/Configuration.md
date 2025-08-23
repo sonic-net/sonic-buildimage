@@ -1505,10 +1505,10 @@ Redis recorder service configuration is stored in the **RECORDER** table. This t
 ```
 {
     "RECORDER": {
-        "config_db": {
+        "CONFIG_DB": {
             "state": "enabled"
         },
-        "state_db": {
+        "STATE_DB": {
             "state": "enabled"
         }
     }

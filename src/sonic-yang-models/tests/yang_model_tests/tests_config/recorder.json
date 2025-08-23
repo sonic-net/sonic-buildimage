@@ -4,19 +4,19 @@
             "sonic-recorder:RECORDER": {
                 "sonic-recorder:RECORDER_LIST": [
                     {
-                        "name": "config_db",
+                        "name": "CONFIG_DB",
                         "state": "enabled"
                     },
                     {
-                        "name": "state_db",
+                        "name": "STATE_DB",
                         "state": "enabled"
                     },
                     {
-                        "name": "app_db",
+                        "name": "APPL_DB",
                         "state": "disabled"
                     },
                     {
-                        "name": "asic_db",
+                        "name": "ASIC_DB",
                         "state": "enabled"
                     }
                 ]
@@ -28,7 +28,7 @@
             "sonic-recorder:RECORDER": {
                 "sonic-recorder:RECORDER_LIST": [
                     {
-                        "name": "config_db",
+                        "name": "CONFIG_DB",
                         "state": "invalid_state"
                     }
                 ]

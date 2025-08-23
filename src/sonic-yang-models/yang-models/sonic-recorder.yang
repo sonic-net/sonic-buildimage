@@ -31,10 +31,10 @@ module sonic-recorder {
             list RECORDER_LIST {
                 key "name";
 
-                description "RECORDER table for Redis recorder service management";
+                description "RECORDER table for Redis recorder service management - supports dynamic database configuration from database_config.json";
 
                 leaf name {
-                    description "Database type identifier (e.g., 'config_db', 'state_db', 'app_db', 'asic_db', etc.)";
+                    description "Database type identifier from database_config.json (e.g., 'CONFIG_DB', 'STATE_DB', 'APPL_DB', 'ASIC_DB', 'COUNTERS_DB', etc.)";
                     type string {
                         length 1..64;
                     }
