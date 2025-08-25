@@ -108,7 +108,8 @@
                 "tpid": "0x8100",
                 "mtu": "9100",
                 "lacp_key": "auto",
-                "mode":"trunk"
+                "mode":"trunk",
+                "system_mac": "02:26:9b:73:c1:1a"
             },
             "PortChannel0004": {
                 "admin_status": "up",
@@ -133,7 +134,8 @@
                 "tpid": "0x8100",
                 "fast_rate": "false",
                 "fallback" : "true",
-                "mode":"routed"
+                "mode":"routed",
+                "system_mac": "aa:bb:cc:dd:ee:ff"
             }
         },
         "PORTCHANNEL_INTERFACE": {
@@ -1232,6 +1234,7 @@
             }
         },
         "INTERFACE": {
+            "Ethernet120": {},
             "Ethernet112": {},
             "Ethernet14": {},
             "Ethernet16": {},
@@ -3078,6 +3081,20 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "EVPN_ETHERNET_SEGMENT": {
+            "Ethernet120": {
+                "type": "TYPE_0_OPERATOR_CONFIGURED",
+                "esi": "00:01:02:03:04:05:06:07:08:FF",
+                "df_pref": "12012"
+            }
+        },
+        "EVPN_MH_GLOBAL": {
+            "default" : {
+                "startup_delay": "1800",
+                "mac_holdtime": "1000",
+                "neigh_holdtime": "600"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
