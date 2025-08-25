@@ -54,6 +54,7 @@ class TestSmartSwitchThermalUpdater:
     @mock.patch('sonic_platform.utils.write_file')
     def test_configuration(self, mock_write):
         dpu = mock.MagicMock()
+        dpu.get_hw_mgmt_id = mock.MagicMock(return_value=1)
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 1
         self.reset_hw_mgmt_mocks()
@@ -71,7 +72,7 @@ class TestSmartSwitchThermalUpdater:
         hw_management_independent_mode_update.thermal_data_clean_asic.assert_called_once()
         hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 0)
-        assert updater._timer.schedule.call_count == 3
+        assert updater._timer.schedule.call_count == 2
         # Called for DPU with time 24/2 = 12
         assert updater._timer.schedule.call_args_list[0][0][0] == 12
         # Expectation on stop - timer stop and suspend = 1
@@ -86,7 +87,6 @@ class TestSmartSwitchThermalUpdater:
         load config for DPU along with start of timer"""
         updater._timer = mock.MagicMock()
         updater.start()
-        mock_write.assert_not_called()
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_ddr_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
         hw_management_dpu_thermal_update.thermal_data_dpu_drive_clear.assert_called_once_with(dpu.get_hw_mgmt_id())
@@ -95,7 +95,6 @@ class TestSmartSwitchThermalUpdater:
         # Expectation on stop - timer stop
         updater.stop()
         updater._timer.stop.assert_called_once()
-        mock_write.assert_not_called()
 
     def test_update_dpu(self):
         self.reset_hw_mgmt_mocks()
@@ -215,6 +214,7 @@ class TestSmartSwitchThermalUpdater:
         hw_management_dpu_thermal_update.thermal_data_clean_module.reset_mock()
         hw_management_dpu_thermal_update.thermal_data_dpu_drive_clear.reset_mock()
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_clear.reset_mock()
+        hw_management_dpu_thermal_update.thermal_data_dpu_ddr_clear.reset_mock()
         hw_management_dpu_thermal_update.thermal_data_dpu_ddr_set.reset_mock()
         hw_management_dpu_thermal_update.thermal_data_dpu_cpu_core_set.reset_mock()
         hw_management_dpu_thermal_update.thermal_data_dpu_drive_set.reset_mock()

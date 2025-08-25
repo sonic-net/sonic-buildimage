@@ -566,6 +566,7 @@ class TestSfp:
 
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
+        mock_super_get_temperature.return_value = None
         assert sfp.get_temperature_info() == (False, None, None, None)
 
         sfp.is_sw_control.return_value = True

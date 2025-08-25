@@ -82,14 +82,6 @@ class SmartswitchThermalUpdater(ThermalUpdater):
         self.load_tc_config_dpu()
         if self.host_mgmt_mode:
             super().start()
-        else:
-            self._timer.start()
-
-    def stop(self):
-        if self.host_mgmt_mode:
-            super().stop()
-        else:
-            self._timer.stop()
 
     def clean_thermal_data_dpu(self):
         for dpu in self._dpu_list:
