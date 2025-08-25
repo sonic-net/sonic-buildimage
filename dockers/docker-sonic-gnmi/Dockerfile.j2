@@ -12,7 +12,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-RUN apt-get update
+RUN apt-get update &&     \
+    apt-get install -f -y \
+        build-essential   \
+        python3-dev
+
+# Upgrade pip via PyPI
+RUN pip3 install --upgrade pip
+RUN apt-get purge -y python3-pip
+RUN pip3 install netifaces==0.11.0
 
 {% if docker_sonic_gnmi_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -22,10 +30,27 @@ RUN apt-get update
 {{ install_debian_packages(docker_sonic_gnmi_debs.split(' ')) }}
 {%- endif %}
 
+{% if docker_sonic_gnmi_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_sonic_gnmi_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_sonic_gnmi_whls.split(' ')) }}
+{% endif %}
+
 COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
+
+## Clean up
+RUN apt-get purge -y          \
+        python3-dev           \
+        build-essential    && \
+    apt-get clean -y       && \
+    apt-get autoclean -y   && \
+    apt-get autoremove -y  && \
+    rm -rf /debs ~/.cache
 
 FROM $BASE
 
