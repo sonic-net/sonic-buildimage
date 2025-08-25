@@ -7,6 +7,7 @@ route-map TO_MB_PATH_V4 deny 10
   match ip address prefix-list DEFAULT_IPV4
 !
 route-map TO_MB_PATH_V4 permit 1000
+  set community 8075:9120 additive
 !
 route-map FROM_MB_PATH_V4 permit 10
   match ip address prefix-list DEFAULT_IPV4
