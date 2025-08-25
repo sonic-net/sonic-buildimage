@@ -862,9 +862,6 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             sw_control = self.is_sw_control()
-            if not sw_control:
-                return sw_control, None, None, None
-
             sn_changed = self.reinit_if_sn_changed()
             # software control, read from EEPROM
             temperature = super().get_temperature()

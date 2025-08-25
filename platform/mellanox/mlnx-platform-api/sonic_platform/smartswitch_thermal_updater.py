@@ -80,16 +80,35 @@ class SmartswitchThermalUpdater(ThermalUpdater):
     def start(self):
         self.clean_thermal_data_dpu()
         self.load_tc_config_dpu()
-        if self.host_mgmt_mode:
+
+        # Check if any DPU is present
+        dpu_present = any(dpu.get_oper_status() == DPU_STATUS_ONLINE for dpu in self._dpu_list)
+
+        if not dpu_present:
+            # If no DPU is present, run thermal updater regardless of mode
+            logger.log_notice("No DPU present, starting thermal updater for smart switch")
             super().start()
         else:
-            self._timer.start()
+            # If DPU is present, use original logic
+            if self.host_mgmt_mode:
+                super().start()
+            else:
+                self._timer.start()
 
     def stop(self):
-        if self.host_mgmt_mode:
+        # Check if any DPU is present
+        dpu_present = any(dpu.get_oper_status() == DPU_STATUS_ONLINE for dpu in self._dpu_list)
+
+        if not dpu_present:
+            # If no DPU is present, stop thermal updater
+            logger.log_notice("No DPU present, stopping thermal updater")
             super().stop()
         else:
-            self._timer.stop()
+            # If DPU is present, use original logic
+            if self.host_mgmt_mode:
+                super().stop()
+            else:
+                self._timer.stop()
 
     def clean_thermal_data_dpu(self):
         for dpu in self._dpu_list:
@@ -148,5 +167,32 @@ class SmartswitchThermalUpdater(ThermalUpdater):
             self.update_dpu_temperature(dpu, fault_state=True)
 
     def update_dpu(self):
-        for dpu in self._dpu_list:
-            self.update_single_dpu(dpu)
+        # Check if any DPU is present
+        dpu_present = any(dpu.get_oper_status() == DPU_STATUS_ONLINE for dpu in self._dpu_list)
+
+        if not dpu_present:
+            logger.log_notice("No DPU present, running thermal updater for smart switch")
+            # Run thermal updater when DPU is not present
+            super().update_thermal()
+        else:
+            # If DPU is present, check mode
+            if self.host_mgmt_mode:
+                # FW mode: Sonic is responsible for reading SDK and putting to hw-management/thermal
+                logger.log_notice("DPU present in host management mode, running thermal updater for SDK data")
+                super().update_thermal()
+            else:
+                # SW mode: Update DPU thermal data for all DPUs (original logic)
+                logger.log_notice("DPU present in SW mode, updating DPU thermal data")
+                for dpu in self._dpu_list:
+                    self.update_single_dpu(dpu)
+
+        # Schedule next update
+        dpu_poll_interval = 3
+        data = utils.load_json_file(TC_CONFIG_FILE, log_func=None)
+        if data:
+            dev_parameters = data.get('dev_parameters', {})
+            dpu_parameter = dev_parameters.get('dpu\\d+_module', {})
+            dpu_poll_interval_config = dpu_parameter.get('poll_time')
+            dpu_poll_interval = int(dpu_poll_interval_config) / 2 if dpu_poll_interval_config else dpu_poll_interval
+
+        self._timer.schedule(dpu_poll_interval, self.update_dpu)
