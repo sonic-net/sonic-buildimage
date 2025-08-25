@@ -130,6 +130,9 @@ if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
+# Set 120 sec flex counter delay
+ORCHAGENT_ARGS+=" -D 120"
+
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
 trap '' SIGHUP
 
