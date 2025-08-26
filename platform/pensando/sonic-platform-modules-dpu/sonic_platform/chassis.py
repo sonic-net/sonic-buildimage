@@ -23,7 +23,7 @@ except ImportError as e:
 
 NUM_THERMAL = 2
 NUM_VOLTAGE_SENSORS = 6
-NUM_CURRENT_SENSORS = 3
+NUM_CURRENT_SENSORS = 6
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 HOST_CHK_CMD = "docker > /dev/null 2>&1"
@@ -140,7 +140,7 @@ class Chassis(ChassisBase):
         global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
         if board_id == self._api_helper.mtfuji_board_id:
-            NUM_THERMAL = 5
+            NUM_THERMAL = 8
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):
                 thermal = Thermal(index)
