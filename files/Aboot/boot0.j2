@@ -883,7 +883,6 @@ write_regular_configs() {
     cmdline_add "loop=$image_name/fs.squashfs"
     cmdline_add loopfstype=squashfs
     write_cmdline
-    write_kdump_cmdline
 }
 
 run_kexec() {
@@ -930,6 +929,7 @@ regular_install() {
 
     info "Generating boot-config, machine.conf and cmdline"
     write_regular_configs "$image_path"
+    write_kdump_cmdline
 
     info "Installing image under $image_path"
     extract_image
