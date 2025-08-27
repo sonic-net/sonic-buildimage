@@ -25,6 +25,9 @@
                 "name": "MAC_CPLDB"
             },
             {
+                "name": "MAC_CPLDC"
+            },
+            {
                 "name": "FAN_CPLD"
             },
             {
@@ -32,9 +35,6 @@
             },
             {
                 "name": "BIOS"
-            },
-            {
-                "name": "MAC_CPLDC"
             }
         ],
         "fans": [
