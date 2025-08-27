@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::process::Command;
  
 use serde::Serialize;
-
+ 
 #[derive(Serialize)]
 struct HealthStatus {
     check_bmp_db: String,
