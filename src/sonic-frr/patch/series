@@ -57,3 +57,6 @@
 0057-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
 0058-mgmtd-normalize-argument-order-to-copy-dst-src.patch
 0059-zebra-Ensure-that-the-dplane-can-send-the-full-packe.patch
+0060-staticd-Do-not-log-uninitialized-nexthop-variable.patch
+0061-staticd-fix-deref-of-NULL-pointer-in-srv6-code.patch
+0062-static-SRv6-Fixing-uninstall-and-reinstall-uA-Sids-upon-Intf-flaps.patch
