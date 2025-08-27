@@ -162,7 +162,7 @@ class TestThermalUpdater:
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
-        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(True, 55.0, 70.0, 80.0))
+        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(55.0, 70.0, 80.0))
 
         updater = ThermalUpdater([mock_sfp])
         updater.update_single_module(mock_sfp)
@@ -187,7 +187,7 @@ class TestThermalUpdater:
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
-        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(True, 55.0, 70.0, 80.0))
+        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(55.0, 70.0, 80.0))
 
         updater = ThermalUpdater([mock_sfp])
         # First call - module not present initially
@@ -203,7 +203,7 @@ class TestThermalUpdater:
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
-        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(True, None, None, None))
+        mock_sfp.get_temperature_info = mock.MagicMock(return_value=(None, None, None))
 
         updater = ThermalUpdater([mock_sfp])
         updater.update_single_module(mock_sfp)

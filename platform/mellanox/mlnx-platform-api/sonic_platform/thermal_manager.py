@@ -36,17 +36,16 @@ class ThermalManager(ThermalManagerBase):
         :return:
         """
         dpus_present = DeviceDataManager.get_platform_dpus_data()
-        host_mgmt_mode = DeviceDataManager.is_module_host_management_mode()
-        if not dpus_present and host_mgmt_mode:
-            # Non smart switch behaviour has highest priority
+        if not dpus_present:
+            # Non smart switch behaviour
             from .chassis import Chassis
             cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps())
-        elif dpus_present:
+        else:
+            # Smart switch with DPUs
             from .chassis import Chassis
             dpus = Chassis.chassis_instance.get_all_modules()
             cls.thermal_updater_task = smartswitch_thermal_updater.SmartswitchThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps(),
-                                                                                             dpu_list=dpus,
-                                                                                             is_host_mgmt_mode=host_mgmt_mode)
+                                                                                             dpu_list=dpus)
         if cls.thermal_updater_task:
             cls.thermal_updater_task.start()
 

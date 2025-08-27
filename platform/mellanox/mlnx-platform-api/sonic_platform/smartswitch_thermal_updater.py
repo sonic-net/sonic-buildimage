@@ -58,11 +58,10 @@ logger = logger.Logger('smart-switch-thermal-updater')
 
 
 class SmartswitchThermalUpdater(ThermalUpdater):
-    def __init__(self, sfp_list, dpu_list, is_host_mgmt_mode=True):
+    def __init__(self, sfp_list, dpu_list):
         super().__init__(sfp_list=sfp_list)
         self._dpu_list = dpu_list
         self._dpu_status = {}
-        self.host_mgmt_mode = is_host_mgmt_mode
 
     def load_tc_config_dpu(self):
         dpu_poll_interval = 3
@@ -80,8 +79,7 @@ class SmartswitchThermalUpdater(ThermalUpdater):
     def start(self):
         self.clean_thermal_data_dpu()
         self.load_tc_config_dpu()
-        if self.host_mgmt_mode:
-            super().start()
+        super().start()
 
     def clean_thermal_data_dpu(self):
         for dpu in self._dpu_list:

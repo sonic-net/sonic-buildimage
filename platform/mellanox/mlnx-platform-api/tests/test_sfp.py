@@ -201,7 +201,9 @@ class TestSfp:
         mock_dir = '/tmp/mock_eeprom/0/i2c-0x50'
         os.makedirs(os.path.join(mock_dir), exist_ok=True)
         for expect_sfp_type in expect_sfp_types:
-            source_eeprom_file = os.path.join(test_path, 'input_platform', expect_sfp_type + '_page0')
+            # Use absolute path to input_platform directory
+            input_platform_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'input_platform')
+            source_eeprom_file = os.path.join(input_platform_dir, expect_sfp_type + '_page0')
             shutil.copy(source_eeprom_file, os.path.join(mock_dir, 'data'))
             assert sfp._get_sfp_type_str(mock_eeprom_path) == expect_sfp_type
             sfp._sfp_type_str = None
@@ -225,24 +227,24 @@ class TestSfp:
         page_num, page, page_offset = sfp._get_page_and_page_offset(255)
         assert page_num == 0
         assert page == '/tmp/0/i2c-0x50/data'
-        assert page_offset is 255
+        assert page_offset == 255
 
         mock_get_type_str.return_value = 'cmis'
         page_num, page, page_offset = sfp._get_page_and_page_offset(256)
         assert page_num == 1
         assert page == '/tmp/1/data'
-        assert page_offset is 0
+        assert page_offset == 0
 
         mock_get_type_str.return_value = 'sff8472'
         page_num, page, page_offset = sfp._get_page_and_page_offset(511)
         assert page_num == -1
         assert page == '/tmp/0/i2c-0x51/data'
-        assert page_offset is 255
+        assert page_offset == 255
 
         page_num, page, page_offset = sfp._get_page_and_page_offset(512)
         assert page_num == 1
         assert page == '/tmp/1/data'
-        assert page_offset is 0
+        assert page_offset == 0
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
@@ -372,7 +374,7 @@ class TestSfp:
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
-    def test_is_sw_control(self, mock_mode, mock_read):
+    def test_is_sw_control(self, mock_read):
         sfp = SFP(0)
         mock_mode.return_value = False
         assert not sfp.is_sw_control()
@@ -383,7 +385,6 @@ class TestSfp:
         mock_read.return_value = 1
         assert sfp.is_sw_control()
         
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=True))
     def test_get_lpmode_cmis_host_mangagement(self, mock_read):
@@ -399,7 +400,6 @@ class TestSfp:
         mock_api.get_lpmode.return_value = True
         assert sfp.get_lpmode()
 
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=True))
     def test_set_lpmode_cmis_host_mangagement(self):
         sfp = SFP(0)
@@ -567,19 +567,19 @@ class TestSfp:
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
         mock_super_get_temperature.return_value = None
-        assert sfp.get_temperature_info() == (False, None, None, None)
+        assert sfp.get_temperature_info() == (None, None, None)
 
         sfp.is_sw_control.return_value = True
         mock_super_get_temperature.return_value = 58.0
-        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
         
         mock_api.get_transceiver_thresholds_support.return_value = None
-        assert sfp.get_temperature_info() == (True, 58.0, None, None)
+        assert sfp.get_temperature_info() == (58.0, None, None)
         
         mock_api.get_transceiver_thresholds_support.return_value = False
-        assert sfp.get_temperature_info() == (True, 58.0, 0.0, 0.0)
+        assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
         
         sfp.reinit_if_sn_changed.return_value = False
-        assert sfp.get_temperature_info() == (True, 58.0, 75.0, 85.0)
+        assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')
-        assert sfp.get_temperature_info() == (False, None, None, None)
+        assert sfp.get_temperature_info() == (None, None, None)
