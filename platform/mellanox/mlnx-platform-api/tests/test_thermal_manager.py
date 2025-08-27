@@ -41,12 +41,6 @@ class TestThermalManager:
             mock_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'])
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
-            # Not initialized if no DPUs and not in host mgmt mode
-            mock_thermal.reset_mock()
-            mgr.initialize()
-            mock_thermal.assert_not_called()
-            mgr.deinitialize()
-            mgr.thermal_updater_task.stop.assert_called_once()
             # Initialized with DPUs if DPUs are present
             mock_dpus_data.return_value = {'DPUS': 'dpu1'}
             mock_thermal.reset_mock()

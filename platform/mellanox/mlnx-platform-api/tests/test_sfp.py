@@ -248,8 +248,12 @@ class TestSfp:
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read, mock_read_int):
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    def test_sfp_get_presence(self, mock_is_sw_control, mock_read, mock_read_int):
         sfp = SFP(0)
+
+        # Mock is_sw_control to return False (firmware control)
+        mock_is_sw_control.return_value = False
 
         mock_read_int.return_value = 1
         mock_read.return_value = None
@@ -374,7 +378,7 @@ class TestSfp:
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
-    def test_is_sw_control(self, mock_read):
+    def test_is_sw_control(self, mock_mode, mock_read):
         sfp = SFP(0)
         mock_mode.return_value = False
         assert not sfp.is_sw_control()
@@ -384,7 +388,7 @@ class TestSfp:
         assert not sfp.is_sw_control()
         mock_read.return_value = 1
         assert sfp.is_sw_control()
-        
+
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=True))
     def test_get_lpmode_cmis_host_mangagement(self, mock_read):
@@ -566,9 +570,28 @@ class TestSfp:
 
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
-        mock_super_get_temperature.return_value = None
+
+        # Test firmware control (is_sw_control = False) with None temperature
+        def mock_read_int_none_side_effect(file_path, *args, **kwargs):
+            return None
+
+        mock_read_int.side_effect = mock_read_int_none_side_effect
         assert sfp.get_temperature_info() == (None, None, None)
 
+        # Test firmware control with valid temperature
+        def mock_read_int_side_effect(file_path, *args, **kwargs):
+            if 'temperature/input' in file_path:
+                return 448  # 56.0 * 8.0
+            elif 'temperature/threshold_hi' in file_path:
+                return 480  # 60.0 * 8.0
+            elif 'temperature/threshold_lo' in file_path:
+                return 448  # 56.0 * 8.0
+            return None
+
+        mock_read_int.side_effect = mock_read_int_side_effect
+        assert sfp.get_temperature_info() == (56.0, 60.0, 56.0)  # threshold_hi=480, threshold_lo=448
+
+        # Test software control (is_sw_control = True)
         sfp.is_sw_control.return_value = True
         mock_super_get_temperature.return_value = 58.0
         assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
@@ -579,6 +602,10 @@ class TestSfp:
         mock_api.get_transceiver_thresholds_support.return_value = False
         assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
         
+        # Reset cached thresholds and set thresholds support back to True
+        sfp.temp_high_threshold = None
+        sfp.temp_critical_threshold = None
+        mock_api.get_transceiver_thresholds_support.return_value = True
         sfp.reinit_if_sn_changed.return_value = False
         assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')

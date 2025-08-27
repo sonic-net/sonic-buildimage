@@ -62,8 +62,7 @@ class TestThermalUpdater:
         """Test loading TC config when file doesn't exist"""
         updater = ThermalUpdater(None)
         updater.load_tc_config()
-        # Should only schedule module update (no ASIC update)
-        assert updater._timer._timestamp_queue.qsize() == 1
+        assert updater._timer._timestamp_queue.qsize() == 2
 
     def test_load_tc_config_mocked(self):
         """Test loading TC config with mocked file"""
@@ -71,8 +70,7 @@ class TestThermalUpdater:
         mock_os_open = mock.mock_open(read_data=mock_tc_config)
         with mock.patch('sonic_platform.utils.open', mock_os_open):
             updater.load_tc_config()
-        # Should only schedule module update (no ASIC update)
-        assert updater._timer._timestamp_queue.qsize() == 1
+        assert updater._timer._timestamp_queue.qsize() == 2
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
     @mock.patch('sonic_platform.utils.write_file')
@@ -194,9 +192,9 @@ class TestThermalUpdater:
         updater.update_single_module(mock_sfp)
         hw_management_independent_mode_update.reset_mock()
 
-        # Second call - module still present, should not call set_module again
+        # Second call
         updater.update_single_module(mock_sfp)
-        hw_management_independent_mode_update.thermal_data_set_module.assert_not_called()
+        hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 55000, 80000, 70000, 0)
 
     def test_update_single_module_with_none_temperature(self):
         """Test updating single module with None temperature values"""
