@@ -686,6 +686,7 @@ start() {
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
         -v /var/run/hw-management:/var/run/hw-management:rw \
+        -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
@@ -729,7 +730,11 @@ start() {
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
+{%- if sonic_asic_platform == "mellanox" %}
+        -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:rw \
+{%- else %}
         -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:ro \
+{%- endif %}
         -v /usr/share/sonic/templates/rsyslog-container.conf.j2:/usr/share/sonic/templates/rsyslog-container.conf.j2:ro \
 {%- if sonic_asic_platform != "mellanox" %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
