@@ -6,7 +6,7 @@ resources:
   - repository: cisco-8000
     type: github
     name: Cisco-8000-sonic/platform-cisco-8000
-    endpoint: cisco-connection
+    endpoint: cisco-connection-new
   - repository: acs-buildimage
     type: git
     name: One/Networking-acs-buildimage
