@@ -256,6 +256,12 @@ if grep -q '\bsonic_fips=1\b' /proc/cmdline && echo " $extra_cmdline_linux" | gr
     extra_cmdline_linux="$extra_cmdline_linux sonic_fips=1"
 fi
 
+# Override FIPS option when SONIC_FIPS set in the environment variable
+if [ -n "$SONIC_FIPS" ]; then
+    extra_cmdline_linux=$(echo $extra_cmdline_linux | sed -E 's/\bsonic_fips=.\b//')
+    extra_cmdline_linux="$extra_cmdline_linux sonic_fips=$SONIC_FIPS"
+fi
+
 echo "EXTRA_CMDLINE_LINUX=$extra_cmdline_linux"
 
 # Update Bootloader Menu with installed image
