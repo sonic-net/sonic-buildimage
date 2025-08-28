@@ -274,11 +274,11 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_comex_pwr_fail':
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             f'{self.reboot_base_path}reset_from_main_board':
-                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
+                ("Reboot", 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
             f'{self.reboot_base_path}reset_pwr_off':
-                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
+                ("Reboot", 'Reset due to Power off'),
         }
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
