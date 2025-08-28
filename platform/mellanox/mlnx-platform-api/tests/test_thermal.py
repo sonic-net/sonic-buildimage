@@ -150,44 +150,10 @@ class TestThermal:
         assert thermal.get_high_threshold() is None
         assert thermal.get_high_critical_threshold() is None
 
-    @mock.patch('os.path.exists', mock.MagicMock(return_value=True))
-    def test_sfp_thermal(self):
-        from sonic_platform.thermal import THERMAL_NAMING_RULE
-        sfp = SFP(0)
-        thermal_list = sfp.get_all_thermals()
-        assert len(thermal_list) == 1
-        thermal = thermal_list[0]
-        rule = THERMAL_NAMING_RULE['sfp thermals']
-        start_index = rule.get('start_index', 1)
-        assert thermal.get_name() == rule['name'].format(start_index)
-        assert thermal.get_position_in_parent() == 1
-        assert thermal.is_replaceable() == False
-        sfp.get_presence = mock.MagicMock(return_value=True)
-        sfp.get_temperature = mock.MagicMock(return_value=35.4)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
-        assert thermal.get_temperature() == 35.4
-        assert thermal.get_high_threshold() == 70
-        assert thermal.get_high_critical_threshold() == 80
-        sfp.get_presence = mock.MagicMock(return_value=False)
-        sfp.get_temperature = mock.MagicMock(return_value=35.4)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
-        assert thermal.get_temperature() is None
-        assert thermal.get_high_threshold() is None
-        assert thermal.get_high_critical_threshold() is None
-        sfp.get_presence = mock.MagicMock(return_value=True)
-        sfp.get_temperature = mock.MagicMock(return_value=0)
-        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=0)
-        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=None)
-        assert thermal.get_temperature() is None
-        assert thermal.get_high_threshold() is None
-        assert thermal.get_high_critical_threshold() is None
-
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_temperature(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', None, None, None, None, 1000, 1)
+        thermal = Thermal('test', 'temp_file', None, None, 1)
         mock_read.return_value = 35727
         assert thermal.get_temperature() == 35.727
 
@@ -200,7 +166,7 @@ class TestThermal:
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_high_threshold(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', None, None, None, None, None, 1000, 1)
+        thermal = Thermal('test', None, None, None, 1)
         assert thermal.get_high_threshold() is None
 
         thermal.high_threshold = 'high_th_file'
@@ -216,7 +182,7 @@ class TestThermal:
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_high_critical_threshold(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', None, None, None, None, None, 1000, 1)
+        thermal = Thermal('test', None, None, None, 1)
         assert thermal.get_high_critical_threshold() is None
 
         thermal.high_critical_threshold = 'high_th_file'
