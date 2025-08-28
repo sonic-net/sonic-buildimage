@@ -332,7 +332,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC_DRAM1",
@@ -340,7 +340,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC",
@@ -348,7 +348,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "CPU",
@@ -356,7 +356,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             }
         ],
         "sfps": [
