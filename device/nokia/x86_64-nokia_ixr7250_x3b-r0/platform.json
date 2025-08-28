@@ -332,7 +332,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC0_DRAM1",
@@ -340,7 +340,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC1_DRAM0",
@@ -348,7 +348,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC1_DRAM1",
@@ -356,7 +356,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC0",
@@ -364,7 +364,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "ASIC1",
@@ -372,7 +372,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             },
             {
                 "name": "CPU",
@@ -380,7 +380,7 @@
                 "low-threshold": false,
                 "high-threshold": true,
                 "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "high-crit-threshold": true
             }
         ],
         "sfps": [
