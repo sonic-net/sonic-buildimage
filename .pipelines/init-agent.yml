@@ -14,22 +14,6 @@ steps:
       # Install Azure cli
       curl -sL https://aka.ms/InstallAzureCLIDeb | sed 's/apt-get/apt-get -o DPkg::Lock::Timeout=600 -o DPkg::Lock::Tries=3/' | sudo bash
       arch=$(docker run --rm publicmirror.azurecr.io/debian:bookworm dpkg --print-architecture)
-      if echo $arch | grep arm64; then
-        echo "arm64 don't need azcopy"
-      else
-        az login --identity --client-id a9a0b0f2-cd25-4abf-b3a2-2ef735a27c89
-        # Install Azcopy
-        if echo $arch | grep amd64; then
-          wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
-        else
-          wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
-        fi
-        sudo chmod a+x azcopy
-        sudo mv -f azcopy /usr/local/bin/
-        azcopy  --version
-        export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
-        azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
-      fi
 
       # Init /data
       if ! mountpoint /data;then

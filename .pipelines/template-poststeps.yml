@@ -69,7 +69,7 @@ steps:
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          az login --identity
+          az account show
           az storage blob upload-batch --auth-mode login \
             -d https://sonicstorageinternal.blob.core.windows.net/images/ \
             -s target \
