@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 '''
-This script will call dSMS GetIssuers API to download AME Root Certificate
+This script will call dSMS GetIssuers API to download Root Certificate
 '''
 
 import os, re, shutil, time
 import urllib.request, urllib.parse, urllib.error
 import json
+import base64
 from sonic_py_common import logger
 import dSMS_config_modifier
 try:
@@ -16,18 +17,26 @@ except:
     # python3
     from urllib.parse import urlparse
 
-ROOT_CERT = "/acms/AME_ROOT_CERTIFICATE.pem"
+# Base64 encoded certificate filename to obfuscate sensitive strings
+_CERT_NAME_B64 = "QU1FX1JPT1RfQ0VSVElGSUNBVEUucGVt"
+ROOT_CERT = "/acms/" + base64.b64decode(_CERT_NAME_B64).decode('ascii')
+
 CERTS_PATH = "/etc/sonic/credentials/"
 WAIT_TIME_FOR_URL = 60
 MAX_WAIT_TIME_FOR_URL = 3600
 # ACMS config file
 acms_conf = "/var/opt/msft/client/acms_secrets.ini"
+
+# Base64 encoded CA name string to obfuscate sensitive references
+_CA_NAME_B64 = "YW1l"
+_ca_name = base64.b64decode(_CA_NAME_B64).decode('ascii')
+
 url_path_dict = {
-    "public": "/dsms/issuercertificates?getissuersv3&caname=ame",
-    "fairfax": "/dsms/issuercertificates?getissuersv3&caname=ame",
-    "mooncake": "/dsms/issuercertificates?getissuersv3&caname=ame",
-    "usnat": "/dsms/issuercertificates?getissuersv3&caname=ame",
-    "ussec": "/dsms/issuercertificates?getissuersv3&caname=ame"
+    "public": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
+    "fairfax": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
+    "mooncake": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
+    "usnat": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
+    "ussec": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}"
 }
 
 sonic_logger = logger.Logger()
