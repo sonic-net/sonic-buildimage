@@ -61,6 +61,7 @@ yang_files = [
     'sonic-feature.yang',
     'sonic-fips.yang',
     'sonic-hash.yang',
+    'sonic-trimming.yang',
     'sonic-system-defaults.yang',
     'sonic-interface.yang',
     'sonic-kdump.yang',
@@ -142,6 +143,7 @@ yang_files = [
     'sonic-grpcclient.yang',
     'sonic-serial-console.yang',
     'sonic-smart-switch.yang',
+    'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
 ]
 

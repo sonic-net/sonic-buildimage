@@ -8,6 +8,7 @@ include $(PLATFORM_PATH)/sai.dep
 include $(PLATFORM_PATH)/platform-modules-s6000.dep
 include $(PLATFORM_PATH)/platform-modules-dell.dep
 include $(PLATFORM_PATH)/platform-modules-arista.dep
+include $(PLATFORM_PATH)/platform-modules-nexthop.dep
 include $(PLATFORM_PATH)/platform-modules-ingrasys.dep
 include $(PLATFORM_PATH)/platform-modules-accton.dep
 include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
@@ -39,4 +40,5 @@ include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.dep
 ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.dep
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.dep
+include $(PLATFORM_PATH)/../components/docker-gbsyncd-milleniob.dep
 endif

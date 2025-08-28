@@ -1,0 +1,65 @@
+From ebbb87841b9e9e8b9ae7d2dc4c44afa73e332496 Mon Sep 17 00:00:00 2001
+From: Tal Berlowitz <talber@nvidia.com>
+Date: Thu, 8 May 2025 03:40:39 +0300
+Subject: [PATCH] Partial memleak fix due to unfreed strdup
+
+---
+ nss_tacplus.c | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/nss_tacplus.c b/nss_tacplus.c
+index 8e9eede..400b3c6 100644
+--- a/nss_tacplus.c
++++ b/nss_tacplus.c
+@@ -245,12 +245,32 @@ static void init_useradd_info()
+     user->shell = strdup("/bin/bash");
+ }
+ 
++static void free_useradd_info()
++{
++    useradd_info_t *user;
++
++    user = &useradd_grp_list[MIN_TACACS_USER_PRIV];
++    if(user->info)
++        free(user->info);
++    if(user->secondary_grp)
++        free(user->secondary_grp);
++    if(user->shell)
++        free(user->shell);
++
++    user = &useradd_grp_list[MAX_TACACS_USER_PRIV];
++    if(user->info)
++        free(user->info);
++    if(user->secondary_grp)
++        free(user->secondary_grp);
++    if(user->shell)
++        free(user->shell);
++}
++
+ static int parse_config(const char *file)
+ {
+     FILE *fp;
+     char buf[512] = {0};
+ 
+-    init_useradd_info();
+     fp = fopen(file, "r");
+     if(!fp) {
+         syslog(LOG_ERR, "%s: %s fopen failed", nssname, file);
+@@ -901,6 +921,7 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+     if(!strcmp(name, "*"))
+         return NSS_STATUS_NOTFOUND;
+ 
++    init_useradd_info();
+     result = parse_config(config_file);
+ 
+     if(result) {
+@@ -930,5 +951,6 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+         }
+     }
+ 
++    free_useradd_info();
+     return status;
+ }
+-- 
+2.34.1
+

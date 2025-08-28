@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-base-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-base-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -49,10 +51,17 @@ COPY ["files/readiness_probe.sh", "/usr/bin/"]
 COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
 
 ## Clean up
-RUN apt-get purge -y               \
-        python3-dev                \
-        build-essential         && \
-    apt-get clean -y            && \
-    apt-get autoclean -y        && \
-    apt-get autoremove -y       && \
-    rm -rf /debs /python-wheels ~/.cache
+
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+RUN apt-get purge -y        \
+        libxslt-dev         \
+        libz-dev
+{%- endif %}
+
+RUN apt-get purge -y        \
+        python3-dev         \
+        build-essential
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /

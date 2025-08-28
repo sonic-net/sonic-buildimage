@@ -42,7 +42,6 @@ endif
 
 # Target machine for EDK-Host defconfig
 TARGET_MACHINE ?= x86_64
-
 # Noisy kernel build
 KBUILD_VERBOSE = 1
 

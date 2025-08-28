@@ -50,7 +50,7 @@ RUN python3 -m pip install aiohttp \
                  azure-kusto-data \
                  azure-kusto-ingest \
                  defusedxml \
-                 celery[redis]==5.2.7 \
+                 celery[redis]==5.5.2 \
                  cffi \
                  contextlib2==0.6.0.post1 \
                  cryptography==41.0.2 \
@@ -218,13 +218,13 @@ RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
-    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
+    && wget https://packages.trafficmanager.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
 
@@ -289,6 +289,8 @@ RUN chmod +x start.sh \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ptf/dataplane.py  -i /azp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
     && patch -u -b /usr/local/lib/python3.8/dist-packages/ansible/plugins/loader.py -i /azp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch
+
+RUN rm -rf /usr/local/lib/python3.8/dist-packages/tests
 
 USER $user
 WORKDIR /var/$user

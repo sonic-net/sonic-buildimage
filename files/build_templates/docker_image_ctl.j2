@@ -682,9 +682,11 @@ start() {
         -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
         -v /var/run/hw-management:/var/run/hw-management:rw \
+        -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
@@ -695,6 +697,11 @@ start() {
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
 {%- endif %}
+{%- endif %}
+{%- endif %}
+{%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "syncd" %}
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
 {%- endif %}
 {%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
@@ -723,7 +730,11 @@ start() {
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
+{%- if sonic_asic_platform == "mellanox" %}
+        -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:rw \
+{%- else %}
         -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:ro \
+{%- endif %}
         -v /usr/share/sonic/templates/rsyslog-container.conf.j2:/usr/share/sonic/templates/rsyslog-container.conf.j2:ro \
 {%- if sonic_asic_platform != "mellanox" %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
@@ -744,6 +755,8 @@ start() {
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
         "docker-$GBSYNCD_PLATFORM":latest \
+{%- elif docker_image_reference is defined and docker_image_reference is not none %}
+        {{docker_image_reference}} \
 {%- elif docker_image_name is defined %}
         {{docker_image_name}}:latest \
 {%- else %}
@@ -765,7 +778,7 @@ start() {
 
 wait() {
     {%- if docker_container_name == "database" %}
-    docker wait $DOCKERNAME
+    /usr/bin/docker-rs wait $DOCKERNAME
     {%- else %}
     /usr/local/bin/container wait $DOCKERNAME
     {%- endif %}

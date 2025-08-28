@@ -1,26 +1,14 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 {% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
+ARG BASE={{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
+ARG BASE={{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
 {% else %}
-FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bullseye
+ARG BASE={{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bullseye
 {% endif %}
 
-# Clean documentation in FROM image
-RUN find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
-
-# Clean doc directories that are empty or only contain empty directories
-RUN while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
-    rm -rf               \
-    /usr/share/man/*     \
-    /usr/share/groff/*   \
-    /usr/share/info/*    \
-    /usr/share/lintian/* \
-    /usr/share/linda/*   \
-    /var/cache/man/*     \
-    /usr/share/locale/*
+FROM $BASE AS base
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -45,6 +33,8 @@ RUN apt-get update &&        \
         python3-pip          \
         python-is-python3    \
         vim-tiny             \
+# Install rsync for copying over only changes between layers
+        rsync                \
 # Install redis-tools
         redis-tools          \
 # common dependencies
@@ -100,13 +90,6 @@ RUN apt-get -y purge   \
 {{ install_debian_packages(docker_base_bullseye_debs.split(' ')) }}
 {%- endif %}
 
-# Clean up apt
-# Remove /var/lib/apt/lists/*, could be obsoleted for derived images
-RUN apt-get clean -y                     && \
-    apt-get autoclean -y                 && \
-    apt-get autoremove -y                && \
-    rm -rf /var/lib/apt/lists/* /tmp/* ~/.cache
-
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
@@ -114,3 +97,7 @@ COPY ["root/.vimrc", "/root/.vimrc"]
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+
+FROM scratch
+
+COPY --from=base / /

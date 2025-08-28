@@ -112,6 +112,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LowerSpineRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -670,11 +680,38 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_ORCH_DASH_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_northbond_dash_zmq_enabled": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_ORCH_ROUTE_ZMQ": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "orch_northbond_route_zmq_enabled": true
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_SYSLOG_WITH_OS_VERSION_ENABLED": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "syslog_with_osversion": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SYSLOG_COUNTER_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "syslog_counter": true
                 }
             }
         }

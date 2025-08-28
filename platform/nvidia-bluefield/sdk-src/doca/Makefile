@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	pushd doca/
 	find . -type f -exec touch {} +
+
+	patch -p1 < ../0001-Add-WA-to-a-bug-in-doca-build-script-which-matches-o.patch
 
 	source /etc/profile.d/mlnx-dpdk-aarch64-linux-gnu.sh
 	source ./devtools/public/set_env_variables.sh  --deb

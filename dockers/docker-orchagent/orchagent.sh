@@ -28,9 +28,13 @@ else
     ORCHAGENT_ARGS+="-b 1024 "
 fi
 
-# Set synchronous mode if it is enabled in CONFIG_DB
+# Set zmq mode by default for smartswitch DPU
+# Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
+if [ "$SWITCH_TYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
 
@@ -78,7 +82,7 @@ elif [ "$platform" == "pensando" ]; then
         MAC_ADDRESS=$(ip link show eth0-midplane | grep ether | awk '{print $2}')
     fi
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
-elif [ "$platform" == "marvell" ]; then
+elif [ "$platform" == "marvell-prestera" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
     CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
     if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
@@ -89,20 +93,23 @@ else
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 fi
 
-# Enable ZMQ for SmartSwitch
+# Enable ZMQ
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
     mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
     if [[ $midplane_mgmt_state == "UP" ]]; then
         # Enable ZMQ with eth0-midplane interface name
-        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane:8100"
+        ORCHAGENT_ARGS+=" -q tcp://eth0-midplane"
     elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
         # If eth0-midplane interface does not up, enable ZMQ with eth0 address
-        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
+        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}"
     else
-        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
+        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
     fi
+else
+    # For other platforms, use the default ZMQ address
+    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1"
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
@@ -115,6 +122,12 @@ fi
 ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -R"
+fi
+
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
