@@ -33,7 +33,11 @@ switch_sku = {
   "0X41RN":(' AC', ' Exhaust'),
   "0Y3N82":(' AC', ' Intake'),
   "0W4CMG":(' DC', ' Exhaust'),
-  "04T94Y":(' DC', ' Intake')
+  "04T94Y":(' DC', ' Intake'),
+  "0MYYKP":(' AC', ' Exhaust'),
+  "061C11":(' AC', ' Intake'),
+  "03C99H":(' AC', ' Intake'),
+  "0MTYT2":(' AC', ' Exhaust')
 }
 
 ipmi_status, ipmi_sdr_list = getstatusoutput_noshell(IPMI_SENSOR_DATA)
