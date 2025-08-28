@@ -1143,6 +1143,7 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
 done
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
+sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
