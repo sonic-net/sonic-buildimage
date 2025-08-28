@@ -34,9 +34,6 @@ parameters:
   default:
   - vs
   - broadcom
-  - centec
-  - centec-arm64
-  - generic
   - marvell-prestera-armhf
   - marvell-prestera-arm64
   - mellanox

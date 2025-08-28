@@ -73,23 +73,6 @@ jobs:
             docker_syncd_rpc_image: yes
             platform_rpc: brcm
 
-        - name: centec
-          variables:
-            dbg_image: yes
-            docker_syncd_rpc_image: yes
-            platform_rpc: centec
-
-        - name: centec-arm64
-          ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
-          timeoutInMinutes: 2880
-          variables:
-            PLATFORM_ARCH: arm64
-
-        - name: generic
-          variables:
-            dbg_image: yes
-
         - name: marvell-teralynx
           variables:
             dbg_image: yes
@@ -97,7 +80,6 @@ jobs:
         - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-armhf
-          timeoutInMinutes: 2880
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
@@ -105,7 +87,6 @@ jobs:
         - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
             pool: sonicbld-arm64
-          timeoutInMinutes: 2880
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
