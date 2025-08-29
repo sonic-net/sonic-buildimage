@@ -153,6 +153,7 @@ SDK_SFP_BLOCKING_ERRORS = [
 # SFP constants
 SFP_PAGE_SIZE = 256          # page size of page0h
 SFP_UPPER_PAGE_OFFSET = 128  # page size of other pages
+SFP_EEPROM_MAX_RETRY_COUNT = 5
 
 # SFP sysfs path constants
 SFP_PAGE0_PATH = '0/i2c-0x50/data'
@@ -1067,10 +1068,20 @@ class SFP(NvidiaSFPCommon):
         Returns:
             enum: software control or firmware control
         """
-        api = self.get_xcvr_api()
-        if not api:
-            logger.log_error(f'Failed to get api object for SFP {self.sdk_index}, probably module EEPROM is not ready')
-            return SFP_FW_CONTROL
+        retry = 0
+        while True:
+            api = self.get_xcvr_api()
+            if api:
+                break
+            retry += 1
+            if retry <= SFP_EEPROM_MAX_RETRY_COUNT:
+                logger.log_warning(f'Cannot read module EEPROM first byte for SFP {self.sdk_index}, '
+                                   f'retry {retry} of {SFP_EEPROM_MAX_RETRY_COUNT}')
+                time.sleep(1)
+            else:
+                logger.log_error(f'Failed to get api object for SFP {self.sdk_index}, '
+                                 'probably module EEPROM is not ready, set to firmware control')
+                return SFP_FW_CONTROL
         
         if not self.is_supported_for_software_control(api):
             return SFP_FW_CONTROL
@@ -1557,7 +1568,7 @@ class SFP(NvidiaSFPCommon):
                 logger.log_error(f'SFP {index} is not in stable state after initializing, state={s.state}')
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
-        cls.wait_sfp_eeprom_ready(sfp_list, 2)
+        cls.wait_sfp_eeprom_ready(sfp_list, wait_time=SFP_EEPROM_MAX_RETRY_COUNT)
         
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
