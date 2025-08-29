@@ -1,12 +1,12 @@
-From 5c38fd1612907680718e3fc37970cf99ef31bf08 Mon Sep 17 00:00:00 2001
+From dd0d95e3a83b33c74b1db985ea49db7a0f0cf512 Mon Sep 17 00:00:00 2001
 From: mirror-bot <mirror@github-actions>
-Date: Tue, 29 Jul 2025 01:42:09 -0500
-Subject: [PATCH] 0018-ISC-DHCP-support-dhcp-relay-in-vrf
+Date: Tue, 26 Aug 2025 02:28:19 -0500
+Subject: [PATCH] ISC-DHCP-support-dhcp-relay-in-vrf
 
 ---
  common/socket.c  |  7 +++++++
- relay/dhcrelay.c | 10 +++++++++-
- 2 files changed, 16 insertions(+), 1 deletion(-)
+ relay/dhcrelay.c | 20 ++++++++++++++------
+ 2 files changed, 21 insertions(+), 6 deletions(-)
 
 diff --git a/common/socket.c b/common/socket.c
 index 87c62a2..4dfad76 100644
@@ -34,7 +34,7 @@ index 87c62a2..4dfad76 100644
  		addr->sin_len = sizeof(*addr);
  #endif
 diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
-index a516829..14750e1 100644
+index a516829..416f6d9 100644
 --- a/relay/dhcrelay.c
 +++ b/relay/dhcrelay.c
 @@ -44,6 +44,7 @@ int lexline;
@@ -61,6 +61,30 @@ index a516829..14750e1 100644
  			usage("Unknown command: %s", argv[i]);
   		} else {
  			struct hostent *he;
+@@ -971,11 +979,6 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+ 			 "%s interface.", ip->name);
+ 		return;
+ 	}
+-	if (ip->address_count < 1 || ip->addresses == NULL) {
+-		log_info("Discarding packet received on %s interface that "
+-			 "has no IPv4 address assigned.", ip->name);
+-		return;
+-	}
+ 
+ 	if (enable_support_for_dual_tor) {
+ 		if (packet->yiaddr.s_addr) {
+@@ -1110,6 +1113,11 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+ 	if (!(ip->flags & INTERFACE_REQUESTED))
+ 		return;
+ 
++	if (ip->address_count < 1 || ip->addresses == NULL) {
++		log_info("Discarding packet received on %s interface that "
++			 "has no IPv4 address assigned.", ip->name);
++		return;
++	}
+ 	/* Add relay agent options if indicated.   If something goes wrong,
+ 	 * drop the packet.  Note this may set packet->giaddr if RFC3527
+ 	 * is enabled. */
 -- 
 2.25.1
 
