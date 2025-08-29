@@ -867,7 +867,7 @@ class SFP(NvidiaSFPCommon):
             if not sw_control:
                 # firmware control, read from SDK sysfs
                 temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
-                temperature = utils.read_int_from_file(temp_file)
+                temperature = utils.read_int_from_file(temp_file, log_func=None)
                 if temperature is None:
                     return None, None, None
                 temperature = temperature / SFP_TEMPERATURE_SCALE
@@ -892,10 +892,10 @@ class SFP(NvidiaSFPCommon):
                 threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
                 threshold_lo_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_lo'
 
-                warning_threshold = utils.read_int_from_file(threshold_lo_file)
+                warning_threshold = utils.read_int_from_file(threshold_lo_file, log_func=None)
                 warning_threshold = warning_threshold / SFP_TEMPERATURE_SCALE if warning_threshold is not None else None
 
-                critical_threshold = utils.read_int_from_file(threshold_hi_file)
+                critical_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
                 critical_threshold = critical_threshold / SFP_TEMPERATURE_SCALE if critical_threshold is not None else None
             else:
                 # Read threshold from EEPROM
@@ -1502,7 +1502,7 @@ class SFP(NvidiaSFPCommon):
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
         cls.wait_sfp_eeprom_ready(sfp_list, 2)
-        
+
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
