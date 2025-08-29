@@ -25,7 +25,7 @@ if [ "$ARCHITECTURE" == "armhf" ]; then
     DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
 fi
 
-if [ "$DISTRIBUTION" == "buster" ]; then
+if [ "$DISTRIBUTION" == "buster" ] || [ "$DISTRIBUTION" == "bullseye" ]; then
     DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
@@ -40,6 +40,10 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
 
     DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
     DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/,http://packages.trafficmanager.net/snapshot/debian-security/$DEBIAN_SECURITY_TIMESTAMP/
+
+	if [ "$DISTRIBUTION" == "buster" ] || [ "$DISTRIBUTION" == "bullseye" ]; then
+		DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/,http://packages.trafficmanager.net/snapshot/debian/$DEBIAN_TIMESTAMP/
+	fi
 
     mkdir -p target/versions/default
     if [ ! -f target/versions/default/versions-mirror ]; then

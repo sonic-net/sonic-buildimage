@@ -50,6 +50,7 @@ declare -r SPC1_ASIC="spc1"
 declare -r SPC2_ASIC="spc2"
 declare -r SPC3_ASIC="spc3"
 declare -r SPC4_ASIC="spc4"
+declare -r SPC5_ASIC="spc5"
 declare -r BF3_NIC="bf3"
 declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
@@ -59,6 +60,7 @@ declare -rA FW_FILE_MAP=( \
     [$SPC2_ASIC]="fw-SPC2.mfa" \
     [$SPC3_ASIC]="fw-SPC3.mfa" \
     [$SPC4_ASIC]="fw-SPC4.mfa" \
+    [$SPC5_ASIC]="fw-SPC5.mfa" \
     [$BF3_NIC]="fw-BF3.mfa" \
 )
 
@@ -204,10 +206,10 @@ function UnlockStateChange() {
 }
 
 function GetMstDeviceType() {
-    local -r asic_type=$(GetAsicType)
+    local -r asic_type=$(/usr/bin/asic_detect/asic_detect.sh)
 
     case $asic_type in
-    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC})
+    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC}|${SPC5_ASIC})
         echo "Spectrum"
         return ${EXIT_SUCCESS}
         ;;
@@ -247,48 +249,6 @@ function WaitForDevice() {
     fi
 
     LogInfo "${DEVICE_TYPE} ASIC successfully detected at ${SPC_MST_DEV}"
-}
-
-function GetAsicType() {
-    local -r VENDOR_ID="15b3"
-
-    local -r SPC1_PRODUCT_ID="cb84"
-    local -r SPC2_PRODUCT_ID="cf6c"
-    local -r SPC3_PRODUCT_ID="cf70"
-    local -r SPC4_PRODUCT_ID="cf80"
-    local -r BF3_PRODUCT_ID="a2dc"
-
-    local -i QUERY_RETRY_COUNT="0"
-    local -i QUERY_RETRY_COUNT_MAX="10"
-    local pcitree=$(lspci -n 2>/dev/null)
-    ERROR_CODE="$?"
-
-    while [[ ("${QUERY_RETRY_COUNT}" -lt "QUERY_RETRY_COUNT_MAX") && ("${ERROR_CODE}" != "${EXIT_SUCCESS}") ]]; do
-        sleep 1s
-        ((QUERY_RETRY_COUNT++))
-        pcitree=$(lspci -n 2>/dev/null)
-        ERROR_CODE="$?"
-    done
-
-    if echo $pcitree | grep "${VENDOR_ID}:${SPC1_PRODUCT_ID}" &>/dev/null; then
-        echo "${SPC1_ASIC}"
-        exit "${EXIT_SUCCESS}"
-    elif echo $pcitree | grep "${VENDOR_ID}:${SPC2_PRODUCT_ID}" &>/dev/null; then
-        echo "${SPC2_ASIC}"
-        exit "${EXIT_SUCCESS}"
-    elif echo $pcitree | grep "${VENDOR_ID}:${SPC3_PRODUCT_ID}" &>/dev/null; then
-        echo "${SPC3_ASIC}"
-        exit "${EXIT_SUCCESS}"
-    elif echo $pcitree | grep "${VENDOR_ID}:${SPC4_PRODUCT_ID}" &>/dev/null; then
-        echo "${SPC4_ASIC}"
-        exit "${EXIT_SUCCESS}"
-    elif echo $pcitree | grep "${VENDOR_ID}:${BF3_PRODUCT_ID}" &>/dev/null; then
-        echo "${BF3_NIC}"
-        exit "${EXIT_SUCCESS}"
-    fi
-
-    echo "${UNKN_ASIC}"
-    exit "${EXIT_FAILURE}"
 }
 
 function GetSPCMstDevice() {
@@ -412,7 +372,7 @@ function GetAvailableFwVersion() {
 function UpgradeFW() {
     local -r _FW_BIN_PATH="$1"
 
-    local -r _ASIC_TYPE="$(GetAsicType)"
+    local -r _ASIC_TYPE="$(/usr/bin/asic_detect/asic_detect.sh)"
     if [[ "${_ASIC_TYPE}" = "${UNKN_ASIC}" ]]; then
         ExitFailure "failed to detect ASIC type"
     fi
