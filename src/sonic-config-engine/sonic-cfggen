@@ -319,6 +319,7 @@ def main():
     parser.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
     parser.add_argument("-H", "--platform-info", help="read platform and hardware info", action='store_true')
     parser.add_argument("-s", "--redis-unix-sock-file", help="unix sock file for redis connection")
+    parser.add_argument("-D", "--from-db-table", help="read only specified ConfigDB table(s); repeatable", action='append', default=[])
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--template", help="render the data with the template file", action="append", default=[],
                        type=lambda opt_value: tuple(opt_value.split(',')) if ',' in opt_value else (opt_value, sys.stdout))
@@ -408,7 +409,7 @@ def main():
     if args.additional_data is not None:
         deep_update(data, json.loads(args.additional_data))
 
-    if args.from_db:
+    if args.from_db or args.from_db_table:
         use_unix_sock = True if os.getuid() == 0 else False
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
@@ -417,8 +418,18 @@ def main():
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
 
         configdb.connect()
-        deep_update(data, FormatConverter.db_to_output(configdb.get_config()))
 
+        if args.from_db:
+            deep_update(data, FormatConverter.db_to_output(configdb.get_config()))
+        else:
+            # Merge only the requested tables
+            for table_name in args.from_db_table:
+                table_data = configdb.get_table(table_name)
+                if table_data:
+                    deep_update(data, {table_name: table_data})
+                else:
+                    print("Warning: ConfigDB table '{}' not found or empty".format(table_name), file=sys.stderr)
+                    sys.exit(1)
 
     # the minigraph file must be provided to get the mac address for backend asics
     # or switch_type chassis_packet
