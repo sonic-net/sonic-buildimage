@@ -86,7 +86,8 @@ installer_image_path="$image_path/$installer_image"
 
 boot_config="$target_path/boot-config"
 
-cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
+kernel_cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
+default_cmdline_blacklist="crashkernel"
 
 # for backward compatibility with the sonic_upgrade= behavior
 install="${install:-${sonic_upgrade:-}}"
@@ -202,6 +203,11 @@ cmdline_clear() {
 
 cmdline_add() {
     echo "$@" >> /tmp/append
+}
+
+cmdline_remove() {
+    # remove all occurences of parameter and its value from the cmdline
+    sed -i "s/\b${1}=[^ ]*\s*//g" /tmp/append
 }
 
 cmdline_has() {
@@ -477,6 +483,17 @@ read_system_eeprom() {
 get_eeprom_value() {
     local key="$1"
     sed -n "s#^$key: *##p" "$target_path/.system-prefdl" || :
+}
+
+write_kdump_cmdline() {
+    local sid="$(cmdline_get sid | sed 's/Ssd$//')"
+    case "$sid" in
+        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
+            if ! cmdline_has crashkernel; then
+                cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
+            fi
+            ;;
+    esac
 }
 
 write_platform_specific_cmdline() {
@@ -802,6 +819,11 @@ write_default_cmdline() {
         # for the Aboot part. Take an educated guess at a right delimiter.
         # Subject to breakage if EOS or SONiC cmdline change.
         cat /proc/cmdline | sed -E 's/^(.*) rw .*$/\1/' | tr ' ' '\n' | cmdline_append
+
+        # Remove any parameters that are inadvertently inherited
+        for field in $default_cmdline_blacklist; do
+            cmdline_remove "$field"
+        done
     fi
 
     cmdline_add "$delimiter"
@@ -822,7 +844,7 @@ write_cmdline() {
     #         this file can be either packaged in the swi or generated from userland
     for cpath in "$image_path/kernel-cmdline" "$image_path/kernel-cmdline-append"; do
         if [ -f "$cpath" ]; then
-            for field in $cmdline_allowlist; do
+            for field in $kernel_cmdline_allowlist; do
                cat "$cpath" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
             done
         fi
@@ -852,6 +874,7 @@ write_secureboot_configs() {
     # setting panic= has the side effect of disabling the initrd shell on error
     cmdline_add panic=0
     write_cmdline
+    write_kdump_cmdline
 }
 
 write_regular_configs() {
@@ -859,6 +882,7 @@ write_regular_configs() {
     cmdline_add "loop=$image_name/fs.squashfs"
     cmdline_add loopfstype=squashfs
     write_cmdline
+    write_kdump_cmdline
 }
 
 run_kexec() {
