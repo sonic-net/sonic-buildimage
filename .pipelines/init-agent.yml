@@ -13,7 +13,7 @@ steps:
 
       # Install Azure cli
       curl -sL https://aka.ms/InstallAzureCLIDeb | sed 's/apt-get/apt-get -o DPkg::Lock::Timeout=600 -o DPkg::Lock::Tries=3/' | sudo bash
-      arch=$(docker run --rm publicmirror.azurecr.io/debian:bookworm dpkg --print-architecture)
+      arch=$(docker run --rm publicmirror.azurecr.io/debian:latest dpkg --print-architecture)
 
       # Init /data
       if ! mountpoint /data;then
