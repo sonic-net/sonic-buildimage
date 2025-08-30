@@ -9,7 +9,8 @@ $(DOCKER_CONFIG_ENGINE_BOOKWORM)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(LIBYANG_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
-                                          $(SONIC_EVENTD)
+                                          $(SONIC_EVENTD) \
+                                          $(SONIC_SUPERVISORD_UTILITIES_RS)
 $(DOCKER_CONFIG_ENGINE_BOOKWORM)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                                   $(SONIC_YANG_MGMT_PY3) \
                                                   $(SONIC_YANG_MODELS_PY3) \
