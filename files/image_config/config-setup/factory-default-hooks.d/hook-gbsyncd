@@ -1,0 +1,44 @@
+# factory-default-hook: gbsyncd
+#
+# By default, gbsyncd service is disabled. If the platform has gearbox chip,
+# enable gbsyncd service in init_cfg.json.
+
+# PLATFORM and HW_KEY must be defined, which are from config-setup
+[ -z $PLATFORM ] && exit 1
+[ -z $HW_KEY ] && exit 1
+
+DEVPATH="/usr/share/sonic/device"
+GBSYNCDINI="${DEVPATH}/${PLATFORM}/gbsyncd.ini"
+
+enable_feature_gbsyncd()
+{
+    local init_cfg="/etc/sonic/init_cfg.json"
+    local tmp_init_cfg=$(mktemp)
+
+    if ! jq -e '.FEATURE.gbsyncd' $init_cfg >/dev/null; then
+        return
+    fi
+
+    echo "Enable feature gbsyncd in factory-default-hook"
+    jq --indent 4 '.FEATURE.gbsyncd.state = "enabled"' $init_cfg > $tmp_init_cfg
+    mv $tmp_init_cfg $init_cfg
+    systemctl unmask gbsyncd.service
+}
+
+if [ ! -f "$GBSYNCDINI" ]; then
+    GBSYNCDINI="${DEVPATH}/${PLATFORM}/${HW_KEY}/gbsyncd.ini"
+fi
+
+if [ -f "$GBSYNCDINI" ]; then
+    while IFS="=" read -r key value; do
+        case "$key" in
+            platform)
+                if [[ "$value" = gbsyncd* ]]; then
+                    enable_feature_gbsyncd
+                    break
+                fi
+                ;;
+        esac
+    done < "$GBSYNCDINI"
+fi
+
