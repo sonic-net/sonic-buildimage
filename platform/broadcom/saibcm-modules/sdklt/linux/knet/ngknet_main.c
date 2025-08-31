@@ -1684,15 +1684,15 @@ static const struct net_device_ops ngknet_netdev_ops = {
 static void
 ngknet_get_drvinfo(struct net_device *ndev, struct ethtool_drvinfo *drvinfo)
 {
-    strlcpy(drvinfo->driver, "linux_ngknet", sizeof(drvinfo->driver));
+    strscpy(drvinfo->driver, "linux_ngknet", sizeof(drvinfo->driver));
     snprintf(drvinfo->version, sizeof(drvinfo->version), "%d", NGKNET_IOC_VERSION);
-    strlcpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
-    strlcpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
+    strscpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
+    strscpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
 static int
-ngknet_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
+ngknet_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
 {
     int rv;
 
@@ -1947,7 +1947,7 @@ ngknet_dev_info_get(int dn)
     }
 
     dev->dev_info.dev_no = dn;
-    strlcpy(dev->dev_info.type_str, drv_ops[dev->pdma_dev.dev_type]->drv_desc,
+    strscpy(dev->dev_info.type_str, drv_ops[dev->pdma_dev.dev_type]->drv_desc,
             sizeof(dev->dev_info.type_str));
     dev->dev_info.vdev = dev->vdev;
     return SHR_E_NONE;
@@ -2552,7 +2552,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         DBG_CMD(("NGKNET_DEV_INIT\n"));
         if (dev->flags & NGKNET_DEV_ACTIVE) {
             DBG_CMD(("NGKNET_DEV_INIT, retrieve device configurations.\n"));
-            strlcpy(dev_cfg->name, pdev->name, sizeof(dev_cfg->name));
+            strscpy(dev_cfg->name, pdev->name, sizeof(dev_cfg->name));
             dev_cfg->dev_id = pdev->dev_id;
             dev_cfg->nb_grp = pdev->ctrl.nb_grp;
             dev_cfg->bm_grp = pdev->ctrl.bm_grp;
@@ -2578,7 +2578,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             break;
         }
         memset(pdev, 0, sizeof(*pdev));
-        strlcpy(pdev->name, dev_cfg->name, sizeof(pdev->name));
+        strscpy(pdev->name, dev_cfg->name, sizeof(pdev->name));
         pdev->dev_id = dev_cfg->dev_id;
         for (dt = 0; dt < drv_num; dt++) {
             if (!drv_ops[dt]) {
@@ -2586,7 +2586,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             }
             if (!strcasecmp(dev_cfg->type_str, drv_ops[dt]->drv_desc)) {
                 pdev->dev_type = dt;
-                strlcpy(dev->dev_info.var_str, dev_cfg->var_str,
+                strscpy(dev->dev_info.var_str, dev_cfg->var_str,
                         sizeof(dev->dev_info.var_str));
                 break;
             }

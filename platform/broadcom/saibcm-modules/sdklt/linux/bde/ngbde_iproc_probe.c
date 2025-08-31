@@ -115,10 +115,10 @@ iproc_cmicd_probe(struct platform_device *pldev)
  *
  * \retval 0 No errors
  */
-static int
+static void
 iproc_cmicd_remove(struct platform_device *pldev)
 {
-    return 0;
+    return;
 }
 
 /*! Matching compatible property with device tree. */

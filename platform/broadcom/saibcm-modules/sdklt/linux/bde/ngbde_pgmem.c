@@ -55,7 +55,7 @@
  ******************************************************************************/
 
 /*! Maximum size the kernel can allocate in a single allocation. */
-#define MEM_CHUNK_SIZE_MAX      (1 << (MAX_ORDER - 1 + PAGE_SHIFT))
+#define MEM_CHUNK_SIZE_MAX      (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))
 
 /*! Default block size we wil request from the kernel. */
 #define MEM_CHUNK_SIZE_DEFAULT  (512 * ONE_KB)
