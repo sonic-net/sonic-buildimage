@@ -178,7 +178,7 @@ ngbde_dmamem_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
     /* Always allow KAPI when CMA is available */
     kapi = 1;
 #else
-    if (dmactrl->size <= (1 << (MAX_ORDER - 1 + PAGE_SHIFT))) {
+    if (dmactrl->size <= (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))) {
         kapi = 1;
     }
 #endif
