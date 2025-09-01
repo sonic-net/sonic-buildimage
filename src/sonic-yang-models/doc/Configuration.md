@@ -41,6 +41,7 @@
   * [FABRIC_MONITOR](#fabric-monitor)
   * [FABRIC_PORT](#fabric-port)
   * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GNMI](#gnmi)
   * [GRPCCLIENT](#grpcclient)
   * [Hash](#hash)
   * [KDUMP](#kdump)
@@ -1403,6 +1404,37 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ```
 
+### GNMI
+
+GNMI (gRPC Network Management Interface) related configuration is defined in the **GNMI** table. The GNMI table contains server configuration including certificates, authentication settings, and service parameters. The GNMI_CLIENT_CERT table manages client certificate authentication.
+
+```
+{
+    "GNMI": {
+        "certs": {
+            "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+            "server_crt": "/etc/sonic/credentials/server.cer",
+            "server_key": "/etc/sonic/credentials/server.key"
+        },
+        "gnmi": {
+            "client_auth": "true",
+            "log_level": "2",
+            "port": "8080",
+            "save_on_set": "false",
+            "enable_crl": "true",
+            "crl_expire_duration": "86400",
+            "user_auth": "password",
+            "vrf": "mgmt"
+        }
+    },
+    "GNMI_CLIENT_CERT": {
+        "client.sonic.net": {
+            "role": ["admin", "operator"]
+        }
+    }
+}
+```
+
 ### Hash
 
 Generic hash allows user to configure various aspects of hashing algorithm.
@@ -2567,7 +2599,8 @@ and is listed in this table.
             "client_auth": "true",
             "log_level": "2",
             "port": "50051",
-            "save_on_set": "false"
+            "save_on_set": "false",
+            "vrf": "Vrf-red"
         }
     }
 }

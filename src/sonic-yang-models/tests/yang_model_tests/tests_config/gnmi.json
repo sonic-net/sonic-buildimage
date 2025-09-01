@@ -72,7 +72,7 @@
             }
         }
     },
-    "GNMI_TABLE_WITH_VALID_CONFIG": {
+    "GNMI_TABLE_WITH_INCORRECT_VRF": {
         "sonic-gnmi:sonic-gnmi": {
             "sonic-gnmi:GNMI": {
                 "certs": {
@@ -86,7 +86,37 @@
                     "port": "50052",
                     "save_on_set": "false",
                     "enable_crl": "true",
-                    "crl_expire_duration": "86400"
+                    "crl_expire_duration": "86400",
+                    "vrf": "Vrf-Red"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_VALID_CONFIG": {
+        "sonic-vrf:sonic-vrf":{
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name":"Vrf-Blue"
+                    }
+                ]
+            }
+        },
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "save_on_set": "false",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400",
+                    "vrf": "Vrf-Blue"
                 }
             }
         }
@@ -135,6 +165,71 @@
                     "user_auth": "none",
                     "log_level": "2",
                     "port": "50052"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_MGMT_VRF_CORRECT": {
+        "sonic-mgmt_vrf:sonic-mgmt_vrf": {
+            "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": true
+                }
+            }
+        },
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "vrf": "mgmt"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_MGMT_VRF_INCORRECT": {
+        "sonic-mgmt_vrf:sonic-mgmt_vrf": {
+            "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": false
+                }
+            }
+        },
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "vrf": "mgmt"
+                }
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_DEFAULT_VRF_CORRECT": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50052",
+                    "vrf": "default"
                 }
             }
         }

@@ -159,5 +159,10 @@ if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     fi
 fi
 
+GNMI_VRF=$(extract_field "$GNMI" '.vrf')
+if [[ -n "$GNMI_VRF" && "$GNMI_VRF" != "null" ]]; then
+    TELEMETRY_ARGS+=" --gnmi_vrf $GNMI_VRF"
+fi
+
 echo "telemetry args: $TELEMETRY_ARGS"
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
