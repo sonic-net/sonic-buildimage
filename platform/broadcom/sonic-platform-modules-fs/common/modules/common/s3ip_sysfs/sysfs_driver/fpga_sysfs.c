@@ -77,6 +77,7 @@ static ssize_t fpga_attr_store(struct switch_obj *obj, struct switch_attribute *
     check_p(g_fpga_drv);
     check_p(g_fpga_drv->set_main_board_fpga_attr);
 
+    value = 0;
     ret = kstrtoint(buf, 0, &value);
     if (ret != 0) {
         FPGA_ERR("Invaild value ret: %d, buf: %s.\n", ret, buf);

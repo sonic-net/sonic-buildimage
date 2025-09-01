@@ -174,6 +174,7 @@ static ssize_t cpld_attr_store(struct switch_obj *obj, struct switch_attribute *
     check_p(g_cpld_drv);
     check_p(g_cpld_drv->set_main_board_cpld_attr);
 
+    value = 0;
     ret = kstrtoint(buf, 0, &value);
     if (ret != 0) {
         CPLD_ERR("Invaild value ret: %d, buf: %s.\n", ret, buf);

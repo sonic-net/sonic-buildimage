@@ -30,9 +30,6 @@
 #define MAX_RW_LEN                (256)
 #define MAX_NAME_SIZE             (32)
 
-#define KERNEL_SPACE              (0)
-#define USER_SPACE                (1)
-
 #define CACHE_FILE_PATH           "/tmp/.%s_cache"
 #define MASK_FILE_PATH            "/tmp/.%s_mask"
 

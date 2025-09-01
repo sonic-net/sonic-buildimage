@@ -308,6 +308,7 @@ static ssize_t bmc_host_sysled_attr_store(struct switch_obj *obj, struct switch_
     check_p(g_sysled_drv->set_bmc_host_sysled_attr);
     check_p(g_sysled_drv->get_sys_led_status);
 
+    bmc_set_host_sys_led = 0;
     ret = kstrtoint(buf, 0, &bmc_set_host_sys_led);
     if (ret != 0) {
         SYSLED_ERR("input parameter: %s error. ret:%d\n", buf, ret);

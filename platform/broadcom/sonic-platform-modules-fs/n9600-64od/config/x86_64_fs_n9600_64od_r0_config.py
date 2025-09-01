@@ -119,652 +119,98 @@ DEV_MONITOR_PARAM = {
 }
 
 MANUINFO_CONF = {
-    "bios": {
-        "key": "BIOS",
-        "head": True,
-        "next": "onie"
-    },
-    "bios_vendor": {
-        "parent": "bios",
-        "key": "Vendor",
-        "cmd": "dmidecode -t 0 |grep Vendor",
-        "pattern": r".*Vendor",
-        "separator": ":",
-        "arrt_index": 1,
-    },
-    "bios_version": {
-        "parent": "bios",
-        "key": "Version",
-        "cmd": "dmidecode -t 0 |grep Version",
-        "pattern": r".*Version",
-        "separator": ":",
-        "arrt_index": 2,
-    },
-    "bios_date": {
-        "parent": "bios",
-        "key": "Release Date",
-        "cmd": "dmidecode -t 0 |grep Release",
-        "pattern": r".*Release Date",
-        "separator": ":",
-        "arrt_index": 3,
-    },
-    "onie": {
-        "key": "ONIE",
-        "next": "cpu"
-    },
-    "onie_date": {
-        "parent": "onie",
-        "key": "Build Date",
-        "file": "/host/machine.conf",
-        "pattern": r"^onie_build_date",
-        "separator": "=",
-        "arrt_index": 1,
-    },
-    "onie_version": {
-        "parent": "onie",
-        "key": "Version",
-        "file": "/host/machine.conf",
-        "pattern": r"^onie_version",
-        "separator": "=",
-        "arrt_index": 2,
+    "version2": 1,
+
+    "BIOS" : {
+        "source" : "bios",
     },
 
-    "cpu": {
-        "key": "CPU",
-        "next": "ssd"
-    },
-    "cpu_vendor": {
-        "parent": "cpu",
-        "key": "Vendor",
-        "cmd": "dmidecode --type processor |grep Manufacturer",
-        "pattern": r".*Manufacturer",
-        "separator": ":",
-        "arrt_index": 1,
-    },
-    "cpu_model": {
-        "parent": "cpu",
-        "key": "Device Model",
-        "cmd": "dmidecode --type processor | grep Version",
-        "pattern": r".*Version",
-        "separator": ":",
-        "arrt_index": 2,
-    },
-    "cpu_core": {
-        "parent": "cpu",
-        "key": "Core Count",
-        "cmd": "dmidecode --type processor | grep \"Core Count\"",
-        "pattern": r".*Core Count",
-        "separator": ":",
-        "arrt_index": 3,
-    },
-    "cpu_thread": {
-        "parent": "cpu",
-        "key": "Thread Count",
-        "cmd": "dmidecode --type processor | grep \"Thread Count\"",
-        "pattern": r".*Thread Count",
-        "separator": ":",
-        "arrt_index": 4,
-    },
-    "ssd": {
-        "key": "SSD",
-        "next": "cpld"
-    },
-    "ssd_model": {
-        "parent": "ssd",
-        "key": "Device Model",
-        "cmd": "smartctl -i /dev/sda |grep \"Device Model\"",
-        "pattern": r".*Device Model",
-        "separator": ":",
-        "arrt_index": 1,
-    },
-    "ssd_fw": {
-        "parent": "ssd",
-        "key": "Firmware Version",
-        "cmd": "smartctl -i /dev/sda |grep \"Firmware Version\"",
-        "pattern": r".*Firmware Version",
-        "separator": ":",
-        "arrt_index": 2,
-    },
-    "ssd_user_cap": {
-        "parent": "ssd",
-        "key": "User Capacity",
-        "cmd": "smartctl -i /dev/sda |grep \"User Capacity\"",
-        "pattern": r".*User Capacity",
-        "separator": ":",
-        "arrt_index": 3,
+    "ONIE" : {
+        "source" : "onie",
+        "print" : ["Build Date","Version"]
     },
 
-    "cpld": {
-        "key": "CPLD",
-        "next": "psu"
+    "CPU" : {
+        "source" : "processor",
     },
 
-    "cpld1": {
-        "key": "CPLD1",
-        "parent": "cpld",
-        "arrt_index": 1,
-    },
-    "cpld1_model": {
-        "key": "Device Model",
-        "parent": "cpld1",
-        "config": "LCMXO3LF-2100C-5BG256C",
-        "arrt_index": 1,
-    },
-    "cpld1_vender": {
-        "key": "Vendor",
-        "parent": "cpld1",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld1_desc": {
-        "key": "Description",
-        "parent": "cpld1",
-        "config": "CPU_CPLD",
-        "arrt_index": 3,
-    },
-    "cpld1_version": {
-        "key": "Firmware Version",
-        "parent": "cpld1",
-        "devfile": {
-            "loc": "/dev/cpld0",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
-    },
-    "cpld2": {
-        "key": "CPLD2",
-        "parent": "cpld",
-        "arrt_index": 2,
-    },
-    "cpld2_model": {
-        "key": "Device Model",
-        "parent": "cpld2",
-        "config": "LCMXO3LF-4300C-6BG324I",
-        "arrt_index": 1,
-    },
-    "cpld2_vender": {
-        "key": "Vendor",
-        "parent": "cpld2",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld2_desc": {
-        "key": "Description",
-        "parent": "cpld2",
-        "config": "CONNECT_CPLD",
-        "arrt_index": 3,
-    },
-    "cpld2_version": {
-        "key": "Firmware Version",
-        "parent": "cpld2",
-         "devfile": {
-            "loc": "/dev/cpld1",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "SSD" : {
+        "source" : "ssd",
     },
 
-    "cpld3": {
-        "key": "CPLD3",
-        "parent": "cpld",
-        "arrt_index": 3,
-    },
-    "cpld3_model": {
-        "key": "Device Model",
-        "parent": "cpld3",
-        "config": "LCMXO3LF-4300C-6BG256C",
-        "arrt_index": 1,
-    },
-    "cpld3_vender": {
-        "key": "Vendor",
-        "parent": "cpld3",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld3_desc": {
-        "key": "Description",
-        "parent": "cpld3",
-        "config": "MAC_CPLDA",
-        "arrt_index": 3,
-    },
-    "cpld3_version": {
-        "key": "Firmware Version",
-        "parent": "cpld3",
-        "devfile": {
-            "loc": "/dev/cpld6",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "CPLD": {
+        "class" : 1,
+        "source" : "s3ip",
+        "type" : "cpld",
     },
 
-    "cpld4": {
-        "key": "CPLD4",
-        "parent": "cpld",
-        "arrt_index": 4,
-    },
-    "cpld4_model": {
-        "key": "Device Model",
-        "parent": "cpld4",
-        "config": "LCMXO3LF-4300C-6BG324I",
-        "arrt_index": 1,
-    },
-    "cpld4_vender": {
-        "key": "Vendor",
-        "parent": "cpld4",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld4_desc": {
-        "key": "Description",
-        "parent": "cpld4",
-        "config": "MAC_CPLDB",
-        "arrt_index": 3,
-    },
-    "cpld4_version": {
-        "key": "Firmware Version",
-        "parent": "cpld4",
-        "devfile": {
-            "loc": "/dev/cpld7",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "PSU": {
+        "class" : 1,
+        "source" : "s3ip",
+        "type" : "psu",
     },
 
-    "cpld5": {
-        "key": "CPLD5",
-        "parent": "cpld",
-        "arrt_index": 5,
-    },
-    "cpld5_model": {
-        "key": "Device Model",
-        "parent": "cpld5",
-        "config": "LCMXO3LF-4300C-6BG324I",
-        "arrt_index": 1,
-    },
-    "cpld5_vender": {
-        "key": "Vendor",
-        "parent": "cpld5",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld5_desc": {
-        "key": "Description",
-        "parent": "cpld5",
-        "config": "MAC_CPLDC",
-        "arrt_index": 3,
-    },
-    "cpld5_version": {
-        "key": "Firmware Version",
-        "parent": "cpld5",
-        "devfile": {
-            "loc": "/dev/cpld8",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "FAN": {
+        "class" : 1,
+        "source" : "s3ip",
+        "type" : "fan",
     },
 
-    "cpld6": {
-        "key": "CPLD6",
-        "parent": "cpld",
-        "arrt_index": 6,
-    },
-    "cpld6_model": {
-        "key": "Device Model",
-        "parent": "cpld6",
-        "config": "LCMXO3LF-4300C-6BG324I",
-        "arrt_index": 1,
-    },
-    "cpld6_vender": {
-        "key": "Vendor",
-        "parent": "cpld6",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld6_desc": {
-        "key": "Description",
-        "parent": "cpld6",
-        "config": "MGMT_CPLD",
-        "arrt_index": 3,
-    },
-    "cpld6_version": {
-        "key": "Firmware Version",
-        "parent": "cpld6",
-        "devfile": {
-            "loc": "/dev/cpld9",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "NIC" : {
+        "Device Model" : {"gettype": "direct_config", "value": "NA"},
+        "Vendor" : {"gettype": "direct_config", "value": "INTEL"},
+        "Firmware Version" : {"cmd": "ethtool -i eth0 |grep firmware-version | awk -F': ' '{print $2}'", "gettype": "cmd"},
     },
 
-    "cpld7": {
-        "key": "CPLD7",
-        "parent": "cpld",
-        "arrt_index": 7,
-    },
-    "cpld7_model": {
-        "key": "Device Model",
-        "parent": "cpld7",
-        "config": "LCMXO3LF-2100C-5BG256C",
-        "arrt_index": 1,
-    },
-    "cpld7_vender": {
-        "key": "Vendor",
-        "parent": "cpld7",
-        "config": "LATTICE",
-        "arrt_index": 2,
-    },
-    "cpld7_desc": {
-        "key": "Description",
-        "parent": "cpld7",
-        "config": "FAN_CPLD",
-        "arrt_index": 3,
-    },
-    "cpld7_version": {
-        "key": "Firmware Version",
-        "parent": "cpld7",
-        "devfile": {
-            "loc": "/dev/cpld10",
-            "offset":0,
-            "len":4,
-            "bit_width":1
-        },
-        "arrt_index": 4,
+    "FPGA": {
+        "class" : 1,
+        "source" : "s3ip",
+        "type" : "fpga",
     },
 
-    "psu": {
-        "key": "PSU",
-        "next": "fan"
-    },
-
-    "psu1": {
-        "parent": "psu",
-        "key": "PSU1",
-        "arrt_index": 1,
-    },
-    "psu1_hw_version": {
-        "key": "Hardware Version",
-        "parent": "psu1",
-        "extra": {
-            "funcname": "getPsu",
-            "id": "psu1",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "psu1_fw_version": {
-        "key": "Firmware Version",
-        "parent": "psu1",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "psu2": {
-        "parent": "psu",
-        "key": "PSU2",
-        "arrt_index": 2,
-    },
-    "psu2_hw_version": {
-        "key": "Hardware Version",
-        "parent": "psu2",
-        "extra": {
-            "funcname": "getPsu",
-            "id": "psu2",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "psu2_fw_version": {
-        "key": "Firmware Version",
-        "parent": "psu2",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "fan": {
-        "key": "FAN",
-        "next": "i210"
-    },
-    "fan1": {
-        "key": "FAN1",
-        "parent": "fan",
-        "arrt_index": 1,
-    },
-    "fan1_hw_version": {
-        "key": "Hardware Version",
-        "parent": "fan1",
-        "extra": {
-            "funcname": "checkFan",
-            "id": "fan1",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "fan1_fw_version": {
-        "key": "Firmware Version",
-        "parent": "fan1",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "fan2": {
-        "key": "FAN2",
-        "parent": "fan",
-        "arrt_index": 2,
-    },
-    "fan2_hw_version": {
-        "key": "Hardware Version",
-        "parent": "fan2",
-        "extra": {
-            "funcname": "checkFan",
-            "id": "fan2",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "fan2_fw_version": {
-        "key": "Firmware Version",
-        "parent": "fan2",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "fan3": {
-        "key": "FAN3",
-        "parent": "fan",
-        "arrt_index": 3,
-    },
-    "fan3_hw_version": {
-        "key": "Hardware Version",
-        "parent": "fan3",
-        "extra": {
-            "funcname": "checkFan",
-            "id": "fan3",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "fan3_fw_version": {
-        "key": "Firmware Version",
-        "parent": "fan3",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "fan4": {
-        "key": "FAN4",
-        "parent": "fan",
-        "arrt_index": 4,
-    },
-    "fan4_hw_version": {
-        "key": "Hardware Version",
-        "parent": "fan4",
-        "extra": {
-            "funcname": "checkFan",
-            "id": "fan4",
-            "key": "hw_version"
-        },
-        "arrt_index": 1,
-    },
-    "fan4_fw_version": {
-        "key": "Firmware Version",
-        "parent": "fan4",
-        "config": "NA",
-        "arrt_index": 2,
-    },
-
-    "i210": {
-        "key": "NIC",
-        "next": "fpga"
-    },
-    "i210_model": {
-        "parent": "i210",
-        "config": "NA",
-        "key": "Device Model",
-        "arrt_index": 1,
-    },
-    "i210_vendor": {
-        "parent": "i210",
-        "config": "INTEL",
-        "key": "Vendor",
-        "arrt_index": 2,
-    },
-    "i210_version": {
-        "parent": "i210",
-        "cmd": "ethtool -i eth0",
-        "pattern": r"firmware-version",
-        "separator": ":",
-        "key": "Firmware Version",
-        "arrt_index": 3,
-    },
-
-    "fpga": {
-        "key": "FPGA",
-        "next": "others"
-    },
-
-    "fpga1": {
-        "key": "FPGA1",
-        "parent": "fpga",
-        "arrt_index": 1,
-    },
-    "fpga1_model": {
-        "parent": "fpga1",
-        "config": "XC7A50T-2FGG484I",
-        "key": "Device Model",
-        "arrt_index": 1,
-    },
-    "fpga1_vender": {
-        "parent": "fpga1",
-        "config": "XILINX",
-        "key": "Vendor",
-        "arrt_index": 2,
-    },
-    "fpga1_desc": {
-        "key": "Description",
-        "parent": "fpga1",
-        "config": "MAC_FPGA",
-        "arrt_index": 3,
-    },
-    "fpga1_hw_version": {
-        "parent": "fpga1",
-        "config": "NA",
-        "key": "Hardware Version",
-        "arrt_index": 4,
-    },
-    "fpga1_fw_version": {
-        "parent": "fpga1",
-        "devfile": {
-            "loc": "/dev/fpga0",
-            "offset":0,
-            "len":4,
-            "bit_width":4
-        },
-        "key": "Firmware Version",
-        "arrt_index": 5,
-    },
-    "fpga1_date": {
-        "parent": "fpga1",
-        "devfile": {
-            "loc": "/dev/fpga0",
-            "offset":4,
-            "len":4,
-            "bit_width":4
-        },
-        "key": "Build Date",
-        "arrt_index": 6,
-    },
-
-    "others": {
-        "key": "OTHERS",
-    },
-    "53134": {
-        "parent": "others",
-        "key": "CPU-BMC-SWITCH",
-        "arrt_index": 1,
-    },
-    "53134_model": {
-        "parent": "53134",
-        "config": "BCM53134O",
-        "key": "Device Model",
-        "arrt_index": 1,
-    },
-    "53134_vendor": {
-        "parent": "53134",
-        "config": "Broadcom",
-        "key": "Vendor",
-        "arrt_index": 2,
-    },
-    "53134_hw_version": {
-        "parent": "53134",
-        "key": "Hardware Version",
-        "func": {
-            "funcname": "get_cpu_bmc_switch_version",
-            "params": {
-                "before": [
-                    # OE high
-                    {"gettype": "cmd", "cmd": "echo 10051 > /sys/class/gpio/export"},
-                    {"gettype": "cmd", "cmd": "echo high > /sys/class/gpio/gpio10051/direction"},
-                    # SEL1 high
-                    {"gettype": "cmd", "cmd": "echo 10052 > /sys/class/gpio/export"},
-                    {"gettype": "cmd", "cmd": "echo high > /sys/class/gpio/gpio10052/direction"},
-                    #enable 53134 update
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x3d, "value": 0x00},
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x45, "value": 0x01},
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x46, "value": 0x06},
-                    {"gettype": "cmd", "cmd": "modprobe wb_spi_gpio"},
-                    {"gettype": "cmd", "cmd": "modprobe wb_spi_gpio_device sck=55  mosi=54 miso=52 cs=53 bus=0 gpio_chip_name=INTC3001:00"},
-                    {"gettype": "cmd", "cmd": "modprobe wb_spi_93xx46"},
-                ],
-                "get_version": "md5sum /sys/bus/spi/devices/spi0.0/eeprom | awk '{print $1}'",
-                "after": [
-                    {"gettype": "cmd", "cmd": "echo 0 > /sys/class/gpio/gpio10052/value"},
-                    {"gettype": "cmd", "cmd": "echo 10052 > /sys/class/gpio/unexport"},
-                    {"gettype": "cmd", "cmd": "echo 0 > /sys/class/gpio/gpio10051/value"},
-                    {"gettype": "cmd", "cmd": "echo 10051 > /sys/class/gpio/unexport"},
-                ],
-                "finally": [
-                    {"gettype": "cmd", "cmd": "rmmod wb_spi_93xx46"},
-                    {"gettype": "cmd", "cmd": "rmmod wb_spi_gpio_device"},
-                    {"gettype": "cmd", "cmd": "rmmod wb_spi_gpio"},
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x46, "value": 0x00},
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x45, "value": 0x00},
-                    {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x3d, "value": 0x01},
-                ],
+    "OTHERS" : {
+        "child" : {
+            "CPU-BMC-SWITCH" : {
+                "Device Model" : {"gettype": "direct_config", "value": "BCM53134O"},
+                "Vendor" : {"gettype": "direct_config", "value": "Broadcom"},
+                "Hardware Version" : {
+                    "gettype": "func", 
+                    "funcname": "get_and_generate_mgmt_version",
+                    "params": {
+                        "before": [
+                            # OE high
+                            {"gettype": "cmd", "cmd": "echo 10051 > /sys/class/gpio/export"},
+                            {"gettype": "cmd", "cmd": "echo high > /sys/class/gpio/gpio10051/direction"},
+                            # SEL1 high
+                            {"gettype": "cmd", "cmd": "echo 10052 > /sys/class/gpio/export"},
+                            {"gettype": "cmd", "cmd": "echo high > /sys/class/gpio/gpio10052/direction"},
+                            #enable 53134 update
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x3d, "value": 0x00},
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x45, "value": 0x01},
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x46, "value": 0x06},
+                            {"gettype": "cmd", "cmd": "modprobe wb_spi_gpio"},
+                            {"gettype": "cmd", "cmd": "modprobe wb_spi_gpio_device sck=55  mosi=54 miso=52 cs=53 bus=0 gpio_chip_name=INTC3001:00"},
+                            {"gettype": "cmd", "cmd": "modprobe wb_spi_93xx46"},
+                        ],
+                        "get_version": "md5sum /sys/bus/spi/devices/spi0.0/eeprom | awk '{print $1}'",
+                        "after": [
+                            {"gettype": "cmd", "cmd": "echo 0 > /sys/class/gpio/gpio10052/value"},
+                            {"gettype": "cmd", "cmd": "echo 10052 > /sys/class/gpio/unexport"},
+                            {"gettype": "cmd", "cmd": "echo 0 > /sys/class/gpio/gpio10051/value"},
+                            {"gettype": "cmd", "cmd": "echo 10051 > /sys/class/gpio/unexport"},
+                        ],
+                        "finally": [
+                            {"gettype": "cmd", "cmd": "rmmod wb_spi_93xx46"},
+                            {"gettype": "cmd", "cmd": "rmmod wb_spi_gpio_device"},
+                            {"gettype": "cmd", "cmd": "rmmod wb_spi_gpio"},
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x46, "value": 0x00},
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x45, "value": 0x00},
+                            {"gettype": "devfile", "path": "/dev/cpld1", "offset": 0x3d, "value": 0x01},
+                        ],
+                    },
+                },
             },
         },
-        "arrt_index": 3,
     },
 }
 
@@ -1013,12 +459,12 @@ DRIVERLISTS = [
     {"name": "wb_fpga_pca954x_drv", "delay": 0},
     {"name": "wb_fpga_pca954x_device", "delay": 0},
     {"name": "wb_i2c_dev_device", "delay": 0},
-#    {"name": "mdio_bitbang", "delay": 0},
-#    {"name": "mdio_gpio", "delay": 0},
-#    {"name": "wb_mdio_gpio_device gpio_mdc=69 gpio_mdio=70 gpio_chip_name=INTC3001:00", "delay": 0},
+    {"name": "mdio_bitbang", "delay": 0},
+    {"name": "mdio_gpio", "delay": 0},
+    {"name": "wb_mdio_gpio_device gpio_mdc=69 gpio_mdio=70 gpio_chip_name=INTC3001:00", "delay": 0},
     {"name": "wb_wdt", "delay": 0},
     {"name": "wb_wdt_device", "delay": 0},
-#    {"name": "wb_eeprom_93xx46", "delay": 0},
+    {"name": "wb_eeprom_93xx46", "delay": 0},
     {"name": "wb_lm75", "delay": 0},
     {"name": "wb_tmp401", "delay": 0},
     {"name": "ct7148", "delay": 0},

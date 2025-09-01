@@ -338,6 +338,7 @@ static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_
         return -DFD_RV_DEV_FAIL;
     }
 
+    int_tmp = 0;
     if (IS_INFO_FRMT_BIT(info_ctrl->frmt)) {
         if (readed_bytes != read_bytes) {
             DBG_DEBUG(DBG_ERROR, "info ctrl multi-byte read failed, read_bytes: %d, readed_bytes: %d",
@@ -397,7 +398,13 @@ static int dfd_get_info_value(info_ctrl_t *info_ctrl, int *ret, info_num_buf_to_
         }
     } else if (IS_INFO_FRMT_NUM_STR(info_ctrl->frmt)) {
         val[readed_bytes] = '\0';
-        int_tmp = simple_strtol((char *)(&(val[0])), NULL, 10);
+        int_tmp = 0;
+        rv = kstrtoint((char *)(&(val[0])), 0, &int_tmp);
+        if (rv) {
+            DBG_DEBUG(DBG_ERROR, "Failed to convert string: %s to int type data, rv: %d\n",
+                (char *)(&(val[0])), rv);
+            return -DFD_RV_INVALID_VALUE;
+        }
     } else {
         if (pfun == NULL) {
             DBG_DEBUG(DBG_ERROR, "info ctrl number buf process function is null\n");

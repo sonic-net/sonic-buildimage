@@ -360,6 +360,7 @@ class platformSyslog():
         self.warning_status = 1
         self.critical_status = 2
         self.poweron_flag = 0
+        self.__temp_source = None
 
         self.pmon_syslog_config = PMON_SYSLOG_STATUS.copy()
         self.__pollingtime = self.pmon_syslog_config.get('polling_time', 3)

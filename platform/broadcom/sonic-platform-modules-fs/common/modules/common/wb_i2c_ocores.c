@@ -285,6 +285,7 @@ static inline u32 oc_getreg_8(struct ocores_i2c *i2c, int reg)
     u32 value, pos;
 
     pos = i2c->base_addr + (reg << i2c->reg_shift);
+    mem_clear(buf_tmp, sizeof(buf_tmp));
     ocores_i2c_reg_read(i2c, pos, buf_tmp, REG_IO_WIDTH_1);
     value = buf_tmp[0];
 

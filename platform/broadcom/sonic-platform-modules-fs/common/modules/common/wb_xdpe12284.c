@@ -136,6 +136,7 @@ static ssize_t set_cfg_reg_value(struct device *dev, struct device_attribute *da
     struct pmbus_data *data = i2c_get_clientdata(client);
     int ret, value;
 
+    value = 0;
     ret = kstrtoint(buf, 0, &value);
     if (ret) {
         DEBUG_ERROR("kstrtoint failed %s, errno: %d\n", buf, ret);

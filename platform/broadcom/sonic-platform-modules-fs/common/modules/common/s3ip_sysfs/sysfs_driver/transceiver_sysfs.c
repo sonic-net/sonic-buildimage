@@ -1205,6 +1205,7 @@ static ssize_t eth_init_power_group(void)
     g_sff.power_group_num = 0;
     mutex_init(&g_sff.power_ctrl_update_lock);
     for (eth_index = 1; eth_index <= g_sff.sff_number; eth_index++) {
+        power_group = 0;
         ret = g_sff_drv->get_eth_power_group(eth_index, &power_group);
         if (ret != -WB_SYSFS_RV_UNSUPPORT) {
             /* one of port group is configured, flag set 1 */

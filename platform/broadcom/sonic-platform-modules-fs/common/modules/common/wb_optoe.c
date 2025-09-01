@@ -1076,6 +1076,7 @@ static ssize_t set_bank_count(struct device *dev,
 	unsigned int bank_count;
 	int ret;
 
+	bank_count = 0;
 	ret = kstrtouint(buf, 0, &bank_count);
 	if (ret) {
         dev_err(&client->dev, "Invaild input bank count value [%s], errno: %d\n", buf, ret);
@@ -1100,7 +1101,8 @@ static ssize_t set_bank_count(struct device *dev,
 }
 
 
-static ssize_t file_cache_rd_show(struct device *dev, struct device_attribute *dattr, char *buf) {
+static ssize_t file_cache_rd_show(struct device *dev, struct device_attribute *dattr, char *buf)
+{
 	struct i2c_client *client = to_i2c_client(dev);
 	struct optoe_data *optoe = i2c_get_clientdata(client);
 
@@ -1108,12 +1110,14 @@ static ssize_t file_cache_rd_show(struct device *dev, struct device_attribute *d
     return snprintf(buf, PAGE_SIZE, "%d\n", optoe->file_cache_rd);
 }
 
-static ssize_t file_cache_rd_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
+static ssize_t file_cache_rd_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
 	struct i2c_client *client = to_i2c_client(dev);
 	struct optoe_data *optoe = i2c_get_clientdata(client);
     u8 val;
     int ret;
 
+    val = 0;
     ret = kstrtou8(buf, 0, &val);
     if (ret) {
         dev_err(&client->dev, "Invaild input value [%s], errno: %d\n", buf, ret);
@@ -1124,7 +1128,8 @@ static ssize_t file_cache_rd_store(struct device *dev, struct device_attribute *
     return count;
 }
 
-static ssize_t cache_file_path_show(struct device *dev, struct device_attribute *dattr, char *buf) {
+static ssize_t cache_file_path_show(struct device *dev, struct device_attribute *dattr, char *buf)
+{
 	struct i2c_client *client = to_i2c_client(dev);
 	struct optoe_data *optoe = i2c_get_clientdata(client);
 
@@ -1132,7 +1137,8 @@ static ssize_t cache_file_path_show(struct device *dev, struct device_attribute 
     return snprintf(buf, PAGE_SIZE, "%s\n", optoe->cache_file_path);
 }
 
-static ssize_t mask_file_path_show(struct device *dev, struct device_attribute *dattr, char *buf) {
+static ssize_t mask_file_path_show(struct device *dev, struct device_attribute *dattr, char *buf)
+{
 	struct i2c_client *client = to_i2c_client(dev);
 	struct optoe_data *optoe = i2c_get_clientdata(client);
 

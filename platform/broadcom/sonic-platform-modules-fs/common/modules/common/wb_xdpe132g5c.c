@@ -102,7 +102,7 @@ struct xdpe_data {
     u32 dev_available;
     struct device *dev;
     struct miscdevice misc;
-    const char dev_name[WB_XDPE_BUF_LEN_MAX];
+    char dev_name[WB_XDPE_BUF_LEN_MAX];
 };
 
 typedef struct xdpe_vout_data_s {
@@ -943,6 +943,7 @@ static ssize_t xdpe_store_remap_to_nvm(struct device *dev, struct device_attribu
         return -EINVAL;
     }
 
+    param = 0;
     ret = kstrtol(buf, 0, &param);
     if (ret) {
         DEBUG_ERROR("%d-%04x: invalid value: %s\n", client->adapter->nr, client->addr, buf);

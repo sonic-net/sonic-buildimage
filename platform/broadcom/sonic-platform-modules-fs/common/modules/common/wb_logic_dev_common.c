@@ -3,7 +3,6 @@
  * ko provide universal methods to logic_dev module
  */
 #include <linux/uio.h>
-
 #include <wb_logic_dev_common.h>
 #include <wb_bsp_kernel_debug.h>
 
@@ -59,12 +58,6 @@ static int wb_bsp_log_file_backup(char *src_path, struct file *src_fp, int src_f
         return -ENOMEM;
     }
 
-    struct kvec iov = {
-        .iov_base = buffer,
-        .iov_len = min_t(size_t, src_file_size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     mem_clear(dst_path, sizeof(dst_path));
     snprintf(dst_path, sizeof(dst_path), "%s_bak", src_path);
     dst_fp = filp_open(dst_path, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -76,10 +69,9 @@ static int wb_bsp_log_file_backup(char *src_path, struct file *src_fp, int src_f
 
     /* read origin file */
     src_offset = 0;
-    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
-    bytes_read = vfs_iter_read(src_fp, &iter, &src_offset, 0);
+    bytes_read = kernel_read(src_fp, buffer, src_file_size, &src_offset);
     if (bytes_read < 0) {
-        DEBUG_ERROR("vfs_iter_read %s failed, src_file_size: %d, ret: %zu\n", src_path, src_file_size, bytes_read);
+        DEBUG_ERROR("Read %s failed, src_file_size: %d, ret: %zu\n", src_path, src_file_size, bytes_read);
         ret = bytes_read;
         goto out_close_dst;
     }
@@ -357,12 +349,6 @@ static int wb_dev_file_write(const char *path, uint32_t pos, uint8_t *val, size_
     struct file *filp;
     loff_t tmp_pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     filp = filp_open(path, O_RDWR, 777);
     if (IS_ERR(filp)) {
         DEBUG_ERROR("write open failed errno = %ld\r\n", -PTR_ERR(filp));
@@ -371,10 +357,9 @@ static int wb_dev_file_write(const char *path, uint32_t pos, uint8_t *val, size_
     }
     ret = 0;
     tmp_pos = (loff_t)pos;
-    iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
-    ret = vfs_iter_write(filp, &iter, &tmp_pos, 0);
+    ret = kernel_write(filp, (void*)val, size, &tmp_pos);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_write failed, ret=%d\r\n", ret);
+        DEBUG_ERROR("write kernel_write failed, ret=%d\r\n", ret);
         goto exit;
     }
     vfs_fsync(filp, 1);
@@ -396,12 +381,6 @@ static int wb_dev_file_read(const char *path, uint32_t pos, uint8_t *val, size_t
     struct file *filp;
     loff_t tmp_pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     filp = filp_open(path, O_RDONLY, 0);
     if (IS_ERR(filp)) {
         DEBUG_ERROR("read open failed errno = %ld\r\n", -PTR_ERR(filp));
@@ -410,10 +389,9 @@ static int wb_dev_file_read(const char *path, uint32_t pos, uint8_t *val, size_t
     }
     ret = 0;
     tmp_pos = (loff_t)pos;
-    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
-    ret = vfs_iter_read(filp, &iter, &tmp_pos, 0);
+    ret = kernel_read(filp, val, size, &tmp_pos);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_read failed, ret=%d\r\n", ret);
+        DEBUG_ERROR("read kernel_read failed, ret=%d\r\n", ret);
         goto exit;
     }
     filp_close(filp, NULL);

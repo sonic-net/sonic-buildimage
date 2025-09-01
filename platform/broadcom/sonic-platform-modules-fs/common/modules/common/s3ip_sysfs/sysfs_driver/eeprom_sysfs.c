@@ -87,6 +87,7 @@ static ssize_t eeprom_attr_store(struct switch_obj *obj, struct switch_attribute
     check_p(g_eeprom_drv);
     check_p(g_eeprom_drv->set_eeprom_attr);
 
+    value = 0;
     ret = kstrtoint(buf, 0, &value);
     if (ret != 0) {
         EEPROM_ERR("Invaild value ret: %d, buf: %s.\n", ret, buf);

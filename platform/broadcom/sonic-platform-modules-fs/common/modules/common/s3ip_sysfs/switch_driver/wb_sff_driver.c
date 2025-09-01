@@ -149,6 +149,7 @@ int dfd_get_single_eth_optoe_type(unsigned int sff_index, int *optoe_type)
     mem_clear(optoe_type_path, sizeof(optoe_type_path));
     ret = get_optoe_type_path_by_bus(sff_index, optoe_type_path, sizeof(optoe_type_path));
     if (ret == 0) {
+        temp_type = 0;
         ret = dfd_ko_read_file(optoe_type_path, 0, &temp_type, OPTOE_TYPE_RW_LEN);
         if (ret < 0) {
             DFD_SFF_DEBUG(DBG_ERROR, "read optoe_type failed, loc: %s, ret: %d,\n", optoe_type_path, ret);

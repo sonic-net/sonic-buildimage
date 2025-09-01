@@ -126,6 +126,7 @@ static int vr_common_probe(struct platform_device *pdev)
     }
 
     for(i = 0; i < PMBUS_RETRY_TIME; i++) {
+        mem_clear(buf, sizeof(buf));
         len = i2c_smbus_read_block_data(client, PMBUS_IC_DEVICE_ID, buf);
         if (len >= 0) {
             break;
@@ -218,6 +219,8 @@ static int vr_common_remove(struct platform_device *pdev)
             dev_warn(&pdev->dev, "i2c client: %d-%04x already unregister\n", i2c_bus,i2c_addr);
         }
         wb_vr_common_dev->client = NULL;
+    } else {
+        dev_warn(&pdev->dev, "i2c client: %d-%04x is NULL\n", i2c_bus,i2c_addr);
     }
 exit_i2c_put:
     i2c_put_adapter(adap);

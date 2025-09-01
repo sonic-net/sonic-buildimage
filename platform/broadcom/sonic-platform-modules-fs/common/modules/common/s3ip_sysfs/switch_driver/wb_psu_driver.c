@@ -561,6 +561,7 @@ ssize_t dfd_get_psu_hw_detail_status_str(unsigned int psu_index, char *buf, size
         return (ssize_t)snprintf(buf, count, "OK\n");
     }
 
+    status_word = 0;
     ret = dfd_get_psu_pmbus_val(psu_index, &status_word, PMBUS_STATUS_WORD_SYSFS);
     if (ret < 0) {
         DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus status error, ret: %d, psu_index: %u\n", ret, psu_index);
@@ -580,6 +581,7 @@ ssize_t dfd_get_psu_hw_detail_status_str(unsigned int psu_index, char *buf, size
         if (status_word & status_infos[i].bit_offset) {
             len += scnprintf(buf + len, count - len, "%s\n", status_infos[i].attr_name);
             for (j = 0; j < status_infos[i].extra_info_len; j++) {
+                tmp_val = 0;
                 ret = dfd_get_psu_pmbus_val(psu_index, &tmp_val, status_infos[i].extra_info[j].sysfs_name);
                 if (ret < 0) {
                     DFD_PSU_DEBUG(DBG_ERROR, "get psu pmbus sysfs error, ret: %d, psu_index: %u, sysfs_name:%s\n", \

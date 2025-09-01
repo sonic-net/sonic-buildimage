@@ -5,6 +5,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi_gpio.h>
+#include <wb_spi_master.h>
 #include <wb_bsp_kernel_debug.h>
 
 /* The SPI Bus number that the device is mounted on can be specified manually when this module is loaded */
@@ -45,7 +46,7 @@ static int __init wb_spi_nor_dev_init(void)
 
     spi_nor_device_info.bus_num = spi_bus_num;
     spi_nor_device_info.chip_select = spi_chip_select;
-    master = spi_busnum_to_master(spi_nor_device_info.bus_num);  /* Get the controller according to the SPI Bus number */
+    master = wb_spi_master_busnum_to_master(spi_nor_device_info.bus_num);  /* Get the controller according to the SPI Bus number */
     if (!master) {
         DEBUG_ERROR("get bus_num %u spi master failed.\n",
             spi_nor_device_info.bus_num);

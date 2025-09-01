@@ -182,7 +182,7 @@ int dev_debug_file_read(char *file_name, unsigned int dev_index, char *buf, int 
     sprintf(file_path, file_name, dev_index);
     filp = filp_open(file_path, O_RDONLY, 0);
     if (IS_ERR(filp)) {
-        SWITCH_ERR("dev_debug_file open failed, path=%s, ret=%d\n", file_path, ret);
+        SWITCH_ERR("dev_debug_file open failed, path=%s\n", file_path);
         filp = NULL;
         ret = -ENOENT;
         return ret;

@@ -30,6 +30,7 @@ static void fpga_pcie_recover(struct pci_dev *pdev, const struct pci_device_id *
     int ret;
 
     mem_base = &pdev->resource[0];
+    bar0_val = 0;
     ret = pci_read_config_dword(pdev, PCI_BASE_ADDRESS_0, &bar0_val);
     if (ret) {
         DEBUG_ERROR("pci_read_config_dword failed ret %d.\n", ret);

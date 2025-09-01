@@ -399,6 +399,7 @@ static int eeprom_93xx46_probe_dt(struct spi_device *spi)
 	if (!pd)
 		return -ENOMEM;
 
+	tmp = 0;
 	ret = of_property_read_u32(np, "data-size", &tmp);
 	if (ret < 0) {
 		dev_err(&spi->dev, "data-size property not found\n");

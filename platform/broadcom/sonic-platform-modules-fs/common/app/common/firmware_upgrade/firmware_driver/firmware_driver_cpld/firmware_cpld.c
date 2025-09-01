@@ -171,6 +171,7 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
     }
 
     mem_clear(cpld_info, sizeof(firmware_cpld_t));
+    name = NULL;
     ret = 0;
     ret += of_property_read_string(dev->of_node, "type", (const char **)&name);
     ret += of_property_read_u32(dev->of_node, "tdi", &cpld_info->tdi);
@@ -186,6 +187,10 @@ static int of_firmware_upgrade_config_init(struct device *dev, firmware_cpld_t *
        return -ENXIO;
     }
 
+    if (name == NULL) {
+        FIRMWARE_DRIVER_DEBUG_ERROR("dts config type.\n");
+        return -ENXIO;
+    }
     strncpy(cpld_info->type, name, sizeof(cpld_info->type) - 1);
 
     ret = of_property_read_u32(dev->of_node, "tck_delay", &cpld_info->tck_delay);

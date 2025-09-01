@@ -579,12 +579,6 @@ int32_t dfd_ko_read_file(char *fpath, int32_t addr, uint8_t *val, int32_t read_b
     struct file *filp;
     loff_t pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, read_bytes, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     if ((fpath == NULL) || (val == NULL) || (addr < 0) || (read_bytes < 0)) {
         DBG_DEBUG(DBG_ERROR, "input arguments error, addr=%d read_bytes=%d\n", addr, read_bytes);
         return -DFD_RV_INDEX_INVALID;
@@ -598,10 +592,9 @@ int32_t dfd_ko_read_file(char *fpath, int32_t addr, uint8_t *val, int32_t read_b
     }
     /* Location file */
     pos = addr;
-    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
-    ret = vfs_iter_read(filp, &iter, &pos, 0);
+    ret = kernel_read(filp, val, read_bytes, &pos);
     if (ret < 0) {
-        DBG_DEBUG(DBG_ERROR, "vfs_iter_read failed, path=%s, addr=%d, size=%d, ret=%d\n", fpath, addr, read_bytes, ret);
+        DBG_DEBUG(DBG_ERROR, "kernel_read failed, path=%s, addr=%d, size=%d, ret=%d\n", fpath, addr, read_bytes, ret);
         ret = -DFD_RV_DEV_FAIL;
     }
     filp_close(filp, NULL);
@@ -712,12 +705,6 @@ int32_t dfd_ko_write_file(char *fpath, int32_t addr, uint8_t *val, int32_t write
     struct file *filp;
     loff_t pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, write_bytes, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     if ((fpath == NULL) || (val == NULL) || (addr < 0) || (write_bytes <= 0)) {
         DBG_DEBUG(DBG_ERROR, "input arguments error, addr=%d write_bytes=%d\n", addr, write_bytes);
         return -DFD_RV_INDEX_INVALID;
@@ -731,10 +718,9 @@ int32_t dfd_ko_write_file(char *fpath, int32_t addr, uint8_t *val, int32_t write
     }
     /* Location file */
     pos = addr;
-    iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
-    ret = vfs_iter_write(filp, &iter, &pos, 0);
+    ret = kernel_write(filp, val, write_bytes, &pos);
     if (ret < 0) {
-        DBG_DEBUG(DBG_ERROR,"vfs_iter_write failed, path=%s, addr=%d, size=%d, ret=%d\n", fpath, addr, write_bytes, ret);
+        DBG_DEBUG(DBG_ERROR,"kernel_write failed, path=%s, addr=%d, size=%d, ret=%d\n", fpath, addr, write_bytes, ret);
     }
     vfs_fsync(filp, 1);
     filp_close(filp, NULL);

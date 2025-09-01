@@ -855,6 +855,7 @@ static ssize_t show_wdt_sysfs_value(struct device *dev,
 
     mutex_lock(&priv->update_lock);
 
+    val = 0;
     /* First read the value val of the enable register */
     ret = wb_wdt_read(priv, priv->config_dev_name,
                 priv->enable_reg, PARENT_WDT, &val, ONE_BYTE);
@@ -894,6 +895,7 @@ static ssize_t set_wdt_ready_sysfs_value(struct device *dev, struct device_attri
     uint32_t val;
 
     priv = dev_get_drvdata(dev);
+    val = 0;
     err = kstrtouint(buf, 0, &val);
     if (err) {
         dev_err(priv->dev, "invalid value: %s, can't set wdt ready status\n", buf);

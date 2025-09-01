@@ -134,8 +134,8 @@ static ssize_t get_fault_record(struct device *dev, struct device_attribute *da,
     int vout_mode;
 
     mutex_lock(&data->update_lock);
-    memset(buf, 0, FAULT_RECORD_SIZE);
-    memset(block_buffer, 0, sizeof(block_buffer));
+    mem_clear(buf, FAULT_RECORD_SIZE);
+    mem_clear(block_buffer, sizeof(block_buffer));
     /* get fault index and number */
     ret = i2c_smbus_read_i2c_block_data(client, LOGGED_FAULT_DETAIL_INDEX, 2, block_buffer);
     if (ret <= 0) {
@@ -234,6 +234,7 @@ static ssize_t clear_fault_record(struct device *dev, struct device_attribute *d
     struct pmbus_data *data = i2c_get_clientdata(client);
     unsigned long val;
 
+    val = 0;
     err = kstrtoul(buf, 16, &val);
     if (err) {
         dev_dbg(&client->dev, "kstrtoul failed, err = %d\n", err);
@@ -483,7 +484,8 @@ static int ucd9000_set_date_func(struct i2c_client *client, uint32_t day, uint32
     return 0;
 }
 
-static void set_date_work_function(struct work_struct *work) {
+static void set_date_work_function(struct work_struct *work)
+{
     struct ucd9000_data *data;
     int ret;
     uint32_t day;
@@ -530,6 +532,7 @@ static ssize_t set_fault_date_and_time(struct device *dev, struct device_attribu
     int ret;
     unsigned long val;
 
+    val = 0;
     ret = kstrtoul(buf, 0, &val);
     if (ret) {
         dev_info(&client->dev, "kstrtoul failed, ret = %d\n", ret);
@@ -828,6 +831,7 @@ static int ucd9000_debugfs_show_mfr_status_bit(void *data, u64 *val)
     u8 buffer[I2C_SMBUS_BLOCK_MAX];
     int ret, i;
 
+    mem_clear(buffer, sizeof(buffer));
     ret = ucd9000_get_mfr_status(client, buffer);
     if (ret < 0)
         return ret;

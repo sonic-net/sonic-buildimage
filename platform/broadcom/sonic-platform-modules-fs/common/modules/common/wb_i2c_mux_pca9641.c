@@ -29,7 +29,6 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/uio.h>
-
 #include "wb_i2c_mux_pca9641.h"
 #include <wb_bsp_kernel_debug.h>
 
@@ -98,8 +97,8 @@
 #define PCA9641_RETRY_TIME     (8)
 #define PCA9641_RESET_DELAY    (150)
 
-typedef struct i2c_muxs_struct_flag
-{
+typedef struct i2c_muxs_struct_flag {
+
 	int nr;
 	char name[48];
 	struct mutex	update_lock;
@@ -214,12 +213,6 @@ static int pca9641_reset_file_read(const char *path, uint32_t pos, uint8_t *val,
     struct file *filp;
     loff_t tmp_pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     filp = filp_open(path, O_RDONLY, 0);
     if (IS_ERR(filp)) {
         DEBUG_ERROR("read open failed errno = %ld\r\n", -PTR_ERR(filp));
@@ -228,10 +221,9 @@ static int pca9641_reset_file_read(const char *path, uint32_t pos, uint8_t *val,
     }
 
     tmp_pos = (loff_t)pos;
-    iov_iter_kvec(&iter, ITER_DEST, &iov, 1, iov.iov_len);
-    ret = vfs_iter_read(filp, &iter, &tmp_pos, 0);
+    ret = kernel_read(filp, val, size, &tmp_pos);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_read failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
+        DEBUG_ERROR("kernel_read failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
         goto exit;
     }
 
@@ -254,12 +246,6 @@ static int pca9641_reset_file_write(const char *path, uint32_t pos, uint8_t *val
     struct file *filp;
     loff_t tmp_pos;
 
-    struct kvec iov = {
-        .iov_base = val,
-        .iov_len = min_t(size_t, size, MAX_RW_COUNT),
-    };
-    struct iov_iter iter;
-
     filp = filp_open(path, O_RDWR, 777);
     if (IS_ERR(filp)) {
         DEBUG_ERROR("write open failed errno = %ld\r\n", -PTR_ERR(filp));
@@ -268,10 +254,9 @@ static int pca9641_reset_file_write(const char *path, uint32_t pos, uint8_t *val
     }
 
     tmp_pos = (loff_t)pos;
-    iov_iter_kvec(&iter, ITER_SOURCE, &iov, 1, iov.iov_len);
-    ret = vfs_iter_write(filp, &iter, &tmp_pos, 0);
+    ret = kernel_write(filp, val, size, &tmp_pos);
     if (ret < 0) {
-        DEBUG_ERROR("vfs_iter_write failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
+        DEBUG_ERROR("kernel_write failed, path=%s, addr=0x%x, size=%zu, ret=%d\r\n", path, pos, size, ret);
         goto exit;
     }
 
@@ -387,6 +372,7 @@ static int pca9641_do_file_reset(struct i2c_mux_core *muxc)
         usleep_range(reset_cfg->rst_delay_b, reset_cfg->rst_delay_b + 1);
     }
 
+    val = 0;
     err = pca9641_reset_file_read(file_attr->dev_name, file_attr->offset, &val, sizeof(val));
     if (err < 0) {
         goto out;
@@ -1073,7 +1059,8 @@ static int pca9641_detect_id(struct i2c_client *client)
     return 1;
 }
 
-static int pca9641_recordflag(struct i2c_adapter *adap) {
+static int pca9641_recordflag(struct i2c_adapter *adap)
+{
     if (pca_flag.flag != -1) {
         pr_err(" %s %d has init already!!!", __func__, __LINE__);
         return -1 ;

@@ -498,6 +498,7 @@ static int dfd_get_fru_data_common(int bus, int dev_addr, char *file_path, int t
         return -DFD_RV_INVALID_VALUE;
     }
 
+    mem_clear(&info, sizeof(info));
     if (file_path) {
         DBG_FRU_DEBUG(DBG_VERBOSE, "Read fru file (file: %s, type:%d, buf: %p, len: %d).\n",
                       file_path, type, buf, buf_len);
@@ -519,6 +520,7 @@ static int dfd_get_fru_data_common(int bus, int dev_addr, char *file_path, int t
         return -DFD_RV_INVALID_VALUE;
     }
     
+    fru_len = 0;
     if (file_path) {
         ret = dfd_ko_read_file(file_path, offset + 1, &fru_len, 1);
     } else {

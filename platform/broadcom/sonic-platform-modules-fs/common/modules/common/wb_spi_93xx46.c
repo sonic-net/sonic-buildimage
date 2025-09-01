@@ -16,6 +16,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/eeprom_93xx46.h>
+#include <wb_spi_master.h>
 #include <wb_bsp_kernel_debug.h>
 
 #define DEFAULT_SPI_BUS_NUM     (0)
@@ -61,7 +62,7 @@ static int __init wb_spi_93xx46_init(void)
     eeprom_93xx46_info.bus_num = spi_bus_num;
     eeprom_93xx46_info.controller_data = (void *)(long)spi_cs_gpio;
     eeprom_93xx46_info.max_speed_hz = spi_hz;
-    master = spi_busnum_to_master(eeprom_93xx46_info.bus_num);
+    master = wb_spi_master_busnum_to_master(eeprom_93xx46_info.bus_num);
     if (!master) {
         DEBUG_ERROR("get bus_num %u spi master failed.\n",
             eeprom_93xx46_info.bus_num);
