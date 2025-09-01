@@ -21,7 +21,6 @@ parameters:
 variables:
   - name: DOCKER_BUILD_TIMEOUT
     value: 5400
-  - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
 
 stages:
