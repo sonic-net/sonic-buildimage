@@ -497,22 +497,9 @@ class SFP(NvidiaSFPCommon):
         for s in not_ready_list:
             logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
 
-    def check_eeprom_ready_if_present(self):
-        """
-        Check if the eeprom is ready for a present SFP
-
-        Returns:
-            bool: False if the SFP is present and the eeprom is not ready, True otherwise
-        """
-        presence_file =  'hw_present' if self.is_sw_control() else 'present'
-        if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{presence_file}', log_func=None) != 1:
-            return True
-        return self._read_eeprom(0, 1, log_on_error=False) is not None
-
-    # read eeprom specfic bytes beginning from offset with size as num_bytes
     def read_eeprom(self, offset, num_bytes, log_on_error=True):
         """
-        Read eeprom specfic bytes beginning from a random offset with size as num_bytes. Tries up to 50 times total on every 0.1s.
+        Read eeprom specific bytes beginning from a random offset with size as num_bytes. Tries up to 50 times total on every 0.1s.
         Returns:
             bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
             None, if the read_eeprom fails
@@ -539,7 +526,7 @@ class SFP(NvidiaSFPCommon):
 
     def _read_eeprom(self, offset, num_bytes, log_on_error=True):
         """
-        Single-attempt read: Read eeprom specfic bytes beginning from a random offset with size as num_bytes
+        Single-attempt read: Read eeprom specific bytes beginning from a random offset with size as num_bytes
 
         Args:
             offset (int): read offset
@@ -593,10 +580,9 @@ class SFP(NvidiaSFPCommon):
 
         return bytearray(result)
 
-    # write eeprom specfic bytes beginning from offset with size as num_bytes
     def write_eeprom(self, offset, num_bytes, write_buffer):
         """
-        write eeprom specfic bytes beginning from a random offset with size as num_bytes
+        write eeprom specific bytes beginning from a random offset with size as num_bytes
         and write_buffer as the required bytes. Tries up to 50 times total on every 0.1s.
         Returns:
             Boolean, true if the write succeeded and false if it did not succeed.
@@ -621,13 +607,13 @@ class SFP(NvidiaSFPCommon):
 
         logger.log_error(
             f"EEPROM write failed after {MAX_ATTEMPTS} attempts "
-            f"for sfp={getattr(self, 'sdk_index', 'N/A')}, offset={offset}, size={num_bytes}"
+            f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}"
         )
         return False
 
     def _write_eeprom(self, offset, num_bytes, write_buffer):
         """
-        Single-attempt write: write eeprom specfic bytes beginning from a random offset with size as num_bytes
+        Single-attempt write: write eeprom specific bytes beginning from a random offset with size as num_bytes
         and write_buffer as the required bytes
         Returns:
             Boolean, true if the write succeeded and false if it did not succeed.
