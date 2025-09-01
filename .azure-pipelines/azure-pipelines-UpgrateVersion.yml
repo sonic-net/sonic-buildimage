@@ -34,9 +34,6 @@ parameters:
   default:
   - vs
   - broadcom
-  - centec
-  - centec-arm64
-  - generic
   - marvell-prestera-armhf
   - marvell-prestera-arm64
   - mellanox
@@ -74,7 +71,7 @@ stages:
   - template: azure-pipelines-build.yml
     parameters:
       jobFilters: ${{ parameters.jobFilters }}
-      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y'
+      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y NOBUSTER=1 NOBULLSEYE=1'
       preSteps:
       - template: .azure-pipelines/template-clean-sonic-slave.yml@buildimage
       - checkout: self
