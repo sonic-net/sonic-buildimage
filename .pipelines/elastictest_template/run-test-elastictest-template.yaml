@@ -147,7 +147,7 @@ steps:
   - script: |
       set -ex
       # To download file from repo, see AzDevOps Rest API @https://learn.microsoft.com/zh-cn/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1&tabs=HTTP
-      
+
       CURRENT_BRANCH=${{ parameters.MGMT_BRANCH }}
       echo "Current branch: $CURRENT_BRANCH"
       if [[ "$CURRENT_BRANCH" != "internal" ]]; then
@@ -158,13 +158,6 @@ steps:
         echo "Current branch is internal, no need to download test_plan.py"
       fi
     displayName: "Download test plan script"
-  - script: |
-      set -ex
-      # To download file from repo, see AzDevOps Rest API @https://learn.microsoft.com/zh-cn/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1&tabs=HTTP
-      
-      echo "Download pr_test_scripts.yaml from sonic-mgmt-int repo ${{ parameters.MGMT_BRANCH }} branch"
-      curl -u :$(MSSONIC-TOKEN) "https://dev.azure.com/mssonic/internal/_apis/git/repositories/sonic-mgmt-int/items?path=.azure-pipelines/pr_test_scripts.yaml&versionDescriptor.version=${{ parameters.MGMT_BRANCH }}&api-version=7.1-preview.1" -o ./.pipelines/pr_test_scripts.yaml
-    displayName: "Download pr scripts"
 
   - script: |
       # Check if azure cli is installed. If not, try to install it
@@ -175,6 +168,24 @@ steps:
         echo "Azure CLI is already installed"
       fi
     displayName: "Install azure-cli"
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: "SONiC-Automation"
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        set -ex
+        # To download file from repo, see AzDevOps Rest API @https://learn.microsoft.com/zh-cn/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1&tabs=HTTP
+
+        echo "Download pr_test_scripts.yaml from sonic-mgmt-int repo ${{ parameters.MGMT_BRANCH }} branch"
+
+        # Get access token using Azure CLI service connection authentication
+        MSSONIC_INTERNAL_TOKEN=$(az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken --output tsv)
+
+        # Use basic auth with empty username and access token as password
+        curl -u ":$MSSONIC_INTERNAL_TOKEN" "https://dev.azure.com/mssonic/internal/_apis/git/repositories/sonic-mgmt-int/items?path=.azure-pipelines/pr_test_scripts.yaml&versionDescriptor.version=${{ parameters.MGMT_BRANCH }}&api-version=7.1-preview.1" -o ./.pipelines/pr_test_scripts.yaml
+    displayName: "Download pr scripts"
 
   - task: AzureCLI@2
     inputs:
