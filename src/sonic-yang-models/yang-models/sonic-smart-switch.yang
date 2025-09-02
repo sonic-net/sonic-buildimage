@@ -49,6 +49,10 @@ module sonic-smart-switch {
 		description "Add vnet_name to DASH_HA_GLOBAL_CONFIG";
 	}
 
+	revision 2025-08-18 {
+		description "Add midplane_ipv4 to DPU";
+	}
+
 	container sonic-smart-switch {
 
 		container MID_PLANE_BRIDGE {
@@ -145,6 +149,11 @@ module sonic-smart-switch {
 					type inet:ipv6-address;
 				}
 				
+				leaf midplane_ipv4 {
+					description "IPv4 IP on midplane from minigraph";
+					type inet:ipv4-address;
+				}
+
 				leaf dpu_id {
 					description "ID of the DPU from minigraph";
 					type string {
