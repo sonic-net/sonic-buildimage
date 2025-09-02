@@ -218,3 +218,33 @@ class TestThermalUpdater:
         updater.update_single_module(mock_sfp)
 
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 0, 0, 0, 254000)
+
+    def test_load_tc_config_asic_no_poll_time_logging(self):
+        """Test logging when ASIC parameter exists but has no poll_time"""
+        updater = ThermalUpdater(None)
+        mock_data = {
+            'dev_parameters': {
+                'asic': {}
+            }
+        }
+        with mock.patch('sonic_platform.utils.load_json_file') as mock_load:
+            mock_load.return_value = mock_data
+            with mock.patch('sonic_platform.thermal_updater.logger') as mock_logger:
+                updater.load_tc_config()
+                # Verify logging message for ASIC poll_time not configured
+                mock_logger.log_notice.assert_any_call('ASIC poll_time not configured, using default 60s')
+
+    def test_load_tc_config_module_no_poll_time_logging(self):
+        """Test logging when module parameter exists but has no poll_time"""
+        updater = ThermalUpdater(None)
+        mock_data = {
+            'dev_parameters': {
+                'module\\d+': {}
+            }
+        }
+        with mock.patch('sonic_platform.utils.load_json_file') as mock_load:
+            mock_load.return_value = mock_data
+            with mock.patch('sonic_platform.thermal_updater.logger') as mock_logger:
+                updater.load_tc_config()
+                # Verify logging message for module poll_time not configured
+                mock_logger.log_notice.assert_any_call('Module poll_time not configured, using default 60s')

@@ -55,11 +55,12 @@ class ThermalUpdater:
         self._timer = utils.Timer()
 
     def load_tc_config(self):
-        asic_poll_interval = 1
-        sfp_poll_interval = 10
+        DEFAULT_POLL_INTERVAL = 60
+        asic_poll_interval = DEFAULT_POLL_INTERVAL
+        sfp_poll_interval = DEFAULT_POLL_INTERVAL
         data = utils.load_json_file(TC_CONFIG_FILE, log_func=None)
         if not data:
-            logger.log_notice(f'{TC_CONFIG_FILE} does not exist, use default polling interval')
+            logger.log_notice(f'{TC_CONFIG_FILE} does not exist, use default polling interval of {DEFAULT_POLL_INTERVAL}s')
 
         if data:
             dev_parameters = data.get('dev_parameters')
@@ -69,15 +70,23 @@ class ThermalUpdater:
                     asic_poll_interval_config = asic_parameter.get('poll_time')
                     if asic_poll_interval_config:
                         asic_poll_interval = int(asic_poll_interval_config) / 2
+                    else:
+                        logger.log_notice(f'ASIC poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
+                else:
+                    logger.log_notice(f'ASIC parameter not found, using default polling interval of {DEFAULT_POLL_INTERVAL}s')
                 module_parameter = dev_parameters.get('module\\d+')
                 if module_parameter is not None:
                     sfp_poll_interval_config = module_parameter.get('poll_time')
                     if sfp_poll_interval_config:
                         sfp_poll_interval = int(sfp_poll_interval_config) / 2
+                    else:
+                        logger.log_notice(f'Module poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
+                else:
+                    logger.log_notice(f'Module parameter not found, using default polling interval of {DEFAULT_POLL_INTERVAL}s')
 
-        logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
+        logger.log_notice(f'ASIC polling interval: {asic_poll_interval}s')
         self._timer.schedule(asic_poll_interval, self.update_asic)
-        logger.log_notice(f'Module polling interval: {sfp_poll_interval}')
+        logger.log_notice(f'SFP polling interval: {sfp_poll_interval}s')
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
     def start(self):

@@ -30,6 +30,7 @@ try:
     import glob
     import os
     import re
+    import time
 
     from .device_data import DeviceDataManager
     from . import utils
@@ -63,7 +64,8 @@ THERMAL_NAMING_RULE = {
         "temperature": "module{}_temp_input",
         "high_threshold": "module{}_temp_crit",
         "high_critical_threshold": "module{}_temp_emergency",
-        "type": "indexable"
+        "type": "indexable",
+        "allow_delay_create": True
     },
     "psu thermals":
     {
@@ -77,7 +79,8 @@ THERMAL_NAMING_RULE = {
             "name": "ASIC",
             "temperature": "asic",
             "high_threshold": "asic_temp_emergency",
-            "high_critical_threshold": "asic_temp_trip_crit"
+            "high_critical_threshold": "asic_temp_crit",
+            "allow_delay_create": True
         },
         {
             "name": "Ambient Port Side Temp",
@@ -224,21 +227,22 @@ def create_indexable_thermal(rule, index, sysfs_folder, position, presence_cb=No
     index += rule.get('start_index', 1)
     name = rule['name'].format(index)
     temp_file = os.path.join(sysfs_folder, rule['temperature'].format(index))
-    _check_thermal_sysfs_existence(temp_file, presence_cb)
+    allow_delay_create = rule.get('allow_delay_create', False)
+    _check_thermal_sysfs_existence(temp_file, presence_cb, allow_delay_create)
     if 'high_threshold' in rule:
         high_th_file = os.path.join(sysfs_folder, rule['high_threshold'].format(index))
-        _check_thermal_sysfs_existence(high_th_file, presence_cb)
+        _check_thermal_sysfs_existence(high_th_file, presence_cb, allow_delay_create)
     else:
         high_th_file = None
     if 'high_critical_threshold' in rule:
         high_crit_th_file = os.path.join(sysfs_folder, rule['high_critical_threshold'].format(index))
-        _check_thermal_sysfs_existence(high_crit_th_file, presence_cb)
+        _check_thermal_sysfs_existence(high_crit_th_file, presence_cb, allow_delay_create)
     else:
         high_crit_th_file = None
     if not presence_cb:
-        return Thermal(name, temp_file, high_th_file, high_crit_th_file, position)
+        return Thermal(name, temp_file, high_th_file, high_crit_th_file, position, allow_delay_create)
     else:
-        return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, position, presence_cb)
+        return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, position, presence_cb, allow_delay_create)
 
 
 def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
@@ -253,22 +257,23 @@ def create_single_thermal(rule, sysfs_folder, position, presence_cb=None):
         return None
 
     temp_file = os.path.join(sysfs_folder, temp_file)
-    _check_thermal_sysfs_existence(temp_file, presence_cb)
+    allow_delay_create = rule.get('allow_delay_create', False)
+    _check_thermal_sysfs_existence(temp_file, presence_cb, allow_delay_create)
     if 'high_threshold' in rule:
         high_th_file = os.path.join(sysfs_folder, rule['high_threshold'])
-        _check_thermal_sysfs_existence(high_th_file, presence_cb)
+        _check_thermal_sysfs_existence(high_th_file, presence_cb, allow_delay_create)
     else:
         high_th_file = None
     if 'high_critical_threshold' in rule:
         high_crit_th_file = os.path.join(sysfs_folder, rule['high_critical_threshold'])
-        _check_thermal_sysfs_existence(high_crit_th_file, presence_cb)
+        _check_thermal_sysfs_existence(high_crit_th_file, presence_cb, allow_delay_create)
     else:
         high_crit_th_file = None
     name = rule['name']
     if not presence_cb:
-        return Thermal(name, temp_file, high_th_file, high_crit_th_file, position)
+        return Thermal(name, temp_file, high_th_file, high_crit_th_file, position, allow_delay_create)
     else:
-        return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, position, presence_cb)
+        return RemovableThermal(name, temp_file, high_th_file, high_crit_th_file, position, presence_cb, allow_delay_create)
 
 
 def create_discrete_thermal(rule, position):
@@ -286,18 +291,20 @@ def create_discrete_thermal(rule, position):
         position += 1
     return thermal_list
 
-
-def _check_thermal_sysfs_existence(file_path, presence_cb):
+def _check_thermal_sysfs_existence(file_path, presence_cb, allow_delay_create=False):
     if presence_cb:
         status, _ = presence_cb()
         if not status:
             return
-    if not os.path.exists(file_path):
-        logger.log_error('Thermal sysfs {} does not exist'.format(file_path))
 
+    if not os.path.exists(file_path):
+        if allow_delay_create:
+            logger.log_notice('Thermal sysfs {} does not exist'.format(file_path))
+        else:
+            logger.log_error('Thermal sysfs {} does not exist'.format(file_path))
 
 class Thermal(ThermalBase):
-    def __init__(self, name, temp_file, high_th_file, high_crit_th_file, position):
+    def __init__(self, name, temp_file, high_th_file, high_crit_th_file, position, allow_delay_create=False):
         """
         index should be a string for category ambient and int for other categories
         """
@@ -307,6 +314,7 @@ class Thermal(ThermalBase):
         self.temperature = temp_file
         self.high_threshold = high_th_file
         self.high_critical_threshold = high_crit_th_file
+        self.allow_delay_create = allow_delay_create
 
     def get_name(self):
         """
@@ -325,6 +333,9 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to nearest thousandth
             of one degree Celsius, e.g. 30.125
         """
+        if not self._retry_until_file_exists(self.temperature):
+            return None
+
         value = utils.read_float_from_file(self.temperature, None, log_func=logger.log_info)
         return value / 1000.0 if (value is not None and value != 0) else None
 
@@ -338,6 +349,10 @@ class Thermal(ThermalBase):
         """
         if self.high_threshold is None:
             return None
+
+        if not self._retry_until_file_exists(self.high_threshold):
+            return None
+
         value = utils.read_float_from_file(self.high_threshold, None, log_func=logger.log_info)
         return value / 1000.0 if (value is not None and value != 0) else None
 
@@ -351,8 +366,46 @@ class Thermal(ThermalBase):
         """
         if self.high_critical_threshold is None:
             return None
+
+        if not self._retry_until_file_exists(self.high_critical_threshold):
+            return None
+
         value = utils.read_float_from_file(self.high_critical_threshold, None, log_func=logger.log_info)
         return value / 1000.0 if (value is not None and value != 0) else None
+
+    def _retry_until_file_exists(self, file_path):
+        """
+        Internal method to retry until a thermal sysfs file exists.
+
+        Args:
+            file_path (str): Path to the thermal sysfs file to check
+
+        Returns:
+            bool: True if file exists after retry, False if retry failed
+        """
+        if not self.allow_delay_create:
+            return True
+
+        # Retry mechanism for thermal sysfs file existence check
+        max_retries = 5
+        retry_delay = 1  # seconds
+
+        for attempt in range(max_retries):
+            if os.path.exists(file_path):
+                # File exists, proceed with reading
+                logger.log_info('Thermal sysfs {} now exists after retry attempt {}'.format(file_path, attempt + 1))
+                self.allow_delay_create = False  # Disable retry for future calls
+                return True
+
+            if attempt < max_retries - 1:
+                # Not the last attempt, log warning and retry
+                logger.log_warning('Thermal sysfs {} does not exist, retrying in {} second(s)... (attempt {}/{})'.format(
+                    file_path, retry_delay, attempt + 1, max_retries))
+                time.sleep(retry_delay)
+            else:
+                # Last attempt failed, log error
+                logger.log_error('Thermal sysfs {} does not exist after {} retries'.format(file_path, max_retries))
+                return False
 
     def get_position_in_parent(self):
         """
@@ -372,8 +425,8 @@ class Thermal(ThermalBase):
 
 
 class RemovableThermal(Thermal):
-    def __init__(self, name, temp_file, high_th_file, high_crit_th_file, position, presence_cb):
-        super(RemovableThermal, self).__init__(name, temp_file, high_th_file, high_crit_th_file, position)
+    def __init__(self, name, temp_file, high_th_file, high_crit_th_file, position, presence_cb, allow_delay_create=False):
+        super(RemovableThermal, self).__init__(name, temp_file, high_th_file, high_crit_th_file, position, allow_delay_create)
         self.presence_cb = presence_cb
 
     def get_temperature(self):
