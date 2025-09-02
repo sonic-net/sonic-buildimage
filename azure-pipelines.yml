@@ -106,7 +106,7 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_IMAGE_TAG
-    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_IMAGE_TAG'], 'default') ]
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_IMAGE_TAG'], 'latest') ]
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
