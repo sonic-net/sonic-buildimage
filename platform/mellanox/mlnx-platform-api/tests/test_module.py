@@ -322,7 +322,7 @@ class TestModule:
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             ("Reboot", 'Reset from Main board'),
             (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
-            ("Reboot", 'Reset due to Power off'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
         ]
         with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
