@@ -151,6 +151,8 @@ jobs:
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         name: PublishAndSetPtfTag
         env:
+          REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
+          REGISTRY_USERNAME: $(REGISTRY_USERNAME)
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
