@@ -78,6 +78,39 @@ jobs:
           BUILD_REASON=$(Build.Reason)
           echo "Build.Reason = $BUILD_REASON"
           echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
+          echo "GROUP_NAME = $(GROUP_NAME)"
+
+          # Check if docker-ptf Dockerfile.j2 has changed for PR builds
+          PTF_DOCKERFILE_CHANGED=false
+          PTF_IMAGE_TAG=""
+
+          if [[ "$BUILD_REASON" == "PullRequest" ]]; then
+            echo "Checking for changes to dockers/docker-ptf/Dockerfile.j2 in PR..."
+
+            # Get the target branch and check for changes
+            TARGET_BRANCH="origin/$(System.PullRequest.TargetBranch)"
+            echo "Comparing against target branch: $TARGET_BRANCH"
+
+            # Fetch target branch to ensure we have the latest
+            git fetch origin $(System.PullRequest.TargetBranch)
+
+            # Check if docker-ptf Dockerfile.j2 has changes
+            if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
+              echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
+              PTF_DOCKERFILE_CHANGED=true
+              PTF_IMAGE_TAG="pr-$(System.PullRequest.PullRequestNumber)-$(Build.BuildId)"
+              echo "PTF_IMAGE_TAG set to: $PTF_IMAGE_TAG"
+              echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]$PTF_IMAGE_TAG"
+            else
+              echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
+              echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]"
+            fi
+          else
+            echo "Not a PR build, setting empty PTF_IMAGE_TAG"
+            echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]"
+          fi
+
+          # Original logic for master branch builds
           if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
           then
             PORT=443
@@ -92,8 +125,31 @@ jobs:
               ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
             done
           fi
+
+          # Push docker-ptf for PR builds if Dockerfile.j2 changed
+          if [[ "$BUILD_REASON" == "PullRequest" && "$PTF_DOCKERFILE_CHANGED" == "true" && "$(GROUP_NAME)" == "vs" ]]; then
+            PORT=443
+            DOCKERS=$(ls target/docker-ptf.gz 2>/dev/null || echo "")
+            if [[ -n "$DOCKERS" ]]; then
+              # Safety check: Ensure PTF_IMAGE_TAG starts with "pr-" to prevent overwriting release tags
+              if [[ "$PTF_IMAGE_TAG" == pr-* ]]; then
+                echo "Pushing docker-ptf.gz with tag: $PTF_IMAGE_TAG"
+                for f in $DOCKERS; do
+                  echo "Pushing $f with tag $PTF_IMAGE_TAG"
+                  ./push_docker.sh $f $(REGISTRY_SERVER_PUBLIC) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$PTF_IMAGE_TAG"
+                done
+                echo "Successfully pushed docker-ptf.gz with tag: $PTF_IMAGE_TAG"
+              else
+                echo "ERROR: PTF_IMAGE_TAG '$PTF_IMAGE_TAG' does not start with 'pr-'. Skipping push."
+              fi
+            else
+              echo "WARNING: No docker-ptf.gz found to push. Check build step"
+            fi
+          fi
+
           mkdir -p $(Build.ArtifactStagingDirectory)/target
           mv target/* $(Build.ArtifactStagingDirectory)/target/
+        name: PublishAndSetPtfTag
         env:
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         displayName: Publish to Docker Registry and Copy Artifacts
