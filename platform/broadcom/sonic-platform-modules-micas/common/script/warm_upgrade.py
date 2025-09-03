@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import os
 import time
@@ -199,6 +214,9 @@ class RefreshUpgradeBase(object):
         return True, msg
 
     def access_test(self, config):
+        skip = config.get("skip", 0)
+        if skip == 1:
+            return True
         # polling execute command
         polling_cmd_list = config.get("polling_cmd", [])
         for polling_cmd_config in polling_cmd_list:

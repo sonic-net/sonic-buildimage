@@ -1,6 +1,21 @@
 /*
- * wb_wdt.c
- * ko for watchdog function
+ * An wb_wdt driver for watchdog device function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/err.h>
@@ -69,8 +84,8 @@ enum {
 
 enum {
     WATCHDOG_DEVICE_TYPE    = 0,
-    HRTIMER_TYPE,
-    THREAD_TYPE,
+    HRTIMER_TYPE            = 1,
+    THREAD_TYPE             = 2,
 };
 
 typedef struct wb_wdt_priv_s {
@@ -427,8 +442,8 @@ static int wdt_thread_timer(void *data)
     wb_wdt_priv_t *priv = data;
 
     while (!kthread_should_stop()) {
-        schedule_timeout_uninterruptible(msecs_to_jiffies(priv->feed_time));
         wdt_hwping(priv);
+        schedule_timeout_uninterruptible(msecs_to_jiffies(priv->feed_time));
     }
     return 0;
 }
@@ -673,6 +688,32 @@ static const struct watchdog_ops wb_wdt_ops = {
     .get_timeleft  = wb_wdt_get_timeleft,
 };
 
+static int wb_wdt_register_device(wb_wdt_priv_t *priv)
+{
+    int ret;
+
+    watchdog_set_drvdata(&priv->wdd, priv);
+
+    priv->wdd.info         = &wb_wdt_ident;
+    priv->wdd.ops          = &wb_wdt_ops;
+    priv->wdd.bootstatus   = 0;
+    priv->wdd.timeout      = priv->hw_margin / MS_TO_S;
+    priv->wdd.min_timeout  = priv->timer_accuracy / MS_TO_S;
+    priv->wdd.max_timeout  = priv->timer_accuracy * MAX_REG_VAL / MS_TO_S;
+    priv->wdd.parent       = priv->dev;
+
+    watchdog_stop_on_reboot(&priv->wdd);
+
+    ret = devm_watchdog_register_device(priv->dev, &priv->wdd);
+    if (ret != 0) {
+        dev_err(priv->dev, "cannot register watchdog device (err=%d)\n", ret);
+        return -ENXIO;
+    }
+
+    return 0;
+}
+
+
 static int watchdog_device_cfg(wb_wdt_priv_t *priv)
 {
     int ret;
@@ -710,24 +751,6 @@ static int watchdog_device_cfg(wb_wdt_priv_t *priv)
                 priv->timer_update_reg, priv->timer_update_reg_val, ret);
             return ret;
         }
-    }
-
-    watchdog_set_drvdata(&priv->wdd, priv);
-
-    priv->wdd.info         = &wb_wdt_ident;
-    priv->wdd.ops          = &wb_wdt_ops;
-    priv->wdd.bootstatus   = 0;
-    priv->wdd.timeout      = priv->hw_margin / MS_TO_S;
-    priv->wdd.min_timeout  = priv->timer_accuracy / MS_TO_S;
-    priv->wdd.max_timeout  = priv->timer_accuracy * MAX_REG_VAL / MS_TO_S;
-    priv->wdd.parent       = priv->dev;
-
-    watchdog_stop_on_reboot(&priv->wdd);
-
-    ret = devm_watchdog_register_device(priv->dev, &priv->wdd);
-    if (ret != 0) {
-        dev_err(priv->dev, "cannot register watchdog device (err=%d)\n", ret);
-        return -ENXIO;
     }
 
     return 0;
@@ -1084,6 +1107,12 @@ static int wb_wdt_probe(struct platform_device *pdev)
 
     dev_info(&pdev->dev, "register %s mode, config_mode %u, func_mode %u, %u ms overtime wdt success\n",
         algo, priv->config_mode, priv->priv_func_mode, priv->hw_margin);
+
+    ret = wb_wdt_register_device(priv);
+    if (ret < 0) {
+        dev_err(&pdev->dev, "kernel watchdog sysfs register %u failed.\n", ret);
+        return -ENODEV;
+    }
 
     if (priv->sysfs_index != SYSFS_NO_CFG) {
 
