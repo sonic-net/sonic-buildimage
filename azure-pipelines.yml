@@ -57,14 +57,14 @@ variables:
 stages:
 - stage: BuildVS
   pool: sonicbld-1es
+  variables:
+  - group: Container-Registry
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
       - name: vs
-        variables:
-          - group: Container-Registry
 
 - stage: Build
   pool: sonicbld-1es
