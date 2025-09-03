@@ -1074,6 +1074,7 @@ declare -rA FW_FILE_MAP=( \
     [$MLNX_SPC2_FW_FILE]="fw-SPC2.mfa" \
     [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
     [$MLNX_SPC4_FW_FILE]="fw-SPC4.mfa" \
+    [$MLNX_SPC5_FW_FILE]="fw-SPC5.mfa" \
 )
 sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
@@ -1139,6 +1140,7 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
 done
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
+sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
@@ -1200,3 +1202,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unho
 {% if ENABLE_MULTIDB == "y" %}
 sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 {% endif %}
+
+# Install syslog counter plugin
+install_deb_package $debs_path/syslog-counter_*.deb

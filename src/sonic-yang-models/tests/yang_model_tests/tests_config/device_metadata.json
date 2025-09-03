@@ -635,6 +635,15 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "location_type": "DUMMY_LOCATION"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -703,6 +712,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "syslog_with_osversion": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SYSLOG_COUNTER_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "syslog_counter": true
                 }
             }
         }
