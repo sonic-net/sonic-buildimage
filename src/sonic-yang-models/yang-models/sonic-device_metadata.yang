@@ -275,6 +275,11 @@ module sonic-device_metadata {
                     type string;
                 }
 
+                leaf location_type {
+                    description "Location type for the device.";
+                    type string;
+                }
+
                 leaf nexthop_group {
                     description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
                     type enumeration {
