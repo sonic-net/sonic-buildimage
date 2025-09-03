@@ -1427,3 +1427,10 @@ device:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
 ...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
+...
