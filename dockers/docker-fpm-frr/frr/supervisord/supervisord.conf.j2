@@ -263,3 +263,15 @@ stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
+
+[program:sharpd]
+command=/usr/lib/frr/sharpd -A 127.0.0.1 -P 0
+priority=5
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
