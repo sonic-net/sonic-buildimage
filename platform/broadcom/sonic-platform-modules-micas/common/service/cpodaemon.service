@@ -1,0 +1,13 @@
+[Unit]
+Description=cpodaemon service
+After=platform_driver.service
+
+[Service]
+ExecStart=/usr/local/bin/cpodaemon.sh start
+ExecStop=/usr/local/bin/cpodaemon.sh stop
+KillMode=process
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target

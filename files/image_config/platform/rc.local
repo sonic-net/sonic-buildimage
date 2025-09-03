@@ -198,9 +198,9 @@ program_console_speed()
     # Subsequent boots may have new baud rate without finding keep-baud argument
     grep agetty /lib/systemd/system/serial-getty@.service |grep keep-baud
     if [ $? = 0 ]; then
-        sed -i "s|\-\-keep\-baud .* %I| $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|\-\-keep\-baud .* -| $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
     else
-        sed -i "s|u' .* %I|u' $CONSOLE_SPEED %I|g" /lib/systemd/system/serial-getty@.service
+        sed -i "s|u' .* -|u' $CONSOLE_SPEED -|g" /lib/systemd/system/serial-getty@.service
     fi
 
     # Reload systemd config

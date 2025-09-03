@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# interface.py
-# Python implementation of the Class interface
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import collections
 from plat_hal.chassisbase import chassisbase
-from plat_hal.baseutil import baseutil
+from plat_hal.baseutil import baseutil, getplatform_name
 from plat_hal.osutil import osutil
 
 
@@ -864,7 +874,7 @@ class interface(object):
             tmp = dcdc.sensor.Value
             if tmp is not None:
                 dicttmp['Value'] = tmp
-                if tmp > dicttmp['Max'] or tmp < dicttmp['Min']:
+                if tmp > float(dicttmp['Max']) or tmp < float(dicttmp['Min']):
                     dicttmp["Status"] = "NOT OK"
                 else:
                     dicttmp["Status"] = "OK"
@@ -914,6 +924,8 @@ class interface(object):
             dic["High"] = self.error_ret
             dic["Value"] = self.error_ret
             dic["Unit"] = self.error_ret
+            dic["Invalid"] = self.error_ret
+            dic["Error"] = self.error_ret
         else:
             dic["Name"] = temptmp.name
             dic["Api_name"] = temptmp.api_name
@@ -924,12 +936,30 @@ class interface(object):
             temp_value = temptmp.Value
             dic["Value"] = temp_value if (temp_value is not None) else self.error_ret
             dic["Unit"] = temptmp.Unit
+            dic["Invalid"] = temptmp.temp_invalid
+            dic["Error"] = temptmp.temp_error
         return dic
 
     def get_temp_info(self):
         val_list = collections.OrderedDict()
         # temp
         templist = self.chas.temp_list
+        for temp in templist:
+            dic = collections.OrderedDict()
+            dic["Min"] = temp.Min
+            dic["Max"] = temp.Max
+            dic["Low"] = temp.Low
+            dic["High"] = temp.High
+            temp_value = temp.Value
+            dic["Value"] = temp_value if (temp_value is not None) else self.error_ret
+            dic["Unit"] = temp.Unit
+            val_list[temp.name] = dic
+        return val_list
+
+    def get_temp_info_s3ip(self):
+        val_list = collections.OrderedDict()
+        # temp
+        templist = self.chas.temp_list_s3ip
         for temp in templist:
             dic = collections.OrderedDict()
             dic["Min"] = temp.Min
@@ -1336,4 +1366,11 @@ class interface(object):
             baseutil.logger_debug(msg)
             return "Unknown reboot cause"
         return cpu.get_cpu_reboot_cause()
+
+    def get_sensor_print_src(self):
+        """
+        Get sensor data source
+        @return string of sensor data source
+        """
+        return self.chas.sensor_print_src
 
