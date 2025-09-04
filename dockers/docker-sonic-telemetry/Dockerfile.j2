@@ -26,6 +26,7 @@ COPY ["start.sh", "telemetry.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
+COPY ["docker-telemetry-entry.sh", "/usr/local/bin/"]
 
 FROM $BASE
 
@@ -37,4 +38,5 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-ENTRYPOINT ["/usr/local/bin/supervisord"]
+RUN chmod +x /usr/local/bin/docker-telemetry-entry.sh
+ENTRYPOINT ["/usr/local/bin/docker-telemetry-entry.sh"]
