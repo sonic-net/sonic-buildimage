@@ -11,6 +11,8 @@
 #include "table.h"
 
 using namespace swss;
+using namespace std;
+
 using json = nlohmann::json;
 
 bool isValidSeverity(string severityStr) {
@@ -33,6 +35,12 @@ bool parse_config(const char *filename, unsigned int& days, unsigned int& count)
     days = EHT_MAX_DAYS;
     count = EHT_MAX_ELEMS;
     std::ifstream ifs(filename);
+
+    if (!ifs.is_open()) {
+        std::cerr << "Error: File does not exist or cannot be opened." << std::endl;
+        return false;
+    }
+
     json j = json::parse(ifs);
     for (json::iterator it = j.begin(); it != j.end(); ++it) {
         if(it.key() == "max-days") {

@@ -4,10 +4,9 @@
 static EventConsume *evtd_instance = NULL;
 
 void signalHandler(const int signal) { 
-    SWSS_LOG_NOTICE("in signalHandler");
 
     if (signal == SIGINT) {
-        evtd_instance->read_eventd_config();
+        reload_config_flag.store(true);
     }
 }
 
