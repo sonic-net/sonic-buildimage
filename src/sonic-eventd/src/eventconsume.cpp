@@ -18,6 +18,8 @@ unordered_map<string, uint64_t> cal_lookup_map;
 // temporary map to hold merge of default map of events and any event profile
 EventMap static_event_table;
 
+std::atomic<bool> reload_config_flag(false); // Definition and initialization
+
 bool g_run = true;
 uint64_t seq_id = 0;
 uint64_t PURGE_SECONDS = 86400;
@@ -81,11 +83,15 @@ void EventConsume::run()
 
     SWSS_LOG_ENTER();
     event_handle_t hsub;
-    hsub = events_init_subscriber();
+    hsub = events_init_subscriber(false, 3000);
     
     while (g_run) {
         event_receive_op_t evt;
         map_str_str_t evtOp;
+        if (reload_config_flag.load()) {
+            read_eventd_config();
+        }
+
         int rc = event_receive(hsub, evt); 
         if (rc != 0) {
             SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
@@ -105,7 +111,7 @@ void EventConsume::read_eventd_config(bool read_all) {
     // read from default map
     static_event_table.clear();
     if (!parse(m_evProfile.c_str(), static_event_table)) {
-        SWSS_LOG_NOTICE("Can not initialize event map");
+        SWSS_LOG_INFO("Can not initialize event map");
         closeSyslog();
         exit(0);
     }
@@ -236,7 +242,7 @@ void EventConsume::handle_notification(const event_receive_op_t& evt)
     updateEventStatistics(true, is_raise, is_ack, is_clear);
 
     // raise a syslog message
-    writeToSyslog(ev_id, (int)(SYSLOG_SEVERITY.find(ev_sev)->second), ev_type, ev_act, ev_msg, ev_static_msg);
+    writeToSyslog(ev_id.c_str(), (int)(SYSLOG_SEVERITY.find(ev_sev)->second), ev_type.c_str(), ev_act.c_str(), ev_msg.c_str(), ev_static_msg.c_str());
 
     return;
 }

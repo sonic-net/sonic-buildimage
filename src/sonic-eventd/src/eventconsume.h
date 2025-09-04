@@ -11,6 +11,8 @@
 using namespace swss;
 using namespace std;
 
+extern std::atomic<bool> reload_config_flag;
+
 class EventConsume
 {
 public:
