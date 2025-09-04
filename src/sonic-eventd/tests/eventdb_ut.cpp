@@ -30,7 +30,7 @@ extern EventMap static_event_table;
 
 string existing_file = "./tests//eventdb_database_config.json";
 string nonexisting_file = "./tests//database_config_nonexisting.json";
-string global_existing_file = "./tests//eventdb_database_global.json";
+string global_existing_file = "./tests//eventdb_database_config_global.json";
 
 
 
@@ -397,7 +397,7 @@ public:
         EXPECT_FALSE(SonicDBConfig::isGlobalInit());
 
         // Call an API which actually needs the data populated by SonicDBConfig::initializeGlobalConfig
-//        EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, TEST_NAMESPACE), runtime_error);
+        // EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, TEST_NAMESPACE), runtime_error);
 
         // load local global file, init should be true
         SonicDBConfig::initializeGlobalConfig(global_existing_file);
@@ -405,8 +405,7 @@ public:
         EXPECT_TRUE(SonicDBConfig::isGlobalInit());
 
         // Call an API with wrong namespace passed
-        cout << "INIT: Invoking SonicDBConfig::getDbId(APPL_DB, invalid)" << endl;
-//        EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, INVALID_NAMESPACE), out_of_range);
+        // EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, INVALID_NAMESPACE), out_of_range);
 
         // Get this info handy
         try
