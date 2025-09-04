@@ -46,7 +46,6 @@ parameters:
   default: 400
 
 variables:
-  - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
 
 stages:

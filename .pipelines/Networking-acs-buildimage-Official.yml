@@ -24,12 +24,11 @@ variables:
     value: noninteractive
   - name: CDP_CLOUDVAULT_VERSION_SANITIZE
     value: true
-  - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
   - name: BUILD_NUMBER
     value: $(Build.BuildId)
 resources:
-  repositories: 
+  repositories:
     - repository: templates
       type: git
       name: OneBranch.Pipelines/GovernedTemplates
