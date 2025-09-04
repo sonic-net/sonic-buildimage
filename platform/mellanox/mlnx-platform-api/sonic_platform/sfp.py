@@ -205,6 +205,9 @@ SFF_POWER_CLASS_8_OFFSET = 107
 CMIS_MCI_EEPROM_OFFSET = 2
 CMIS_MCI_MASK = 0b00001100
 
+MAX_ATTEMPTS = 50
+RETRY_SLEEP_SEC = 0.1
+
 STATE_DOWN = 'Down'                             # Initial state
 STATE_INIT = 'Initializing'                     # Module starts initializing, check module present, also power on the module if need
 STATE_RESETTING = 'Resetting'                   # Module is resetting the firmware
@@ -443,7 +446,9 @@ class SFP(NvidiaSFPCommon):
         presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
         if utils.read_int_from_file(presence_sysfs) != 1:
             return False
-        eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
+        eeprom_raw = self.read_eeprom(0, 1, log_on_error=False)
+        if eeprom_raw is None:
+            logger.log_error(f'SFP {self.sdk_index} was plugged out')
         return eeprom_raw is not None
     
     @classmethod
@@ -451,7 +456,7 @@ class SFP(NvidiaSFPCommon):
         not_ready_list = sfp_list
         
         while wait_time > 0:
-            not_ready_list = [s for s in not_ready_list if s.state == STATE_FW_CONTROL and s._read_eeprom(0, 2,False) is None]
+            not_ready_list = [s for s in not_ready_list if s.state == STATE_FW_CONTROL and s._read_eeprom(0, 1,False) is None]
             if not_ready_list:
                 time.sleep(0.1)
                 wait_time -= 0.1
@@ -461,18 +466,36 @@ class SFP(NvidiaSFPCommon):
         for s in not_ready_list:
             logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
 
-    # read eeprom specfic bytes beginning from offset with size as num_bytes
-    def read_eeprom(self, offset, num_bytes):
+    def read_eeprom(self, offset, num_bytes, log_on_error=True):
         """
-        Read eeprom specfic bytes beginning from a random offset with size as num_bytes
+        Read eeprom specific bytes beginning from a random offset with size as num_bytes. Tries up to 50 times total on every 0.1s.
         Returns:
             bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
             None, if the read_eeprom fails
         """
-        return self._read_eeprom(offset, num_bytes)
+        for attempt in range(MAX_ATTEMPTS):
+            result = self._read_eeprom(offset, num_bytes, log_on_error)
+            if result is not None:
+                logger.log_notice(
+                    f"EEPROM read success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
+                    f"(sfp={self.sdk_index}, offset={offset}, size={num_bytes})")
+                return result
+            if attempt < MAX_ATTEMPTS - 1:  # only sleep if another retry will happen
+                logger.log_notice(
+                    f"EEPROM read attempt {attempt + 1}/{MAX_ATTEMPTS} failed "
+                    f"(sfp={self.sdk_index}, offset={offset}, size={num_bytes}). "
+                    f"Retrying in {RETRY_SLEEP_SEC:.1f}s...")
+                time.sleep(RETRY_SLEEP_SEC)
+
+        if log_on_error:
+            logger.log_error(
+                f"EEPROM read failed after {MAX_ATTEMPTS} attempts "
+                f"(sfp={self.sdk_index}, offset={offset}, size={num_bytes})")
+        return None
 
     def _read_eeprom(self, offset, num_bytes, log_on_error=True):
-        """Read eeprom specfic bytes beginning from a random offset with size as num_bytes
+        """
+        Single-attempt read: Read eeprom specific bytes beginning from a random offset with size as num_bytes
 
         Args:
             offset (int): read offset
@@ -510,30 +533,62 @@ class SFP(NvidiaSFPCommon):
                             num_bytes = 0
                     if ctypes.get_errno() != 0:
                         raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-                    logger.log_debug(f'read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
-                        f'size={read_length}, data={content}')
+
+                    logger.log_debug(
+                        f"read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, "
+                        f"size={read_length}, data={content}"
+                    )
+
             except (OSError, IOError) as e:
                 if log_on_error:
-                    logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, '\
-                        f'size={num_bytes}, offset={offset}, error = {e}')
+                    logger.log_warning(
+                        f"Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, "
+                        f"size={num_bytes}, offset={offset}, error = {e}"
+                    )
                 return None
 
         return bytearray(result)
 
-    # write eeprom specfic bytes beginning from offset with size as num_bytes
     def write_eeprom(self, offset, num_bytes, write_buffer):
         """
-        write eeprom specfic bytes beginning from a random offset with size as num_bytes
+        write eeprom specific bytes beginning from a random offset with size as num_bytes
+        and write_buffer as the required bytes. Tries up to 50 times total on every 0.1s.
+        Returns:
+            Boolean, true if the write succeeded and false if it did not succeed.
+        """
+        if num_bytes != len(write_buffer):
+            logger.log_error("Error mismatch between buffer length and number of bytes to be written")
+            return False
+
+        for attempt in range(MAX_ATTEMPTS):
+            ret = self._write_eeprom(offset, num_bytes, write_buffer)
+            if ret:
+                logger.log_notice(
+                    f"EEPROM write success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
+                    f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}")
+                return True
+            logger.log_notice(
+                f"EEPROM write attempt {attempt + 1}/{MAX_ATTEMPTS} failed "
+                f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}. "
+                f"Retrying in {RETRY_SLEEP_SEC:.1f}s..."
+            )
+            time.sleep(RETRY_SLEEP_SEC)
+
+        logger.log_error(
+            f"EEPROM write failed after {MAX_ATTEMPTS} attempts "
+            f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}"
+        )
+        return False
+
+    def _write_eeprom(self, offset, num_bytes, write_buffer):
+        """
+        Single-attempt write: write eeprom specific bytes beginning from a random offset with size as num_bytes
         and write_buffer as the required bytes
         Returns:
             Boolean, true if the write succeeded and false if it did not succeed.
         Example:
             mlxreg -d /dev/mst/mt52100_pciconf0 --reg_name MCIA --indexes slot_index=0,module=1,device_address=154,page_number=5,i2c_device_address=0x50,size=1,bank_number=0 --set dword[0]=0x01000000 -y
         """
-        if num_bytes != len(write_buffer):
-            logger.log_error("Error mismatch between buffer length and number of bytes to be written")
-            return False
-
         while num_bytes > 0:
             page_num, page, page_offset = self._get_page_and_page_offset(offset)
             if not page:
@@ -558,12 +613,13 @@ class SFP(NvidiaSFPCommon):
                     num_bytes -= ret
                     if ctypes.get_errno() != 0:
                         raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-                    logger.log_debug(f'write EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
-                        f'size={ret}, left={num_bytes}, data={written_buffer}')
+                    logger.log_debug('write EEPROM sfp={}, page={}, page_offset={}, size={}, left={}, data={}'.format(self.sdk_index, page, page_offset, ret, num_bytes, written_buffer))
             except (OSError, IOError) as e:
                 data = ''.join('{:02x}'.format(x) for x in write_buffer)
-                logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, '\
-                    f'offset={offset}, data = {data}, error = {e}')
+                logger.log_error(
+                    f"Failed to write EEPROM: sfp={self.sdk_index}, page={page}, page_offset={page_offset}, "
+                    f"size={num_bytes}, offset={offset}, data={data}, error={e}"
+                )
                 return False
         return True
 
