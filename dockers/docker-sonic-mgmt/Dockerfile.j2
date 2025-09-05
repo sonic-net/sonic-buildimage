@@ -111,6 +111,9 @@ RUN python3 -m pip install aiohttp \
                  thrift==0.11.0 \
                  virtualenv \
                  debugpy \
+                 opentelemetry-api==1.33.1 \
+                 opentelemetry-sdk==1.33.1 \
+                 opentelemetry-exporter-otlp==1.33.1 \
     && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
     && cd nanomsg-1.2      \
