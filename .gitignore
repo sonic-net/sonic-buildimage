@@ -9,6 +9,7 @@ rules/config.user
 
 # Build artifacts
 fsroot/
+fsroot-vs/
 fs.*
 target/
 *.deb
@@ -18,6 +19,8 @@ target/
 *.tar
 *.xz
 *.gz
+*.d
+*.dsc
 *-dbg
 *dbg.j2
 *.img
@@ -43,6 +46,8 @@ platform/*/docker-*/*manifest*
 
 # Installer-related files and directories
 installer/x86_64/platforms/
+installer/platforms/
+installer/platforms_asic
 
 # Misc. files
 asic_config_checksum
@@ -95,6 +100,9 @@ platform/broadcom/sonic-platform-modules-dell/z9100/modules/dell_mailbox.c
 platform/broadcom/sonic-platform-modules-dell/z9264f/sonic_platform/ipmihelper.py
 platform/cisco-8000
 platform/pensando/pensando-sonic-artifacts
+
+# generated files
+src/sonic-yang-models/cvlyang-models
 
 # buildinfo
 files/build/buildinfo
