@@ -31,6 +31,7 @@
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
   * [DHCP_RELAY](#dhcp_relay)
+  * [DHCPV4_RELAY](#dhcpv4_relay)
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
@@ -1134,6 +1135,28 @@ instance is supported in SONiC.
     ],
     "rfc6939_support": "true",
     "interface_id": "true"
+}
+
+```
+
+### DHCPV4_RELAY
+
+```
+{
+"DHCPV4_RELAY": {
+    "Vlan1000": {
+        "dhcpv4_servers": [
+            "192.168.0.1",
+            "192.168.0.2"
+        ],
+        "server_vrf": "Vrf_RED",
+        "source_interface": "Loopback0",
+        "link_selection": "enable",
+        "vrf_selection": "enable",
+        "server_id_override": "enable",
+        "agent_relay_mode": "append",
+        "max_hop_count": 10
+    }
 }
 
 ```
