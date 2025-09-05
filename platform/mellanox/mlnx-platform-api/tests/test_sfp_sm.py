@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -180,4 +181,16 @@ class TestSfpStateMachine:
         s = sfp.SFP(0)
         s.on_event(sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_FCP_NOT_PRESENT
-        
+
+    def test_eeprom_read_retry(self):
+        self.mock_value('control', 1)
+        self.mock_value('hw_present', 1)
+        self.mock_value('power_on', 1)
+        self.mock_value('hw_reset', 1)
+        self.mock_value('power_good', 1)
+        s = sfp.SFP(0)
+        s.get_xcvr_api = mock.MagicMock(return_value=None)
+        s.on_event(sfp.EVENT_START)
+        assert s.get_state() == sfp.STATE_FW_CONTROL
+        assert self.get_value('control') == sfp.SFP_FW_CONTROL
+        assert s.get_xcvr_api.call_count == sfp.SFP_EEPROM_MAX_RETRY_COUNT + 1
