@@ -14,7 +14,11 @@
         },
         "thermal_name": {
             "1": "PSU1_TEMP1",
-            "2": "PSU2_TEMP1"
+            "2": "PSU1_TEMP2",
+            "3": "PSU1_TEMP3",
+            "4": "PSU2_TEMP1",
+            "5": "PSU2_TEMP2",
+            "6": "PSU2_TEMP3"
         },
         "psu_present": {
             "i2c": {
@@ -35,11 +39,12 @@
         "psu_fan_dir": {
             "i2c": {
                 "valmap": {
+                    "D1U74T-W-2400-12-HB4C": "exhaust",
                     "D1U74T-W-3200-12-HB4C": "exhaust"
                 }
             }
         },
-        "PSU_FAN_MAX_SPEED": "37000"
+        "PSU_FAN_MAX_SPEED": "32500"
     },
     "FAN": {
         "present": {
