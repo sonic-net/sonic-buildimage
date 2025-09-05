@@ -10,7 +10,7 @@ backcall==0.2.0
 bcrypt==3.2.2
 beautifulsoup4==4.11.2
 beniget==0.4.1
-bitarray==3.0.0
+bitarray==3.4.2
 blinker==1.5
 blkinfo==0.2.0
 brotli==1.0.9
@@ -39,7 +39,7 @@ executing==1.2.0
 fastentrypoints==0.12
 fonttools==4.38.0
 fs==2.4.16
-fsspec==2024.12.0
+fsspec==2025.5.1
 gast==0.5.2
 gbp==0.9.30
 gcovr==5.2
@@ -76,7 +76,7 @@ matplotlib-inline==0.1.6
 mccabe==0.7.0
 meson==1.0.1
 mmh3==2.5.1
-mock==5.1.0
+mock==5.2.0
 mockredispy==2.9.3
 more-itertools==8.10.0
 mpmath==0.0.0
@@ -108,7 +108,7 @@ pyangbind==0.8.2
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pyelftools==0.29
-pyfakefs==5.7.4
+pyfakefs==5.9.0
 pygments==2.14.0
 pygobject==3.42.2
 pyhamcrest==2.0.3
@@ -130,7 +130,7 @@ pytz==2022.7.1
 pyxdg==0.28
 pyyaml==6.0
 pyyaml-include==2.2
-redis==5.2.1
+redis==6.2.0
 regex==2024.11.6
 requests==2.28.1
 roman==3.3

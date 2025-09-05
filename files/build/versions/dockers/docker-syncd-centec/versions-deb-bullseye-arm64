@@ -5,7 +5,7 @@ libdbus-1-dev==1.12.28-0+deb11u1
 libdevmapper1.02.1==2:1.02.175-2.1
 libdpkg-perl==1.20.13
 libevent-2.1-7==2.1.12-stable-1
-libexpat1-dev==2.2.10-2+deb11u6
+libexpat1-dev==2.2.10-2+deb11u7
 libnfsidmap2==0.25-6
 libpcap-dev==1.10.0-2
 libpcap0.8==1.10.0-2

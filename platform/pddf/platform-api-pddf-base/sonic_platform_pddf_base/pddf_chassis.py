@@ -16,6 +16,29 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+voltage_sensor_present = True
+try:
+    from sonic_platform.voltage_sensor import VoltageSensor
+except ImportError as e:
+    voltage_sensor_present = False
+
+current_sensor_present = True
+try:
+    from sonic_platform.current_sensor import CurrentSensor
+except ImportError as e:
+    current_sensor_present = False
+
+asicthermal_present = True
+try:
+    from sonic_platform.asic_thermal import AsicThermal
+except ImportError as e:
+    asicthermal_present = False
+
+component_present = True
+try:
+    from sonic_platform.component import Component
+except ImportError as e:
+    component_present = False
 
 class PddfChassis(ChassisBase):
     """
@@ -70,6 +93,30 @@ class PddfChassis(ChassisBase):
         for i in range(self.platform_inventory['num_temps']):
             thermal = Thermal(i, self.pddf_obj, self.plugin_data)
             self._thermal_list.append(thermal)
+
+        if voltage_sensor_present:
+            # VOLTAGE SENSORs
+            for i in range(self.platform_inventory['num_voltage_sensors']):
+                voltage = VoltageSensor(i, self.pddf_obj, self.plugin_data)
+                self._voltage_sensor_list.append(voltage)
+
+        if current_sensor_present:
+            # CURRENT SENSORs
+            for i in range(self.platform_inventory['num_current_sensors']):
+                current = CurrentSensor(i, self.pddf_obj, self.plugin_data)
+                self._current_sensor_list.append(current)
+
+        if asicthermal_present:
+            # ASIC Thermal
+            for i in range(self.platform_inventory['num_asic_temps']):
+                asicthermal = AsicThermal(i, self.pddf_obj)
+                self._thermal_list.append(asicthermal)
+
+        if component_present:
+            # Components (Programmables)
+            for i in range(self.platform_inventory['num_components']):
+                component = Component(i, self.pddf_obj, self.plugin_data)
+                self._component_list.append(component)
 
 
     def get_name(self):

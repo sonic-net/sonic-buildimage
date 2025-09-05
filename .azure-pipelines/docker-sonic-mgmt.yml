@@ -25,6 +25,7 @@ resources:
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
+    ref: master
     endpoint: sonic-net
 
 parameters:
@@ -53,8 +54,9 @@ stages:
     - bash: |
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
-        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic
-        make -f Makefile.work BLDENV=bullseye SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y LEGACY_SONIC_MGMT_DOCKER=y target/docker-sonic-mgmt.gz
+
+        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic DOCKER_BUILDKIT=0
+        make -f Makefile.work BLDENV=bullseye SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y LEGACY_SONIC_MGMT_DOCKER=n target/docker-sonic-mgmt.gz
         cp target -r $(Build.ArtifactStagingDirectory)/target
         docker load -i target/docker-sonic-mgmt.gz
         docker tag docker-sonic-mgmt $REGISTRY_SERVER/docker-sonic-mgmt:latest
@@ -73,6 +75,7 @@ stages:
     steps:
     - checkout: sonic-mgmt
       clean: true
+      fetchDepth: 0
       displayName: 'Checkout sonic-mgmt'
 
     - download: current
@@ -93,6 +96,14 @@ stages:
 
         docker exec sonic-mgmt bash -c "echo 'Container is running' && ps aux"
       displayName: 'Setup sonic-mgmt docker container and verify'
+
+    - bash: |
+        set -ex
+
+        docker tag docker-sonic-mgmt:latest $REGISTRY_SERVER/docker-sonic-mgmt:latest
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: 'Tag docker-sonic-mgmt'
 
     - task: Docker@2
       displayName: Upload image

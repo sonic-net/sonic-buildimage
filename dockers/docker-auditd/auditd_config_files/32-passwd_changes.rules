@@ -1,0 +1,1 @@
+-w /etc/passwd -p wa -F auid>=1000 -F auid!=4294967295 -k passwd_changes

@@ -7,7 +7,7 @@
     images {
         kernel_ac5x {
             description = "Linux Kernel for AC5x";
-            data = /incbin/("/boot/vmlinuz-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -20,7 +20,7 @@
         };
         fdt_ac5x {
             description = "Flattened Device Tree blob for AC5x";
-            data = /incbin/("/usr/lib/linux-image-6.1.0-22-2-arm64/marvell/ac5-98dx35xx-rd.dtb");
+            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/ac5-98dx35xx-rd.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -31,7 +31,7 @@
         };
         fdt_7215_a1 {
             description = "Flattened Device Tree blob for 7215_IXS_A1";
-            data = /incbin/("/usr/lib/linux-image-6.1.0-22-2-arm64/marvell/7215-ixs-a1.dtb");
+            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/7215-ixs-a1.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -42,7 +42,7 @@
         };
         ramdisk_ac5x {
             description = "ramdisk for AC5x";
-            data = /incbin/("/boot/initrd.img-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
@@ -55,7 +55,7 @@
         };
         kernel_1 {
             description = "Linux Kernel";
-            data = /incbin/("/boot/vmlinuz-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -68,7 +68,7 @@
         };
         ramdisk_1 {
             description = "ramdisk";
-            data = /incbin/("/boot/initrd.img-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
@@ -81,7 +81,7 @@
         };
         kernel_2 {
             description = "Linux Kernel";
-            data = /incbin/("/boot/vmlinuz-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -94,7 +94,7 @@
         };
         ramdisk_2 {
             description = "ramdisk";
-            data = /incbin/("/boot/initrd.img-6.1.0-22-2-arm64");
+            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";

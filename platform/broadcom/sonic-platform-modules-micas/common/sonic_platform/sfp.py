@@ -81,6 +81,7 @@ class Sfp(SfpOptoeBase):
     def __init__(self, index):
         SfpOptoeBase.__init__(self)
         self.sfp_type = None
+        self.presence = False
         sfp_config = baseutil.get_config().get("sfps", None)
         self.log_level_config = sfp_config.get("log_level", LOG_WARNING_LEVEL)
         # Init instance of SfpCust
@@ -103,11 +104,33 @@ class Sfp(SfpOptoeBase):
     def read_eeprom(self, offset, num_bytes):
         return self._sfp_api.read_eeprom(offset, num_bytes)
 
+    def set_power_class(self):
+        try:
+            if self.sfp_type is None:
+                self.refresh_xcvr_api()
+            if self.sfp_type != "QSFP":
+                return
+            identify_code = self.read_eeprom(0, 1)
+            if identify_code[0] != 0x11:
+                return
+            ext_identify_code = self.read_eeprom(129, 1)
+            if (ext_identify_code[0] & 0x3) == 0x0:
+                return
+            power_class_ctrl = self.read_eeprom(93, 1)
+            power_class_ctrl = power_class_ctrl[0] | 0x4
+            self._sfp_api.write_eeprom(93, 1, bytearray([power_class_ctrl]))
+        except Exception as e:
+            print(traceback.format_exc())
+
     def write_eeprom(self, offset, num_bytes, write_buffer):
         return self._sfp_api.write_eeprom(offset, num_bytes, write_buffer)
 
     def get_presence(self):
-        return self._sfp_api.get_presence()
+        presence = self._sfp_api.get_presence()
+        if (presence == True) and (self.presence != True):
+            self.set_power_class()
+        self.presence = presence
+        return presence
 
     def get_transceiver_info(self):
         api_get = self._sfp_api.get_transceiver_info(SfpOptoeBase, self)
@@ -303,6 +326,9 @@ class SfpCust():
 
     def _get_eeprom_path(self):
         return self.eeprom_path or None
+
+    def get_eeprom_path(self):
+        return self._get_eeprom_path()
 
     @abstractmethod
     def _pre_get_transceiver_info(self):

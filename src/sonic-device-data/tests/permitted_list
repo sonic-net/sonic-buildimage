@@ -355,3 +355,10 @@ sai_mmu_tc_to_pg_config
 sai_hostif_netif_iff_up_set
 appl_param_active_links_thr_high
 appl_param_active_links_thr_low
+custom_feature_start_tx_threshold
+appl_param_nof_devices
+fabric_mesh_multicast_enable
+fabric_num_pipes
+fabric_pipe_map_uc
+fabric_pipe_map_mc
+system_contains_multiple_pipe_device

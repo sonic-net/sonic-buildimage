@@ -3,6 +3,7 @@ from swsscommon import swsscommon
 
 import jinja2
 import netaddr
+import os
 
 from .log import log_warn, log_err, log_info, log_debug, log_crit
 from .manager import Manager
@@ -103,7 +104,14 @@ class BGPPeerMgrBase(Manager):
             "delete":      self.fabric.from_string('no neighbor {{ neighbor_addr }}'),
             "shutdown":    self.fabric.from_string('neighbor {{ neighbor_addr }} shutdown'),
             "no shutdown": self.fabric.from_string('no neighbor {{ neighbor_addr }} shutdown'),
+            "no listen range": self.fabric.from_string('no bgp listen range {{ ip_range }} peer-group {{peer_group}}'),
         }
+
+        if (os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "update.conf.j2")):
+            self.templates["update"] = self.fabric.from_file(base_template + "update.conf.j2")
+        if os.path.exists(self.fabric.env.loader.searchpath[0] + "/" + base_template + "delete.conf.j2"):
+            self.templates["delete"] = self.fabric.from_file(base_template + "delete.conf.j2")
+            log_info("Using delete template found at %s" % (base_template + "delete.conf.j2"))
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
@@ -187,19 +195,12 @@ class BGPPeerMgrBase(Manager):
         if "local_addr" not in data:
             log_warn("Peer %s. Missing attribute 'local_addr'" % nbr)
         else:
-            # The bgp session that belongs to a vnet cannot be advertised as the default BGP session.
-            # So we need to check whether this bgp session belongs to a vnet.
             data["local_addr"] = str(netaddr.IPNetwork(str(data["local_addr"])).ip)
             interface = self.get_local_interface(data["local_addr"])
             if not interface:
                 print_data = nbr, data["local_addr"]
                 log_debug("Peer '%s' with local address '%s' wait for the corresponding interface to be set" % print_data)
                 return False
-            vnet = self.get_vnet(interface)
-            if vnet:
-                # Ignore the bgp session that is in a vnet
-                log_info("Ignore the BGP peer '%s' as the interface '%s' is in vnet '%s'" % (nbr, interface, vnet))
-                return True
 
         kwargs = {
             'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
@@ -234,9 +235,46 @@ class BGPPeerMgrBase(Manager):
             self.apply_op(cmd, vrf)
             key = (vrf, nbr)
             self.peers.add(key)
+            self.update_state_db(vrf, nbr, data, "SET")
             log_info("Peer '(%s|%s)' has been scheduled to be added with attributes '%s'" % print_data)
 
+        self.directory.put(self.db_name, self.table_name, vrf + '|' + nbr, data)
         return True
+
+    def update_state_db(self, vrf, nbr, data, op):
+        """
+        Update the database with the new data
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param data: associated data (will be empty for deletion case)
+        :param op: operation type. It can be "SET" or "DEL"
+        :return: True if this adding was successful, False otherwise
+        """
+        if (vrf == "default"):
+            key = nbr
+        else:
+            key = vrf + "|" + nbr
+        # Update the peer in the STATE_DB table
+        try:
+            state_db = swsscommon.DBConnector("STATE_DB", 0)
+            state_peer_table = swsscommon.Table(state_db, swsscommon.STATE_BGP_PEER_CONFIGURED_TABLE_NAME)
+            if (op == "SET"):
+                state_peer_table.set(key, list(sorted(data.items())))
+                log_info("Peer '(%s)' has been added to BGP_PEER_CONFIGURED_TABLE with attributes '%s'" % (key, data))
+            elif (op == "DEL"):
+                (status, fvs) = state_peer_table.get(key)
+                if status == True:
+                    state_peer_table.delete(key)
+                    log_info("Peer '(%s)' has been deleted from BGP_PEER_CONFIGURED_TABLE" % (key))
+                else:
+                    log_warn("Peer '(%s)' not found in BGP_PEER_CONFIGURED_TABLE" % (key))
+            else:
+                log_err("Update state DB called for Peer '(%s)' with unkown operation '%s'" % (key, op))
+                return False
+            return True
+        except Exception as e:
+            log_err("Update of state db failed for peer '(%s)' with error: %s" % (key, str(e)))
+            return False
 
     def update_peer(self, vrf, nbr, data):
         """
@@ -249,9 +287,12 @@ class BGPPeerMgrBase(Manager):
         """
         if "admin_status" in data:
             self.change_admin_status(vrf, nbr, data)
+        elif "update" in self.templates and "ip_range" in data and self.peer_type == 'dynamic':
+            self.change_ip_range(vrf, nbr, data)
         else:
             log_err("Peer '(%s|%s)': Can't update the peer. Only 'admin_status' attribute is supported" % (vrf, nbr))
 
+        self.directory.put(self.db_name, self.table_name, vrf + '|' + nbr, data)
         return True
 
     def change_admin_status(self, vrf, nbr, data):
@@ -263,14 +304,14 @@ class BGPPeerMgrBase(Manager):
         :return: True if this adding was successful, False otherwise
         """
         if data['admin_status'] == 'up':
-            self.apply_admin_status(vrf, nbr, "no shutdown", "up")
+            self.apply_admin_status(vrf, nbr, "no shutdown", "up", data)
         elif data['admin_status'] == 'down':
-            self.apply_admin_status(vrf, nbr, "shutdown", "down")
+            self.apply_admin_status(vrf, nbr, "shutdown", "down", data)
         else:
             print_data = vrf, nbr, data['admin_status']
             log_err("Peer '%s|%s': Can't update the peer. It has wrong attribute value attr['admin_status'] = '%s'" % print_data)
 
-    def apply_admin_status(self, vrf, nbr, template_name, admin_state):
+    def apply_admin_status(self, vrf, nbr, template_name, admin_state, data):
         """
         Render admin state template and apply the command to the FRR
         :param vrf: vrf name. Name is equal "default" for the global vrf
@@ -282,9 +323,98 @@ class BGPPeerMgrBase(Manager):
         print_data = vrf, nbr, admin_state
         ret_code = self.apply_op(self.templates[template_name].render(neighbor_addr=nbr), vrf)
         if ret_code:
+            self.update_state_db(vrf, nbr, data, "SET")
             log_info("Peer '%s|%s' admin state is set to '%s'" % print_data)
         else:
             log_err("Can't set peer '%s|%s' admin state to '%s'." % print_data)
+
+    def change_ip_range(self, vrf, nbr, data):
+        """
+        Change ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param data: associated data
+        :return: True if this adding was successful, False otherwise
+        """
+        if data['ip_range']:
+            log_info("Peer '(%s|%s)' ip range is going to be updated with range: %s" % (vrf, nbr, data['ip_range']))
+            new_ip_range = data["ip_range"].split(",")
+            ip_ranges_to_add = new_ip_range
+            ip_ranges_to_del = []
+            existing_ipv4_range, existing_ipv6_range = self.get_existing_ip_ranges(vrf, nbr)
+            if existing_ipv4_range:
+                for ipv4_range in existing_ipv4_range:
+                    if ipv4_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv4_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv4_range)
+            if existing_ipv6_range:
+                for ipv6_range in existing_ipv6_range:
+                    if ipv6_range not in new_ip_range:
+                        ip_ranges_to_del.append(ipv6_range)
+                    else:
+                        ip_ranges_to_add.remove(ipv6_range)
+            if ip_ranges_to_del or ip_ranges_to_add:
+                log_info("Peer '(%s|%s)' ip range is going to be updated. Ranges to delete: %s Ranges to add: %s" % (vrf, nbr, ip_ranges_to_del, ip_ranges_to_add))
+                self.apply_range_changes(vrf, nbr, ip_ranges_to_add, ip_ranges_to_del, data)
+
+    def get_existing_ip_ranges(self, vrf, nbr):
+        """
+        Get existing ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :return: existing ipv4 and ipv6 ranges of a peer if they exist.
+        """
+        ipv4_ranges = []
+        ipv6_ranges = []
+        if vrf == 'default':
+            command = ["vtysh", "-c", "show bgp peer-group %s json" % (nbr)]
+        else:
+            command = ["vtysh", "-c", "show bgp vrf %s peer-group %s json" % (vrf, nbr)]
+        try:
+            ret_code, out, err = run_command(command)
+            if ret_code == 0:
+                js_bgp = json.loads(out)
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv4' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv4']:
+                    ipv4_ranges = js_bgp[nbr]['dynamicRanges']['IPv4']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV4 range: %s" % (vrf, nbr, ipv4_ranges))
+                if nbr in js_bgp and 'dynamicRanges' in js_bgp[nbr] and 'IPv6' in js_bgp[nbr]['dynamicRanges'] and 'ranges' in js_bgp[nbr]['dynamicRanges']['IPv6']:
+                    ipv6_ranges = js_bgp[nbr]['dynamicRanges']['IPv6']['ranges']
+                    log_info("Peer '(%s|%s)' already has ipV6 range: %s" % (vrf, nbr, ipv6_ranges))
+                return ipv4_ranges, ipv6_ranges
+            else:
+                log_err("Can't read ip range of peer '%s|%s': %s" % (vrf, nbr, str(err)))
+                return ipv4_ranges, ipv6_ranges
+        except Exception as e:
+            log_err("Error in parsing ip range: %s" % str(e))
+            return ipv4_ranges, ipv6_ranges
+
+    def apply_range_changes(self, vrf, nbr, new_ip_range, ip_ranges_to_del, data):
+        """
+        Apply changes of ip range of a peer
+        :param vrf: vrf name. Name is equal "default" for the global vrf
+        :param nbr: neighbor ip address (name for dynamic peer type)
+        :param new_ip_range: new ip range
+        :param ip_ranges_to_del: ip ranges to delete
+        """
+        print_data = vrf, nbr, data
+        kwargs = {
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
+            'vrf': vrf,
+            'bgp_session': data,
+            'delete_ranges': ip_ranges_to_del,
+            'add_ranges': new_ip_range
+        }
+        try:
+            cmd = self.templates["update"].render(**kwargs)
+        except jinja2.TemplateError as e:
+            msg = "Peer '(%s|%s)'. Error in rendering the template for 'SET' command '%s'" % print_data
+            log_err("%s: %s" % (msg, str(e)))
+            return True
+        if cmd is not None:
+            self.apply_op(cmd, vrf)
+            self.update_state_db(vrf, nbr, data, "SET")
+            log_info("Peer '(%s|%s)' ip range has been scheduled to be updated with range '%s'" % (vrf, nbr, data['ip_range']))
 
     def del_handler(self, key):
         """
@@ -296,13 +426,43 @@ class BGPPeerMgrBase(Manager):
         if peer_key not in self.peers:
             log_warn("Peer '(%s|%s)' has not been found" % (vrf, nbr))
             return
-        cmd = self.templates["delete"].render(neighbor_addr=nbr)
+        # Starting with FRR 10.1, if a peer group is attached to a "listen range",
+        # the range must be removed before the peer group can be deleted.
+        # To comply with this requirement, we first run the command "no bgp listen range ..." to
+        # remove the "listen range" associated with the peer group, and only then proceed
+        # with deleting the peer group.
+        if self.peer_type == 'dynamic' or self.peer_type == 'sentinels':
+            ip_ranges = self.directory.get(self.db_name, self.table_name, vrf + '|' + nbr).get("ip_range")
+            if ip_ranges is not None:
+                ip_ranges = ip_ranges.split(',')
+                for ip_range in ip_ranges:
+                    log_debug("Deleting listen range for peer-group {}, ip_range {}".format(ip_range, nbr))
+                    cmd = self.templates["no listen range"].render(ip_range=ip_range, peer_group=nbr)
+                    ret_code = self.apply_op(cmd, vrf)
+                    if ret_code:
+                        log_info("Listen range '%s' for peer '(%s|%s)' has been disabled" % (ip_range, vrf, nbr))
+                    else:
+                        log_err("Listen range '%s' for peer '(%s|%s)' hasn't been disabled" % (ip_range, vrf, nbr))
+        
+        kwargs = {
+            'CONFIG_DB__DEVICE_METADATA': self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
+            'neighbor_addr': nbr,
+            'vrf': vrf
+        }
+
+        try:
+            cmd = self.templates["delete"].render(**kwargs)
+        except jinja2.TemplateError as e:
+            log_err("Peer '(%s|%s)'. Error in rendering the template for 'DEL' command '%s'" % (vrf, nbr, str(e)))
+
         ret_code = self.apply_op(cmd, vrf)
         if ret_code:
+            self.update_state_db(vrf, nbr, {}, "DEL")
             log_info("Peer '(%s|%s)' has been removed" % (vrf, nbr))
             self.peers.remove(peer_key)
         else:
             log_err("Peer '(%s|%s)' hasn't been removed" % (vrf, nbr))
+        self.directory.remove(self.db_name, self.table_name, vrf + '|' + nbr)
 
     def apply_op(self, cmd, vrf):
         """
