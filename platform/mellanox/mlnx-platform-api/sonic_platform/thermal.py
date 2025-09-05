@@ -393,7 +393,7 @@ class Thermal(ThermalBase):
         for attempt in range(max_retries):
             if os.path.exists(file_path):
                 # File exists, proceed with reading
-                logger.log_info('Thermal sysfs {} now exists after retry attempt {}'.format(file_path, attempt + 1))
+                logger.log_debug('Thermal sysfs {} now exists after retry attempt {}'.format(file_path, attempt + 1))
                 self.allow_delay_create = False  # Disable retry for future calls
                 return True
 
