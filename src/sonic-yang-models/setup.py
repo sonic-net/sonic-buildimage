@@ -62,6 +62,7 @@ yang_files = [
     'sonic-feature.yang',
     'sonic-fips.yang',
     'sonic-hash.yang',
+    'sonic-high-frequency-telemetry.yang',
     'sonic-trimming.yang',
     'sonic-system-defaults.yang',
     'sonic-interface.yang',
@@ -146,7 +147,6 @@ yang_files = [
     'sonic-smart-switch.yang',
     'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
-    'sonic-high-frequency-telemetry.yang',
 ]
 
 class my_build_py(build_py):
