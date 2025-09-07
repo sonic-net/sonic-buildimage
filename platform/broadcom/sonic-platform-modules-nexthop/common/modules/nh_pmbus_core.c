@@ -27,6 +27,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/of.h>
 #include <linux/thermal.h>
+#include <linux/version.h>
 #include "nh_pmbus.h"
 
 /*
