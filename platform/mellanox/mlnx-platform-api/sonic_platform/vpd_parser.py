@@ -58,7 +58,7 @@ class VpdParser:
         if self._get_data() and PN_VPD_FIELD not in self.vpd_data:
             logger.log_error("Fail to read model number: No key {} in VPD {}".format(PN_VPD_FIELD, self.vpd_file))
             # Log the entire VPD data for debugging
-            logger.log_debug("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
+            logger.log_info("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
             return 'N/A'
         return self.vpd_data.get(PN_VPD_FIELD, 'N/A')
 
@@ -72,7 +72,7 @@ class VpdParser:
         if self._get_data() and SN_VPD_FIELD not in self.vpd_data:
             logger.log_error("Fail to read serial number: No key {} in VPD {}".format(SN_VPD_FIELD, self.vpd_file))
             # Log the entire VPD data for debugging
-            logger.log_debug("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
+            logger.log_info("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
             return 'N/A'
         return self.vpd_data.get(SN_VPD_FIELD, 'N/A')
 
@@ -86,7 +86,7 @@ class VpdParser:
         if self._get_data() and REV_VPD_FIELD not in self.vpd_data:
             logger.log_error("Fail to read revision: No key {} in VPD {}".format(REV_VPD_FIELD, self.vpd_file))
             # Log the entire VPD data for debugging
-            logger.log_debug("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
+            logger.log_info("VPD data content for {}: {}".format(self.vpd_file, self.vpd_data))
             return 'N/A'
         return self.vpd_data.get(REV_VPD_FIELD, 'N/A')
 
