@@ -1,0 +1,25 @@
+# XSight SAI
+
+XSIGHT_LIBSAI_VERSION = 1.16.3-0
+XSIGHT_LIBSAI_URL_PREFIX = "https://raw.githubusercontent.com/xsightlabs/sonic-xsight-binaries/main/amd64/sai-plugin/master"
+
+XSIGHT_LIBSAI = xsai-main_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
+XSIGHT_LIBSAI_DEV = xsai-main-dev_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
+XSIGHT_XBM = xbm_$(XSIGHT_LIBSAI_VERSION)_amd64.deb
+
+$(XSIGHT_LIBSAI)_URL = "$(XSIGHT_LIBSAI_URL_PREFIX)/$(XSIGHT_LIBSAI)"
+$(eval $(call add_derived_package,$(XSIGHT_LIBSAI),$(XSIGHT_LIBSAI_DEV)))
+$(XSIGHT_LIBSAI_DEV)_URL = "$(XSIGHT_LIBSAI_URL_PREFIX)/$(XSIGHT_LIBSAI_DEV)"
+
+XBM_EXISTS := $(or $(and $(wildcard $(XSIGHT_XBM)),y),n)
+
+ifeq ($(XBM_EXISTS),y)
+$(XSIGHT_XBM)_URL = "$(XSIGHT_LIBSAI_URL_PREFIX)/$(XSIGHT_XBM)"
+$(XSIGHT_LIBSAI)_DEPENDS += $(XSIGHT_XBM)
+$(XSIGHT_LIBSAI)_RDEPENDS += $(XSIGHT_XBM)
+SONIC_ONLINE_DEBS += $(XSIGHT_XBM)
+endif
+
+SONIC_ONLINE_DEBS += $(XSIGHT_LIBSAI)
+
+$(eval $(call add_conflict_package,$(XSIGHT_LIBSAI_DEV),$(LIBSAIVS_DEV)))
