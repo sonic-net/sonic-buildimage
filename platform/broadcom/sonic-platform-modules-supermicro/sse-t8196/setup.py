@@ -10,5 +10,6 @@ setup(
    description='Module to initialize Supermicro T8196 platforms',
 
    packages=['sse-t8196'],
+   package_dir={'sse-t8196': ''}
 )
 
