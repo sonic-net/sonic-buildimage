@@ -1,0 +1,55 @@
+From 6f6e43f343ae336d2f7fa6ca83cf72acb7e89143 Mon Sep 17 00:00:00 2001
+From: Volodymyr Samotiy <volodymyrs@nvidia.com>
+Date: Mon, 20 Oct 2025 11:26:00 +0300
+Subject: [PATCH 3/3] Disable hw-management-sync.service
+
+Remove service dependency and comment out enable/start and mask
+configurations in rules to prevent hw-management-sync starting.
+
+Signed-off-by: Jianyue Wu <jianyuew@nvidia.com>
+---
+ debian/hw-management.hw-management.service | 1 -
+ debian/rules                               | 8 ++++++--
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
+index 634b4014..e6f96743 100755
+--- a/debian/hw-management.hw-management.service
++++ b/debian/hw-management.hw-management.service
+@@ -1,7 +1,6 @@
+ [Unit]
+ Description=Chassis HW management service of Nvidia systems
+ Documentation=man:hw-management.service(8)
+-Wants=hw-management-sync.service
+ Wants=hw-management-sysfs-monitor.service
+ Wants=hw-management-fast-sysfs-monitor.service
+ Before=determine-reboot-cause.service system-health.service watchdog-control.service
+diff --git a/debian/rules b/debian/rules
+index e75aa289..0d747728 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -64,7 +64,11 @@ override_dh_installinit:
+ override_dh_systemd_enable:
+ 	dh_systemd_enable --name=hw-management
+ 	dh_systemd_enable --name=hw-management-tc
+-	dh_systemd_enable --name=hw-management-sync
++	# dh_systemd_enable --name=hw-management-sync (disabled - service is masked)
++	# Mask hw-management-sync service by creating symlink to /dev/null in /etc/systemd/system
++	# This overrides the service file and prevents service from starting (can be unmasked if needed)
++	dh_installdirs -p$(pname) etc/systemd/system
++	ln -sf /dev/null debian/$(pname)/etc/systemd/system/hw-management-sync.service
+ 	dh_systemd_enable --name=hw-management-sysfs-monitor
+ 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
+ 	dh_systemd_enable --name=hw-management-blacklist-generator
+@@ -72,7 +76,7 @@ override_dh_systemd_enable:
+ override_dh_systemd_start:
+ 	dh_systemd_start --name=hw-management
+ 	dh_systemd_start --name=hw-management-tc
+-	dh_systemd_start --name=hw-management-sync
++	#dh_systemd_start --name=hw-management-sync
+ 	dh_systemd_start --name=hw-management-sysfs-monitor
+ 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
+ 	dh_systemd_start --name=hw-management-blacklist-generator
+-- 
+2.48.1
+
