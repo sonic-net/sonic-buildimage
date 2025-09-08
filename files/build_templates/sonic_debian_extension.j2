@@ -268,6 +268,9 @@ install_pip_package {{sonic_host_services_py3_wheel_path}}
 # Install SONiC host services data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-host-services-data_*.deb
 
+# Install SONiC host services binary package (C++ userd daemon)
+install_deb_package $debs_path/sonic-host-services_*.deb
+
 {% if enable_ztp == "y" %}
 # Install ZTP (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-ztp_*.deb
