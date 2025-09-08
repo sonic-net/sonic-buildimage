@@ -268,6 +268,9 @@ install_pip_package {{sonic_host_services_py3_wheel_path}}
 # Install SONiC host services data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-host-services-data_*.deb
 
+# Install SONiC host userd package
+install_deb_package $debs_path/sonic-host-userd_*.deb
+
 {% if enable_ztp == "y" %}
 # Install ZTP (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-ztp_*.deb
@@ -644,7 +647,7 @@ echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.sh $FILESYSTEM_ROOT/usr/bin
 
 # Generate initial SONiC configuration file
-j2 files/build_templates/init_cfg.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/init_cfg.json
+password="$(sudo grep ^${sonicadmin_user} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)" j2 files/build_templates/init_cfg.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/init_cfg.json
 
 # Copy config-setup script, conf file and service file
 j2 files/build_templates/config-setup.service.j2 | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/config-setup.service
