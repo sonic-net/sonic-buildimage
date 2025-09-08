@@ -238,5 +238,51 @@
                 ]
             }
         }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE1": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_dummy",
+                        "stream_state": "disabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_dummy",
+                        "group_name": "BUFFER_POOL",
+                        "object_names": "",
+                        "object_counters": ""
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE2": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_dummy",
+                        "stream_state": "disabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_dummy",
+                        "group_name": "PORT",
+                        "object_names": [],
+                        "object_counters": []
+                    }
+                ]
+            }
+        }
     }
 }
