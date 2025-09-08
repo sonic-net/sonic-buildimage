@@ -917,7 +917,7 @@ static int i2c_pci_init (struct fpgapci_dev *fpgapci)
 	for (i = 0 ; i < total_i2c_pci_bus; i ++) {
 
 		i2c_pci_adap[i].owner = THIS_MODULE;
-		i2c_pci_adap[i].class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+		i2c_pci_adap[i].class = I2C_CLASS_HWMON;
 
 		i2c_pci_adap[i].algo_data = &fpgalogic_i2c[i];
 		/* /dev/i2c-600 ~ /dev/i2c-615  for FPGA LOGIC I2C channel  controller 1-7  */
