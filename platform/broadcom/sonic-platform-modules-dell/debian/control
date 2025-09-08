@@ -2,8 +2,9 @@ Source: sonic-dell-platform-modules
 Section: main
 Priority: extra
 Maintainer: Dell Team <support@dell.com>
-Build-Depends: debhelper (>= 8.0.0), bzip2
-Standards-Version: 3.9.3
+Build-Depends: debhelper-compat (= 13), dh-python, python3, linux-headers-6.12.41+deb13-common-sonic
+Rules-Requires-Root: no
+Standards-Version: 4.7.2
 
 Package: platform-modules-s6000
 Architecture: amd64
