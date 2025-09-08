@@ -346,6 +346,8 @@ install_deb_package {{deb}}
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
 
+# Install SONiC host userd package
+install_deb_package $debs_path/sonic-host-userd_*.deb
 
 {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
 # Install sonic-rsyslog-plugin
@@ -635,7 +637,7 @@ echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.sh $FILESYSTEM_ROOT/usr/bin
 
 # Generate initial SONiC configuration file
-j2 files/build_templates/init_cfg.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/init_cfg.json
+sonicadmin_password="$(sudo grep ^${sonicadmin_user} $FILESYSTEM_ROOT/etc/shadow | cut -d: -f2)" j2 files/build_templates/init_cfg.json.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/init_cfg.json
 
 # Copy config-setup script, conf file and service file
 j2 files/build_templates/config-setup.service.j2 | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/config-setup.service
