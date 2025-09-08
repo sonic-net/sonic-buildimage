@@ -2,7 +2,7 @@ Source: sonic-alphanetworks-platform-modules
 Section: main
 Priority: extra
 Maintainer: Alphanetworks <Jun_Tseng@alphanetworks.com>, Alphanetworks <Jun_Tseng@alphanetworks.com>
-Build-Depends: debhelper (>= 8.0.0), bzip2
+Build-Depends: debhelper-compat (= 13), python3
 Standards-Version: 3.9.3
 
 Package: sonic-platform-alphanetworks-snh60a0-320fv2
