@@ -16,6 +16,7 @@ OPTIONS:
       --rpc-xgs         ; build xgs syncd rpc image only
       --rpc-mrvl        ; build mrvl (arm64) syncd rpc image only
       --features        ; apply features function
+      --platform=[marvell-prestera | vs-hw]        ; build mrvl or vs-hw for CO (arm64 build machine only)
 "
   exit $1
 }
@@ -29,7 +30,7 @@ OPTIONS:
 TEMP=`
 getopt \
 -o hcs \
--l help,configure,rpc-dnx,rpc-xgs,rpc-mrvl,submodule,features \
+-l help,configure,rpc-dnx,rpc-xgs,rpc-mrvl,submodule,features,platform: \
 --name="$prog" \
 -- "$@" \
 `
@@ -45,6 +46,7 @@ opt_features=0
 opt_rpc_dnx=0
 opt_rpc_xgs=0
 opt_rpc_mrvl=0
+opt_platform=marvell-prestera
 debug=echo
 
 while true; do
@@ -56,10 +58,13 @@ while true; do
          --rpc-xgs )       opt_rpc_xgs=1; shift ;;
          --rpc-mrvl )      opt_rpc_mrvl=1; shift ;;
          --features)       opt_features=1; shift ;;
+         --platform)       opt_platform=$2; shift ;;
     --        )        shift;  break ;;
     *         )        break ;;
   esac
 done
+
+if [[ $opt_platform != vs-hw && $opt_platform != marvell-prestera ]] ; then usage 1; fi
 
 set -e
 
@@ -80,7 +85,12 @@ _add_patch()
 {
     echo "_add_patch $2 to $1"
     pushd $1  &>/dev/null
-    git apply $2
+    if [ -e "$2.done" ]; then
+        echo "Patch $2 has been done. Skip!"
+    else
+        git apply $2
+        touch $2.done
+    fi
     popd &>/dev/null
 }
 
@@ -89,7 +99,11 @@ apply_patch_files() {
     # https://github.com/sonic-net/sonic-swss/pull/3269
     # [POC] verify route performance issue #3269
     # _add_patch src/sonic-swss ../../fix34kroute.patch
-    # _add_patch src/sonic-utilities ../../nokia_route_check.patch
+    # _add_patch src/sonic-utilities ../../utils_pr4012.patch
+
+    # Increase timeout for route_check to 500s
+    _add_patch src/sonic-utilities ../../route_check_timeout.patch
+    _add_patch src/sonic-sairedis ../../co_vs-hw.patch
 }
 
 # add remote github user repo for cherry-pick
@@ -138,26 +152,38 @@ submodule_prs () {
   #
   ############################################################################################################################
   #https://github.com/sonic-net/sonic-swss/pull/3660
-  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 8ab3277
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 6551d244
+
+  #https://github.com/sonic-net/sonic-swss/pull/4001
+  _submodule_add src/sonic-swss bala_swss https://github.com/balanokia/sonic-swss 9fa297a
 
   #https://github.com/sonic-net/sonic-swss/pull/3377
-  _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 122ff86
+  _submodule_add src/sonic-swss ossobv-swss https://github.com/ossobv/sonic-swss 52ed10e
   
-   #https://github.com/sonic-net/sonic-swss/pull/3833
-  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 5f40ace^..ebde957
+  #https://github.com/sonic-net/sonic-swss/pull/3833
+  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 4a2b68d^..95cf043
 
-  #https://github.com/sonic-net/sonic-utilities/pull/4012
-  # _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities d8671d2^..d6207f1
+  #https://github.com/sonic-net/sonic-utilities/pull/4052
+  _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities 0ebbbc8
+ 
+  #https://github.com/sonic-net/sonic-swss/pull/3977
+  _submodule_add src/sonic-swss saksarav-nokia https://github.com/saksarav-nokia/sonic-swss 7680ae1
 
-  #https://github.com/sonic-net/sonic-utilities/pull/4029
-  _submodule_add src/sonic-utilities saksarav-nokia https://github.com/saksarav-nokia/sonic-utilities b6eef8a^..d7a4675
-
-  #https://github.com/sonic-net/sonic-linux-kernel/pull/511
-  _submodule_add src/sonic-linux-kernel master https://github.com/JunhongMao/sonic-linux-kernel 798f76d
-
+  #https://github.com/Azure/sonic-swss/pull/4015
+  _submodule_add src/sonic-swss arlakshm https://github.com/arlakshm/sonic-swss.git 1a8607e^..7bf89c8
+  
+  # https://github.com/sonic-net/sonic-platform-common/pull/611
+  _submodule_add src/sonic-platform-common upstream https://github.com/sonic-net/sonic-platform-common  6ac56928
+  
+  # https://github.com/saksarav-nokia/saibcm-modules.git
+  _submodule_add platform/broadcom/saibcm-modules-dnx saksarav-nokia https://github.com/saksarav-nokia/saibcm-modules.git c15e9731
+  
+  #https://github.com/sonic-net/sonic-linux-kernel/pull/522
+  _submodule_add src/sonic-linux-kernel nexthop-ai https://github.com/nexthop-ai/sonic-linux-kernel.git 75bec6c^..96a04e2
 
   # apply patches
   apply_patch_files
+
 }
 
 features()
@@ -184,7 +210,7 @@ configure()
       make PLATFORM=marvell-prestera PLATFORM_ARCH=armhf configure
       ;;
     aarch64)
-      make PLATFORM=marvell-prestera PLATFORM_ARCH=arm64 configure
+      make PLATFORM=${opt_platform} PLATFORM_ARCH=arm64 configure
       ;;
   esac
 }
@@ -204,8 +230,8 @@ build()
       ;;
     aarch64)
       features
-      make target/sonic-marvell-prestera-arm64.bin || \
-        ( rm -f target/*.bin && make target/sonic-marvell-prestera-arm64.bin )
+      make target/sonic-${opt_platform}-arm64.bin || \
+        ( rm -f target/*.bin && make target/sonic-${opt_platform}-arm64.bin )
       ;;
   esac
 
@@ -231,6 +257,7 @@ if [ $opt_submodule_test -eq 1 ]; then
   submodule_prs
   exit $?
 fi
+
 
 configure
 rc=$?
