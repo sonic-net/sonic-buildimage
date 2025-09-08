@@ -24,6 +24,28 @@ steps:
   - template: /.pipelines/init-agent.yml
   - template: /.azure-pipelines/cleanup.yml
   - template: /.azure-pipelines/template-daemon.yml
+  - task: SSH@0
+    displayName: "test blobfuse2 on jumpbox"
+    inputs:
+      sshEndpoint: 'jumpbox'
+      failOnStdErr: false
+      runOptions: 'inline'
+      readyTimeout: '20000'
+      inline: |
+        set -e
+
+        if ls /azmirrors/nonexist 2>&1 | grep -i 'input/output error'; then
+          fusermount3 -u /azmirrors
+          blobfuse2 mount /azmirrors --config-file=/home/azureuser/blobfuse-images.yml
+        fi
+        if ls /azlinks/nonexist 2>&1 | grep -i 'input/output error'; then
+          fusermount3 -u /azlinks
+          blobfuse2 mount /azlinks --config-file=/home/azureuser/blobfuse-links.yml
+        fi
+        sleep 2
+        if ls /azmirrors/nonexist /azlinks/nonexist 2>&1 | grep -i 'input/output error'; then
+          exit 111
+        fi
   - checkout: self
     clean: true
     submodules: recursive
