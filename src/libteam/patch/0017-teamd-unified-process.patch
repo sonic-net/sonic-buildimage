@@ -1343,43 +1343,26 @@ index a5eb0be..f748276 100644
  int port_list_alloc(struct team_handle *th);
  int port_list_init(struct team_handle *th);
 diff --git a/libteamdctl/cli_usock.c b/libteamdctl/cli_usock.c
-index d3fbdba..653c1b5 100644
+index d3fbdba..5a017c7 100644
 --- a/libteamdctl/cli_usock.c
 +++ b/libteamdctl/cli_usock.c
-@@ -164,8 +164,15 @@ static int cli_usock_method_call(struct teamdctl *tdc, const char *method_name,
+@@ -164,8 +164,9 @@ static int cli_usock_method_call(struct teamdctl *tdc, const char *method_name,
  	int err;
  
  	/* dbg(tdc, "usock: Calling method \"%s\"", method_name); */
 -	err= myasprintf(&msg, "%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
-+        if(tdc->team_name) {
-+                err= myasprintf(&msg, "%s\n%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
-+                                          method_name, tdc->team_name);
-+	}
-+        else {
-+                err= myasprintf(&msg, "%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
- 					  method_name);
-+	}
+-					  method_name);
++        err= myasprintf(&msg, "%s\n%s\n%s\n", TEAMD_USOCK_REQUEST_PREFIX,
++                                             method_name, tdc->team_name);
 +
  	if (err)
  		return err;
  	while (*fmt) {
-@@ -228,12 +235,16 @@ static int cli_usock_init(struct teamdctl *tdc, const char *team_name,
- {
- 	struct cli_usock_priv *cli_usock = priv;
- 	struct sockaddr_un addr;
--	int err;
-+	int err, ret;
- 
- 	memset(&addr, 0, sizeof(addr));
+@@ -234,6 +235,7 @@ static int cli_usock_init(struct teamdctl *tdc, const char *team_name,
  	addr.sun_family = AF_UNIX;
--	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
--				 team_name);
-+	ret = teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
-+				 team_name, FALSE);
-+	if(ret)
-+		tdc->team_name = team_name;
-+	else
-+		tdc->team_name = NULL;
+ 	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
+ 				 team_name);
++	tdc->team_name = team_name;
  
  	cli_usock->sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
  	if (cli_usock->sock == -1) {
@@ -1425,7 +1408,7 @@ index 904d76c..d43eb6c 100644
 -		 teamd_zmq_common.h
 +		 teamd_zmq_common.h teamd_timer.h teamd_utldll.h teamd_utlhash.h 
 diff --git a/teamd/teamd.c b/teamd/teamd.c
-index 5220ae2..3deba2d 100644
+index 5220ae2..8851393 100644
 --- a/teamd/teamd.c
 +++ b/teamd/teamd.c
 @@ -51,6 +51,14 @@
@@ -2340,7 +2323,7 @@ index 5220ae2..3deba2d 100644
  	teamd_phys_port_check_fini(ctx);
  	teamd_state_basics_fini(ctx);
  	teamd_runner_fini(ctx);
-@@ -1496,19 +1584,89 @@ static void teamd_fini(struct teamd_context *ctx)
+@@ -1496,19 +1584,90 @@ static void teamd_fini(struct teamd_context *ctx)
  	teamd_state_fini(ctx);
  	teamd_ifinfo_watch_fini(ctx);
  	teamd_option_watch_fini(ctx);
@@ -2413,12 +2396,13 @@ index 5220ae2..3deba2d 100644
 +		teamd_log_err("Failed to init 1sec timer.");
 +		return err;
 +	}
-+
++#ifdef MS_TIMER_ENABLED
 +	err = _teamd_timer_init(g_ctx, TIMER_TYPE_MS, TEAMD_100MS_TIMER_CB_NAME);
 +	if (err) {
 +		teamd_log_err("Failed to init 100ms timer.");
 +		return err;
 +	}
++#endif
 +
 +	return 0;
 +}
@@ -2432,7 +2416,7 @@ index 5220ae2..3deba2d 100644
  
  	if (getuid() == 0)
  		teamd_log_warn("This program is not intended to be run as root.");
-@@ -1531,7 +1689,7 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1531,7 +1690,7 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  		return -EEXIST;
  	}
  
@@ -2441,7 +2425,7 @@ index 5220ae2..3deba2d 100644
  		daemon_retval_init();
  
  		pid = daemon_fork();
-@@ -1557,13 +1715,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1557,13 +1716,13 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  	/* Child */
  	}
  
@@ -2460,7 +2444,7 @@ index 5220ae2..3deba2d 100644
  			daemon_log_use = DAEMON_LOG_SYSLOG;
  	}
  
-@@ -1586,27 +1744,104 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
+@@ -1586,27 +1745,104 @@ static int teamd_start(struct teamd_context *ctx, enum teamd_exit_code *p_ret)
  		goto pid_file_remove;
  	}
  
@@ -2573,7 +2557,7 @@ index 5220ae2..3deba2d 100644
  pid_file_remove:
  	daemon_pid_file_remove();
  
-@@ -1676,11 +1911,6 @@ static int teamd_get_devname(struct teamd_context *ctx, bool generate_enabled)
+@@ -1676,11 +1912,6 @@ static int teamd_get_devname(struct teamd_context *ctx, bool generate_enabled)
  skip_set:
  	teamd_log_dbg(ctx, "Using team device \"%s\".", ctx->team_devname);
  
@@ -2585,7 +2569,7 @@ index 5220ae2..3deba2d 100644
  	return 0;
  }
  
-@@ -1689,30 +1919,72 @@ static int teamd_set_default_pid_file(struct teamd_context *ctx)
+@@ -1689,30 +1920,72 @@ static int teamd_set_default_pid_file(struct teamd_context *ctx)
  	int err;
  
  	/* Generate PID filename only if it was not set on command line */
@@ -2664,7 +2648,7 @@ index 5220ae2..3deba2d 100644
  {
  	struct teamd_context *ctx;
  
-@@ -1720,21 +1992,18 @@ static int teamd_context_init(struct teamd_context **pctx)
+@@ -1720,21 +1993,18 @@ static int teamd_context_init(struct teamd_context **pctx)
  	if (!ctx)
  		return -ENOMEM;
  	*pctx = ctx;
@@ -2693,7 +2677,7 @@ index 5220ae2..3deba2d 100644
  }
  
  
-@@ -1831,7 +2100,9 @@ int main(int argc, char **argv)
+@@ -1831,7 +2101,9 @@ int main(int argc, char **argv)
  {
  	enum teamd_exit_code ret = TEAMD_EXIT_FAILURE;
  	int err;
@@ -2704,7 +2688,7 @@ index 5220ae2..3deba2d 100644
  
  	err = teamd_make_rundir();
  	if (err)
-@@ -1841,25 +2112,32 @@ int main(int argc, char **argv)
+@@ -1841,25 +2113,32 @@ int main(int argc, char **argv)
  	if (err)
  		return ret;
  
@@ -2740,7 +2724,7 @@ index 5220ae2..3deba2d 100644
  		ret = TEAMD_EXIT_SUCCESS;
  		goto context_fini;
  	case DAEMON_CMD_KILL:
-@@ -1868,10 +2146,10 @@ int main(int argc, char **argv)
+@@ -1868,10 +2147,10 @@ int main(int argc, char **argv)
  		break;
  	}
  
@@ -2753,7 +2737,7 @@ index 5220ae2..3deba2d 100644
  
  	err = teamd_config_load(ctx);
  	if (err) {
-@@ -1881,22 +2159,31 @@ int main(int argc, char **argv)
+@@ -1881,22 +2160,31 @@ int main(int argc, char **argv)
  
  	teamd_init_debug_level(ctx);
  
@@ -2790,7 +2774,7 @@ index 5220ae2..3deba2d 100644
  	case DAEMON_CMD_HELP:
  	case DAEMON_CMD_VERSION:
  		break;
-@@ -1925,9 +2212,19 @@ int main(int argc, char **argv)
+@@ -1925,9 +2213,19 @@ int main(int argc, char **argv)
  		break;
  	}
  
@@ -2811,7 +2795,7 @@ index 5220ae2..3deba2d 100644
  	return ret;
  }
 diff --git a/teamd/teamd.h b/teamd/teamd.h
-index d1d0f7f..b023660 100644
+index d1d0f7f..8767564 100644
 --- a/teamd/teamd.h
 +++ b/teamd/teamd.h
 @@ -33,10 +33,13 @@
@@ -3026,6 +3010,18 @@ index d1d0f7f..b023660 100644
  
  /* Runner structures */
  extern const struct teamd_runner teamd_runner_broadcast;
+@@ -399,6 +439,11 @@ static inline void ms_to_timespec(struct timespec *ts, int ms)
+ 
+ static inline int timespec_to_ms(struct timespec *ts)
+ {
++#ifndef MS_TIMER_ENABLED
++	/* If the timer is in seconds, and the nanoseconds is not zero, then it is a 1 second timer */
++	if(ts->tv_sec == 0 && ts->tv_nsec != 0)
++		return 1000;
++#endif
+ 	return ts->tv_sec * 1000 + ts->tv_nsec / 1000000;
+ }
+ 
 diff --git a/teamd/teamd_config.c b/teamd/teamd_config.c
 index 610ad5f..d2b6eef 100644
 --- a/teamd/teamd_config.c
@@ -3041,10 +3037,10 @@ index 610ad5f..d2b6eef 100644
  
  int teamd_config_dump(struct teamd_context *ctx, char **p_config_dump)
 diff --git a/teamd/teamd_ctl.c b/teamd/teamd_ctl.c
-index b30b273..98b6133 100644
+index b30b273..23ba4d4 100644
 --- a/teamd/teamd_ctl.c
 +++ b/teamd/teamd_ctl.c
-@@ -30,18 +30,34 @@
+@@ -30,18 +30,26 @@
  #include "teamd_state.h"
  #include "teamd_ctl.h"
  
@@ -3059,31 +3055,21 @@ index b30b273..98b6133 100644
  	uint32_t ifindex;
  	int err;
 +	struct teamd_context *ctx;
+ 
+-	err = ops->get_args(ops_priv, "ss", &port_devname, &port_config);
++	err = ops->get_args(ops_priv, "sss",&team_devname, &port_devname , &port_config);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "sss",&team_devname, &port_devname , &port_config);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+
-+		ctx = team_dev_get_node_by_name(team_devname);
-+
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+		err = ops->get_args(ops_priv, "ss", &port_devname, &port_config);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "ConfigUpdateFail", "team_devname structure not found.");
- 
--	err = ops->get_args(ops_priv, "ss", &port_devname, &port_config);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
  	teamd_log_dbgx(ctx, 2, "port_devname \"%s\", port_config \"%s\"",
  		       port_devname, port_config);
  
-@@ -59,7 +75,7 @@ static int teamd_ctl_method_port_config_update(struct teamd_context *ctx,
+@@ -59,7 +67,7 @@ static int teamd_ctl_method_port_config_update(struct teamd_context *ctx,
  	return ops->reply_succ(ops_priv, NULL);
  }
  
@@ -3092,36 +3078,27 @@ index b30b273..98b6133 100644
  					     const struct teamd_ctl_method_ops *ops,
  					     void *ops_priv)
  {
-@@ -67,10 +83,25 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
+@@ -67,10 +75,18 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
  	uint32_t ifindex;
  	char *cfg;
  	int err;
 +	struct teamd_context *ctx;
 +	const char *team_devname;
+ 
+-	err = ops->get_args(ops_priv, "s", &port_devname);
++	err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+		err = ops->get_args(ops_priv, "s", &port_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "ConfigDumpFail", "team_devname structure not found.");
- 
--	err = ops->get_args(ops_priv, "s", &port_devname);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
  	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
  
  	ifindex = team_ifname2ifindex(ctx->th, port_devname);
-@@ -89,16 +120,97 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
+@@ -89,16 +105,90 @@ static int teamd_ctl_method_port_config_dump(struct teamd_context *ctx,
  	return err;
  }
  
@@ -3203,19 +3180,10 @@ index b30b273..98b6133 100644
  	int err;
  
 -	err = ops->get_args(ops_priv, "s", &port_devname);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+		err = ops->get_args(ops_priv, "s", &port_devname);
-+			if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+	}
++	err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "PortAddFail", "team_devname structure not found.");
@@ -3223,7 +3191,7 @@ index b30b273..98b6133 100644
  	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
  
  	err = teamd_port_add_ifname(ctx, port_devname);
-@@ -118,16 +230,30 @@ static int teamd_ctl_method_port_add(struct teamd_context *ctx,
+@@ -118,16 +208,23 @@ static int teamd_ctl_method_port_add(struct teamd_context *ctx,
  	return ops->reply_succ(ops_priv, NULL);
  }
  
@@ -3236,29 +3204,20 @@ index b30b273..98b6133 100644
  	int err;
 +	struct teamd_context *ctx;
 +	const char *team_devname;
-+
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+		err = ops->get_args(ops_priv, "s", &port_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+	}
+ 
+-	err = ops->get_args(ops_priv, "s", &port_devname);
++	err = ops->get_args(ops_priv, "ss",&team_devname, &port_devname);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "PortRemoveFail", "team_devname structure not found.");
- 
--	err = ops->get_args(ops_priv, "s", &port_devname);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
  	teamd_log_dbgx(ctx, 2, "port_devname \"%s\"", port_devname);
  
  	err = teamd_port_remove_ifname(ctx, port_devname);
-@@ -142,12 +268,27 @@ static int teamd_ctl_method_port_remove(struct teamd_context *ctx,
+@@ -142,12 +239,23 @@ static int teamd_ctl_method_port_remove(struct teamd_context *ctx,
  	return ops->reply_succ(ops_priv, NULL);
  }
  
@@ -3272,22 +3231,18 @@ index b30b273..98b6133 100644
 +	struct teamd_context *ctx;
 +	const char *team_devname;
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "s",&team_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	err = ops->get_args(ops_priv, "s",&team_devname);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "ConfigDumpFail", "team_devname structure not found.");
  
  	err = teamd_config_dump(ctx, &cfg);
  	if (err) {
-@@ -159,12 +300,27 @@ static int teamd_ctl_method_config_dump(struct teamd_context *ctx,
+@@ -159,12 +267,23 @@ static int teamd_ctl_method_config_dump(struct teamd_context *ctx,
  	return err;
  }
  
@@ -3301,22 +3256,18 @@ index b30b273..98b6133 100644
 +	struct teamd_context *ctx;
 +	const char *team_devname;
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "s",&team_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	err = ops->get_args(ops_priv, "s",&team_devname);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "ConfigDumpActualFail", "team_devname structure not found.");
  
  	err = teamd_config_actual_dump(ctx, &cfg);
  	if (err) {
-@@ -176,12 +332,27 @@ static int teamd_ctl_method_config_dump_actual(struct teamd_context *ctx,
+@@ -176,12 +295,23 @@ static int teamd_ctl_method_config_dump_actual(struct teamd_context *ctx,
  	return err;
  }
  
@@ -3330,22 +3281,18 @@ index b30b273..98b6133 100644
 +	struct teamd_context *ctx;
 +	const char *team_devname;
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "s",&team_devname);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	err = ops->get_args(ops_priv, "s",&team_devname);
++	if (err)
++		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "StateDumpFail", "team_devname structure not found.");
  
  	err = teamd_state_dump(ctx, &state);
  	if (err) {
-@@ -193,17 +364,32 @@ static int teamd_ctl_method_state_dump(struct teamd_context *ctx,
+@@ -193,17 +323,25 @@ static int teamd_ctl_method_state_dump(struct teamd_context *ctx,
  	return err;
  }
  
@@ -3359,30 +3306,21 @@ index b30b273..98b6133 100644
  	int err;
 +	struct teamd_context *ctx;
 +	const char *team_devname;
+ 
+-	err = ops->get_args(ops_priv, "s", &item_path);
++	err = ops->get_args(ops_priv, "ss",&team_devname, &item_path);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
 +
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "ss",&team_devname, &item_path);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+
-+		ctx = team_dev_get_node_by_name(team_devname);
-+	} else {
-+		err = ops->get_args(ops_priv, "s", &item_path);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+	}
++	ctx = team_dev_get_node_by_name(team_devname);
 +
 +	if (ctx == NULL)
 +		return ops->reply_err(ops_priv, "ItemValueGetFail", "team_devname structure not found.");
- 
--	err = ops->get_args(ops_priv, "s", &item_path);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
  	teamd_log_dbgx(ctx, 2, "item_path \"%s\"", item_path);
  
  	err = teamd_state_item_value_get(ctx, item_path, &value);
-@@ -219,17 +405,33 @@ static int teamd_ctl_method_state_item_value_get(struct teamd_context *ctx,
+@@ -219,17 +357,24 @@ static int teamd_ctl_method_state_item_value_get(struct teamd_context *ctx,
  	return err;
  }
  
@@ -3396,31 +3334,20 @@ index b30b273..98b6133 100644
  	int err;
 +	struct teamd_context *ctx;
 +	const char *team_devname;
-+
-+	if (g_ctx->unified_mode) {
-+		err = ops->get_args(ops_priv, "sss",&team_devname, &item_path, &value);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+
-+		ctx = team_dev_get_node_by_name(team_devname);
-+
-+	} else {
-+		err = ops->get_args(ops_priv, "ss", &item_path, &value);
-+		if (err)
-+			return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
-+		ctx = team_dev_get_node_by_name(g_ctx->process_name);
-+	}
-+
-+	if (ctx == NULL)
-+		return ops->reply_err(ops_priv, "ItemValueSetFail", "team_devname structure not found.");
  
 -	err = ops->get_args(ops_priv, "ss", &item_path, &value);
--	if (err)
--		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++	err = ops->get_args(ops_priv, "sss",&team_devname, &item_path, &value);
+ 	if (err)
+ 		return ops->reply_err(ops_priv, "InvalidArgs", "Did not receive correct message arguments.");
++
++	ctx = team_dev_get_node_by_name(team_devname);
++	if (ctx == NULL)
++		return ops->reply_err(ops_priv, "ItemValueSetFail", "team_devname structure not found.");
++
  	teamd_log_dbgx(ctx, 2, "item_path \"%s\", value \"%s\"",
  		       item_path, value);
  
-@@ -247,7 +449,7 @@ static int teamd_ctl_method_state_item_value_set(struct teamd_context *ctx,
+@@ -247,7 +392,7 @@ static int teamd_ctl_method_state_item_value_set(struct teamd_context *ctx,
  	return ops->reply_succ(ops_priv, NULL);
  }
  
@@ -3429,7 +3356,7 @@ index b30b273..98b6133 100644
  				       const struct teamd_ctl_method_ops *ops,
  				       void *ops_priv);
  struct teamd_ctl_method {
-@@ -301,6 +503,14 @@ static const struct teamd_ctl_method teamd_ctl_method_list[] = {
+@@ -301,6 +446,14 @@ static const struct teamd_ctl_method teamd_ctl_method_list[] = {
  		.func = teamd_ctl_method_state_item_value_set,
  
  	},
@@ -3444,7 +3371,7 @@ index b30b273..98b6133 100644
  };
  
  #define TEAMD_CTL_METHOD_LIST_SIZE ARRAY_SIZE(teamd_ctl_method_list)
-@@ -324,7 +534,7 @@ bool teamd_ctl_method_exists(const char *method_name)
+@@ -324,7 +477,7 @@ bool teamd_ctl_method_exists(const char *method_name)
  	return get_func_by_name(method_name);
  }
  
@@ -3453,7 +3380,7 @@ index b30b273..98b6133 100644
  			  const struct teamd_ctl_method_ops *ops,
  			  void *ops_priv)
  {
-@@ -336,5 +546,5 @@ int teamd_ctl_method_call(struct teamd_context *ctx, const char *method_name,
+@@ -336,5 +489,5 @@ int teamd_ctl_method_call(struct teamd_context *ctx, const char *method_name,
  			      method_name);
  		return -EINVAL;
  	}
@@ -3777,7 +3704,7 @@ index ea7ef87..f340bc7 100644
  
  int __set_sockaddr(struct sockaddr *sa, socklen_t sa_len, sa_family_t family,
 diff --git a/teamd/teamd_lw_ethtool.c b/teamd/teamd_lw_ethtool.c
-index b44656e..4be1d1a 100644
+index b44656e..25bfe69 100644
 --- a/teamd/teamd_lw_ethtool.c
 +++ b/teamd/teamd_lw_ethtool.c
 @@ -22,7 +22,7 @@
@@ -3842,7 +3769,7 @@ index b44656e..4be1d1a 100644
  					      link_up);
  }
  
-@@ -139,18 +139,20 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+@@ -139,18 +139,27 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
  				 void *priv, void *creator_priv)
  {
  	int err;
@@ -3859,7 +3786,14 @@ index b44656e..4be1d1a 100644
 -		teamd_log_err("Failed add delay callback timer");
 -		return err;
 +
-+	ethtool_ppriv->delay_timer = tmr_create_timer(priv, lw_ethtool_callback_delay, TRUE, TIMER_TYPE_MS);
++	ethtool_ppriv->delay_timer = tmr_create_timer(priv, lw_ethtool_callback_delay, TRUE, 
++#ifdef MS_TIMER_ENABLED
++		TIMER_TYPE_MS
++#else
++		TIMER_TYPE_SEC
++#endif
++		);
++
 +	if (!ethtool_ppriv->delay_timer) {
 +		teamd_log_err("Failed to create delay callback timer");
 +		return -ENOMEM;
@@ -3868,7 +3802,7 @@ index b44656e..4be1d1a 100644
  	err = teamd_event_watch_register(ctx, &lw_ethtool_port_watch_ops, priv);
  	if (err) {
  		teamd_log_err("Failed to register event watch.");
-@@ -159,7 +161,7 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
+@@ -159,7 +168,7 @@ static int lw_ethtool_port_added(struct teamd_context *ctx,
  	return 0;
  
  delay_callback_del:
@@ -3877,7 +3811,7 @@ index b44656e..4be1d1a 100644
  	return err;
  }
  
-@@ -167,8 +169,10 @@ static void lw_ethtool_port_removed(struct teamd_context *ctx,
+@@ -167,8 +176,10 @@ static void lw_ethtool_port_removed(struct teamd_context *ctx,
  				    struct teamd_port *tdport,
  				    void *priv, void *creator_priv)
  {
@@ -3890,7 +3824,7 @@ index b44656e..4be1d1a 100644
  
  static int lw_ethtool_state_delay_up_get(struct teamd_context *ctx,
 diff --git a/teamd/teamd_lw_psr.c b/teamd/teamd_lw_psr.c
-index b0a41f4..09b7c4f 100644
+index b0a41f4..c1d7a12 100644
 --- a/teamd/teamd_lw_psr.c
 +++ b/teamd/teamd_lw_psr.c
 @@ -32,7 +32,7 @@ static const struct timespec lw_psr_default_init_wait = { 0, 1 };
@@ -3936,7 +3870,7 @@ index b0a41f4..09b7c4f 100644
  					 lw_psr_callback_socket,
  					 psr_ppriv->sock,
  					 TEAMD_LOOP_FD_EVENT_READ);
-@@ -152,13 +152,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -152,13 +152,20 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
  		goto close_sock;
  	}
  
@@ -3945,7 +3879,13 @@ index b0a41f4..09b7c4f 100644
 -						lw_psr_callback_periodic,
 -						&psr_ppriv->interval,
 -						&psr_ppriv->init_wait);
-+	psr_ppriv->periodic_timer = tmr_create_timer(psr_ppriv, lw_psr_callback_periodic, TRUE, TIMER_TYPE_MS);
++	psr_ppriv->periodic_timer = tmr_create_timer(psr_ppriv, lw_psr_callback_periodic, TRUE, 
++#ifdef MS_TIMER_ENABLED
++		TIMER_TYPE_MS
++#else
++		TIMER_TYPE_SEC
++#endif
++		);
 +	if (!psr_ppriv->periodic_timer) {
 +		teamd_log_err("Failed to create periodic callback timer");
 +		return -ENOMEM;
@@ -3957,7 +3897,7 @@ index b0a41f4..09b7c4f 100644
  		goto socket_callback_del;
  	}
  
-@@ -169,14 +170,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -169,14 +176,14 @@ int lw_psr_port_added(struct teamd_context *ctx, struct teamd_port *tdport,
  		goto periodic_callback_del;
  	}
  
@@ -3976,7 +3916,7 @@ index b0a41f4..09b7c4f 100644
  close_sock:
  	psr_ppriv->ops->sock_close(psr_ppriv);
  	return err;
-@@ -187,8 +188,8 @@ void lw_psr_port_removed(struct teamd_context *ctx, struct teamd_port *tdport,
+@@ -187,8 +194,8 @@ void lw_psr_port_removed(struct teamd_context *ctx, struct teamd_port *tdport,
  {
  	struct lw_psr_port_priv *psr_ppriv = priv;
  
@@ -4677,10 +4617,10 @@ index 0714880..52ead2e 100644
  
 diff --git a/teamd/teamd_timer.c b/teamd/teamd_timer.c
 new file mode 100644
-index 0000000..6abee07
+index 0000000..97a866e
 --- /dev/null
 +++ b/teamd/teamd_timer.c
-@@ -0,0 +1,407 @@
+@@ -0,0 +1,411 @@
 +#include "teamd_timer.h"
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -4810,7 +4750,9 @@ index 0000000..6abee07
 +
 +int tmr_init(void) {
 +    _tmr_init(TIMER_TYPE_SEC, TMR_WHEEL_SIZE_SECS);
++#ifdef MS_TIMER_ENABLED
 +    _tmr_init(TIMER_TYPE_MS, TMR_WHEEL_SIZE_MS);
++#endif
 +    return 0;
 +}
 +
@@ -4844,7 +4786,9 @@ index 0000000..6abee07
 +}
 +
 +void tmr_cleanup(void) {
++#ifdef MS_TIMER_ENABLED
 +    _tmr_cleanup(TIMER_TYPE_MS);
++#endif
 +    _tmr_cleanup(TIMER_TYPE_SEC);
 +}
 +
@@ -5223,7 +5167,7 @@ index 0000000..1450bb2
 +
 +#endif // TIMER_H
 diff --git a/teamd/teamd_usock.c b/teamd/teamd_usock.c
-index 1adfdf8..4171c89 100644
+index 1adfdf8..831aa10 100644
 --- a/teamd/teamd_usock.c
 +++ b/teamd/teamd_usock.c
 @@ -163,7 +163,7 @@ static const struct teamd_ctl_method_ops teamd_usock_ctl_method_ops = {
@@ -5385,7 +5329,7 @@ index 1adfdf8..4171c89 100644
  	addr.sun_family = AF_UNIX;
  	teamd_usock_get_sockpath(addr.sun_path, sizeof(addr.sun_path),
 -				 ctx->team_devname);
-+				 g_ctx->process_name, TRUE);
++				 g_ctx->process_name);
  
 -	teamd_log_dbg(ctx, "usock: Using sockpath \"%s\"", addr.sun_path);
 +	teamd_log_info("usock: Using sockpath \"%s\"", addr.sun_path);
@@ -5475,37 +5419,6 @@ index 85d6beb..1990f9a 100644
 +void teamd_usock_fini(struct global_context *g_ctx);
  
  #endif /* _TEAMD_USOCK_H_ */
-diff --git a/teamd/teamd_usock_common.h b/teamd/teamd_usock_common.h
-index 0790d0b..dee94ad 100644
---- a/teamd/teamd_usock_common.h
-+++ b/teamd/teamd_usock_common.h
-@@ -31,10 +31,24 @@
- #define TEAMD_USOCK_REPLY_ERR_PREFIX	"REPLY_ERROR"
- #define TEAMD_USOCK_REPLY_SUCC_PREFIX	"REPLY_SUCCESS"
- 
--static inline void teamd_usock_get_sockpath(char *sockpath, size_t sockpath_len,
--					    const char *team_devname)
-+
-+static inline int teamd_usock_get_sockpath(char *sockpath, size_t sockpath_len,
-+					    const char *team_devname, bool server)
- {
- 	snprintf(sockpath, sockpath_len, TEAMD_RUN_DIR"%s.sock", team_devname);
-+	if(server)
-+	{
-+		return 0;
-+	}
-+	else
-+	{
-+		if(access(sockpath, F_OK) == 0)
-+		{
-+			return 0;
-+		}
-+		snprintf(sockpath, sockpath_len, TEAMD_RUN_DIR"teamd-unified.sock");
-+		return 1;
-+	}
- }
- 
- static inline int teamd_usock_recv_msg(int sock, char **p_str)
 diff --git a/teamd/teamd_utldll.c b/teamd/teamd_utldll.c
 new file mode 100644
 index 0000000..c26c962
