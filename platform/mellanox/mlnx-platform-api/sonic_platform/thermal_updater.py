@@ -69,7 +69,7 @@ class ThermalUpdater:
                 if asic_parameter is not None:
                     asic_poll_interval_config = asic_parameter.get('poll_time')
                     if asic_poll_interval_config:
-                        asic_poll_interval = int(asic_poll_interval_config) / 2
+                        asic_poll_interval = int(asic_poll_interval_config)
                     else:
                         logger.log_notice(f'ASIC poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
                 else:
@@ -78,7 +78,7 @@ class ThermalUpdater:
                 if module_parameter is not None:
                     sfp_poll_interval_config = module_parameter.get('poll_time')
                     if sfp_poll_interval_config:
-                        sfp_poll_interval = int(sfp_poll_interval_config) / 2
+                        sfp_poll_interval = int(sfp_poll_interval_config)
                     else:
                         logger.log_notice(f'Module poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
                 else:
