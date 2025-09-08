@@ -83,12 +83,14 @@ function PrintHelp() {
     echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  -r, --reset    Reset firmware configuration (NVIDIA BlueField platform only)"
+    echo "  -n, --no-mst  Do not start MST drivers (NVIDIA BlueField platform only)"
 {% endif %}
     echo "  -h, --help     Print help"
     echo
     echo "Examples:"
     echo "  ./${SCRIPT_NAME} --verbose"
     echo "  ./${SCRIPT_NAME} --upgrade"
+    echo "  ./${SCRIPT_NAME} --no-mst"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  ./${SCRIPT_NAME} --reset"
 {% endif %}
@@ -115,6 +117,9 @@ function ParseArguments() {
             ;;
             -c|--clear-semaphore)
                 CLEAR_SEMAPHORE="${YES_PARAM}"
+            ;;
+            -n|--no-mst)
+                NO_MST="${YES_PARAM}"
             ;;
 {% if sonic_asic_platform == "nvidia-bluefield" %}
             -r|--reset)
@@ -230,6 +235,15 @@ function WaitForDevice() {
     local -r DEVICE_TYPE=$(GetMstDeviceType)
     local SPC_MST_DEV
     local QUERY_RC=""
+
+    if [[ "${NO_MST}" != "${YES_PARAM}" ]]; then
+        LogInfo "Restarting MST device"
+        /usr/bin/mst restart --with_i2cdev
+        ERROR_CODE="$?"
+        if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+            ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
+        fi
+    fi
 
     while : ; do
         SPC_MST_DEV=$(GetSPCMstDevice)
