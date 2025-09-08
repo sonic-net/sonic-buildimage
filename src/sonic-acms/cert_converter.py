@@ -14,6 +14,8 @@ from swsscommon import swsscommon
 restapi_certs_path = "/etc/sonic/credentials/"
 # Location where this script finally puts the gnmi certs after format conversion
 gnmi_certs_path = "/etc/sonic/gnmi/"
+# Default location for certs
+default_certs_path = "/etc/sonic/credentials/"
 # Location where ACMS downloads certs from dSMS
 acms_certs_path = "/var/opt/msft/client/dsms/sonic-prod/certificates/chained/"
 # Location of the uber notify file
@@ -114,55 +116,116 @@ def link_to_latest_cert(acms_certs_path, certs_path):
         sonic_logger.log_info("cert_converter : link_to_latest_cert : Finished linking cert "+cert_name+".pfx")
     return True
 
-def convert_certs(acms_certs_path, cert_prefix, certs_path, password_length):
+def convert_single_cert(cert_name, source_path, dest_path):
+    """Convert a single certificate from pfx to crt/key format"""
+    name = cert_name.split(".")[0]
+    ver = cert_name.split(".")[1]
+    
+    sonic_logger.log_info("cert_converter : convert_single_cert : Start converting " + cert_name)
+    
+    # Extract the certificate from the pfx file
+    cmd = ["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", 
+           source_path + name + ".pfx." + ver, "-out", 
+           dest_path + name + ".crt." + ver, "-password", "pass:", "-passin", "pass:"]
+    sonic_logger.log_info("cert_converter : convert_single_cert : " + " ".join(cmd))
+    ret, _ = execute_cmd(cmd)
+    if not ret:
+        sonic_logger.log_error("cert_converter : convert_single_cert : Extracting crt from pfx failed!", True)
+        return False
+    
+    # Generate a random password for encrypting the private key
+    string_choice = string.ascii_uppercase + string.ascii_lowercase + string.digits
+    random_password = ''.join(random.choice(string_choice) for _ in range(password_length))
+    
+    # Extract the private key from the pfx file
+    cmd = ["openssl", "pkcs12", "-nocerts", "-in", 
+           source_path + name + ".pfx." + ver, "-out", "/dev/stdout", 
+           "-password", "pass:", "-passin", "pass:", "-passout", "pass:" + random_password]
+    ret, private_key = execute_cmd(cmd)
+    if not ret:
+        sonic_logger.log_error("cert_converter : convert_single_cert : Creating private key from pfx failed!", True)
+        return False
+    
+    # Decrypt the private key
+    cmd = ["openssl", "rsa", "-in", "/dev/stdin", "-out", 
+           dest_path + name + ".key." + ver, "-passin", "pass:" + random_password]
+    ret, _ = execute_cmd(cmd, input=private_key)
+    if not ret:
+        sonic_logger.log_error("cert_converter : convert_single_cert : Extracting key from pfx failed!", True)
+        return False
+    
+    sonic_logger.log_info("cert_converter : convert_single_cert : Finished converting " + cert_name)
+    return True
+
+def convert_certs_with_prefix(acms_certs_path, cert_prefix, certs_path, password_length):
+    """Convert certificates that match a specific prefix"""
     existing_cert_names = get_list_of_certs(certs_path)
     downloaded_cert_names = get_list_of_certs(acms_certs_path)
     new_cert_flag = False
 
     if len(downloaded_cert_names):
         for cert_name in downloaded_cert_names:
-            # Ignore certs with other prefixes
-            if cert_prefix not in cert_name:
+            cert_name_prefix = cert_name.split(".")[0]
+            # Check if this cert starts with the specified prefix
+            if not cert_name_prefix.startswith(cert_prefix):
                 continue
+            
             # Start converting those certs which have not been converted
             if cert_name not in existing_cert_names:
-                sonic_logger.log_info("cert_converter : convert_certs : Start converting "+cert_name)
-                name = cert_name.split(".")[0]
-                ver = cert_name.split(".")[1]
-                # Extract the certificate from the pfx file
-                cmd = ["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", acms_certs_path+name+".pfx."+ver, "-out", certs_path+name+".crt."+ver, "-password", "pass:", "-passin", "pass:"]
-                sonic_logger.log_info("cert_converter : convert_certs : "+" ".join(cmd))
-                ret, _ = execute_cmd(cmd)
-                if not ret:
-                    sonic_logger.log_error("cert_converter : convert_certs : Extracting crt from pfx failed!", True)
-                    return False                
-                # Generate a random password for encrypting the private key
-                string_choice = string.ascii_uppercase + string.ascii_lowercase + string.digits
-                random_password = ''.join(random.choice(string_choice) for _ in range(password_length))
-                # Extract the private key from the pfx file
-                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", "/dev/stdout", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
-                ret, private_key = execute_cmd(cmd)
-                if not ret:
-                    sonic_logger.log_error("cert_converter : convert_certs : Creating private key from pfx failed!", True)
+                if convert_single_cert(cert_name, acms_certs_path, certs_path):
+                    new_cert_flag = True
+                else:
                     return False
-                # Decrypt the private key
-                cmd = ["openssl", "rsa", "-in", "/dev/stdin", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
-                ret, _ = execute_cmd(cmd, input=private_key)
-                if not ret:
-                    sonic_logger.log_error("cert_converter : convert_certs : Extracting key from pfx failed!", True)
-                    return False
-                new_cert_flag = True
-                sonic_logger.log_info("cert_converter : convert_certs : Finished converting "+cert_name)
             else:
-                sonic_logger.log_info("cert_converter : convert_certs : "+cert_name+" already converted")
+                sonic_logger.log_info("cert_converter : convert_certs_with_prefix : " + cert_name + " already converted")
+        
         if new_cert_flag:
-            if not (link_to_latest_cert(acms_certs_path, certs_path)):
-                sonic_logger.log_error("cert_converter : convert_certs : linking certs failed!", True)
+            if not link_to_latest_cert(acms_certs_path, certs_path):
+                sonic_logger.log_error("cert_converter : convert_certs_with_prefix : linking certs failed!", True)
                 return False
     else:
-        sonic_logger.log_info("cert_converter : convert_certs : no certs downloaded")
+        sonic_logger.log_info("cert_converter : convert_certs_with_prefix : no certs downloaded")
+    
     return True
 
+def convert_certs_without_known_prefix(acms_certs_path, known_prefixes, dest_path):
+    """Convert certificates that don't match any known prefix to default path"""
+    downloaded_cert_names = get_list_of_certs(acms_certs_path)
+    existing_cert_names = get_list_of_certs(dest_path)
+    new_cert_flag = False
+    
+    for cert_name in downloaded_cert_names:
+        cert_prefix = cert_name.split(".")[0]
+        # Check if this cert has a known prefix
+        has_known_prefix = any(cert_prefix.startswith(prefix) for prefix in known_prefixes)
+        
+        if not has_known_prefix:
+            sonic_logger.log_info("cert_converter : convert_certs_without_known_prefix : Converting cert %s to default path" % cert_name)
+            
+            # Check if cert already exists in default path
+            if cert_name not in existing_cert_names:
+                if convert_single_cert(cert_name, acms_certs_path, dest_path):
+                    new_cert_flag = True
+                # Continue to next cert if conversion fails (don't return False)
+            else:
+                sonic_logger.log_info("cert_converter : convert_certs_without_known_prefix : " + cert_name + " already converted to default path")
+    
+    # Link to latest certs for default path if any new certs were converted
+    if new_cert_flag:
+        if not link_to_latest_cert(acms_certs_path, dest_path):
+            sonic_logger.log_error("cert_converter : convert_certs_without_known_prefix : linking certs failed for default path!", True)
+
+def convert_all_certs():
+    """Convert all certificates, placing them in appropriate paths based on prefix"""
+    known_prefixes = list(certs_path_map.keys())
+    
+    # First, handle certificates with known prefixes
+    for prefix, certs_path in certs_path_map.items():
+        if not convert_certs_with_prefix(acms_certs_path, prefix, certs_path, password_length):
+            sonic_logger.log_error("cert_converter : convert_all_certs : Cert conversion failed for %s!" % certs_path)
+    
+    # Then, handle certificates that don't match any known prefix
+    convert_certs_without_known_prefix(acms_certs_path, known_prefixes, default_certs_path)
 
 def clean_current_certs(certs_path):
     if not os.path.exists(certs_path):
@@ -179,19 +242,19 @@ def clean_current_certs(certs_path):
         if (file_ext in supported_cert_ext) and ("sonic_acms_bootstrap" not in file_name) and ("temp" not in file_name) and ("test" not in file_name):
             os.remove(os.path.join(certs_path, file_t))
 
-
 def main():
     set_acms_certs_path_from_db()
     while True:
         sonic_logger.log_info("cert_converter : main : Check if uber_notify_file is present")
         if os.path.isfile(uber_notify_file_path):
             sonic_logger.log_info("cert_converter : main : uber_notify_file found, clean old certs...")
+            # Clean old certs for all paths
             for prefix, certs_path in certs_path_map.items():
-                # Clean old certs
                 clean_current_certs(certs_path)
-                sonic_logger.log_info("cert_converter : main : uber_notify_file found, converting all certs for %s..." % certs_path)
-                if not convert_certs(acms_certs_path, prefix, certs_path, password_length):
-                    sonic_logger.log_error("cert_converter : main : Cert conversion failed for %s!" % certs_path)
+            clean_current_certs(default_certs_path)
+            
+            sonic_logger.log_info("cert_converter : main : uber_notify_file found, converting all certs...")
+            convert_all_certs()
             break
         else:
             time.sleep(60)
@@ -199,9 +262,7 @@ def main():
     sonic_logger.log_info("cert_converter : main : Start polling every 1hr...")
     while True:
         sonic_logger.log_notice("cert_converter : main : Checking for cert changes...")
-        for prefix, certs_path in certs_path_map.items():
-            if not convert_certs(acms_certs_path, prefix, certs_path, password_length):
-                sonic_logger.log_error("cert_converter : main : Cert conversion failed for %s!" % certs_path)
+        convert_all_certs()
         time.sleep(polling_frequency)
 
 if __name__ == "__main__":
