@@ -3110,6 +3110,13 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "LOCAL_USER": {
+            "admin": {
+                "role": "administrator",
+                "password_hash": "$6$rounds=656000$YI/0Vi2X$YI/0Vi2X.FGpk0yZ0DSbMVyp0/ozeWVnJMSUVJsvZQR2ZjbDxw0jkEQBB2trWecfmJpSg.k2VjbdJVv.JZlnM.",
+                "enabled": "true"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

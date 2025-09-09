@@ -5,6 +5,7 @@
             {%- if include_p4rt == "y" %}"synchronous_mode":"enable",{% endif %}
             "default_bgp_status": {% if shutdown_bgp_on_start == "y" %}"down"{% else %}"up"{% endif %},
             "default_pfcwd_status": {% if enable_pfcwd_on_start == "y" %}"enable"{% else %}"disable"{% endif %},
+            "local_user_management": {%- if username and password %}"enabled"{% else %}"disabled"{% endif %},
             "timezone": "UTC"
         }
     },
@@ -212,5 +213,14 @@
             "admin_state": "enabled",
             "vrf": "default"
         }
+    },
+    "LOCAL_USER": {
+{%- if username and password %}
+        "{{ username }}": {
+            "role": "administrator",
+            "password_hash": "{{ password }}",
+            "enabled": true
+        }
+{%- endif %}
     }
 }
