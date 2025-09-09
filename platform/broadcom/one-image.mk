@@ -48,6 +48,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(ACCTON_AS5835_54T_PLATFORM_MODULE) \
                                $(ACCTON_AS7312_54XS_PLATFORM_MODULE) \
                                $(ACCTON_AS7315_27XB_PLATFORM_MODULE) \
+                               $(ACCTON_AS4625_54P_PLATFORM_MODULE) \
+                               $(ACCTON_AS4625_54T_PLATFORM_MODULE) \
                                $(INVENTEC_D7032Q28B_PLATFORM_MODULE) \
                                $(INVENTEC_D7054Q28B_PLATFORM_MODULE) \
                                $(INVENTEC_D7264Q28B_PLATFORM_MODULE) \
@@ -106,7 +108,6 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64E_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64EO_PLATFORM_MODULE) \
-                               $(NEXTHOP_4010_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \
