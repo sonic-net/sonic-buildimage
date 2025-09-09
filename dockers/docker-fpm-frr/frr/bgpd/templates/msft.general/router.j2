@@ -7,6 +7,7 @@
 {% set devicedownstream_subrole = CONFIG_DB__DEVICE_METADATA['localhost']['downstream_subrole'] %}
 {% set device_region = CONFIG_DB__DEVICE_METADATA['localhost']['region'] %}
 {% set is_storage_device = CONFIG_DB__DEVICE_METADATA['localhost']['storage_device'] %}
+{% set device_location_type = CONFIG_DB__DEVICE_METADATA['localhost']['locationtype'] %}
 {% if is_storage_device is not defined or is_storage_device | length == 0 %}
 {% set is_storage_device = "false" %}
 {% endif %}

@@ -1,7 +1,8 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
-            "type": "MgmtSpineRouter"
+            "type": "MgmtSpineRouter",
+            "locationtype": "Edge"
         }
     },
     "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {

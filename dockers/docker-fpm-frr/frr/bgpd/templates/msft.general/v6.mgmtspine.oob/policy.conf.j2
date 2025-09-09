@@ -7,6 +7,12 @@ ipv6 prefix-list AGGREGATE_ROUTES_V6 seq 5 permit ::1/128
 !
 ipv6 prefix-list AGGREGATE_CONTRIBUTING_ROUTES_V6 seq 5 permit ::1/128
 !
+{% if device_location_type is defined and device_location_type in ['Edge'] %}
+ip community-list standard GATEWAY_ROUTE_COMMUNITY permit 8075:8803
+!
+ip community-list standard OOB_DEFAULT_COMMUNITY permit 8075:8804
+!
+{% endif %}
 route-map TO_MB_PATH_V6 deny 100
  match ipv6 address prefix-list DEFAULT_IPV6
 !
@@ -28,6 +34,9 @@ route-map FROM_MB_PATH_V6 permit 100
 route-map FROM_MB_PATH_V6 permit 110
   match ipv6 address prefix-list DEFAULT_IPV6
   set as-path prepend 64512
+{% if device_location_type is defined and device_location_type in ['Edge'] %}
+  set community 8075:8804 additive
+{% endif %}
 !
 route-map FROM_MB_PATH_V6 deny 1000
 !
