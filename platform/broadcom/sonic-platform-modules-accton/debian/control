@@ -49,6 +49,10 @@ Package: sonic-platform-accton-as4630-54te
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
 
+Package: sonic-platform-accton-as4630-54npe
+Architecture: amd64
+Description: kernel modules for platform devices such as fan, led, sfp
+
 Package: sonic-platform-accton-minipack
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
