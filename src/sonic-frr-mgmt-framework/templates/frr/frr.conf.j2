@@ -18,6 +18,13 @@ fpm use-next-hop-groups
 ! Uses the old known FPM behavior of including next hop information in the route (e.g. RTM_NEWROUTE) messages
 no fpm use-next-hop-groups
 {% endif %}
+{% if ( ('localhost' in DEVICE_METADATA) and ('route_replace' in  DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['route_replace'] == 'enabled') ) %}
+! enable route replace semantics
+fpm use-route-replace
+{% else %}
+no fpm use-route-replace
+{% endif %}
 !
 ! Add fpm address for zebra
 fpm address 127.0.0.1
