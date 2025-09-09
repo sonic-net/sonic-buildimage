@@ -9,7 +9,9 @@
     neighbor AH_V6 route-map TO_AH_V6 out
     neighbor AH_V6 send-community
     neighbor AH_V6 maximum-prefix 64000 90 warning-only
+{% if (CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC') or CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'UpperSpineRouter' %}
     table-map SELECTIVE_ROUTE_DOWNLOAD_V6
+{% endif %}
   exit-address-family
 !
 ! end of template: bgpd/templates/msft.general/v6.spine.ah/peer-group.conf.j2

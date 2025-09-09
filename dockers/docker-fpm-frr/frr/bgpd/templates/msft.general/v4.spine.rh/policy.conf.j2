@@ -4,9 +4,13 @@
 bgp community-list standard LEAK_COMMUNITY permit 8075:10400
 bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
 bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
+{% set need_anchor = false %}
+{% if (CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC') or CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'UpperSpineRouter' %}
+{% set need_anchor = true %}
 bgp community-list standard ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_route_community }}
 bgp community-list standard LOCAL_ANCHOR_ROUTE_COMMUNITY permit {{ constants.bgp.local_anchor_route_community }}
 bgp community-list standard ANCHOR_CONTRIBUTING_ROUTE_COMMUNITY permit {{ constants.bgp.anchor_contributing_route_community }}
+{% endif %}
 !
 bgp as-path access-list WAN_ASNS permit _8075_
 bgp as-path access-list WAN_ASNS permit _8074_
@@ -14,6 +18,7 @@ bgp as-path access-list WAN_ASNS permit _8072_
 !
 ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
 !
+{% if need_anchor %}
 route-map SELECTIVE_ROUTE_DOWNLOAD_V4 deny 10
   match community LOCAL_ANCHOR_ROUTE_COMMUNITY
 !
@@ -22,6 +27,7 @@ route-map SELECTIVE_ROUTE_DOWNLOAD_V4 permit 1000
 route-map TAG_ANCHOR_COMMUNITY permit 10
   set community {{ constants.bgp.local_anchor_route_community }} {{ constants.bgp.anchor_route_community }} additive
 !
+{% endif %}
 route-map FROM_RH_V4 permit 100
   match ip address prefix-list DEFAULT_IPV4
 !
@@ -39,11 +45,13 @@ route-map FROM_RH_V4 permit 400
 !
 route-map FROM_RH_V4 deny 1000
 !
-route-map TO_RH_V4 permit 30
+{% if need_anchor %}
+route-map TO_RH_V4 permit 50
   match ip address prefix-list ANCHOR_CONTRIBUTING_ROUTES
   set community {{ constants.bgp.anchor_contributing_route_community }} additive
   on-match next
 !
+{% endif %}
 route-map TO_RH_V4 deny 100
   match as-path WAN_ASNS
 !
@@ -51,7 +59,9 @@ route-map TO_RH_V4 deny 200
   match ip address prefix-list DEFAULT_IPV4
 !
 route-map TO_RH_V4 permit 1000
+{% if need_anchor %}
   set comm-list LOCAL_ANCHOR_ROUTE_COMMUNITY delete
+{% endif %}
 !
 ! end of template: bgpd/templates/msft.general/v4.spine.rh/policy.conf.j2
 !
