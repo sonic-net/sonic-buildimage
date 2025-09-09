@@ -3110,6 +3110,29 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+            "dummy": {
+                "stream_state": "disabled",
+                "poll_interval": "100000"
+            },
+            "hft_profile": {
+                "stream_state": "enabled",
+                "poll_interval": "100000"
+            }
+        },
+        "HIGH_FREQUENCY_TELEMETRY_GROUP": {
+            "dummy|PORT": {},
+            "hft_profile|PORT": {
+                "object_names": [
+                    "Ethernet0",
+                    "Ethernet4"
+                ],
+                "object_counters": [
+                    "IF_IN_OCTETS",
+                    "OUT_CURR_OCCUPANCY_BYTES"
+                ]
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
