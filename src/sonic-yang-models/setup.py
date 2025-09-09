@@ -45,6 +45,7 @@ yang_files = [
     'sonic-device_neighbor.yang',
     'sonic-device_neighbor_metadata.yang',
     'sonic-dhcp-server.yang',
+    'sonic-dhcpv4-relay.yang',
     'sonic-dhcpv6-relay.yang',
     'sonic-dns.yang',
     'sonic-events-bgp.yang',
@@ -143,6 +144,7 @@ yang_files = [
     'sonic-grpcclient.yang',
     'sonic-serial-console.yang',
     'sonic-smart-switch.yang',
+    'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
 ]
 

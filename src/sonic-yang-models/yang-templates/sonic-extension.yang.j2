@@ -32,8 +32,8 @@ module sonic-extension {
             the action will be performed first on the Parent table and then on the
             Dependent table. In DELETE operation, the Dependent table will be
             deleted first and then the Parent table. This extension can be defined
-            only under List nodes. Table name should always be suffixed with '_LIST'
-            as modeled in yang.  e.g. - dependent-on STP_LIST";
+            only under List nodes. Table name should always be suffixed with '_list'
+            as modeled in yang.  e.g. - dependent-on stp-list";
         argument "value";
     }
     {% else %}

@@ -26,4 +26,3 @@ $(DOCKER_AUDITD_WATCHDOG)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_AUDITD_WATCHDOG)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_AUDITD_WATCHDOG)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
-$(DOCKER_AUDITD_WATCHDOG)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)

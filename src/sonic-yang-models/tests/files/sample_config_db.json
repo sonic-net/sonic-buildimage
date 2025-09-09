@@ -384,7 +384,8 @@
         "SWITCH_TRIMMING": {
             "GLOBAL": {
                 "size": "128",
-                "dscp_value": "48",
+                "dscp_value": "from-tc",
+                "tc_value": "6",
                 "queue_index": "6"
             }
         },
@@ -1552,9 +1553,17 @@
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
+            "DASH_METER": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
             "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "SWITCH": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "60000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
@@ -1611,7 +1620,8 @@
             "Ethernet9": {
                "action": "drop",
                "detection_time": "100",
-               "restoration_time": "400"
+               "restoration_time": "400",
+               "pfc_stat_history": "enable"
             }
         },
         "PFC_WD": {
@@ -1827,7 +1837,8 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
-                "advertise-svi-ip": "true"
+                "advertise-svi-ip": "true",
+                "autort": "rfc8365-compatible"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -2131,6 +2142,36 @@
                 "interface_id": "true"
             }
         },
+        "DHCPV4_RELAY": {
+            "Vlan111": {
+                "dhcpv4_servers": [
+                    "10.222.72.116"
+                ],
+                "server_vrf": "Vrf_blue",
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "enable",
+                "server_id_override": "enable",
+                "agent_relay_mode": "forward_untouched",
+                "max_hop_count": "4"
+            },
+            "Vlan222": {
+                "dhcpv4_servers": [
+                    "10.222.72.116",
+                    "10.222.82.226"
+                ]
+            },
+            "Vlan777": {
+                "dhcpv4_servers": [
+                    "10.222.82.226"
+                ],
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "disable",
+                "server_id_override": "disable",
+                "agent_relay_mode": "discard"
+            }
+        },
         "DHCP_SERVER_IPV4": {
             "Vlan100": {
                 "gateway": "100.1.1.1",
@@ -2391,6 +2432,14 @@
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet55": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "8000",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
             }
         },
         "VNET_ROUTE_TUNNEL" : {
@@ -2426,6 +2475,45 @@
             }
         },
 
+        "STP": {
+            "GLOBAL": {
+                "mode": "pvst",
+                "rootguard_timeout": "30",
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768"
+            }
+        },
+        "STP_VLAN": {
+            "Vlan100": {
+                "forward_delay": "15",
+                "hello_time": "2",
+                "max_age": "20",
+                "priority": "32768",
+                "enabled": "true",
+                "vlanid": "100"
+            }
+        },
+        "STP_VLAN_PORT": {
+            "Vlan100|Ethernet0": {
+                "path_cost": "200000",
+                "priority": "128"
+            }
+        },
+        "STP_PORT": {
+            "Ethernet0": {
+                "enabled": "true",
+                "root_guard": "false",
+                "bpdu_guard": "false",
+                "bpdu_guard_do_disable": "false",
+                "path_cost": "200",
+                "priority": "128",
+                "portfast": "false",
+                "uplink_fast": "false"
+            }
+        },
+        
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -2874,6 +2962,7 @@
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "midplane_ipv4": "169.254.200.245",
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
@@ -2887,6 +2976,7 @@
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "midplane_ipv4": "169.254.150.20",
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
@@ -2938,6 +3028,7 @@
         },
         "DASH_HA_GLOBAL_CONFIG": {
             "global": {
+                "vnet_name": "Vnet55",
                 "cp_data_channel_port": "11362",
                 "dp_channel_port": "11368",
                 "dp_channel_src_port_min": "49152",

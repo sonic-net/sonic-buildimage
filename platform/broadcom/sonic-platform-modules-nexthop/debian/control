@@ -1,0 +1,16 @@
+Source: sonic-platform-nexthop
+Section: misc
+Priority: optional
+Maintainer: Michael Chan <michaelc@nexthop.ai>
+Build-Depends: debhelper-compat (= 12),
+               dh-python,
+               python3-all,
+               python3-setuptools
+Standards-Version: 4.6.0
+Homepage: https://nexthop.ai
+
+Package: sonic-platform-nexthop-4010
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Kernel modules for Nexthop NH4010 platform FPGA devices
+ This package contains kernel modules for platform-specific device, such as the FPGA.

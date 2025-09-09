@@ -31,6 +31,7 @@
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
   * [DHCP_RELAY](#dhcp_relay)
+  * [DHCPV4_RELAY](#dhcpv4_relay)
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
@@ -72,6 +73,7 @@
   * [Restapi](#restapi)
   * [System Port](#system-port)
   * [Tacplus Server](#tacplus-server)
+  * [TC to DSCP map](#tc-to-dscp-map)
   * [TC to Priority group map](#tc-to-priority-group-map)
   * [TC to Queue map](#tc-to-queue-map)
   * [Telemetry](#telemetry)
@@ -1137,6 +1139,28 @@ instance is supported in SONiC.
 
 ```
 
+### DHCPV4_RELAY
+
+```
+{
+"DHCPV4_RELAY": {
+    "Vlan1000": {
+        "dhcpv4_servers": [
+            "192.168.0.1",
+            "192.168.0.2"
+        ],
+        "server_vrf": "Vrf_RED",
+        "source_interface": "Loopback0",
+        "link_selection": "enable",
+        "vrf_selection": "enable",
+        "server_id_override": "enable",
+        "agent_relay_mode": "append",
+        "max_hop_count": 10
+    }
+}
+
+```
+
 ### BMP
 BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_table**, **bgp_rib_out_table** tables.
 
@@ -1367,6 +1391,10 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 			"POLL_INTERVAL": "10000"
 		},
 		"WRED_ECN_PORT": {
+			"FLEX_COUNTER_STATUS": "enable",
+			"POLL_INTERVAL": "1000"
+		},
+		"SWITCH": {
 			"FLEX_COUNTER_STATUS": "enable",
 			"POLL_INTERVAL": "1000"
 		}
@@ -2471,6 +2499,21 @@ and is listed in this table.
 }
 ```
 
+### TC to DSCP map
+
+```json
+{
+    "TC_TO_DSCP_MAP": {
+        "AZURE": {
+            "5": "10",
+            "6": "20"
+        }
+    }
+}
+```
+
+**Note:**
+* configuration is mandatory when packet trimming Asymmetric DSCP mode is used
 
 ### TC to Priority group map
 
@@ -2623,7 +2666,8 @@ and try sending it on a different queue to deliver a packet drop notification to
 
 ***TRIMMING***
 
-```
+Symmetric DSCP and static queue:
+```json
 {
     "SWITCH_TRIMMING": {
         "GLOBAL": {
@@ -2635,7 +2679,22 @@ and try sending it on a different queue to deliver a packet drop notification to
 }
 ```
 
+Asymmetric DSCP and dynamic queue:
+```json
+{
+    "SWITCH_TRIMMING": {
+        "GLOBAL": {
+            "size": "128",
+            "dscp_value": "from-tc",
+            "tc_value": "8",
+            "queue_index": "dynamic"
+        }
+    }
+}
+```
+
 **Note:**
+* when `dscp_value` is set to `from-tc`, the `tc_value` is used for mapping to DSCP
 * when `queue_index` is set to `dynamic`, the `dscp_value` is used for mapping to queue
 
 ### Versions
@@ -3224,6 +3283,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "midplane_ipv4": "169.254.200.245",
             "dpu_id": "0",
             "vdpu_id": "vdpu0",
             "gnmi_port": "50052",
@@ -3236,6 +3296,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "midplane_ipv4": "169.254.150.20",
             "dpu_id": "1",
             "vdpu_id": "vdpu1",
             "gnmi_port": "50052",
@@ -3354,6 +3415,7 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
 {
     "DASH_HA_GLOBAL_CONFIG": {
         "global": {
+            "vnet_name": "Vnet55",
             "cp_data_channel_port": "11362",
             "dp_channel_port": "11368",
             "dp_channel_src_port_min": "49152",
@@ -3366,6 +3428,8 @@ Like NTP global configuration, DASH HA global configuration must have one entry 
     }
 }
 ```
+
+**vnet_name**: Vnet name used in SmartSwitch HA scenarios.
 
 **cp_data_channel_port**: Control plane data channel port, used for bulk sync.
 

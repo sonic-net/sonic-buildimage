@@ -17,6 +17,10 @@ module sonic-smart-switch {
 		prefix port;
 	}
 
+	import sonic-vnet {
+		prefix sonic-vnet;
+	}
+
 	organization
 		"SONiC";
 
@@ -39,6 +43,14 @@ module sonic-smart-switch {
 
 	revision 2025-03-31 {
 		description "Add REMOTE_DPU, VDPU, and DASH_HA_GLOBAL_CONFIG containers";
+	}
+
+	revision 2025-07-20 {
+		description "Add vnet_name to DASH_HA_GLOBAL_CONFIG";
+	}
+
+	revision 2025-08-18 {
+		description "Add midplane_ipv4 to DPU";
 	}
 
 	container sonic-smart-switch {
@@ -137,6 +149,11 @@ module sonic-smart-switch {
 					type inet:ipv6-address;
 				}
 				
+				leaf midplane_ipv4 {
+					description "IPv4 IP on midplane from minigraph";
+					type inet:ipv4-address;
+				}
+
 				leaf dpu_id {
 					description "ID of the DPU from minigraph";
 					type string {
@@ -268,6 +285,16 @@ module sonic-smart-switch {
 			container global {
 
 				description "DASH_HA_GLOBAL_CONFIG part of config_db.json";
+
+				leaf vnet_name {
+					description "Name of the vnet used for VNET tunnel route.";
+					type leafref {
+						path "/sonic-vnet:sonic-vnet/sonic-vnet:VNET/sonic-vnet:VNET_LIST/sonic-vnet:name";
+					}
+					must "string-length(.) >= 1 and string-length(.) <= 255" {
+						error-message "vnet_name length must be between 1 and 255 characters";
+					}
+				}
 
 				leaf cp_data_channel_port {
 					description "Control plane data channel port, used for bulk sync";

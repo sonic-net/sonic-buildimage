@@ -465,6 +465,11 @@ sudo cp $IMAGE_CONFIGS/copp/copp-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/copp/copp_cfg.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 echo "copp-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
+sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo cp $IMAGE_CONFIGS/dhcp_dos_logger/dhcp_dos_logger.py $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/dhcp_dos_logger.py
+echo "dhcp_dos_logger.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
 # Copy dhcp client configuration template and create an initial configuration
 sudo cp files/dhcp/dhclient.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 j2 files/dhcp/dhclient.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/dhcp/dhclient.conf
@@ -524,6 +529,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
+
+# sonic-ctrmgrd-rs is required by container script
+install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
 
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
@@ -952,7 +960,18 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-man
 {% set name, path, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
 name_repo=$(basename {{name}} .gz)
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
+image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
+if echo "$image_tags" | grep -q "latest"; then
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
+else
+    # If not tagged with latest, find existing tag and tag with latest
+    existing_tag=$(echo "$image_tags" | head -1)
+    if [ -n "$existing_tag" ]; then
+        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:$existing_tag $name_repo:latest
+    else
+        echo "Warning: No existing tag found for image $name_repo, skipping version tagging"
+    fi
+fi
 {% endfor -%}
 
 sudo umount $FILESYSTEM_ROOT/target
@@ -1066,6 +1085,7 @@ declare -rA FW_FILE_MAP=( \
     [$MLNX_SPC2_FW_FILE]="fw-SPC2.mfa" \
     [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
     [$MLNX_SPC4_FW_FILE]="fw-SPC4.mfa" \
+    [$MLNX_SPC5_FW_FILE]="fw-SPC5.mfa" \
 )
 sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
 sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
@@ -1095,6 +1115,8 @@ sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
+sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
+sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
@@ -1129,8 +1151,11 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
 done
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
+sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
+sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
+sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
 install_pip_package {{platform_api_py3_wheel_path}}
 
@@ -1188,3 +1213,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unho
 {% if ENABLE_MULTIDB == "y" %}
 sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 {% endif %}
+
+# Install syslog counter plugin
+install_deb_package $debs_path/syslog-counter_*.deb

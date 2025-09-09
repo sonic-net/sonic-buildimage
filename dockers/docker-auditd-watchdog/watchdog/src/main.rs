@@ -7,8 +7,8 @@ static NSENTER_CMD: &str = "nsenter --target 1 --pid --mount --uts --ipc --net";
 
 // Expected hash values
 static AUDITD_CONF_HASH: &str = "7cdbd1450570c7c12bdc67115b46d9ae778cbd76";
-static AUDITD_RULES_HASH_DEFAULT: &str = "3042c67383dccff079755c5f3daa2820e2ca392a";
-static AUDITD_RULES_HASH_NOKIA: &str = "fffb00199104c493d04a621b257c579c48d77225";
+static AUDITD_RULES_HASH_64BIT: &str = "1c532e73fdd3f7366d9c516eb712102d3063bd5a";
+static AUDITD_RULES_HASH_32BIT: &str = "ac45b13d45de02f08e12918e38b4122206859555";
 
 // Helper to run commands
 fn run_command(cmd: &str) -> Result<String, String> {
@@ -59,16 +59,18 @@ fn check_syslog_conf() -> String {
 // Check auditd rules sha1, depends on HW SKU
 fn check_auditd_rules() -> String {
     // Get HW SKU
-    let hwsku_cmd = format!(r#"{NSENTER_CMD} sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"#);
-    let hwsku = match run_command(&hwsku_cmd) {
+    let cmd = format!(r#"{NSENTER_CMD} file -L /bin/sh"#);
+    let bitness = match run_command(&cmd) {
         Ok(s) => s.trim().to_string(),
-        Err(e) => return format!("FAIL (could not get HW SKU: {})", e),
+        Err(e) => return format!("FAIL (could not get bitness: {})", e),
     };
 
-    let expected = if hwsku.contains("Nokia-7215") || hwsku.contains("Nokia-M0-7215") {
-        AUDITD_RULES_HASH_NOKIA
+    let expected = if bitness.contains("32-bit") {
+        AUDITD_RULES_HASH_32BIT
+    } else if bitness.contains("64-bit") {
+        AUDITD_RULES_HASH_64BIT
     } else {
-        AUDITD_RULES_HASH_DEFAULT
+        return format!("FAIL (unknown bitness: {})", bitness);
     };
 
     let cmd = format!(

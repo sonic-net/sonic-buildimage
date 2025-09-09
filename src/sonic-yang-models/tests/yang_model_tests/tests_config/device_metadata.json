@@ -112,6 +112,16 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_LOWER_SPINEROUTER_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LowerSpineRouter"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -625,6 +635,15 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "location_type": "DUMMY_LOCATION"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -674,7 +693,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "orch_dash_zmq_enabled": true
+                    "orch_northbond_dash_zmq_enabled": true
                 }
             }
         }
@@ -683,7 +702,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "orch_route_zmq_enabled": true
+                    "orch_northbond_route_zmq_enabled": true
                 }
             }
         }
@@ -693,6 +712,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "syslog_with_osversion": true
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SYSLOG_COUNTER_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "syslog_counter": true
                 }
             }
         }
