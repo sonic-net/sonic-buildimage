@@ -65,7 +65,7 @@ def add_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
     table_name = DHCP_RELAY_TABLE if ip_version == 6 else VLAN_TABLE
     dhcp_servers_str = DHCPV6_SERVERS if ip_version == 6 else DHCPV4_SERVERS
     vlan_name = "Vlan{}".format(vid)
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
        dhcp_table_name = DHCPV4_RELAY_TABLE
        dhcpv4_servers_str = DHCPV4_RELAY_TBL_SERVERS
     ctx = click.get_current_context()
@@ -74,7 +74,7 @@ def add_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
 
     # It's unnecessary for DHCPv6 Relay to verify entry exist
     check_config_exist = True if ip_version == 4 else False
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
        dhcpv4_servers, v4_table = get_dhcp_servers(db, vlan_name, ctx, dhcp_table_name, dhcpv4_servers_str, check_config_exist)
     else:
        dhcp_servers, table = get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str, check_config_exist)
@@ -85,7 +85,7 @@ def add_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
         if dhcp_relay_ip in added_ips:
             ctx.fail("Find duplicate DHCP relay ip {} in add list".format(dhcp_relay_ip))
 
-        if ip_version == IPV4:
+        if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
             if dhcp_relay_ip in dhcpv4_servers:
                 ctx.fail("{} is already a DHCPv4 relay for {}".format(dhcp_relay_ip, vlan_name))
             dhcpv4_servers.append(dhcp_relay_ip)
@@ -96,7 +96,7 @@ def add_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
         added_ips.append(dhcp_relay_ip)
 
     # for IPv4, we will add same entry to DHCPV4_RELAY table also
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
         v4_table[dhcpv4_servers_str] = dhcpv4_servers
         db.cfgdb.set_entry(dhcp_table_name, vlan_name, v4_table)
     else:
@@ -114,13 +114,13 @@ def del_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
     table_name = DHCP_RELAY_TABLE if ip_version == 6 else VLAN_TABLE
     dhcp_servers_str = DHCPV6_SERVERS if ip_version == 6 else DHCPV4_SERVERS
     vlan_name = "Vlan{}".format(vid)
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
        dhcp_table_name = DHCPV4_RELAY_TABLE
        dhcpv4_servers_str = DHCPV4_RELAY_TBL_SERVERS
     ctx = click.get_current_context()
     # Verify ip addresses are valid
     validate_ips(ctx, dhcp_relay_ips, ip_version)
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
        dhcpv4_servers, v4_table = get_dhcp_servers(db, vlan_name, ctx, dhcp_table_name, dhcpv4_servers_str)
     else:
        dhcp_servers, table = get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str)
@@ -131,7 +131,7 @@ def del_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
         if dhcp_relay_ip in removed_ips:
             ctx.fail("Find duplicate DHCP relay ip {} in del list".format(dhcp_relay_ip))
 
-        if ip_version == IPV4:
+        if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
             if dhcp_relay_ip in dhcpv4_servers:
                 dhcpv4_servers.remove(dhcp_relay_ip)
                 removed_ips.append(dhcp_relay_ip)
@@ -145,7 +145,7 @@ def del_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
               ctx.fail("{} is not a DHCP relay for {}".format(dhcp_relay_ip, vlan_name))
 
     # for IPv4, we will remove same entry from DHCPV4_RELAY table also
-    if ip_version == IPV4:
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
        if len(dhcpv4_servers) == 0:
            db.cfgdb.set_entry(dhcp_table_name, vlan_name, None)
        else:
