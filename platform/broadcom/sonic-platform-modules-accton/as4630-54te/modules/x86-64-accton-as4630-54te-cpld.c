@@ -412,7 +412,7 @@ static ssize_t set_tx_disable(struct device *dev, struct device_attribute *da,
             break;
         case MODULE_TXDISABLE_51 ... MODULE_TXDISABLE_52:
             reg=0x6;
-            mask=0x1 << (attr->index==MODULE_TXFAULT_51?7:3);
+            mask=0x1 << (attr->index==MODULE_TXDISABLE_51?7:3);
             break;
      
 	    default:
