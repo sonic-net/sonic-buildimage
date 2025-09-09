@@ -9,6 +9,7 @@ rules/config.user
 
 # Build artifacts
 fsroot/
+fsroot-*/
 fs.*
 target/
 *.deb
@@ -22,6 +23,7 @@ target/
 *dbg.j2
 *.img
 *.pyc
+*.mod
 
 # Slave docker log files
 sonic-slave*/*.log
