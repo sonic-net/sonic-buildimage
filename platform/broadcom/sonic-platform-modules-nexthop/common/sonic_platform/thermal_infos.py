@@ -21,7 +21,7 @@ class FanInfo(ThermalPolicyInfoBase):
         self._fans = []
     
     def collect(self, chassis: Chassis):
-        self._fans = chassis.get_all_fans()
+        self._fans = chassis.get_all_fans()[:]
     
     def get_fans(self)->list[Fan]:
         return self._fans
@@ -37,7 +37,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._thermal_manager = None
     
     def collect(self, chassis: Chassis):
-        self._thermals = chassis.get_all_thermals()
+        self._thermals = chassis.get_all_thermals()[:]
         for sfp in chassis.get_all_sfps():
             self._thermals.extend(sfp.get_all_thermals())
         self._thermal_manager = chassis.get_thermal_manager()
@@ -56,7 +56,7 @@ class PsuInfo(ThermalPolicyInfoBase):
         self._psus = []
     
     def collect(self, chassis: Chassis):
-        self._psus = chassis.get_all_psus()
+        self._psus = chassis.get_all_psus()[:]
     
     def get_thermals(self)->list[Psu]:
         return self._psus.get_all_thermals()

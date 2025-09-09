@@ -27,6 +27,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/of.h>
 #include <linux/thermal.h>
+#include <linux/version.h>
 #include "nh_pmbus.h"
 
 /*
@@ -35,6 +36,29 @@
  */
 #define PMBUS_ATTR_ALLOC_SIZE	32
 #define PMBUS_NAME_SIZE		24
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+/*
+ * PMBus status register bits required in linux kernel v5.10
+ */
+#define PMBUS_SKIP_STATUS_CHECK	BIT(0)
+#define PMBUS_WRITE_PROTECTED	BIT(1)
+#define PMBUS_NO_CAPABILITY			BIT(2)
+#define PMBUS_READ_STATUS_AFTER_FAILED_CHECK	BIT(3)
+#define PMBUS_NO_WRITE_PROTECT			BIT(4)
+#define PMBUS_USE_COEFFICIENTS_CMD		BIT(5)
+#define PMBUS_OP_PROTECTED BIT(6)
+#define PMBUS_VOUT_PROTECTED BIT(7)
+#define REGULATOR_ERROR_UNDER_VOLTAGE BIT(1)
+#define REGULATOR_ERROR_OVER_CURRENT BIT(2)
+#define REGULATOR_ERROR_REGULATION_OUT BIT(3)
+#define REGULATOR_ERROR_FAIL BIT(4)
+#define REGULATOR_ERROR_OVER_TEMP BIT(5)
+#define REGULATOR_ERROR_UNDER_VOLTAGE_WARN BIT(6)
+#define REGULATOR_ERROR_OVER_CURRENT_WARN BIT(7)
+#define REGULATOR_ERROR_OVER_VOLTAGE_WARN BIT(8)
+#define REGULATOR_ERROR_OVER_TEMP_WARN BIT(9)
+#endif
 
 struct pmbus_sensor {
 	struct pmbus_sensor *next;
@@ -1275,10 +1299,16 @@ struct pmbus_thermal_data {
 	struct pmbus_data *pmbus_data;
 	struct pmbus_sensor *sensor;
 };
-
+// Thermal ops compatibility
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
+static int pmbus_thermal_get_temp(void *data, int *temp)
+{
+	struct pmbus_thermal_data *tdata = data;
+#else
 static int pmbus_thermal_get_temp(struct thermal_zone_device *tz, int *temp)
 {
 	struct pmbus_thermal_data *tdata = tz->devdata;
+#endif
 	struct pmbus_sensor *sensor = tdata->sensor;
 	struct pmbus_data *pmbus_data = tdata->pmbus_data;
 	struct i2c_client *client = to_i2c_client(pmbus_data->dev);
@@ -1302,9 +1332,15 @@ static int pmbus_thermal_get_temp(struct thermal_zone_device *tz, int *temp)
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
+static const struct thermal_zone_of_device_ops pmbus_thermal_ops = {
+	.get_temp = pmbus_thermal_get_temp,
+};
+#else
 static const struct thermal_zone_device_ops pmbus_thermal_ops = {
 	.get_temp = pmbus_thermal_get_temp,
 };
+#endif
 
 static int pmbus_thermal_add_sensor(struct pmbus_data *pmbus_data,
 				    struct pmbus_sensor *sensor, int index)
@@ -1320,8 +1356,13 @@ static int pmbus_thermal_add_sensor(struct pmbus_data *pmbus_data,
 	tdata->sensor = sensor;
 	tdata->pmbus_data = pmbus_data;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
+	tzd = devm_thermal_zone_of_sensor_register(dev, index, tdata,
+						   &pmbus_thermal_ops);
+#else
 	tzd = devm_thermal_of_zone_register(dev, index, tdata,
-					    &pmbus_thermal_ops);
+			                    &pmbus_thermal_ops);
+#endif
 	/*
 	 * If CONFIG_THERMAL_OF is disabled, this returns -ENODEV,
 	 * so ignore that error but forward any other error.
