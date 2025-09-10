@@ -22,7 +22,6 @@ function startplatform() {
         fi
 
         debug "Starting Firmware update procedure"
-        /usr/bin/mst start --with_i2cdev
 
         /usr/bin/mlnx-fw-upgrade.sh -c -v
         if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
