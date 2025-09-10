@@ -1,14 +1,50 @@
-#!/bin/bash
+#!/usr/bin/python3
 
-set -e
+import sys
+import time
+from sonic_py_common import logger
+from nexthop import fpga_lib
 
-FPGA_BDF="0000:04:00.0"
-LOG_TAG="platform_reboot"
-REBOOT_REG_OFFSET=0x4
-REBOOT_ENABLE=0xdeadbeef
+REBOOT_DELAY_MS = 1000
+REBOOT_ENABLE = 0xdeadbeef
+SWITCHCARD_FPGA_BDF = "0000:04:00.0"
+SWITCHCARD_REBOOT_REG_OFFSET = 0x4
+CPU_FPGA_BDF = "0000:03:00.0"
+CPU_REBOOT_REG_OFFSET = 0x8
 
-logger -t $LOG_TAG "Writing to power cycle control register to initiate reboot"
-fpga write32 "$FPGA_BDF" "$REBOOT_REG_OFFSET" "$REBOOT_ENABLE"
-if [ $? -ne 0 ]; then
-    logger -t $LOG_TAG -p error "Error writing to power cycle control register on fpga $FPGA_BDF"
-fi
+sonic_logger = logger.Logger("platform_reboot")
+sonic_logger.set_min_log_priority_info()
+
+def log_error(msg: str):
+    sonic_logger.log_error(msg)
+
+def main():
+    try:
+        sonic_logger.log_info("Writing to power cycle control register to initiate reboot")
+        fpga_lib.write_32(SWITCHCARD_FPGA_BDF, SWITCHCARD_REBOOT_REG_OFFSET, REBOOT_ENABLE)
+    except Exception as e:
+        log_error(
+            "Error writing to power cycle control register on switchcard FPGA"
+            f" {SWITCHCARD_FPGA_BDF}: {str(e)}, trying CPU FPGA"
+        )
+    time.sleep(REBOOT_DELAY_MS / 1000)
+
+    try:
+        fpga_lib.write_32(CPU_FPGA_BDF, CPU_REBOOT_REG_OFFSET, REBOOT_ENABLE)
+    except Exception as e:
+        log_error(
+            "Error writing to power cycle control register on CPU FPGA"
+            f" {CPU_FPGA_BDF}: {str(e)}"
+        )
+        return 2
+    time.sleep(REBOOT_DELAY_MS / 1000)
+
+    # If we reach here, we silently failed to reboot the dataplane!
+    log_error(
+        "Failed to initiate reboot, the control plane will reboot and"
+        " leave the dataplane in an undefined state"
+    )
+    return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
