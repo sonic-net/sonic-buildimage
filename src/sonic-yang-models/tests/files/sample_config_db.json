@@ -2461,6 +2461,7 @@
         "MUX_CABLE": {
             "Ethernet4": {
                 "cable_type": "active-active",
+                "prober_type": "software",
                 "server_ipv4": "192.168.0.2/32",
                 "server_ipv6": "fc02:1000::30/128",
                 "soc_ipv4": "192.168.0.3/32",
