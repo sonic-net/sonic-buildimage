@@ -102,9 +102,7 @@ def get_container_id(container_name):
             break
 
     if not container_id:
-        syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_ID_NOT_FOUND.format(container_name))
-
-        sys.exit(INTERNAL_ERROR)
+        return None
 
     return container_id
 
@@ -196,8 +194,13 @@ def check_memory_usage(container_name, threshold_value):
         sys.exit(INVALID_VALUE)
 
     container_id = get_container_id(container_name)
-    syslog.syslog(syslog.LOG_INFO, "[memory_checker] Container ID of '{}' is: '{}'."
-                  .format(container_name, container_id))
+    if container_id is None:
+        syslog.syslog(syslog.LOG_INFO,
+                      f"[memory_checker] Container '{container_name}' not running; exiting.")
+        sys.exit(CONTAINER_NOT_RUNNING)
+    else:
+        syslog.syslog(syslog.LOG_INFO, "[memory_checker] Container ID of '{}' is: '{}'."
+                      .format(container_name, container_id))
 
     memory_usage_in_bytes = get_memory_usage(container_id)
     syslog.syslog(syslog.LOG_INFO, "[memory_checker] The memory usage of container '{}' is '{}' Bytes!"
