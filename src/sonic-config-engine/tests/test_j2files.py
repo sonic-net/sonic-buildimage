@@ -806,6 +806,19 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         assert utils.cmp(expected, self.output_file), self.run_diff(expected, self.output_file)
 
+    def test_ndppd_conf_no_vlan_interfaces(self):
+        """Test ndppd.conf generation when no VLAN interfaces exist"""
+        conf_template = os.path.join(self.test_dir, "ndppd.conf.j2")
+        empty_json = os.path.join(self.test_dir, "data", "ndppd", "empty_vlan_interfaces.json")
+        
+        argument = ['-j', empty_json, '-t', conf_template]
+        self.run_script(argument, output_file=self.output_file)
+        
+        # Verify route-ttl is still generated even without VLAN interfaces
+        with open(self.output_file, 'r') as f:
+            content = f.read()
+            assert 'route-ttl 2147483647' in content
+
     def test_ntp_conf(self):
         conf_template = os.path.join(self.test_dir, "chrony.conf.j2")
         config_db_ntp_json = os.path.join(self.test_dir, "data", "ntp", "ntp_interfaces.json")
