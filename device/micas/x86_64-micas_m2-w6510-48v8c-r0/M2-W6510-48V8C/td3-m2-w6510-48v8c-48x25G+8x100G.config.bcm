@@ -631,6 +631,7 @@ sai_brcm_sonic_acl_enhancements=1
 # Reduced Trap Group QSET for BRCM Sonic
 sai_brcm_sonic_trap_group=1
 # MMU Lossless configurations
+# sai_mmu_tc_to_pg_config=1
 buf.map.egress_pool0.ingress_pool=0
 buf.map.egress_pool1.ingress_pool=0
 buf.map.egress_pool2.ingress_pool=1
