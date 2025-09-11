@@ -31,6 +31,7 @@
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
   * [DHCP_RELAY](#dhcp_relay)
+  * [DHCPV4_RELAY](#dhcpv4_relay)
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
@@ -1134,6 +1135,28 @@ instance is supported in SONiC.
     ],
     "rfc6939_support": "true",
     "interface_id": "true"
+}
+
+```
+
+### DHCPV4_RELAY
+
+```
+{
+"DHCPV4_RELAY": {
+    "Vlan1000": {
+        "dhcpv4_servers": [
+            "192.168.0.1",
+            "192.168.0.2"
+        ],
+        "server_vrf": "Vrf_RED",
+        "source_interface": "Loopback0",
+        "link_selection": "enable",
+        "vrf_selection": "enable",
+        "server_id_override": "enable",
+        "agent_relay_mode": "append",
+        "max_hop_count": 10
+    }
 }
 
 ```
@@ -3260,6 +3283,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "midplane_ipv4": "169.254.200.245",
             "dpu_id": "0",
             "vdpu_id": "vdpu0",
             "gnmi_port": "50052",
@@ -3272,6 +3296,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "midplane_ipv4": "169.254.150.20",
             "dpu_id": "1",
             "vdpu_id": "vdpu1",
             "gnmi_port": "50052",

@@ -31,9 +31,12 @@ class Thermal(ThermalBase):
     SENSOR_MAPPING_MTFUJI = [
         ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
         ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
-        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input", 1, 110, -10, 130],
-        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input", 1, 110, -10, 130],
-        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input", 1, 110, -10, 130]
+        ["VP0P85_VDD_DDR_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/temp2_input", 1, 110, -10, 130],
+        ["VP1P2_DDR_VDDQ_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/temp3_input", 1, 110, -10, 130],
+        ["VP0P75_VDD_CORE_DPU0 1", "/sys/bus/i2c/devices/0-0055/hwmon/hwmon1/temp2_input", 1, 110, -10, 130],
+        ["VP0P75_VDD_CORE_DPU0 2", "/sys/bus/i2c/devices/0-0055/hwmon/hwmon1/temp3_input", 1, 110, -10, 130],
+        ["VP0P75_VDD_CORE_DPU0 3", "/sys/bus/i2c/devices/0-0066/hwmon/hwmon0/temp2_input", 1, 110, -10, 130],
+        ["VP0P85_VDD_ARM_DPU0", "/sys/bus/i2c/devices/0-0066/hwmon/hwmon0/temp3_input", 1, 110, -10, 130],
     ]
 
     @classmethod
@@ -43,7 +46,7 @@ class Thermal(ThermalBase):
         apiHelper = APIHelper()
         g_board_id = apiHelper.get_board_id()
         temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
-        if g_board_id == self._api_helper.mtfuji_board_id:
+        if g_board_id == apiHelper.mtfuji_board_id:
             temp_hwmon = '/sys/class/hwmon/hwmon0/temp1_input'
         if os.path.exists(temp_hwmon):
             return True
