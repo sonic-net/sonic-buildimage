@@ -1,5 +1,11 @@
 ###############################################################################
-## Monit configuration for telemetry container
+## Monit configuration for gNMI container
+##
+## This is a passive monitoring configuration for sonic-mgmt testing purposes.
+## The memory threshold value is embedded in the command path and 
+## can be extracted by test scripts for validation.
+##
+## Note: Monit will NOT take any remediation actions (no alerts, no restarts).
 ###############################################################################
-check program container_memory_gnmi with path "/usr/bin/memory_checker gnmi 419430400"
-    if status == 3 for 10 times within 20 cycles then exec "/usr/bin/restart_service gnmi" repeat every 2 cycles
+check program container_memory_gnmi_dummy with path "/usr/bin/memory_checker gnmi 419430400"
+    if status == 255 for 10 times within 20 cycles then exec "/usr/bin/echo" repeat every 2 cycles
