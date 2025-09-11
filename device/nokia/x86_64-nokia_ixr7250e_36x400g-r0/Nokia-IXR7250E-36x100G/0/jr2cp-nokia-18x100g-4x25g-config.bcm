@@ -2104,3 +2104,4 @@ sai_instru_stat_accum_enable=1
 appl_param_active_links_thr_low=1
 appl_param_active_links_thr_high=112
 sai_ecmp_group_members_increment=8
+sai_dnx_ecmp_udp_weight_support=0
