@@ -757,7 +757,7 @@
                   { "attr_name":"board_info","attr_devaddr":"0x60", "attr_offset":"0x0","attr_mask":"0xff","attr_len":"0x1"},
                   { "attr_name":"cpld1_version","attr_devaddr":"0x60","attr_offset":"0x1","attr_mask":"0xff","attr_len":"0x1"},
                   { "attr_name":"cpld2_version","attr_devaddr":"0x61","attr_offset":"0x1","attr_mask":"0xff","attr_len":"0x1"},
-                  { "attr_name":"cpld3version","attr_devaddr":"0x62","attr_offset":"0x1","attr_mask":"0xff","attr_len":"0x1"},
+                  { "attr_name":"cpld3_version","attr_devaddr":"0x62","attr_offset":"0x1","attr_mask":"0xff","attr_len":"0x1"},
                   { "attr_name":"fan_cpld_version","attr_devaddr":"0x63","attr_offset":"0x1","attr_mask":"0xff","attr_len":"0x1"}
 
         ]
