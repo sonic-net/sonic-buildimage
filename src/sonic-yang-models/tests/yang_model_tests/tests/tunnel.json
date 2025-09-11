@@ -4,15 +4,15 @@
     },
     "TUNNEL_INVALID_ADDR": {
         "desc": "Load TUNNEL with invalid IPv4 Address.",
-        "eStr": ["does not satisfy the constraint"]
+        "eStrKey": "Pattern"
     },
     "TUNNEL_SRC_IP_NOT_PEER_SWITCH": {
         "desc": "Load TUNNEL with wrong IPv4 Address.",
-        "eStr": ["points to a non-existing leaf."]
+        "eStrKey": "LeafRef"
     },
     "TUNNEL_MISSING_MUX_TUNNEL": {
         "desc": "Load MUX_TUNNEL missing name.",
-        "eStr": ["Missing required element"]
+        "eStrKey": "ListKey"
     }
 }
 

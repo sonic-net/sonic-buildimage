@@ -37,11 +37,12 @@ bcm_device:
         global_flexctr_egr_group_num_reserved: 1
         flowtracker_enable: 1
         flowtracker_hardware_learn_enable: 2
-        flowtracker_flexctr_alloc_enable: 1
+        flowtracker_flexctr_alloc_enable: 2
         flowtracker_max_flows: 131072
         sai_create_dflt_trap: 1
         default_cpu_tx_queue: 7
         sai_port_queue_ecn_counter: 1
+        stat_custom_receive0_management_mode: 1
 ...
 ---
 device:
@@ -1144,143 +1145,6 @@ device:
         EXTENDED_REACH_PAM4: 0xff
         LP_TX_PRECODER_ON_AUTO: 1
         LP_TX_PRECODER_ON: 1
-...
----
-bcm_device:
-    0:
-        port:
-            1:
-                dport_map_port: 47
-            2:
-                dport_map_port: 48
-            11:
-                dport_map_port: 45
-            12:
-                dport_map_port: 46
-            22:
-                dport_map_port: 34
-            23:
-                dport_map_port: 33
-            33:
-                dport_map_port: 1
-            34:
-                dport_map_port: 2
-            44:
-                dport_map_port: 36
-            45:
-                dport_map_port: 35
-            55:
-                dport_map_port: 3
-            56:
-                dport_map_port: 4
-            66:
-                dport_map_port: 38
-            67:
-                dport_map_port: 37
-            77:
-                dport_map_port: 5
-            78:
-                dport_map_port: 6
-            88:
-                dport_map_port: 40
-            89:
-                dport_map_port: 39
-            99:
-                dport_map_port: 7
-            100:
-                dport_map_port: 8
-            110:
-                dport_map_port: 42
-            111:
-                dport_map_port: 41
-            121:
-                dport_map_port: 9
-            122:
-                dport_map_port: 10
-            132:
-                dport_map_port: 44
-            133:
-                dport_map_port: 43
-            143:
-                dport_map_port: 11
-            144:
-                dport_map_port: 12
-            154:
-                dport_map_port: 13
-            155:
-                dport_map_port: 14
-            165:
-                dport_map_port: 15
-            166:
-                dport_map_port: 16
-            176:
-                dport_map_port: 18
-            177:
-                dport_map_port: 17
-            187:
-                dport_map_port: 20
-            188:
-                dport_map_port: 19
-            198:
-                dport_map_port: 22
-            199:
-                dport_map_port: 21
-            209:
-                dport_map_port: 53
-            210:
-                dport_map_port: 54
-            220:
-                dport_map_port: 24
-            221:
-                dport_map_port: 23
-            231:
-                dport_map_port: 55
-            232:
-                dport_map_port: 56
-            242:
-                dport_map_port: 26
-            243:
-                dport_map_port: 25
-            253:
-                dport_map_port: 57
-            254:
-                dport_map_port: 58
-            264:
-                dport_map_port: 28
-            265:
-                dport_map_port: 27
-            275:
-                dport_map_port: 59
-            276:
-                dport_map_port: 60
-            286:
-                dport_map_port: 30
-            287:
-                dport_map_port: 29
-            297:
-                dport_map_port: 61
-            298:
-                dport_map_port: 62
-            308:
-                dport_map_port: 32
-            309:
-                dport_map_port: 31
-            319:
-                dport_map_port: 63
-            320:
-                dport_map_port: 64
-            330:
-                dport_map_port: 52
-            331:
-                dport_map_port: 51
-            341:
-                dport_map_port: 50
-            342:
-                dport_map_port: 49
-            76:
-                dport_map_port: 65
-            164:
-                dport_map_port: 66
 ...
 ---
 device:

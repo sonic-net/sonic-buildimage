@@ -73,22 +73,6 @@ const bcmpkt_lbhdr_fget_t bcm56780_a0_lbhdr_fget = {
         NULL,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL
     }
 };
@@ -96,22 +80,6 @@ const bcmpkt_lbhdr_fget_t bcm56780_a0_lbhdr_fget = {
 
 const bcmpkt_lbhdr_fset_t bcm56780_a0_lbhdr_fset = {
     {
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL,
         NULL,
         NULL,
@@ -168,7 +136,6 @@ static shr_enum_map_t bcm56780_a0_lbhdr_view_types[] = {
 
 /* -2: unsupported, -1: global, others: view's value */
 static int bcm56780_a0_lbhdr_view_infos[BCMPKT_LBHDR_FID_COUNT] = {
-     -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2,

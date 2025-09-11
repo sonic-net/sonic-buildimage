@@ -49,9 +49,6 @@ export BINUTILSVER := 2.41
 #
 # For ESW compilation, suppress 'stringop-overflow'
 #
-ifeq ($(BCM_ESW_SUPPORT),1)
-    OPT_CFLAGS += -Wno-error=stringop-overflow
-endif
 ifeq (1,$(GCC_12_1_0))
     export GCCVER := 12.1.0
     TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
@@ -68,16 +65,34 @@ else ifeq (1,$(GCC_13_1_0))
       OPT_CFLAGS += -Wno-error=array-bounds=
     # }
     endif
+else ifeq (1,$(GCC_14_1_0))
+    export GCCVER := 14.1.0
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+    ifneq ($(DEBUG_OPTIMIZE),FALSE)
+    # {
+      # These flags are required for -O2 'optimized' compilation
+      # We leave the suppression of array-bounds since, currently,
+      # GCC emits many 'false positive' errors of this kind (among a
+      # few that are justified)
+      OPT_CFLAGS += -Wno-error=array-bounds=
+    # }
+    endif
 else
     export GCCVER := 11.2.0
     TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/11.2.0-x86_64
-    ifneq ($(USE_CLANG),1)
-      OPT_CFLAGS += -Wno-error=array-bounds
-    endif
 endif
 
 #The LCOV tool is not compatible with GCC version 9.x and newer, thus we are forced to compile with older one.
 ifeq (1,$(GCOV))
+  use_gcc_8_1_0 = 1
+endif
+
+#Valgrind does not have symbolic traceback on newer gcc versions
+ifeq (1,$(VALGRIND_SUPPORT))
+  use_gcc_8_1_0 = 1
+endif
+
+ifeq (1,$(use_gcc_8_1_0))
   ifeq ($(targetplat),user)
     # GCC 8.1 does not work with binutils 2.41 and newer
     export BINUTILSVER := 2.38
@@ -88,6 +103,7 @@ endif
 
 BINUTILS_DIR = /tools/oss/packages/x86_64-rhel7/binutils/$(BINUTILSVER)/bin
 export TCL860 := 1
+$(info INFO from make/Makefile.linux-x86-5_10. GCCVER is $(GCCVER). BINUTILSVER is $(BINUTILSVER))
 
 # For GCC versions >= 4.7
 USE_GCC_TOOLS := 1
@@ -126,15 +142,6 @@ endif
 CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
 #CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
 #
-#Flags to prevent gcc 8.1.0 new warnings to appear as errors.
-#(All these flags have been removed so as to activate the maximal types of
-#warning)
-#
-#OPT_CFLAGS += -Wno-error=unused-value
-#OPT_CFLAGS += -Wno-error=unused-but-set-variable
-#OPT_CFLAGS += -Wno-error=maybe-uninitialized
-#OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
-#OPT_CFLAGS += -Wno-error=array-bounds
 
 # set up KFLAGS appropriately. #
 # -fno-builtin needed for using kernel's version of memcpy instead of the gcc inline version
@@ -219,7 +226,7 @@ CFGFLAGS += -DSYS_BE_PIO=0 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=0
 ENDIAN = LE_HOST=1
 CFGFLAGS += -D$(ENDIAN)
 CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
-CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
+CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=192
 
 # Extra variables.
 EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)

@@ -1,3 +1,5 @@
--w /sbin/insmod -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes
--w /sbin/rmmod -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes
--w /sbin/modprobe -p x -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-a always,exit -F path=/usr/bin/kmod -F perm=x -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-a always,exit -F arch=b64 -S finit_module -S init_module -S delete_module -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-a always,exit -F arch=b32 -S finit_module -S init_module -S delete_module -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-a always,exit -F arch=b64 -S open,openat -F dir=/lib/modules/ -F perm=r -F success=1 -F auid>=1000 -F auid!=4294967295 -k modules_changes
+-a always,exit -F arch=b32 -S open,openat -F dir=/lib/modules/ -F perm=r -F success=1 -F auid>=1000 -F auid!=4294967295 -k modules_changes

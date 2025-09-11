@@ -86,7 +86,8 @@ installer_image_path="$image_path/$installer_image"
 
 boot_config="$target_path/boot-config"
 
-cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
+kernel_cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
+default_cmdline_blacklist="crashkernel"
 
 # for backward compatibility with the sonic_upgrade= behavior
 install="${install:-${sonic_upgrade:-}}"
@@ -202,6 +203,11 @@ cmdline_clear() {
 
 cmdline_add() {
     echo "$@" >> /tmp/append
+}
+
+cmdline_remove() {
+    # remove all occurences of parameter and its value from the cmdline
+    sed -i "s/\b${1}=[^ ]*\s*//g" /tmp/append
 }
 
 cmdline_has() {
@@ -474,6 +480,22 @@ read_system_eeprom() {
     read_eeprom /tmp/.system-prefdl
 }
 
+get_eeprom_value() {
+    local key="$1"
+    sed -n "s#^$key: *##p" "$target_path/.system-prefdl" || :
+}
+
+write_kdump_cmdline() {
+    local sid="$(cmdline_get sid | sed 's/Ssd$//')"
+    case "$sid" in
+        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
+            if ! cmdline_has crashkernel; then
+                cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
+            fi
+            ;;
+    esac
+}
+
 write_platform_specific_cmdline() {
     local platform="$(cmdline_get platform)"
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
@@ -537,6 +559,10 @@ write_platform_specific_cmdline() {
         cmdline_add logs_inram=on
         cmdline_add libata.force=2.00:noncq
     fi
+    if [ "$sid" = "LodogaPrime" ]; then
+        aboot_machine=arista_7050cx3_32c
+        cmdline_add logs_inram=on
+    fi
     if [ "$sid" = "Marysville" ]; then
         aboot_machine=arista_7050sx3_48yc8
         flash_size=7382
@@ -565,6 +591,18 @@ write_platform_specific_cmdline() {
     fi
     if [ "$sid" = "BlackhawkTH4DD" ] || [ "$sid" = "BlackhawkTh4Dd" ]; then
            aboot_machine=arista_7060dx5_32
+    fi
+    if [ "$sid" = "QuartzDd" ]; then
+        aboot_machine=arista_7280dr3a_36
+    fi
+    if [ "$sid" = "QuartzDdBk" ]; then
+        aboot_machine=arista_7280dr3ak_36
+    fi
+    if [ "$sid" = "QuartzDdBkS" ]; then
+        aboot_machine=arista_7280dr3ak_36s
+    fi
+    if [ "$sid" = "QuartzDdMs" ]; then
+        aboot_machine=arista_7280dr3am_36
     fi
     if [ "$sid" = "Smartsville" ]; then
         aboot_machine=arista_7280cr3_32p4
@@ -633,6 +671,9 @@ write_platform_specific_cmdline() {
                 "Redstart832Mk2QuicksilverP512" "Redstart832Mk2NQuicksilverP512"; then
         aboot_machine=arista_7060x6_64pe_b
     fi
+    if in_array "$sid" "MorandaP"; then
+        aboot_machine=arista_7060x6_32pe
+    fi
 
     # disable cpu c-state other than C1
     local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"
@@ -641,12 +682,15 @@ write_platform_specific_cmdline() {
         cmdline_add intel_idle.max_cstate=0
     fi
 
-    if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish"; then
+    if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish" "puffin"; then
         cmdline_add tsc=reliable
         cmdline_add pcie_ports=native
         cmdline_add rhash_entries=1
         cmdline_add usb-storage.delay_use=0
         cmdline_add reassign_prefmem
+    fi
+    if in_array "$platform" "cormorant"; then
+        read_system_eeprom
     fi
     if in_array "$platform" "rook" "sprucefish"; then
         cmdline_add iommu=on
@@ -663,7 +707,7 @@ write_platform_specific_cmdline() {
         cmdline_add sdhci.append_quirks2=0x40
         read_system_eeprom
     fi
-    if in_array "$platform" "woodpecker"; then
+    if in_array "$platform" "woodpecker" "puffin" "skylark"; then
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi
@@ -675,7 +719,7 @@ write_platform_specific_cmdline() {
         read_system_eeprom
     fi
     if in_array "$platform" "shearwater" "redstart"; then
-        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
+        cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio,amd_sfh
         if [ -f /tmp/.switch-prefdl ]; then
             read_switch_eeprom
         else
@@ -683,7 +727,13 @@ write_platform_specific_cmdline() {
         fi
     fi
     if in_array "$sid" "Moby" "RedstartFixed8CNMoby"; then
-        aboot_machine=arista_7060x6_16pe_384c
+        aboot_machine=arista_7060x6_16pe_384c_b
+
+        local hw_api="$(get_eeprom_value HwApi)"
+        info "HwApi for Moby: $hw_api"
+        if [ -z "$hw_api" ] || [ "$hw_api" = "01.00" ]; then
+            aboot_machine=arista_7060x6_16pe_384c
+        fi
     fi
 
     if [ $varlog_size -eq 0 ]; then
@@ -769,6 +819,11 @@ write_default_cmdline() {
         # for the Aboot part. Take an educated guess at a right delimiter.
         # Subject to breakage if EOS or SONiC cmdline change.
         cat /proc/cmdline | sed -E 's/^(.*) rw .*$/\1/' | tr ' ' '\n' | cmdline_append
+
+        # Remove any parameters that are inadvertently inherited
+        for field in $default_cmdline_blacklist; do
+            cmdline_remove "$field"
+        done
     fi
 
     cmdline_add "$delimiter"
@@ -789,7 +844,7 @@ write_cmdline() {
     #         this file can be either packaged in the swi or generated from userland
     for cpath in "$image_path/kernel-cmdline" "$image_path/kernel-cmdline-append"; do
         if [ -f "$cpath" ]; then
-            for field in $cmdline_allowlist; do
+            for field in $kernel_cmdline_allowlist; do
                cat "$cpath" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
             done
         fi
@@ -819,6 +874,7 @@ write_secureboot_configs() {
     # setting panic= has the side effect of disabling the initrd shell on error
     cmdline_add panic=0
     write_cmdline
+    write_kdump_cmdline
 }
 
 write_regular_configs() {
@@ -826,6 +882,7 @@ write_regular_configs() {
     cmdline_add "loop=$image_name/fs.squashfs"
     cmdline_add loopfstype=squashfs
     write_cmdline
+    write_kdump_cmdline
 }
 
 run_kexec() {

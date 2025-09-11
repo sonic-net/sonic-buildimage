@@ -1,3 +1,15 @@
+opennsl (13.2.1.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 13.2.1.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Wed, 25 Jun 2025 05:46:10 +0000
+
+opennsl (13.2.0.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 13.2.0.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Wed, 21 May 2025 01:43:59 +0000
+
 opennsl (12.1.0.2) unstable; urgency=medium
 
   * Update to Broadcom SAI 12.1.0.2

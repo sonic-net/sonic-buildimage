@@ -1,0 +1,71 @@
+{
+    "PSU": {
+        "name": {
+            "1": "PSU1",
+            "2": "PSU2"
+        },
+        "fan_name": {
+            "1": {
+                "1": "PSU1_FAN1"
+            },
+            "2": {
+                "1": "PSU2_FAN1"
+            }
+        },
+        "thermal_name": {
+            "1": "PSU1_TEMP1",
+            "2": "PSU1_TEMP2",
+            "3": "PSU1_TEMP3",
+            "4": "PSU2_TEMP1",
+            "5": "PSU2_TEMP2",
+            "6": "PSU2_TEMP3"
+        },
+        "psu_present": {
+            "i2c": {
+                "valmap": {
+                    "1": false,
+                    "0": true
+                }
+            }
+        },
+        "psu_power_good": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "psu_fan_dir": {
+            "i2c": {
+                "valmap": {
+                    "D1U74T-W-2400-12-HB4C": "exhaust",
+                    "D1U74T-W-3200-12-HB4C": "exhaust"
+                }
+            }
+        },
+        "PSU_FAN_MAX_SPEED": "32500"
+    },
+    "FAN": {
+        "present": {
+            "i2c": {
+                "valmap": {
+                    "1": true,
+                    "0": false
+                }
+            }
+        },
+        "direction": {
+            "i2c": {
+                "valmap": {
+                    "1": "exhaust"
+                }
+            }
+        },
+        "duty_cycle_to_pwm": "lambda dc: ((dc/100) * 255)",
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm/255) * 100)"
+    },
+    "REBOOT_CAUSE": {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}
