@@ -56,6 +56,7 @@ module sonic-routing-policy-sets {
                         enum IPv6;
                     }
                     description "Address family of the prefix";
+                    default "IPv4";
                 }
             }
         }
