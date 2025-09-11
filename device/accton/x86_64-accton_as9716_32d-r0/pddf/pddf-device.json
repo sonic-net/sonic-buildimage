@@ -138,28 +138,28 @@
             "dev_attr": { "virt_bus":"0x9", "idle_state":"-2"},
             "channel":
             [
-                { "chn":"0", "dev":"PSU2" },
-                { "chn":"1", "dev":"PSU1" }
+                { "chn":"0", "dev":"PSU1" },
+                { "chn":"1", "dev":"PSU2" }
             ]
         }
     },
-     "PSU1":
+     "PSU2":
     {
-        "dev_info": { "device_type":"PSU", "device_name":"PSU1", "device_parent":"MUX2"}, 
-        "dev_attr": { "dev_idx":"1", "num_psu_fans": "1"},
+        "dev_info": { "device_type":"PSU", "device_name":"PSU2", "device_parent":"MUX2"}, 
+        "dev_attr": { "dev_idx":"2", "num_psu_fans": "1"},
         "i2c":
         {
             "interface":
             [
-                { "itf":"pmbus", "dev":"PSU1-PMBUS" },
-                { "itf":"eeprom", "dev":"PSU1-EEPROM" }
+                { "itf":"pmbus", "dev":"PSU2-PMBUS" },
+                { "itf":"eeprom", "dev":"PSU2-EEPROM" }
             ]
         }
     },
 
-    "PSU1-PMBUS":
+    "PSU2-PMBUS":
     {
-        "dev_info": { "device_type":"PSU-PMBUS", "device_name":"PSU1-PMBUS", "device_parent":"MUX2", "virt_parent":"PSU1"},
+        "dev_info": { "device_type":"PSU-PMBUS", "device_name":"PSU2-PMBUS", "device_parent":"MUX2", "virt_parent":"PSU2"},
         "i2c":
         {
             "topo_info":{ "parent_bus":"0xa", "dev_addr":"0x59", "dev_type":"psu_pmbus"}, 
@@ -181,9 +181,9 @@
         }
     },
 
-    "PSU1-EEPROM":
+    "PSU2-EEPROM":
     {
-        "dev_info": { "device_type":"PSU-EEPROM", "device_name":"PSU1-EEPROM", "device_parent":"MUX2", "virt_parent":"PSU1"},
+        "dev_info": { "device_type":"PSU-EEPROM", "device_name":"PSU2-EEPROM", "device_parent":"MUX2", "virt_parent":"PSU2"},
         "i2c":
         {
             "topo_info":{ "parent_bus":"0xa", "dev_addr":"0x51", "dev_type":"psu_eeprom"}, 
@@ -196,10 +196,10 @@
         }
     },
 
-    "PSU2":
+    "PSU1":
     {
-        "dev_info": { "device_type":"PSU", "device_name":"PSU2", "device_parent":"MUX2" },
-        "dev_attr": { "dev_idx":"2", "num_psu_fans":"1"},
+        "dev_info": { "device_type":"PSU", "device_name":"PSU1", "device_parent":"MUX2" },
+        "dev_attr": { "dev_idx":"1", "num_psu_fans":"1"},
         "i2c":
         {
             "interface":
@@ -210,9 +210,9 @@
         }
     },
 
-    "PSU2-PMBUS":
+    "PSU1-PMBUS":
     {
-        "dev_info": {"device_type":"PSU-PMBUS", "device_name":"PSU2-PMBUS", "device_parent":"MUX2", "virt_parent":"PSU2"},
+        "dev_info": {"device_type":"PSU-PMBUS", "device_name":"PSU1-PMBUS", "device_parent":"MUX2", "virt_parent":"PSU1"},
         "i2c":
         {
             "topo_info": { "parent_bus":"0x9", "dev_addr":"0x58", "dev_type":"psu_pmbus"},
@@ -234,9 +234,9 @@
         }
     },
     
-    "PSU2-EEPROM":
+    "PSU1-EEPROM":
     {
-        "dev_info": { "device_type":"PSU-EEPROM", "device_name":"PSU2-EEPROM", "device_parent":"MUX2", "virt_parent":"PSU2"},
+        "dev_info": { "device_type":"PSU-EEPROM", "device_name":"PSU1-EEPROM", "device_parent":"MUX2", "virt_parent":"PSU1"},
         "i2c":
         {
             "topo_info":{ "parent_bus":"0x9", "dev_addr":"0x50", "dev_type":"psu_eeprom"}, 
