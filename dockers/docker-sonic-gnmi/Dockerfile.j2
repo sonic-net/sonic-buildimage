@@ -17,9 +17,7 @@ RUN apt-get update &&     \
         build-essential   \
         python3-dev
 
-# Upgrade pip via PyPI
-RUN pip3 install --upgrade pip
-RUN apt-get purge -y python3-pip
+# Install netifaces
 RUN pip3 install netifaces==0.11.0
 
 {% if docker_sonic_gnmi_debs.strip() -%}
