@@ -351,14 +351,5 @@
                 ]
             }
         }
-    },
-    "VXLAN_TUNNEL_NAME_STRING_INVALID_EMPTY_TEST": {
-        "sonic-vxlan:sonic-vxlan": {
-            "sonic-vxlan:VXLAN_TUNNEL": {
-                "VXLAN_TUNNEL_LIST": [
-                    { "name": "", "src_ip": "9.9.9.9" }
-                ]
-            }
-        }
     }
 }

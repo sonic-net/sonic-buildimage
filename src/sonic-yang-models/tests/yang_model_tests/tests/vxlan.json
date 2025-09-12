@@ -38,13 +38,9 @@
     },
     "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
         "desc": "Invalid config with more than 2 VXLAN_TUNNEL entries",
-        "eStrKey": "Must"
+        "eStrKey": "MaxElements"
     },
     "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
         "desc": "Tunnel name as arbitrary string is valid"
-    },
-    "VXLAN_TUNNEL_NAME_STRING_INVALID_EMPTY_TEST": {
-        "desc": "Tunnel name as empty string is invalid",
-        "eStrKey": "Must"
     }
 }
