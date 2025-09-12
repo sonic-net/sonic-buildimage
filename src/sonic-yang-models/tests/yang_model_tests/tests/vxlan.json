@@ -25,7 +25,7 @@
     },
     "VXLAN_TUNNEL_NAME_EMPTY_INVALID_TEST": {
         "desc": "Tunnel Name string length 0 is invalid",
-        "eStr" : "Invalid interface name length, it cannot be 0."
+        "eStrKey": "Must"
     },
     "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
         "desc": "Valid IPv4 Destination Address"
