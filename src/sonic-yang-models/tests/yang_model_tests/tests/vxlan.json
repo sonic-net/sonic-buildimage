@@ -20,17 +20,15 @@
     "VXLAN_TUNNEL_NAME_VALID_TEST": {
         "desc": "Tunnel Name string length 15 is valid"
     },
-    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
-        "desc": "Tunnel Name string length exceeding 16 is invalid",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
+        "desc": "Tunnel Name string length exceeding 16 is now valid"
     },
-    "VXLAN_TUNNEL_NAME_INVALID_TEST": {
+    "VXLAN_TUNNEL_NAME_EMPTY_INVALID_TEST": {
         "desc": "Tunnel Name string length 0 is invalid",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+        "eStrKey": "Must"
     },
     "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
-        "desc": "Valid IPv4 Destination Address",
-        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+        "desc": "Valid IPv4 Destination Address"
     },
     "VXLAN_TUNNEL_NAME_VALID_DST_IPV6_TEST": {
         "desc": "Valid IPv6 Destination Address"

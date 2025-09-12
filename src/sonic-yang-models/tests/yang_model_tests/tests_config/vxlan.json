@@ -196,7 +196,7 @@
             }
         }
     },
-    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
+    "VXLAN_TUNNEL_NAME_LONG_VALID_TEST": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [
@@ -227,7 +227,7 @@
             }
         }
     },
-    "VXLAN_TUNNEL_NAME_INVALID_TEST": {
+    "VXLAN_TUNNEL_NAME_EMPTY_INVALID_TEST": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
                 "VLAN_LIST": [
