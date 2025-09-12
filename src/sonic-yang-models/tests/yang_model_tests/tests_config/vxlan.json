@@ -321,5 +321,44 @@
                 ]
             }
         }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_MAX_ELEM_INVALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "vtep1", "src_ip": "1.2.3.4" },
+                    { "name": "vtep2", "src_ip": "2.3.4.5" },
+                    { "name": "vtep3", "src_ip": "3.4.5.6" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "arbitrary_string", "src_ip": "5.6.7.8" }
+                ]
+            }
+        }
+    },
+    "VXLAN_TUNNEL_NAME_STRING_INVALID_EMPTY_TEST": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    { "name": "", "src_ip": "9.9.9.9" }
+                ]
+            }
+        }
     }
 }
