@@ -235,9 +235,11 @@ class Test_yang_models:
     def runSpecialTest(self, test):
         try:
             if test == 'ALL_VLAN_TEST':
-                return self.runVlanSpecialTest(test);
+                log.info("Running ALL_VLAN_TEST")
+                return self.runVlanSpecialTest(test)
         except Exception as e:
             printExceptionDetails()
+        desc = self.SpecialTests[test]['desc']
         log.info(desc + " Failed\n")
         return FAIL
 
@@ -246,15 +248,18 @@ class Test_yang_models:
             desc = self.SpecialTests[test]['desc']
             self.logStartTest(desc)
             jInput = json.loads(self.readJsonInput(test))
+            log.info("Loaded JSON for VLAN test")
             # check all Vlan from 2 to 4094
             for i in range(2,4095):
 
                 vlan = 'Vlan'+str(i)
                 jInput["sonic-vlan:sonic-vlan"]["sonic-vlan:VLAN"]["VLAN_LIST"]\
                       [0]["name"] = vlan
-                log.debug(jInput)
+                log.info("jInput: {}".format(jInput))
                 s = self.loadConfigData(json.dumps(jInput))
+                log.info("Loading s: {} with vlan: {}".format(s, vlan))
                 if s!="":
+                    log.info("VLAN TEST failed at {} with error: {}".format(vlan, s))
                     raise Exception("{} in not empty".format(s))
             return PASS
         except Exception as e:
@@ -275,11 +280,18 @@ class Test_yang_models:
             for test in self.tests:
                 test = test.strip()
                 if test in self.ExceptionTests:
-                    ret = ret + self.runExceptionTest(test)
+                    result = self.runExceptionTest(test)
                 elif test in self.SpecialTests:
-                    ret = ret + self.runSpecialTest(test)
+                    result = self.runSpecialTest(test)
                 else:
                     raise Exception("Unexpected Test")
+                if result != PASS:
+                    failed_test = self.ExceptionTests.get(test, self.SpecialTests.get(test))['desc']
+                    log.info("Test failed: {} ({})".format(test, failed_test))
+                else:
+                    print("Test passed: {}".format(test))
+
+                ret = ret + result
         except Exception as e:
             ret = FAIL * len(self.tests)
             printExceptionDetails()
