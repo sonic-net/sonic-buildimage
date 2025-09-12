@@ -426,9 +426,9 @@ wait() {
     done
 
     if [[ ! -z $DEV ]]; then
-        /usr/bin/docker-wait-any -s ${SERVICE}$DEV -d `printf "%s$DEV " ${PEER}` ${ALL_DEPS}
+        /usr/local/bin/docker-wait-any -s ${SERVICE}$DEV -d `printf "%s$DEV " ${PEER}` ${ALL_DEPS}
     else
-        /usr/bin/docker-wait-any -s ${SERVICE} -d ${PEER} ${ALL_DEPS}
+        /usr/local/bin/docker-wait-any -s ${SERVICE} -d ${PEER} ${ALL_DEPS}
     fi
 }
 

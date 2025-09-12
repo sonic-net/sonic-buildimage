@@ -533,15 +533,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchd
 # sonic-ctrmgrd-rs is required by container script
 install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
 
-{% if include_kubernetes == "y" %}
-# Point to kubelet to /etc/resolv.conf
-#
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
-
-# Copy Flannel conf file into sonic-templates
-#
-sudo cp $BUILD_TEMPLATES/kube_cni.10-flannel.conflist $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
-
 # Install remote Container mgmt package
 # Required even if include_kubernetes != y, as it contains the
 # the container wrapper for docker start/stop/wait commands.
@@ -550,6 +541,15 @@ SONIC_CTRMGMT_WHEEL_NAME=$(basename {{sonic_ctrmgmt_py3_wheel_path}})
 sudo cp {{sonic_ctrmgmt_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_CTRMGMT_WHEEL_NAME
 sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
+
+{% if include_kubernetes == "y" %}
+# Point to kubelet to /etc/resolv.conf
+#
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+
+# Copy Flannel conf file into sonic-templates
+#
+sudo cp $BUILD_TEMPLATES/kube_cni.10-flannel.conflist $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
 # Config file used by container mgmt scripts/service
 fl="${files_path}/remote_ctr.config.json"
@@ -579,12 +579,6 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 
 # kubelet service is controlled by ctrmgrd daemon.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
-{% else %}
-# container script for docker commands, which is required as
-# all docker commands are replaced with container commands.
-# So just copy that file only.
-#
-sudo cp ${files_path}/container $FILESYSTEM_ROOT/usr/local/bin/
 {% endif %}
 
 # Copy the buffer configuration template
@@ -623,9 +617,6 @@ sudo cp $IMAGE_CONFIGS/hostname/hostname-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "banner-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.sh $FILESYSTEM_ROOT/usr/bin/
-
-# Copy miscellaneous scripts
-sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 
 # Copy internal topology configuration scripts
 {%- if sonic_asic_platform == "vs" %}
