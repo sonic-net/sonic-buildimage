@@ -162,9 +162,7 @@ stages:
               set -ex
               set -o pipefail
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
-              make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin 2>&1 | tee target/buildss.log
-              mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
-              make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
+              make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin 2>&1 | tee target/build.log
               mv target/sonic-mellanox.bin target/release/sonic-mellanox.bin
               make $OPTIONS INCLUDE_VNET_MONITOR=y INCLUDE_SESSION_MONITOR=y target/sonic-mellanox.bin 2>&1 | tee target/build-session-monitor.log
               mv target/sonic-mellanox.bin target/sonic-mellanox-session-monitor.bin
@@ -236,13 +234,6 @@ stages:
         parameters:
           NAME: cisco-8000
           OPTIONS: ${{ parameters.OPTIONS }} NOBULLSEYE=0
-          CACHE: ${{ parameters.CACHE }}
-          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-    - ${{ if containsValue(parameters.JOBS, 'cisco-8000-smartswitch') }}:
-      - template: template-cisco.yml
-        parameters:
-          NAME: cisco-8000-smartswitch
-          OPTIONS: '${{ parameters.OPTIONS }} NOBULLSEYE=0 SMARTSWITCH=1 INCLUDE_SESSION_MONITOR=y'
           CACHE: ${{ parameters.CACHE }}
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'pensando') }}:

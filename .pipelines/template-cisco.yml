@@ -2,7 +2,6 @@ parameters:
 - name: NAME
   values:
   - cisco-8000
-  - cisco-8000-smartswitch
 - name: OPTIONS
   type: string
 - name: CACHE
@@ -14,10 +13,7 @@ jobs:
   - job: ${{ replace(parameters.NAME, '-', '_') }}
     ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
       timeoutInMinutes: 840
-    ${{ if eq(parameters.NAME, 'cisco-8000') }}:
-      condition: ne(variables.SKIP_CISCO, 'y')
-    ${{ else }}:
-      condition: ne(variables.SKIP_CISCOSS, 'y')
+    condition: ne(variables.SKIP_CISCO, 'y')
     pool:
       type: linux
       isCustom: true
@@ -95,7 +91,7 @@ jobs:
     - script: |
         set -ex
         set -o pipefail
-        OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
+        OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/${{ parameters.NAME }} ENABLE_NAT=n INCLUDE_VNET_MONITOR=y INCLUDE_DHCP_SERVER=y"
         make $OPTIONS target/sonic-cisco-8000.bin 2>&1 | tee target/build.log
         make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz 2>&1 | tee target/buildrpc.log
       displayName: Build SONiC image
