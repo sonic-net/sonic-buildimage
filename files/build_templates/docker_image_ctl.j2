@@ -173,6 +173,10 @@ function postStartAction()
 {%- if docker_container_name == "database" %}
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
+    if [[ -f $CHASSISDB_CONF ]]; then
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+    fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
@@ -187,9 +191,6 @@ function postStartAction()
            # Use /16 for loopback interface
            ip netns exec "$NET_NS" ip addr add 127.0.0.1/16 dev lo
            ip netns exec "$NET_NS" ip addr del 127.0.0.1/8 dev lo
-
-           slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-           supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
 
            # Create eth1 in database instance
            if [[ "${slot_id}" == "${supervisor_slot_id}" ]]; then
@@ -235,6 +236,12 @@ function postStartAction()
            fi
        fi
     fi
+
+    # midplane ip for the Linecard database container
+    if [[ -z "$DEV" && "$DATABASE_TYPE" != "dpudb"  && -f $CHASSISDB_CONF && "${slot_id}" != "${supervisor_slot_id}" ]]; then
+        midplane_ip=$(docker exec -i ${DOCKERNAME} ip addr show eth1-midplane | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+    fi
+
     # Setup ebtables configuration
 {%- if sonic_asic_platform != "vs" %}
     ebtables_config
@@ -330,8 +337,8 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
-
-    if [[ $DEV && $midplane_ip ]]; then
+    # Binding the midplane ip to the redisdb
+    if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
         bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
         redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
