@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import inspect
 import sys
 import json
@@ -418,7 +433,8 @@ def get_temps_sensor():
     print("=================get_temps_sensor======================")
     temp_list = int_case.get_temps()
     for temp in temp_list:
-        print("id: %s, name: %s, API name: %s, value: %s" % (temp.temp_id, temp.name, temp.api_name, temp.Value))
+        print("id: %s, name: %s, API name: %s, value: %s, Min: %s, Low: %s, High: %s, Max: %s, Invalid: %s, Error: %s" %
+            (temp.temp_id, temp.name, temp.api_name, temp.Value, temp.Min, temp.Low, temp.High, temp.Max, temp.temp_invalid, temp.temp_error))
 
 def get_cpu_reset_num():
     r'''get_cpu_reset_num'''

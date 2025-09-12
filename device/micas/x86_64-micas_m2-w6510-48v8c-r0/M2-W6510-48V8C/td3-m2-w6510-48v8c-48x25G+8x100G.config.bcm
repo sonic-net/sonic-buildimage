@@ -603,3 +603,38 @@ sai_optimized_mmu=1
 
 #ACL wb count
 ctr_evict_enable=0
+
+# Start of chip common properties
+[Low Inheritance Precedence]
+mpls_mem_entries=16384
+vlan_xlate_1_mem_entries=65536
+vlan_xlate_2_mem_entries=16384
+mmu_lossless=0
+l2_entry_used_as_my_station=1
+multi_hash_recurse_depth_l3=3
+# Drop monitor and IFA configuration
+flowtracker_enable=2
+flowtracker_max_flows=48000
+flowtracker_drop_monitor_enable=1
+flowtracker_export_interval_usecs=1000000
+flowtracker_max_export_pkt_length=9000
+flowtracker_fsp_reinject_max_length=128
+host_as_route_disable=1
+num_queues_pci=46
+num_queues_uc0=1
+num_queues_uc1=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+ifa_enable=1
+sai_load_hw_config=/usr/lib/cancun/
+sai_fast_convergence_support=1
+sai_brcm_sonic_acl_enhancements=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
+# MMU Lossless configurations
+buf.map.egress_pool0.ingress_pool=0
+buf.map.egress_pool1.ingress_pool=0
+buf.map.egress_pool2.ingress_pool=1
+#Tunnels
+bcm_tunnel_term_compatible_mode=1
+#RIOT Enable
+# End of chip common properties

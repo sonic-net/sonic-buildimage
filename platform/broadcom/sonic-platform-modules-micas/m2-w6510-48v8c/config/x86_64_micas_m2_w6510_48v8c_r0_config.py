@@ -5,7 +5,7 @@ from platform_common import *
 STARTMODULE = {
     "hal_fanctrl": 1,
     "hal_ledctrl": 1,
-    "avscontrol": 1,
+    "avscontrol": 0,
     "dev_monitor": 1,
     "pmon_syslog": 1,
     "tty_console": 1,
@@ -709,16 +709,12 @@ MAC_DEFAULT_PARAM = [
     }
 ]
 
-BLACKLIST_DRIVERS = [
-    {"name": "i2c_i801", "delay": 0},
-]
-
 DRIVERLISTS = [
-    {"name": "wb_i2c_i801", "delay": 0},
+    {"name": "i2c_i801", "delay": 0},
     {"name": "wb_gpio_d1500", "delay": 0},
     {"name": "i2c_dev", "delay": 0},
-    {"name": "wb_i2c_algo_bit", "delay": 0},
-    {"name": "wb_i2c_gpio", "delay": 0},
+    {"name": "i2c_algo_bit", "delay": 0},
+    {"name": "i2c_gpio", "delay": 0},
     {"name": "i2c_mux", "delay": 0},
     {"name": "wb_gpio_device", "delay": 0},
     {"name": "wb_i2c_gpio_device gpio_sda=17 gpio_scl=1 gpio_udelay=2", "delay": 0},
@@ -737,15 +733,15 @@ DRIVERLISTS = [
     {"name": "wb_i2c_mux_pca954x", "delay": 0},
     {"name": "wb_i2c_mux_pca954x_device", "delay": 0},
     {"name": "wb_i2c_dev_device", "delay": 0},
-    {"name": "wb_lm75", "delay": 0},
+    {"name": "lm75", "delay": 0},
     {"name": "optoe", "delay": 0},
     {"name": "at24", "delay": 0},
     {"name": "wb_mac_bsc", "delay": 0},
-    {"name": "wb_pmbus_core", "delay": 0},
-    {"name": "wb_isl68137", "delay": 0},
+    {"name": "pmbus_core", "delay": 0},
+    {"name": "isl68137", "delay": 0},
     {"name": "wb_csu550", "delay": 0},
-    {"name": "wb_ina3221", "delay": 0},
-    {"name": "wb_tps53622", "delay": 0},
+    {"name": "ina3221", "delay": 0},
+    {"name": "tps53679", "delay": 0},
     {"name": "plat_dfd", "delay": 0},
     {"name": "plat_switch", "delay": 0},
     {"name": "plat_fan", "delay": 0},
@@ -767,19 +763,19 @@ DEVICE = [
     {"name": "24c02", "bus": 25, "loc": 0x50},
     {"name": "wb_dps550", "bus": 25, "loc": 0x58},
     # temp
-    {"name": "wb_lm75", "bus": 3, "loc": 0x48},
-    {"name": "wb_lm75", "bus": 3, "loc": 0x49},
-    {"name": "wb_lm75", "bus": 3, "loc": 0x4a},
-    {"name": "wb_lm75", "bus": 3, "loc": 0x4b},
-    {"name": "wb_lm75", "bus": 3, "loc": 0x4c},
+    {"name": "lm75", "bus": 3, "loc": 0x48},
+    {"name": "lm75", "bus": 3, "loc": 0x49},
+    {"name": "lm75", "bus": 3, "loc": 0x4a},
+    {"name": "lm75", "bus": 3, "loc": 0x4b},
+    {"name": "lm75", "bus": 3, "loc": 0x4c},
     # dcdc
-    {"name": "wb_ina3221", "bus": 7, "loc": 0x40},
-    {"name": "wb_ina3221", "bus": 7, "loc": 0x41},
-    {"name": "wb_ina3221", "bus": 7, "loc": 0x42},
-    {"name": "wb_ina3221", "bus": 7, "loc": 0x43},
-    {"name": "wb_tps53622", "bus": 7, "loc": 0x60},
-    {"name": "wb_tps53622", "bus": 7, "loc": 0x6c},
-    {"name": "wb_isl68127", "bus": 7, "loc": 0x64},
+    {"name": "ina3221", "bus": 7, "loc": 0x40},
+    {"name": "ina3221", "bus": 7, "loc": 0x41},
+    {"name": "ina3221", "bus": 7, "loc": 0x42},
+    {"name": "ina3221", "bus": 7, "loc": 0x43},
+    {"name": "tps53688", "bus": 7, "loc": 0x60},
+    {"name": "tps53688", "bus": 7, "loc": 0x6c},
+    {"name": "isl68137", "bus": 7, "loc": 0x64},
 ]
 
 OPTOE = [
@@ -847,11 +843,11 @@ DEV_MONITOR_PARAM = {
         {
             "name": "lm75",
             "device": [
-                {"id": "lm75_1", "name": "wb_lm75", "bus": 3, "loc": 0x48, "attr": "hwmon"},
-                {"id": "lm75_2", "name": "wb_lm75", "bus": 3, "loc": 0x49, "attr": "hwmon"},
-                {"id": "lm75_3", "name": "wb_lm75", "bus": 3, "loc": 0x4a, "attr": "hwmon"},
-                {"id": "lm75_4", "name": "wb_lm75", "bus": 3, "loc": 0x4b, "attr": "hwmon"},
-                {"id": "lm75_5", "name": "wb_lm75", "bus": 3, "loc": 0x4c, "attr": "hwmon"},
+                {"id": "lm75_1", "name": "lm75", "bus": 3, "loc": 0x48, "attr": "hwmon"},
+                {"id": "lm75_2", "name": "lm75", "bus": 3, "loc": 0x49, "attr": "hwmon"},
+                {"id": "lm75_3", "name": "lm75", "bus": 3, "loc": 0x4a, "attr": "hwmon"},
+                {"id": "lm75_4", "name": "lm75", "bus": 3, "loc": 0x4b, "attr": "hwmon"},
+                {"id": "lm75_5", "name": "lm75", "bus": 3, "loc": 0x4c, "attr": "hwmon"},
             ],
         },
         {
@@ -863,32 +859,33 @@ DEV_MONITOR_PARAM = {
         {
             "name": "ina3221",
             "device": [
-                {"id": "ina3221_1", "name": "wb_ina3221", "bus": 7, "loc": 0x40, "attr": "hwmon"},
-                {"id": "ina3221_2", "name": "wb_ina3221", "bus": 7, "loc": 0x41, "attr": "hwmon"},
-                {"id": "ina3221_3", "name": "wb_ina3221", "bus": 7, "loc": 0x42, "attr": "hwmon"},
-                {"id": "ina3221_4", "name": "wb_ina3221", "bus": 7, "loc": 0x43, "attr": "hwmon"},
+                {"id": "ina3221_1", "name": "ina3221", "bus": 7, "loc": 0x40, "attr": "hwmon"},
+                {"id": "ina3221_2", "name": "ina3221", "bus": 7, "loc": 0x41, "attr": "hwmon"},
+                {"id": "ina3221_3", "name": "ina3221", "bus": 7, "loc": 0x42, "attr": "hwmon"},
+                {"id": "ina3221_4", "name": "ina3221", "bus": 7, "loc": 0x43, "attr": "hwmon"},
             ],
         },
         {
             "name": "tps53622",
             "device": [
-                {"id": "tps53622_1", "name": "wb_tps53622", "bus": 7, "loc": 0x60, "attr": "hwmon"},
-                {"id": "tps53622_2", "name": "wb_tps53622", "bus": 7, "loc": 0x6c, "attr": "hwmon"},
+                {"id": "tps53622_1", "name": "tps53688", "bus": 7, "loc": 0x60, "attr": "hwmon"},
+                {"id": "tps53622_2", "name": "tps53688", "bus": 7, "loc": 0x6c, "attr": "hwmon"},
             ],
         },
         {
-            "name": "isl68127",
+            "name": "isl68137",
             "device": [
-                {"id": "isl68127_1", "name": "wb_isl68127", "bus": 7, "loc": 0x64, "attr": "hwmon"},
+                {"id": "isl68137_1", "name": "isl68137", "bus": 7, "loc": 0x64, "attr": "hwmon"},
             ],
         }
     ],
 }
 
 INIT_PARAM_PRE = [
-    {"loc": "7-0064/hwmon/hwmon*/avs0_vout_max", "value": "900000"},
-    {"loc": "7-0064/hwmon/hwmon*/avs0_vout_min", "value": "750000"},
+    #{"loc": "7-0064/hwmon/hwmon*/avs0_vout_max", "value": "900000"},
+    #{"loc": "7-0064/hwmon/hwmon*/avs0_vout_min", "value": "750000"},
 ]
+
 INIT_COMMAND_PRE = [
     "i2cset -y -f 6 0x0d 0x91 0x48",
     "i2cset -y -f 6 0x0d 0x92 0x01",  # MAC_PWR_EN

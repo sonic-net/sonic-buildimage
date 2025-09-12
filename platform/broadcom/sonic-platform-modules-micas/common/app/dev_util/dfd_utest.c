@@ -1,3 +1,22 @@
+/*
+ * An dfd_utest driver for dfd utest function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #include <errno.h>
 #include <stdlib.h>
@@ -1865,10 +1884,6 @@ static int mdiodev_arg_parse(int argc, char* argv[], int *mdio_index, int *phyad
     }
 
     regaddr = strtoul(argv[4], &end, 0);
-    if (*end || regaddr > 0xffff) {
-        fprintf(stderr, "Error: regaddr invalid!\n");
-        return -EINVAL;
-    }
 
     if (argc > 5) {
         value = strtoul(argv[5], &end, 0);
