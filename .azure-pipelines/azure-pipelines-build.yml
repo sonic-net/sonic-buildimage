@@ -46,7 +46,6 @@ jobs:
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
-      ss_image: no
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -115,7 +114,6 @@ jobs:
         - name: mellanox
           variables:
             dbg_image: yes
-            ss_image: yes
             docker_syncd_rpc_image: yes
             syncd_rpc_image: yes
             platform_rpc: mlnx
@@ -145,6 +143,9 @@ jobs:
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
+          if echo $(GROUP_NAME) | grep mellanox; then
+            BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
+          fi
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
@@ -181,10 +182,6 @@ jobs:
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
               mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-dbg.bin
-            fi
-            if [ $(ss_image) == yes ]; then
-              make $BUILD_OPTIONS SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-smartswitch.bin
             fi
             if [ $(swi_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi
