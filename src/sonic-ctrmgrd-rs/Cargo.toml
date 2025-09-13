@@ -2,6 +2,7 @@
 resolver = '2'
 members = [
     "crates/docker-rs",
+    "crates/docker-wait-any-rs",
 ]
 exclude = []
 

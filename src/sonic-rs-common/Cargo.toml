@@ -1,0 +1,21 @@
+[package]
+name = "sonic-rs-common"
+version = "0.1.0"
+authors = ["SONiC"]
+license = "Apache-2.0"
+repository = "https://github.com/sonic-net/sonic-buildimage"
+documentation = "https://github.com/sonic-net/sonic-buildimage/blob/master/README.md"
+keywords = ["sonic"]
+edition = "2021"
+
+[dependencies]
+swss-common = { path = "../sonic-swss-common/crates/swss-common" }
+thiserror = "1"
+tracing = "0.1"
+syslog = "6.1"
+
+[lints.rust]
+unused_extern_crates = 'warn'
+trivial_numeric_casts = 'warn' 
+unstable_features = 'warn'
+unused_import_braces = 'warn'
