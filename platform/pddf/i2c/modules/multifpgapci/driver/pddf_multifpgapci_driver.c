@@ -244,7 +244,7 @@ void delete_fpga_data_node(const char *bdf)
 {
 	struct fpga_data_node *node, *tmp_node;
 	struct fpga_data_node *found_node = NULL;
- 
+
 	// Find and remove from global list by holding the lock so that
 	// all further cleanup can be performed without the need for a lock.
  	mutex_lock(&fpga_list_lock);
@@ -361,11 +361,6 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 	fpga_data->fpga_attrs[1] = NULL;
 	fpga_data->fpga_attr_group.attrs = fpga_data->fpga_attrs;
 
-	// Add to FPGA list
-	mutex_lock(&fpga_list_lock);
-	list_add(&fpga_data->list, &fpga_list);
-	mutex_unlock(&fpga_list_lock);
-
 	// Attach all registered protocols to this new FPGA
 	attach_protocols_for_fpga(dev, fpga_data->kobj);
 
@@ -377,14 +372,18 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 		goto free_fpga_kobj;
 	}
 	fpga_data->fpga_attr_group_initialized = true;
-	
+
 	ret = sysfs_create_group(fpga_data->kobj, &pddf_clients_data_group);
 	if (ret) {
 		pddf_dbg(MULTIFPGA,
-			 KERN_ERR "[%s] sysfs_create_group failed: %d\n",
+			 KERN_ERR "[%s] create pddf_clients_data_group failed: %d\n",
 			 __FUNCTION__, ret);
 		goto free_fpga_attr_group;
 	}
+
+	mutex_lock(&fpga_list_lock);
+	list_add(&fpga_data->list, &fpga_list);
+	mutex_unlock(&fpga_list_lock);
 
 	return 0;
 
@@ -619,7 +618,7 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 			 KERN_ERR
 			 "[%s] pci_enable_device failed. dev:%s err:%#x\n",
 			 __FUNCTION__, pci_name(dev), err);
-		return err;
+		goto error_enable_dev;
 	}
 
 	// Enable DMA
@@ -643,6 +642,7 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 			 KERN_ERR
 			 "[%s] couldn't allocate pci_privdata memory\n",
 			 __FUNCTION__);
+		err = -ENOMEM;
 		goto error_pci_req;
 	}
 
@@ -653,10 +653,10 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 
 	return 0;
 
-// ERROR HANDLING
 error_pci_req:
 	pci_disable_device(dev);
-	return -ENODEV;
+error_enable_dev:
+	return err;
 }
 
 // Initialize the driver module (but not any device) and register
