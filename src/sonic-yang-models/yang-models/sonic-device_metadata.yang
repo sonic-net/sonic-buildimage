@@ -289,6 +289,15 @@ module sonic-device_metadata {
                     default disabled;
                 }
 
+                leaf route_replace {
+                    description "Enable or disable Route replace semantics.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
+
                 leaf ring_thread_enabled {
                     type boolean;
                     description "Enable gRingMode of OrchDaemon, which would set up its ring thread to accelerate task execution.";
