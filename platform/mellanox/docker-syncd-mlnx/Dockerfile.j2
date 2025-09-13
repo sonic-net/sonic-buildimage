@@ -1,7 +1,7 @@
 ##
 ## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 ## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-## Apache-2.0
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -67,6 +67,9 @@ RUN apt-get purge -y         \
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
+
+COPY ["files/rdb-cli", "/usr/bin/"]
+RUN chmod +x /usr/bin/rdb-cli
 
 RUN mkdir -p /etc/mlnx/
 COPY sai-*.profile /etc/mlnx/
