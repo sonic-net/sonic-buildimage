@@ -13,8 +13,9 @@ from .config import ConfigMgr
 from .directory import Directory
 from .log import log_notice, log_crit
 from .managers_advertise_rt import AdvertiseRouteMgr
+from .managers_aggregate_address import AggregateAddressMgr, BGP_AGGREGATE_ADDRESS_TABLE_NAME
 from .managers_allow_list import BGPAllowListMgr
-from .managers_bbr import BBRMgr
+from .managers_bbr import BBRMgr, BGP_BBR_TABLE_NAME
 from .managers_bgp import BGPPeerMgrBase
 from .managers_db import BGPDataBaseMgr
 from .managers_intf import InterfaceMgr
@@ -34,6 +35,7 @@ from .utils import read_constants
 from .frr import FRR
 from .vars import g_debug
 
+
 def do_work():
     """ Main function """
     st_rt_timer = StaticRouteTimer()
@@ -47,6 +49,7 @@ def do_work():
         'cfg_mgr':   ConfigMgr(frr),
         'tf':        TemplateFabric(),
         'constants': read_constants(),
+        'state_db_conn': swsscommon.DBConnector("STATE_DB", 0)
     }
     managers = [
         # Config DB managers
@@ -71,7 +74,7 @@ def do_work():
         # AllowList Managers
         BGPAllowListMgr(common_objs, "CONFIG_DB", "BGP_ALLOWED_PREFIXES"),
         # BBR Manager
-        BBRMgr(common_objs, "CONFIG_DB", "BGP_BBR"),
+        BBRMgr(common_objs, "CONFIG_DB", BGP_BBR_TABLE_NAME),
         # Static Route Managers
         StaticRouteMgr(common_objs, "CONFIG_DB", "STATIC_ROUTE"),
         StaticRouteMgr(common_objs, "APPL_DB", "STATIC_ROUTE"),
@@ -80,6 +83,8 @@ def do_work():
         RouteMapMgr(common_objs, "APPL_DB", swsscommon.APP_BGP_PROFILE_TABLE_NAME),
         # Device Global Manager
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
+        # Bgp Aggregate Address Manager
+        AggregateAddressMgr(common_objs, "CONFIG_DB", BGP_AGGREGATE_ADDRESS_TABLE_NAME),
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
