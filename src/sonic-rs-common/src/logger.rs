@@ -11,7 +11,7 @@ pub enum LoggerError {
 pub type LoggerResult<T> = std::result::Result<T, LoggerError>;
 
 pub struct Logger {
-    writer: syslog::Logger<syslog::LoggerBackend, syslog::Formatter3164>,
+    writer: Option<syslog::Logger<syslog::LoggerBackend, syslog::Formatter3164>>,
     min_log_priority: Severity,
 }
 
@@ -54,7 +54,9 @@ impl Logger {
             process: identifier,
             pid: std::process::id(),
         };
-        let writer = syslog::unix(formatter)?;
+
+        // Try to create syslog writer, but don't fail if it doesn't work
+        let writer = syslog::unix(formatter).ok();
 
         Ok(Logger {
             writer,
@@ -88,13 +90,16 @@ impl Logger {
 
     pub fn log(&mut self, priority: Severity, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
         if self.should_log(priority) {
-            match priority {
-                Severity::LOG_ERR => self.writer.err(msg)?,
-                Severity::LOG_WARNING => self.writer.warning(msg)?,  
-                Severity::LOG_NOTICE => self.writer.notice(msg)?,
-                Severity::LOG_INFO => self.writer.info(msg)?,
-                Severity::LOG_DEBUG => self.writer.debug(msg)?,
-                _ => self.writer.info(msg)?,
+            // Only log to syslog if writer is available
+            if let Some(ref mut writer) = self.writer {
+                match priority {
+                    Severity::LOG_ERR => writer.err(msg)?,
+                    Severity::LOG_WARNING => writer.warning(msg)?,
+                    Severity::LOG_NOTICE => writer.notice(msg)?,
+                    Severity::LOG_INFO => writer.info(msg)?,
+                    Severity::LOG_DEBUG => writer.debug(msg)?,
+                    _ => writer.info(msg)?,
+                }
             }
 
             if also_print_to_console {
