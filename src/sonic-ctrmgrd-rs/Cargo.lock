@@ -392,6 +392,7 @@ dependencies = [
  "bollard",
  "clap",
  "futures-util",
+ "log",
  "serial_test",
  "sonic-rs-common",
  "thiserror",

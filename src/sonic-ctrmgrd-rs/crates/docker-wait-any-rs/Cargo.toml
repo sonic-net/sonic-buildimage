@@ -19,6 +19,7 @@ tokio = { workspace = true }
 futures-util = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+log = "0.4"
 sonic-rs-common = { path = "../../../sonic-rs-common" }
 
 [dev-dependencies]
@@ -26,10 +27,3 @@ serial_test = "1.0.0"
 
 [lints]
 workspace = true
-
-[profile.test]
-opt-level = 0
-debug = true
-lto = false
-codegen-units = 1
-incremental = false
