@@ -24,6 +24,8 @@ sonic-rs-common = { path = "../../../sonic-rs-common" }
 
 [dev-dependencies]
 serial_test = "1.0.0"
+injectorpp = "0.4.0"
+bollard-stubs = "=1.45.0-rc.26.0.1"
 
 [lints]
 workspace = true
