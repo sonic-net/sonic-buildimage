@@ -36,15 +36,11 @@ impl Logger {
             Some(id) => id,
             None => {
                 let args: Vec<String> = env::args().collect();
-                if let Some(program_path) = args.first() {
-                    Path::new(program_path)
-                        .file_name()
-                        .and_then(|name| name.to_str())
-                        .unwrap_or("sonic-rs-app")
-                        .to_string()
-                } else {
-                    "sonic-rs-app".to_string()
-                }
+                Path::new(args.first().unwrap_or(&String::new()))
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("")
+                    .to_string()
             }
         };
 
@@ -89,7 +85,7 @@ impl Logger {
     }
 
     pub fn log(&mut self, priority: Severity, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
-        if self.should_log(priority) {
+        if self.min_log_priority as i32 >= priority as i32 {
             // Only log to syslog if writer is available
             if let Some(ref mut writer) = self.writer {
                 match priority {
@@ -127,9 +123,5 @@ impl Logger {
 
     pub fn log_debug(&mut self, msg: &str, also_print_to_console: bool) -> LoggerResult<()> {
         self.log(Self::LOG_PRIORITY_DEBUG, msg, also_print_to_console)
-    }
-
-    fn should_log(&self, priority: Severity) -> bool {
-        priority as i32 <= self.min_log_priority as i32
     }
 }
