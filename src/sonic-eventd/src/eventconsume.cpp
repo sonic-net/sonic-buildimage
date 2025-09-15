@@ -82,20 +82,24 @@ void EventConsume::run()
 {
 
     SWSS_LOG_ENTER();
-    event_handle_t hsub;
-    hsub = events_init_subscriber(false, 3000);
+    event_handle_t hsub = events_init_subscriber(false, 3000);
+
+    if (hsub == nullptr) {
+        SWSS_LOG_ERROR("Failed to initialize event subscriber");
+        return;
+    }
     
     while (g_run) {
         event_receive_op_t evt;
         map_str_str_t evtOp;
         if (reload_config_flag.load()) {
             read_eventd_config();
+            reload_config_flag.store(false);
         }
 
         int rc = event_receive(hsub, evt); 
         if (rc != 0) {
-            SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
-             continue;
+            continue;
         }
         handle_notification(evt);
     }
