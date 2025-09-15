@@ -124,6 +124,9 @@ jobs:
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
+          if echo $(GROUP_NAME) | grep mellanox; then
+            BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
+          fi
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
