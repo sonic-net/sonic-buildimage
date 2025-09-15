@@ -148,7 +148,7 @@ INCLUDE_NAT = n
 INCLUDE_DHCP_RELAY = y
 
 # INCLUDE_DHCP_SERVER - build dhcp-server package and enable based on config_db.json
-INCLUDE_DHCP_SERVER ?= y
+INCLUDE_DHCP_SERVER ?= n
 
 # INCLUDE_SESSION_MONITOR - build docker-session-monitor for bgp session tracking, link state tracking, periodic config saver on the device
 INCLUDE_SESSION_MONITOR = n
