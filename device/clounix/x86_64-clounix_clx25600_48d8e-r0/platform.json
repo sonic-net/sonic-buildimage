@@ -1,0 +1,764 @@
+{
+    "chassis": {
+        "name": "clx25600-48d8e",
+        "watchdog": {
+            "name":"watchdog0"
+        },
+        "components": [
+            {
+                "name": "CPLD-1",
+                "description":"MB CPLD#1",
+                "firmware_version_path":"/sys_switch/cpld/cpld1/firmware_version"
+            },
+            {
+                "name": "CPLD-2",
+                "description":"MB CPLD#2",
+                "firmware_version_path":"/sys_switch/cpld/cpld2/firmware_version"
+            },
+            {
+                "name": "FPGA",
+                "description":"FPGA",
+                "firmware_version_path":"/sys_switch/fpga/fpga1/firmware_version"
+            },
+            {
+                "name": "BIOS",
+                "description":"Performs initialization of hardware components during booting",
+                "firmware_version_path":"dmidecode -s bios-version"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "Draw1",
+                "fans": [
+                    {
+                        "name": "FAN1"
+                    },
+                    {
+                        "name": "FAN2"
+                    },
+                    {
+                        "name": "FAN3"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "PSU1",
+                "fans": [
+                    {
+                        "name": "PSU1-FAN1"
+                    }
+                ],
+                "thermals": [
+                    {
+                        "name": "PSU1_Ambient",
+                        "position": "PSU"
+                    },
+                    {
+                        "name": "PSU1_SR_Hotspot",
+                        "position": "PSU"
+                    },
+                    {
+                        "name": "PSU1_PFC_Hotspot",
+                        "position": "PSU"
+                    }
+                ]
+            },
+            {
+                "name": "PSU2",
+                "fans": [
+                    {
+                        "name": "PSU2-FAN1"
+                    }
+                ],
+                "thermals" :[
+                    {
+                        "name": "PSU2_Ambient",
+                        "position": "PSU"
+                    },
+                    {
+                        "name": "PSU2_SR_Hotspot",
+                        "position": "PSU"
+                    },
+                    {
+                        "name": "PSU2_PFC_Hotspot",
+                        "position": "PSU"
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "TMP75C_temp_0x48",
+                "position": "fpga i2c temp"
+            },
+            {
+                "name": "TMP75C_temp_0x49",
+                "position": "fpga i2c temp"
+            },
+            {
+                "name": "TMP75C_temp_0x4a",
+                "position": "fpga i2c temp"
+            },
+            {
+                "name": "TMP75C_temp_0x4b",
+                "position": "fpga i2c temp"
+            },
+            
+            {
+                "name": "xdpe132g5h_0x72_rail-1",
+                "position": "XDPE132G5H"
+            },
+            {
+                "name": "xdpe132g5h_0x72_rail-2",
+                "position": "XDPE132G5H"
+            },
+            {
+                "name": "xdpe132g5h_0x74_rail-1",
+                "position": "XDPE132G5H"
+            },
+            {
+                "name": "xdpe132g5h_0x74_rail-2",
+                "position": "XDPE132G5H"
+            },
+            {
+                "name": "CPU_Package",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_0",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_1",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_2",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_3",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_4",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_5",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_6",
+                "position": "CPU"
+            },
+            {
+                "name": "CPU_Core_7",
+                "position": "CPU"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "Ethernet0"
+            },
+            {
+                "name": "Ethernet4"
+            },
+            {
+                "name": "Ethernet8"
+            },
+            {
+                "name": "Ethernet12"
+            },
+            {
+                "name": "Ethernet16"
+            },
+            {
+                "name": "Ethernet20"
+            },
+            {
+                "name": "Ethernet24"
+            },
+            {
+                "name": "Ethernet28"
+            },
+            {
+                "name": "Ethernet32"
+            },
+            {
+                "name": "Ethernet36"
+            },
+            {
+                "name": "Ethernet40"
+            },
+            {
+                "name": "Ethernet44"
+            },
+            {
+                "name": "Ethernet48"
+            },
+            {
+                "name": "Ethernet52"
+            },
+            {
+                "name": "Ethernet56"
+            },
+            {
+                "name": "Ethernet60"
+            },
+            {
+                "name": "Ethernet64"
+            },
+            {
+                "name": "Ethernet68"
+            },
+            {
+                "name": "Ethernet72"
+            },
+            {
+                "name": "Ethernet76"
+            },
+            {
+                "name": "Ethernet80"
+            },
+            {
+                "name": "Ethernet84"
+            },
+            {
+                "name": "Ethernet88"
+            },
+            {
+                "name": "Ethernet92"
+            },
+            {
+                "name": "Ethernet96"
+            },
+            {
+                "name": "Etherne100"
+            },
+            {
+                "name": "Etherne104"
+            },
+            {
+                "name": "Etherne108"
+            },
+            {
+                "name": "Ethernet112"
+            },
+            {
+                "name": "Ethernet116"
+            },
+            {
+                "name": "Ethernet120"
+            },
+            {
+                "name": "Ethernet124"
+            },
+            {
+                "name": "Ethernet128"
+            },
+            {
+                "name": "Ethernet132"
+            },
+            {
+                "name": "Ethernet136"
+            },
+            {
+                "name": "Ethernet140"
+            },
+            {
+                "name": "Ethernet144"
+            },
+            {
+                "name": "Ethernet148"
+            },
+            {
+                "name": "Ethernet152"
+            },
+            {
+                "name": "Ethernet156"
+            },
+            {
+                "name": "Ethernet160"
+            },
+            {
+                "name": "Ethernet164"
+            },
+            {
+                "name": "Ethernet168"
+            },
+            {
+                "name": "Ethernet172"
+            },
+            {
+                "name": "Ethernet176"
+            },
+            {
+                "name": "Ethernet180"
+            },
+            {
+                "name": "Ethernet184"
+            },
+            {
+                "name": "Ethernet188"
+            },
+            {
+                "name": "Ethernet192"
+            },
+            {
+                "name": "Ethernet200"
+            },
+            {
+                "name": "Ethernet208"
+            },
+            {
+                "name": "Ethernet216"
+            },
+            {
+                "name": "Ethernet224"
+            },
+            {
+                "name": "Ethernet232"
+            },
+            {
+                "name": "Ethernet240"
+            },
+            {
+                "name": "Ethernet248"
+            },
+            {
+                "name": "Ethernet257"
+            }
+        ],
+        "cpi_fp_map": [
+            {
+                "Ethernet257": 57
+            }
+        ],
+        "pmbus-dev":[
+            {
+                "non-std":"1",
+                "master":"0x65",
+                "slave":"0x34",
+                "sensors":[
+                    {
+                        "dir":"vx1",
+                        "vol":"vx1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx2",
+                        "vol":"vx2",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx3",
+                        "vol":"vx3",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx4",
+                        "vol":"vx4",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx5",
+                        "vol":"vx5",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp1",
+                        "vol":"vp1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp2",
+                        "vol":"vp2",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp3",
+                        "vol":"vp3",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp4",
+                        "vol":"vp4",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vh",
+                        "vol":"vh",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"aux1",
+                        "vol":"aux1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"aux2",
+                        "vol":"aux2",
+                        "vol_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "non-std":"1",
+                "master":"0x65",
+                "slave":"0x36",
+                "sensors":[
+                    {
+                        "dir":"vx1",
+                        "vol":"vx1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx2",
+                        "vol":"vx2",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx3",
+                        "vol":"vx3",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx4",
+                        "vol":"vx4",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vx5",
+                        "vol":"vx5",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp1",
+                        "vol":"vp1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp2",
+                        "vol":"vp2",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp3",
+                        "vol":"vp3",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vp4",
+                        "vol":"vp4",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"vh",
+                        "vol":"vh",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"aux1",
+                        "vol":"aux1",
+                        "vol_resol":"0.001"
+                    },
+                    {
+                        "dir":"aux2",
+                        "vol":"aux2",
+                        "vol_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "psu":"1",
+                "master":"0x64",
+                "slave":"0x58",
+                "sensors":[
+                    {
+                        "dir":"input1",
+                        "vol":"psu_v_in",
+                        "vol_resol":"0.001",
+                        "curr":"psu_i_in",
+                        "curr_resol":"0.001"
+                    },
+                    {
+                        "dir":"output1",
+                        "vol":"psu_v_out",
+                        "vol_resol":"0.001",
+                        "curr":"psu_i_out",
+                        "curr_resol":"0.001",
+                        "power":"psu_p_out",
+                        "power_resol":"0.000001"
+                    }
+                ],
+                "temp_sensors":[
+                    {
+                        "temp":"temp1_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp2_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp3_input",
+                        "temp_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "psu":"2",
+                "master":"0x64",
+                "slave":"0x5a",
+                "sensors":[
+                    {
+                        "dir":"input1",
+                        "vol":"psu_v_in",
+                        "vol_resol":"0.001",
+                        "curr":"psu_i_in",
+                        "curr_resol":"0.001"
+                    },
+                    {
+                        "dir":"output1",
+                        "vol":"psu_v_out",
+                        "vol_resol":"0.001",
+                        "curr":"psu_i_out",
+                        "curr_resol":"0.001",
+                        "power":"psu_p_out",
+                        "power_resol":"0.000001"
+                    }
+                ],
+                "temp_sensors":[
+                    {
+                        "temp":"temp1_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp2_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp3_input",
+                        "temp_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "master":"0x66",
+                "slave":"0x40",
+                "sensors":[
+                    {
+                        "dir":"input1",
+                        "vol":"in1_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr1_input",
+                        "curr_resol":"0.001",
+                        "power":"power1_input",
+                        "power_resol":"0.000001"
+                    },
+                    {
+                        "dir":"input2",
+                        "vol":"in2_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr2_input",
+                        "curr_resol":"0.001",
+                        "power":"power2_input",
+                        "power_resol":"0.000001"
+                    },
+                    {
+                        "asic_power":"1",
+                        "dir":"output1",
+                        "vol":"in3_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr3_input",
+                        "curr_resol":"0.002",
+                        "power":"power3_input",
+                        "power_resol":"0.000002"
+                    },
+                    {
+                        "asic_power":"1",
+                        "dir":"output2",
+                        "vol":"in4_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr4_input",
+                        "curr_resol":"0.001",
+                        "power":"power4_input",
+                        "power_resol":"0.000001"
+                    }
+                ],
+                "temp_sensors":[
+                    {
+                        "temp":"temp1_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp2_input",
+                        "temp_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "master":"0x66",
+                "slave":"0x41",
+                "sensors":[
+                    {
+                        "dir":"input1",
+                        "vol":"in1_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr1_input",
+                        "curr_resol":"0.001",
+                        "power":"power1_input",
+                        "power_resol":"0.000001"
+                    },
+                    {
+                        "dir":"input2",
+                        "vol":"in2_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr2_input",
+                        "curr_resol":"0.001",
+                        "power":"power2_input",
+                        "power_resol":"0.000001"
+                    },
+                    {
+                        "asic_power":"1",
+                        "dir":"output1",
+                        "vol":"in3_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr3_input",
+                        "curr_resol":"0.001",
+                        "power":"power3_input",
+                        "power_resol":"0.000001"
+                    },
+                    {
+                        "dir":"output2",
+                        "vol":"in4_input",
+                        "vol_resol":"0.002",
+                        "curr":"curr4_input",
+                        "curr_resol":"0.001",
+                        "power":"power4_input",
+                        "power_resol":"0.000002"
+                    }
+                ],
+                "temp_sensors":[
+                    {
+                        "temp":"temp1_input",
+                        "temp_resol":"0.001"
+                    },
+                    {
+                        "temp":"temp2_input",
+                        "temp_resol":"0.001"
+                    }
+                ]
+            },
+            {
+                "master":"0x68",
+                "slave":"0x10",
+                "sensors":[
+                    {
+                        "dir":"input1",
+                        "vol":"in1_input",
+                        "vol_resol":"0.001",
+                        "power":"power1_input",
+                        "power_resol":"0.0000012"
+                    },
+                    {
+                        "dir":"output1",
+                        "vol":"in2_input",
+                        "vol_resol":"0.001",
+                        "curr":"curr1_input",
+                        "curr_resol":"0.0012"
+                    }
+                ],
+                "temp_sensors":[
+                    {
+                        "temp":"temp1_input",
+                        "temp_resol":"0.001"
+                    }
+                ]
+            }
+        ],
+        "voltages": [
+            {
+                "name": "P1V2_DVDD",
+                "class":"TPS53915",
+                "adapter": 102,
+                "slave_addr":31,                
+                "pages":0,
+                "step":5,
+                "default":240,
+                "step_multiple":1000,
+                "vout_mask":"0xffff",
+                "vout_cmd_mask":"0xffff",
+                "range":5,
+                "adapter_read": 101,
+                "slave_addr_read":54,
+                "node_path": "/sys/bus/i2c/drivers/adm1166",
+                "mon_vol": "vx3",
+                "step_up": [0, 0.9, 1.8, 2.8, 3.7, 4.7, 5.7, 6.7, 7.7, 8.8, 9.9, 10.9, 12],
+                "step_down": [0, -1.1, -2.1, -3.2, -4.2, -5.2, -6.2, -7.1, -8.1, -9.0, -9.9, -10.7, -11.6]
+            },
+            {
+                "name": "P0V75_VDDK",
+                "class":"XDPE132G5H",
+                "adapter": 102,
+                "slave_addr":64,
+                "pages":2,
+                "page":0,
+                "step":625,
+                "step_multiple":1000000,
+                "vout_mask":"0xffff",
+                "vout_cmd_mask":"0xffff",
+                "default":3072,
+                "range":3
+            },
+            {
+                "name": "P1V2_AVDDH",
+                "class":"XDPE132G5H",
+                "adapter": 102,
+                "slave_addr":64,
+                "pages":2,
+                "page":1,
+                "step":625,
+                "step_multiple":1000000,
+                "vout_mask":"0xffff",
+                "vout_cmd_mask":"0xffff",
+                "default":4915,
+                "range":3
+            },
+            {
+                "name": "P0V75_AVDDL",
+                "class":"XDPE132G5H",
+                "adapter": 102,
+                "slave_addr":65,
+                "pages":2,
+                "page":0,
+                "step":625,
+                "step_multiple":1000000,
+                "vout_mask":"0xffff",
+                "vout_cmd_mask":"0xffff",
+                "default":3072,
+                "range":3
+            },
+            {
+                "name": "P3V3_SFP",
+                "class":"XDPE132G5H",
+                "adapter": 102,
+                "slave_addr":65,
+                "pages":2,
+                "page":1,
+                "step":625,
+                "step_multiple":1000000,
+                "vout_mask":"0xffff",
+                "vout_cmd_mask":"0xffff",
+                "default":6758,
+                "factor": 2,
+                "range":5
+            }
+        ]
+    },
+    "interfaces": {}
+}
