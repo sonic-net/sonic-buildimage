@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-ARG BASE=docker-sonic-gnmi-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 FROM $BASE AS base
 
