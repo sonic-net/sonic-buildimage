@@ -26,6 +26,7 @@ sonic-rs-common = { path = "../../../sonic-rs-common" }
 [dev-dependencies]
 serial_test = "1.0.0"
 mockall = "0.11.0"
+injectorpp = { git = "https://github.com/microsoft/injectorppforrust.git", rev = "c7317906a1d514ef99bf2fbd4c943908c265d280" } ## For ARM support
 
 [lints]
 workspace = true

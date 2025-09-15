@@ -1,15 +1,13 @@
 use bollard::container::WaitContainerOptions;
 use bollard::Docker;
 use futures_util::stream::{Stream, TryStreamExt};
-use sonic_rs_common::device_info::{self, StateDBTrait, StateDBConnector};
+use sonic_rs_common::device_info;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::task::JoinSet;
 use log::{error, info};
 
-pub static G_SERVICE: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
-pub static G_DEP_SERVICES: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -56,18 +54,8 @@ impl DockerApi for BollardDockerApi {
 pub async fn wait_for_container(
     docker_client: &dyn DockerApi,
     container_name: String,
-    g_thread_exit_event: Arc<AtomicBool>,
-) -> Result<(), Error> {
-    let state_db = StateDBConnector::new()
-        .map_err(|e| Error::DeviceInfo(sonic_rs_common::device_info::DeviceInfoError::SwSS(e)))?;
-    wait_for_container_with_db(docker_client, container_name, g_thread_exit_event, &state_db).await
-}
-
-pub async fn wait_for_container_with_db<T: StateDBTrait>(
-    docker_client: &dyn DockerApi,
-    container_name: String,
-    g_thread_exit_event: Arc<AtomicBool>,
-    state_db: &T,
+    dependent_services: Arc<Vec<String>>,
+    exit_event: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     info!("Waiting on container '{}'", container_name);
 
@@ -83,7 +71,7 @@ pub async fn wait_for_container_with_db<T: StateDBTrait>(
             .await;
 
         if let Err(e) = wait_result {
-            if g_thread_exit_event.load(Ordering::Acquire) {
+            if exit_event.load(Ordering::Acquire) {
                 info!("Container {} wait thread get exception: {}", container_name, e);
                 return Ok(());
             }
@@ -94,17 +82,16 @@ pub async fn wait_for_container_with_db<T: StateDBTrait>(
 
         info!("No longer waiting on container '{}'", container_name);
 
-        let g_dep_services = G_DEP_SERVICES.lock().unwrap();
-        if g_dep_services.contains(&container_name) {
-            let warm_restart = device_info::is_warm_restart_enabled_with_db(&container_name, state_db)?;
-            let fast_reboot = device_info::is_fast_reboot_enabled_with_db(state_db)?;
+        if dependent_services.contains(&container_name) {
+            let warm_restart = device_info::is_warm_restart_enabled(&container_name)?;
+            let fast_reboot = device_info::is_fast_reboot_enabled()?;
 
             if warm_restart || fast_reboot {
                 continue;
             }
         }
 
-        g_thread_exit_event.store(true, Ordering::Release);
+        exit_event.store(true, Ordering::Release);
         return Ok(());
     }
 }
@@ -114,39 +101,28 @@ pub async fn run_main(
     service: Option<Vec<String>>,
     dependent: Option<Vec<String>>,
 ) -> Result<i32, Error> {
-    {
-        let mut g_service = G_SERVICE.lock().unwrap();
-        let mut g_dep_services = G_DEP_SERVICES.lock().unwrap();
-
-        if let Some(service) = service {
-            *g_service = service;
-        }
-        if let Some(dependent) = dependent {
-            *g_dep_services = dependent;
-        }
-    }
+    let service_containers = service.unwrap_or_default();
+    let dependent_containers = dependent.unwrap_or_default();
 
     let mut container_names = Vec::new();
-    {
-        let g_service = G_SERVICE.lock().unwrap();
-        let g_dep_services = G_DEP_SERVICES.lock().unwrap();
-        container_names.extend(g_service.clone());
-        container_names.extend(g_dep_services.clone());
-    }
+    container_names.extend(service_containers);
+    container_names.extend(dependent_containers.clone());
 
     if container_names.is_empty() {
         return Ok(0);
     }
 
-    let g_thread_exit_event = Arc::new(AtomicBool::new(false));
+    let exit_event = Arc::new(AtomicBool::new(false));
+    let dependent_containers_arc = Arc::new(dependent_containers);
     let mut tasks = JoinSet::new();
 
     for container_name in container_names {
         let docker_clone = docker_client.clone();
-        let event_clone = g_thread_exit_event.clone();
+        let event_clone = exit_event.clone();
+        let deps_clone = dependent_containers_arc.clone();
 
         tasks.spawn(async move {
-            wait_for_container(docker_clone.as_ref(), container_name, event_clone).await
+            wait_for_container(docker_clone.as_ref(), container_name, deps_clone, event_clone).await
         });
     }
 

@@ -410,6 +410,7 @@ dependencies = [
  "bollard",
  "clap",
  "futures-util",
+ "injectorpp",
  "log",
  "mockall",
  "serial_test",
@@ -965,6 +966,14 @@ dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
  "serde",
+]
+
+[[package]]
+name = "injectorpp"
+version = "0.4.0"
+source = "git+https://github.com/microsoft/injectorppforrust.git?rev=c7317906a1d514ef99bf2fbd4c943908c265d280#c7317906a1d514ef99bf2fbd4c943908c265d280"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
