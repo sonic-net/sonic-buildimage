@@ -54,6 +54,7 @@ jobs:
     ${{ if eq(parameters.jobGroups, '') }}:
       jobGroups:
         - name: vs
+          pool: sonicso1ES-amd64
           variables:
             dbg_image: yes
             asan_image: yes
