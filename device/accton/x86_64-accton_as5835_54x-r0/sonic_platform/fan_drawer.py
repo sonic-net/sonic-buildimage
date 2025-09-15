@@ -22,7 +22,7 @@ class FanDrawer(FanDrawerBase):
         # FanTray is 0-based in platforms
         self.fantrayindex = fantray_index
         self.__initialize_fan_drawer()
-        
+
 
     def __initialize_fan_drawer(self):
         from sonic_platform.fan import Fan
@@ -67,7 +67,13 @@ class FanDrawer(FanDrawerBase):
         Returns:
             A boolean value, True if device is operating properly, False if not
         """
-        return self._fan_list[0].get_status()
+        from sonic_platform.fan import Fan
+
+        for fan in self._fan_list:
+            if not fan.get_status():
+                return False
+
+        return True
 
     def get_position_in_parent(self):
         """
@@ -88,3 +94,25 @@ class FanDrawer(FanDrawerBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the fan module status LED
+        Args:
+            color: A string representing the color with which to set the
+                   fan module status LED
+        Returns:
+            bool: True if status LED state is set successfully, False if not
+        """
+        return False # Not supported
+
+    def get_status_led(self):
+        """
+        Gets the state of the fan status LED
+        Returns:
+            A string, one of the predefined STATUS_LED_COLOR_* strings above
+        """
+        return {
+            True: self.STATUS_LED_COLOR_GREEN,
+            False: self.STATUS_LED_COLOR_RED
+        }.get(self.get_status(), self.STATUS_LED_COLOR_RED)
