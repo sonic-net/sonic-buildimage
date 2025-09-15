@@ -106,32 +106,32 @@ class EventDbFixture : public ::testing::Test {
         DBConnector eventDb("EVENT_DB", 0, true);
         //delete any entries in the EVENT_DB        
         delete_evdb(eventDb);
-
-        try
-        {
-            /* Start Eventdb in a separate thread*/
-            evtConsume= new EventConsume(&eventDb, event_profile, event_db_profile);
-            thread thr(&EventConsume::run, evtConsume);
-            thr.detach();
-        }
-        catch (exception &e)
-        {
-            printf("EventDbFixture::SetUP: Unable to get DB Connector, e=(%s)\n", e.what());
-       }
+        evtConsume= new EventConsume(&eventDb, event_profile, event_db_profile);
+        consumerThread = std::thread(&EventConsume::run, evtConsume);
     }
     
     void TearDown() override {
+        g_run = false;
+
+        if (consumerThread.joinable()) {
+            consumerThread.join(); // Wait for clean exit
+        }
+
         delete evtConsume;
-        evtConsume = NULL;
+        evtConsume = nullptr;
+
         delete pxy;
-        pxy= NULL;
+        pxy= nullptr;
+
         zmq_ctx_term(zctx);
-        zctx = NULL;
+        zctx = nullptr;
+
         clear_eventdb_data();
     }
     EventConsume *evtConsume;
     void *zctx;
     eventd_proxy *pxy;
+    std::thread consumerThread;
 };
 
 
@@ -370,7 +370,7 @@ TEST_F(EventDbFixture, rollover_purge)
     g_run = false;
     wr_evts.push_back(create_ev(303, 3, "SYSTEM_STATE", "NOTIFY", verify_data));
     run_pub(mock_pub, wr_source, wr_evts); 
-    this_thread::sleep_for(chrono::milliseconds(2000));        
+    this_thread::sleep_for(chrono::milliseconds(2000));
     zmq_close(mock_pub);
     printf("Rollover purge TEST completed\n");
 }
