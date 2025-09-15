@@ -1,6 +1,7 @@
 use clap::Parser;
-use docker_wait_any_rs::{run_main, Error};
+use docker_wait_any_rs::{run_main, BollardDockerApi, Error};
 use std::process;
+use std::sync::Arc;
 
 #[derive(Parser)]
 #[command(
@@ -30,6 +31,7 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let cli = Cli::parse();
-    let exit_code = run_main(cli.service, cli.dependent).await?;
+    let docker_client = Arc::new(BollardDockerApi::new()?);
+    let exit_code = run_main(docker_client, cli.service, cli.dependent).await?;
     process::exit(exit_code);
 }

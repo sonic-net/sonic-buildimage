@@ -1,109 +1,220 @@
-use docker_wait_any_rs::{run_main, G_DEP_SERVICES, G_SERVICE};
+use docker_wait_any_rs::{run_main, wait_for_container_with_db, G_DEP_SERVICES, G_SERVICE, DockerApi};
+use futures_util::stream::{self, Stream};
+use mockall::mock;
+use mockall::predicate::*;
 use serial_test::serial;
+use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
-use injectorpp::interface::injector::*;
-use bollard::Docker;
 use bollard::container::WaitContainerOptions;
-use bollard_stubs::models::ContainerWaitResponse;
-use futures_util::stream::{Stream, pending};
-use std::pin::Pin;
-
-// Create a mock Docker instance using a dummy connection that won't actually connect
-fn create_mock_docker() -> Docker {
-    // Create a Docker instance with a dummy HTTP URL that won't actually connect anywhere
-    // This gives us a valid Docker object for testing without real connections
-    Docker::connect_with_http("http://127.0.0.1:1", 1, bollard::API_DEFAULT_VERSION)
-        .expect("Failed to create mock Docker client")
-}
+use sonic_rs_common::device_info::StateDBTrait;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 fn setup_method() {
     G_SERVICE.lock().unwrap().clear();
     G_DEP_SERVICES.lock().unwrap().clear();
 }
 
-// Convert Python test: test_all_containers_running_timeout
-// Original Python test: Test with args -s swss -d syncd teamd, all containers running, test will not exit
-#[serial]
+mock! {
+    pub DockerApi {}
+
+    impl DockerApi for DockerApi {
+        fn wait_container(
+            &self,
+            container_name: String,
+            options: Option<WaitContainerOptions<String>>,
+        ) -> Pin<Box<dyn Stream<Item = Result<bollard::models::ContainerWaitResponse, bollard::errors::Error>> + Send>>;
+    }
+}
+
 #[tokio::test]
+#[serial]
 async fn test_all_containers_running_timeout() {
     setup_method();
 
-    // Python equivalent: with patch('sys.argv', ['docker-wait-any', '-s', 'swss', '-d', 'syncd', 'teamd']):
     let services = vec!["swss".to_string()];
     let dependents = vec!["syncd".to_string(), "teamd".to_string()];
 
-    // Use injectorpp to mock Docker::connect_with_local_defaults to return a successful connection
-    let mut injector = InjectorPP::new();
+    let mut mock_docker = MockDockerApi::new();
 
-    injector
-        .when_called(injectorpp::func!(
-            fn (Docker::connect_with_local_defaults)(
-            ) -> Result<Docker, bollard::errors::Error>
-        ))
-        .will_execute(injectorpp::fake!(
-            func_type: fn() -> Result<Docker, bollard::errors::Error>,
-            returns: Ok(create_mock_docker()),
-            times: 1
-        ));
+    mock_docker
+        .expect_wait_container()
+        .with(eq("swss".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
 
-    // Python: Mock docker.wait to block indefinitely (simulate containers running)
-    // Python: wait_event = threading.Event()
-    // Python: mock_docker_client.wait.side_effect = lambda _: wait_event.wait()
+    mock_docker
+        .expect_wait_container()
+        .with(eq("syncd".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
 
-    // Mock wait_container calls to block indefinitely (simulate containers running)
-    // Each container's wait_container call should never return, simulating running containers
+    mock_docker
+        .expect_wait_container()
+        .with(eq("teamd".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
 
-    // Mock wait_container for all containers to block indefinitely
-    injector
-        .when_called(injectorpp::func!(
-            fn (Docker::wait_container)(
-                &Docker, &str, Option<WaitContainerOptions<String>>
-            ) -> Pin<Box<dyn Stream<Item = Result<ContainerWaitResponse, bollard::errors::Error>> + Send>>
-        ))
-        .will_execute(injectorpp::fake!(
-            func_type: fn(&Docker, &str, Option<WaitContainerOptions<String>>) -> Pin<Box<dyn Stream<Item = Result<ContainerWaitResponse, bollard::errors::Error>> + Send>>,
-            returns: Box::pin(pending()), // Stream that never produces values (blocks indefinitely)
-        ));
+    let result = timeout(
+        Duration::from_secs(2),
+        run_main(Arc::new(mock_docker), Some(services), Some(dependents)),
+    )
+    .await;
 
-    // Python: Run main() in a separate thread and abort after 2 seconds
-    let result = timeout(Duration::from_secs(2), async {
-        run_main(Some(services.clone()), Some(dependents.clone())).await
-    }).await;
+    assert!(result.is_err(), "Should timeout when containers keep running");
+}
 
-    // Verify the global variables were set correctly (equivalent to Python setup verification)
-    let g_service = G_SERVICE.lock().unwrap();
-    let g_dep_services = G_DEP_SERVICES.lock().unwrap();
-    assert_eq!(*g_service, services, "Service should be set correctly");
-    assert_eq!(*g_dep_services, dependents, "Dependents should be set correctly");
+#[tokio::test]
+#[serial]
+async fn test_swss_exits_main_will_exit() {
+    setup_method();
 
-    // Python: Verify all docker_client.wait() are called for each container
-    // Python: expected_calls = [call('swss'), call('syncd'), call('teamd')]
-    let all_containers: Vec<String> = g_service.iter().chain(g_dep_services.iter()).cloned().collect();
-    assert_eq!(all_containers.len(), 3, "Should have 3 containers total");
-    assert!(all_containers.contains(&"swss".to_string()), "Should contain swss");
-    assert!(all_containers.contains(&"syncd".to_string()), "Should contain syncd");
-    assert!(all_containers.contains(&"teamd".to_string()), "Should contain teamd");
+    let services = vec!["swss".to_string()];
+    let dependents = vec!["syncd".to_string(), "teamd".to_string()];
 
-    // Python: Verify main does not exit normally after timeout
-    // Python: mock_exit.assert_not_called()
+    let mut mock_docker = MockDockerApi::new();
 
-    // Should timeout because containers are mocked to keep running
-    match result {
-        Err(_) => {
-            // Timeout occurred - this simulates containers running indefinitely
-            println!("Test succeeded: timeout occurred, containers are running indefinitely");
-        }
-        Ok(run_result) => {
-            match run_result {
-                Err(e) => {
-                    // If we get an error, it might be because we haven't fully mocked the container wait behavior
-                    println!("Test partial success: Got error (need to mock container waits): {}", e);
-                }
-                Ok(exit_code) => {
-                    println!("run_main should not succeed when containers are running (got exit code: {})", exit_code);
-                }
-            }
+    mock_docker
+        .expect_wait_container()
+        .with(eq("swss".to_string()), always())
+        .returning(|_, _| {
+            Box::pin(futures_util::stream::iter(vec![Ok(
+                bollard::models::ContainerWaitResponse {
+                    status_code: 0,
+                    error: None,
+                },
+            )]))
+        });
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("syncd".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("teamd".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    let result = timeout(
+        Duration::from_secs(2),
+        run_main(Arc::new(mock_docker), Some(services), Some(dependents)),
+    )
+    .await;
+
+    assert!(result.is_ok(), "Should not timeout");
+    let exit_code = result.unwrap().unwrap();
+    assert_eq!(exit_code, 0, "Should exit with code 0");
+}
+
+#[tokio::test]
+#[serial]
+async fn test_empty_args_main_will_exit() {
+    setup_method();
+
+    let mock_docker = MockDockerApi::new();
+
+    let result = run_main(Arc::new(mock_docker), None, None).await;
+
+    assert!(result.is_ok(), "Main should exit successfully");
+    let exit_code = result.unwrap();
+    assert_eq!(exit_code, 0, "Main should exit with code 0 when no containers specified");
+}
+
+// Mock implementation for testing
+#[derive(Default)]
+struct MockStateDbConnector {
+    data: HashMap<String, HashMap<String, String>>,
+}
+
+impl MockStateDbConnector {
+    fn new() -> Self {
+        Self {
+            data: HashMap::new(),
         }
     }
+
+    fn set_value(&mut self, key: &str, field: &str, value: &str) {
+        self.data
+            .entry(key.to_string())
+            .or_insert_with(HashMap::new)
+            .insert(field.to_string(), value.to_string());
+    }
+}
+
+impl StateDBTrait for MockStateDbConnector {
+    fn hget(&self, key: &str, field: &str) -> std::result::Result<Option<swss_common::CxxString>, swss_common::Exception> {
+        Ok(self.data
+            .get(key)
+            .and_then(|fields| fields.get(field))
+            .map(|s| swss_common::CxxString::from(s.as_str())))
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn test_teamd_exits_warm_restart_main_will_not_exit() {
+    setup_method();
+
+    let services = vec!["swss".to_string()];
+    let dependents = vec!["syncd".to_string(), "teamd".to_string()];
+
+    // Set up warm restart enabled
+    let mut mock_db = MockStateDbConnector::new();
+    mock_db.set_value("WARM_RESTART_ENABLE_TABLE|system", "enable", "true");
+
+    let mut mock_docker = MockDockerApi::new();
+
+    // teamd exits after returning one wait response, others wait indefinitely
+    mock_docker
+        .expect_wait_container()
+        .with(eq("teamd".to_string()), always())
+        .returning(|_, _| {
+            Box::pin(futures_util::stream::iter(vec![Ok(
+                bollard::models::ContainerWaitResponse {
+                    status_code: 0,
+                    error: None,
+                },
+            )]))
+        });
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("swss".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    mock_docker
+        .expect_wait_container()
+        .with(eq("syncd".to_string()), always())
+        .returning(|_, _| Box::pin(stream::pending()));
+
+    // Set up global variables
+    {
+        let mut g_service = G_SERVICE.lock().unwrap();
+        let mut g_dep_services = G_DEP_SERVICES.lock().unwrap();
+        *g_service = services;
+        *g_dep_services = dependents;
+    }
+
+    let g_thread_exit_event = Arc::new(AtomicBool::new(false));
+
+    // Test teamd container specifically - it should continue waiting due to warm restart
+    let docker_clone = Arc::new(mock_docker);
+    let event_clone = g_thread_exit_event.clone();
+
+    let result = timeout(
+        Duration::from_secs(2),
+        wait_for_container_with_db(
+            docker_clone.as_ref(),
+            "teamd".to_string(),
+            event_clone,
+            &mock_db,
+        ),
+    )
+    .await;
+
+    // Should timeout because warm restart is enabled and teamd is a dependent service
+    assert!(result.is_err(), "Should timeout when warm restart is enabled and teamd exits");
+
+    // Verify exit event was not set (container should continue waiting)
+    assert!(!g_thread_exit_event.load(Ordering::Acquire), "Exit event should not be set when warm restart is enabled");
 }

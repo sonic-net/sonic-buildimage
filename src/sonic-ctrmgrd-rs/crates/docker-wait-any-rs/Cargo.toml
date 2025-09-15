@@ -13,6 +13,7 @@ name = "docker-wait-any-rs"
 path = "src/main.rs"
 
 [dependencies]
+async-trait = "0.1.77"
 bollard = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
@@ -24,8 +25,7 @@ sonic-rs-common = { path = "../../../sonic-rs-common" }
 
 [dev-dependencies]
 serial_test = "1.0.0"
-injectorpp = "0.4.0"
-bollard-stubs = "=1.45.0-rc.26.0.1"
+mockall = "0.11.0"
 
 [lints]
 workspace = true
