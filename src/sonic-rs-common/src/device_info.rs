@@ -1,7 +1,5 @@
 use swss_common::DbConnector;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
+
 
 #[derive(thiserror::Error, Debug)]
 pub enum DeviceInfoError {
