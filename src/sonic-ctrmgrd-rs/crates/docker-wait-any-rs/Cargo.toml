@@ -20,7 +20,8 @@ tokio = { workspace = true }
 futures-util = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-log = "0.4"
+tracing-subscriber = { workspace = true }
+syslog-tracing = { workspace = true }
 sonic-rs-common = { path = "../../../sonic-rs-common" }
 
 [dev-dependencies]

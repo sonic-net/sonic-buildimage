@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::task::JoinSet;
-use log::{error, info};
+use tracing::{error, info};
 
 
 #[derive(thiserror::Error, Debug)]
