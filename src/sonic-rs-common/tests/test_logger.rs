@@ -4,10 +4,9 @@ use gag::BufferRedirect;
 use std::io::Read;
 
 #[cfg(test)]
-mod test_sys_logger {
+mod test_logger {
     use super::*;
 
-    // Test equivalent to TestSysLogger::test_notice_log
     #[test]
     fn test_notice_log() {
         let mut logger = Logger::new(Some("test_logger".to_string()))
@@ -22,7 +21,6 @@ mod test_sys_logger {
         assert!(result.is_ok());
     }
 
-    // Test equivalent to TestSysLogger::test_basic
     #[test]
     fn test_basic() {
         let mut logger = Logger::new(Some("test_logger".to_string()))
@@ -37,7 +35,6 @@ mod test_sys_logger {
         assert!(logger.log(Logger::LOG_PRIORITY_ERROR, "error msg", true).is_ok());
     }
 
-    // Test equivalent to TestSysLogger::test_log_priority
     #[test]
     fn test_log_priority() {
         let mut logger = Logger::new(Some("test_logger".to_string()))
@@ -48,7 +45,6 @@ mod test_sys_logger {
         // For now, test that the setter doesn't panic
     }
 
-    // Test equivalent to TestSysLogger::test_log_priority_from_str
     #[test]
     fn test_log_priority_from_str() {
         // Note: The Python version has log_priority_from_str method
@@ -68,7 +64,6 @@ mod test_sys_logger {
         assert_eq!(Logger::LOG_PRIORITY_DEBUG as i32, Severity::LOG_DEBUG as i32);
     }
 
-    // Test equivalent to TestSysLogger::test_log_priority_to_str
     #[test]
     fn test_log_priority_to_str() {
         // Note: The Python version has log_priority_to_str method
@@ -87,7 +82,6 @@ mod test_sys_logger {
         assert!((Logger::LOG_PRIORITY_INFO as i32) < (Logger::LOG_PRIORITY_DEBUG as i32));
     }
 
-    // Test equivalent to TestSysLogger::test_runtime_config
     #[test]
     fn test_runtime_config() {
         // Note: The Python version tests runtime config with SwSS database
@@ -102,7 +96,6 @@ mod test_sys_logger {
         assert!(logger.log_debug("test message", false).is_ok());
     }
 
-    // Test equivalent to TestSysLogger::test_runtime_config_negative
     #[test]
     fn test_runtime_config_negative() {
         // Note: The Python version tests error handling in runtime config
