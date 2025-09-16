@@ -14,29 +14,32 @@ extern "C" void openSyslog() {
     openlog (NULL, LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL4);
 }
 
-extern "C" void writeToSyslog(char* ev_id, int ev_sev, char* ev_type, char* ev_act, char* ev_msg, char* ev_static_msg) {
+extern "C" void writeToSyslog(char* ev_id, int ev_sev, char* ev_type, char* ev_act,
+                              char* ev_src, char* ev_msg, char* ev_static_msg) {
     int SYSLOG_FACILITY = LOG_LOCAL4;
 
     if (!ev_act || std::strlen(ev_act) == 0) {
-        const char LOG_FORMAT[] = "[%s], %%%s: %s %s"; 
+        const char LOG_FORMAT[] = "[%s], %%%s: %%%%%s: %s %s"; 
                                                       // event Type
                                                       // Event Name
+                                                      // Event Source
                                                       // Static Desc
                                                       // Dynamic Desc
 
         // raise a syslog message
         syslog(LOG_MAKEPRI(ev_sev, SYSLOG_FACILITY), LOG_FORMAT,
-            safe(ev_type), safe(ev_id), safe(ev_static_msg), safe(ev_msg));
+            safe(ev_type), safe(ev_id), safe(ev_src), safe(ev_static_msg), safe(ev_msg));
     } else {
-        const char LOG_FORMAT[] = "[%s] (%s), %%%s: %s %s"; 
+        const char LOG_FORMAT[] = "[%s] (%s), %%%s: %%%%%s: %s %s"; 
                                                       // event Type
                                                       // event action
                                                       // Event Name
+                                                      // Event Source
                                                       // Static Desc
                                                       // Dynamic Desc
         // raise a syslog message
         syslog(LOG_MAKEPRI(ev_sev, SYSLOG_FACILITY), LOG_FORMAT,
-            safe(ev_type), safe(ev_act), safe(ev_id), safe(ev_static_msg), safe(ev_msg));
+            safe(ev_type), safe(ev_act), safe(ev_id), safe(ev_src), safe(ev_static_msg), safe(ev_msg));
     }
 }
 
