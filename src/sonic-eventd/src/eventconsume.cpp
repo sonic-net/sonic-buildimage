@@ -82,7 +82,7 @@ void EventConsume::run()
 {
 
     SWSS_LOG_ENTER();
-    event_handle_t hsub = events_init_subscriber(false, 3000);
+    event_handle_t hsub = events_init_subscriber();
 
     if (hsub == nullptr) {
         SWSS_LOG_ERROR("Failed to initialize event subscriber");
@@ -99,6 +99,7 @@ void EventConsume::run()
 
         int rc = event_receive(hsub, evt); 
         if (rc != 0) {
+            SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
             continue;
         }
         handle_notification(evt);
@@ -129,8 +130,6 @@ void EventConsume::read_eventd_config(bool read_all) {
 
 void EventConsume::handle_notification(const event_receive_op_t& evt)
 {
-    SWSS_LOG_ENTER();
-
     string ev_id, ev_msg, ev_src, ev_act, ev_timestamp, ev_type("EVENT"),
            ev_static_msg(""), ev_reckey;
     string ev_sev = string(EVENT_SEVERITY_INFORMATIONAL_STR);
@@ -246,7 +245,8 @@ void EventConsume::handle_notification(const event_receive_op_t& evt)
     updateEventStatistics(true, is_raise, is_ack, is_clear);
 
     // raise a syslog message
-    writeToSyslog(ev_id.c_str(), (int)(SYSLOG_SEVERITY.find(ev_sev)->second), ev_type.c_str(), ev_act.c_str(), ev_msg.c_str(), ev_static_msg.c_str());
+    writeToSyslog(ev_id.c_str(), (int)(SYSLOG_SEVERITY.find(ev_sev)->second), ev_type.c_str(), ev_act.c_str(),
+                   ev_src.c_str(), ev_msg.c_str(), ev_static_msg.c_str());
 
     return;
 }
@@ -384,7 +384,7 @@ void EventConsume::modifyEventStats(string seq_id) {
 }
 
 void EventConsume::purge_events() {
-    SWSS_LOG_ENTER();
+
     uint32_t size = event_history_list.size();
 
     while (size >= m_count) {
@@ -501,15 +501,12 @@ void EventConsume::fetchFieldValues(const event_receive_op_t& evt,
         if (idx.first == "type-id") {
             ev_id = idx.second;
             vec.push_back(FieldValueTuple("type-id", ev_id));
-            SWSS_LOG_DEBUG("type-id: <%s> ", ev_id.c_str());
         } else if (idx.first == "text") {
             ev_msg = idx.second;
             vec.push_back(FieldValueTuple("text", ev_msg));
-            SWSS_LOG_DEBUG("text: <%s> ", ev_msg.c_str());
         } else if (idx.first == "resource") {
             ev_src = idx.second;
             vec.push_back(idx);
-            SWSS_LOG_DEBUG("resource: <%s> ", ev_src.c_str());
         } else if (idx.first == "action") {
             ev_act = idx.second;
             // for events, action is empty
