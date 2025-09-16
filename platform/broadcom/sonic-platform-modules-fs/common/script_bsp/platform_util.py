@@ -13,6 +13,7 @@ import shutil
 import gzip
 import ast
 import syslog
+from typing import Tuple
 from public.platform_common_config import MGMT_VERSION_PATH, SYSLOG_PREFIX
 
 G_RESTFUL_CLASS = None
@@ -671,6 +672,63 @@ def getPid(name):
             ret.append(dirname)
     return ret
 
+def set_file_and_dir_permissions_if_root(
+    file_path: str,
+    dir_mode: int = 0o777,
+    file_mode: int = 0o666
+) -> Tuple[bool, str]:
+    """
+    (Updated docstring) If the current user is root, atomically set permissions for the parent directory of the specified file (to `dir_mode`) 
+    and the file itself (to `file_mode`). The operation is atomic: either both permissions are set successfully, or no changes are made.
+    
+    Parameters:
+        file_path (str): Absolute path to the file (e.g., /a/b/c.txt).
+        dir_mode (int): Permissions for the parent directory (default: 0o777, recommended for most directories).
+        file_mode (int): Permissions for the file (default: 0o666, recommended for most files).
+    
+    Returns:
+        Tuple[bool, str]: (True if successful, "Success") or (False if failed, detailed error message).
+    """
+    # Check if the current user is root (only root can modify permissions of other users' files)
+    if os.geteuid() != 0:
+        return False, "Not running as root (requires root privileges)"
+    
+    # Check if the file path is absolute (relative paths may cause unexpected parent directory resolution)
+    if not os.path.isabs(file_path):
+        return False, "File path must be an absolute path (e.g., /a/b/c.txt)"
+    
+    # Check if the file exists (cannot set permissions for a non-existent file)
+    if not os.path.exists(file_path):
+        return False, f"File not found: {file_path} (verify the path is correct)"
+    
+    parent_dir = os.path.dirname(file_path)
+
+    # Get the original permissions of the parent directory (to rollback if file permission setting fails)
+    try:
+        original_dir_stat = os.stat(parent_dir)
+        original_dir_mode = original_dir_stat.st_mode & 0o777  # Extract only the permission bits (ignore other flags)
+    except Exception as e:
+        return False, f"Failed to retrieve parent directory permissions: {str(e)}"
+    
+    # Attempt to set permissions for the parent directory
+    try:
+        os.chmod(parent_dir, dir_mode)
+    except Exception as e:
+        return False, f"Failed to set parent directory permissions: {str(e)}"
+    
+    # Attempt to set permissions for the file (rollback parent directory permissions if this fails)
+    try:
+        os.chmod(file_path, file_mode)
+    except Exception as e:
+        # Rollback: Restore the parent directory to its original permissions
+        try:
+            os.chmod(parent_dir, original_dir_mode)
+        except Exception as rollback_e:
+            return False, f"Failed to set file permissions (and rollback of parent directory permissions failed): {str(e)}; Rollback error: {str(rollback_e)}"
+        return False, f"Failed to set file permissions (parent directory permissions rolled back successfully): {str(e)}"
+    
+    return True, "Success"
+
 def setup_logger(log_file, max_bytes=1024*1024*5, backup_count=3):
     dir_path = os.path.dirname(log_file)
     if not os.path.exists(dir_path):
@@ -689,6 +747,8 @@ def setup_logger(log_file, max_bytes=1024*1024*5, backup_count=3):
         handler.setFormatter(formatter)
 
         logger.addHandler(handler)
+
+        set_file_and_dir_permissions_if_root(log_file)
 
     return logger
 
