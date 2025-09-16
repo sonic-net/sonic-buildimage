@@ -61,7 +61,17 @@ jobs:
         displayName: 'Checkout commit'
       - script: |
           set -x
-          sudo setfacl -R -b $(Agent.BuildDirectory)
+          # Make symbolic link for the workspace to increase the space
+          sudo mkdir -p /data/w
+          if [[ "$(realpath $(Agent.BuildDirectory)/../)" != "$(realpath /data/w)" ]];then
+            sudo mv $(Agent.BuildDirectory)/ /data/w
+            ln -s /data/w/$(basename $(Agent.BuildDirectory)) $(Agent.BuildDirectory)
+          fi
+          sudo setfacl -R -b /data/w
+          sudo chown $USER:$(id -gn) /data/w
+
+          echo "pwd=$(pwd)"
+          ls -lt $(Agent.BuildDirectory) $(Agent.BuildDirectory)/s
         displayName: 'setfacl'
       - script: |
           set -ex
