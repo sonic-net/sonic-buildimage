@@ -65,7 +65,7 @@ jobs:
         displayName: 'setfacl'
       - script: |
           set -ex
-          sudo pip3 install j2cli --break-system-packages
+          sudo pip3 install jinjanator --break-system-packages
           pip3 install --user j2cli --break-system-packages
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
