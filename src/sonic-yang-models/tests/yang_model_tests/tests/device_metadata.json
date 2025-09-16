@@ -63,6 +63,12 @@
     "DEVICE_METADATA_TYPE_MGMT_ACCESS_ROUTER_PATTERN": {
         "desc": "DEVICE_METADATA value as MgmtAccessRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_LOWER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as LowerMgmtAggregator for Type field"
+    },
+    "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
+        "desc": "DEVICE_METADATA value as UpperMgmtAggregator for Type field"
+    },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "desc": "DEVICE_METADATA value as SmartSwitchDPU for Type field"
     },
