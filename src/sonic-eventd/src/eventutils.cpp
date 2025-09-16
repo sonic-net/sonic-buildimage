@@ -37,11 +37,18 @@ bool parse_config(const char *filename, unsigned int& days, unsigned int& count)
     std::ifstream ifs(filename);
 
     if (!ifs.is_open()) {
-        std::cerr << "Error: File does not exist or cannot be opened." << std::endl;
+        std::cerr << "Failed to open file: " << filename << std::endl;
         return false;
     }
 
-    json j = json::parse(ifs);
+    json j;
+    try {
+      j = json::parse(ifs);
+    }
+    catch (const std::exception &e) {
+        SWSS_LOG_ERROR("Error parsing config file %s:%s ", filename, e.what());
+        return false;
+    }
     for (json::iterator it = j.begin(); it != j.end(); ++it) {
         if(it.key() == "max-days") {
             days = it.value();
@@ -54,27 +61,40 @@ bool parse_config(const char *filename, unsigned int& days, unsigned int& count)
 }
 
 bool parse(const char *filename, EventMap& tmp_event_table) {
-    ifstream fs(filename);
-    if (!fs.is_open()) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        SWSS_LOG_ERROR("Failed to open file: %s", filename);
         return false;
     }
 
-    fstream file(filename, fstream::in);
     json j;
-    file >> j;
+    try {
+       file >> j;
+    }
+    catch (const std::exception &e) {
+        SWSS_LOG_ERROR("Error parsing profile file %s:%s ", filename, e.what());
+        return false;
+    }
 
-    if (j["events"].size() == 0) {
+    if (!j.contains("events") || j["events"].empty()) {
         SWSS_LOG_NOTICE("No entries in 'events' field in %s", filename);
         return false;
     }
 
-    for (size_t i = 0; i < j["events"].size(); i++) {
-        auto elem = j["events"][i];
+
+    for (const auto& elem : j["events"]) {
+        if (!elem.contains("name") || !elem.contains("severity") ||
+            !elem.contains("enable")) {
+            SWSS_LOG_ERROR("Missing required fields in event entry in %s", filename);
+            continue;
+        }
         struct EventInfo_t ev_info;
         string ev_name = elem["name"];
         ev_info.severity = elem["severity"];
         ev_info.enable = elem["enable"];
-        ev_info.static_event_msg = elem["message"];
+        if (elem.contains("message")) {
+            ev_info.static_event_msg = elem["message"];
+        }
         tmp_event_table.emplace(ev_name, ev_info);
     }
 
