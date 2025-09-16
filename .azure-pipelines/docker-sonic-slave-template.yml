@@ -33,8 +33,8 @@ parameters:
   default: sonicso1ES-amd64
   values:
   - sonicso1ES-amd64
-  - sonicbld-arm64
-  - sonicbld-armhf
+  - sonicso1ES-arm64
+  - sonicso1ES-armhf
 
 jobs:
 - job: sonic_slave_${{ parameters.dist }}${{ parameters.march }}
