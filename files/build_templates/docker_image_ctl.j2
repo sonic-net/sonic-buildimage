@@ -525,7 +525,7 @@ start() {
     {%- if docker_container_name == "swss" %}
     # Generate the asic_table.json and peripheral_table.json
     if [ ! -f /etc/sonic/asic_table.json ] && [ -f /usr/share/sonic/templates/asic_table.j2 ]; then
-        sonic-cfggen -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
+        sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render asic_table.json"
             echo "$(cat errorlog.txt)"
