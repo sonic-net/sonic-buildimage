@@ -1,0 +1,36 @@
+From ee7090b9a77912d84eb153f1b4188bc72c3e8b20 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Tue, 27 May 2025 08:43:38 -0400
+Subject: [PATCH] staticd: fix deref of NULL pointer in srv6 code
+
+Ensure we check sid->locator before deref'ing it; this was
+coverity SA 1643169
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ staticd/static_zebra.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/staticd/static_zebra.c b/staticd/static_zebra.c
+index 5ea80a619e34..82a2d41afa6f 100644
+--- a/staticd/static_zebra.c
++++ b/staticd/static_zebra.c
+@@ -989,7 +989,7 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 	struct vrf *vrf;
+ 	struct interface *ifp;
+ 
+-	if (!sid || !static_zebra_sid_locator_block_check(sid))
++	if (!sid)
+ 		return;
+ 
+ 	if (!sid->locator) {
+@@ -997,6 +997,9 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
+ 		return;
+ 	}
+ 
++	if (!static_zebra_sid_locator_block_check(sid))
++		return;
++
+ 	/* convert `srv6_endpoint_behavior_codepoint` to `seg6local_action_t` */
+ 	switch (sid->behavior) {
+ 	case SRV6_ENDPOINT_BEHAVIOR_END:

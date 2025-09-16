@@ -1,0 +1,175 @@
+From 8061d2cdc20298c45db9e9e496dd51c8567a3bc5 Mon Sep 17 00:00:00 2001
+From: Rajasekar Raja <rajasekarr@nvidia.com>
+Date: Fri, 13 Jun 2025 15:03:16 -0700
+Subject: [PATCH] static: [SRv6] Fixing uninstall and reinstall uA Sids upon
+ Intf flaps
+
+Static daemons in the current code does not remove/add SRv6 sids configured
+with behavior uA on an interface when it receives the interface events.
+
+Fixing this.
+
+Initial state:
+ip -6 -d route  | grep End.X
+unicast fcbb:bbbb:fe5::/48 nhid 16  encap seg6local action End.X nh6 fe80::c0f9:81ff:fe68:6455 dev r1-eth1 proto 196 scope global metric 20 pref medium
+vtysh -c "sh ipv6 route" | grep seg6
+S>* fcbb:bbbb:fe5::/48 [1/0] is directly connected, r1-eth1, seg6local uA nh6 fe80::c0f9:81ff:fe68:6455, weight 1, 00:00:20
+
+ip link set down r1-eth1
+vtysh -c "sh ipv6 route" | grep seg6
+S>  fcbb:bbbb:fe5::/48 [1/0] is directly connected, r1-eth1 inactive, seg6local uA nh6 fe80::c0f9:81ff:fe68:6455, weight 1, 00:00:28
+ip -6 -d route  | grep End.X
+
+ip link set up r1-eth1
+vtysh -c "sh ipv6 route" | grep seg6
+S>* fcbb:bbbb:fe5::/48 [1/0] is directly connected, r1-eth1, seg6local uA nh6 fe80::c0f9:81ff:fe68:6455, weight 1, 00:00:41
+ip -6 -d route  | grep End.X
+
+Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+---
+ staticd/static_srv6.c                         |  3 +
+ .../expected_srv6_sids_interface_down.json    | 68 +++++++++++++++++++
+ .../static_srv6_sids/test_static_srv6_sids.py | 41 +++++++++++
+ 3 files changed, 112 insertions(+)
+ create mode 100644 tests/topotests/static_srv6_sids/expected_srv6_sids_interface_down.json
+
+diff --git a/staticd/static_srv6.c b/staticd/static_srv6.c
+index d4d31436c1f8..18a9691c3776 100644
+--- a/staticd/static_srv6.c
++++ b/staticd/static_srv6.c
+@@ -50,6 +50,9 @@ void static_ifp_srv6_sids_update(struct interface *ifp, bool is_up)
+ 	 */
+ 	for (ALL_LIST_ELEMENTS_RO(srv6_sids, node, sid)) {
+ 		if ((strcmp(sid->attributes.vrf_name, ifp->name) == 0) ||
++		    ((sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X ||
++		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_X_NEXT_CSID) &&
++		     strcmp(sid->attributes.ifname, ifp->name) == 0) ||
+ 		    (strncmp(ifp->name, DEFAULT_SRV6_IFNAME, sizeof(ifp->name)) == 0 &&
+ 		     (sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END ||
+ 		      sid->behavior == SRV6_ENDPOINT_BEHAVIOR_END_NEXT_CSID))) {
+diff --git a/tests/topotests/static_srv6_sids/expected_srv6_sids_interface_down.json b/tests/topotests/static_srv6_sids/expected_srv6_sids_interface_down.json
+new file mode 100644
+index 000000000000..9f5878f05b49
+--- /dev/null
++++ b/tests/topotests/static_srv6_sids/expected_srv6_sids_interface_down.json
+@@ -0,0 +1,68 @@
++{
++	"fcbb:bbbb:1:fe10::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe10::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"nexthops": [
++				{
++					"directlyConnected": true,
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT4"
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe20::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe20::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"nexthops": [
++				{
++					"directlyConnected": true,
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT6"
++					}
++				}
++			]
++		}
++	],
++	"fcbb:bbbb:1:fe30::/64": [
++		{
++			"prefix": "fcbb:bbbb:1:fe30::/64",
++			"prefixLen": 64,
++			"protocol": "static",
++			"selected": true,
++			"destSelected": true,
++			"distance": 1,
++			"metric": 0,
++			"installed": true,
++			"nexthops": [
++				{
++					"directlyConnected": true,
++					"active": true,
++					"weight": 1,
++					"seg6local": {
++						"action": "uDT46"
++					}
++				}
++			]
++		}
++	]
++}
+diff --git a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+index abf49df046b4..ef90e754dee6 100755
+--- a/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
++++ b/tests/topotests/static_srv6_sids/test_static_srv6_sids.py
+@@ -402,6 +402,47 @@ def check_srv6_static_sids(router, expected_file):
+     check_srv6_static_sids(router, "expected_srv6_sids.json")
+ 
+ 
++def test_srv6_static_sids_interface_down_up():
++    """
++    Test SRv6 route behavior when sr0 interface goes down and up
++    """
++    tgen = get_topogen()
++    if tgen.routers_have_failure():
++        pytest.skip(tgen.errors)
++    router = tgen.gears["r1"]
++
++    def _check_srv6_static_sids(router, expected_route_file):
++        logger.info("checking zebra srv6 static sids")
++        output = json.loads(router.vtysh_cmd("show ipv6 route static json"))
++        expected = open_json_file("{}/{}".format(CWD, expected_route_file))
++        return topotest.json_cmp(output, expected)
++
++    def check_srv6_static_sids(router, expected_file):
++        func = functools.partial(_check_srv6_static_sids, router, expected_file)
++        _, result = topotest.run_and_expect(func, None, count=15, wait=1)
++        assert result is None, "Failed"
++
++    # First verify initial state
++    logger.info("Verifying initial SRv6 routes")
++    check_srv6_static_sids(router, "expected_srv6_sids.json")
++
++    # Bring down sr0 interface using ip link
++    logger.info("Bringing down sr0 interface using ip link")
++    router.run("ip link set sr0 down")
++
++    # Verify routes using sr0 are removed
++    logger.info("Verifying routes using sr0 are removed")
++    check_srv6_static_sids(router, "expected_srv6_sids_interface_down.json")
++
++    # Bring up sr0 interface using ip link
++    logger.info("Bringing up sr0 interface using ip link")
++    router.run("ip link set sr0 up")
++
++    # Verify routes are restored
++    logger.info("Verifying routes are restored")
++    check_srv6_static_sids(router, "expected_srv6_sids.json")
++
++
+ if __name__ == "__main__":
+     args = ["-s"] + sys.argv[1:]
+     sys.exit(pytest.main(args))
