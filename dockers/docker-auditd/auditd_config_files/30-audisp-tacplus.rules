@@ -22,8 +22,8 @@
 # We assume here that user 1000 is the first local user, and therefore
 # should not be looked up for tacacs.  You may need to change this for
 # your local configuration
--a always,exit -F arch=b32 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
--a always,exit -F arch=b64 -S execve -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+-a always,exit -F arch=b32 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
+-a always,exit -F arch=b64 -S exit -S exit_group -F auid>1000 -F auid!=4294967295 -k tacplus
 
 # In newer distributions (such as debian jessie), a number of auditing events
 # are logged by default even after the -D initialization.  If you are using

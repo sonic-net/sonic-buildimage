@@ -50,6 +50,7 @@ class Test_yang_models:
             'MaxElements': ['Too many'],
             'UnknownElement': ['Unknown element'],
             'Missing': ['Missing required element'],
+            "InvalidJSON": ['Invalid JSON data'],
             'None': [],
 # New keys are needed for libyang3's messages which are different.  Go
 # ahead and add them now with the libyang1 values (which are duplicates
@@ -274,9 +275,9 @@ class Test_yang_models:
             for test in self.tests:
                 test = test.strip()
                 if test in self.ExceptionTests:
-                    ret = ret + self.runExceptionTest(test);
+                    ret = ret + self.runExceptionTest(test)
                 elif test in self.SpecialTests:
-                    ret = ret + self.runSpecialTest(test);
+                    ret = ret + self.runSpecialTest(test)
                 else:
                     raise Exception("Unexpected Test")
         except Exception as e:

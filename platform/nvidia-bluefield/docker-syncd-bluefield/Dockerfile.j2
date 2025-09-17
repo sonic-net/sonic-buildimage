@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+## Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,10 @@ RUN apt-get update && \
         python3-dev \
         python3-setuptools \
         binutils-dev \
-        ethtool
+        ethtool \
+        pciutils
+
+RUN pip3 install ctypeslib2 clang==14
 
 {% if docker_syncd_bluefield_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -53,7 +56,9 @@ RUN apt-get clean -y && \
     rm -rf /debs
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
+
+RUN mkdir -p /etc/mlnx/
+COPY sai-*.profile /etc/mlnx/
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

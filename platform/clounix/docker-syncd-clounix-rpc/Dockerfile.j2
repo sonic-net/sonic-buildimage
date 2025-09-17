@@ -1,0 +1,59 @@
+FROM docker-syncd-clounix
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY \
+{% for deb in docker_syncd_clounix_rpc_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get purge -y syncd
+
+## Pre-install the fundamental packages
+RUN apt-get update \
+ && apt-get -y install  \
+    net-tools           \
+    python-pip          \
+    python-setuptools   \
+    build-essential     \
+    libssl-dev          \
+    libffi-dev          \
+    python-dev          \
+    wget                \
+    cmake               \
+    libqt5core5a        \
+    libqt5network5      \
+    libboost-atomic1.71.0
+
+RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
+{% for deb in docker_syncd_clounix_rpc_debs.split(' ') -%}
+dpkg_apt debs/{{ deb }}{{'; '}}
+{%- endfor %}
+
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+    && tar xvfz 1.0.0.tar.gz \
+    && cd nanomsg-1.0.0    \
+    && mkdir -p build      \
+    && cmake .             \
+    && make install        \
+    && ldconfig            \
+    && cd ..               \
+    && rm -fr nanomsg-1.0.0 \
+    && rm -f 1.0.0.tar.gz  \
+    && pip2 install cffi==1.7.0    \
+    && pip2 install --upgrade cffi==1.7.0 \
+    && pip2 install wheel  \
+    && pip2 install nnpy   \
+    && mkdir -p /opt       \
+    && cd /opt             \
+    && git clone https://github.com/p4lang/ptf.git \
+    && cp ptf/ptf_nn/ptf_nn_agent.py ./  \
+    && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
+    && rm -rf /root/deps
+
+RUN chmod +x  /usr/bin/clx_diag /usr/bin/warm-verifier /usr/bin/dsserve
+COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
@@ -29,14 +31,6 @@ RUN apt-get update
 {{ install_python_wheels(docker_lldp_whls.split(' ')) }}
 {% endif %}
 
-# Clean up
-RUN apt-get clean -y            && \
-    apt-get autoclean -y        && \
-    apt-get autoremove -y       && \
-    rm -rf /debs                   \
-           /python-wheels          \
-           ~/.cache
-
 COPY ["docker-lldp-init.sh", "/usr/bin/"]
 COPY ["start.sh", "/usr/bin/"]
 COPY ["waitfor_lldp_ready.sh", "/usr/bin/"]
@@ -45,7 +39,14 @@ COPY ["lldpd.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["lldpdSysDescr.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["lldpd", "/etc/default/"]
 COPY ["lldpmgrd", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/bin/docker-lldp-init.sh"]

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +19,10 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -ex
 
-MLXBF3_PINCTRL = pinctrl-mlxbf3-${MLXBF3_PINCTRL_DRIVER_VERSION}
-MODULE_DIR := $(shell pwd)/tmp/${MLXBF3_PINCTRL}
+MLXBF3_PINCTRL = ${MLXBF3_PINCTRL_DRIVER}-1.0
 GET_PACKAGE := $(shell pwd)/../recipes/get-soc-package.sh
 
-$(addprefix $(DEST)/, $(MLXBF3_PINCTRL_DRIVER)): $(DEST)/% :
+$(addprefix $(DEST)/, $(MLXBF3_PINCTRL_DRIVER_DKMS)): $(DEST)/% :
 	rm -rf ./tmp/
 	mkdir ./tmp/
 	pushd ./tmp/
@@ -33,7 +32,7 @@ $(addprefix $(DEST)/, $(MLXBF3_PINCTRL_DRIVER)): $(DEST)/% :
 	pushd ${MLXBF3_PINCTRL}
 
 	# Build the package
-	make -C /lib/modules/$(KVERSION)/build M=$(MODULE_DIR)
+	KVER=$(KVERSION) WITH_DKMS=1 dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 
-	mv ${MLXBF3_PINCTRL_DRIVER} $(DEST)/
+	mv ../${MLXBF3_PINCTRL_DRIVER_DKMS} $(DEST)/
 	popd
