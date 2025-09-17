@@ -57,8 +57,8 @@ $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:r
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/pmon/stormond:/usr/share/stormond:rw
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/platform_cache:/var/run/platform_cache:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/device/pddf:/usr/share/sonic/device/pddf:ro
-# Add LED device mounts for hardware access
-$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /sys/class/leds:/sys/class/leds:rw
+# Add sysfs mounts for hardware access
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /sys/:/sys/:rw
 
 # Mount Arista python library on Aboot images to be used by plugins
 $(DOCKER_PLATFORM_MONITOR)_aboot_RUN_OPT += -v /usr/lib/libsfp-eeprom.so:/usr/lib/libsfp-eeprom.so:ro
