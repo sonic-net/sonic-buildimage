@@ -263,6 +263,7 @@ class DpuModule(ModuleBase):
         self._name = f"DPU{self.dpu_id}"
         self.dpuctl_obj = DpuCtlPlat(self._name.lower())
         self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
