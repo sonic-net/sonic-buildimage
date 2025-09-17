@@ -235,6 +235,20 @@ def docker_from_env_side_effect():
     return dock_client()
 
 
+def mock_os_execv(cmd, args):
+    # global current_test_name, current_test_no, current_test_data
+    global mock_containers
+
+    if cmd == "/usr/bin/docker-rs" and len(args) == 3 and args[1] == "wait":
+        container_name = args[2]
+        if container_name in mock_containers:
+            mock_containers[container_name].wait()
+            return 0
+
+    print("Unexpected command in mock_os_execv: cmd={} args={}".format(cmd, args))
+    return -1
+
+
 def check_mock_containers():
     global current_test_data
 

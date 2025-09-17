@@ -167,9 +167,27 @@ NotificationResponse RebootBE::HandleRebootRequest(
 
   if (!RebootAllowed(request.method())) {
     response.status = swss::StatusCode::SWSS_RC_IN_USE;
-    response.json_string =
-        "Reboot not allowed at this time. Reboot, halt or "
-        "post-warmboot in progress";
+    RebManagerStatus current_status = GetCurrentStatus();
+
+    switch (current_status) {
+    	case RebManagerStatus::COLD_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Cold Reboot in progress";
+		break;
+    	case RebManagerStatus::HALT_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Halt Reboot in progress";
+		break;
+    	case RebManagerStatus::WARM_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Warm Reboot in progress";
+		break;
+	default:
+    		response.json_string =
+        	"Reboot not allowed at this time,current reboot status is unknown.";
+		break;
+    }
+		
     SWSS_LOG_WARN("%s", response.json_string.c_str());
     return response;
   }

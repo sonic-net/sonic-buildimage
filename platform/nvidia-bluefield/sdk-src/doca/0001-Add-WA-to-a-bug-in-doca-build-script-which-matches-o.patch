@@ -1,0 +1,30 @@
+From 8801a2b3e74e3383db4a7f630a0a7b439d34a7a1 Mon Sep 17 00:00:00 2001
+From: vkarri <vkarri@nvidia.com>
+Date: Fri, 30 May 2025 01:54:09 +0000
+Subject: [PATCH] Add WA to a bug in doca build script which matches on
+ prefixes
+
+doca-sdk-flow-dpa-provider depends on FlexIO but doca-sdk-flow does not. 
+build script because of the prefix match assumes doca-sdk-flow depends on FlexIO.
+Remove doca-sdk-flow-dpa-provider from FLEXIO_PACKAGES array until this is fixed in DOCA
+
+Signed-off-by: vkarri <vkarri@contoso.com>
+---
+ devtools/scripts/doca_build_packages.sh | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/devtools/scripts/doca_build_packages.sh b/devtools/scripts/doca_build_packages.sh
+index 44271ed..0f3c075 100755
+--- a/devtools/scripts/doca_build_packages.sh
++++ b/devtools/scripts/doca_build_packages.sh
+@@ -152,7 +152,6 @@ FLEXIO_PACKAGES=(
+     'doca-spcx-cc'
+     'doca-sdk-pcc-ztr-rttcc-algo'
+     'doca-sdk-sta'
+-    'doca-sdk-flow-dpa-provider'
+ )
+ 
+ CUDA_PACKAGES=(
+-- 
+2.39.5
+

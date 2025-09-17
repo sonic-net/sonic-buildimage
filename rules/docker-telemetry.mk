@@ -32,5 +32,4 @@ $(DOCKER_TELEMETRY)_RUN_OPT += -t
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
-$(DOCKER_TELEMETRY)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 $(DOCKER_TELEMETRY)_BASE_IMAGE_FILES += monit_telemetry:/etc/monit/conf.d

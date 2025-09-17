@@ -1,6 +1,8 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
-FROM {{ prefix }}p4lang/behavioral-model:latest
-## FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE={{ prefix }}p4lang/behavioral-model:latest
+## ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,12 +18,12 @@ RUN pip3 install supervisord-dependent-startup
 COPY ["start.sh", "/usr/bin/"]
 
 ## COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-## COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 ## COPY ["critical_processes", "/etc/supervisor/"]
 
-## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs
+FROM scratch
+
+# RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+COPY --from=base / /
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]
 ENTRYPOINT ["/usr/bin/start.sh"]

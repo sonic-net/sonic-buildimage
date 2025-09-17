@@ -13,6 +13,9 @@ After=opennsl-modules.service
 {% elif sonic_asic_platform == 'nephos' %}
 Requires=nps-modules.service
 After=nps-modules.service
+{% elif sonic_asic_platform == 'clounix' %}
+Requires=clx-modules.service
+After=clx-modules.service
 {% endif %}
 Requires=config-setup.service
 After=config-setup.service

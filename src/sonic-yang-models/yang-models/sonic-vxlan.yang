@@ -46,10 +46,10 @@ module sonic-vxlan {
             list VXLAN_TUNNEL_LIST {
 
                 key "name";
-                max-elements 1;
+                max-elements 2;
 
                 leaf name {
-                    type stypes:interface_name;
+                    type string;
                 }
 
                 leaf src_ip {

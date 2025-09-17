@@ -26,6 +26,7 @@
 #define ATTR_NAME_LEN 32
 #define STR_ATTR_SIZE 32
 #define DEV_TYPE_LEN 32
+#define ATTR_DATA_FORMAT_SIZE 32
 
 /* Each client has this additional data 
  */
@@ -33,6 +34,7 @@
 typedef struct PSU_DATA_ATTR
 {
     char aname[ATTR_NAME_LEN];                    // attr name, taken from enum psu_sysfs_attributes
+    char data_format[ATTR_DATA_FORMAT_SIZE];      // PMBUS number format, either linear11, linear16, or direct   
     char devtype[DEV_TYPE_LEN];       // either a 'eeprom' or 'cpld', or 'pmbus' attribute
     char devname[DEV_TYPE_LEN];       // Name of the device from where this sysfs attr is read
     uint32_t devaddr;
@@ -40,8 +42,10 @@ typedef struct PSU_DATA_ATTR
     uint32_t mask;
     uint32_t cmpval;
     uint32_t len;
+    int m;
+    int b;
+    int r;
     void *access_data;
-
 }PSU_DATA_ATTR;
 
 typedef struct PSU_SYSFS_ATTR_DATA
@@ -71,6 +75,8 @@ typedef struct PSU_DATA
 {
     int idx;    // psu index
     int num_psu_fans;
+    int num_psu_thermals;
+    u32 psu_temp_high_thresh_bitmap;
     PSU_DATA_ATTR psu_attr;
     int len;             // no of valid attributes for this psu client
     PSU_DATA_ATTR psu_attrs[MAX_PSU_ATTRS]; 
@@ -80,6 +86,14 @@ typedef struct PSU_PDATA
 {
     int idx;                    // psu index
     int num_psu_fans;      // num of fans supported by the PSU
+    int num_psu_thermals; // num of thermals supported by the PSU
+    /*
+     * Bitmap of supported thermal thresholds
+     * Bit 0 (LSB) corresponds to thermal sensor 1, bit 1 to sensor 2, etc.
+     * A bit value of 1 means the sensor supports high threshold.
+     * Needed as some PSUs may not support high threshold for all thermal sensors.
+     */
+    u32 psu_temp_high_thresh_bitmap;
     int len;             // no of valid attributes for this psu client
     PSU_DATA_ATTR *psu_attrs; 
 }PSU_PDATA;

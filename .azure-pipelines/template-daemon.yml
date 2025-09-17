@@ -5,7 +5,7 @@ steps:
       do
         sleep 120
         now=$(date +%s)
-        pids=$(ps -C docker -o pid,etime,args | grep "docker build" | cut -d" " -f2)
+        pids=$(ps -C docker-buildx -o pid,etime,args | grep "docker-buildx buildx build" | cut -d" " -f2)
         for pid in $pids
         do
           start=$(date --date="$(ls -dl /proc/$pid --time-style full-iso | awk '{print$6,$7}')" +%s)
