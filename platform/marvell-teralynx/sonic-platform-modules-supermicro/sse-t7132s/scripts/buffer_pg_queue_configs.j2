@@ -1,0 +1,152 @@
+{# This a jinja2 template to add missing configs of new ports after dyname port breakout. #}
+{# The user must provide a master_port to find it's child ports. #}
+{# Usage: sonic-cfggen --from-db --template ./buffer_pg_queue_configs.j2,config-db --write-to-db --additional-data '{"master_port":"Ethernet0"}' -#}
+
+{% set default_cable = '40m' %}
+{% macro abort(error) %}
+    {{ None['[ERROR] ' ~ error][0] }}
+{% endmacro -%}
+
+{% set port_index_list = [] %}
+{% for port in PORT %}
+    {%- if port == master_port %}
+        {%- if port_index_list.append(PORT[port]["index"]) %}{% endif %}
+    {%- endif %}
+{% endfor %}
+{% set port_index = port_index_list | join(',') -%}
+
+{%- if port_index == "" %}
+    {{ abort("Unable to get index for master port: " ~ master_port) }}
+{% endif %}
+
+{%- set port_names_list = [] %}
+{% for port in PORT %}
+    {%- if PORT[port]["index"] == port_index %}
+        {%- if port_names_list.append(port) %}{% endif %}
+    {%- endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+{
+    "CABLE_LENGTH": {
+        "AZURE": {
+    {% for port in port_names_list %}
+        "{{ port }}": "{{ default_cable }}"{%- if not loop.last -%},
+{% else %}
+
+        {%- endif %}
+    {% endfor %}
+
+        }
+    },
+    "BUFFER_PG": {
+{% for port in port_names_list %}
+        "{{ port }}|3-4": {
+             "profile" : "pg_lossless_{{ PORT[port]["speed"] }}_{{ default_cable }}_profile"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0": {
+            "profile" : "ingress_lossy_profile"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|1-2": {
+            "profile" : "ingress_lossy_profile"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5-7": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "BUFFER_QUEUE": {
+{% for port in port_names_list %}
+        "{{ port }}|3-4": {
+             "profile" : "egress_lossless_profile"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5-7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "PORT": {
+{% for port in port_names_list %}
+        "{{ port }}": {
+            "admin_status": "down",
+{% if PORT[port]["speed"] == '50000' %}
+            "fec": "none",
+{% elif PORT[port]["speed"] == '40000' %}
+            "fec": "none",
+{% else %}
+            "fec": "rs",
+{% endif %}
+            "mtu": "9100"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "PORT_QOS_MAP": {
+{% for port in port_names_list %}
+       "{{ port }}": {
+            "tc_to_pg_map": "AZURE",
+            "tc_to_queue_map": "AZURE",
+            "dscp_to_tc_map": "AZURE",
+            "pfc_to_queue_map": "AZURE",
+            "pfcwd_sw_enable": "3,4",
+            "pfc_enable": "3,4"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "QUEUE": {
+{% for port in port_names_list %}
+        "{{ port }}|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile"  : "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|5": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for port in port_names_list %}
+        "{{ port }}|6": {
+            "scheduler": "scheduler.0"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
+}
