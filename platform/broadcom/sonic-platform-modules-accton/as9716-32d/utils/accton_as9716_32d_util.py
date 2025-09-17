@@ -186,7 +186,7 @@ def log_os_system(cmd, show):
     logging.info('Run :'+cmd)
     status = 1
     output = ""
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell([cmd])
     my_log (cmd +"with result:" + str(status))
     #my_log ("cmd:" + cmd)
     #my_log ("      output:"+output)
@@ -248,7 +248,7 @@ def driver_uninstall():
 
 def eeprom_check():
     cmd = "i2cget -y -f 0 0x57"
-    status, output = subprocess.getstatusoutput(cmd)
+    status, output = getstatusoutput_noshell(cmd)
     return status
 
 def device_install():
