@@ -2,4 +2,5 @@
 auto usb0
 allow-hotplug usb0
 iface usb0 inet6
+up sysctl net.ipv6.neigh.usb0.base_reachable_time_ms=30000
 up ifconfig usb0 txqueuelen 64
