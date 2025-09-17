@@ -39,18 +39,19 @@ class ThermalUtil(object):
     """ Dictionary where
         key1 = thermal id index (integer) starting from 1
         value = path to fan device file (string) """
-
+    #_thermal_to_device_path_mapping = {}
         
     thermal_sysfspath ={
-    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/15-0048/hwmon/hwmon*/temp1_input"],
-    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/15-0049/hwmon/hwmon*/temp1_input"],  
-    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/15-004a/hwmon/hwmon*/temp1_input"],    
-    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/15-004c/hwmon/hwmon*/temp1_input"],      
-    THERMAL_NUM_5_IDX: ["/sys/bus/i2c/devices/15-004f/hwmon/hwmon*/temp1_input"],     
-    THERMAL_NUM_6_IDX: ["/sys/class/hwmon/hwmon0/temp1_input"],     
-    THERMAL_NUM_7_IDX: ["/sys/bus/i2c/devices/15-004b/hwmon/hwmon*/temp1_input"],    
+    THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/15-0048/hwmon/hwmon*/temp1_input", "MB_FrontMiddle_temp"],
+    THERMAL_NUM_2_IDX: ["/sys/bus/i2c/devices/15-0049/hwmon/hwmon*/temp1_input", "MB_RightCenter_temp"],
+    THERMAL_NUM_3_IDX: ["/sys/bus/i2c/devices/15-004a/hwmon/hwmon*/temp1_input", "MB_LeftCenter_temp"],
+    THERMAL_NUM_4_IDX: ["/sys/bus/i2c/devices/15-004c/hwmon/hwmon*/temp1_input", "OCXO_temp"],
+    THERMAL_NUM_5_IDX: ["/sys/bus/i2c/devices/15-004f/hwmon/hwmon*/temp1_input", "MB_RearRight_temp"],
+    THERMAL_NUM_6_IDX: ["/sys/class/hwmon/hwmon0/temp1_input", "CPU Core Temp"],
+    THERMAL_NUM_7_IDX: ["/sys/bus/i2c/devices/15-004b/hwmon/hwmon*/temp1_input", "CB_temp"],
     }
 
+    #def __init__(self):
         
     def _get_thermal_val(self, thermal_num):
         if thermal_num < self.THERMAL_NUM_1_IDX or thermal_num > self.THERMAL_NUM_MAX:
@@ -73,7 +74,7 @@ class ThermalUtil(object):
             except BaseException:
                 logging.debug('GET. unable to close file. device_path:%s', device_path)
                 return None
-
+              
             return int(content)
                 
         return 0
@@ -86,3 +87,6 @@ class ThermalUtil(object):
 
     def get_thermal_path(self, thermal_num):
         return self.thermal_sysfspath[thermal_num][0]
+
+    def get_thermal_name(self, thermal_num):
+        return self.thermal_sysfspath[thermal_num][1]
