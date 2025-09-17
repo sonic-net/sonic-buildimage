@@ -34,7 +34,6 @@ sys.path.insert(0, modules_path)
 import sonic_platform.chassis
 from sonic_platform import utils
 from sonic_platform.chassis import ModularChassis, SmartSwitchChassis
-from sonic_platform.device_data import DeviceDataManager
 from sonic_platform.module import Module
 from sonic_platform_base.module_base import ModuleBase
 from sonic_platform_base.chassis_base import ChassisBase

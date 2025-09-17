@@ -107,7 +107,7 @@ class DpuCtlPlat():
         self.pci_dev_path = []
         self.verbosity = False
 
-    def setup_logger(self, use_print=False):
+    def setup_logger(self, use_print=False, use_notice_level=False):
         def print_with_time(msg):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] {msg}")
@@ -117,8 +117,12 @@ class DpuCtlPlat():
             self.logger_error = print_with_time 
             self.logger_debug = print_with_time
             return
-        self.logger_debug = logger.log_debug
-        self.logger_info = logger.log_info
+        if use_notice_level:
+            self.logger_debug = logger.log_notice
+            self.logger_info = logger.log_notice
+        else:
+            self.logger_debug = logger.log_debug
+            self.logger_info = logger.log_info
         self.logger_error = logger.log_error
 
     def log_debug(self, msg=None):
@@ -408,7 +412,7 @@ class DpuCtlPlat():
         read_value = self.read_boot_prog()
         if read_value != self.boot_prog_state:
             self.dpu_boot_prog_update(read_value)
-            self.log_error(f"The boot_progress status is changed to = {self.boot_prog_indication}")
+            self.log_info(f"The boot_progress status is changed to = {self.boot_prog_indication}")
 
     def watch_boot_prog(self):
         """Read boot_progress and update the value in an infinite loop"""
