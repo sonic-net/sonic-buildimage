@@ -151,10 +151,14 @@ class TestThermal:
         assert thermal.get_high_threshold() is None
         assert thermal.get_high_critical_threshold() is None
 
+    @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
-    def test_get_temperature(self, mock_read):
+    def test_get_temperature(self, mock_read, mock_exists):
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', 'temp_file', None, None, 1)
+
+        # Mock file exists for successful reading
+        mock_exists.return_value = True
         mock_read.return_value = 35727
         assert thermal.get_temperature() == 35.727
 
@@ -164,29 +168,35 @@ class TestThermal:
         mock_read.return_value = None
         assert thermal.get_temperature() is None
 
+    @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
-    def test_get_high_threshold(self, mock_read):
+    def test_get_high_threshold(self, mock_read, mock_exists):
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', None, None, None, 1)
         assert thermal.get_high_threshold() is None
 
         thermal.high_threshold = 'high_th_file'
+        # Mock file exists for successful reading
+        mock_exists.return_value = True
         mock_read.return_value = 25833
-        assert thermal.get_temperature() == 25.833
+        assert thermal.get_high_threshold() == 25.833
 
         mock_read.return_value = 0.0
-        assert thermal.get_temperature() is None
+        assert thermal.get_high_threshold() is None
 
         mock_read.return_value = None
-        assert thermal.get_temperature() is None
+        assert thermal.get_high_threshold() is None
 
+    @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
-    def test_get_high_critical_threshold(self, mock_read):
+    def test_get_high_critical_threshold(self, mock_read, mock_exists):
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', None, None, None, 1)
         assert thermal.get_high_critical_threshold() is None
 
         thermal.high_critical_threshold = 'high_th_file'
+        # Mock file exists for successful reading
+        mock_exists.return_value = True
         mock_read.return_value = 120839
         assert thermal.get_high_critical_threshold() == 120.839
 
@@ -211,144 +221,260 @@ class TestThermal:
     @mock.patch('os.path.exists')
     @mock.patch('time.sleep')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_retry_until_file_exists_success_first_try(self, mock_logger, mock_sleep, mock_exists):
-        """Test _retry_until_file_exists when file exists on first try"""
+    def test_check_thermal_sysfs_existence_success_first_try(self, mock_logger, mock_sleep, mock_exists):
+        """Test _check_thermal_sysfs_existence when file exists on first try"""
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
         # File exists on first try
         mock_exists.return_value = True
 
-        result = thermal._retry_until_file_exists('test_file')
+        from sonic_platform.thermal import _check_thermal_sysfs_existence
+        result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
 
         assert result is True
-        assert thermal.allow_delay_create is False  # Should be disabled after success
         mock_exists.assert_called_once_with('test_file')
         mock_sleep.assert_not_called()
-        mock_logger.log_debug.assert_called_once()
+        # No logging should occur when file exists
+        mock_logger.log_warning.assert_not_called()
+        mock_logger.log_error.assert_not_called()
 
     @mock.patch('os.path.exists')
     @mock.patch('time.sleep')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_retry_until_file_exists_success_after_retries(self, mock_logger, mock_sleep, mock_exists):
-        """Test _retry_until_file_exists when file exists after retries"""
+    def test_check_thermal_sysfs_existence_success_file_exists(self, mock_logger, mock_sleep, mock_exists):
+        """Test _check_thermal_sysfs_existence when file exists"""
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
-        # File doesn't exist for first 2 attempts, then exists
-        mock_exists.side_effect = [False, False, True]
+        # File exists
+        mock_exists.return_value = True
 
-        result = thermal._retry_until_file_exists('test_file')
+        from sonic_platform.thermal import _check_thermal_sysfs_existence
+        result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
 
         assert result is True
-        assert thermal.allow_delay_create is False  # Should be disabled after success
-        assert mock_exists.call_count == 3
-        assert mock_sleep.call_count == 2  # Should sleep twice (between attempts 1-2 and 2-3)
-        mock_logger.log_warning.assert_called()
-        mock_logger.log_debug.assert_called_once()
+        assert mock_exists.call_count == 1  # Should check once and find file exists
+        assert mock_sleep.call_count == 0  # No sleep calls since delay is removed
+        # No logging should occur when file exists
+        mock_logger.log_warning.assert_not_called()
+        mock_logger.log_error.assert_not_called()
 
     @mock.patch('os.path.exists')
     @mock.patch('time.sleep')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_retry_until_file_exists_failure_after_all_retries(self, mock_logger, mock_sleep, mock_exists):
-        """Test _retry_until_file_exists when file never exists after all retries"""
+    def test_check_thermal_sysfs_existence_file_not_exists(self, mock_logger, mock_sleep, mock_exists):
+        """Test _check_thermal_sysfs_existence when file does not exist"""
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
         # File never exists
         mock_exists.return_value = False
 
-        result = thermal._retry_until_file_exists('test_file')
+        from sonic_platform.thermal import _check_thermal_sysfs_existence
+        result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
 
         assert result is False
-        assert thermal.allow_delay_create is True  # Should remain True after failure
-        assert mock_exists.call_count == 5  # Should try 5 times
-        assert mock_sleep.call_count == 4  # Should sleep 4 times (between attempts)
-        mock_logger.log_warning.assert_called()
-        mock_logger.log_error.assert_called_once()
+        assert thermal.file_check_counts.get('test_file') == 1  # Should be called once
+        assert mock_exists.call_count == 1  # Should check once
+        assert mock_sleep.call_count == 0  # No sleep calls since delay is removed
+        mock_logger.log_warning.assert_called_once()  # Called for first attempt
 
     @mock.patch('os.path.exists')
     @mock.patch('time.sleep')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_retry_until_file_exists_disabled(self, mock_logger, mock_sleep, mock_exists):
-        """Test _retry_until_file_exists when allow_delay_create is False"""
+    def test_check_thermal_sysfs_existence_disabled(self, mock_logger, mock_sleep, mock_exists):
+        """Test _check_thermal_sysfs_existence when allow_delay_create is False"""
         from sonic_platform.thermal import Thermal
         thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=False)
 
-        result = thermal._retry_until_file_exists('test_file')
+        # File exists
+        mock_exists.return_value = True
 
-        assert result is True  # Should return True immediately when disabled
-        mock_exists.assert_not_called()
+        from sonic_platform.thermal import _check_thermal_sysfs_existence
+        result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
+
+        assert result is True  # Should return True when file exists
+        mock_exists.assert_called_once_with('test_file')  # Should check file existence
         mock_sleep.assert_not_called()
+        # Should not log anything when file exists
         mock_logger.log_warning.assert_not_called()
         mock_logger.log_error.assert_not_called()
 
     @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_get_temperature_with_retry_success(self, mock_logger, mock_read, mock_exists):
-        """Test get_temperature with retry mechanism when file exists after retry"""
+    def test_get_temperature_with_file_check(self, mock_logger, mock_read, mock_exists):
+        """Test get_temperature when file exists"""
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
-        # File doesn't exist for first 2 attempts, then exists
-        mock_exists.side_effect = [False, False, True]
+        # File exists when get_temperature is called
+        mock_exists.return_value = True
         mock_read.return_value = 35727
 
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
         result = thermal.get_temperature()
 
         assert result == 35.727
-        assert thermal.allow_delay_create is False  # Should be disabled after success
+        # Should not log any warnings or errors when file exists
+        mock_logger.log_warning.assert_not_called()
+        mock_logger.log_error.assert_not_called()
 
     @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_get_temperature_with_retry_failure(self, mock_logger, mock_read, mock_exists):
-        """Test get_temperature with retry mechanism when file never exists"""
+    def test_get_temperature_file_not_exists(self, mock_logger, mock_read, mock_exists):
+        """Test get_temperature when thermal file doesn't exist"""
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
-        # File never exists
+        # File never exists (both during init and get_temperature call)
         mock_exists.return_value = False
 
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
         result = thermal.get_temperature()
 
         assert result is None
-        assert thermal.allow_delay_create is True  # Should remain True after failure
+        # Should log warning on first attempt
+        mock_logger.log_warning.assert_called_once()
 
     @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_get_high_threshold_with_retry(self, mock_logger, mock_read, mock_exists):
-        """Test get_high_threshold with retry mechanism"""
+    def test_get_high_threshold_normal_operation(self, mock_logger, mock_read, mock_exists):
+        """Test get_high_threshold normal operation"""
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
-        # File exists on second try
-        mock_exists.side_effect = [False, True]
+        # File exists during both init and get_high_threshold call
+        mock_exists.return_value = True
         mock_read.return_value = 25833
 
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
         result = thermal.get_high_threshold()
 
         assert result == 25.833
-        assert thermal.allow_delay_create is False  # Should be disabled after success
+        # Should not log any warnings or errors when file exists
+        mock_logger.log_warning.assert_not_called()
+        mock_logger.log_error.assert_not_called()
 
     @mock.patch('os.path.exists')
     @mock.patch('sonic_platform.utils.read_float_from_file')
     @mock.patch('sonic_platform.thermal.logger')
-    def test_get_high_critical_threshold_with_retry(self, mock_logger, mock_read, mock_exists):
-        """Test get_high_critical_threshold with retry mechanism"""
+    def test_get_high_critical_threshold_normal_operation(self, mock_logger, mock_read, mock_exists):
+        """Test get_high_critical_threshold normal operation"""
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
 
-        # File exists on third try
-        mock_exists.side_effect = [False, False, True]
+        # File exists during both init and get_high_critical_threshold call
+        mock_exists.return_value = True
         mock_read.return_value = 120839
 
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
         result = thermal.get_high_critical_threshold()
 
         assert result == 120.839
-        assert thermal.allow_delay_create is False  # Should be disabled after success
+        # Should not log any warnings or errors when file exists
+        mock_logger.log_warning.assert_not_called()
+        mock_logger.log_error.assert_not_called()
+
+    def test_initialization_with_allow_delay_create_true(self):
+        """Test thermal initialization when allow_delay_create is True"""
+        from sonic_platform.thermal import Thermal
+
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
+
+        # Check that the object is properly initialized
+        assert thermal.allow_delay_create is True
+        assert thermal.max_attempts == 100
+        assert thermal.file_check_counts == {}
+        assert thermal.temperature == 'temp_file'
+        assert thermal.high_threshold == 'high_th_file'
+        assert thermal.high_critical_threshold == 'high_crit_th_file'
+
+    def test_initialization_with_allow_delay_create_false(self):
+        """Test thermal initialization when allow_delay_create is False"""
+        from sonic_platform.thermal import Thermal
+
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=False)
+
+        # Check that the object is properly initialized
+        assert thermal.allow_delay_create is False
+        assert thermal.max_attempts == 100
+        assert thermal.file_check_counts == {}
+        assert thermal.temperature == 'temp_file'
+        assert thermal.high_threshold == 'high_th_file'
+        assert thermal.high_critical_threshold == 'high_crit_th_file'
+
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_platform.thermal.logger')
+    def test_check_thermal_sysfs_existence_multiple_calls(self, mock_logger, mock_exists):
+        """Test _check_thermal_sysfs_existence with multiple calls to same file"""
+        from sonic_platform.thermal import Thermal, _check_thermal_sysfs_existence
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
+
+        # File doesn't exist
+        mock_exists.return_value = False
+
+        # Call multiple times
+        for i in range(5):
+            result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
+            assert result is False
+
+        # Should have called exists 5 times
+        assert mock_exists.call_count == 5
+
+        # Check that warnings are logged for first 100 attempts, errors for the rest
+        assert thermal.file_check_counts['test_file'] == 5
+
+        # Should have 5 warning calls and 0 error calls (since 5 < 100)
+        assert mock_logger.log_warning.call_count == 5
+        assert mock_logger.log_error.call_count == 0
+
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_platform.thermal.logger')
+    def test_check_thermal_sysfs_existence_different_files(self, mock_logger, mock_exists):
+        """Test _check_thermal_sysfs_existence with different file paths have independent counters"""
+        from sonic_platform.thermal import Thermal, _check_thermal_sysfs_existence
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
+
+        # Files don't exist
+        mock_exists.return_value = False
+
+        # Call with different file paths
+        _check_thermal_sysfs_existence('file1', None, thermal.allow_delay_create, thermal)
+        _check_thermal_sysfs_existence('file2', None, thermal.allow_delay_create, thermal)
+        _check_thermal_sysfs_existence('file1', None, thermal.allow_delay_create, thermal)  # Second call to file1
+
+        # Each file should have independent counters
+        assert thermal.file_check_counts['file1'] == 2
+        assert thermal.file_check_counts['file2'] == 1
+
+        # Should have 3 warning calls total (2 for file1, 1 for file2) - all under max_attempts=100
+        assert mock_logger.log_warning.call_count == 3
+        assert mock_logger.log_error.call_count == 0
+
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_platform.thermal.logger')
+    def test_check_thermal_sysfs_existence_exceeds_max_attempts(self, mock_logger, mock_exists):
+        """Test _check_thermal_sysfs_existence when calls exceed max_attempts=100"""
+        from sonic_platform.thermal import Thermal, _check_thermal_sysfs_existence
+        thermal = Thermal('test', 'temp_file', 'high_th_file', 'high_crit_th_file', 1, allow_delay_create=True)
+
+        # File doesn't exist
+        mock_exists.return_value = False
+
+        # Call 102 times to exceed max_attempts=100
+        for i in range(102):
+            result = _check_thermal_sysfs_existence('test_file', None, thermal.allow_delay_create, thermal)
+            assert result is False
+
+        # Should have called exists 102 times
+        assert mock_exists.call_count == 102
+
+        # Check that warnings are logged for first 100 attempts, errors for the rest
+        assert thermal.file_check_counts['test_file'] == 102
+
+        # Should have 100 warning calls and 2 error calls
+        assert mock_logger.log_warning.call_count == 100
+        assert mock_logger.log_error.call_count == 2
 
     def test_thermal_naming_rule_allow_delay_create(self):
         """Test that THERMAL_NAMING_RULE has allow_delay_create field for sfp thermals and ASIC"""

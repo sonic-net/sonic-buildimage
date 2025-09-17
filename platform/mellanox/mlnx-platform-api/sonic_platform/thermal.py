@@ -291,17 +291,51 @@ def create_discrete_thermal(rule, position):
         position += 1
     return thermal_list
 
-def _check_thermal_sysfs_existence(file_path, presence_cb, allow_delay_create=False):
+def _check_thermal_sysfs_existence(file_path, presence_cb, allow_delay_create=False, thermal_obj=None):
+    """
+    Check if a thermal sysfs file exists and log appropriate messages.
+    If thermal_obj is provided and allow_delay_create is True, it will track
+    call counts and log warnings for first few attempts, then errors.
+
+    Args:
+        file_path (str): Path to the thermal sysfs file
+        presence_cb: Presence callback function
+        allow_delay_create (bool): Whether to allow delayed creation
+        thermal_obj: Thermal object for tracking call counts (optional)
+
+    Returns:
+        bool: True if file exists, False otherwise
+    """
     if presence_cb:
         status, _ = presence_cb()
         if not status:
-            return
+            return False
 
-    if not os.path.exists(file_path):
+    if os.path.exists(file_path):
+        return True
+
+    # If thermal_obj is provided and allow_delay_create is True, use counter-based logging
+    if thermal_obj and allow_delay_create:
+        # Increment the check count for this file path
+        if file_path not in thermal_obj.file_check_counts:
+            thermal_obj.file_check_counts[file_path] = 0
+        thermal_obj.file_check_counts[file_path] += 1
+
+        # Log warning or error based on attempt count
+        if thermal_obj.file_check_counts[file_path] <= thermal_obj.max_attempts:
+            logger.log_warning('Thermal sysfs {} does not exist (attempt {})'.format(
+                file_path, thermal_obj.file_check_counts[file_path]))
+        else:
+            logger.log_error('Thermal sysfs {} does not exist (attempt {})'.format(
+                file_path, thermal_obj.file_check_counts[file_path]))
+    else:
+        # Original behavior for initialization-time checks
         if allow_delay_create:
             logger.log_notice('Thermal sysfs {} does not exist'.format(file_path))
         else:
             logger.log_error('Thermal sysfs {} does not exist'.format(file_path))
+
+    return False
 
 class Thermal(ThermalBase):
     def __init__(self, name, temp_file, high_th_file, high_crit_th_file, position, allow_delay_create=False):
@@ -315,6 +349,8 @@ class Thermal(ThermalBase):
         self.high_threshold = high_th_file
         self.high_critical_threshold = high_crit_th_file
         self.allow_delay_create = allow_delay_create
+        self.max_attempts = 100  # Maximum attempts before logging errors instead of warnings
+        self.file_check_counts = {}  # Track check counts for each file path
 
     def get_name(self):
         """
@@ -333,7 +369,7 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to nearest thousandth
             of one degree Celsius, e.g. 30.125
         """
-        if not self._retry_until_file_exists(self.temperature):
+        if not _check_thermal_sysfs_existence(self.temperature, None, self.allow_delay_create, self):
             return None
 
         value = utils.read_float_from_file(self.temperature, None, log_func=logger.log_info)
@@ -350,7 +386,7 @@ class Thermal(ThermalBase):
         if self.high_threshold is None:
             return None
 
-        if not self._retry_until_file_exists(self.high_threshold):
+        if not _check_thermal_sysfs_existence(self.high_threshold, None, self.allow_delay_create, self):
             return None
 
         value = utils.read_float_from_file(self.high_threshold, None, log_func=logger.log_info)
@@ -367,45 +403,11 @@ class Thermal(ThermalBase):
         if self.high_critical_threshold is None:
             return None
 
-        if not self._retry_until_file_exists(self.high_critical_threshold):
+        if not _check_thermal_sysfs_existence(self.high_critical_threshold, None, self.allow_delay_create, self):
             return None
 
         value = utils.read_float_from_file(self.high_critical_threshold, None, log_func=logger.log_info)
         return value / 1000.0 if (value is not None and value != 0) else None
-
-    def _retry_until_file_exists(self, file_path):
-        """
-        Internal method to retry until a thermal sysfs file exists.
-
-        Args:
-            file_path (str): Path to the thermal sysfs file to check
-
-        Returns:
-            bool: True if file exists after retry, False if retry failed
-        """
-        if not self.allow_delay_create:
-            return True
-
-        # Retry mechanism for thermal sysfs file existence check
-        max_retries = 5
-        retry_delay = 1  # seconds
-
-        for attempt in range(max_retries):
-            if os.path.exists(file_path):
-                # File exists, proceed with reading
-                logger.log_debug('Thermal sysfs {} now exists after retry attempt {}'.format(file_path, attempt + 1))
-                self.allow_delay_create = False  # Disable retry for future calls
-                return True
-
-            if attempt < max_retries - 1:
-                # Not the last attempt, log warning and retry
-                logger.log_warning('Thermal sysfs {} does not exist, retrying in {} second(s)... (attempt {}/{})'.format(
-                    file_path, retry_delay, attempt + 1, max_retries))
-                time.sleep(retry_delay)
-            else:
-                # Last attempt failed, log error
-                logger.log_error('Thermal sysfs {} does not exist after {} retries'.format(file_path, max_retries))
-                return False
 
     def get_position_in_parent(self):
         """
