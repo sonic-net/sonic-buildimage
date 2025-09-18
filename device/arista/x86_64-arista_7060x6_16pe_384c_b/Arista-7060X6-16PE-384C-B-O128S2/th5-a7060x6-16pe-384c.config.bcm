@@ -2578,3 +2578,10 @@ device:
             :
                 TRAFFIC_CLASS: OBM_TC_LOSSLESS0
 ...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
+...
