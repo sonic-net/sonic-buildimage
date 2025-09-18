@@ -170,6 +170,16 @@ class PddfChassis(ChassisBase):
         """
         return self._eeprom.base_mac_addr()
 
+    def get_revision(self):
+        """
+        Retrieves the hardware revision for the chassis
+
+        Returns:
+            A string containing the hardware revision for this
+            chassis.
+        """
+        return self._eeprom.revision_str()
+
     def get_serial(self):
         """
         Retrieves the hardware serial number for the chassis
