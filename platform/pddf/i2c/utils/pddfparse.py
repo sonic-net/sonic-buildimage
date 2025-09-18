@@ -544,6 +544,33 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        if 'gpio' in dev:
+            ret = self.create_gpio_device(bdf, dev['gpio'], ops)
+            if ret != 0:
+                return create_ret.append(ret)
+
+        return create_ret.append(ret)
+
+    def create_gpio_device(self, bdf, gpio_dev, ops):
+        create_ret = []
+        ret = 0
+
+        for line in gpio_dev.keys():
+            for attr in gpio_dev[line]['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/multifpgapci/{}/gpio/line".format(bdf), ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/line/create_line".format(bdf)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+
+        cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/create_chip".format(bdf)
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+
         return create_ret.append(ret)
 
     #################################################################################################################################
