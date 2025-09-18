@@ -29,6 +29,7 @@ pub trait DockerApi: Send + Sync {
     ) -> Pin<Box<dyn Stream<Item = Result<bollard::models::ContainerWaitResponse, bollard::errors::Error>> + Send>>;
 }
 
+#[derive(Debug)]
 pub struct BollardDockerApi {
     docker: Docker,
 }
