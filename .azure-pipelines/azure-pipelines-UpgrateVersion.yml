@@ -26,7 +26,7 @@ resources:
     ref: master
     endpoint: sonic-net
 
-pool: sonicbld-1es
+pool: sonicso1ES-amd64
 
 parameters:
 - name: 'jobFilters'

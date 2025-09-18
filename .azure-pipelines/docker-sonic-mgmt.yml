@@ -40,7 +40,7 @@ stages:
 - stage: Build
   jobs:
   - job: Build
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 360
     steps:
     - template: cleanup.yml
@@ -69,7 +69,7 @@ stages:
       displayName: "Archive docker image sonic-mgmt"
 
   - job: validate_docker_image_and_upload
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 360
     dependsOn: Build
     steps:
