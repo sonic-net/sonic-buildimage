@@ -13,6 +13,10 @@ ip prefix-list SLASH32 permit 0.0.0.0/0 ge 32
 !
 route-map FROM_FABRICSPINE_V4 permit 100
 !
+route-map TO_FABRICSPINE_V4 deny 1
+  match ip address prefix-list PL_LoopbackV4
+exit
+!
 route-map TO_FABRICSPINE_V4 deny 100
   match community LEAK_COMMUNITY
 !
