@@ -61,10 +61,10 @@
 {% endfor %}
 {%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
 {%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
-{# FIXME: SAI report tunnel TABLE_FULL for large topo. Disable it temporarily if over 128 IPv4/IPv6 tunnels. #}
+{# SAI report tunnel TABLE_FULL for large topo. Only generating for VLAN and loopback if over 128 routed interfaces.#}
 {% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
-{%- set ipv4_addresses = [] %}
-{%- set ipv6_addresses = [] %}
+{%- set ipv4_addresses = ipv4_loopback_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_loopback_addresses + ipv6_vlan_addresses %}
 {% endif %}
 
 {# Check if AZURE QoS map exists #}
