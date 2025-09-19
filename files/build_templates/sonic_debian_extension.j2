@@ -170,10 +170,10 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 # Install Python module for ipaddr
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
-# Install Python module for grpcio and grpcio-toole
+# Install Python module for grpcio and grpcio-tools
 if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.58.0"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.66.2"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.66.2"
 fi
 
 # Install Python module for smbus2
@@ -191,11 +191,14 @@ if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
 fi
 
 # Install sonic-yang-models Python 3 package, install dependencies
-install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb
+install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb $debs_path/libpcre3_*.deb
 install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
+
+# Install some dependencies for pyangbind
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -226,7 +229,8 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift
 install_pip_package {{system_health_py3_wheel_path}}
 
 # Install m2crypto, cryptography, cffi, and pynacl packages, used by sonic-utilities
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-nacl
+# Install python packages used by sonic-utilities
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-natsort python3-netifaces python3-paramiko python3-scp python3-enlighten python3-requests
 
 # install libffi-dev to match utilities' dependency.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libffi-dev
@@ -238,7 +242,8 @@ install_pip_package {{sonic_utilities_py3_wheel_path}}
 install_deb_package $debs_path/sonic-utilities-data_*.deb
 
 # Install customized bash version to patch bash plugin support.
-install_deb_package $debs_path/bash_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/bash_*.deb
 
 # sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
 # in bash.bashrc, so we copy a version of the file with it enabled here.
@@ -304,9 +309,11 @@ install_deb_package $debs_path/libtac2_*.deb
 install_deb_package $debs_path/libpam-tacplus_*.deb
 install_deb_package $debs_path/libnss-tacplus_*.deb
 # Install bash-tacplus
-install_deb_package $debs_path/bash-tacplus_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/bash-tacplus_*.deb
 # Install audisp-tacplus
-install_deb_package $debs_path/audisp-tacplus_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/audisp-tacplus_*.deb
 # Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
 ## some local configuration of a PAM module. Currently, there's no clean way of noninteractively specifying
@@ -318,8 +325,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus ldap
 sudo sed -i -e '/^passwd/s/ tacplus//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install pam-radius-auth and nss-radius
-install_deb_package $debs_path/libpam-radius-auth_*.deb
-install_deb_package $debs_path/libnss-radius_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/libpam-radius-auth_*.deb
+#install_deb_package $debs_path/libnss-radius_*.deb
 # Disable radius by default
 # radius does not have any profiles
 #sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove radius tacplus
@@ -372,12 +380,12 @@ sudo cp $IMAGE_CONFIGS/monit/mgmt_oper_status.py $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mgmt_oper_status.py
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
-# TODO: are mismatching versions fine for bookworm?
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -t bookworm-backports smartmontools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install smartmontools
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
-install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
 
 {% if sonic_asic_platform == 'broadcom' %}
 # Install custom-built flashrom
@@ -528,7 +536,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 {% endif %}
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-watchdog
 
 # sonic-ctrmgrd-rs is required by container script
 install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
@@ -1182,14 +1190,14 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+{% if installer_python_debs.strip() -%}
 # Install FIPS python package will break apt-get purge command, so install after all purge command finish 
 if [ "$INCLUDE_FIPS" == y ]; then
-    {% if installer_python_debs.strip() -%}
     {% for deb in installer_python_debs.strip().split(' ') -%}
     install_deb_package {{deb}}
     {% endfor %}
-    {% endif %}
 fi
+{% endif %}
 
 
 {% if installer_debs.strip() -%}

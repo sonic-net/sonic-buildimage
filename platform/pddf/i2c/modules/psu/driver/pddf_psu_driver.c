@@ -145,6 +145,20 @@ PSU_SYSFS_ATTR_DATA_ENTRY psu_sysfs_attr_data_tbl[]=
 	{ "psu_p_in" , &access_psu_p_in}
 };
 
+enum psu_intf
+{
+	eeprom_intf,
+	smbus_intf
+};
+
+static const struct i2c_device_id psu_id[] = {
+	{"psu_eeprom", eeprom_intf},
+	{"psu_pmbus", smbus_intf},
+	{}
+};
+
+MODULE_DEVICE_TABLE(i2c, psu_id);
+
 void *get_psu_access_data(char *name)
 {
 	int i=0;
@@ -196,8 +210,7 @@ static bool skip_unsupported_psu_attribute(PSU_DATA_ATTR *data_attr,
 	return false;
 }
 
-static int psu_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int psu_probe(struct i2c_client *client)
 {
     struct psu_data *data;
     int status =0;
@@ -206,6 +219,7 @@ static int psu_probe(struct i2c_client *client,
     PSU_DATA_ATTR *data_attr;
     PSU_SYSFS_ATTR_DATA_ENTRY *sysfs_data_entry;
     char new_str[ATTR_NAME_LEN] = "";
+    struct i2c_device_id *dev_id;
 
 
 	if (client == NULL) {
@@ -215,6 +229,7 @@ static int psu_probe(struct i2c_client *client,
 
 	if (pddf_psu_ops.pre_probe)
     {
+        dev_id = i2c_match_id(psu_id, client);
         status = (pddf_psu_ops.pre_probe)(client, dev_id);
         if (status != 0)
             goto exit;
@@ -314,6 +329,7 @@ static int psu_probe(struct i2c_client *client,
 	/* Add a support for post probe function */
     if (pddf_psu_ops.post_probe)
     {
+        dev_id = i2c_match_id(psu_id, client);
         status = (pddf_psu_ops.post_probe)(client, dev_id);
         if (status != 0)
             goto exit_remove;
@@ -379,20 +395,6 @@ static void psu_remove(struct i2c_client *client)
             printk(KERN_ERR "FAN post_remove function failed\n");
     }
 }
-
-enum psu_intf
-{
-	eeprom_intf,
-	smbus_intf
-};
-
-static const struct i2c_device_id psu_id[] = {
-	{"psu_eeprom", eeprom_intf},
-	{"psu_pmbus", smbus_intf},
-	{}
-};
-
-MODULE_DEVICE_TABLE(i2c, psu_id);
 
 static struct i2c_driver psu_driver = {
     .class        = I2C_CLASS_HWMON,
