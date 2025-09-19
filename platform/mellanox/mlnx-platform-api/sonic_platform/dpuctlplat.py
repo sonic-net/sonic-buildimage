@@ -24,6 +24,7 @@ import subprocess
 from contextlib import contextmanager
 from select import poll, POLLPRI, POLLIN
 from enum import Enum
+import signal
 
 try:
     from .inotify_helper import InotifyHelper
@@ -416,16 +417,28 @@ class DpuCtlPlat():
 
     def watch_boot_prog(self):
         """Read boot_progress and update the value in an infinite loop"""
+        def signal_handler(signum, frame):
+            self.log_info("Received termination signal, shutting down...")
+            raise SystemExit("Terminated by signal")
+        
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        file = None
+        file = open(self.boot_prog_path, "r")
+        p = poll()
+        p.register(file.fileno(), POLLPRI)
         try:
-            self.dpu_boot_prog_update()
-            self.log_info(f"The initial boot_progress status is = {self.boot_prog_indication}")
-            file = open(self.boot_prog_path, "r")
-            p = poll()
-            p.register(file.fileno(), POLLPRI)
             while True:
-                self.update_boot_prog_once(p)
-        except Exception:
-            self.log_error(f"Exception occured during watch_boot_progress!")
+                try:
+                    self.update_boot_prog_once(p)
+                except SystemExit:
+                    break  # Exit on termination signal
+        except Exception as e:
+            self.log_error(f"Error during watch_boot_progress: {e}")
+        finally:
+            if file:
+                file.close()
 
     @contextmanager
     def boot_prog_context(self):
@@ -442,6 +455,8 @@ class DpuCtlPlat():
             finally:
                 if self.boot_prog_proc and self.boot_prog_proc.is_alive():
                     self.boot_prog_proc.terminate()
+                    self.boot_prog_proc.join(timeout=3)
+                    self.boot_prog_proc.kill()
                     self.boot_prog_proc.join()
         else:
             yield
