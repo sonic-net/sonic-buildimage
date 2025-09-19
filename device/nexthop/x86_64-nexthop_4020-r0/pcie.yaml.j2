@@ -208,13 +208,15 @@
   id: 161e
   name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Rembrandt USB4 XHCI controller
     #4'
+{%- if has_amd_audio_coprocessor == 'true' %}
 - bus: '{{amd_soc_group_1_bus}}'
   dev: '00'
   fn: '5'
   id: 15e2
   name: 'Multimedia controller: Advanced Micro Devices, Inc. [AMD] ACP/ACP3X/ACP6x
     Audio Coprocessor (rev 60)'
-{%- if has_audio_controller == 'true' %}
+{%- endif %}
+{%- if has_amd_audio_controller == 'true' %}
 - bus: '{{amd_soc_group_1_bus}}'
   dev: '00'
   fn: '6'
@@ -222,12 +224,14 @@
   name: 'Audio device: Advanced Micro Devices, Inc. [AMD] Family 17h/19h HD Audio
     Controller'
 {%- endif %}
+{%- if has_amd_sensor_fusion_hub == 'true' %}
 - bus: '{{amd_soc_group_1_bus}}'
   dev: '00'
   fn: '7'
   id: 15e4
   name: 'Signal processing controller: Advanced Micro Devices, Inc. [AMD] Sensor Fusion
     Hub'
+{%- endif %}
 - bus: '{{amd_soc_group_2_bus}}'
   dev: '00'
   fn: '0'

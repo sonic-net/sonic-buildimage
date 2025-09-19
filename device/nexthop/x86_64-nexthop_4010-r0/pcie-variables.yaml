@@ -37,11 +37,12 @@
   lookup_command: "setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0'"
 
 # Commands to check whether a certain PCI bridge (class code 0x0604)
-# or a certain device (e.g. audio device with class code 0x0403)
-# is used on the system.
+# or a certain device (e.g. AMD audio device with vendor ID 0x1022
+# and class code 0x0403) is used on the system.
 #
 # Used by pcie.yaml.j2 to conditionally include/exclude certain devices in
-# /usr/share/sonic/platform/pcie.yaml.
+# /usr/share/sonic/platform/pcie.yaml. The presences of these devices aren't
+# critical and depend on the BIOS version.
 
 - name: "has_pci_bridge_00_01_1"
   lookup_command: "lspci -d ::0604 | grep -q '01.1' && echo 'true' || echo 'false'"
@@ -55,5 +56,11 @@
 - name: "has_pci_bridge_00_04_1"
   lookup_command: "lspci -d ::0604 | grep -q '04.1' && echo 'true' || echo 'false'"
 
-- name: "has_audio_controller"
-  lookup_command: "lspci -d ::0403 | grep -q . && echo 'true' || echo 'false'"
+- name: "has_amd_audio_coprocessor"
+  lookup_command: "lspci -d 1022::0480 | grep -q . && echo 'true' || echo 'false'"
+
+- name: "has_amd_audio_controller"
+  lookup_command: "lspci -d 1022::0403 | grep -q . && echo 'true' || echo 'false'"
+
+- name: "has_amd_sensor_fusion_hub"
+  lookup_command: "lspci -d 1022::1180 | grep -q . && echo 'true' || echo 'false'"
