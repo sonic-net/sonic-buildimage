@@ -1,6 +1,6 @@
-From e323263795a0af4c9c61992bd7a3347d8928db39 Mon Sep 17 00:00:00 2001
+From 6dd258e2e1e3cf0661dfa9bebfb814507f845b55 Mon Sep 17 00:00:00 2001
 From: Xin Wang <xiwang5@microsoft.com>
-Date: Thu, 14 Sep 2023 16:52:54 +0800
+Date: Fri, 19 Sep 2025 14:40:46 +0800
 Subject: [PATCH] Fix getattr AttributeError in multi-thread scenario
 
 When multi-thread is used, the plugin loader may raise AttributeError
@@ -14,33 +14,32 @@ attribute from this module, exception AttributeError could be raised.
 
 Signed-off-by: Xin Wang <xiwang5@microsoft.com>
 ---
- lib/ansible/plugins/loader.py | 11 +++++------
- 1 file changed, 5 insertions(+), 6 deletions(-)
+ lib/ansible/plugins/loader.py | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/lib/ansible/plugins/loader.py b/lib/ansible/plugins/loader.py
-index 74bdeb5719..251531b62e 100644
+index b1f380558e..af9ffa2a23 100644
 --- a/lib/ansible/plugins/loader.py
 +++ b/lib/ansible/plugins/loader.py
-@@ -801,15 +801,14 @@ class PluginLoader:
-             warnings.simplefilter("ignore", RuntimeWarning)
-             spec = importlib.util.spec_from_file_location(to_native(full_name), to_native(path))
+@@ -934,14 +934,14 @@ class PluginLoader:
+             spec = importlib.util.spec_from_file_location(to_native(python_module_name), to_native(path))
              module = importlib.util.module_from_spec(spec)
--
+
 -            # mimic import machinery; make the module-being-loaded available in sys.modules during import
 -            # and remove if there's a failure...
--            sys.modules[full_name] = module
+-            sys.modules[python_module_name] = module
 -
              try:
                  spec.loader.exec_module(module)
 +                # mimic import machinery; make the module-being-loaded available in sys.modules during import
 +                # and remove if there's a failure...
-+                sys.modules[full_name] = module
++                sys.modules[python_module_name] = module
              except Exception:
--                del sys.modules[full_name]
-+                if full_name in sys.modules:
-+                    del sys.modules[full_name]
+-                del sys.modules[python_module_name]
++                if python_module_name in sys.modules:
++                    del sys.modules[python_module_name]
                  raise
 
          return module
 --
-2.25.1
+2.51.0.windows.1
