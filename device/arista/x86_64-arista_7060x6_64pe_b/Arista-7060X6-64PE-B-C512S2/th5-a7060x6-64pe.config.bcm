@@ -3416,3 +3416,10 @@ device:
         TM_SCHEDULER_CONFIG:
             NUM_MC_Q: NUM_MC_Q_2
 ...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
+...

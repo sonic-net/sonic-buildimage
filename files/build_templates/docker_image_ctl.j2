@@ -714,6 +714,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
     $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
     $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
 {%- endif %}
