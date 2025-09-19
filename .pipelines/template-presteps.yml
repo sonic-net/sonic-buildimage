@@ -23,7 +23,7 @@ parameters:
 steps:
   - template: /.pipelines/init-agent.yml
   - template: /.azure-pipelines/cleanup.yml
-  - template: /.azure-pipelines/template-daemon.yml
+  - template: template-daemon.yml
   - task: SSH@0
     displayName: "test blobfuse2 on jumpbox"
     inputs:

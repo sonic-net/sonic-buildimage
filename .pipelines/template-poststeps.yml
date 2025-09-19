@@ -25,6 +25,15 @@ steps:
       exit 0
     continueOnError: true
     displayName: Log Scan
+  - script: |
+      set -ex
+      if [ -e target/daemon.log ];then
+        cat target/daemon.log
+        exit 1
+      fi
+      exit 0
+    displayName: Detect docker hang
+    continueOnError: true
   - ${{ if eq(variables['System.DefinitionId'], 372481) }}:
     # Only enable BinSkim on VS platform, because they share same way of compiling
     # Only enable on VS platform can maximum reduce the affection to current build logic
