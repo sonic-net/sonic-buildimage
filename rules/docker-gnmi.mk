@@ -34,5 +34,6 @@ $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
+$(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
