@@ -1854,6 +1854,7 @@ device:
                 ENABLE: 0
                 SPEED: 25000
                 NUM_LANES: 1
+                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: 187
@@ -2117,6 +2118,7 @@ device:
                 ENABLE: 0
                 SPEED: 25000
                 NUM_LANES: 1
+                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: 275
@@ -15711,6 +15713,7 @@ bcm_device:
             global_flexctr_egr_group_num_reserved: 1
             stat_custom_receive0_management_mode: 1
             sai_field_group_auto_prioritize: 1
+            sai_common_hash_crc: 1
 ...
 ### Baseline
 # Skipping buffer reservation. This means that don't use SDK default settings.
@@ -15764,5 +15767,14 @@ device:
                 PFC_PRI: [0,7]
             :
                 TM_PRI_GRP_ID: 0
+
+        # Set lossless PG
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[1,4], [11,14], [22,25], [33,36], [44,47], [55,58], [66,69], [77,80], [88,91], [99,102], [110,113], [121, 124], [132, 135], [143, 146], [154, 157], [165, 168], [176, 179], [187, 190], [198, 201], [209, 212], [220, 223], [231, 234], [242, 245], [253, 256], [264, 267], [275, 278], [286, 289], [297, 300], [308, 311], [319, 322], [330, 333], [341, 344], [274], [186]]
+                TM_PRI_GRP_ID: [0,1,2,3,4,5,6,7]
+            :
+                PFC: 0
+                LOSSLESS: 1
 
 ...

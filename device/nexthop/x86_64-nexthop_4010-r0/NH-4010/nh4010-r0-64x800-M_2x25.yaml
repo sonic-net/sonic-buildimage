@@ -14945,6 +14945,7 @@ bcm_device:
             global_flexctr_egr_group_num_reserved: 1
             stat_custom_receive0_management_mode: 1
             sai_field_group_auto_prioritize: 1
+            sai_common_hash_crc: 1
 ...
 ### Baseline
 # Skipping buffer reservation. This means that don't use SDK default settings.
@@ -14999,4 +15000,12 @@ device:
             :
                 TM_PRI_GRP_ID: 0
 
+        # Set lossless PG
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [[1,2], [11,12], [22,23], [33,34], [44,45], [55,56], [66,67], [77,78], [88,89], [99,100], [110,111], [121,122], [132,133], [143,144], [154,155], [165,166], [176,177], [187,188], [198,199], [209,210], [220,221], [231,232], [242,243], [253,254], [264,265], [275,276], [286,287], [297,298], [308,309], [319, 320], [330, 331], [341, 342], [274], [186]]
+                TM_PRI_GRP_ID: [0,1,2,3,4,5,6,7]
+            :
+                PFC: 0
+                LOSSLESS: 1
 ...

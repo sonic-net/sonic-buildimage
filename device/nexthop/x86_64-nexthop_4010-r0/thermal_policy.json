@@ -2,7 +2,7 @@
     "interval": 5,
     "info_types": [
         {
-            "type": "fan_info"
+            "type": "fan_drawer_info"
         },
         {
             "type": "thermal_info"
@@ -13,16 +13,66 @@
     ],
     "policies": [
         {
-            "name": "Two or fewer fans present",
+            "name": "One fan drawer present",
             "conditions": [
                 {
-                    "type": "fan.two.or.fewer.present"
+                    "type": "fandrawer.one.present"
                 }
             ],
             "actions": [
                 {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 100
+                },
+                {
                     "type": "fan.set_speed",
-                    "speed": "100"
+                    "speed": 100
+                }
+            ]
+        },
+        {
+            "name": "Two fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.two.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 95
+                },
+                {
+                    "type": "fan.set_speed",
+                    "speed": 95
+                }
+            ]
+        },
+        {
+            "name": "Three fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.three.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 80
+                }
+            ]
+        },
+        {
+            "name": "Four fan drawers present",
+            "conditions": [
+                {
+                    "type": "fandrawer.four.present"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_max_speed",
+                    "max_speed": 75
                 }
             ]
         },
@@ -37,8 +87,7 @@
                 {
                     "type": "thermal.control_algo",
                     "fan_limits": {
-                        "min": 30,
-                        "max": 70
+                        "min": 30
                     },
                     "pid_domains": {
                         "asic": {

@@ -2910,6 +2910,7 @@ device:
                 ENABLE: 0
                 SPEED: 25000
                 NUM_LANES: 1
+                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: 289
@@ -3429,6 +3430,7 @@ device:
                 ENABLE: 0
                 SPEED: 25000
                 NUM_LANES: 1
+                FEC_MODE: PC_FEC_RS528
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: 425
@@ -17302,4 +17304,3 @@ device:
                 TM_PRI_GRP_ID: 0
 
 ...
-

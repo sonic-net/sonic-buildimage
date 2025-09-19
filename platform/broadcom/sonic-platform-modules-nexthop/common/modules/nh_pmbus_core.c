@@ -1299,6 +1299,7 @@ struct pmbus_thermal_data {
 	struct pmbus_data *pmbus_data;
 	struct pmbus_sensor *sensor;
 };
+
 // Thermal ops compatibility
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
 static int pmbus_thermal_get_temp(void *data, int *temp)
@@ -3185,9 +3186,14 @@ EXPORT_SYMBOL_NS_GPL(nh_pmbus_get_debugfs_dir, PMBUS);
 
 static int __init pmbus_core_init(void)
 {
-	pmbus_debugfs_dir = debugfs_create_dir("pmbus", NULL);
-	if (IS_ERR(pmbus_debugfs_dir))
-		pmbus_debugfs_dir = NULL;
+	struct dentry *d = debugfs_lookup("pmbus", NULL);
+	if (!d) {
+		pmbus_debugfs_dir = debugfs_create_dir("pmbus", NULL);
+		if (IS_ERR(pmbus_debugfs_dir))
+			pmbus_debugfs_dir = NULL;
+	} else {
+		dput(d);
+	}
 
 	return 0;
 }

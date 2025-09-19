@@ -1,0 +1,59 @@
+# Commands to retrieve the bus number for each PCIe device.
+# Context: PCIe bus numbers are non-deterministic and can be looked up
+#          from the root ports after boot.
+#
+# Strings in pcie.yaml.j2 matching "{{<name>}}" will be replaced with
+# the result of the lookup_command, to generate /usr/share/sonic/platform/pcie.yaml.
+
+- name: "asic_bus"
+  lookup_command: "setpci -s 00:01.2 0x19.b"
+
+- name: "cpu_card_fpga_bus"
+  lookup_command: "setpci -s 00:02.1 0x19.b"
+
+- name: "switchcard_fpga_bus"
+  lookup_command: "setpci -s 00:02.2 0x19.b"
+
+- name: "nvme_bus"
+  lookup_command: "setpci -s 00:02.4 0x19.b"
+
+- name: "amd_soc_group_1_bus"
+  lookup_command: "setpci -s 00:08.1 0x19.b"
+
+- name: "amd_soc_group_2_bus"
+  lookup_command: "setpci -s 00:08.2 0x19.b"
+
+- name: "amd_soc_group_3_bus"
+  lookup_command: "setpci -s 00:08.3 0x19.b"
+
+# Commands to retrieve the PCIe address for each device.
+# Strings in pddf-device.json.j2 matching "{{<name>}}"" will be replaced with
+# the result of the lookup_command, to generate /usr/share/sonic/platform/pddf/pddf-device.json.
+
+- name: "cpu_card_fpga_bdf"
+  lookup_command: "setpci -s 00:02.1 0x19.b | xargs printf '0000:%s:00.0'"
+
+- name: "switchcard_fpga_bdf"
+  lookup_command: "setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0'"
+
+# Commands to check whether a certain PCI bridge (class code 0x0604)
+# or a certain device (e.g. audio device with class code 0x0403)
+# is used on the system.
+#
+# Used by pcie.yaml.j2 to conditionally include/exclude certain devices in
+# /usr/share/sonic/platform/pcie.yaml.
+
+- name: "has_pci_bridge_00_01_1"
+  lookup_command: "lspci -d ::0604 | grep -q '01.1' && echo 'true' || echo 'false'"
+
+- name: "has_pci_bridge_00_02_3"
+  lookup_command: "lspci -d ::0604 | grep -q '02.3' && echo 'true' || echo 'false'"
+
+- name: "has_pci_bridge_00_03_1"
+  lookup_command: "lspci -d ::0604 | grep -q '03.1' && echo 'true' || echo 'false'"
+
+- name: "has_pci_bridge_00_04_1"
+  lookup_command: "lspci -d ::0604 | grep -q '04.1' && echo 'true' || echo 'false'"
+
+- name: "has_audio_controller"
+  lookup_command: "lspci -d ::0403 | grep -q . && echo 'true' || echo 'false'"
