@@ -9,7 +9,7 @@ Before=database.service
 [Service]
 Type=oneshot
 User=root
-ExecStart=/usr/lib/systemd/systemd-networkd-wait-online -i eth0-midplane --timeout=600
+ExecStart=/usr/lib/systemd/systemd-networkd-wait-online -i eth0-midplane --timeout=1800
 
 [Install]
 WantedBy=multi-user.target
