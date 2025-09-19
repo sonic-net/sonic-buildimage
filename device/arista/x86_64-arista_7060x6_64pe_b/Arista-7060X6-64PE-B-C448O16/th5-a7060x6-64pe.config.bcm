@@ -41,7 +41,8 @@ bcm_device:
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
+            l3_ecmp_member_secondary_mem_size: 0
             stat_custom_receive0_management_mode: 1
 ---
 device:
@@ -3399,4 +3400,11 @@ device:
             THRESHOLD_MODE: LOSSY
         TM_SCHEDULER_CONFIG:
             NUM_MC_Q: NUM_MC_Q_2
+...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
 ...

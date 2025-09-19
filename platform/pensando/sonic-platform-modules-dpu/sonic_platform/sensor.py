@@ -29,9 +29,12 @@ VOLTAGE_SENSOR_MAPPING = [
 
 # [ Sensor-Name, sysfs, low_threshold, high_threshold, critical_low, critical_high]
 CURRENT_SENSOR_MAPPING = [
-    ["Current sensor 1", "/sys/class/hwmon/hwmon0/curr1_input", "0", "15100", NOT_AVAILABLE, "30000"],
-    ["Current sensor 2", "/sys/class/hwmon/hwmon1/curr1_input", "0", "13800", NOT_AVAILABLE, "30000"],
-    ["Current sensor 3", "/sys/class/hwmon/hwmon2/curr1_input", "0", "79100", NOT_AVAILABLE, "30000"]
+    ["VP0P85_VDD_DDR_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/curr1_input", "0", "15100", NOT_AVAILABLE, "30000"],
+    ["VP1P2_DDR_VDDQ_DPU0", "/sys/bus/i2c/devices/0-0044/hwmon/hwmon2/curr2_input", "0", "13800", NOT_AVAILABLE, "30000"],
+    ["VP0P75_VDD_CORE_DPU0 1", "/sys/bus/i2c/devices/0-0055/hwmon/hwmon1/curr1_input", "0", "25000", NOT_AVAILABLE, "30000"],
+    ["VP0P75_VDD_CORE_DPU0 2", "/sys/bus/i2c/devices/0-0055/hwmon/hwmon1/curr2_input", "0", "25000", NOT_AVAILABLE, "30000"],
+    ["VP0P75_VDD_CORE_DPU0 3", "/sys/bus/i2c/devices/0-0066/hwmon/hwmon0/curr1_input", "0", "25000", NOT_AVAILABLE, "30000"],
+    ["VP0P85_VDD_ARM_DPU0", "/sys/bus/i2c/devices/0-0066/hwmon/hwmon0/curr2_input", "0", "29100", NOT_AVAILABLE, "30000"],
 ]
 
 class VoltageSensor(SensorBase):
@@ -207,3 +210,4 @@ class CurrentSensor(SensorBase):
         if value == NOT_AVAILABLE:
             return NOT_AVAILABLE
         return float(value)
+

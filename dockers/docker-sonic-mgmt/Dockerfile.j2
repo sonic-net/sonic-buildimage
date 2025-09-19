@@ -111,6 +111,9 @@ RUN python3 -m pip install aiohttp \
                  thrift==0.11.0 \
                  virtualenv \
                  debugpy \
+                 opentelemetry-api==1.33.1 \
+                 opentelemetry-sdk==1.33.1 \
+                 opentelemetry-exporter-otlp==1.33.1 \
     && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
     && cd nanomsg-1.2      \
@@ -148,7 +151,7 @@ RUN python2 -m pip install allure-pytest==2.8.22 \
                 ixload \
                 ixnetwork-restpy==1.0.64 \
                 ixnetwork-open-traffic-generator==0.0.79 \
-                snappi_ixload==0.0.5 \
+                snappi_ixload==0.0.8 \
                 jinja2==2.10.1 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
