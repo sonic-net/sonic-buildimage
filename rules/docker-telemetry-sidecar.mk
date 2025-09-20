@@ -25,3 +25,12 @@ $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/syste
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+
+
+.PHONY: docker-telemetry-sidecar-ut
+docker-telemetry-sidecar-ut:
+	@echo "Running unit tests for systemd_stub.py..."
+	@PYTHONPATH=dockers/docker-telemetry-sidecar \
+		python3 -m pytest -q dockers/docker-telemetry-sidecar/systemd_scripts/tests
+
+target/docker-telemetry-sidecar.gz: docker-telemetry-sidecar-ut
