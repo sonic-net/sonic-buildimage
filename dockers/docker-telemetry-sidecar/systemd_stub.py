@@ -64,7 +64,7 @@ def read_file_bytes_local(path: str) -> Optional[bytes]:
     try:
         with open(path, "rb") as f:
             return f.read()
-    except Exception as e:
+    except OSError as e:  #covers file-related errors incl. ENOENT, EACCES, EISDIR, etc.
         logger.log_error(f"read failed for {path}: {e}")
         return None
 
