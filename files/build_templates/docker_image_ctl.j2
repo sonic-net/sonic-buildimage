@@ -727,6 +727,9 @@ start() {
 {%- if docker_container_name == "bgp" %}
         -v /etc/sonic/frr/$DEV:/etc/frr:rw \
 {%- endif %}
+{%- if docker_container_name == "k8s_telemetry" %}
+        --label raw_container_name=telemetry \
+{%- endif %}
 {%- if docker_container_name == "database" %}
         $DB_OPT \
 {%- else %}
