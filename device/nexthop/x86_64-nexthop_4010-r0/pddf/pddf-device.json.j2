@@ -4,7 +4,7 @@
     "num_fantrays": 4,
     "num_fans_pertray": 2,
     "num_ports": 66,
-    "num_temps": 12,
+    "num_temps": 7,
     "num_asic_temps": 56,
     "num_voltage_sensors" : 24,
     "num_current_sensors" : 8,
@@ -33,12 +33,10 @@
     "std_kos": [
       "at24",
       "i2c-dev",
+      "adm1266",
       "optoe"
     ],
     "pddf_kos": [
-      "pddf_multifpgapci_i2c_module",
-      "pddf_multifpgapci_gpio_module",
-      "pddf_multifpgapci_spi_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -57,8 +55,8 @@
       "nh_pmbus_core",
       "nh_isl68137",
       "nh_tda38740",
-      "nh_adm1266",
-      "nh_tmp464"
+      "nh_tmp464",
+      "pddf_custom_fpga_algo"
     ]
   },
   "COMPONENT1": {
@@ -187,14 +185,6 @@
         {
           "vendor": "0x10ee",
           "device": "0x7012"
-        },
-        {    
-          "vendor": "0x20a4",
-          "device": "0x7011"
-        },
-        {
-          "vendor": "0x20a4",
-          "device": "0x7012"
         }
       ]
     }
@@ -243,10 +233,6 @@
         {
           "chn": "3",
           "dev": "DPM1"
-        },
-        {
-          "chn": "5",
-          "dev": "DPM2"
         },
         {
           "chn": "6",
@@ -506,151 +492,6 @@
         {
           "attr_name": "temp1_input",
           "drv_attr_name": "temp1_input"
-        }
-      ]
-    }
-  },
-  "TEMP8": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC0_TEMP",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent" : "DCDC0",
-      "nexthop_thermal_setpoint_margin": 10,
-      "nexthop_thermal_pid_domain": "main"
-    },
-    "dev_attr": {
-      "display_name": "DCDC0"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
-        }
-      ]
-    }
-  },
-  "TEMP9": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC1_TEMP",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent" : "DCDC1",
-      "nexthop_thermal_setpoint_margin": 10,
-      "nexthop_thermal_pid_domain": "main"
-    },
-    "dev_attr": {
-      "display_name": "DCDC1"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
-        }
-      ]
-    }
-  },
-  "TEMP10": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC2_TEMP",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent" : "DCDC2",
-      "nexthop_thermal_setpoint_margin": 10,
-      "nexthop_thermal_pid_domain": "main"
-    },
-    "dev_attr": {
-      "display_name": "DCDC2"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
-        }
-      ]
-    }
-  },
-  "TEMP11": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC3_TEMP",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent" : "DCDC3",
-      "nexthop_thermal_setpoint_margin": 10,
-      "nexthop_thermal_pid_domain": "main"
-    },
-    "dev_attr": {
-      "display_name": "DCDC3"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
-        }
-      ]
-    }
-  },
-  "TEMP12": {
-    "dev_info": {
-      "device_type": "TEMP_SENSOR",
-      "device_name": "DCDC4_TEMP",
-      "device_parent": "MULTIFPGAPCIE0",
-      "virt_parent" : "DCDC4",
-      "nexthop_thermal_setpoint_margin": 10,
-      "nexthop_thermal_pid_domain": "main"
-    },
-    "dev_attr": {
-      "display_name": "DCDC4"
-    },
-    "i2c": {
-      "attr_list": [
-        {
-          "attr_name": "temp1_input",
-          "drv_attr_name": "temp1_input"
-        },
-        {
-          "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp1_max"
-        },
-        {
-          "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp1_crit"
         }
       ]
     }
@@ -1682,86 +1523,6 @@
           "attr_len": "1"
         },
         {
-          "attr_name": "fan1_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00000100",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan2_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00000100",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan3_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00008000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan4_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00008000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan5_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00400000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan6_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x00400000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan7_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x20000000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
-          "attr_name": "fan8_fault",
-          "attr_devaddr": "0x0",
-          "attr_devtype": "multifpgapci",
-          "attr_devname": "SWITCHCARD_FPGA",
-          "attr_offset": "0xa4",
-          "attr_mask": "0x20000000",
-          "attr_cmpval": "0x0",
-          "attr_len": "1"
-        },
-        {
           "attr_name": "fan1_input",
           "attr_devaddr": "0x0",
           "attr_devtype": "multifpgapci",
@@ -1974,7 +1735,9 @@
         },
         {
           "chan": "3",
-          "dev": [],
+          "dev": [
+            "FAN_CARD_EEPROM"
+          ],
           "cpld_offset": "0x10",
           "cpld_sel": "0x3"
         }
@@ -2511,6 +2274,28 @@
       ]
     }
   },
+  "FAN_CARD_EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "FAN_CARD_EEPROM",
+      "device_parent": "MULTIFPGAPCIE0"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5a",
+        "dev_addr": "0x50",
+        "dev_type": "24c64"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
+        }
+      ]
+    }
+  },
   "CPLDMUX1": {
     "dev_info": {
       "device_type": "CPLDMUX",
@@ -2582,7 +2367,9 @@
       "channel": [
         {
           "chan": "0",
-          "dev": [],
+          "dev": [
+            "MGMT_CARD_EEPROM"
+          ],
           "cpld_offset": "0x1c",
           "cpld_sel": "0x0"
         },
@@ -2609,6 +2396,28 @@
           ],
           "cpld_offset": "0x1c",
           "cpld_sel": "0x3"
+        }
+      ]
+    }
+  },
+  "MGMT_CARD_EEPROM": {
+    "dev_info": {
+      "device_type": "EEPROM",
+      "device_name": "MGMT_CARD_EEPROM",
+      "device_parent": "MULTIFPGAPCIE1"
+    },
+    "i2c": {
+      "topo_info": {
+        "parent_bus": "0x5f",
+        "dev_addr": "0x50",
+        "dev_type": "24c64"
+      },
+      "dev_attr": {
+        "access_mode": "BLOCK"
+      },
+      "attr_list": [
+        {
+          "attr_name": "eeprom"
         }
       ]
     }
@@ -12427,15 +12236,7 @@
       "dev_info": {"device_type":"DPM", "device_name":"DPM1", "device_parent":"MULTIFPGAPCIE0"},
       "i2c":
       {
-          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
-      }
-  },
-  "DPM2":
-  {
-      "dev_info": {"device_type":"DPM", "device_name":"DPM2", "device_parent":"MULTIFPGAPCIE0"},
-      "i2c":
-      {
-          "topo_info":{ "parent_bus":"0x9", "dev_addr":"0x41", "dev_type":"nh_adm1266"}
+          "topo_info":{ "parent_bus":"0x7", "dev_addr":"0x41", "dev_type":"adm1266"}
       }
   },
   "VOLTAGE1":
@@ -12448,8 +12249,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in1_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in1_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in1_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in1_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in1_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in1_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in1_min_alarm"}
         ]
     }
   },
@@ -12463,8 +12264,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in2_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in2_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in2_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in2_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in2_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in2_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in2_min_alarm"}
         ]
     }
   },
@@ -12478,8 +12279,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in4_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in4_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in4_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in4_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in4_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in4_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in4_min_alarm"}
         ]
     }
   },
@@ -12493,8 +12294,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in5_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in5_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in5_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in5_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in5_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in5_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in5_min_alarm"}
         ]
     }
   },
@@ -12508,8 +12309,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in6_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in6_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in6_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in6_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in6_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in6_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in6_min_alarm"}
         ]
     }
   },
@@ -12523,8 +12324,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in7_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in7_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in7_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in7_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in7_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in7_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in7_min_alarm"}
         ]
     }
   },
@@ -12538,8 +12339,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in8_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in8_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in8_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in8_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in8_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in8_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in8_min_alarm"}
         ]
     }
   },
@@ -12553,8 +12354,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in9_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in9_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in9_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in9_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in9_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in9_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in9_min_alarm"}
         ]
     }
   },
@@ -12568,8 +12369,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in10_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in10_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in10_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in10_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in10_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in10_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in10_min_alarm"}
         ]
     }
   },
@@ -12584,8 +12385,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in11_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in11_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in11_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in11_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in11_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in11_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in11_min_alarm"}
         ]
     }
   },
@@ -12599,8 +12400,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in12_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in12_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in12_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in12_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in12_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in12_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in12_min_alarm"}
         ]
     }
   },
@@ -12614,8 +12415,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in13_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in13_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in13_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in13_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in13_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in13_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in13_min_alarm"}
         ]
     }
   },
@@ -12629,8 +12430,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in14_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in14_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in14_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in14_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in14_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in14_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in14_min_alarm"}
         ]
     }
   },
@@ -12644,8 +12445,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in15_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in15_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in15_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in15_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in15_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in15_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in15_min_alarm"}
         ]
     }
   },
@@ -12659,8 +12460,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in16_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in16_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in16_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in16_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in16_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in16_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in16_min_alarm"}
         ]
     }
   },
@@ -12674,8 +12475,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in17_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in17_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in17_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in17_crit"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in17_lcrit"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in17_max_alarm"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in17_min_alarm"}
         ]
     }
   },
@@ -13074,11 +12875,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
+          "drv_attr_name": "curr3_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max_alarm"
         }
       ]
     }
@@ -13101,11 +12902,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
+          "drv_attr_name": "curr4_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max_alarm"
         }
       ]
     }
@@ -13128,11 +12929,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
+          "drv_attr_name": "curr3_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max_alarm"
         }
       ]
     }
@@ -13155,11 +12956,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
+          "drv_attr_name": "curr4_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max_alarm"
         }
       ]
     }
@@ -13182,11 +12983,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
+          "drv_attr_name": "curr3_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max_alarm"
         }
       ]
     }
@@ -13209,11 +13010,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_max"
+          "drv_attr_name": "curr3_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max_alarm"
         }
       ]
     }
@@ -13236,23 +13037,13 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_max"
+          "drv_attr_name": "curr4_crit"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max_alarm"
         }
       ]
     }
-  },
-  "WATCHDOG": {
-    "dev_info": {
-      "device_type": "WATCHDOG",
-      "device_parent": "MULTIFPGAPCIE1"
-     },
-     "dev_attr": {
-       "event_driven_power_cycle_control_reg_offset": "0x28",
-       "watchdog_counter_reg_offset": "0x1E0"
-     }
   }
 }

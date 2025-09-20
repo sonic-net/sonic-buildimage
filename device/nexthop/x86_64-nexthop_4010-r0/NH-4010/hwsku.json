@@ -321,10 +321,14 @@
             "fec": "rs"
         },
         "Ethernet512": {
-            "default_brkout_mode": "1x25G"
+            "autoneg": "off",
+            "default_brkout_mode": "1x25G",
+            "fec": "rs"
         },
         "Ethernet513": {
-            "default_brkout_mode": "1x25G"
+            "autoneg": "off",
+            "default_brkout_mode": "1x25G",
+            "fec": "rs"
         }
     }
 }

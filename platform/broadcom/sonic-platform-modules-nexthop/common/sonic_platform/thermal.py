@@ -113,16 +113,6 @@ class Thermal(PddfThermal, MinMaxTempMixin, PidThermalMixin):
         self._update_min_max_temp(temp)
         return temp
 
-    def get_minimum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_minimum_recorded(self)
-
-    def get_maximum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_maximum_recorded(self)
-
 
 class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     """ASIC temperature sensor read from the FPGA register"""
@@ -227,16 +217,6 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
             return float(val)
         return None
 
-    def get_minimum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_minimum_recorded(self)
-
-    def get_maximum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_maximum_recorded(self)
-
 
 class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     """SFP thermal interface class"""
@@ -328,16 +308,6 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
 
     def set_low_critical_threshold(self, temperature):
         return False
-
-    def get_minimum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_minimum_recorded(self)
-
-    def get_maximum_recorded(self):
-        # Make sure temp is recorded at least once.
-        self.get_temperature()
-        return MinMaxTempMixin.get_maximum_recorded(self)
     
     def get_pid_setpoint(self):
         setpoint = super().get_pid_setpoint()

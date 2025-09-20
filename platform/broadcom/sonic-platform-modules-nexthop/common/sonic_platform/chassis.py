@@ -9,14 +9,10 @@
 #
 #############################################################################
 
-import os
 import sys
 import time
 
 from sonic_platform.thermal import NexthopFpgaAsicThermal
-from sonic_platform.watchdog import Watchdog
-from sonic_platform.adm1266 import get_reboot_cause
-
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
 except ImportError as e:
@@ -29,7 +25,6 @@ XCVR_REMOVED = "0"
 # Sleep duration waiting for change events
 CHANGE_EVENT_SLEEP_SECONDS = 1
 
-
 class Chassis(PddfChassis):
     """
     PDDF Platform-specific Chassis class
@@ -40,11 +35,9 @@ class Chassis(PddfChassis):
 
         # {'port': 'presence'}
         self._xcvr_presence = {}
-        self._watchdog: Watchdog | None = None
-        self._pddf_data = pddf_data
 
-        if self._pddf_data:
-            num_asic_thermals = self._pddf_data.data.get("PLATFORM", {}).get("num_nexthop_fpga_asic_temp_sensors", 0)
+        if pddf_data:
+            num_asic_thermals = pddf_data.data.get('PLATFORM', {}).get('num_nexthop_fpga_asic_temp_sensors', 0)
         else:
             num_asic_thermals = 0
         for index in range(num_asic_thermals):
@@ -91,9 +84,10 @@ class Chassis(PddfChassis):
 
         try:
             # The index starts from 1
-            sfp = self._sfp_list[index - 1]
+            sfp = self._sfp_list[index-1]
         except IndexError:
-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(index, len(self._sfp_list)))
+            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
+                             index, len(self._sfp_list)))
         return sfp
 
     def _get_xcvr_change_event(self):
@@ -132,15 +126,15 @@ class Chassis(PddfChassis):
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
         """
-        end_time = time.monotonic() + timeout / 1000 if timeout > 0 else None
+        end_time = time.monotonic() + timeout/1000 if timeout > 0 else None
         change_events = {}
         while True:
-            change_events["sfp"] = self._get_xcvr_change_event()
-            if bool(change_events["sfp"]):
+            change_events['sfp'] = self._get_xcvr_change_event()
+            if bool(change_events['sfp']):
                 break
             if end_time is not None and time.monotonic() > end_time:
                 break
-            time.sleep(min(timeout / 1000, CHANGE_EVENT_SLEEP_SECONDS))
+            time.sleep(min(timeout/1000, CHANGE_EVENT_SLEEP_SECONDS))
         return True, change_events
 
     # sonic-utilities/show/system_health.py calls this
@@ -165,48 +159,27 @@ class Chassis(PddfChassis):
             to pass a description of the reboot cause.
         """
 
-        # First check for hardware specific causes
-        hw_cause, hw_description = get_reboot_cause()
-        if hw_cause != "REBOOT_CAUSE_UNKNOWN":
-            return (hw_cause, hw_description)
-
-        # Fall back to software reboot cause file
-        reboot_cause_path = self.plugin_data["REBOOT_CAUSE"]["reboot_cause_file"]
+        reboot_cause_path = self.plugin_data['REBOOT_CAUSE']['reboot_cause_file']
 
         try:
-            with open(reboot_cause_path, "r", errors="replace") as fd:
+            with open(reboot_cause_path, 'r', errors='replace') as fd:
                 data = fd.read()
                 sw_reboot_cause = data.strip()
-                return ("REBOOT_CAUSE_NON_HARDWARE", sw_reboot_cause)
         except IOError:
             sw_reboot_cause = "Unknown"
-            return ("REBOOT_CAUSE_UNKNOWN", "Unknown")
 
-    def get_watchdog(self) -> Watchdog | None:
+        return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
+    
+    def get_watchdog(self):
         """
         Retrieves hardware watchdog device on this chassis
         Returns:
             An object derived from WatchdogBase representing the hardware
-            watchdog device. None if no watchdog is present as defined in pddf_data.
+            watchdog device
         """
         if self._watchdog is None:
-            if not self._pddf_data:
-                return None
-            watchdog_pddf_obj_data = self._pddf_data.data.get("WATCHDOG")
-            if watchdog_pddf_obj_data is None:
-                return None
-            device_parent_name = watchdog_pddf_obj_data["dev_info"]["device_parent"]
-            fpga_pci_addr = self._pddf_data.data[device_parent_name]["dev_info"]["device_bdf"]
-            watchdog_dev_attr = watchdog_pddf_obj_data["dev_attr"]
-            event_driven_power_cycle_control_reg_offset = int(
-                watchdog_dev_attr["event_driven_power_cycle_control_reg_offset"], 16
-            )
-            watchdog_counter_reg_offset = int(watchdog_dev_attr["watchdog_counter_reg_offset"], 16)
-            self._watchdog = Watchdog(
-                fpga_pci_addr=fpga_pci_addr,
-                event_driven_power_cycle_control_reg_offset=event_driven_power_cycle_control_reg_offset,
-                watchdog_counter_reg_offset=watchdog_counter_reg_offset,
-            )
+            from sonic_platform.watchdog import Watchdog
+            self._watchdog = Watchdog()
 
         return self._watchdog
 
@@ -216,5 +189,4 @@ class Chassis(PddfChassis):
 
     def get_thermal_manager(self):
         from .thermal_manager import ThermalManager
-
         return ThermalManager

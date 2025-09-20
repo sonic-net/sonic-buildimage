@@ -54,7 +54,7 @@ def setup_external_mocks():
 
     # Create mock modules for the local dependencies
     mock_thermal_infos = Mock()
-    mock_thermal_infos.FanDrawerInfo = type('FanDrawerInfo', (), {'INFO_TYPE': 'fan_drawer_info'})
+    mock_thermal_infos.FanInfo = type('FanInfo', (), {'INFO_TYPE': 'fan_info'})
     mock_thermal_infos.ThermalInfo = type('ThermalInfo', (), {'INFO_TYPE': 'thermal_info'})
 
     mock_syslog = Mock()
@@ -540,11 +540,11 @@ class TestFanSetSpeedAction:
     @pytest.fixture
     def mock_thermal_info_dict(self, thermal_actions_module, mock_fans):
         """Fixture providing mock thermal info dictionary."""
-        fan_drawer_info = Mock()
-        fan_drawer_info.get_fans = Mock(return_value=mock_fans)
+        fan_info = Mock()
+        fan_info.get_fans = Mock(return_value=mock_fans)
         
         return {
-            thermal_actions_module.FanDrawerInfo.INFO_TYPE: fan_drawer_info
+            thermal_actions_module.FanInfo.INFO_TYPE: fan_info
         }
 
     def test_fan_set_speed_action_initialization(self, fan_set_speed_action):
@@ -575,70 +575,6 @@ class TestFanSetSpeedAction:
             fan.set_speed.assert_called_once_with(75)
 
 
-class TestFanSetMaxSpeedAction:
-    """Test class for FanSetMaxSpeedAction functionality."""
-
-    @pytest.fixture
-    def fan_set_max_speed_action(self, thermal_actions_module):
-        """Fixture providing a FanSetMaxSpeedAction instance."""
-        return thermal_actions_module.FanSetMaxSpeedAction()
-
-    @pytest.fixture
-    def mock_fans(self):
-        """Fixture providing mock fan objects."""
-        fans = []
-        for _ in range(3):
-            fan = Mock()
-            fan.set_speed = Mock(return_value=True)
-            fans.append(fan)
-        return fans
-
-    @pytest.fixture
-    def mock_thermal_info_dict(self, thermal_actions_module, mock_fans):
-        """Fixture providing mock thermal info dictionary."""
-        fan_drawer_info = Mock()
-        fan_drawer_info.get_fans = Mock(return_value=mock_fans)
-        
-        return {
-            thermal_actions_module.FanDrawerInfo.INFO_TYPE: fan_drawer_info
-        }
-
-    def test_fan_set_max_speed_action_initialization(self, fan_set_max_speed_action):
-        """Test FanSetMaxSpeedAction initialization."""
-        assert fan_set_max_speed_action._max_speed is None
-
-    def test_fan_set_max_speed_action_load_from_json_valid(self, fan_set_max_speed_action):
-        """Test loading valid JSON configuration."""
-        json_config = {'max_speed': 75}
-        fan_set_max_speed_action.load_from_json(json_config)
-        assert fan_set_max_speed_action._max_speed == 75
-
-    def test_fan_set_max_speed_action_load_from_json_invalid(self, fan_set_max_speed_action):
-        """Test loading invalid JSON configuration."""
-        with pytest.raises(KeyError):
-            fan_set_max_speed_action.load_from_json({})  # Missing max_speed field
-
-    def test_fan_set_max_speed_action_load_from_json_range_validation(self, fan_set_max_speed_action):
-        """Test max_speed range validation during JSON loading."""
-        with pytest.raises(ValueError, match="Max speed 5.0 is out of range"):
-            fan_set_max_speed_action.load_from_json({'max_speed': 5})
-        
-        with pytest.raises(ValueError, match="Max speed 105.0 is out of range"):
-            fan_set_max_speed_action.load_from_json({'max_speed': 105})
-
-    def test_fan_set_max_speed_action_execute(self, fan_set_max_speed_action, mock_thermal_info_dict, mock_fans):
-        """Test FanSetMaxSpeedAction execution."""
-        # Configure action
-        fan_set_max_speed_action.load_from_json({'max_speed': 75})
-        
-        # Execute action
-        fan_set_max_speed_action.execute(mock_thermal_info_dict)
-        
-        # Verify all fans were set to correct max speed
-        for fan in mock_fans:
-            fan.set_max_speed.assert_called_once_with(75)
-
-
 class TestThermalControlAlgorithmAction:
     """Test class for ThermalControlAlgorithmAction functionality."""
 
@@ -659,7 +595,8 @@ class TestThermalControlAlgorithmAction:
                 'extra_setpoint_margin': {'cpu': 2.0}
             },
             'fan_limits': {
-                'min': 30
+                'min': 30,
+                'max': 100
             }
         }
 
@@ -691,7 +628,7 @@ class TestThermalControlAlgorithmAction:
         thermal_control_action.load_from_json(valid_json_config)
 
         # Initialize PID controllers
-        thermal_control_action._initialize_pid_controllers(interval=5, fan_max_speed=100)
+        thermal_control_action._initialize_pid_controllers(5)
 
         # Verify controller was created for the domain
         assert 'cpu' in thermal_control_action._pidControllers
@@ -711,7 +648,7 @@ class TestThermalControlAlgorithmAction:
 
         # Try to initialize with different interval
         with pytest.raises(ValueError, match="Interval 10 does not match interval 5"):
-            thermal_control_action._initialize_pid_controllers(interval=10, fan_max_speed=100)
+            thermal_control_action._initialize_pid_controllers(10)
 
     def test_thermal_control_action_convert_pid_output_to_speed(self, thermal_control_action, valid_json_config):
         """Test PID output to fan speed conversion with precise validation."""
@@ -727,7 +664,7 @@ class TestThermalControlAlgorithmAction:
         ]
 
         for pid_output, expected_speed in test_cases:
-            speed = thermal_control_action._convert_pid_output_to_speed(pid_output, max_speed=100)
+            speed = thermal_control_action._convert_pid_output_to_speed(pid_output)
             assert speed == expected_speed, f"PID output {pid_output} should convert to {expected_speed}, got {speed}"
 
     def test_thermal_control_action_multiple_domains(self, thermal_actions_module):
@@ -745,12 +682,13 @@ class TestThermalControlAlgorithmAction:
                 'extra_setpoint_margin': {'cpu': 2.0, 'switch': 3.0, 'ambient': 1.0}
             },
             'fan_limits': {
-                'min': 35
+                'min': 35,
+                'max': 95
             }
         }
 
         action.load_from_json(multi_domain_config)
-        action._initialize_pid_controllers(interval=5, fan_max_speed=95)
+        action._initialize_pid_controllers(5)
 
         # Verify all controllers were created
         assert len(action._pidControllers) == 3
@@ -774,18 +712,28 @@ class TestThermalControlAlgorithmAction:
         invalid_config = {
             'pid_domains': {'cpu': {'KP': 1.0, 'KI': 0.5, 'KD': 0.1}},
             'constants': {'interval': 5, 'extra_setpoint_margin': {'cpu': 2.0}},
-            'fan_limits': {'min': 5}  # Out of valid range
+            'fan_limits': {'min': 5, 'max': 150}  # Out of valid range
         }
 
-        with pytest.raises(ValueError, match="Min fan limit 5 is out of range"):
+        with pytest.raises(ValueError, match="Fan limits 5-150 are out of range"):
             thermal_control_action.load_from_json(invalid_config)
+
+        # Test invalid fan limits (min > max)
+        invalid_config2 = {
+            'pid_domains': {'cpu': {'KP': 1.0, 'KI': 0.5, 'KD': 0.1}},
+            'constants': {'interval': 5, 'extra_setpoint_margin': {'cpu': 2.0}},
+            'fan_limits': {'min': 80, 'max': 60}  # min > max
+        }
+
+        with pytest.raises(ValueError, match="Min fan limit 80 is greater than max fan limit 60"):
+            thermal_control_action.load_from_json(invalid_config2)
 
     def test_thermal_control_action_missing_interval(self, thermal_control_action):
         """Test that missing interval raises ValueError."""
         invalid_config = {
             'pid_domains': {'cpu': {'KP': 1.0, 'KI': 0.5, 'KD': 0.1}},
             'constants': {'extra_setpoint_margin': {'cpu': 2.0}},  # Missing interval
-            'fan_limits': {'min': 30}
+            'fan_limits': {'min': 30, 'max': 100}
         }
 
         with pytest.raises(ValueError, match="Interval must be defined"):
