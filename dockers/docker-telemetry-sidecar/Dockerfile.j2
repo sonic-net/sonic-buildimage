@@ -15,7 +15,7 @@ ENV IMAGE_VERSION=$image_version
 
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
-COPY ["files/image_config/monit/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
+COPY ["files/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
 RUN chmod +x /usr/bin/systemd_stub.py
