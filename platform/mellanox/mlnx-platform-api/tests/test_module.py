@@ -320,7 +320,7 @@ class TestModule:
         reboot_cause_list = [
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
-            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
+            ("Reboot", 'Reset from Main board'),
             (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
