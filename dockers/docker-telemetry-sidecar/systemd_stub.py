@@ -196,8 +196,4 @@ def main() -> int:
         ok = ensure_sync() and ok
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        logger.log_info("Interrupted by user")
-        sys.exit(130)
+    raise SystemExit(main())
