@@ -27,6 +27,7 @@ $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_TELEMETRY_SIDECAR)_FILES += $(CONTAINER_CHECKER)
+$(DOCKER_TELEMETRY_SIDECAR)_FILES += $(TELEMETRY_SYSTEMD)
 
 .PHONY: docker-telemetry-sidecar-ut
 docker-telemetry-sidecar-ut:

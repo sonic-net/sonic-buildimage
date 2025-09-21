@@ -14,6 +14,14 @@ from typing import List, Optional, Tuple
 from sonic_py_common import logger as log
 logger = log.Logger()
 
+def env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "y", "on")
+
+IS_V1_ENABLED = env_bool("IS_V1_ENABLED", default=False)
+
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
 NSENTER_BASE = ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net"]
@@ -24,8 +32,16 @@ class SyncItem:
     dst_on_host: str
     mode: int = 0o755
 
+
+_TELEMETRY_SRC = (
+    "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"
+    if IS_V1_ENABLED
+    else "/usr/share/sonic/systemd_scripts/telemetry.sh"
+)
+logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}; telemetry source set to {_TELEMETRY_SRC}")
+
 SYNC_ITEMS: List[SyncItem] = [
-    SyncItem("/usr/share/sonic/systemd_scripts/telemetry.sh", "/usr/local/bin/telemetry.sh"),
+    SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
     SyncItem("/usr/share/sonic/systemd_scripts/container_checker", "/bin/container_checker"),
 ]
 
@@ -64,7 +80,7 @@ def read_file_bytes_local(path: str) -> Optional[bytes]:
     try:
         with open(path, "rb") as f:
             return f.read()
-    except OSError as e:  #covers file-related errors incl. ENOENT, EACCES, EISDIR, etc.
+    except OSError as e:  # covers file-related errors incl. ENOENT, EACCES, EISDIR, etc.
         logger.log_error(f"read failed for {path}: {e}")
         return None
 
