@@ -512,9 +512,10 @@ class SFP(NvidiaSFPCommon):
         for attempt in range(MAX_ATTEMPTS):
             result, err = self._read_eeprom(offset, num_bytes, log_on_error)
             if result is not None:
-                logger.log_debug(
-                    f"EEPROM read success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
-                    f"(sfp={self.sdk_index}, offset={offset}, size={num_bytes})")
+                if attempt > 0:
+                    logger.log_notice(
+                        f"EEPROM read success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
+                        f"(sfp={self.sdk_index}, offset={offset}, size={num_bytes})")
                 return result
 
             log_func = (logger.log_error if attempt + 1 > EEPROM_RETRY_ERR_THRESHOLD else logger.log_debug)
@@ -630,9 +631,10 @@ class SFP(NvidiaSFPCommon):
         for attempt in range(MAX_ATTEMPTS):
             ret, err = self._write_eeprom(offset, num_bytes, write_buffer)
             if ret:
-                logger.log_debug(
-                    f"EEPROM write success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
-                    f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}")
+                if attempt > 0:
+                    logger.log_notice(
+                        f"EEPROM write success after attempt {attempt + 1}/{MAX_ATTEMPTS} "
+                        f"for sfp={self.sdk_index}, offset={offset}, size={num_bytes}")
                 return True
 
             log_func = (logger.log_error if attempt + 1 > EEPROM_RETRY_ERR_THRESHOLD else logger.log_debug)
