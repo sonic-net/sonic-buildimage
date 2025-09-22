@@ -9,7 +9,7 @@ import click
 from tabulate import tabulate
 
 import utilities_common.multi_asic as multi_asic_util
-from swsscommon.swsscommon import CounterTable, MacsecCounter
+from swsscommon.swsscommon import CounterTable, MacsecCounter, SonicV2Connector
 from utilities_common.cli import UserCache
 
 CACHE_MANAGER = UserCache(app_name="macsec")
@@ -266,12 +266,77 @@ def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
 @click.argument('interface_name', required=False)
 @click.option('--profile', is_flag=True, required=False, default=False, help="show all macsec profiles")
 @click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
+@click.option('--post-status', is_flag=True, required=False, default=False, help="show macsec FIPS POST(Pre-Operational Self-Test) status")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display, profile):
+def macsec(interface_name, dump_file, namespace, display, profile, post_status):
+    if post_status:
+        if interface_name is not None or profile or dump_file:
+            click.echo('POST status is not valid with other options/arguments')
+            return
+        show_post_status()
+        return
+
     if interface_name is not None and profile:
         click.echo('Interface name is not valid with profile option')
         return
     MacsecContext(namespace, display).show(interface_name, dump_file, profile)
+
+def show_post_status():
+    """Show POST (Pre-Operational Self-Test) status"""
+    # Connect to STATE_DB
+    state_db = SonicV2Connector(use_unix_socket_path=True)
+    state_db.connect(state_db.STATE_DB)
+
+    # Define the table name
+    table_name = "FIPS_MACSEC_POST_TABLE"
+
+    def format_module_status(module):
+        # Get all fields from the table
+        post_data = state_db.get_all("STATE_DB", table_name+"|"+module)
+
+        # Format according to SONiC CLI guidelines
+        output = []
+        output.append(f"Module      : {module}")
+
+        for field in post_data:
+            value = post_data[field]
+            # Format field name for consistent alignment (capitalize and pad to 11 chars)
+            display_name = field.capitalize().ljust(11)
+            output.append(f"{display_name} : {value}")
+
+        return "\n".join(output)
+
+    # Get all keys in the FIPS_MACSEC_POST_TABLE
+    all_keys = state_db.keys(state_db.STATE_DB, table_name + "|*")
+
+    if not all_keys:
+        click.echo("POST Status")
+        click.echo("===========")
+        click.echo("No entries found")
+        return
+
+    # Extract module names from the keys and sort them
+    modules = []
+    for key in all_keys:
+        # Key format is "FIPS_MACSEC_POST_TABLE|module_name"
+        if "|" in key:
+            module = key.split("|", 1)[1]
+            modules.append(module)
+
+    # Sort modules for consistent output
+    modules.sort()
+
+    # Display header
+    click.echo("POST Status")
+    click.echo("===========")
+
+    # Display each module's status
+    for i, module in enumerate(modules):
+        if i > 0:
+            click.echo("")  # Add separator between modules
+
+        module_output = format_module_status(module)
+        click.echo(module_output)
 
 class MacsecContext(object):
 
