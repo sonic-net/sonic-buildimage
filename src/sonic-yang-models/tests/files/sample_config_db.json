@@ -1372,9 +1372,6 @@
         "VERSIONS": {
             "DATABASE": {
                 "VERSION": "version_1_0_3"
-            },
-            "SOFTWARE": {
-                "VERSION": "sonic_202411_01_03"
             }
         },
         "TELEMETRY": {
