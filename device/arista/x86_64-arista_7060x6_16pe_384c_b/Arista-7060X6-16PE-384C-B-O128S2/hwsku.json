@@ -174,61 +174,61 @@
         },
         "Ethernet136": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet140": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet144": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet148": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet152": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet156": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet160": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet164": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet168": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet172": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -246,61 +246,61 @@
         },
         "Ethernet184": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet188": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet192": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet196": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet200": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet204": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet208": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet212": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet216": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet220": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -318,61 +318,61 @@
         },
         "Ethernet232": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet236": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet240": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet244": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet248": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet252": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet256": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet260": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet264": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet268": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -390,61 +390,61 @@
         },
         "Ethernet280": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet284": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet288": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet292": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet296": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet300": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet304": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet308": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet312": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet316": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -462,61 +462,61 @@
         },
         "Ethernet328": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet332": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet336": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet340": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet344": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet348": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet352": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet356": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet360": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet364": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -534,61 +534,61 @@
         },
         "Ethernet376": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet380": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet384": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet388": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet392": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet396": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet400": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet404": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet408": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet412": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -606,61 +606,61 @@
         },
         "Ethernet424": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet428": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet432": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet436": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet440": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet444": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet448": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet452": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet456": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet460": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
@@ -678,61 +678,61 @@
         },
         "Ethernet472": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "3",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet476": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "4",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet480": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "5",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet484": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "6",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet488": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "7",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet492": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "8",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet496": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "9",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet500": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "10",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet504": {
             "fec": "rs",
-            "subport": "1",
+            "subport": "11",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },
         "Ethernet508": {
             "fec": "rs",
-            "subport": "2",
+            "subport": "12",
             "autoneg": "on",
             "default_brkout_mode": "1x400G"
         },

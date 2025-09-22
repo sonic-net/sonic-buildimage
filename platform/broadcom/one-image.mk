@@ -92,6 +92,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H4_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64O_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H5_32D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7250X1B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(TENCENT_TCS8400_PLATFORM_MODULE) \
                                $(TENCENT_TCS9400_PLATFORM_MODULE) \
@@ -104,6 +106,12 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64E_PLATFORM_MODULE) \
                                $(UFISPACE_S9321_64EO_PLATFORM_MODULE) \
+                               $(NEXTHOP_COMMON_PLATFORM_MODULE) \
+                               $(NEXTHOP_KOMODO_PLATFORM_MODULE) \
+                               $(NEXTHOP_4010_PLATFORM_MODULE) \
+                               $(NEXTHOP_4010_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4010_R1_PLATFORM_MODULE) \
+                               $(NEXTHOP_4020_R0_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \

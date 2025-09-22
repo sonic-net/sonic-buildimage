@@ -17,6 +17,7 @@ libicu72==72.1-3
 libipt2==2.0.5-1
 liblua5.1-0==5.1.5-9
 libmpfr6==4.2.0-1
+libpython3.11==3.11.2-6+deb12u6
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
 libssl-dev==3.0.13-1~deb12u1
@@ -32,4 +33,3 @@ strace==6.1-0.1
 ucf==3.0043+nmu1
 vim==2:9.0.1378-2
 vim-runtime==2:9.0.1378-2
-libpython3.11==3.11.2-6+deb12u6

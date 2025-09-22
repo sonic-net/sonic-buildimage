@@ -24,12 +24,12 @@
 #define MAX_NUM_XCVR 5
 #define MAX_XCVR_ATTRS 20
 
-
 typedef struct XCVR_ATTR
 {
     char aname[32];                    // attr name, taken from enum xcvr_sysfs_attributes
     char devtype[32];       // either a 'eeprom' or 'cpld', or 'pmbus' attribute
     char devname[32];       // name of the device from where this sysfs is to be read
+    struct pci_dev *fpga_pci_dev;
     uint32_t devaddr;
     uint32_t offset;
     uint32_t mask;
@@ -48,7 +48,7 @@ typedef struct XCVR_DATA
     int idx;                    // xcvr index
     XCVR_ATTR xcvr_attr;
     int len;             // no of valid attributes for this xcvr client
-    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS]; 
+    XCVR_ATTR xcvr_attrs[MAX_XCVR_ATTRS];
 }XCVR_DATA;
 
 typedef struct XCVR_PDATA

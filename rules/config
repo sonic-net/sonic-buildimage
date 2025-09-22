@@ -20,14 +20,6 @@ SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
 # Supported format: simple, none
 DEFAULT_BUILD_LOG_TIMESTAMP = none
 
-# SONIC_USE_DOCKER_BUILDKIT - use docker buildkit for build.
-# If set to y SONiC build system will set environment variable DOCKER_BUILDKIT=1
-# to enable docker buildkit.
-# This options will speed up docker image build time.
-# NOTE: SONIC_USE_DOCKER_BUILDKIT will produce larger installable SONiC image
-# because of a docker bug (more details: https://github.com/moby/moby/issues/38903)
-# SONIC_USE_DOCKER_BUILDKIT = y
-
 # SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD - use native dockerd for build.
 # If set to y SONiC build container will use native dockerd instead of dind for faster build.
 # Special handling of the docker image file names is needed to avoid conflicts with
@@ -41,9 +33,6 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 
 # CHANGE_DEFAULT_PASSWORD - enforce default user/users to change password on 1st login
 CHANGE_DEFAULT_PASSWORD ?= n
-
-# Default value for SMARTSWITCH
-SMARTSWITCH ?= 0
 
 # DEFAULT_USERNAME - default username for installer build
 DEFAULT_USERNAME = admin
@@ -155,16 +144,14 @@ INCLUDE_NAT = y
 # INCLUDE_DHCP_RELAY - build and install dhcp-relay package
 INCLUDE_DHCP_RELAY = y
 
-# INCLUDE_DHCP_SERVER - build and install dhcp-server package
+# INCLUDE_DHCP_SERVER - build dhcp-server package and enable based on config_db.json
 INCLUDE_DHCP_SERVER ?= n
-
-# Conditionally enable DHCP_SERVER when SMARTSWITCH is set to 1
-ifeq ($(SMARTSWITCH), 1)
-    INCLUDE_DHCP_SERVER = y
-endif
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
+
+# INCLUDE_VS_DASH_SAI - build dash-sai for VS
+INCLUDE_VS_DASH_SAI ?= y
 
 # ENABLE_AUTO_TECH_SUPPORT - Enable the configuration for event-driven techsupport & coredump mgmt feature
 ENABLE_AUTO_TECH_SUPPORT = y

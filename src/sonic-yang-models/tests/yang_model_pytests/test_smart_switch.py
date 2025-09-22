@@ -127,6 +127,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -156,6 +157,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -185,6 +187,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -214,6 +217,7 @@ class TestSmartSwitch:
                             "vip_ipv6": vip_ipv6,
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -243,6 +247,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": pa_ipv4,
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -272,6 +277,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": pa_ipv6,
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -301,6 +307,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": dpu_id,
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -330,6 +337,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": gnmi_port,
@@ -359,6 +367,7 @@ class TestSmartSwitch:
                             "vip_ipv6": "2001:db8::1",
                             "pa_ipv4": "192.168.1.2",
                             "pa_ipv6": "2001:db8::2",
+                            "midplane_ipv4": "169.254.200.245",
                             "dpu_id": "0",
                             "vdpu_id": "vdpu0",
                             "gnmi_port": 8080,
@@ -416,9 +425,34 @@ class TestSmartSwitch:
 
     def test_dash_ha_global_config(self, yang_model):
         data = {
+            "sonic-vxlan:sonic-vxlan": {
+                "sonic-vxlan:VXLAN_TUNNEL": {
+                    "VXLAN_TUNNEL_LIST": [
+                        {
+                            "name": "vtep1",
+                            "src_ip": "1.2.3.4"
+                        }
+                    ]
+                }
+            },
+            "sonic-vnet:sonic-vnet": {
+                "sonic-vnet:VNET": {
+                    "VNET_LIST": [
+                        {
+                            "name": "Vnet55",
+                            "vxlan_tunnel": "vtep1",
+                            "vni": 8000,
+                            "scope": "default",
+                            "advertise_prefix": True,
+                            "overlay_dmac": "22:33:44:55:66:77"
+                        }
+                    ]
+                }
+            },
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:DASH_HA_GLOBAL_CONFIG": {
                     "global": {
+                        "vnet_name": "Vnet55",
                         "cp_data_channel_port": 11234,
                         "dp_channel_port": 11235,
                         "dp_channel_src_port_min": 11236,
