@@ -381,7 +381,11 @@ fn main() {
                         }
                     }
 
-                    let status = HealthStatus { check_telemetry_port: check_port_result, xpath_commands: cmd_results, xpath_load_errors: load_json_errors };
+                    let status = HealthStatus {
+                        check_telemetry_port: check_port_result,
+                        xpath_commands: cmd_results,
+                        xpath_load_errors: load_json_errors
+                    };
 
                     let json_body = serde_json::to_string(&status).unwrap();
                     let response = format!(
