@@ -1,555 +1,8 @@
 {
-    "chassis": {
-        "name": "M2-W6940-128QC",
-        "thermal_manager": false,
-        "status_led": {
-            "controllable": false,
-            "colors": ["green", "blinking_green", "amber", "blinking_amber"]
-        },
-        "components": [
-            {
-                "name": "BASE_CPLD"
-            },
-            {
-                "name": "FAN_CPLD"
-            },
-            {
-                "name": "CPU_CPLD"
-            },
-            {
-                "name": "MISC_CPLD"
-            },
-            {
-                "name": "MAC_CPLDA"
-            },
-            {
-                "name": "MAC_CPLDB"
-            },
-            {
-                "name": "LC_CPLD"
-            },
-            {
-                "name": "MAC FPGA"
-            },
-            {
-                "name": "BIOS"
-            },
-            {
-                "name": "BMC"
-            }
-        ],
-        "fans": [
-            {
-                "name": "Fantray1_1",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray1_2",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray2_1",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray2_2",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray3_1",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray3_2",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray4_1",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray4_2",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray5_1",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            },
-            {
-                "name": "Fantray5_2",
-                "speed": {
-                    "controllable": false,
-                    "minimum": 50,
-                    "maximum": 100
-                },
-                "status_led": {
-                    "available": false,
-                    "colors": ["off", "red", "amber", "green"]
-                }
-            }
-        ],
-        "fan_drawers":[
-            {
-                "name": "Fantray1",
-                "num_fans" : 2,
-                "status_led": {
-                    "controllable": false,
-                    "colors": ["amber", "green", "off"]
-                },
-                "fans": [
-                    {
-                        "name": "Fantray1_1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "Fantray1_2",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Fantray2",
-                "num_fans" : 2,
-                "status_led": {
-                    "controllable": false,
-                    "colors": ["amber", "green", "off"]
-                },
-                "fans": [
-                    {
-                        "name": "Fantray2_1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "Fantray2_2",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Fantray3",
-                "num_fans" : 2,
-                "status_led": {
-                    "controllable": false,
-                    "colors": ["amber", "green", "off"]
-                },
-                "fans": [
-                    {
-                        "name": "Fantray3_1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "Fantray3_2",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Fantray4",
-                "num_fans" : 2,
-                "status_led": {
-                    "controllable": false,
-                    "colors": ["amber", "green", "off"]
-                },
-                "fans": [
-                    {
-                        "name": "Fantray4_1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "Fantray4_2",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Fantray5",
-                "num_fans" : 2,
-                "status_led": {
-                    "controllable": false,
-                    "colors": ["amber", "green", "off"]
-                },
-                "fans": [
-                    {
-                        "name": "Fantray5_1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "Fantray5_2",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            }
-        ],
-        "psus": [
-            {
-                "name": "Psu1",
-                "voltage": true,
-                "current": true,
-                "power": true,
-                "max_power": false,
-                "voltage_high_threshold": true,
-                "voltage_low_threshold": true,
-                "temperature": true,
-                "fans_target_speed": true,
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": [
-                    {
-                        "name": "PSU1_FAN1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Psu2",
-                "voltage": true,
-                "current": true,
-                "power": true,
-                "max_power": false,
-                "voltage_high_threshold": true,
-                "voltage_low_threshold": true,
-                "temperature": true,
-                "fans_target_speed": true,
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": [
-                    {
-                        "name": "PSU2_FAN1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Psu3",
-                "voltage": true,
-                "current": true,
-                "power": true,
-                "max_power": false,
-                "voltage_high_threshold": true,
-                "voltage_low_threshold": true,
-                "temperature": true,
-                "fans_target_speed": true,
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": [
-                    {
-                        "name": "PSU3_FAN1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "Psu4",
-                "voltage": true,
-                "current": true,
-                "power": true,
-                "max_power": false,
-                "voltage_high_threshold": true,
-                "voltage_low_threshold": true,
-                "temperature": true,
-                "fans_target_speed": true,
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": [
-                    {
-                        "name": "PSU4_FAN1",
-                        "speed": {
-                            "controllable": false,
-                            "minimum": 50,
-                            "maximum": 100
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            }
-        ],
-        "thermals": [
-            {
-                "name": "ASIC_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "CPU_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "INLET_TEMP_LC",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "INLET_TEMP_PDB",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "OUTLET_1_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "OUTLET_2_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU1_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU2_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU3_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU4_TEMP",
-                "controllable": false,
-                "low-crit-threshold": true,
-                "high-crit-threshold": true,
-                "low-threshold": true,
-                "high-threshold": true,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            }
-        ],
-        "modules": [],
-        "sfps": []
-    },
     "interfaces": {
         "Ethernet1": {
             "index": "0,0,0,0",
             "lanes": "17,18,19,20",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth1"
@@ -563,15 +16,6 @@
         "Ethernet5": {
             "index": "1,1,1,1",
             "lanes": "21,22,23,24",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth2"
@@ -585,15 +29,6 @@
         "Ethernet9": {
             "index": "2,2,2,2",
             "lanes": "25,26,27,28",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth3"
@@ -607,15 +42,6 @@
         "Ethernet13": {
             "index": "3,3,3,3",
             "lanes": "29,30,31,32",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth4"
@@ -629,15 +55,6 @@
         "Ethernet17": {
             "index": "4,4,4,4",
             "lanes": "129,130,131,132",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth5"
@@ -651,15 +68,6 @@
         "Ethernet21": {
             "index": "5,5,5,5",
             "lanes": "133,134,135,136",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth6"
@@ -673,15 +81,6 @@
         "Ethernet25": {
             "index": "6,6,6,6",
             "lanes": "41,42,43,44",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth7"
@@ -695,15 +94,6 @@
         "Ethernet29": {
             "index": "7,7,7,7",
             "lanes": "45,46,47,48",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth8"
@@ -717,15 +107,6 @@
         "Ethernet33": {
             "index": "8,8,8,8",
             "lanes": "57,58,59,60",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth9"
@@ -739,15 +120,6 @@
         "Ethernet37": {
             "index": "9,9,9,9",
             "lanes": "61,62,63,64",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth10"
@@ -761,15 +133,6 @@
         "Ethernet41": {
             "index": "10,10,10,10",
             "lanes": "145,146,147,148",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth11"
@@ -783,15 +146,6 @@
         "Ethernet45": {
             "index": "11,11,11,11",
             "lanes": "149,150,151,152",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth12"
@@ -805,15 +159,6 @@
         "Ethernet49": {
             "index": "12,12,12,12",
             "lanes": "137,138,139,140",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth13"
@@ -827,15 +172,6 @@
         "Ethernet53": {
             "index": "13,13,13,13",
             "lanes": "141,142,143,144",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth14"
@@ -849,15 +185,6 @@
         "Ethernet57": {
             "index": "14,14,14,14",
             "lanes": "33,34,35,36",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth15"
@@ -871,15 +198,6 @@
         "Ethernet61": {
             "index": "15,15,15,15",
             "lanes": "37,38,39,40",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth16"
@@ -893,15 +211,6 @@
         "Ethernet65": {
             "index": "16,16,16,16",
             "lanes": "161,162,163,164",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth17"
@@ -915,15 +224,6 @@
         "Ethernet69": {
             "index": "17,17,17,17",
             "lanes": "165,166,167,168",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth18"
@@ -937,15 +237,6 @@
         "Ethernet73": {
             "index": "18,18,18,18",
             "lanes": "153,154,155,156",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth19"
@@ -959,15 +250,6 @@
         "Ethernet77": {
             "index": "19,19,19,19",
             "lanes": "157,158,159,160",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth20"
@@ -981,15 +263,6 @@
         "Ethernet81": {
             "index": "20,20,20,20",
             "lanes": "49,50,51,52",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth21"
@@ -1003,15 +276,6 @@
         "Ethernet85": {
             "index": "21,21,21,21",
             "lanes": "53,54,55,56",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth22"
@@ -1025,15 +289,6 @@
         "Ethernet89": {
             "index": "22,22,22,22",
             "lanes": "177,178,179,180",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth23"
@@ -1047,15 +302,6 @@
         "Ethernet93": {
             "index": "23,23,23,23",
             "lanes": "181,182,183,184",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth24"
@@ -1069,15 +315,6 @@
         "Ethernet97": {
             "index": "24,24,24,24",
             "lanes": "169,170,171,172",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth25"
@@ -1091,15 +328,6 @@
         "Ethernet101": {
             "index": "25,25,25,25",
             "lanes": "173,174,175,176",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth26"
@@ -1113,15 +341,6 @@
         "Ethernet105": {
             "index": "26,26,26,26",
             "lanes": "65,66,67,68",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth27"
@@ -1135,15 +354,6 @@
         "Ethernet109": {
             "index": "27,27,27,27",
             "lanes": "69,70,71,72",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth28"
@@ -1157,15 +367,6 @@
         "Ethernet113": {
             "index": "28,28,28,28",
             "lanes": "209,210,211,212",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth29"
@@ -1179,15 +380,6 @@
         "Ethernet117": {
             "index": "29,29,29,29",
             "lanes": "213,214,215,216",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth30"
@@ -1201,15 +393,6 @@
         "Ethernet121": {
             "index": "30,30,30,30",
             "lanes": "185,186,187,188",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth31"
@@ -1223,15 +406,6 @@
         "Ethernet125": {
             "index": "31,31,31,31",
             "lanes": "189,190,191,192",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth32"
@@ -1245,15 +419,6 @@
         "Ethernet129": {
             "index": "32,32,32,32",
             "lanes": "81,82,83,84",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth33"
@@ -1267,15 +432,6 @@
         "Ethernet133": {
             "index": "33,33,33,33",
             "lanes": "85,86,87,88",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth34"
@@ -1289,15 +445,6 @@
         "Ethernet137": {
             "index": "34,34,34,34",
             "lanes": "193,194,195,196",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth35"
@@ -1311,15 +458,6 @@
         "Ethernet141": {
             "index": "35,35,35,35",
             "lanes": "197,198,199,200",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth36"
@@ -1333,15 +471,6 @@
         "Ethernet145": {
             "index": "36,36,36,36",
             "lanes": "201,202,203,204",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth37"
@@ -1355,15 +484,6 @@
         "Ethernet149": {
             "index": "37,37,37,37",
             "lanes": "205,206,207,208",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth38"
@@ -1377,15 +497,6 @@
         "Ethernet153": {
             "index": "38,38,38,38",
             "lanes": "97,98,99,100",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth39"
@@ -1399,15 +510,6 @@
         "Ethernet157": {
             "index": "39,39,39,39",
             "lanes": "101,102,103,104",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth40"
@@ -1421,15 +523,6 @@
         "Ethernet161": {
             "index": "40,40,40,40",
             "lanes": "121,122,123,124",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth41"
@@ -1443,15 +536,6 @@
         "Ethernet165": {
             "index": "41,41,41,41",
             "lanes": "125,126,127,128",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth42"
@@ -1465,15 +549,6 @@
         "Ethernet169": {
             "index": "42,42,42,42",
             "lanes": "217,218,219,220",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth43"
@@ -1487,15 +562,6 @@
         "Ethernet173": {
             "index": "43,43,43,43",
             "lanes": "221,222,223,224",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth44"
@@ -1509,15 +575,6 @@
         "Ethernet177": {
             "index": "44,44,44,44",
             "lanes": "113,114,115,116",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth45"
@@ -1531,15 +588,6 @@
         "Ethernet181": {
             "index": "45,45,45,45",
             "lanes": "117,118,119,120",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth46"
@@ -1553,15 +601,6 @@
         "Ethernet185": {
             "index": "46,46,46,46",
             "lanes": "105,106,107,108",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth47"
@@ -1575,15 +614,6 @@
         "Ethernet189": {
             "index": "47,47,47,47",
             "lanes": "109,110,111,112",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth48"
@@ -1597,15 +627,6 @@
         "Ethernet193": {
             "index": "48,48,48,48",
             "lanes": "225,226,227,228",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth49"
@@ -1619,15 +640,6 @@
         "Ethernet197": {
             "index": "49,49,49,49",
             "lanes": "229,230,231,232",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth50"
@@ -1641,15 +653,6 @@
         "Ethernet201": {
             "index": "50,50,50,50",
             "lanes": "233,234,235,236",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth51"
@@ -1663,15 +666,6 @@
         "Ethernet205": {
             "index": "51,51,51,51",
             "lanes": "237,238,239,240",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth52"
@@ -1685,15 +679,6 @@
         "Ethernet209": {
             "index": "52,52,52,52",
             "lanes": "89,90,91,92",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth53"
@@ -1707,15 +692,6 @@
         "Ethernet213": {
             "index": "53,53,53,53",
             "lanes": "93,94,95,96",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth54"
@@ -1729,15 +705,6 @@
         "Ethernet217": {
             "index": "54,54,54,54",
             "lanes": "241,242,243,244",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth55"
@@ -1751,15 +718,6 @@
         "Ethernet221": {
             "index": "55,55,55,55",
             "lanes": "245,246,247,248",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth56"
@@ -1773,15 +731,6 @@
         "Ethernet225": {
             "index": "56,56,56,56",
             "lanes": "249,250,251,252",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth57"
@@ -1795,15 +744,6 @@
         "Ethernet229": {
             "index": "57,57,57,57",
             "lanes": "253,254,255,256",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth58"
@@ -1817,15 +757,6 @@
         "Ethernet233": {
             "index": "58,58,58,58",
             "lanes": "73,74,75,76",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth59"
@@ -1839,15 +770,6 @@
         "Ethernet237": {
             "index": "59,59,59,59",
             "lanes": "77,78,79,80",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth60"
@@ -1861,15 +783,6 @@
         "Ethernet241": {
             "index": "60,60,60,60",
             "lanes": "257,258,259,260",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth61"
@@ -1883,15 +796,6 @@
         "Ethernet245": {
             "index": "61,61,61,61",
             "lanes": "261,262,263,264",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth62"
@@ -1905,15 +809,6 @@
         "Ethernet249": {
             "index": "62,62,62,62",
             "lanes": "265,266,267,268",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth63"
@@ -1927,15 +822,6 @@
         "Ethernet253": {
             "index": "63,63,63,63",
             "lanes": "269,270,271,272",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth64"
@@ -1949,15 +835,6 @@
         "Ethernet257": {
             "index": "64,64,64,64",
             "lanes": "433,434,435,436",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth65"
@@ -1971,15 +848,6 @@
         "Ethernet261": {
             "index": "65,65,65,65",
             "lanes": "437,438,439,440",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth66"
@@ -1993,15 +861,6 @@
         "Ethernet265": {
             "index": "66,66,66,66",
             "lanes": "273,274,275,276",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth67"
@@ -2015,15 +874,6 @@
         "Ethernet269": {
             "index": "67,67,67,67",
             "lanes": "277,278,279,280",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth68"
@@ -2037,15 +887,6 @@
         "Ethernet273": {
             "index": "68,68,68,68",
             "lanes": "281,282,283,284",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth69"
@@ -2059,15 +900,6 @@
         "Ethernet277": {
             "index": "69,69,69,69",
             "lanes": "285,286,287,288",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth70"
@@ -2081,15 +913,6 @@
         "Ethernet281": {
             "index": "70,70,70,70",
             "lanes": "417,418,419,420",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth71"
@@ -2103,15 +926,6 @@
         "Ethernet285": {
             "index": "71,71,71,71",
             "lanes": "421,422,423,424",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth72"
@@ -2125,15 +939,6 @@
         "Ethernet289": {
             "index": "72,72,72,72",
             "lanes": "393,394,395,396",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth73"
@@ -2147,15 +952,6 @@
         "Ethernet293": {
             "index": "73,73,73,73",
             "lanes": "397,398,399,400",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth74"
@@ -2169,15 +965,6 @@
         "Ethernet297": {
             "index": "74,74,74,74",
             "lanes": "289,290,291,292",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth75"
@@ -2191,15 +978,6 @@
         "Ethernet301": {
             "index": "75,75,75,75",
             "lanes": "293,294,295,296",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth76"
@@ -2213,15 +991,6 @@
         "Ethernet305": {
             "index": "76,76,76,76",
             "lanes": "401,402,403,404",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth77"
@@ -2235,15 +1004,6 @@
         "Ethernet309": {
             "index": "77,77,77,77",
             "lanes": "405,406,407,408",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth78"
@@ -2257,15 +1017,6 @@
         "Ethernet313": {
             "index": "78,78,78,78",
             "lanes": "409,410,411,412",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth79"
@@ -2279,15 +1030,6 @@
         "Ethernet317": {
             "index": "79,79,79,79",
             "lanes": "413,414,415,416",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth80"
@@ -2301,15 +1043,6 @@
         "Ethernet321": {
             "index": "80,80,80,80",
             "lanes": "305,306,307,308",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth81"
@@ -2323,15 +1056,6 @@
         "Ethernet325": {
             "index": "81,81,81,81",
             "lanes": "309,310,311,312",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth82"
@@ -2345,15 +1069,6 @@
         "Ethernet329": {
             "index": "82,82,82,82",
             "lanes": "385,386,387,388",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth83"
@@ -2367,15 +1082,6 @@
         "Ethernet333": {
             "index": "83,83,83,83",
             "lanes": "389,390,391,392",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth84"
@@ -2389,15 +1095,6 @@
         "Ethernet337": {
             "index": "84,84,84,84",
             "lanes": "425,426,427,428",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth85"
@@ -2411,15 +1108,6 @@
         "Ethernet341": {
             "index": "85,85,85,85",
             "lanes": "429,430,431,432",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth86"
@@ -2433,15 +1121,6 @@
         "Ethernet345": {
             "index": "86,86,86,86",
             "lanes": "321,322,323,324",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth87"
@@ -2455,15 +1134,6 @@
         "Ethernet349": {
             "index": "87,87,87,87",
             "lanes": "325,326,327,328",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth88"
@@ -2477,15 +1147,6 @@
         "Ethernet353": {
             "index": "88,88,88,88",
             "lanes": "313,314,315,316",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth89"
@@ -2499,15 +1160,6 @@
         "Ethernet357": {
             "index": "89,89,89,89",
             "lanes": "317,318,319,320",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth90"
@@ -2521,15 +1173,6 @@
         "Ethernet361": {
             "index": "90,90,90,90",
             "lanes": "441,442,443,444",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth91"
@@ -2543,15 +1186,6 @@
         "Ethernet365": {
             "index": "91,91,91,91",
             "lanes": "445,446,447,448",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth92"
@@ -2565,15 +1199,6 @@
         "Ethernet369": {
             "index": "92,92,92,92",
             "lanes": "337,338,339,340",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth93"
@@ -2587,15 +1212,6 @@
         "Ethernet373": {
             "index": "93,93,93,93",
             "lanes": "341,342,343,344",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth94"
@@ -2609,15 +1225,6 @@
         "Ethernet377": {
             "index": "94,94,94,94",
             "lanes": "297,298,299,300",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth95"
@@ -2631,15 +1238,6 @@
         "Ethernet381": {
             "index": "95,95,95,95",
             "lanes": "301,302,303,304",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth96"
@@ -2653,15 +1251,6 @@
         "Ethernet385": {
             "index": "96,96,96,96",
             "lanes": "457,458,459,460",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth97"
@@ -2675,15 +1264,6 @@
         "Ethernet389": {
             "index": "97,97,97,97",
             "lanes": "461,462,463,464",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth98"
@@ -2697,15 +1277,6 @@
         "Ethernet393": {
             "index": "98,98,98,98",
             "lanes": "353,354,355,356",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth99"
@@ -2719,15 +1290,6 @@
         "Ethernet397": {
             "index": "99,99,99,99",
             "lanes": "357,358,359,360",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth100"
@@ -2741,15 +1303,6 @@
         "Ethernet401": {
             "index": "100,100,100,100",
             "lanes": "329,330,331,332",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth101"
@@ -2763,15 +1316,6 @@
         "Ethernet405": {
             "index": "101,101,101,101",
             "lanes": "333,334,335,336",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth102"
@@ -2785,15 +1329,6 @@
         "Ethernet409": {
             "index": "102,102,102,102",
             "lanes": "473,474,475,476",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth103"
@@ -2807,15 +1342,6 @@
         "Ethernet413": {
             "index": "103,103,103,103",
             "lanes": "477,478,479,480",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth104"
@@ -2829,15 +1355,6 @@
         "Ethernet417": {
             "index": "104,104,104,104",
             "lanes": "369,370,371,372",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth105"
@@ -2851,15 +1368,6 @@
         "Ethernet421": {
             "index": "105,105,105,105",
             "lanes": "373,374,375,376",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth106"
@@ -2873,15 +1381,6 @@
         "Ethernet425": {
             "index": "106,106,106,106",
             "lanes": "345,346,347,348",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth107"
@@ -2895,15 +1394,6 @@
         "Ethernet429": {
             "index": "107,107,107,107",
             "lanes": "349,350,351,352",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth108"
@@ -2917,15 +1407,6 @@
         "Ethernet433": {
             "index": "108,108,108,108",
             "lanes": "449,450,451,452",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth109"
@@ -2939,15 +1420,6 @@
         "Ethernet437": {
             "index": "109,109,109,109",
             "lanes": "453,454,455,456",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth110"
@@ -2961,15 +1433,6 @@
         "Ethernet441": {
             "index": "110,110,110,110",
             "lanes": "465,466,467,468",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth111"
@@ -2983,15 +1446,6 @@
         "Ethernet445": {
             "index": "111,111,111,111",
             "lanes": "469,470,471,472",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth112"
@@ -3005,15 +1459,6 @@
         "Ethernet449": {
             "index": "112,112,112,112",
             "lanes": "361,362,363,364",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth113"
@@ -3027,15 +1472,6 @@
         "Ethernet453": {
             "index": "113,113,113,113",
             "lanes": "365,366,367,368",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth114"
@@ -3049,15 +1485,6 @@
         "Ethernet457": {
             "index": "114,114,114,114",
             "lanes": "489,490,491,492",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth115"
@@ -3071,15 +1498,6 @@
         "Ethernet461": {
             "index": "115,115,115,115",
             "lanes": "493,494,495,496",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth116"
@@ -3093,15 +1511,6 @@
         "Ethernet465": {
             "index": "116,116,116,116",
             "lanes": "481,482,483,484",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth117"
@@ -3115,15 +1524,6 @@
         "Ethernet469": {
             "index": "117,117,117,117",
             "lanes": "485,486,487,488",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth118"
@@ -3137,15 +1537,6 @@
         "Ethernet473": {
             "index": "118,118,118,118",
             "lanes": "377,378,379,380",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth119"
@@ -3159,15 +1550,6 @@
         "Ethernet477": {
             "index": "119,119,119,119",
             "lanes": "381,382,383,384",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth120"
@@ -3181,15 +1563,6 @@
         "Ethernet481": {
             "index": "120,120,120,120",
             "lanes": "505,506,507,508",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth121"
@@ -3203,15 +1576,6 @@
         "Ethernet485": {
             "index": "121,121,121,121",
             "lanes": "509,510,511,512",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth122"
@@ -3225,15 +1589,6 @@
         "Ethernet489": {
             "index": "122,122,122,122",
             "lanes": "497,498,499,500",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth123"
@@ -3247,15 +1602,6 @@
         "Ethernet493": {
             "index": "123,123,123,123",
             "lanes": "501,502,503,504",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth124"
@@ -3269,15 +1615,6 @@
         "Ethernet497": {
             "index": "124,124,124,124",
             "lanes": "9,10,11,12",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth125"
@@ -3291,15 +1628,6 @@
         "Ethernet501": {
             "index": "125,125,125,125",
             "lanes": "13,14,15,16",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth126"
@@ -3313,15 +1641,6 @@
         "Ethernet505": {
             "index": "126,126,126,126",
             "lanes": "1,2,3,4",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth127"
@@ -3335,15 +1654,6 @@
         "Ethernet509": {
             "index": "127,127,127,127",
             "lanes": "5,6,7,8",
-            "fec_modes": {
-                "1x400G": [
-                    "rs"
-                ],
-                "2x200G[100G]": [
-                    "rs",
-                    "rs"
-                ]
-            },
             "breakout_modes": {
                 "1x400G": [
                     "Eth128"
