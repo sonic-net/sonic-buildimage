@@ -1,0 +1,50 @@
+#!/bin/sh
+
+case $1 in
+    prereqs)
+        exit 0
+        ;;
+esac
+
+info() { printf "%04.2f: $@\n" "$(cut -f1 -d' ' /proc/uptime)"; }
+warn() { info "Warning: $@"; }
+
+set -e
+
+aboot_flag=''
+root_val=''
+
+# Extract kernel parameters
+set -- $(cat /proc/cmdline)
+for x in "$@"; do
+    case "$x" in
+        Aboot=*)
+            aboot_flag="${x#Aboot=}"
+            ;;
+        root=UUID=*)
+            root_val="${x#root=UUID=}"
+            ;;
+        systemd.unit=kdump-tools.service)
+            # In kdump environment, skip hooks
+            exit 0
+            ;;
+    esac
+done
+
+[ -z "$aboot_flag" ] && exit 0
+[ -z "$root_val" ] && exit 0
+
+wait_blockdev_retry_count=1
+while [ "$wait_blockdev_retry_count" -le 10 ]; do
+    info "Waiting for UUID=${root_val}: attempt ${wait_blockdev_retry_count}"
+    if blkid --uuid $root_val > /dev/null 2>&1; then
+        info "Finished waiting for UUID=${root_val}"
+        exit 0
+    fi
+    wait_blockdev_retry_count=$((wait_blockdev_retry_count + 1))
+    sleep 1
+done
+warn "Failed to wait for UUID=${root_val}"
+ls /dev
+dmesg | tail -n 100
+blkid
