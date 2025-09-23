@@ -39,6 +39,8 @@ const DEFAULT_TARGET_NAME: &str = "server.ndastreaming.ap.gbl";
 const DEFAULT_CA_CRT: &str = "/etc/sonic/telemetry/dsmsroot.cer";
 const DEFAULT_SERVER_CRT: &str = "/etc/sonic/telemetry/streamingtelemetryserver.cer";
 const DEFAULT_SERVER_KEY: &str = "/etc/sonic/telemetry/streamingtelemetryserver.key";
+// Max stderr we keep per gnmi_get (bytes) before truncation.
+const STDERR_TRUNCATE_LIMIT: usize = 16 * 1024; // 16KB
 
 // Configuration:
 // 1. JSON file (/cmd_list.json) optional. Format:
@@ -62,20 +64,21 @@ fn load_xpath_list() -> (Vec<String>, Vec<String>) {
     let mut errors: Vec<String> = Vec::new();
     // JSON file format example:
     //   { "xpaths": ["reboot-cause/history", "lldp/neighbors"] }
-    if let Ok(content) = fs::read_to_string(CMD_LIST_JSON) {
-        #[derive(serde::Deserialize)]
-        struct JsonCfg { xpaths: Option<Vec<String>> }
-        match serde_json::from_str::<JsonCfg>(&content) {
-            Ok(cfg) => {
-                if let Some(xs) = cfg.xpaths { for x in xs { if !x.is_empty() { set.insert(x); } } }
-            },
-            Err(e) => {
-                let msg = format!("Failed to parse {CMD_LIST_JSON}: {e}");
-                errors.push(msg);
-            },
+    match fs::read_to_string(CMD_LIST_JSON) {
+        Ok(content) => {
+            #[derive(serde::Deserialize)]
+            struct JsonCfg { xpaths: Option<Vec<String>> }
+            match serde_json::from_str::<JsonCfg>(&content) {
+                Ok(cfg) => {
+                    if let Some(xs) = cfg.xpaths { for x in xs { if !x.is_empty() { set.insert(x); } } }
+                },
+                Err(e) => {
+                    let msg = format!("Failed to parse {CMD_LIST_JSON}: {e}");
+                    errors.push(msg);
+                },
+            }
         }
-    } else {
-        if let Err(e) = fs::read_to_string(CMD_LIST_JSON) {
+        Err(e) => {
             let msg = format!(
                 "Could not read {CMD_LIST_JSON}: {e} (will continue with env var only)"
             );
@@ -216,11 +219,11 @@ fn run_gnmi_for_xpath(
                 }
             } else {
                 // Possibly large stderr; truncate if huge (optional threshold 16KB).
-                let mut truncated = if stderr_string.len() > 16 * 1024 {
+                let mut truncated = if stderr_string.len() > STDERR_TRUNCATE_LIMIT {
                     format!(
                         "{}...[truncated {} bytes]",
-                        &stderr_string[..16 * 1024],
-                        stderr_string.len() - 16 * 1024
+                        &stderr_string[..STDERR_TRUNCATE_LIMIT],
+                        stderr_string.len() - STDERR_TRUNCATE_LIMIT
                     )
                 } else {
                     stderr_string.clone()
