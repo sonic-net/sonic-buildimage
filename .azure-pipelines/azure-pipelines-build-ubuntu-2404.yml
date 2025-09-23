@@ -1,0 +1,52 @@
+# C/C++ with GCC
+# Build your C/C++ project with GCC using make.
+# Add steps that publish test results, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/c-cpp/gcc
+pr: none
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - 202???
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily build
+  branches:
+    include:
+      - master
+      - 202???
+  always: true
+
+stages:
+- stage: Build
+
+  jobs:
+  - job:
+    displayName: "amd64/ubuntu-24.04"
+    pool:
+      vmImage: 'ubuntu-24.04'
+
+    steps:
+    - checkout: self
+      submodules: true
+    - script: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y make wget libtool m4 autoconf dh-exec debhelper \
+                                protobuf-compiler libprotobuf-dev swig python3-dev \
+                                python3-pip libboost-all-dev libgtest-dev
+        sudo pip3 install pytest click --break-system-packages
+      displayName: "Install dependencies"
+    - script: |
+        dpkg-buildpackage -rfakeroot -b -us -uc
+      workingDirectory: src/sonic-dash-api
+      displayName: "Build sonic-dash-api"
+    - script: |
+        cp *.deb /tmp/artifacts
+      workingDirectory: src
+    - publish: /tmp/artifacts
+      artifact: sonic-buildimage.amd64.ubuntu22_04
+      displayName: "Archive sonic-buildimage debian packages for ubuntu22.04"
