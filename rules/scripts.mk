@@ -23,7 +23,7 @@ $(SYSCTL_NET_CONFIG)_PATH = files/image_config/sysctl
 CONTAINER_CHECKER = container_checker
 $(CONTAINER_CHECKER)_PATH = files/image_config/monit
 
-TELEMETRY_SYSTEMD = telemetry_sydtemd
+TELEMETRY_SYSTEMD = telemetry.sh
 $(TELEMETRY_SYSTEMD)_PATH = files/scripts
 
 UPDATE_CHASSISDB_CONFIG_SCRIPT = update_chassisdb_config

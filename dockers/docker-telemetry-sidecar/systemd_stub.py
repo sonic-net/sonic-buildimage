@@ -14,13 +14,13 @@ from typing import List, Optional, Tuple
 from sonic_py_common import logger as log
 logger = log.Logger()
 
-def env_bool(name: str, default: bool = False) -> bool:
+def get_bool_env_var(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
     if val is None:
         return default
     return val.strip().lower() in ("1", "true", "yes", "y", "on")
 
-IS_V1_ENABLED = env_bool("IS_V1_ENABLED", default=False)
+IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
