@@ -209,7 +209,7 @@ def main() -> int:
 
     while True:
         time.sleep(args.interval)
-        ok = ensure_sync() and ok
+        ok = ensure_sync()
 
 if __name__ == "__main__":
     raise SystemExit(main())
