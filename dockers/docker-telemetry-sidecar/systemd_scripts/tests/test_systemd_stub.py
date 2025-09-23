@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+
 @pytest.fixture(scope="session", autouse=True)
 def fake_logger_module():
     pkg = types.ModuleType("sonic_py_common")
@@ -18,9 +19,12 @@ def fake_logger_module():
         def _log(self, level, msg):
             self.messages.append((level, msg))
 
-        def log_debug(self, msg): self._log("DEBUG", msg)
-        def log_info(self, msg):  self._log("INFO", msg)
-        def log_error(self, msg): self._log("ERROR", msg)
+        def log_debug(self, msg):     self._log("DEBUG", msg)
+        def log_info(self, msg):      self._log("INFO", msg)
+        def log_error(self, msg):     self._log("ERROR", msg)
+        def log_notice(self, msg):    self._log("NOTICE", msg)
+        def log_warning(self, msg):   self._log("WARNING", msg)
+        def log_critical(self, msg):  self._log("CRITICAL", msg)
 
     logger_mod.Logger = _Logger
     pkg.logger = logger_mod
@@ -37,7 +41,6 @@ def ss(tmp_path, monkeypatch):
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
     """
-    # Ensure a clean import each time
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     ss = importlib.import_module("systemd_stub")
@@ -46,7 +49,7 @@ def ss(tmp_path, monkeypatch):
     host_fs = {}
     commands = []
 
-    # Fake run_nsenter that understands a minimal set of commands used by the code
+    # Fake run_nsenter
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
         # /bin/cat <path>
@@ -75,30 +78,27 @@ def ss(tmp_path, monkeypatch):
             target = args[-1]
             host_fs.pop(target, None)
             return 0, "" if text else b"", "" if text else b""
-        # Post actions like: sudo docker ..., sudo systemctl ...
+        # sudo …
         if args[:1] == ["sudo"]:
-            # Accept and succeed for simplicity
             return 0, "" if text else b"", "" if text else b""
-        # default: fail
         return 1, "" if text else b"", "unsupported" if text else b"unsupported"
 
     monkeypatch.setattr(ss, "run_nsenter", fake_run_nsenter, raising=True)
 
-    # Provide a fake "container filesystem" for read_file_bytes_local
+    # Fake container FS
     container_fs = {}
     def fake_read_file_bytes_local(path: str):
         return container_fs.get(path, None)
 
     monkeypatch.setattr(ss, "read_file_bytes_local", fake_read_file_bytes_local, raising=True)
 
-    # Give each test fresh POST_COPY_ACTIONS they can edit safely
+    # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
     return ss, container_fs, host_fs, commands
 
 
 def test_sha256_bytes_basic():
-    # Import a fresh module
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     ss = importlib.import_module("systemd_stub")
@@ -129,7 +129,6 @@ def test_sync_no_change_fast_path(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
-    # no /bin/sh cat > ... when files are same
     assert not any("/bin/sh" == c[1][0] and "-lc" in c[1] for c in commands)
 
 
@@ -149,7 +148,6 @@ def test_sync_updates_and_post_actions(ss):
     assert ok is True
     assert host_fs[item.dst_on_host] == b"NEW"
 
-    # args were recorded as tuples; compare using tuples
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
     assert ("sudo", "systemctl", "daemon-reload") in post_cmds
     assert ("sudo", "systemctl", "restart", "monit") in post_cmds
@@ -185,3 +183,33 @@ def test_main_once_exits_nonzero_when_sync_fails(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["systemd_stub.py", "--once"])
     rc = ss.main()
     assert rc == 1
+
+
+def test_env_controls_telemetry_src_true(monkeypatch):
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("IS_V1_ENABLED", "true")
+
+    ss = importlib.import_module("systemd_stub")
+    assert ss.IS_V1_ENABLED is True
+    assert ss._TELEMETRY_SRC.endswith("telemetry_v1.sh")
+
+
+def test_env_controls_telemetry_src_false(monkeypatch):
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.setenv("IS_V1_ENABLED", "false")
+
+    ss = importlib.import_module("systemd_stub")
+    assert ss.IS_V1_ENABLED is False
+    assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
+
+
+def test_env_controls_telemetry_src_default(monkeypatch):
+    if "systemd_stub" in sys.modules:
+        del sys.modules["systemd_stub"]
+    monkeypatch.delenv("IS_V1_ENABLED", raising=False)
+
+    ss = importlib.import_module("systemd_stub")
+    assert ss.IS_V1_ENABLED is False
+    assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
