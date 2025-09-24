@@ -157,6 +157,7 @@
         "VLAN_INTERFACE": {
             "Vlan111": {
                 "nat_zone": "0",
+                "static_anycast_gateway": "true",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
                 "mac_addr": "02:ab:cd:ef:12:34"
@@ -2209,6 +2210,11 @@
                 "ranges": [
                     "range1"
                 ]
+            }
+        },
+        "SAG": {
+            "GLOBAL": {
+                "gateway_mac": "00:11:22:33:44:55"
             }
         },
         "SCHEDULER": {
