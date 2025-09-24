@@ -1083,6 +1083,48 @@
                 "LOGOUTPUT": "SYSLOG"
             }
         },
+        "POE_PORT": {
+            "Ethernet0": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet1": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet2": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet3": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet4": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet5": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet6": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "high"
+            },
+            "Ethernet7": {
+                "enabled": "enable",
+                "pwr_limit": "50.0",
+                "priority": "crit"
+            }
+        },
         "ACL_TABLE": {
             "V4-ACL-TABLE": {
                 "type": "L3",

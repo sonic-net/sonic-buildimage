@@ -88,6 +88,7 @@ yang_files = [
     'sonic-port.yang',
     'sonic-policer.yang',
     'sonic-portchannel.yang',
+    'sonic-poe.yang',
     'sonic-pfcwd.yang',
     'sonic-route-common.yang',
     'sonic-route-map.yang',
