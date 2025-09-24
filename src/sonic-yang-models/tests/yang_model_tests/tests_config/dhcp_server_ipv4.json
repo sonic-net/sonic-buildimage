@@ -354,6 +354,7 @@
         }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_EMPTY": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
@@ -364,8 +365,10 @@
                     }
                 ]
             }
+        }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_TRUE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
@@ -377,8 +380,10 @@
                     }
                 ]
             }
+        }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_FALSE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
@@ -390,6 +395,7 @@
                     }
                 ]
             }
+        }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_INVALID": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
