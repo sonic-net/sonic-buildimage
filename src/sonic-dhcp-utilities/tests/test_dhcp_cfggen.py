@@ -260,6 +260,11 @@ tested_options_data = {
             "type": "string",
             "value": "dummy_value"
         },
+        "option32": {
+            "id": "32",
+            "type": "string",
+            "value": "192.168.0.1"
+        },
         "option60": {
             "id": "60",
             "type": "string",
@@ -295,9 +300,11 @@ tested_options_data = {
         }
     },
     "res": {
-        "option223": "dummy_value",
-        "option217": "dummy_value\\\\,dummy_value",
-        "option216": "8"
+        "option223": {"value": "dummy_value"},
+        "option217": {"value": "dummy_value\\\\,dummy_value"},
+        "option216": {"value": "8"},
+        "option60": {"value": "dummy_value"},
+        "option32": {"value": "192.168.0.1", "type": "ipv4-address"}
     }
 }
 
@@ -455,8 +462,8 @@ def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_ren
     for key, value in tested_options_data["res"].items():
         expected_res[key] = {
             "id": customized_options_ipv4[key]["id"],
-            "value": value,
-            "type": customized_options_ipv4[key]["type"],
+            "value": value["value"],
+            "type": value.get("type", customized_options_ipv4[key]["type"]),
             "always_send": "true"
         }
     assert customized_options == expected_res

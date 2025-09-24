@@ -122,6 +122,7 @@ class DhcpServCfgGenerator(object):
     def _parse_customized_options(self, customized_options_ipv4):
         customized_options = {}
         for option_name, config in customized_options_ipv4.items():
+            print(config["id"])
             if config["id"] not in self.dhcp_option.keys():
                 syslog.syslog(syslog.LOG_ERR, "Unsupported option: {}, currently only support unassigned options"
                               .format(config["id"]))
@@ -130,10 +131,9 @@ class DhcpServCfgGenerator(object):
                 option_type = self.dhcp_option[config["id"]][0]
                 if option_type != config["type"]:
                     syslog.syslog(syslog.LOG_WARNING,
-                                  "Option type [{}] is not consistent with expected dhcp option type [{}], will " + \
-                                      "honor expected type"
+                                  ("Option type [{}] is not consistent with expected dhcp option type [{}], will " +
+                                   "honor expected type")
                                   .format(config["type"], option_type))
-                    continue
             else:
                 option_type = config["type"] if "type" in config else "string"
             if option_type not in SUPPORT_DHCP_OPTION_TYPE:
