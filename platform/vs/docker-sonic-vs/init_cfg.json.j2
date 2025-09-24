@@ -6,6 +6,11 @@
             "buffer_model": "traditional"
         }
     },
+    "NODE_CFG": {
+        "integrated_circuit0": {
+            "node-id": "1"
+        }
+    },
 {% if switch_type != "dpu" %}
 {% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "enabled", "nat": "enabled", "database": "enabled", "lldp": "enabled", "dhcp_relay": "enabled", "macsec": "enabled"}) %}
 {% else %}
