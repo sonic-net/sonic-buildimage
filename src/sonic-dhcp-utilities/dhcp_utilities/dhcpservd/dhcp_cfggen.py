@@ -122,7 +122,6 @@ class DhcpServCfgGenerator(object):
     def _parse_customized_options(self, customized_options_ipv4):
         customized_options = {}
         for option_name, config in customized_options_ipv4.items():
-            print(config["id"])
             if config["id"] not in self.dhcp_option.keys():
                 syslog.syslog(syslog.LOG_ERR, "Unsupported option: {}, currently only support unassigned options"
                               .format(config["id"]))
