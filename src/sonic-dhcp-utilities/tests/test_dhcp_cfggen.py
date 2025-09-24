@@ -220,7 +220,15 @@ expected_render_obj = {
             "customized_options": {
                 "option223": {
                     "always_send": "true",
-                    "value": "dummy_value"
+                    "value": "dummy_value",
+                    "option_type": "customized",
+                    "id": "223"
+                },
+                "option60": {
+                    "always_send": "false",
+                    "value": "dummy_value",
+                    "option_type": "standard",
+                    "id": "60"
                 }
             }
         },
@@ -231,7 +239,15 @@ expected_render_obj = {
             "customized_options": {
                 "option223": {
                     "always_send": "true",
-                    "value": "dummy_value"
+                    "value": "dummy_value",
+                    "option_type": "customized",
+                    "id": "223"
+                },
+                "option60": {
+                    "always_send": "false",
+                    "value": "dummy_value",
+                    "option_type": "standard",
+                    "id": "60"
                 }
             }
         }
@@ -248,13 +264,19 @@ expected_render_obj = {
             "id": "223",
             "value": "dummy_value",
             "type": "string",
-            "always_send": "true"
+            "always_send": "true",
+            "option_type": "customized"
         }
     },
     "hook_lib_path": "/usr/local/lib/kea/hooks/libdhcp_run_script.so"
 }
 tested_options_data = {
     "data": {
+        "option83": {
+            "id": "83",
+            "type": "string",
+            "value": "dummy_value"
+        },
         "option223": {
             "id": "223",
             "type": "string",
@@ -300,11 +322,11 @@ tested_options_data = {
         }
     },
     "res": {
-        "option223": {"value": "dummy_value"},
-        "option217": {"value": "dummy_value\\\\,dummy_value"},
-        "option216": {"value": "8"},
-        "option60": {"value": "dummy_value"},
-        "option32": {"value": "192.168.0.1", "type": "ipv4-address"}
+        "option223": {"value": "dummy_value", "option_type": "customized"},
+        "option217": {"value": "dummy_value\\\\,dummy_value", "option_type": "customized"},
+        "option216": {"value": "8", "option_type": "customized"},
+        "option60": {"value": "dummy_value", "option_type": "standard"},
+        "option32": {"value": "192.168.0.1", "type": "ipv4-address", "option_type": "standard"},
     }
 }
 
@@ -396,7 +418,22 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                                     mock_get_render_template):
     mock_config_db = MockConfigDb(config_db_path="tests/test_data/mock_config_db.json")
     dhcp_db_connector = DhcpDbConnector()
-    customized_options = {"option223": {"id": "223", "value": "dummy_value", "type": "string", "always_send": "true"}}
+    customized_options = {
+        "option223": {
+            "id": "223",
+            "value": "dummy_value",
+            "type": "string",
+            "always_send": "true",
+            "option_type": "customized"
+        },
+        "option60": {
+            "id": "60",
+            "value": "dummy_value",
+            "type": "string",
+            "always_send": "false",
+            "option_type": "standard"
+        }
+    }
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
     tested_hostname = "sonic-host"
     port_ips = {
@@ -444,6 +481,12 @@ def test_render_config(mock_swsscommon_dbconnector_init, mock_parse_port_map_ali
         else:
             for i in range(len(expected_config["Dhcp4"]["subnet4"])):
                 expected_config["Dhcp4"]["subnet4"][i]["option-data"].insert(0, {
+                                "code": 60,
+                                "data": "dummy_value",
+                                "always-send": False,
+                                "csv-format": True
+                        })
+                expected_config["Dhcp4"]["subnet4"][i]["option-data"].insert(0, {
                                 "name": "option223",
                                 "data": "dummy_value",
                                 "always-send": True
@@ -464,8 +507,11 @@ def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_ren
             "id": customized_options_ipv4[key]["id"],
             "value": value["value"],
             "type": value.get("type", customized_options_ipv4[key]["type"]),
-            "always_send": "true"
+            "always_send": "true",
+            "option_type": value["option_type"]
         }
+    print(customized_options)
+    print(expected_res)
     assert customized_options == expected_res
 
 

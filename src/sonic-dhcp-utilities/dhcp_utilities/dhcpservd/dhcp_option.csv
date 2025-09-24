@@ -120,8 +120,8 @@ Code,Type,Customized Type
 118,,assigned
 119,fqdn,defined_supported
 120,,assigned
-121,,assigned
-122,,assigned
+121,,defined_supported
+122,,defined_supported
 123,,assigned
 124,"record (uint32, binary)",defined_supported
 125,uint32,defined_supported

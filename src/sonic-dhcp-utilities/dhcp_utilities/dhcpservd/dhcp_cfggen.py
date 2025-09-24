@@ -122,13 +122,14 @@ class DhcpServCfgGenerator(object):
     def _parse_customized_options(self, customized_options_ipv4):
         customized_options = {}
         for option_name, config in customized_options_ipv4.items():
-            if config["id"] not in self.dhcp_option.keys():
-                syslog.syslog(syslog.LOG_ERR, "Unsupported option: {}, currently only support unassigned options"
-                              .format(config["id"]))
+            is_standard_option = config["id"] in self.dhcp_option["standard_options"].keys()
+            is_customized_option = config["id"] in self.dhcp_option["customized_options"].keys()
+            if not is_standard_option and not is_customized_option:
+                syslog.syslog(syslog.LOG_ERR, "Unsupported option: {}".format(config["id"]))
                 continue
-            if len(self.dhcp_option[config["id"]]) != 0:
-                option_type = self.dhcp_option[config["id"]][0]
-                if option_type != config["type"]:
+            if is_standard_option:
+                option_type = self.dhcp_option["standard_options"][config["id"]][0]
+                if "type" in config and config["type"] != option_type:
                     syslog.syslog(syslog.LOG_WARNING,
                                   ("Option type [{}] is not consistent with expected dhcp option type [{}], will " +
                                    "honor expected type")
@@ -151,7 +152,8 @@ class DhcpServCfgGenerator(object):
                 "id": config["id"],
                 "value": config["value"].replace(",", "\\\\,") if option_type == "string" else config["value"],
                 "type": option_type,
-                "always_send": always_send
+                "always_send": always_send,
+                "option_type": "standard" if is_standard_option else "customized"
             }
         return customized_options
 
@@ -212,7 +214,9 @@ class DhcpServCfgGenerator(object):
                             continue
                         curr_options[option] = {
                             "always_send": customized_options[option]["always_send"],
-                            "value": customized_options[option]["value"]
+                            "value": customized_options[option]["value"],
+                            "option_type": customized_options[option]["option_type"],
+                            "id": customized_options[option]["id"]
                         }
                 for dhcp_interface_ip, port_config in port_ips[dhcp_interface_name].items():
                     pools = []
@@ -249,7 +253,8 @@ class DhcpServCfgGenerator(object):
             "client_classes": client_classes,
             "lease_update_script_path": self.lease_update_script_path,
             "lease_path": self.lease_path,
-            "customized_options": customized_options,
+            "customized_options": {key: value for key, value in customized_options.items()
+                                   if value["option_type"] == "customized"},
             "hook_lib_path": self.hook_lib_path
         }
         return render_obj, enabled_dhcp_interfaces, used_options, subscribe_table
@@ -452,7 +457,10 @@ class DhcpServCfgGenerator(object):
     def _read_dhcp_option(self, file_path):
         # TODO current only support unassigned options, use dict in case support more options in the future
         # key: option code, value: option type list
-        self.dhcp_option = {}
+        self.dhcp_option = {
+            "customized_options": {},
+            "standard_options": {}
+        }
         with open(file_path, "r") as file:
             lines = file.readlines()
             for line in lines:
@@ -460,8 +468,8 @@ class DhcpServCfgGenerator(object):
                     continue
                 splits = line.strip().split(",")
                 if splits[-1] == "unassigned":
-                    self.dhcp_option[splits[0]] = []
+                    self.dhcp_option["customized_options"][splits[0]] = []
                 elif splits[-1] == "defined_supported":
                     # TODO record and fqdn types are not supported currently
                     if splits[1] in SUPPORT_DHCP_OPTION_TYPE:
-                        self.dhcp_option[splits[0]] = [splits[1]]
+                        self.dhcp_option["standard_options"][splits[0]] = [splits[1]]
