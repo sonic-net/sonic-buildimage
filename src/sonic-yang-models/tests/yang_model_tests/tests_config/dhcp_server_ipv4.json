@@ -398,6 +398,7 @@
         }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_INVALID": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
@@ -409,6 +410,7 @@
                     }
                 ]
             }
+        }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
         "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {

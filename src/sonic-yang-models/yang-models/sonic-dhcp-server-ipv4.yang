@@ -165,7 +165,7 @@ module sonic-dhcp-server-ipv4 {
                     type string {
                         pattern "(true|false)";
                     }
-                    default "false";
+                    default "true";
                 }
             }
             /* end of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST */
