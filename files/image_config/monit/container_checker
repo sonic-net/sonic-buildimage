@@ -169,13 +169,18 @@ def get_current_running_from_dockers():
     DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
     running_containers = set()
     ctrs = DOCKER_CLIENT.containers
+
     try:
         lst = ctrs.list(filters={"status": "running"})
         for ctr in lst:
-            running_containers.add(ctr.name)
+            # Prefer raw_container_name label over actual name
+            if ctr.labels and "raw_container_name" in ctr.labels:
+                running_containers.add(ctr.labels["raw_container_name"])
+            else:
+                running_containers.add(ctr.name)
     except docker.errors.APIError as err:
-        print("Failed to retrieve the running container list. Error: '{}'".format(err))
-        pass
+        print(f"Failed to retrieve the running container list. Error: '{err}'")
+
     return running_containers
 
 
