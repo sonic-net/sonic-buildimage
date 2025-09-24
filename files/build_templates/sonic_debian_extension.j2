@@ -667,7 +667,12 @@ sudo cp $IMAGE_CONFIGS/midplane-network/bridge-midplane.network $FILESYSTEM_ROOT
 sudo cp $IMAGE_CONFIGS/midplane-network/dummy-midplane.netdev $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/dummy-midplane.netdev
 sudo cp $IMAGE_CONFIGS/midplane-network/dummy-midplane.network $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/dummy-midplane.network
 sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-npu.network $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/midplane-network-npu.network
+if [ -f platform/{{ sonic_asic_platform }}/midplane-network-dpu.network ]
+then
+sudo cp platform/{{ sonic_asic_platform }}/midplane-network-dpu.network $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/midplane-network-dpu.network
+else
 sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-dpu.network $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/midplane-network-dpu.network
+fi
 sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-npu.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/midplane-network-npu.service
 sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-dpu.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/midplane-network-dpu.service
 
