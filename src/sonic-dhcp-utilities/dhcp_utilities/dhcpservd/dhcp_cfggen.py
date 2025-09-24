@@ -126,7 +126,16 @@ class DhcpServCfgGenerator(object):
                 syslog.syslog(syslog.LOG_ERR, "Unsupported option: {}, currently only support unassigned options"
                               .format(config["id"]))
                 continue
-            option_type = config["type"] if "type" in config else "string"
+            if len(self.dhcp_option[config["id"]]) != 0:
+                option_type = self.dhcp_option[config["id"]][0]
+                if option_type != config["type"]:
+                    syslog.syslog(syslog.LOG_WARNING,
+                                  "Option type [{}] is not consistent with expected dhcp option type [{}], will " + \
+                                      "honor expected type"
+                                  .format(config["type"], option_type))
+                    continue
+            else:
+                option_type = config["type"] if "type" in config else "string"
             if option_type not in SUPPORT_DHCP_OPTION_TYPE:
                 syslog.syslog(syslog.LOG_ERR, "Unsupported type: {}, currently only support {}"
                               .format(option_type, SUPPORT_DHCP_OPTION_TYPE))
@@ -443,7 +452,7 @@ class DhcpServCfgGenerator(object):
 
     def _read_dhcp_option(self, file_path):
         # TODO current only support unassigned options, use dict in case support more options in the future
-        # key: option cod, value: option type list
+        # key: option code, value: option type list
         self.dhcp_option = {}
         with open(file_path, "r") as file:
             lines = file.readlines()
@@ -453,3 +462,7 @@ class DhcpServCfgGenerator(object):
                 splits = line.strip().split(",")
                 if splits[-1] == "unassigned":
                     self.dhcp_option[splits[0]] = []
+                elif splits[-1] == "defined_supported":
+                    # TODO record and fqdn types are not supported currently
+                    if splits[1] in SUPPORT_DHCP_OPTION_TYPE:
+                        self.dhcp_option[splits[0]] = [splits[1]]
