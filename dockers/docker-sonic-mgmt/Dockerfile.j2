@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     jq \
     openssh-server \
+    protobuf-compiler \
     psmisc \
     python3 \
     python3-dev \
@@ -45,8 +46,12 @@ RUN apt-get update && apt-get install -y \
     telnet \
     vim
 
-RUN python3 -m venv /opt/venv
+RUN python3 -m venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
+RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
+    && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
 RUN pip install --no-cache-dir \
     aiohttp \
@@ -141,35 +146,29 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get install -y docker-ce-cli \
     && curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Remove old python protobuf package if existing
-# RUN python3 -m pip show protobuf && python3 -m pip uninstall -y protobuf
-# Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
-# RUN mkdir -p /tmp/protobuf \
-#     && cd /tmp/protobuf \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
-#     && wget https://packages.trafficmanager.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
-#     && dpkg -i *.deb \
-#     && rm -rf /tmp/protobuf
+# Install dash-api
+RUN tmpdir=$(mktemp -d) \
+    && python_site_packages=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+    && mkdir -p "$python_site_packages/dash_api" \
+    && git clone --depth 1 https://github.com/sonic-net/sonic-dash-api.git $tmpdir/sonic-dash-api \
+    && cp $tmpdir/sonic-dash-api/misc/pypkg/dash_api/__init__.py "$python_site_packages/dash_api/__init__.py" \
+    && protoc -I=$tmpdir/sonic-dash-api/proto --python_out="$python_site_packages/dash_api" $tmpdir/sonic-dash-api/proto/*.proto \
+    && rm -rf "$tmpdir"
 
 ## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
-
+COPY debs/sonic-device-data_*.deb debs/
 RUN dpkg -i debs/sonic-device-data_*.deb
 
 # Install dash-pipeline-utils
 COPY ["files/github_get.py", "/usr/bin"]
-RUN cd /tmp \
+RUN tmpdir=$(mktemp -d) \
+    && cd "$tmpdir" \
     && python3 /usr/bin/github_get.py https://api.github.com/repos/sonic-net/DASH/contents/dash-pipeline/utils \
     && cd utils \
     && python3 setup.py bdist_wheel \
     && python3 -m pip install dist/dash_pipeline_utils*.whl \
     && cd / \
-    && rm -rf /tmp/utils
+    && rm -rf "$tmpdir"
 
 # Apply patches to ansible and ptf
 COPY \
@@ -188,19 +187,9 @@ EXPOSE 22
 COPY start.sh /azp/
 RUN chmod +x /azp/start.sh
 
-# Add user
-ENV USER sonicuser
 ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BUNDLED_FREETDS=1
 
-RUN groupadd -f -r g$USER \
-    && useradd $USER -l -g g$USER -d /home/$USER -m -s /bin/bash \
-    && mkdir -p /home/$USER/.ssh \
-    && echo "Host *\n\tStrictHostKeyChecking no\n" > /home/$USER/.ssh/config \
-    && chown $USER /home/$USER/.ssh -R \
-    && chmod go= /home/$USER/.ssh -R \
-    && echo "$USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USER \
-    && chmod 0440 /etc/sudoers.d/$USER \
-    && usermod -aG sudo "$USER"
-
-USER $USER
-WORKDIR /home/$USER
+# Remove the default ubuntu user of Ubuntu 24.04 to avoid conflicts with setup-container.sh in sonic-mgmt repo
+# Usually SONiC community use the setup-container.sh tool in the sonic-mgmt repot to create sonic-mgmt container.
+# The tool will create a user with the same uid and gid of the host user who runs the tool.
+RUN if getent passwd ubuntu; then userdel -r ubuntu; fi
