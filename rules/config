@@ -158,7 +158,7 @@ ENABLE_AUTO_TECH_SUPPORT = y
 
 # ENABLE_TRANSLIB_WRITE - Enable translib write/config operations via the gNMI interface.
 # Uncomment to enable:
-# ENABLE_TRANSLIB_WRITE = y
+ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
