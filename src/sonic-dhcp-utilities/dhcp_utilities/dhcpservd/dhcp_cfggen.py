@@ -28,6 +28,7 @@ KEA_DHCP4_CONF_TEMPLATE_PATH = "/usr/share/sonic/templates/kea-dhcp4.conf.j2"
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DHCP_OPTION_FILE = f"{SCRIPT_DIR}/dhcp_option.csv"
 SUPPORT_DHCP_OPTION_TYPE = ["binary", "boolean", "ipv4-address", "string", "uint8", "uint16", "uint32"]
+OPTION_DHCP_SERVER_ID = "54"
 
 
 class DhcpServCfgGenerator(object):
@@ -205,6 +206,7 @@ class DhcpServCfgGenerator(object):
                                   .format(dhcp_interface_name))
                     continue
                 curr_options = {}
+                dhcp_server_id_option = {}
                 if "customized_options" in dhcp_config:
                     for option in dhcp_config["customized_options"]:
                         used_options.add(option)
@@ -212,12 +214,16 @@ class DhcpServCfgGenerator(object):
                             syslog.syslog(syslog.LOG_WARNING, "Customized option {} configured for {} is not defined"
                                           .format(option, dhcp_interface_name))
                             continue
-                        curr_options[option] = {
-                            "always_send": customized_options[option]["always_send"],
-                            "value": customized_options[option]["value"],
-                            "option_type": customized_options[option]["option_type"],
-                            "id": customized_options[option]["id"]
+                        current_option = {
+                                "always_send": customized_options[option]["always_send"],
+                                "value": customized_options[option]["value"],
+                                "option_type": customized_options[option]["option_type"],
+                                "id": customized_options[option]["id"]
                         }
+                        if customized_options[option]["id"] == OPTION_DHCP_SERVER_ID:
+                            dhcp_server_id_option = current_option
+                        else:
+                            curr_options[option] = current_option
                 for dhcp_interface_ip, port_config in port_ips[dhcp_interface_name].items():
                     pools = []
                     for port_name, ip_ranges in port_config.items():
@@ -236,12 +242,16 @@ class DhcpServCfgGenerator(object):
                                 "condition": "substring(relay4[1].hex, -{}, {}) == '{}'".format(class_len, class_len,
                                                                                                 client_class)
                             })
-
+                    if not dhcp_server_id_option:
+                        dhcp_server_id_option = {
+                            "value": dhcp_interface_ip.split("/")[0],
+                            "always_send": "true"
+                        }
                     subnet_obj = {
                         "id": MID_PLANE_BRIDGE_SUBNET_ID if smart_switch else dhcp_interface_name.replace("Vlan", ""),
                         "subnet": str(ipaddress.ip_network(dhcp_interface_ip, strict=False)),
                         "pools": pools,
-                        "server_id": dhcp_interface_ip.split("/")[0],
+                        "dhcp_server_id_option": dhcp_server_id_option,
                         "lease_time": dhcp_config["lease_time"] if "lease_time" in dhcp_config else DEFAULT_LEASE_TIME,
                         "customized_options": curr_options
                     }

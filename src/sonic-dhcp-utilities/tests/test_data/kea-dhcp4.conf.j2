@@ -80,7 +80,8 @@
     {%- endif -%}
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "{{ subnet_info["server_id"] }}"
+                        "data": "{{ subnet_info["dhcp_server_id_option"]["value"] }}",
+                        "always-send": {{ subnet_info["dhcp_server_id_option"]["always_send"] }}
                     }
                 ],
                 "valid-lifetime": {{ subnet_info["lease_time"] if "lease_time" in subnet_info else default_lease_time }},

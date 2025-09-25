@@ -65,7 +65,8 @@ expected_dhcp_config = {
                     },
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "192.168.0.1"
+                        "data": "10.0.0.1",
+                        "always-send": False
                     }
                 ],
                 "valid-lifetime": 900,
@@ -83,7 +84,8 @@ expected_dhcp_config = {
                 "option-data": [
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "192.168.3.1"
+                        "data": "192.168.3.1",
+                        "always-send": True
                     }
                 ],
                 "valid-lifetime": 900,
@@ -216,7 +218,7 @@ expected_render_obj = {
             "pools": [{"range": "192.168.0.2 - 192.168.0.6", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.10 - 192.168.0.10", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.7 - 192.168.0.7", "client_class": "sonic-host:etp7"}],
-            "gateway": "192.168.0.1", "server_id": "192.168.0.1", "lease_time": "900",
+            "gateway": "192.168.0.1", "lease_time": "900",
             "customized_options": {
                 "option223": {
                     "always_send": "true",
@@ -230,12 +232,18 @@ expected_render_obj = {
                     "option_type": "standard",
                     "id": "60"
                 }
+            },
+            "dhcp_server_id_option": {
+                "always_send": "false",
+                "value": "10.0.0.1",
+                "option_type": "standard",
+                "id": "54"
             }
         },
         {
             "subnet": "192.168.3.0/24", 'id': '4000',
             "pools": [{"range": "192.168.3.2 - 192.168.3.3", "client_class": "sonic-host:etp11"}],
-            "server_id": "192.168.3.1", "lease_time": "900",
+            "lease_time": "900",
             "customized_options": {
                 "option223": {
                     "always_send": "true",
@@ -249,6 +257,10 @@ expected_render_obj = {
                     "option_type": "standard",
                     "id": "60"
                 }
+            },
+            "dhcp_server_id_option": {
+                "value": "192.168.3.1",
+                "always_send": "true"
             }
         }
     ],
@@ -432,6 +444,13 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
             "type": "string",
             "always_send": "false",
             "option_type": "standard"
+        },
+        "option54": {
+            "id": "54",
+            "value": "10.0.0.1",
+            "type": "ipv4-address",
+            "always_send": "false",
+            "option_type": "standard"
         }
     }
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
@@ -457,7 +476,7 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                                                        port_ips, tested_hostname, customized_options)
     assert render_obj == expected_render_obj
     assert enabled_dhcp_interfaces == {"Vlan1000", "Vlan4000", "Vlan3000", "Vlan6000"}
-    assert used_options == set(["option223", "option60"])
+    assert used_options == set(["option223", "option60", "option54"])
     assert subscribe_table == set(PORT_MODE_CHECKER)
 
 
@@ -510,8 +529,6 @@ def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_ren
             "always_send": "true",
             "option_type": value["option_type"]
         }
-    print(customized_options)
-    print(expected_res)
     assert customized_options == expected_res
 
 

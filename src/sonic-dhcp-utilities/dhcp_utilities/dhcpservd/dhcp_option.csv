@@ -1,7 +1,7 @@
 Code,Type,Customized Type
 1,ipv4-address,defined_unsupported
 2,int32,defined_supported
-3,ipv4-address,defined_supported
+3,ipv4-address,unsupported
 4,ipv4-address,defined_supported
 5,ipv4-address,defined_supported
 6,ipv4-address,defined_supported
