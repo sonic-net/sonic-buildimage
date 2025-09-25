@@ -139,9 +139,11 @@ for attempt in {0..2}; do
     setpci -s 0:1.2 0x68.w=0x40
     setpci -s 0:1.2 0x68.w=0x60
 
-    logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
-    /etc/init.d/opennsl-modules start
-    logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
+    if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
+      /etc/init.d/opennsl-modules start
+      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
+    fi
 
     release_lock
     exit 0
