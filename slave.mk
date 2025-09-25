@@ -379,6 +379,9 @@ endif
 export RUST_CROSS_COMPILE_TARGET
 endif
 
+# try to remove the lock to avoid residual lock from previous abnormal exits.
+$(shell [ -d $(DEBS_PATH)/dpkg_lock ] && rm -d $(DEBS_PATH)/dpkg_lock)
+
 ###############################################################################
 ## Routing stack related exports
 ###############################################################################
