@@ -33,6 +33,7 @@ def generate_file_from_jinja2_template(
     # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     j2_env = jinja2.Environment(loader=loader, keep_trailing_newline=True)
     template = j2_env.get_template(os.path.basename(template_filepath))
+    # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
     output = template.render(variables)
     with open(output_filepath, "w") as f:
         f.write(output)
