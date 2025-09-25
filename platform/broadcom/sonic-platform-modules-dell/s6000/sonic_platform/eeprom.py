@@ -50,7 +50,7 @@ fantray_eeprom_format = [
 class Eeprom(TlvInfoDecoder):
     """DellEMC Platform-specific EEPROM class"""
 
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
 
     def __init__(self, is_psu=False, psu_index=0, is_fantray=False, fantray_index=0):
         self.is_psu_eeprom = is_psu
