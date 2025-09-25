@@ -319,8 +319,11 @@ dependencies = [
  "enumset",
  "futures-util",
  "serde_json",
+ "syslog-tracing",
  "thiserror",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
