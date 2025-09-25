@@ -298,9 +298,9 @@ class Sfp(SfpOptoeBase):
         """
 
         i2c_bus = self.sfp_eeprom_path[27:].split('/')[0]
-        del_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/delete_device".format(i2c_bus)
-        new_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/new_device".format(i2c_bus)
-        driver_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/name".format(i2c_bus)
+        del_sfp_path = "/sys/bus/i2c/devices/i2c-{0}/delete_device".format(i2c_bus)
+        new_sfp_path = "/sys/bus/i2c/devices/i2c-{0}/new_device".format(i2c_bus)
+        driver_path = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/name".format(i2c_bus)
 
         if not os.path.isfile(driver_path):
             print(driver_path, "does not exist")

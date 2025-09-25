@@ -102,7 +102,7 @@ class Chassis(ChassisBase):
         self.PORTS_IN_BLOCK = (self.PORT_END + 1)
         self.SFP_PORT_START = 1
         self._sfp_port = range(self.SFP_PORT_START, self.PORTS_IN_BLOCK)
-        eeprom_base = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
+        eeprom_base = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
         for index in range(self.PORT_START, self.PORTS_IN_BLOCK):
             eeprom_path = ''
             if index in self._sfp_port:

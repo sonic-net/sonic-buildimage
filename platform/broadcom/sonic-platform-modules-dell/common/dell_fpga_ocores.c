@@ -678,6 +678,11 @@ static int fpgai2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
     int ret;
     unsigned long timeout = jiffies + msecs_to_jiffies(1000);
 
+    if (!i2c) {
+        pr_err("fpgai2c_xfer: adapter data is NULL\n");
+        return -ENODEV;
+    }
+
     i2c->msg = msgs;
     i2c->pos = 0;
     i2c->nmsgs = num;
@@ -923,13 +928,13 @@ static int i2c_pci_init (struct fpgapci_dev *fpgapci)
 		/* /dev/i2c-600 ~ /dev/i2c-615  for FPGA LOGIC I2C channel  controller 1-7  */
 		i2c_pci_adap[i].nr = i+600;
 		sprintf( i2c_pci_adap[ i ].name, "i2c-pci-%d", i );
+		i2c_set_adapdata(&i2c_pci_adap[i], &fpgalogic_i2c[i]);
 		/* Add the bus via the algorithm code */
 		if( i2c_pci_add_bus( &i2c_pci_adap[ i ] ) != 0 )
 		{
 			PRINT("Cannot add bus %d to algorithm layer\n", i );
 			return( -ENODEV );
 		}
-		i2c_set_adapdata(&i2c_pci_adap[i], &fpgalogic_i2c[i]);
 
 		PRINT( "Registered bus id: %s\n", kobject_name(&i2c_pci_adap[ i ].dev.kobj));
 	}
