@@ -384,3 +384,32 @@ stages:
           SPECIFIC_PARAM: '[
             {"name": "dash/test_dash_vnet.py", "param": "--skip_dataplane_checking"}
             ]'
+
+  - job: impacted_area_t2_lag_elastictest
+    displayName: "impacted-area-kvmtest-t2 by Elastictest"
+    dependsOn:
+      - get_impacted_area
+    condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't2_checker')
+    variables:
+      TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+      - checkout: sonic-mgmt
+      - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t2
+          BUILD_BRANCH: $(BUILD_BRANCH)
+          # 50 mins for preparing testbed, 10 mins for pre-test and post-test
+          PREPARE_TIME: 60
+
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t2
+          SCRIPTS: $(SCRIPTS)
+          MIN_WORKER: $(INSTANCE_NUMBER)
+          MAX_WORKER: $(INSTANCE_NUMBER)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          COMMON_EXTRA_PARAMS: "--disable_sai_validation "
