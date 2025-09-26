@@ -1,5 +1,0 @@
-#!/bin/bash
-
-docker exec -it syncd clx_diag ipy
-docker exec -it syncd jupyter-console --existing clx-ipython-shell.json
-
