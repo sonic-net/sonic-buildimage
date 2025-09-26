@@ -41,5 +41,6 @@ Description: Modules for NH-4010 r1
 Package: sonic-platform-nexthop-4020-r0
 Architecture: amd64
 Depends: ${misc:Depends},
-         sonic-platform-nexthop-4010-r1
+         sonic-platform-nexthop-4010
 Description: Modules for NH-4020 r0
+
