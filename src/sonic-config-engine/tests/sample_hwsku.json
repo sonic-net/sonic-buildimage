@@ -10,16 +10,20 @@
             "default_brkout_mode": "2x50G"
         },
         "Ethernet8": {
-            "default_brkout_mode": "4x25G[10G]"
+            "default_brkout_mode": "4x25G[10G]",
+            "subport": "1"
         },
         "Ethernet9": {
-            "default_brkout_mode": "4x25G[10G]"
+            "default_brkout_mode": "4x25G[10G]",
+            "subport": "2"
         },
         "Ethernet10": {
-            "default_brkout_mode": "4x25G[10G]"
+            "default_brkout_mode": "4x25G[10G]",
+            "subport": "3"
         },
         "Ethernet11": {
-            "default_brkout_mode": "4x25G[10G]"
+            "default_brkout_mode": "4x25G[10G]",
+            "subport": "4"
         },
         "Ethernet12": {
             "default_brkout_mode": "2x25G(2)+1x50G(2)"
