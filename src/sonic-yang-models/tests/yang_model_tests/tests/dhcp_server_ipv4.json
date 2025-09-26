@@ -60,7 +60,8 @@
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ALWAYS_SEND_INVALID": {
         "desc": "Add option with always send invalid.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue",
+        "eStr": ["False"]
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
         "desc": "Add uint8 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."

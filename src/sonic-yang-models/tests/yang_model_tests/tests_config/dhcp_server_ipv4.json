@@ -406,7 +406,7 @@
                         "id": 60,
                         "type": "string",
                         "value": "dummy_value",
-                        "always_send": "dummy"
+                        "always_send": "False"
                     }
                 ]
             }
