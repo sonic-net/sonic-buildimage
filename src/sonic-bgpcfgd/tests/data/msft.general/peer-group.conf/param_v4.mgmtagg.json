@@ -1,7 +1,7 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
-            "type": "MgmtAggregator"
+            "type": "LowerMgmtAggregator"
         }
     },
     "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {

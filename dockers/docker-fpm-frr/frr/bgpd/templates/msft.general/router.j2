@@ -67,7 +67,7 @@
 {%             include path_template % "v4.mgmtleaf.mgmttor.all" %}
 {%         endif %}
 {%     elif device_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
-{%         if neighbor_type == 'MgmtAggregator' %}
+{%         if neighbor_type in ['MgmtAggregator','LowerMgmtAggregator', 'UpperMgmtAggregator'] %}
 {%             include path_template % "v4.mgmtspine.ma" %}
 {%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v4.mgmtspine.oob" %}
@@ -79,12 +79,16 @@
 {%             endif %}
 {%             include path_template % "v4.mgmtspine" %}
 {%         endif %}
-{%     elif device_type in ['MgmtAggregator'] %}
+{%     elif device_type in ['LowerMgmtAggregator', 'UpperMgmtAggregator'] %}
 {%         if neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v4.mgmtagg.oob" %}
 {%         else %}
 {%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtSpineRouter', 'MgmtAccessRouter', 'SpineTs'] %}
 {%                  set peer_group_type = 'DOWNSTREAM_V4' %}
+{%             elif device_type == "UpperMgmtAggregator" and neighbor_type == "LowerMgmtAggregator" %}
+{%                  set peer_group_type = 'DOWNSTREAM_V4' %}
+{%             elif device_type == "LowerMgmtAggregator" and neighbor_type == "UpperMgmtAggregator" %}
+{%                  set peer_group_type = 'CORE_V4' %}
 {%             else %}
 {%                  set peer_group_type = 'CORE_V4' %}
 {%             endif %}
@@ -170,7 +174,7 @@
 {%             include path_template % "v6.mgmtleaf.mgmttor.all" %}
 {%         endif %}
 {%     elif device_type in ['MgmtSpineRouter', 'MgmtAccessRouter'] %}
-{%         if neighbor_type == 'MgmtAggregator' %}
+{%         if neighbor_type in ['MgmtAggregator','LowerMgmtAggregator', 'UpperMgmtAggregator'] %}
 {%             include path_template % "v6.mgmtspine.ma" %}
 {%         elif neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v6.mgmtspine.oob" %}
@@ -182,12 +186,16 @@
 {%             endif %}
 {%             include path_template % "v6.mgmtspine" %}
 {%         endif %}
-{%     elif device_type in ['MgmtAggregator'] %}
+{%     elif device_type in ['LowerMgmtAggregator', 'UpperMgmtAggregator'] %}
 {%         if neighbor_type in ['CoreTs', 'CoreMgmtRouter'] %}
 {%             include path_template % "v6.mgmtagg.oob" %}
 {%         else %}
 {%             if neighbor_type in ['MgmtToRRouter', 'MgmtLeafRouter', 'MgmtSpineRouter', 'MgmtAccessRouter', 'SpineTs'] %}
 {%                  set peer_group_type = 'DOWNSTREAM_V6' %}
+{%             elif device_type == "UpperMgmtAggregator" and neighbor_type == "LowerMgmtAggregator" %}
+{%                  set peer_group_type = 'DOWNSTREAM_V6' %}
+{%             elif device_type == "LowerMgmtAggregator" and neighbor_type == "UpperMgmtAggregator" %}
+{%                  set peer_group_type = 'CORE_V6' %}
 {%             else %}
 {%                  set peer_group_type = 'CORE_V6' %}
 {%             endif %}
