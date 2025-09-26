@@ -16,7 +16,7 @@ pr: none
 
 jobs:
 - job: Amd
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   timeoutInMinutes: 5
   steps:
   - checkout: none
@@ -26,7 +26,7 @@ jobs:
       df -h
     displayName: clean dpkg cache
 - job: Armhf
-  pool: sonicbld-armhf
+  pool: sonicso1ES-armhf
   timeoutInMinutes: 5
   steps:
   - checkout: none
@@ -36,7 +36,7 @@ jobs:
       df -h
     displayName: clean dpkg cache
 - job: Arm64
-  pool: sonicbld-arm64
+  pool: sonicso1ES-arm64
   timeoutInMinutes: 5
   steps:
   - checkout: none
