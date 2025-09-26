@@ -204,8 +204,8 @@
         {
             "interface":
             [
-                { "itf":"pmbus", "dev":"PSU2-PMBUS"},
-                { "itf":"eeprom", "dev":"PSU2-EEPROM" }
+                { "itf":"pmbus", "dev":"PSU1-PMBUS"},
+                { "itf":"eeprom", "dev":"PSU1-EEPROM" }
             ]
         }
     },
