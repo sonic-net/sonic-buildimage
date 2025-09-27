@@ -5,6 +5,9 @@ use syslog_tracing;
 use std::ffi::CString;
 mod container;
 
+// Mimic python container script `FAILURE = -1`
+const FAILURE: i32 = -1;
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Action {
     Start,
@@ -29,7 +32,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), container::Error> {
+async fn main() {
     let identity = CString::new("docker-rs").unwrap();
     let syslog = syslog_tracing::Syslog::new(
         identity,
@@ -48,7 +51,7 @@ async fn main() -> Result<(), container::Error> {
 
     let container = Container::new(&cli.name);
 
-    match cli.action {
+    let result = match cli.action {
         Action::Start => container
             .start()
             .await
@@ -65,5 +68,15 @@ async fn main() -> Result<(), container::Error> {
             .kill()
             .await
             .inspect_err(|e| info!("Unable to kill container: {e}")),
+    };
+
+    if let Err(e) = result {
+        // Don't exit with failure for wait operations when container was killed (exit code 137)
+        if matches!(cli.action, Action::Wait) {
+            if let container::Error::Docker(bollard::errors::Error::DockerContainerWaitError { code: 137, .. }) = e {
+                return;
+            }
+        }
+        std::process::exit(FAILURE);
     }
 }
