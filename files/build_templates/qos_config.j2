@@ -5,6 +5,22 @@
 {%- set PORT_QOS_BYPASS = [] %}
 {%- set PORT_UPLINK = [] %}
 {%- set PORT_DOWNLINK = [] %}
+{%- set PORT_SERVICE = [] %}
+
+{% if template_exists("buffers.json.j2") %}
+    {% import "buffers.json.j2" as buffer_defs %}
+    {%- set filename_postfix = buffer_defs.default_topo | default("def", true) %}
+{% else %}
+    {%- set filename_postfix = "def" %}
+{% endif %}
+
+{# Allow includer to pre-package defs without needing an import #}
+{%- if defs is not defined %}
+    {# Import default values from device HWSKU folder #}
+    {%- if template_exists('buffers_defaults_%s.j2' % filename_postfix) %}
+        {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
+    {%- endif -%}
+{%- endif -%}
 
 {%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
@@ -36,6 +52,9 @@
 {%- endif %}
 {%- if generate_qos_bypass_port_list is defined %}
     {%- if generate_qos_bypass_port_list(PORT_QOS_BYPASS) %} {% endif %}
+{%- endif %}
+{%- if defs is defined and defs.generate_service_port_list is defined %}
+    {%- if defs.generate_service_port_list(PORT_SERVICE) %}{% endif %}
 {%- endif %}
 
 {%- if PORT_ALL | sort_by_port_index %}{% endif %}
@@ -426,6 +445,10 @@
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
+{% if port in PORT_SERVICE %}
+            "pfc_enable"      : "",
+            "pfcwd_sw_enable" : "",
+{% else %}
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
@@ -433,12 +456,17 @@
 {% endif %}
             "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
+{% endif %}
 {% if port not in PORT_DPC %}
             "tc_to_pg_map"    : "AZURE",
 {% else %}
             "tc_to_pg_map"    : "AZURE_DPC",
 {% endif %}
+{% if port in PORT_SERVICE %}
+            "pfc_to_queue_map": ""
+{% else %}
             "pfc_to_queue_map": "AZURE"
+{% endif %}
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
