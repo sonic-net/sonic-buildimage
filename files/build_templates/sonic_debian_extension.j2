@@ -1141,6 +1141,10 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
     sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
 done
 
+# Copy nvidia-bluefield platform files to /usr/bin
+sudo cp platform/nvidia-bluefield/files/bfnet.sh platform/nvidia-bluefield/files/platform-dump.sh $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platform-dump.sh
+
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py
 SONIC_PLATFORM={{sonic_asic_platform}} j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
