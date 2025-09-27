@@ -181,6 +181,12 @@ module sonic-syslog {
                     default notice;
                 }
 
+                leaf preserve_fqdn {
+                    type boolean;
+                    description "Enable syslog to preserve FQDN in remote messages.";
+                    default "false";
+                }
+
             }
             /* end of list SYSLOG_CONFIG_LIST */
         }

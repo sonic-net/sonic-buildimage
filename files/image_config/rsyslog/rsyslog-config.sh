@@ -23,7 +23,12 @@ if [ $contain_dhcp_server ]; then
     docker0_ip=$(ip -o -4 addr list docker0 | awk '{print $4}' | cut -d/ -f1)
 fi
 
-hostname=$(hostname)
+syslog_preserve_fqdn=$(sonic-db-cli CONFIG_DB hget "SYSLOG_CONFIG|GLOBAL" "preserve_fqdn")
+if [[ "$syslog_preserve_fqdn" == "true" ]]; then
+    hostname=$(hostname -f)
+else
+    hostname=$(hostname -s)
+fi
 
 syslog_with_osversion=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_with_osversion")
 if [ -z "$syslog_with_osversion" ]; then
