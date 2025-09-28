@@ -445,10 +445,7 @@
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
-{% if port in PORT_SERVICE %}
-            "pfc_enable"      : "",
-            "pfcwd_sw_enable" : "",
-{% else %}
+{% if port not in PORT_SERVICE %}
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}

@@ -1156,16 +1156,12 @@
         "Ethernet512": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
-            "pfc_enable"      : "",
-            "pfcwd_sw_enable" : "",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": ""
         },
         "Ethernet513": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
-            "pfc_enable"      : "",
-            "pfcwd_sw_enable" : "",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": ""
         }
