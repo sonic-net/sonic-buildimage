@@ -21,6 +21,8 @@ from sonic_py_common import logger
 
 import sys
 import time
+import os
+import re
 
 sys.path.append('/run/hw-management/bin')
 
@@ -54,6 +56,51 @@ class ThermalUpdater:
         self._sfp_status = {}
         self._timer = utils.Timer()
 
+    def _find_matching_key(self, dev_parameters, pattern):
+        """
+        Find the first key in dev_parameters that matches the given regex pattern.
+        Returns the matching key and its value, or (None, None) if no match found.
+        """
+        for key in dev_parameters.keys():
+            if re.match(pattern, key):
+                return key, dev_parameters[key]
+        return None, None
+
+    def wait_for_sysfs_nodes(self):
+        """
+        Wait for temperature sysfs nodes to be present before proceeding.
+        Returns:
+            bool: True if wait success else timeout
+        """
+        import time
+        start_time = time.time()
+        logger.log_notice('Waiting for temperature sysfs nodes to be present...')
+        conditions = []
+
+        # ASIC temperature sysfs nodes
+        asic_temp_nodes = ['input']
+        for temp_node in asic_temp_nodes:
+            conditions.append(lambda node=temp_node: os.path.exists(f'/sys/module/sx_core/asic0/temperature/{node}'))
+
+        # Module temperature sysfs nodes
+        sfp_count = len(self._sfp_list) if self._sfp_list else 0
+        module_temp_nodes = ['input', 'label', 'threshold_hi', 'threshold_lo']
+        for sfp_index in range(sfp_count):
+            for temp_node in module_temp_nodes:
+                conditions.append(lambda idx=sfp_index, node=temp_node: os.path.exists(f'/sys/module/sx_core/asic0/module{idx}/temperature/{node}'))
+            conditions.append(lambda idx=sfp_index: os.path.exists(f'/sys/module/sx_core/asic0/module{idx}/eeprom/'))
+
+        result = utils.wait_until_conditions(conditions, 300, 1)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        if result:
+            logger.log_notice(f'Temperature sysfs nodes are ready. Wait time: {elapsed_time:.4f} seconds')
+        else:
+            logger.log_error(f'Timeout waiting for temperature sysfs nodes. Wait time: {elapsed_time:.4f} seconds')
+
+        return result
+
     def load_tc_config(self):
         DEFAULT_POLL_INTERVAL = 60
         asic_poll_interval = DEFAULT_POLL_INTERVAL
@@ -65,24 +112,28 @@ class ThermalUpdater:
         if data:
             dev_parameters = data.get('dev_parameters')
             if dev_parameters is not None:
-                asic_parameter = dev_parameters.get('asic')
+                # Find ASIC parameter using regex pattern
+                asic_key, asic_parameter = self._find_matching_key(dev_parameters, r'asic\\d*')
                 if asic_parameter is not None:
                     asic_poll_interval_config = asic_parameter.get('poll_time')
                     if asic_poll_interval_config:
                         asic_poll_interval = int(asic_poll_interval_config)
+                        logger.log_notice(f'ASIC parameter found with key "{asic_key}", poll_time: {asic_poll_interval}s')
                     else:
-                        logger.log_notice(f'ASIC poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
+                        logger.log_notice(f'ASIC poll_time not configured in "{asic_key}", using default {DEFAULT_POLL_INTERVAL}s')
                 else:
-                    logger.log_notice(f'ASIC parameter not found, using default polling interval of {DEFAULT_POLL_INTERVAL}s')
-                module_parameter = dev_parameters.get('module\\d+')
+                    logger.log_notice(f'ASIC parameter not found (pattern: asic\\d*), using default polling interval of {DEFAULT_POLL_INTERVAL}s')
+                # Find Module parameter using regex pattern
+                module_key, module_parameter = self._find_matching_key(dev_parameters, r'module\\d+')
                 if module_parameter is not None:
                     sfp_poll_interval_config = module_parameter.get('poll_time')
                     if sfp_poll_interval_config:
                         sfp_poll_interval = int(sfp_poll_interval_config)
+                        logger.log_notice(f'Module parameter found with key "{module_key}", poll_time: {sfp_poll_interval}s')
                     else:
-                        logger.log_notice(f'Module poll_time not configured, using default {DEFAULT_POLL_INTERVAL}s')
+                        logger.log_notice(f'Module poll_time not configured in "{module_key}", using default {DEFAULT_POLL_INTERVAL}s')
                 else:
-                    logger.log_notice(f'Module parameter not found, using default polling interval of {DEFAULT_POLL_INTERVAL}s')
+                    logger.log_notice(f'Module parameter not found (pattern: module\\d+), using default polling interval of {DEFAULT_POLL_INTERVAL}s')
 
         logger.log_notice(f'ASIC polling interval: {asic_poll_interval}s')
         self._timer.schedule(asic_poll_interval, self.update_asic)
@@ -93,7 +144,14 @@ class ThermalUpdater:
         self.clean_thermal_data()
         self.control_tc(False)
         self.load_tc_config()
+
+        # Wait for temperature sysfs nodes to be ready before starting the timer
+        if not self.wait_for_sysfs_nodes():
+            logger.log_error('Failed to start thermal updater: temperature sysfs nodes not available')
+            return False
+
         self._timer.start()
+        return True
 
     def stop(self):
         self._timer.stop()
@@ -104,13 +162,15 @@ class ThermalUpdater:
         utils.write_file('/run/hw-management/config/suspend', 1 if suspend else 0)
 
     def clean_thermal_data(self):
-        hw_management_independent_mode_update.module_data_set_module_counter(len(self._sfp_list))
+        sfp_count = len(self._sfp_list) if self._sfp_list else 0
+        hw_management_independent_mode_update.module_data_set_module_counter(sfp_count)
         hw_management_independent_mode_update.thermal_data_clean_asic(0)
-        for sfp in self._sfp_list:
-            hw_management_independent_mode_update.thermal_data_clean_module(
-                0,
-                sfp.sdk_index + 1
-            )
+        if self._sfp_list:
+            for sfp in self._sfp_list:
+                hw_management_independent_mode_update.thermal_data_clean_module(
+                    0,
+                    sfp.sdk_index + 1
+                )
 
     def get_asic_temp(self):
         temperature = utils.read_int_from_file('/sys/module/sx_core/asic0/temperature/input', default=None)

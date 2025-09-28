@@ -51,8 +51,10 @@ mock_tc_config = """
 
 
 class TestSmartSwitchThermalUpdater:
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes')
     @mock.patch('sonic_platform.utils.write_file')
-    def test_configuration(self, mock_write):
+    def test_configuration(self, mock_write, mock_wait_sysfs):
+        mock_wait_sysfs.return_value = True
         dpu = mock.MagicMock()
         dpu.get_hw_mgmt_id = mock.MagicMock(return_value=1)
         mock_sfp = mock.MagicMock()

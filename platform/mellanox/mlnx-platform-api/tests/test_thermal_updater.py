@@ -73,13 +73,18 @@ class TestThermalUpdater:
         assert updater._timer._timestamp_queue.qsize() == 2
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes')
     @mock.patch('sonic_platform.utils.write_file')
-    def test_start_stop(self, mock_write):
+    def test_start_stop(self, mock_write, mock_wait_sysfs):
         """Test start and stop functionality"""
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 1
         updater = ThermalUpdater([mock_sfp])
-        updater.start()
+        mock_wait_sysfs.return_value = True
+
+        result = updater.start()
+        assert result is True
+        mock_wait_sysfs.assert_called_once()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 0)
         utils.wait_until(updater._timer.is_alive, timeout=5)
 
@@ -224,7 +229,7 @@ class TestThermalUpdater:
         updater = ThermalUpdater(None)
         mock_data = {
             'dev_parameters': {
-                'asic': {}
+                'asic\\d*': {}
             }
         }
         with mock.patch('sonic_platform.utils.load_json_file') as mock_load:
@@ -232,7 +237,45 @@ class TestThermalUpdater:
             with mock.patch('sonic_platform.thermal_updater.logger') as mock_logger:
                 updater.load_tc_config()
                 # Verify logging message for ASIC poll_time not configured
-                mock_logger.log_notice.assert_any_call('ASIC poll_time not configured, using default 60s')
+                mock_logger.log_notice.assert_any_call('ASIC poll_time not configured in "asic\\d*", using default 60s')
+
+    def test_find_matching_key(self):
+        """Test the regex key matching function"""
+        updater = ThermalUpdater(None)
+
+        # Test data with various key patterns
+        # /run/hw-management/config/tc_config.json has the following data:
+        # "dev_parameters" : {
+        #         "asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100},
+        #         "(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
+        #         "module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+        #         "sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30},
+        #         "voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
+        #         "sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+        #         "drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60},
+        #         "ibc\\d+":         {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60}
+        # },
+        dev_parameters = {
+            'asic\\d*': {'poll_time': 3},  # This should match the pattern
+            'module\\d+': {'poll_time': 25},  # This should match the pattern
+            'cpu_core0': {'poll_time': 10},
+            'other_key': {'poll_time': 15}
+        }
+
+        # Test ASIC pattern matching
+        key, value = updater._find_matching_key(dev_parameters, r'asic\\d*')
+        assert key == 'asic\\d*'
+        assert value == {'poll_time': 3}
+
+        # Test module pattern matching
+        key, value = updater._find_matching_key(dev_parameters, r'module\\d+')
+        assert key == 'module\\d+'
+        assert value == {'poll_time': 25}
+
+        # Test pattern that doesn't match
+        key, value = updater._find_matching_key(dev_parameters, r'nonexistent\\d+')
+        assert key is None
+        assert value is None
 
     def test_load_tc_config_module_no_poll_time_logging(self):
         """Test logging when module parameter exists but has no poll_time"""
@@ -247,4 +290,145 @@ class TestThermalUpdater:
             with mock.patch('sonic_platform.thermal_updater.logger') as mock_logger:
                 updater.load_tc_config()
                 # Verify logging message for module poll_time not configured
-                mock_logger.log_notice.assert_any_call('Module poll_time not configured, using default 60s')
+                mock_logger.log_notice.assert_any_call('Module poll_time not configured in "module\\d+", using default 60s')
+
+    @mock.patch('sonic_platform.utils.wait_until_conditions')
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_wait_for_sysfs_nodes_success(self, mock_logger, mock_wait_until):
+        """Test wait_for_sysfs_nodes when all nodes are ready"""
+        updater = ThermalUpdater(None)
+        mock_wait_until.return_value = True
+
+        result = updater.wait_for_sysfs_nodes()
+
+        assert result is True
+        # Should be called twice: once for "Waiting..." and once for "ready" message
+        assert mock_logger.log_notice.call_count == 2
+        mock_logger.log_notice.assert_any_call('Waiting for temperature sysfs nodes to be present...')
+        mock_wait_until.assert_called_once_with(mock.ANY, 300, 1)
+
+    @mock.patch('sonic_platform.utils.wait_until_conditions')
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_wait_for_sysfs_nodes_timeout(self, mock_logger, mock_wait_until):
+        """Test wait_for_sysfs_nodes when timeout occurs"""
+        updater = ThermalUpdater(None)
+        mock_wait_until.return_value = False
+
+        result = updater.wait_for_sysfs_nodes()
+
+        assert result is False
+        mock_logger.log_notice.assert_called_once_with('Waiting for temperature sysfs nodes to be present...')
+        mock_wait_until.assert_called_once_with(mock.ANY, 300, 1)
+
+    @mock.patch('os.path.exists')
+    def test_wait_for_sysfs_nodes_conditions_creation(self, mock_exists):
+        """Test that wait_for_sysfs_nodes creates correct conditions"""
+        # Create updater with 2 SFPs for testing
+        mock_sfp1 = mock.MagicMock()
+        mock_sfp2 = mock.MagicMock()
+        updater = ThermalUpdater([mock_sfp1, mock_sfp2])
+        mock_exists.return_value = True
+
+        with mock.patch('sonic_platform.utils.wait_until_conditions') as mock_wait_until:
+            mock_wait_until.return_value = True
+            updater.wait_for_sysfs_nodes()
+
+            # Verify that conditions were created for each temperature node
+            args, kwargs = mock_wait_until.call_args
+            conditions = args[0]
+            # 1 ASIC node + (2 SFPs * (4 module temp nodes + 1 eeprom dir)) = 1 + (2 * 5) = 11
+            assert len(conditions) == 11
+
+            # Test that each condition calls os.path.exists
+            for condition in conditions:
+                condition()
+
+            # Should be called once for each condition
+            assert mock_exists.call_count == 11
+
+            # Verify the expected paths are checked
+            expected_calls = [
+                # ASIC temperature nodes
+                mock.call('/sys/module/sx_core/asic0/temperature/input'),
+                # Module temperature nodes for module 0
+                mock.call('/sys/module/sx_core/asic0/module0/temperature/input'),
+                mock.call('/sys/module/sx_core/asic0/module0/temperature/label'),
+                mock.call('/sys/module/sx_core/asic0/module0/temperature/threshold_hi'),
+                mock.call('/sys/module/sx_core/asic0/module0/temperature/threshold_lo'),
+                # Module EEPROM directory for module 0
+                mock.call('/sys/module/sx_core/asic0/module0/eeprom/'),
+                # Module temperature nodes for module 1
+                mock.call('/sys/module/sx_core/asic0/module1/temperature/input'),
+                mock.call('/sys/module/sx_core/asic0/module1/temperature/label'),
+                mock.call('/sys/module/sx_core/asic0/module1/temperature/threshold_hi'),
+                mock.call('/sys/module/sx_core/asic0/module1/temperature/threshold_lo'),
+                # Module EEPROM directory for module 1
+                mock.call('/sys/module/sx_core/asic0/module1/eeprom/'),
+            ]
+            mock_exists.assert_has_calls(expected_calls, any_order=True)
+
+    @mock.patch('os.path.exists')
+    def test_wait_for_sysfs_nodes_no_sfps(self, mock_exists):
+        """Test that wait_for_sysfs_nodes works correctly with no SFPs"""
+        updater = ThermalUpdater([])  # Empty SFP list
+        mock_exists.return_value = True
+
+        with mock.patch('sonic_platform.utils.wait_until_conditions') as mock_wait_until:
+            mock_wait_until.return_value = True
+            updater.wait_for_sysfs_nodes()
+
+            # Verify that conditions were created only for ASIC nodes
+            args, kwargs = mock_wait_until.call_args
+            conditions = args[0]
+            # Only 1 ASIC node when no SFPs
+            assert len(conditions) == 1
+
+            # Test that each condition calls os.path.exists
+            for condition in conditions:
+                condition()
+
+            # Should be called once for each ASIC condition
+            assert mock_exists.call_count == 1
+
+            # Verify only ASIC paths are checked
+            expected_calls = [
+                mock.call('/sys/module/sx_core/asic0/temperature/input'),
+            ]
+            mock_exists.assert_has_calls(expected_calls, any_order=True)
+
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes')
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.clean_thermal_data')
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.control_tc')
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.load_tc_config')
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_start_with_sysfs_wait_success(self, mock_logger, mock_load_config, mock_control_tc,
+                                          mock_clean_data, mock_wait_sysfs):
+        """Test start method when sysfs nodes are available"""
+        updater = ThermalUpdater(None)
+        updater._timer = mock.MagicMock()
+        mock_wait_sysfs.return_value = True
+
+        result = updater.start()
+
+        assert result is True
+        mock_wait_sysfs.assert_called_once()
+        mock_clean_data.assert_called_once()
+        mock_control_tc.assert_called_once_with(False)
+        mock_load_config.assert_called_once()
+        updater._timer.start.assert_called_once()
+
+    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_for_sysfs_nodes')
+    @mock.patch('sonic_platform.thermal_updater.logger')
+    def test_start_with_sysfs_wait_failure(self, mock_logger, mock_wait_sysfs):
+        """Test start method when sysfs nodes are not available"""
+        updater = ThermalUpdater(None)
+        updater._timer = mock.MagicMock()
+        mock_wait_sysfs.return_value = False
+
+        result = updater.start()
+
+        assert result is False
+        mock_wait_sysfs.assert_called_once()
+        mock_logger.log_error.assert_called_once_with('Failed to start thermal updater: temperature sysfs nodes not available')
+        # Timer should not be started when sysfs wait fails
+        updater._timer.start.assert_not_called()
