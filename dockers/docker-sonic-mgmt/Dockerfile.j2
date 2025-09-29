@@ -56,7 +56,7 @@ RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
 RUN pip install --no-cache-dir \
     aiohttp \
     allure-pytest \
-    ansible \
+    ansible==11.10.0 \
     azure-storage-blob \
     azure-kusto-data \
     azure-kusto-ingest \
@@ -80,6 +80,7 @@ RUN pip install --no-cache-dir \
     jsonpatch \
     lxml \
     markupsafe \
+    matplotlib \
     mock \
     msrest \
     natsort \
@@ -111,9 +112,11 @@ RUN pip install --no-cache-dir \
     redis \
     requests \
     retry \
+    rich \
     rpyc \
     scandir \
     scapy \
+    seaborn \
     setuptools-rust \
     six \
     snappi \
