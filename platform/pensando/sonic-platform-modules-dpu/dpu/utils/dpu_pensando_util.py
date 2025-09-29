@@ -14,7 +14,7 @@ QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 apiHelper = APIHelper()
 LOCALHOST = "127.0.0.1"
 REDIS_PORT = 6379
-CHSSIS_DB = 4
+CONFIG_DB = 4
 DISABLE_CONTAINER_LIST = ["snmp", "dhcp_relay", "mgmt_framework"]
 
 SYSLOG_IDENTIFIER = 'dpu_pensando_util'
@@ -92,7 +92,7 @@ def disable_unused_containers():
     try:
         import redis
 
-        r = redis.StrictRedis(host=LOCALHOST, port=REDIS_PORT, db=CHSSIS_DB, decode_responses=True)
+        r = redis.StrictRedis(host=LOCALHOST, port=REDIS_PORT, db=CONFIG_DB, decode_responses=True)
 
         for feature in DISABLE_CONTAINER_LIST:
             key = f"FEATURE|{feature}"
