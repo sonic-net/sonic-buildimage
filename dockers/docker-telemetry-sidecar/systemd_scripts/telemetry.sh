@@ -1,47 +1,71 @@
 #!/bin/bash
+# 1. Uses sudo -n because the systemd service is run as admin user, and kubelet.conf is accessible via root
+# 2. Use kubectl to get pods and delete pods with retry
+# 3. start/stop/restart are NON-BLOCKING
+
 set -euo pipefail
 
-SERVICE="telemetry"
-NS="${NS:-sonic}"                               # k8s namespace
-LABEL="raw_container_name=${SERVICE}"           # selector used by DaemonSet
-KUBECTL_BIN="${KUBECTL_BIN:-kubectl}"
-NODE_NAME="${NODE_NAME:-$(hostname)}"
-DEV="${2:-}"                                    # accepted for compatibility; unused (single-ASIC)
+NS="sonic"
+KUBECTL_BIN="/usr/bin/kubectl"
+KCF=(--kubeconfig=/etc/kubernetes/kubelet.conf)
+SUDO_BIN="/usr/bin/sudo"
+SUDO_OPTS=(-n)                   # non-interactive
+REQ_TIMEOUT="5s"
+MAX_ATTEMPTS=10
+BACKOFF_START=1
+BACKOFF_MAX=8
 
-log() { /usr/bin/logger -t "${SERVICE}#system" "$*"; }
+NODE_NAME="$(hostname | tr '[:upper:]' '[:lower:]')"
+log() { /usr/bin/logger -t "k8s-podctl#system" "$*"; }
 
-require_kubectl() {
-  if ! command -v "${KUBECTL_BIN}" >/dev/null 2>&1; then
-    echo "ERROR: kubectl not found (KUBECTL_BIN=${KUBECTL_BIN})." >&2
-    exit 127
-  fi
-  # Try a sensible default if KUBECONFIG isn’t set
-  if [[ -z "${KUBECONFIG:-}" && -r /etc/kubernetes/kubelet.conf ]]; then
-    export KUBECONFIG=/etc/kubernetes/kubelet.conf
-  fi
+kubectl_retry() {
+  local attempt=1 backoff=${BACKOFF_START} out rc
+  while true; do
+    out="$("${SUDO_BIN}" "${SUDO_OPTS[@]}" "${KUBECTL_BIN}" "${KCF[@]}" --request-timeout="${REQ_TIMEOUT}" "$@" 2>&1)"; rc=$?
+    if (( rc == 0 )); then
+      printf '%s' "$out"
+      return 0
+    fi
+    if (( attempt >= MAX_ATTEMPTS )); then
+      echo "$out" >&2
+      return "$rc"
+    fi
+    log "kubectl retry ${attempt}/${MAX_ATTEMPTS} for: $*"
+    sleep "${backoff}.$((RANDOM%200))"
+    (( backoff = backoff < BACKOFF_MAX ? backoff*2 : BACKOFF_MAX ))
+    (( attempt++ ))
+  done
 }
 
 pods_on_node() {
-  # Prints: "<name> <phase>" per line for this node
-  "${KUBECTL_BIN}" -n "${NS}" get pods \
-    -l "${LABEL}" \
+  kubectl_retry -n "${NS}" get pods \
     --field-selector "spec.nodeName=${NODE_NAME}" \
-    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' 2>/dev/null || true
+    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' || true
+}
+
+pod_names_on_node() {
+  kubectl_retry -n "${NS}" get pods \
+    --field-selector "spec.nodeName=${NODE_NAME}" \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || true
+}
+
+delete_pod_with_retry() {
+  local name="$1"
+  kubectl_retry -n "${NS}" delete pod "${name}" --force --grace-period=0 --wait=false
 }
 
 kill_pods() {
-  require_kubectl
-  local found=0
-  while read -r name phase; do
-    [[ -z "${name}" ]] && continue
-    found=1
-    log "Deleting ${SERVICE} pod ${name} (phase=${phase}) on node ${NODE_NAME}"
-    # Force/instant delete to emulate “kill”; DaemonSet will recreate
-    "${KUBECTL_BIN}" -n "${NS}" delete pod "${name}" --grace-period=0 --force >/dev/null 2>&1 || true
-  done < <(pods_on_node)
-  if [[ "${found}" -eq 0 ]]; then
-    log "No ${SERVICE} pods found on node ${NODE_NAME} (namespace=${NS}, label=${LABEL})."
+  mapfile -t names < <(pod_names_on_node)
+  if (( ${#names[@]} == 0 )); then
+    log "No pods found on ${NODE_NAME} (ns=${NS})."
+    return 0
   fi
+  log "Deleting pods on ${NODE_NAME}: ${names[*]}"
+  local rc=0
+  for p in "${names[@]}"; do
+    [[ -n "$p" ]] && delete_pod_with_retry "$p" || rc=1
+  done
+  return "$rc"
 }
 
 cmd_start()   { kill_pods; }     # start == kill (DS restarts)
@@ -49,18 +73,16 @@ cmd_stop()    { kill_pods; }
 cmd_restart() { kill_pods; }
 
 cmd_status() {
-  require_kubectl
-  local out; out="$(pods_on_node)"
-  if [[ -z "${out}" ]]; then
-    echo "${SERVICE}: NOT RUNNING (no pod on node ${NODE_NAME})"
+  local out=""; out="$(pods_on_node)"
+  if [[ -z "$out" ]]; then
+    echo "NOT RUNNING (no pod on node ${NODE_NAME})"
     exit 3
   fi
-  echo "${out}" | while read -r name phase; do
-    [[ -z "${name}" ]] && continue
-    echo "${SERVICE} pod ${name}: ${phase}"
-  done
-  # Exit 0 if at least one Running, 1 otherwise
-  if echo "${out}" | awk '$2=="Running"{found=1} END{exit found?0:1}'; then
+  while read -r name phase; do
+    [[ -z "$name" ]] && continue
+    echo "pod ${name}: ${phase}"
+  done <<<"$out"
+  if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
     exit 0
   else
     exit 1
@@ -68,18 +90,13 @@ cmd_status() {
 }
 
 cmd_wait() {
-  require_kubectl
-  log "Waiting on ${SERVICE} pods (ns=${NS}, label=${LABEL}) on node ${NODE_NAME}..."
-  # Keep the systemd service 'active' as long as at least one pod exists for this node.
+  log "Waiting on pods (ns=${NS}) on node ${NODE_NAME}…"
   while true; do
-    local out; out="$(pods_on_node)"
-    if [[ -z "${out}" ]]; then
-      # no pod presently; keep waiting (DaemonSet may bring it up)
-      sleep 5
-      continue
+    local out=""; out="$(pods_on_node)"
+    if [[ -z "$out" ]]; then
+      sleep 5; continue
     fi
-    # If at least one is Running, sleep longer; otherwise poll faster
-    if echo "${out}" | awk '$2=="Running"{found=1} END{exit found?0:1}'; then
+    if awk '$2=="Running"{found=1} END{exit found?0:1}' <<<"$out"; then
       sleep 60
     else
       sleep 5
@@ -94,7 +111,7 @@ case "${1:-}" in
   wait)    cmd_wait ;;
   status)  cmd_status ;;
   *)
-    echo "Usage: $0 {start|stop|restart|wait|status} [asic-id(optional, ignored)]" >&2
+    echo "Usage: $0 {start|stop|restart|wait|status}" >&2
     exit 2
     ;;
 esac
