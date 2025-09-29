@@ -447,5 +447,7 @@ serdes_preemphasis_108=0x145c00
 serdes_driver_current_109=0x4
 serdes_preemphasis_109=0x145c00
 
+sai_interface_type_auto_detect=0
+
 mmu_init_config="MSFT-TH-Tier0"
 phy_an_lt_msft=1
