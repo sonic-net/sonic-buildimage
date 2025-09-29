@@ -136,11 +136,12 @@ fn run_gnmi_for_xpath(
     sec: &TelemetrySecurityConfig,
     target_name: &str,
     timeout: Duration,
+    xpath_target: &str,
 ) -> CommandResult {
     let addr = format!("127.0.0.1:{port}");
     let start = Instant::now();
     let mut cmd = Command::new(GNMI_BASE_CMD);
-    cmd.arg("-xpath_target").arg("SHOW")
+    cmd.arg("-xpath_target").arg(xpath_target)
         .arg("-xpath").arg(xpath)
         .arg("-target_addr").arg(addr)
         .arg("-logtostderr")
@@ -366,20 +367,30 @@ fn main() {
                         if !check_port_result.starts_with("OK") { http_status = "HTTP/1.1 500 Internal Server Error"; }
 
                         // Only run xpath commands if port is OK
-                        if http_status == "HTTP/1.1 200 OK" && is_show_api_probe_enabled() {
-                            let (xpaths, xpath_load_errors) = load_xpath_list();
-                            if !xpath_load_errors.is_empty() {
-                                load_json_errors.extend(xpath_load_errors);
-                                http_status = "HTTP/1.1 500 Internal Server Error";
-                            }
+                        if http_status == "HTTP/1.1 200 OK" {
                             let port = get_gnmi_port();
                             let sec_cfg = get_security_config();
                             let timeout = read_timeout();
                             let target_name = get_target_name();
-                            for xp in xpaths {
-                                let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout);
-                                if !res.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
-                                cmd_results.push(res);
+
+                            // Check Serial Number
+                            let xpath_sn = "system/state/serial-no"; // TODO: FIX
+                            let res_sn = run_gnmi_for_xpath(&xpath_sn, port, &sec_cfg, &target_name, timeout, "CONFIG??");
+                            if !res_sn.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                            cmd_results.push(res_sn);
+
+                            // Check SHOW API xpaths
+                            if is_show_api_probe_enabled() {
+                                let (xpaths, xpath_load_errors) = load_xpath_list();
+                                if !xpath_load_errors.is_empty() {
+                                    load_json_errors.extend(xpath_load_errors);
+                                    http_status = "HTTP/1.1 500 Internal Server Error";
+                                }
+                                for xp in xpaths {
+                                    let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout, "SHOW");
+                                    if !res.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                    cmd_results.push(res);
+                                }
                             }
                         }
                     }
