@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Populate serial number to StateDB so telemetry could use it
-nsenter --target 1 --pid --mount --uts --ipc --net sonic-db-cli STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+nsenter --target 1 --pid --mount --uts --ipc --net bash -c 'sonic-db-cli STATE_DB HSET "DEVICE_METADATA|localhost" chassis_serial_number $(decode-syseeprom -s)'
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
