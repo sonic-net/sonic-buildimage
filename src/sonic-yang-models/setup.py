@@ -220,7 +220,7 @@ yang_files = [
 class my_build_py(build_py):
     def run(self):
         if not self.dry_run:
-            print("hehe")
+            pass
 
         # Validate YANG files completeness before building
         print("RUNNING YANG FILES VALIDATION...")
