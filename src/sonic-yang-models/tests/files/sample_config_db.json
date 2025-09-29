@@ -3133,6 +3133,13 @@
                     "OUT_CURR_OCCUPANCY_BYTES"
                 ]
             }
+        },
+        "LOCAL_USER": {
+            "admin": {
+                "role": "administrator",
+                "password_hash": "$y$j9T$mYVqMrB/TF29nNg.IK63H1$4k1Th1bqfrLXo50z3.KJvsKpffgD7NPMExVmDTrnUc8",
+                "enabled": "true"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
