@@ -225,9 +225,9 @@ SFF_POWER_CLASS_8_OFFSET = 107
 CMIS_MCI_EEPROM_OFFSET = 2
 CMIS_MCI_MASK = 0b00001100
 
-MAX_ATTEMPTS = 50
+MAX_ATTEMPTS = 5
 RETRY_SLEEP_SEC = 0.1
-EEPROM_RETRY_ERR_THRESHOLD = 10
+EEPROM_RETRY_ERR_THRESHOLD = 2
 
 STATE_DOWN = 'Down'                             # Initial state
 STATE_INIT = 'Initializing'                     # Module starts initializing, check module present, also power on the module if need
