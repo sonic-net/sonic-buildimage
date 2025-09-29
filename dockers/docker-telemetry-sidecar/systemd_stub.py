@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import time
 import argparse
 import hashlib
@@ -32,7 +31,6 @@ class SyncItem:
     dst_on_host: str
     mode: int = 0o755
 
-
 _TELEMETRY_SRC = (
     "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"
     if IS_V1_ENABLED
@@ -45,19 +43,42 @@ SYNC_ITEMS: List[SyncItem] = [
     SyncItem("/usr/share/sonic/systemd_scripts/container_checker", "/bin/container_checker"),
 ]
 
+# NOTE: All commands here run on the HOST via nsenter (as root).
 POST_COPY_ACTIONS = {
     "/usr/local/bin/telemetry.sh": [
+        # Ensure kubeconfig + client cert/key are owned by 'admin' (0600)
+        ["/bin/sh", "-lc", r"""
+set -e
+U=admin
+KC=/etc/kubernetes/kubelet.conf
+
+# kubeconfig owner/perms
+if [ -f "$KC" ]; then
+  sudo chown "$U:$U" "$KC" || true
+  sudo chmod 600 "$KC" || true
+fi
+
+# extract unique client cert/key paths from kubeconfig
+paths="$(
+  awk -F':' '/client-(certificate|key)/{val=$2; sub(/^[ \t]*/,"",val); gsub(/"/,"",val); print val}' "$KC" 2>/dev/null \
+  | sed 's/#.*$//' | tr -d '\r' | sort -u
+)"
+for p in $paths; do
+  [ -e "$p" ] || continue
+  sudo chown "$U:$U" "$p" || true
+  sudo chmod 600 "$p" || true
+done
+"""],
         ["sudo", "docker", "stop", "telemetry"],
         ["sudo", "docker", "rm", "telemetry"],
         ["sudo", "systemctl", "daemon-reload"],
         ["sudo", "systemctl", "restart", "telemetry"],
     ],
     "/bin/container_checker": [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "monit"],
+        ["sudo /bin/systemctl", "daemon-reload"],
+        ["sudo /bin/systemctl", "restart", "monit"],
     ],
 }
-
 
 def run(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = None) -> Tuple[int, str | bytes, str | bytes]:
     logger.log_debug("Running: " + " ".join(args))
@@ -71,23 +92,19 @@ def run(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = No
     out, err = p.communicate(input=input_bytes if input_bytes is not None else None)
     return p.returncode, out, err
 
-
 def run_nsenter(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = None) -> Tuple[int, str | bytes, str | bytes]:
     return run(NSENTER_BASE + args, text=text, input_bytes=input_bytes)
-
 
 def read_file_bytes_local(path: str) -> Optional[bytes]:
     try:
         with open(path, "rb") as f:
             return f.read()
-    except OSError as e:  # covers file-related errors incl. ENOENT, EACCES, EISDIR, etc.
+    except OSError as e:
         logger.log_error(f"read failed for {path}: {e}")
         return None
 
-
 # ───────────── Host file ops via nsenter ─────────────
 def host_read_bytes(path_on_host: str) -> Optional[bytes]:
-    # Use /bin/cat in host namespace
     rc, out, _ = run_nsenter(["/bin/cat", path_on_host], text=False)
     if rc != 0:
         return None
@@ -135,7 +152,6 @@ def run_host_actions_for(path_on_host: str) -> None:
             logger.log_info(f"Post-copy action succeeded: {' '.join(cmd)}")
         else:
             logger.log_error(f"Post-copy action FAILED (rc={rc}): {' '.join(cmd)}; stderr={str(err).strip()}")
-
 
 # ───────────── file Sync logic ─────────────
 def sha256_bytes(b: Optional[bytes]) -> str:
@@ -187,7 +203,6 @@ def sync_items(items: List[SyncItem]) -> bool:
 
 def ensure_sync() -> bool:
     return sync_items(SYNC_ITEMS)
-
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Sync host scripts from this container to the host via nsenter (syslog logging).")

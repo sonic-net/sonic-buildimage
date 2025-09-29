@@ -18,6 +18,9 @@ check program container_checker with path "/usr/bin/container_checker"
 
 import docker
 import sys
+import subprocess
+import json
+import socket
 
 from sonic_py_common import multi_asic, device_info
 from swsscommon import swsscommon
@@ -160,26 +163,54 @@ def get_current_running_from_DB(always_running_containers):
 
 def get_current_running_from_dockers():
     """
-    @summary: This function will get all running containers from
-              the list of docker containers in running state.
-    @return:  A set which contains containers that are
-              in running state.
+    Return a set containing:
+      - names of running Docker containers, and
+      - values of Kubernetes pod label 'raw_container_name' for pods
+        in namespace 'sonic' running on *this* node.
     """
-    DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
     running_containers = set()
-    ctrs = DOCKER_CLIENT.containers
+
+    # ---- Docker ----
     try:
-        lst = ctrs.list(filters={"status": "running"})
-        for ctr in lst:
-            # Prefer raw_container_name label over actual name
-            if ctr.labels and "raw_container_name" in ctr.labels:
-                running_containers.add(ctr.labels["raw_container_name"])
-            else:
+        client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        for ctr in client.containers.list(filters={"status": "running"}):
+            if ctr.name:
                 running_containers.add(ctr.name)
     except docker.errors.APIError as err:
-        print(f"Failed to retrieve the running container list. Error: '{err}'")
-        pass
+        print(f"Failed to retrieve Docker containers. Error: '{err}'")
+    except docker.errors.DockerException as err:
+        print(f"Docker client error: '{err}'")
+
+    # ---- Kubernetes ----
+    try:
+        node_name = socket.gethostname()
+        cmd = [
+            "kubectl",
+            "--kubeconfig=/etc/kubernetes/kubelet.conf",
+            "-n", "sonic",
+            "get", "pods",
+            "-l", "raw_container_name",
+            "--field-selector", f"spec.nodeName={node_name}",  # filter local node
+            "-o", "json",
+        ]
+        out = subprocess.check_output(cmd, text=True)
+        data = json.loads(out)
+
+        for pod in data.get("items", []):
+            if (pod.get("status") or {}).get("phase") == "Running":
+                labels = (pod.get("metadata") or {}).get("labels") or {}
+                raw = labels.get("raw_container_name")
+                if raw:
+                    running_containers.add(raw)
+    except FileNotFoundError:
+        print("[kubectl] Not found: skipping Kubernetes check")
+    except subprocess.CalledProcessError as e:
+        print(f"[kubectl] Failed: {e}")
+    except json.JSONDecodeError as e:
+        print(f"[kubectl] Invalid JSON: {e}")
+
     return running_containers
+
 
 def get_current_running_containers(always_running_containers):
     """
