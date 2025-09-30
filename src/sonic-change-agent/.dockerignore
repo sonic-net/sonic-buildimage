@@ -1,0 +1,26 @@
+# Binaries
+sonic-change-agent
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*.test
+coverage.out
+coverage.html
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Misc
+.DS_Store
+*.log
