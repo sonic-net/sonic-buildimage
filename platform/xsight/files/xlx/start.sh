@@ -47,7 +47,7 @@ if [[ ${ONIE_MACHINE,,} == *"es9618"* ]]; then
 fi
 
 if [[ ${ONIE_MACHINE,,} != *"kvm"* ]]; then
-    XSIGHT_PCI_ID=$(lspci | grep -E -o "${XSIGHT_PCI_SIG}:[0-9]{4}" | awk -F ":" '{print $2}')
+    XSIGHT_PCI_ID=$(lspci -nn | grep -E -o "${XSIGHT_PCI_SIG}:[0-9]{4}" | awk -F ":" '{print $2}')
     if [[ "${XSIGHT_PCI_ID}" == "0001" ]]; then
         XSIGHT_DEVICE="X1"
     elif [[ "${XSIGHT_PCI_ID}" == "0002" ]]; then
