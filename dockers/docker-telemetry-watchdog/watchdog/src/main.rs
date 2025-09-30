@@ -374,8 +374,8 @@ fn main() {
                             let target_name = get_target_name();
 
                             // Check Serial Number
-                            let xpath_sn = "system/state/serial-no"; // TODO: FIX
-                            let res_sn = run_gnmi_for_xpath(&xpath_sn, port, &sec_cfg, &target_name, timeout, "CONFIG??");
+                            let xpath_sn = "DEVICE_METADATA/localhost/chassis_serial_number";
+                            let res_sn = run_gnmi_for_xpath(&xpath_sn, port, &sec_cfg, &target_name, timeout, "STATE_DB");
                             if !res_sn.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
                             cmd_results.push(res_sn);
 
