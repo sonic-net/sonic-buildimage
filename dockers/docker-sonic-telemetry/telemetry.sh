@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 
 ## Populate serial number to StateDB so telemetry could use it
-nsenter --target 1 --pid --mount --uts --ipc --net bash -c 'sonic-db-cli STATE_DB HSET "DEVICE_METADATA|localhost" chassis_serial_number $(decode-syseeprom -s)'
+## Only update if decode-syseeprom succeeds and value differs from Redis
+nsenter --target 1 --pid --mount --uts --ipc --net bash -c '
+    SERIAL_NUMBER=$(decode-syseeprom -s)
+    if [ $? -eq 0 ] && [ -n "$SERIAL_NUMBER" ]; then
+        CURRENT_VALUE=$(sonic-db-cli STATE_DB HGET "DEVICE_METADATA|localhost" chassis_serial_number)
+        if [ "$CURRENT_VALUE" != "$SERIAL_NUMBER" ]; then
+            echo "Updating chassis_serial_number in STATE_DB: $SERIAL_NUMBER"
+            sonic-db-cli STATE_DB HSET "DEVICE_METADATA|localhost" chassis_serial_number "$SERIAL_NUMBER"
+        else
+            echo "chassis_serial_number already up to date in STATE_DB: $SERIAL_NUMBER"
+        fi
+    else
+        echo "Failed to retrieve serial number from decode-syseeprom"
+    fi
+'
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
 INCORRECT_TELEMETRY_VALUE=2
