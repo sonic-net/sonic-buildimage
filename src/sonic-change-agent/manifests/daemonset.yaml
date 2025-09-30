@@ -39,7 +39,6 @@ spec:
           value: "true"  # Set to "false" for production
         args:
         - --device-name=$(NODE_NAME)
-        - --gnoi-endpoint=localhost:8080
         - -v=2
         resources:
           requests:

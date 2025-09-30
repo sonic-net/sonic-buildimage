@@ -16,9 +16,8 @@ import (
 )
 
 var (
-	deviceName   = flag.String("device-name", "", "Name of the SONiC device (defaults to NODE_NAME env var)")
-	gnoiEndpoint = flag.String("gnoi-endpoint", "localhost:8080", "gNOI server endpoint")
-	showVersion  = flag.Bool("version", false, "Show version information")
+	deviceName  = flag.String("device-name", "", "Name of the SONiC device (defaults to NODE_NAME env var)")
+	showVersion = flag.Bool("version", false, "Show version information")
 )
 
 func main() {
@@ -42,14 +41,21 @@ func main() {
 		}
 	}
 
+	// Read gNOI server config from SONiC Redis
+	gnoiConfig, err := config.GetGNOIConfigFromRedis()
+	if err != nil {
+		klog.ErrorS(err, "Failed to read gNOI config from Redis")
+		os.Exit(1)
+	}
+
 	klog.InfoS("Starting sonic-change-agent",
 		"version", version.Version,
 		"deviceName", *deviceName,
-		"gnoiEndpoint", *gnoiEndpoint,
+		"gnoiEndpoint", gnoiConfig.GetGNOIEndpoint(),
 		"dryRun", os.Getenv("DRY_RUN") == "true")
 
 	// Create gNOI client
-	gnoiClient, err := gnoi.NewClient(*gnoiEndpoint)
+	gnoiClient, err := gnoi.NewClient(gnoiConfig.GetGNOIEndpoint())
 	if err != nil {
 		klog.ErrorS(err, "Failed to create gNOI client")
 		os.Exit(1)
