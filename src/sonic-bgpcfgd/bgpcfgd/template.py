@@ -3,6 +3,7 @@ from functools import partial
 
 import jinja2
 import netaddr
+import os
 
 from .log import log_err
 
@@ -15,6 +16,7 @@ class TemplateFabric(object):
         j2_env.filters['ipv4'] = self.is_ipv4
         j2_env.filters['ipv6'] = self.is_ipv6
         j2_env.filters['pfx_filter'] = self.pfx_filter
+        j2_env.filters['file_exists'] = self.file_exists_filter
         for attr in ['ip', 'network', 'prefixlen', 'netmask']:
             j2_env.filters[attr] = partial(self.prefix_attr, attr)
         self.env = j2_env
@@ -106,3 +108,7 @@ class TemplateFabric(object):
             else:
                 table[key] = val
         return table
+
+    @staticmethod
+    def file_exists_filter(path):
+        return os.path.isfile(path)

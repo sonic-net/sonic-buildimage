@@ -2,6 +2,7 @@
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
             "type": "SpineRouter",
+            "chassisdb_conf_present" : "true",
             "switch_type": "voq"
         }
     }

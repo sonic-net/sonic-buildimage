@@ -1,8 +1,12 @@
 !
 ! template: bgpd/templates/BGPMON/peer-group.conf.j2
 !
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' and ('chassisdb_conf_present' in CONFIG_DB__DEVICE_METADATA['localhost'] or
+      '/usr/share/sonic/platform/chassisdb.conf' | file_exists) %}
+{% set voq_chassis = True %}
+{% endif %}
   neighbor BGPMON peer-group
-{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if voq_chassis is defined or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
   neighbor BGPMON update-source Loopback4096
 {% elif loopback0_ipv4 %}
   neighbor BGPMON update-source {{ loopback0_ipv4 | ip }}
