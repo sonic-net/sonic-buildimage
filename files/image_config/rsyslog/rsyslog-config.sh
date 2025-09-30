@@ -35,8 +35,13 @@ if [ -z "$os_version" ]; then
     os_version="Unknown"
 fi
 
+syslog_counter=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "syslog_counter")
+if [ -z "$syslog_counter" ]; then
+    syslog_counter="false"
+fi
+
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
-    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\"}" \
+    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\", \"docker0_ip\": \"$docker0_ip\", \"forward_with_osversion\": \"$syslog_with_osversion\", \"os_version\": \"$os_version\", \"syslog_counter\": \"$syslog_counter\"}" \
     > /etc/rsyslog.conf
 
 systemctl restart rsyslog
