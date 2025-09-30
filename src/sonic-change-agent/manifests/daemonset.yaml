@@ -15,7 +15,8 @@ spec:
         app: sonic-change-agent
     spec:
       serviceAccountName: sonic-change-agent
-      hostNetwork: true
+      # Justification: Required to access SONiC Redis (localhost:6379) and gNOI server (localhost:8080)
+      hostNetwork: true # nosemgrep: yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

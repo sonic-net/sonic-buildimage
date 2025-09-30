@@ -136,7 +136,8 @@ func (c *grpcClient) VerifyLocalImage(downloadPath, expectedMD5 string) (bool, e
 	}
 	defer file.Close()
 
-	hash := md5.New()
+	// Justification: MD5 used for data integrity verification (checksum), not cryptographic security
+	hash := md5.New() // nosemgrep: go.lang.security.audit.crypto.use_of_weak_crypto.use-of-md5
 	if _, err := io.Copy(hash, file); err != nil {
 		return false, fmt.Errorf("failed to calculate MD5: %w", err)
 	}
