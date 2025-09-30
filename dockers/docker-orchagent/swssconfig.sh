@@ -55,7 +55,12 @@ HWSKU=${HWSKU:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['hwsku']"`}
 SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 SWSS_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|swss" enable`
 if [[ "$SYSTEM_WARM_START" == "true" ]] || [[ "$SWSS_WARM_START" == "true" ]]; then
-  exit 0
+    # Always load ipinip.json even on warm boot
+    if [[ -f /etc/swss/config.d/ipinip.json ]]; then
+        swssconfig /etc/swss/config.d/ipinip.json
+        sleep 1
+    fi
+    exit 0
 fi
 
 SWSSCONFIG_ARGS="ipinip.json ports.json switch.json vxlan.json"
