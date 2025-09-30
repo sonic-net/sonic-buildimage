@@ -6,7 +6,7 @@ DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/transceiver_init.sh
+ExecStart=/usr/local/bin/transceiver_init.py
 RemainAfterExit=yes
 
 [Install]

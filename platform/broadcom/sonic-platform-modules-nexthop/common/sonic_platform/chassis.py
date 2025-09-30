@@ -16,6 +16,7 @@ import time
 
 from sonic_platform.thermal import NexthopFpgaAsicThermal
 from sonic_platform.watchdog import Watchdog
+from sonic_platform.adm1266 import get_reboot_cause
 
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
@@ -165,14 +166,22 @@ class Chassis(PddfChassis):
             to pass a description of the reboot cause.
         """
 
-        reboot_cause_path = self.plugin_data['REBOOT_CAUSE']['reboot_cause_file']
+        # First check for hardware specific causes
+        hw_cause, hw_description = get_reboot_cause()
+        if hw_cause != "REBOOT_CAUSE_UNKNOWN":
+            return (hw_cause, hw_description)
+
+        # Fall back to software reboot cause file
+        reboot_cause_path = self.plugin_data["REBOOT_CAUSE"]["reboot_cause_file"]
 
         try:
-            with open(reboot_cause_path, 'r', errors='replace') as fd:
+            with open(reboot_cause_path, "r", errors="replace") as fd:
                 data = fd.read()
                 sw_reboot_cause = data.strip()
+                return ("REBOOT_CAUSE_NON_HARDWARE", sw_reboot_cause)
         except IOError:
             sw_reboot_cause = "Unknown"
+            return ("REBOOT_CAUSE_UNKNOWN", "Unknown")
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
 
@@ -210,4 +219,5 @@ class Chassis(PddfChassis):
 
     def get_thermal_manager(self):
         from .thermal_manager import ThermalManager
+
         return ThermalManager
