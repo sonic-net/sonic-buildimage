@@ -525,7 +525,7 @@ start() {
     {%- if docker_container_name == "swss" %}
     # Generate the asic_table.json and peripheral_table.json
     if [ ! -f /etc/sonic/asic_table.json ] && [ -f /usr/share/sonic/templates/asic_table.j2 ]; then
-        sonic-cfggen -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
+        sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render asic_table.json"
             echo "$(cat errorlog.txt)"
@@ -714,6 +714,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
     $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
     $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
 {%- endif %}
