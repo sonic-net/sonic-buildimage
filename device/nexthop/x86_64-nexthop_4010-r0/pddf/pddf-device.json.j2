@@ -70,7 +70,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 SWITCHCARD_FPGA {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F SWITCHCARD_FPGA {}" }
       ]
   },
   "COMPONENT2": {
@@ -86,7 +86,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 CPUCARD_FPGA {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F CPUCARD_FPGA {}" }
       ]
   },
   "COMPONENT3": {
@@ -102,7 +102,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 BIOS {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F BIOS {}" }
       ]
   },
   "COMPONENT4": {
@@ -118,7 +118,7 @@
           { "attr_name": "model", "get_cmd": "echo 'N/A'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "echo 'N/A'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 ONIE {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F ONIE {}" }
       ]
   },
   "COMPONENT5": {
@@ -134,7 +134,7 @@
           { "attr_name": "model", "get_cmd": "tpm2_getcap properties-fixed | grep -A 2 'TPM2_PT_VENDOR_STRING_[12]' | awk '/value:/ { ORS=\"\"; gsub(\"\\\"\", \"\", $2); print $2 }'" },
           { "attr_name": "serial", "get_cmd": "echo 'N/A'" },
           { "attr_name": "revision", "get_cmd": "tpm2_getcap properties-fixed | grep -A 2 TPM2_PT_REVISION | awk '/value:/ { print $2 }'" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 TPM {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F TPM {}" }
       ]
   },
   "COMPONENT6": {
@@ -150,7 +150,7 @@
           { "attr_name": "model", "get_cmd": "cat /sys/class/nvme/nvme0/model" },
           { "attr_name": "serial", "get_cmd": "cat /sys/class/nvme/nvme0/serial" },
           { "attr_name": "revision", "get_cmd": "echo N/A" },
-          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010 NVMe {}" }
+          { "attr_name": "update", "cmd": "/var/platform/fwpackage/fwpackage/update_firmware.py NH-4010-F NVMe {}" }
       ]
   },
   "SYSTEM": {
