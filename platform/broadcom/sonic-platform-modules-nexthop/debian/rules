@@ -4,7 +4,7 @@ include /usr/share/dpkg/pkg-info.mk
 
 export INSTALL_MOD_DIR := extra
 
-KVERSION   ?= $(shell uname -r)
+export KVERSION   ?= $(shell uname -r)
 KERNEL_SRC ?= /lib/modules/$(KVERSION)
 KERNEL_BUILD ?= $(shell if [ -d "/lib/modules/$(KVERSION)/build" ]; then echo "/lib/modules/$(KVERSION)/build"; else echo "/usr/src/linux-headers-$(KVERSION)"; fi)
 MOD_SRC_DIR := $(shell pwd)
@@ -16,8 +16,6 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
-MODULE_DIRS += nh-4010-r0
-MODULE_DIRS += nh-4010-r1
 
 SERVICE_DIR := service
 SYSTEM_DIR := etc/systemd/system
@@ -94,6 +92,11 @@ override_dh_auto_install:
 			dh_installdirs -p$${pkg_name} etc/bash_completion.d; \
 			cp $(MOD_SRC_DIR)/$${mod}/bash_completion.d/* \
 				debian/$${pkg_name}/etc/bash_completion.d/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/modprobe.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \
+				debian/$${pkg_name}/etc/modprobe.d/; \
 		fi; \
 	done)
 	python3 setup.py install \

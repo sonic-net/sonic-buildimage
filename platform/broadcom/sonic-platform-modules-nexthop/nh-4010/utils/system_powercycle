@@ -2,14 +2,13 @@
 
 import sys
 import time
+
+from nexthop import fpga_lib, pcie_lib
 from sonic_py_common import logger
-from nexthop import fpga_lib
 
 REBOOT_DELAY_MS = 1000
 REBOOT_ENABLE = 0xdeadbeef
-SWITCHCARD_FPGA_BDF = "0000:04:00.0"
 SWITCHCARD_REBOOT_REG_OFFSET = 0x4
-CPU_FPGA_BDF = "0000:03:00.0"
 CPU_REBOOT_REG_OFFSET = 0x8
 
 sonic_logger = logger.Logger("platform_reboot")
@@ -19,22 +18,32 @@ def log_error(msg: str):
     sonic_logger.log_error(msg)
 
 def main():
+    switchcard_fpga_bdf = pcie_lib.get_switchcard_fpga_bdf()
     try:
         sonic_logger.log_info("Writing to power cycle control register to initiate reboot")
-        fpga_lib.write_32(SWITCHCARD_FPGA_BDF, SWITCHCARD_REBOOT_REG_OFFSET, REBOOT_ENABLE)
+        fpga_lib.write_32(
+            switchcard_fpga_bdf,
+            SWITCHCARD_REBOOT_REG_OFFSET,
+            REBOOT_ENABLE,
+        )
     except Exception as e:
         log_error(
             "Error writing to power cycle control register on switchcard FPGA"
-            f" {SWITCHCARD_FPGA_BDF}: {str(e)}, trying CPU FPGA"
+            f" {switchcard_fpga_bdf}: {str(e)}, trying CPU FPGA"
         )
     time.sleep(REBOOT_DELAY_MS / 1000)
 
+    cpu_card_fpga_bdf = pcie_lib.get_cpu_card_fpga_bdf()
     try:
-        fpga_lib.write_32(CPU_FPGA_BDF, CPU_REBOOT_REG_OFFSET, REBOOT_ENABLE)
+        fpga_lib.write_32(
+            cpu_card_fpga_bdf,
+            CPU_REBOOT_REG_OFFSET,
+            REBOOT_ENABLE
+        )
     except Exception as e:
         log_error(
             "Error writing to power cycle control register on CPU FPGA"
-            f" {CPU_FPGA_BDF}: {str(e)}"
+            f" {cpu_card_fpga_bdf}: {str(e)}"
         )
         return 2
     time.sleep(REBOOT_DELAY_MS / 1000)
@@ -47,4 +56,10 @@ def main():
     return 1
 
 if __name__ == "__main__":
+    # Systemd calls this script with one of 4 arguments. "poweroff" and "halt" we don't expect.
+    # A cold reboot will pass "reboot". In the first 3 cases, we continue with the powercycle.
+    # Warm reboots will use kexec and will pass "kexec" as the first argument, therefore we
+    # must skip the powercycle in that case.
+    if len(sys.argv) > 1 and sys.argv[1] == "kexec":
+        sys.exit(0)
     sys.exit(main())

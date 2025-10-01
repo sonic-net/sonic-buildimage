@@ -1,6 +1,6 @@
 [Unit]
 Description=PDDF module and device initialization service
-Before=pmon.service
+Before=pmon.service opennsl-modules.service
 DefaultDependencies=no
 
 [Service]
