@@ -9,8 +9,9 @@ if [ "${TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED}" = "true" ]; then
         if [ $? -eq 0 ] && [ -n "$SERIAL_NUMBER" ]; then
             CURRENT_VALUE=$(sonic-db-cli STATE_DB HGET "DEVICE_METADATA|localhost" chassis_serial_number)
             if [ "$CURRENT_VALUE" != "$SERIAL_NUMBER" ]; then
-                echo "Updating chassis_serial_number in STATE_DB: $SERIAL_NUMBER"
-                sonic-db-cli STATE_DB HSET "DEVICE_METADATA|localhost" chassis_serial_number "$SERIAL_NUMBER"
+                echo "Updating chassis_serial_number in STATE_DB: $CURRENT_VALUE -> $SERIAL_NUMBER"
+                RESULT=$(sonic-db-cli STATE_DB HSET "DEVICE_METADATA|localhost" chassis_serial_number "$SERIAL_NUMBER")
+                echo "sonic-db-cli HSET result: $RESULT"
             else
                 echo "chassis_serial_number already up to date in STATE_DB: $SERIAL_NUMBER"
             fi
