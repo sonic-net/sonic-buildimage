@@ -4,8 +4,8 @@
     "num_fantrays": 4,
     "num_fans_pertray": 2,
     "num_ports": 66,
-    "num_temps": 7,
-    "num_asic_temps": 56,
+    "num_temps": 12,
+    "num_asic_temps": 83,
     "num_voltage_sensors" : 24,
     "num_current_sensors" : 8,
     "num_nexthop_fpga_asic_temp_sensors": 2,
@@ -54,8 +54,7 @@
       "nh_pmbus_core",
       "nh_isl68137",
       "nh_tda38740",
-      "nh_tmp464",
-      "pddf_custom_fpga_algo"
+      "nh_tmp464"
     ]
   },
   "COMPONENT1": {
@@ -206,11 +205,15 @@
     }
   },
   "HWMON0": {
-    "dev_info" : {
+    "dev_info": {
       "device_type": "HWMON",
       "device_name": "HWMON_CPU",
-      "device_parent": "PCIE0",
-      "device_bdf": "0000:00:18.3"
+      "device_parent": "PCIE0"
+    },
+    "i2c": {
+      "path_info": {
+        "sysfs_base_path": "{{hwmon_cpu_sysfs_path}}"
+      }
     }
   },
   "MULTIFPGAPCIE0": {
@@ -486,11 +489,156 @@
     "dev_attr": {
       "display_name": "CPU"
     },
-    "sysfs": {
+    "i2c": {
       "attr_list": [
         {
           "attr_name": "temp1_input",
           "drv_attr_name": "temp1_input"
+        }
+      ]
+    }
+  },
+  "TEMP8": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC0_TEMP",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent" : "DCDC0",
+      "nexthop_thermal_setpoint_margin": 10,
+      "nexthop_thermal_pid_domain": "main"
+    },
+    "dev_attr": {
+      "display_name": "DCDC0"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "TEMP9": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC1_TEMP",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent" : "DCDC1",
+      "nexthop_thermal_setpoint_margin": 10,
+      "nexthop_thermal_pid_domain": "main"
+    },
+    "dev_attr": {
+      "display_name": "DCDC1"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "TEMP10": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC2_TEMP",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent" : "DCDC2",
+      "nexthop_thermal_setpoint_margin": 10,
+      "nexthop_thermal_pid_domain": "main"
+    },
+    "dev_attr": {
+      "display_name": "DCDC2"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "TEMP11": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC3_TEMP",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent" : "DCDC3",
+      "nexthop_thermal_setpoint_margin": 10,
+      "nexthop_thermal_pid_domain": "main"
+    },
+    "dev_attr": {
+      "display_name": "DCDC3"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
+        }
+      ]
+    }
+  },
+  "TEMP12": {
+    "dev_info": {
+      "device_type": "TEMP_SENSOR",
+      "device_name": "DCDC4_TEMP",
+      "device_parent": "MULTIFPGAPCIE0",
+      "virt_parent" : "DCDC4",
+      "nexthop_thermal_setpoint_margin": 10,
+      "nexthop_thermal_pid_domain": "main"
+    },
+    "dev_attr": {
+      "display_name": "DCDC4"
+    },
+    "i2c": {
+      "attr_list": [
+        {
+          "attr_name": "temp1_input",
+          "drv_attr_name": "temp1_input"
+        },
+        {
+          "attr_name": "temp1_high_threshold",
+          "drv_attr_name": "temp1_max"
+        },
+        {
+          "attr_name": "temp1_high_crit_threshold",
+          "drv_attr_name": "temp1_crit"
         }
       ]
     }
@@ -1219,6 +1367,357 @@
     },
     "dev_attr": {
       "display_name": "ASIC pm40",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP57": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP57",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm41",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP58": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP58",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm42",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP59": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP59",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm43",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP60": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP60",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm44",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP61": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP61",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm45",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP62": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP62",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm46",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP63": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP63",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm47",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP64": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP64",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm48",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP65": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP65",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm49",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP66": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP66",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm50",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP67": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP67",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm51",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP68": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP68",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm52",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP69": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP69",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm53",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP70": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP70",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm54",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP71": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP71",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm55",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP72": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP72",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm56",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP73": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP73",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm57",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP74": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP74",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm58",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP75": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP75",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm59",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP76": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP76",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm60",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP77": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP77",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm61",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP78": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP78",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm62",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP79": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP79",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC pm63",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP80": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP80",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC top.pvtmon10_A",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP81": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP81",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC top.pvtmon10_B",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP82": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP82",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC top.pvtmon12_A",
+      "temp1_high_threshold": 95,
+      "temp1_high_crit_threshold": 110
+    }
+  },
+  "ASIC_TEMP83": {
+    "dev_info": {
+      "device_type": "ASIC_TEMP_SENSOR",
+      "device_name": "ASIC_TEMP83",
+      "device_parent": "None",
+      "nexthop_thermal_pid_domain": "None"
+    },
+    "dev_attr": {
+      "display_name": "ASIC top.pvtmon12_B",
       "temp1_high_threshold": 95,
       "temp1_high_crit_threshold": 110
     }
@@ -12248,8 +12747,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in1_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in1_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in1_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in1_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in1_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in1_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in1_lcrit"}
         ]
     }
   },
@@ -12263,8 +12762,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in2_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in2_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in2_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in2_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in2_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in2_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in2_lcrit"}
         ]
     }
   },
@@ -12278,8 +12777,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in4_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in4_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in4_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in4_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in4_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in4_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in4_lcrit"}
         ]
     }
   },
@@ -12293,8 +12792,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in5_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in5_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in5_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in5_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in5_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in5_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in5_lcrit"}
         ]
     }
   },
@@ -12308,8 +12807,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in6_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in6_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in6_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in6_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in6_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in6_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in6_lcrit"}
         ]
     }
   },
@@ -12323,8 +12822,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in7_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in7_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in7_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in7_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in7_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in7_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in7_lcrit"}
         ]
     }
   },
@@ -12338,8 +12837,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in8_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in8_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in8_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in8_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in8_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in8_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in8_lcrit"}
         ]
     }
   },
@@ -12353,8 +12852,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in9_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in9_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in9_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in9_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in9_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in9_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in9_lcrit"}
         ]
     }
   },
@@ -12368,8 +12867,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in10_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in10_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in10_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in10_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in10_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in10_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in10_lcrit"}
         ]
     }
   },
@@ -12384,8 +12883,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in11_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in11_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in11_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in11_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in11_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in11_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in11_lcrit"}
         ]
     }
   },
@@ -12399,8 +12898,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in12_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in12_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in12_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in12_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in12_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in12_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in12_lcrit"}
         ]
     }
   },
@@ -12414,8 +12913,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in13_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in13_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in13_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in13_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in13_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in13_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in13_lcrit"}
         ]
     }
   },
@@ -12429,8 +12928,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in14_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in14_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in14_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in14_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in14_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in14_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in14_lcrit"}
         ]
     }
   },
@@ -12444,8 +12943,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in15_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in15_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in15_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in15_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in15_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in15_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in15_lcrit"}
         ]
     }
   },
@@ -12459,8 +12958,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in16_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in16_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in16_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in16_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in16_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in16_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in16_lcrit"}
         ]
     }
   },
@@ -12474,8 +12973,8 @@
             {"attr_name":"volt1_input", "drv_attr_name":"in17_input"},
             {"attr_name":"volt1_high_threshold", "drv_attr_name":"in17_max"},
             {"attr_name":"volt1_low_threshold", "drv_attr_name":"in17_min"},
-            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in17_max_alarm"},
-            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in17_min_alarm"}
+            {"attr_name":"volt1_crit_high_threshold", "drv_attr_name":"in17_crit"},
+            {"attr_name":"volt1_crit_low_threshold", "drv_attr_name":"in17_lcrit"}
         ]
     }
   },
@@ -12874,11 +13373,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_max_alarm"
+          "drv_attr_name": "curr3_crit"
         }
       ]
     }
@@ -12901,11 +13400,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_max_alarm"
+          "drv_attr_name": "curr4_crit"
         }
       ]
     }
@@ -12928,11 +13427,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_max_alarm"
+          "drv_attr_name": "curr3_crit"
         }
       ]
     }
@@ -12955,11 +13454,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_max_alarm"
+          "drv_attr_name": "curr4_crit"
         }
       ]
     }
@@ -12982,11 +13481,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_max_alarm"
+          "drv_attr_name": "curr3_crit"
         }
       ]
     }
@@ -13009,11 +13508,11 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr3_crit"
+          "drv_attr_name": "curr3_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr3_max_alarm"
+          "drv_attr_name": "curr3_crit"
         }
       ]
     }
@@ -13036,13 +13535,13 @@
         },
         {
           "attr_name": "current1_high_threshold",
-          "drv_attr_name": "curr4_crit"
+          "drv_attr_name": "curr4_max"
         },
         {
           "attr_name": "current1_crit_high_threshold",
-          "drv_attr_name": "curr4_max_alarm"
+          "drv_attr_name": "curr4_crit"
         }
       ]
-    }
+     }
   }
 }
