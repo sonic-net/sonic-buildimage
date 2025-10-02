@@ -49,6 +49,7 @@ fast_reboot
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 HWSKU=${HWSKU:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['hwsku']"`}
+sonic_asic_type=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v asic_type)
 
 # Apply only TUNNEL_DECAP_TABLE entries
 apply_ipinip_subset() {
@@ -81,8 +82,9 @@ apply_ipinip_subset() {
 SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 SWSS_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|swss" enable`
 if [[ "$SYSTEM_WARM_START" == "true" ]] || [[ "$SWSS_WARM_START" == "true" ]]; then
-    # On warm boot, only apply TUNNEL_DECAP_TABLE subset on non-Broadcom ASICs
-    if [[ "$ASIC_VENDOR" != "broadcom" ]]; then
+    # On warm boot, only apply TUNNEL_DECAP_TABLE subset on non-Broadcom ASICs to
+    # match ipinip.json.j2 config
+    if [[ "$sonic_asic_type" != "broadcom" ]]; then
         echo "Preparing to apply ipinip.json config for non-broadcom ASIC switch"
         apply_ipinip_subset
     else
