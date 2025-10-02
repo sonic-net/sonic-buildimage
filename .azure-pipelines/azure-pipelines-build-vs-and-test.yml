@@ -45,45 +45,6 @@ parameters:
     type: string
     default: 'master'
 
-  - name: TOPOLOGY
-    type: string
-    default: 't0'
-    values:
-      - t0
-      - t0-64-32
-      - t1-lag
-      - t1-8-lag
-      - dualtor
-      - dpu
-
-  - name: DEPLOY_MG_EXTRA_PARAMS
-    type: string
-    default: ' '
-
-  - name: COMMON_EXTRA_PARAMS
-    type: string
-    default: ' '
-
-  - name: SCRIPTS
-    type: string
-    default: ' '
-
-  - name: FEATURES
-    type: string
-    default: ' '
-
-  - name: MIN_WORKER
-    type: string
-    default: '1'
-
-  - name: MAX_WORKER
-    type: string
-    default: '1'
-  
-  - name: NUM_ASIC
-    type: string
-    default: '1'
-
   - name: STOP_ON_FAILURE
     type: string
     default: 'True'
@@ -120,6 +81,7 @@ stages:
       value: veos_vtb
     - name: testbed_file
       value: vtestbed.yaml
+    - name:
 
     jobs:
     - job: KVMTEST
@@ -130,16 +92,9 @@ stages:
       steps:
       - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
         parameters:
-          TOPOLOGY: ${{ parameters.TOPOLOGY }}
-          MIN_WORKER: ${{ parameters.MIN_WORKER }}
-          MAX_WORKER: ${{ parameters.MAX_WORKER }}
+          BUILD_BRANCH: $(BUILD_BRANCH)
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: ${{ parameters.MGMT_BRANCH }}
-          SCRIPTS: ${{ parameters.SCRIPTS }}
-          FEATURES: ${{ parameters.FEATURES }}
-          NUM_ASIC: ${{ parameters.NUM_ASIC }}
-          DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
-          COMMON_EXTRA_PARAMS: ${{ parameters.COMMON_EXTRA_PARAMS }}
-          STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
+          MGMT_BRANCH: $(BUILD_BRANCH)
           IMPACT_AREA_INFO: ${{ parameters.IMPACT_AREA_INFO }}
+          STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
           BUILD_REASON: ${{ parameters.BUILD_REASON }}
