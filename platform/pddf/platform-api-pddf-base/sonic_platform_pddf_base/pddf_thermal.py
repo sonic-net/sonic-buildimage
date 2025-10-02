@@ -100,7 +100,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             # Hardcoded values in JSON take precedence over hwmon sysfs values
             if json_value := self.thermal_obj['dev_info'].get('high_threshold'):
-                return json_value
+                return float(json_value)
 
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_high_threshold")
             if not output:
@@ -130,7 +130,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             # Hardcoded values in JSON take precedence over hwmon sysfs values
             if json_value := self.thermal_obj['dev_info'].get('low_threshold'):
-                return json_value
+                return float(json_value)
 
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_low_threshold")
             if not output:
@@ -190,7 +190,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             # Hardcoded values in JSON take precedence over hwmon sysfs values
             if json_value := self.thermal_obj['dev_info'].get('high_crit_threshold'):
-                return json_value
+                return float(json_value)
 
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_high_crit_threshold")
             if not output:
@@ -219,7 +219,7 @@ class PddfThermal(ThermalBase):
         if not self.is_psu_thermal:
             # Hardcoded values in JSON take precedence over hwmon sysfs values
             if json_value := self.thermal_obj['dev_info'].get('low_crit_threshold'):
-                return json_value
+                return float(json_value)
 
             output = self.pddf_obj.get_attr_name_output(self.thermal_obj_name, "temp1_low_crit_threshold")
             if not output:
