@@ -604,6 +604,12 @@ write_platform_specific_cmdline() {
     if [ "$sid" = "QuartzDdMs" ]; then
         aboot_machine=arista_7280dr3am_36
     fi
+    if in_array "$sid" "Redstart8Mk2CitrineDd" "Redstart8Mk2NCitrineDd"; then
+        aboot_machine=arista_7280r4_32qf_32df
+    fi
+    if in_array "$sid" "Redstart8Mk2CitrineDdBk" "Redstart8Mk2NCitrineDdBk"; then
+        aboot_machine=arista_7280r4k_32qf_32df
+    fi
     if [ "$sid" = "Smartsville" ]; then
         aboot_machine=arista_7280cr3_32p4
     fi
