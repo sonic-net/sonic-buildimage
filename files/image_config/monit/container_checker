@@ -172,7 +172,7 @@ def get_current_running_from_dockers():
 
     try:
         for ctr in DOCKER_CLIENT.containers.list(filters={"status": "running"}):
-            labels = getattr(ctr, "labels", None) or {}
+            labels = ctr.labels or {}
             ns = labels.get("io.kubernetes.pod.namespace")
             dtype = labels.get("io.kubernetes.docker.type")
             kname = labels.get("io.kubernetes.container.name")

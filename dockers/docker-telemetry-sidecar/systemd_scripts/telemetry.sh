@@ -29,7 +29,7 @@ kubectl_retry() {
       return "$rc"
     fi
     log "kubectl retry ${attempt}/${MAX_ATTEMPTS} for: $*"
-    sleep "${backoff}.$((RANDOM%200))"
+    sleep "${backoff}"
     (( backoff = backoff < BACKOFF_MAX ? backoff*2 : BACKOFF_MAX ))
     (( attempt++ ))
   done
