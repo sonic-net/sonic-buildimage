@@ -6,6 +6,7 @@
         "num_fans_pertray":2,
         "num_ports":34,
         "num_temps": 12,
+		"num_voltage_sensors":10,
         "pddf_dev_types":
         {
             "description":"AS9716 - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -332,19 +333,6 @@
             ]
         }
     },
-    
-    "CURRENT1" :
-    {
-        "dev_info": { "device_type":"VOLTAGE_CURRENT", "device_name":"CURRENT1", "device_parent":"MUX3"},
-        "dev_attr": { "display_name":"CURRENT1"},
-        "i2c":
-        {   
-            
-            "topo_info": { "parent_bus":"0x18", "dev_addr":"0x34", "dev_type":""},
-            "dev_attr":{}
-        }
-    },
-    
     
     "VOLTAGE1" :
     {
