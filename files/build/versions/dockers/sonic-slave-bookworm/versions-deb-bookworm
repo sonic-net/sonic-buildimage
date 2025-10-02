@@ -1845,7 +1845,7 @@ python3-iniconfig==1.1.1-2
 python3-ipython==8.5.0-4
 python3-isort==5.6.4-1
 python3-jedi==0.18.2-1
-python3-jinja2==3.1.2-1+deb12u3
+python3-jinja2==3.1.6
 python3-jwt==2.6.0-1
 python3-kiwisolver==1.4.4-1+b1
 python3-lazr.restfulclient==0.14.5-1
