@@ -2,7 +2,6 @@
 import sys
 import types
 import importlib
-from pathlib import Path
 
 import pytest
 
@@ -34,7 +33,7 @@ def fake_logger_module():
 
 
 @pytest.fixture
-def ss(tmp_path, monkeypatch):
+def ss(monkeypatch):
     """
     Import systemd_stub fresh for every test, and provide fakes:
       - run_nsenter: simulates a host FS + systemctl/docker/stat/chown/chmod calls
@@ -92,7 +91,6 @@ def ss(tmp_path, monkeypatch):
         if args[:2] == ["/usr/bin/stat", "-c"] and len(args) == 4:
             fmt, path = args[2], args[3]
             if path not in host_meta:
-                # Treat as missing -> fail
                 return _fail("stat: No such file")
             meta = host_meta[path]
             if fmt == "%U %G %a":
@@ -126,7 +124,6 @@ def ss(tmp_path, monkeypatch):
         if args[:2] == ["/bin/sh", "-lc"] and len(args) == 3 and args[2].startswith("cat > "):
             tmp_path = args[2].split("cat > ", 1)[1].strip()
             host_fs[tmp_path] = input_bytes or (b"" if text else b"")
-            # track meta for tmp file
             host_meta.setdefault(tmp_path, {"owner": "root", "group": "root", "mode": 0o600})
             return _ok()
 
@@ -134,7 +131,6 @@ def ss(tmp_path, monkeypatch):
         if args[:1] == ["/bin/mv"] and len(args) == 4:
             src, dst = args[2], args[3]
             host_fs[dst] = host_fs.get(src, b"")
-            # move meta if present
             if src in host_meta:
                 host_meta[dst] = dict(host_meta[src])
             host_fs.pop(src, None)
@@ -148,15 +144,15 @@ def ss(tmp_path, monkeypatch):
             host_meta.pop(target, None)
             return _ok()
 
-        # /usr/bin/docker ... (stop/rm)
-        if args[:1] == ["/usr/bin/docker"]:
+        # docker (allow both '/usr/bin/docker' and 'docker' after sudo)
+        if args[:1] == ["/usr/bin/docker"] or (args[:1] == ["docker"]):
             return _ok()
 
-        # /bin/systemctl ... (daemon-reload/restart)
-        if args[:1] == ["/bin/systemctl"]:
+        # systemctl (allow '/bin/systemctl', 'systemctl' and 'sudo /bin/systemctl' forms)
+        if args[:1] == ["/bin/systemctl"] or args[:1] == ["systemctl"] or (args and args[0].startswith("sudo") and "systemctl" in " ".join(args)):
             return _ok()
 
-        # tolerate "sudo ..." if any test still injects it
+        # tolerate "sudo ..." generally
         if args[:1] == ["sudo"]:
             return _ok()
 
@@ -173,7 +169,6 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
-    # Expose handy internals to tests
     return ss, container_fs, host_fs, host_meta, commands
 
 
@@ -227,22 +222,22 @@ def test_sync_updates_and_post_actions(ss, monkeypatch):
     ss.SYNC_ITEMS[:] = [item]
 
     ss.POST_COPY_ACTIONS[item.dst_on_host] = [
-        ["/bin/systemctl", "daemon-reload"],
-        ["/bin/systemctl", "restart", "monit"],
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo /bin/systemctl", "restart", "monit"],
     ]
 
     ok = ss.ensure_sync()
     assert ok is True
     assert host_fs[item.dst_on_host] == b"NEW"
 
-    post_cmds = [args for _, args in commands if args and args[0] == "/bin/systemctl"]
-    assert ("/bin/systemctl", "daemon-reload") in post_cmds
-    assert ("/bin/systemctl", "restart", "monit") in post_cmds
+    # Assert that a systemctl daemon-reload and restart were invoked (any sudo form)
+    joined = [" ".join(args) for _, args in commands]
+    assert any("systemctl daemon-reload" in s for s in joined)
+    assert any("systemctl restart monit" in s for s in joined)
 
 
 def test_sync_missing_src_returns_false(ss, monkeypatch):
     ss, container_fs, host_fs, host_meta, commands = ss
-    # Avoid ownership enforcement noise in this test
     monkeypatch.setattr(ss, "enforce_kube_credentials_owner_periodic", lambda: True, raising=True)
 
     item = ss.SyncItem("/container/missing.sh", "/usr/local/bin/telemetry.sh", 0o755)
@@ -307,22 +302,21 @@ def test_env_controls_telemetry_src_default(monkeypatch):
 
 def test_enforce_kube_owner_mode_drift(ss):
     """
-    New test: ensure periodic enforcement detects drift and fixes owner/mode
+    Ensure periodic enforcement detects drift and fixes owner/mode
     for kubeconfig + client credential.
     """
     ss, container_fs, host_fs, host_meta, commands = ss
     kc = "/etc/kubernetes/kubelet.conf"
     client = "/var/lib/kubelet/pki/kubelet-client-current.pem"
 
-    # Drift: reset both to root:root 600
+    # Drift: set to root:root 600
     host_meta[kc] = {"owner": "root", "group": "root", "mode": 0o600}
     host_meta[client] = {"owner": "root", "group": "root", "mode": 0o600}
 
-    # Call the periodic enforcement directly
     ok = ss.enforce_kube_credentials_owner_periodic()
     assert ok is True
 
-    # Should now be admin:admin 600
+    # Should now be admin:admin 600 (default KUBE_USER="admin")
     assert host_meta[kc]["owner"] == "admin"
     assert host_meta[kc]["group"] == "admin"
     assert host_meta[kc]["mode"] == 0o600
@@ -331,8 +325,30 @@ def test_enforce_kube_owner_mode_drift(ss):
     assert host_meta[client]["group"] == "admin"
     assert host_meta[client]["mode"] == 0o600
 
-    # And we should have seen chown/chmod/stat calls
-    called = [" ".join(a) for _, a in commands]
-    assert any(cmd.startswith("/usr/bin/stat -c") and cmd.endswith(kc) for cmd in called)
-    assert any(cmd.startswith("/bin/chown admin:admin ") and cmd.endswith(kc) for cmd in called)
-    assert any(cmd.startswith("/bin/chmod 600 ") and cmd.endswith(kc) for cmd in called)
+    # Saw stat/chown/chmod calls
+    joined = [" ".join(args) for _, args in commands]
+    assert any(s.startswith("/usr/bin/stat -c %U %G %a " + kc) for s in joined)
+    assert any(s.startswith("/bin/chown admin:admin " + kc) for s in joined)
+    assert any(s.startswith("/bin/chmod 600 " + kc) for s in joined)
+
+
+def test_ensure_sync_calls_periodic_enforcement(ss, monkeypatch):
+    ss, container_fs, host_fs, host_meta, commands = ss
+
+    # Make a single item that won't need copying (fast path)
+    item = ss.SyncItem("/container/telemetry.sh", "/host/telemetry.sh", 0o755)
+    content = b"SAME"
+    container_fs[item.src_in_container] = content
+    host_fs[item.dst_on_host] = content
+    ss.SYNC_ITEMS[:] = [item]
+
+    called = {"flag": False}
+    def fake_enforce():
+        called["flag"] = True
+        return True
+
+    monkeypatch.setattr(ss, "enforce_kube_credentials_owner_periodic", fake_enforce, raising=True)
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    assert called["flag"] is True
