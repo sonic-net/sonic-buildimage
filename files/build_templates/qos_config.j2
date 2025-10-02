@@ -454,15 +454,13 @@
             "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
 {% endif %}
-{% if port not in PORT_DPC %}
-            "tc_to_pg_map"    : "AZURE",
-{% else %}
-            "tc_to_pg_map"    : "AZURE_DPC",
+{% if port not in PORT_SERVICE %}
+            "pfc_to_queue_map": "AZURE",
 {% endif %}
-{% if port in PORT_SERVICE %}
-            "pfc_to_queue_map": ""
+{% if port not in PORT_DPC %}
+            "tc_to_pg_map"    : "AZURE"
 {% else %}
-            "pfc_to_queue_map": "AZURE"
+            "tc_to_pg_map"    : "AZURE_DPC"
 {% endif %}
         }{% if not loop.last %},{% endif %}
 
