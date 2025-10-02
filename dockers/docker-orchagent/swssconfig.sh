@@ -50,15 +50,43 @@ fast_reboot
 
 HWSKU=${HWSKU:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['hwsku']"`}
 
+# Apply only TUNNEL_DECAP_TABLE entries
+apply_ipinip_subset() {
+  if [[ -f /etc/swss/config.d/ipinip.json ]]; then
+    tmpfile=$(mktemp /tmp/ipinip.XXXX.json)
+
+    jq '[ .[] 
+          | select(
+                has("TUNNEL_DECAP_TABLE:IPINIP_TUNNEL")
+            or has("TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL")
+            or has("TUNNEL_DECAP_TABLE:IPINIP_SUBNET")
+            or has("TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6")
+          )
+        ]' /etc/swss/config.d/ipinip.json > "$tmpfile"
+
+    if [[ -s "$tmpfile" ]]; then
+        echo "Applying filtered ipinip.json subset from $tmpfile"
+        swssconfig "$tmpfile"
+    else
+        echo "No matching TUNNEL_DECAP_TABLE entries found in ipinip.json"
+    fi
+
+    rm -f "$tmpfile"
+    sleep 1
+  fi
+}
+
 # Don't load json config if system warm start or
 # swss docker warm start is enabled, the data already exists in appDB.
 SYSTEM_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 SWSS_WARM_START=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|swss" enable`
 if [[ "$SYSTEM_WARM_START" == "true" ]] || [[ "$SWSS_WARM_START" == "true" ]]; then
-    # Always load ipinip.json even on warm boot
-    if [[ -f /etc/swss/config.d/ipinip.json ]]; then
-        swssconfig /etc/swss/config.d/ipinip.json
-        sleep 1
+    # On warm boot, only apply TUNNEL_DECAP_TABLE subset on non-Broadcom ASICs
+    if [[ "$ASIC_VENDOR" != "broadcom" ]]; then
+        echo "Preparing to apply ipinip.json config for non-broadcom ASIC switch"
+        apply_ipinip_subset
+    else
+        echo "Skip applying ipinip.json config for broadcom ASIC switch after warm-boot"
     fi
     exit 0
 fi
