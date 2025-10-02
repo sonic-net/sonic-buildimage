@@ -78,14 +78,14 @@ jobs:
 
         - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-armhf
+            pool: sonicso1ES-armhf
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
 
         - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
+            pool: sonicso1ES-arm64
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
@@ -106,12 +106,12 @@ jobs:
             platform_rpc: nephos
 
         - name: pensando
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
         - name: nvidia-bluefield
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
