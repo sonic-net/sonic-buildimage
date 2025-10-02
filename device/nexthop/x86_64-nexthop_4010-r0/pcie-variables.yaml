@@ -40,4 +40,3 @@
 
 - name: "hwmon_cpu_sysfs_path"
   lookup_command: "readlink -f /sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon*"
-
