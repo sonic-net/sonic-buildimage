@@ -383,7 +383,6 @@ fn main() {
                             let target_name = get_target_name();
 
                             // Check Serial Number
-                            // Check serial number
                             if is_serialnumber_probe_enabled() {
                                 let xpath_sn = "DEVICE_METADATA/localhost/chassis_serial_number";
                                 let res_sn = run_gnmi_for_xpath(&xpath_sn, port, &sec_cfg, &target_name, timeout, "STATE_DB");
