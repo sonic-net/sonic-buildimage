@@ -21,6 +21,12 @@ LOG_MSG "Dropping caches..."
 LOG_MSG 3 > /proc/sys/vm/drop_caches
 LOG_MSG "Cache cleared."
 
+sleep 2
 LOG_MSG "Pre-reboot flush and cache clear complete."
+
+sleep 2
+LOG_MSG "Writing pre-shutdown success to CPLD reg"
+docker exec "$(cat /host/dpu-docker-info/name)" /nic/bin/cpldapp -w 0xd 200
+
 LOG_MSG "Platform specific pre-shutdown is successful"
 

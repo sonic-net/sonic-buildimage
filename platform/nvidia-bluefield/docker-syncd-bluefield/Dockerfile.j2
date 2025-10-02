@@ -37,8 +37,7 @@ RUN apt-get update && \
         python3-setuptools \
         binutils-dev \
         ethtool \
-        python3-clang \
-        clang
+        pciutils
 
 RUN pip3 install ctypeslib2 clang==14
 
@@ -58,5 +57,8 @@ RUN apt-get clean -y && \
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor/"]
+
+RUN mkdir -p /etc/mlnx/
+COPY sai-*.profile /etc/mlnx/
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
