@@ -91,6 +91,14 @@ parameters:
       - 'True'
       - 'False'
 
+  - name: IMPACT_AREA_INFO
+    type: string
+    default: ' '
+
+  - name: BUILD_REASON
+    type: string
+    default: 'Manual'
+
 stages:
   - stage: BuildVS
     pool: sonicso1ES-amd64
@@ -120,7 +128,7 @@ stages:
       continueOnError: false
       pool: sonic-ubuntu-1c
       steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: ${{ parameters.TOPOLOGY }}
           MIN_WORKER: ${{ parameters.MIN_WORKER }}
@@ -133,3 +141,5 @@ stages:
           DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
           COMMON_EXTRA_PARAMS: ${{ parameters.COMMON_EXTRA_PARAMS }}
           STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
+          IMPACT_AREA_INFO: ${{ parameters.IMPACT_AREA_INFO }}
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
