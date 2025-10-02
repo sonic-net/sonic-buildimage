@@ -128,6 +128,13 @@ class PddfEeprom(eeprom_tlvinfo.TlvInfoDecoder):
 
         return results[2].decode('ascii')
 
+    def label_revision_str(self):
+        (is_valid, results) = self.get_tlv_field(self.eeprom_data, self._TLV_CODE_LABEL_REVISION)
+        if not is_valid:
+            return "N/A"
+
+        return results[2].decode('ascii')
+
     def system_eeprom_info(self):
         """
         Returns a dictionary, where keys are the type code defined in
