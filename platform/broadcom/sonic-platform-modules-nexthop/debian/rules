@@ -5,7 +5,7 @@ include /usr/share/dpkg/pkg-info.mk
 export INSTALL_MOD_DIR := extra
 
 export KVERSION   ?= $(shell uname -r)
-export KERNEL_SRC := /lib/modules/$(KVERSION)
+export KERNEL_SRC ?= /lib/modules/$(KVERSION)
 KERNEL_BUILD := $(KERNEL_SRC)/build
 MOD_SRC_DIR := $(shell pwd)
 MODULE_DIRS :=
