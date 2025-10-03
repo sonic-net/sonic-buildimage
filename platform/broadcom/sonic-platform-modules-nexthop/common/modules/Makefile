@@ -1,4 +1,5 @@
 obj-m := pddf_custom_fpga_algo.o
+obj-m += pddf_custom_mdio_algo.o
 obj-m += nh_tda38740.o
 obj-m += nh_isl68137.o
 obj-m += nh_pmbus_core.o
