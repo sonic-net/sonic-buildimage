@@ -5,8 +5,8 @@ include /usr/share/dpkg/pkg-info.mk
 export INSTALL_MOD_DIR := extra
 
 export KVERSION   ?= $(shell uname -r)
-KERNEL_SRC ?= /lib/modules/$(KVERSION)
-KERNEL_BUILD ?= $(shell if [ -d "/lib/modules/$(KVERSION)/build" ]; then echo "/lib/modules/$(KVERSION)/build"; else echo "/usr/src/linux-headers-$(KVERSION)"; fi)
+export KERNEL_SRC ?= /lib/modules/$(KVERSION)
+KERNEL_BUILD := $(KERNEL_SRC)/build
 MOD_SRC_DIR := $(shell pwd)
 MODULE_DIRS :=
 
