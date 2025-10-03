@@ -455,13 +455,11 @@
 {% endif %}
 {% endif %}
 {% if port not in PORT_DPC %}
-            "tc_to_pg_map"    : "AZURE",
+            "tc_to_pg_map"    : "AZURE"{% if port not in PORT_SERVICE %},{% endif %}
 {% else %}
-            "tc_to_pg_map"    : "AZURE_DPC",
+            "tc_to_pg_map"    : "AZURE_DPC"{% if port not in PORT_SERVICE %},{% endif %}
 {% endif %}
-{% if port in PORT_SERVICE %}
-            "pfc_to_queue_map": ""
-{% else %}
+{% if port not in PORT_SERVICE %}
             "pfc_to_queue_map": "AZURE"
 {% endif %}
         }{% if not loop.last %},{% endif %}
