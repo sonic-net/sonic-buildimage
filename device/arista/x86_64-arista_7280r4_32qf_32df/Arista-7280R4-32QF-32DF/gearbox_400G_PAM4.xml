@@ -1,0 +1,57 @@
+<?xml version="1.0" ?>
+<root>
+    <name>screaming_eagle</name>
+    <phy_addr>0</phy_addr>
+    <mode>bitmux</mode>
+    <topology>2</topology>
+    <lane id="0" system-side="true"/>
+    <lane id="2" system-side="true"/>
+    <lane id="4" system-side="true"/>
+    <lane id="6" system-side="true"/>
+    <lane id="8" system-side="true"/>
+    <lane id="10" system-side="true"/>
+    <lane id="12" system-side="true"/>
+    <lane id="14" system-side="true"/>
+    <lane id="16" system-side="false"/>
+    <lane id="17" system-side="false"/>
+    <lane id="18" system-side="false"/>
+    <lane id="19" system-side="false"/>
+    <lane id="20" system-side="false"/>
+    <lane id="21" system-side="false"/>
+    <lane id="22" system-side="false"/>
+    <lane id="23" system-side="false"/>
+    <lane id="24" system-side="false"/>
+    <lane id="25" system-side="false"/>
+    <lane id="26" system-side="false"/>
+    <lane id="27" system-side="false"/>
+    <lane id="28" system-side="false"/>
+    <lane id="29" system-side="false"/>
+    <lane id="30" system-side="false"/>
+    <lane id="31" system-side="false"/>
+    <PAM4>
+        <lane id="0" tx-taps="5,-13,41,-3,0"/>
+        <lane id="2" tx-taps="5,-13,41,-3,0"/>
+        <lane id="4" tx-taps="5,-13,41,-3,0"/>
+        <lane id="6" tx-taps="5,-13,41,-3,0"/>
+        <lane id="8" tx-taps="5,-13,41,-3,0"/>
+        <lane id="10" tx-taps="5,-13,41,-3,0"/>
+        <lane id="12" tx-taps="5,-13,41,-3,0"/>
+        <lane id="14" tx-taps="5,-13,41,-3,0"/>
+        <lane id="16" tx-taps="5,-13,41,-3,0"/>
+        <lane id="17" tx-taps="5,-13,41,-3,0"/>
+        <lane id="18" tx-taps="5,-13,41,-3,0"/>
+        <lane id="19" tx-taps="5,-13,41,-3,0"/>
+        <lane id="20" tx-taps="5,-13,41,-3,0"/>
+        <lane id="21" tx-taps="5,-13,41,-3,0"/>
+        <lane id="22" tx-taps="5,-13,41,-3,0"/>
+        <lane id="23" tx-taps="5,-13,41,-3,0"/>
+        <lane id="24" tx-taps="5,-13,41,-3,0"/>
+        <lane id="25" tx-taps="5,-13,41,-3,0"/>
+        <lane id="26" tx-taps="5,-13,41,-3,0"/>
+        <lane id="27" tx-taps="5,-13,41,-3,0"/>
+        <lane id="28" tx-taps="5,-13,41,-3,0"/>
+        <lane id="29" tx-taps="5,-13,41,-3,0"/>
+        <lane id="30" tx-taps="5,-13,41,-3,0"/>
+        <lane id="31" tx-taps="5,-13,41,-3,0"/>
+    </PAM4>
+</root>
