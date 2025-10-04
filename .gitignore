@@ -24,6 +24,8 @@ target/
 *.img
 *.pyc
 *.mod
+# Exception: go.mod is a Go source file (dependency manifest), not a build artifact
+!go.mod
 
 # Slave docker log files
 sonic-slave*/*.log
