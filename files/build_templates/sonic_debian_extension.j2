@@ -264,6 +264,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 
 # Install SONiC host services package
 install_pip_package {{sonic_host_services_py3_wheel_path}}
+install_deb_package $debs_path/sonic-host-services-rs_*.deb
 
 # Install SONiC host services data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-host-services-data_*.deb
