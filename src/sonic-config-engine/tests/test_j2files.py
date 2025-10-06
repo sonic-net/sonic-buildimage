@@ -418,7 +418,7 @@ class TestJ2Files(TestCase):
         self._test_qos_render_template('dell', 'x86_64-dell_s6100_c2538-r0', 'Force10-S6100', 'sample-dell-6100-t0-minigraph.xml', 'qos-dell6100.json', copy_files=True)
 
     def test_qos_arista7260_render_template(self):
-        self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D96C16', 'sample-arista-7260-t1-minigraph-remap-disabled.xml', 'qos-arista7260.json')
+        self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-C64', 'sample-arista-7260-t1-minigraph-remap-disabled.xml', 'qos-arista7260.json')
 
     def test_qos_arista7060x6_render_template(self):
         self._test_qos_render_template('arista', 'x86_64-arista_7060x6_16pe_384c_b', 'Arista-7060X6-16PE-384C-B-O128S2', 'sample-arista-7060x6-t0-minigraph.xml', 'qos-arista7060x6.json')
