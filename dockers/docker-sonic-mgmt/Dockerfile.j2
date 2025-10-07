@@ -104,8 +104,8 @@ RUN python3 -m pip install aiohttp \
                  scapy==2.5.0 \
                  setuptools-rust \
                  six \
-                 snappi==1.33.0 \
-                 snappi-ixnetwork==1.33.1 \
+                 snappi \
+                 snappi-ixnetwork \
                  matplotlib \
                  seaborn \
                  rich \
@@ -114,9 +114,9 @@ RUN python3 -m pip install aiohttp \
                  thrift==0.11.0 \
                  virtualenv \
                  debugpy \
-                 opentelemetry-api==1.33.1 \
-                 opentelemetry-sdk==1.33.1 \
-                 opentelemetry-exporter-otlp==1.33.1 \
+                 opentelemetry-api==1.27.0 \
+                 opentelemetry-sdk==1.27.0 \
+                 opentelemetry-exporter-otlp==1.27.0 \
     && wget https://github.com/nanomsg/nanomsg/archive/1.2.tar.gz \
     && tar xvfz 1.2.tar.gz \
     && cd nanomsg-1.2      \
