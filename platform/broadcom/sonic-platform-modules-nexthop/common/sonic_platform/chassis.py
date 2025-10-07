@@ -156,6 +156,7 @@ class Chassis(PddfChassis):
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
+
         Returns:
             A tuple (string, string) where the first element is a string
             containing the cause of the previous reboot. This string must be
