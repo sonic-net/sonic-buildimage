@@ -11,6 +11,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "0"
     },
     {
@@ -24,6 +25,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "1"
     },
     {
@@ -37,6 +39,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "2"
     },
     {
@@ -50,6 +53,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "3"
     },
     {
@@ -63,6 +67,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "4"
     },
     {
@@ -76,6 +81,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "5"
     },
     {
@@ -89,6 +95,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "6"
     },
     {
@@ -102,6 +109,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "7"
     },
     {
@@ -115,6 +123,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "8"
     },
     {
@@ -128,6 +137,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "9"
     },
     {
@@ -141,6 +151,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "10"
     },
     {
@@ -154,6 +165,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "11"
     },
     {
@@ -167,6 +179,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "12"
     },
     {
@@ -180,6 +193,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "13"
     },
     {
@@ -193,6 +207,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "14"
     },
     {
@@ -206,6 +221,7 @@
       "phy_access": "mdio",
       "bus_id": 0,
       "context_id": 1,
+      "macsec_supported": false,
       "hwinfo": "15"
     }
   ],
