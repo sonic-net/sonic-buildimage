@@ -404,6 +404,10 @@ EOF
 # override tcpdump profile to allow tcpdump access TACACS config file.
 sudo cp files/apparmor/usr.bin.tcpdump $FILESYSTEM_ROOT/etc/apparmor.d/local/usr.bin.tcpdump
 
+# latest chrony control resource access with AppArmor.
+# override chrony profile to allow chrony access TACACS config file.
+sudo cp files/apparmor/usr.sbin.chronyd $FILESYSTEM_ROOT/etc/apparmor.d/local/usr.sbin.chronyd
+
 ## Set /etc/shadow permissions to -rw-------.
 sudo LANG=c chroot $FILESYSTEM_ROOT chmod 600 /etc/shadow
 
