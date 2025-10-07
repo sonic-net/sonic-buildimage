@@ -5,13 +5,9 @@ import os
 import click
 import sys
 import struct
-import subprocess
-import errno
 
 from dataclasses import dataclass
 from enum import Enum
-from nexthop.platform_utils import run_cmd, run_and_report
-
 
 try:
     from sonic_eeprom import eeprom_tlvinfo
@@ -400,17 +396,6 @@ def decode_eeprom(eeprom_path: str):
     eeprom_class.decode_eeprom(eeprom)
 
 
-def clear_syseeprom_cache():
-    """ syseeprom cache cleanup and service restart"""
-    cache_path = "/var/cache/sonic/decode-syseeprom/syseeprom_cache"
-    
-    if os.path.exists(cache_path):
-        run_and_report("Remove syseeprom cache", f"rm {cache_path}")
-    
-    run_and_report("Remove syseeprom cache from pmon", f'docker exec pmon bash -c "rm -f {cache_path}"')
-    run_and_report("Restart syseepromd", 'docker exec pmon bash -c "supervisorctl restart syseepromd"')
-
-
 def check_root_privileges():
     if os.getuid() != 0:
         click.secho("Root privileges required for this operation", fg="red")
@@ -559,7 +544,6 @@ def program(
         custom_serial_number,
         regulatory_model_number,
     )
-    clear_syseeprom_cache()
 
 
 @cli.command("clear")
