@@ -3,7 +3,6 @@
     <name>screaming_eagle</name>
     <phy_addr>0</phy_addr>
     <mode>bitmux</mode>
-    <topology>2</topology>
     <lane id="0" system-side="true"/>
     <lane id="2" system-side="true"/>
     <lane id="4" system-side="true"/>
