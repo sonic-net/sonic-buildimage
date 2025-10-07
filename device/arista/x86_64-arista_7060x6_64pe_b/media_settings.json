@@ -1,7 +1,7 @@
 {
     "PORT_MEDIA_SETTINGS": {
         "1": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -65,8 +65,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0x00000000",
                         "lane1": "0xfffffffc",
@@ -131,7 +131,7 @@
             }
         },
         "2": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -195,8 +195,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0x00000000",
                         "lane1": "0xfffffffc",
@@ -261,7 +261,7 @@
             }
         },
         "3": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -325,8 +325,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0x00000000",
                         "lane1": "0xfffffffc",
@@ -391,7 +391,7 @@
             }
         },
         "4": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -455,8 +455,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0x00000000",
                         "lane1": "0xfffffffc",
@@ -521,7 +521,7 @@
             }
         },
         "5": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -585,8 +585,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -651,7 +651,7 @@
             }
         },
         "6": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -715,8 +715,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -781,7 +781,7 @@
             }
         },
         "7": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffd",
@@ -845,8 +845,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -911,7 +911,7 @@
             }
         },
         "8": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffd",
@@ -975,8 +975,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1041,7 +1041,7 @@
             }
         },
         "9": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -1105,8 +1105,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1171,7 +1171,7 @@
             }
         },
         "10": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -1235,8 +1235,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1301,7 +1301,7 @@
             }
         },
         "11": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -1365,8 +1365,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1431,7 +1431,7 @@
             }
         },
         "12": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -1495,8 +1495,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1561,7 +1561,7 @@
             }
         },
         "13": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -1625,8 +1625,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1691,7 +1691,7 @@
             }
         },
         "14": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -1755,8 +1755,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1821,7 +1821,7 @@
             }
         },
         "15": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -1885,8 +1885,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -1951,7 +1951,7 @@
             }
         },
         "16": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -2015,8 +2015,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2081,7 +2081,7 @@
             }
         },
         "17": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -2145,8 +2145,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2211,7 +2211,7 @@
             }
         },
         "18": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -2275,8 +2275,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2341,7 +2341,7 @@
             }
         },
         "19": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -2405,8 +2405,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2471,7 +2471,7 @@
             }
         },
         "20": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -2535,8 +2535,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2601,7 +2601,7 @@
             }
         },
         "21": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -2665,8 +2665,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2731,7 +2731,7 @@
             }
         },
         "22": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -2795,8 +2795,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2861,7 +2861,7 @@
             }
         },
         "23": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -2925,8 +2925,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -2991,7 +2991,7 @@
             }
         },
         "24": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -3055,8 +3055,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3121,7 +3121,7 @@
             }
         },
         "25": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -3185,8 +3185,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3251,7 +3251,7 @@
             }
         },
         "26": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -3315,8 +3315,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3381,7 +3381,7 @@
             }
         },
         "27": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -3445,8 +3445,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3511,7 +3511,7 @@
             }
         },
         "28": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -3575,8 +3575,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3641,7 +3641,7 @@
             }
         },
         "29": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -3705,8 +3705,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3771,7 +3771,7 @@
             }
         },
         "30": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -3835,8 +3835,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -3901,7 +3901,7 @@
             }
         },
         "31": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                    "pre3": {
                         "lane0": "0xfffffffe",
@@ -3965,8 +3965,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4031,7 +4031,7 @@
             }
         },
         "32": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                    "pre3": {
                         "lane0": "0xfffffffe",
@@ -4095,8 +4095,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4161,7 +4161,7 @@
             }
         },
         "33": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -4225,8 +4225,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4291,7 +4291,7 @@
             }
         },
         "34": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -4355,8 +4355,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4421,7 +4421,7 @@
             }
         },
         "35": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -4485,8 +4485,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4551,7 +4551,7 @@
             }
         },
         "36": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -4615,8 +4615,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4681,7 +4681,7 @@
             }
         },
         "37": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                    "pre3": {
                         "lane0": "0xffffffff",
@@ -4745,8 +4745,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4811,7 +4811,7 @@
             }
         },
         "38": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                    "pre3": {
                         "lane0": "0xffffffff",
@@ -4875,8 +4875,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -4941,7 +4941,7 @@
             }
         },
         "39": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5005,8 +5005,8 @@
                     }
                 }
            },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5071,7 +5071,7 @@
             }
         },
         "40": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5135,8 +5135,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5201,7 +5201,7 @@
             }
         },
         "41": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5265,8 +5265,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5331,7 +5331,7 @@
             }
         },
         "42": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5395,8 +5395,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5461,7 +5461,7 @@
             }
         },
         "43": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5525,8 +5525,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5591,7 +5591,7 @@
             }
         },
         "44": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5655,8 +5655,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5721,7 +5721,7 @@
             }
         },
         "45": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5785,8 +5785,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5851,7 +5851,7 @@
             }
         },
         "46": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -5915,8 +5915,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -5981,7 +5981,7 @@
             }
         },
         "47": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -6045,8 +6045,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6111,7 +6111,7 @@
             }
         },
         "48": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -6175,8 +6175,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6241,7 +6241,7 @@
             }
         },
         "49": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6305,8 +6305,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6371,7 +6371,7 @@
             }
         },
         "50": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6435,8 +6435,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6501,7 +6501,7 @@
             }
         },
         "51": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6565,8 +6565,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6631,7 +6631,7 @@
             }
         },
         "52": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6695,8 +6695,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6761,7 +6761,7 @@
             }
         },
         "53": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6825,8 +6825,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -6891,7 +6891,7 @@
             }
         },
         "54": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -6955,8 +6955,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7021,7 +7021,7 @@
             }
         },
         "55": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7085,8 +7085,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7151,7 +7151,7 @@
             }
         },
         "56": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7215,8 +7215,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7281,7 +7281,7 @@
             }
         },
         "57": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7345,8 +7345,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7411,7 +7411,7 @@
             }
         },
         "58": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7475,8 +7475,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7541,7 +7541,7 @@
             }
         },
         "59": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7605,8 +7605,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7671,7 +7671,7 @@
             }
         },
         "60": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xfffffffe",
@@ -7735,8 +7735,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0xfffffffc",
@@ -7801,7 +7801,7 @@
             }
         },
         "61": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -7865,8 +7865,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0x00000000",
@@ -7931,7 +7931,7 @@
             }
         },
         "62": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -7995,8 +7995,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0x00000000",
@@ -8061,7 +8061,7 @@
             }
         },
         "63": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -8125,8 +8125,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0x00000000",
@@ -8191,7 +8191,7 @@
             }
         },
         "64": {
-            "EOPTOLINK-(EO138HGPCT01SL1|EOLO138HG5HSDLC)": {
+            "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
                 "speed:100GAUI-1-S|800G": {
                     "pre3": {
                         "lane0": "0xffffffff",
@@ -8255,8 +8255,8 @@
                     }
                 }
             },
-            "TERAHOP-L-OS8CNS005-N00": {
-                "speed:100GAUI-1-S|100GAUI-1-L|200GAUI-2-S|200GAUI-2-L|400GAUI-4-S|400GAUI-4-L|800G": {
+            "PINEWAVE-(L-OS8CNS\\d{3}-NMT|P-OH8CNT\\d{3}-NMT)": {
+                "speed:100GAUI-1-L C2M (Annex 120G)|400GAUI-4-L C2M (Annex 120G)|LEI-400G-PAM4-4|LEI-800G-PAM4-8|LEI-200G-PAM4-2|LEI-100G-PAM4-1": {
                     "pre3": {
                         "lane0": "0xfffffffc",
                         "lane1": "0x00000000",
