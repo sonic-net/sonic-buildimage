@@ -51,7 +51,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 			last_line=$$(tail -n 1 device/x86_64-kvm_x86_64-r0/$$(basename $$d)/port_config.ini); \
 			num_columns=$$(echo $$last_line | awk '{print NF}'); \
 			i=0; \
-			if [ -f $$(dirname $$d)/chassisdb.conf ]; then \
+			if [ -f $$(dirname $$d)/chassisdb.conf ] && ! grep -q '^disaggregated_chassis=1' $$(dirname $$d)/platform_env.conf; then \
 				i=$$(($$i+1)); \
 			fi; \
 			while IFS= read -r line; do \
