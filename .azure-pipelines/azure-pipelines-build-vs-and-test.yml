@@ -60,6 +60,18 @@ parameters:
     type: string
     default: 'Manual'
 
+  - name: TEST_PLAN_NUM
+    type: string
+    default: "1"
+
+  - name: TEST_PLAN_STOP_ON_FAILURE
+    type: string
+    default: "True"
+
+  - name: RETRY_TIMES
+    type: string
+    default: "0"
+
 stages:
   - stage: BuildVS
     pool: sonicso1ES-amd64
@@ -98,3 +110,6 @@ stages:
           IMPACT_AREA_INFO: ${{ parameters.IMPACT_AREA_INFO }}
           STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
           BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
