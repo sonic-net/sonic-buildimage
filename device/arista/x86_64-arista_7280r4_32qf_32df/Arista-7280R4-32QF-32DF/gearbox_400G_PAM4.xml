@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <root>
-    <name>screaming_eagle</name>
+    <name>crt88322</name>
     <phy_addr>0</phy_addr>
     <mode>bitmux</mode>
     <lane id="0" system-side="true"/>
