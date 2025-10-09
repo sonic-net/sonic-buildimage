@@ -6,6 +6,7 @@
         "num_fans_pertray":2,
         "num_ports":58,
         "num_temps": 9,
+        "num_voltage_sensors":8,
         "pddf_dev_types":
         {
             "description":"AS7326-56X - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -52,7 +53,8 @@
         ],
         "custom_kos":
         [
-            "pddf_custom_psu"
+            "pddf_custom_psu",
+			"powr1220"
         ]
     },
 
@@ -440,6 +442,121 @@
                 { "attr_name": "temp1_high_crit_threshold", "drv_attr_name":"temp5_crit"},
                 { "attr_name": "temp1_high_threshold", "drv_attr_name":"temp5_max"},
                 { "attr_name": "temp1_input", "drv_attr_name":"temp5_input"}
+            ]
+        }
+    },
+    "VOLTAGE1" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE1", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VCC12_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in0_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in0_input" }
+            ]
+        }
+    },
+    "VOLTAGE2" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE2", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VCC5P0_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in1_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in1_input" }
+            ]
+        }
+    },
+     "VOLTAGE3" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE3", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VDD3P3_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in2_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in2_input" }
+            ]
+        }
+    },
+     
+    "VOLTAGE4" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE4", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VDD1P8_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in3_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in3_input" }
+            ]
+        }
+    },
+    "VOLTAGE5" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE5", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VDD1P2_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in4_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in4_input" }
+            ]
+        }
+    },
+	
+     "VOLTAGE6" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE6", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VDOP8_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in6_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in6_input" }
+            ]
+        }
+    },
+     "VOLTAGE7" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE7", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"VDDP1P0_ROV_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in7_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in7_input" }
+            ]
+        }
+    },
+    "VOLTAGE8" :
+    {
+        "dev_info": { "device_type":"VOLTAGE_SENSOR", "device_name":"VOLTAGE8", "device_parent":"MUX2"},
+        "dev_attr": { "display_name":"USB_VCC5P0_MON"},
+        "i2c":
+        {
+            "topo_info": { "parent_bus":"0x15", "dev_addr":"0x25", "dev_type":"powr1014"},
+            "attr_list":
+            [                
+                { "attr_name": "volt1_high_threshold", "drv_attr_name": "in8_highest" },
+                { "attr_name": "volt1_input",          "drv_attr_name": "in8_input" }
+         
             ]
         }
     },
