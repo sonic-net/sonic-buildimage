@@ -34,7 +34,7 @@ parameters:
   - sonicso1ES-armhf
 
 jobs:
-- job: sonic_slave_${{ parameters.dist }}
+- job: sonic_slave_${{ parameters.dist }}_${{ arch }}
   timeoutInMinutes: 360
   variables:
   - template: template-variables.yml
