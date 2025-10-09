@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "NH-5010-F": {
+            "component": {
+                "SWITCHCARD_FPGA": {},
+                "MEZZCARD_FPGA": {},
+                "CPUCARD_FPGA": {},
+                "BIOS": {},
+                "ONIE": {},
+                "TPM": {},
+                "NVMe": {}
+            }
+        }
+    }
+}
