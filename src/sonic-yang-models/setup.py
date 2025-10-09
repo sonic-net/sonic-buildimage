@@ -116,6 +116,7 @@ yang_files = [
     'sonic-vlan-sub-interface.yang',
     'sonic-warm-restart.yang',
     'sonic-lldp.yang',
+    'sonic-static-anycast-gateway.yang',
     'sonic-scheduler.yang',
     'sonic-wred-profile.yang',
     'sonic-queue.yang',

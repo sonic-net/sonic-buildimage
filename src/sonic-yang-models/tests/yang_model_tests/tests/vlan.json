@@ -55,6 +55,13 @@
     "VLAN_INTERFACE_VALID_NAT_ZONE_RANGE": {
         "desc": "Configure valid value for nat zone."
     },
+    "VLAN_INTERFACE_VALID_STATIC_ANYCAST_GATEWAY": {
+        "desc": "Configure valid value for static anycast gateway"
+    },
+    "VLAN_INTERFACE_INVALID_STATIC_ANYCAST_GATEWAY": {
+        "desc": "Configure invalid value for static anycast gateway",
+        "eStrKey": "InvalidValue"
+    },
     "DHCP_SERVER_VALID_FORMAT": {
         "desc": "Add dhcp_server in correct format."
     },
