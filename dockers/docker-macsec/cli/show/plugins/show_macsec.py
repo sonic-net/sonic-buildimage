@@ -337,6 +337,7 @@ class MacsecContext(object):
                 pickle.dump(dump_obj, dump_file)
                 dump_file.flush()
 
+    @multi_asic_util.run_on_multi_asic
     def show_post_status(self):
         """Show POST (Pre-Operational Self-Test) status"""
         # Define the table name
@@ -348,57 +349,55 @@ class MacsecContext(object):
 
             # Format according to SONiC CLI guidelines
             output = []
-            output.append(f"{'Module'.ljust(11)} : {module}")
-            if namespace:
-               output.append(f"{'Namespace'.ljust(11)} : {namespace}")
+            indent = "  " if namespace else ""
+            output.append(f"{indent}{'Module'.ljust(11)} : {module}")
 
             for field in post_data:
                 value = post_data[field]
                 # Format field name for consistent alignment (capitalize and pad to 11 chars)
                 display_name = field.capitalize().ljust(11)
-                output.append(f"{display_name} : {value}")
+                output.append(f"{indent}{display_name} : {value}")
 
             return "\n".join(output)
 
-        display_output = []
-        namespaces = self.multi_asic.get_ns_list_based_on_options()
-        for namespace in namespaces:
-            # Connect to STATE_DB
-            state_db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
-            state_db.connect(state_db.STATE_DB)
+        namespace = self.multi_asic.current_namespace
+        # Connect to STATE_DB
+        state_db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+        state_db.connect(state_db.STATE_DB)
 
-            # Get all keys in the FIPS_MACSEC_POST_TABLE
-            all_keys = state_db.keys(state_db.STATE_DB, table_name + "|*")
-            if not len(all_keys):
-                continue
-
-            # Extract module names from the keys and sort them
-            modules = []
-            for key in all_keys:
-                # Key format is "FIPS_MACSEC_POST_TABLE|module_name"
-                if "|" in key:
-                    module = key.split("|", 1)[1]
-                    modules.append(module)
-
-            # Sort modules for consistent output
-            modules.sort()
-
-            # Display each module's status
-            for i, module in enumerate(modules):
-                if i > 0:
-                    click.echo("")  # Add separator between modules
-
-                module_output = format_module_status(module, namespace)
-                display_output.append("")
-                display_output.append(module_output)
-
-        # Display header
-        click.echo("POST Status")
-        click.echo("===========")
-        if not display_output:
-            click.echo("No entries found")
+        # Get all keys in the FIPS_MACSEC_POST_TABLE
+        all_keys = state_db.keys(state_db.STATE_DB, table_name + "|*")
+        if not len(all_keys):
+            click.echo("")  # Add blank line for separation
+            if namespace:
+                click.echo(f"Namespace ({namespace})")
+                click.echo("  No entries found")
+            else:
+                click.echo("No entries found")
             return
-        click.echo("\n".join(display_output))
+
+        # Extract module names from the keys and sort them
+        modules = []
+        for key in all_keys:
+            # Key format is "FIPS_MACSEC_POST_TABLE|module_name"
+            if "|" in key:
+                module = key.split("|", 1)[1]
+                modules.append(module)
+
+        # Sort modules for consistent output
+        modules.sort()
+
+        display_output = [""]
+        if namespace:
+            display_output.append(f"Namespace ({namespace})")
+        for i, module in enumerate(modules):
+            if i > 0:
+                display_output.append("")  # Add separator between modules
+            module_output = format_module_status(module, namespace)
+            display_output.append(module_output)
+
+        if display_output:
+            click.echo("\n".join(display_output))
 
 def register(cli):
     cli.add_command(macsec)

@@ -71,7 +71,6 @@ class TestShowMACsec(object):
 
             # Assertions
             assert result.exit_code == 0
-            assert "POST Status" in result.output
             assert "Module      : crypto" in result.output
             assert "Module      : sai" in result.output
             assert "Status      : pass" in result.output
@@ -182,11 +181,10 @@ class TestShowMACsec(object):
 
             # Assertions
             assert result.exit_code == 0
-            assert "POST Status" in result.output
             assert "Module      : crypto" in result.output
             assert "Module      : sai" in result.output
-            assert "Namespace   : asic0" in result.output
-            assert "Namespace   : asic1" in result.output
+            assert "Namespace (asic0)" in result.output
+            assert "Namespace (asic1)" in result.output
             assert "Status      : pass" in result.output
             assert "Status      : fail" in result.output
             assert "Status      : inprogress" in result.output
@@ -230,14 +228,13 @@ class TestShowMACsec(object):
             result = runner.invoke(show_macsec.macsec, ["--post-status"])
 
             assert result.exit_code == 0
-            assert "POST Status" in result.output
             # Check that modules are displayed for asic1 only
             assert "Module      : sai" in result.output
             assert "Status      : pass" in result.output
-            assert "Namespace   : asic1" in result.output
+            assert "Namespace (asic1)" in result.output
 
     @patch('show_macsec.SonicV2Connector')
-    def test_post_status_multi_asic_no_entries(self, mock_connector):
+    def test_post_status_multi_asic_partial_entries(self, mock_connector):
         """Test --post-status command when no POST data is available"""
         # Setup MultiAsic mock
         with patch('show_macsec.multi_asic_util.MultiAsic') as mock_multi_asic_class:
@@ -247,10 +244,22 @@ class TestShowMACsec(object):
             mock_multi_asic_class.return_value = mock_multi_asic_instance
             def mock_connector_side_effect(use_unix_socket_path=True, namespace=None):
                 mock_db = MagicMock()
-
-                # No keys for other namespaces (they shouldn't be called with filtering)
-                mock_db.keys.return_value = []
-                mock_db.get_all.return_value = {}
+                if namespace == 'asic0':
+                    # Only asic1 should have data when filtered
+                    mock_db.keys.return_value = ['FIPS_MACSEC_POST_TABLE|sai']
+                    # Mock get_all for different modules
+                    def mock_get_all(db_name, key):
+                        if key == "FIPS_MACSEC_POST_TABLE|sai":
+                            return {
+                                'status': 'pass',
+                                'timestamp': '2025-09-15 10:31:00 UTC',
+                            }
+                        return {}
+                    mock_db.get_all.side_effect = mock_get_all
+                else:
+                    # No keys for other namespaces (they shouldn't be called with filtering)
+                    mock_db.keys.return_value = []
+                    mock_db.get_all.return_value = {}
 
                 return mock_db
 
@@ -261,5 +270,7 @@ class TestShowMACsec(object):
             result = runner.invoke(show_macsec.macsec, ["--post-status"])
 
             assert result.exit_code == 0
-            assert "POST Status" in result.output
             assert "No entries found" in result.output
+            assert "Module      : sai" in result.output
+            assert "Status      : pass" in result.output
+            assert "Namespace (asic1)" in result.output
