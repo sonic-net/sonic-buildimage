@@ -120,9 +120,9 @@ function aznz_migration_with_deny()
 
    local ah_premigation_route_maps=(
         "FROM_AH_V6 permit 10"
-        "TO_AH_V6 permit 10"
+        "TO_AH_V6 permit 50"
         "FROM_AH_V4 permit 10"
-        "TO_AH_V4 permit 10"
+        "TO_AH_V4 permit 50"
     )
 
    check_and_apply_frr_config_helper "check" ah_premigation_route_maps[@] 0
@@ -138,9 +138,9 @@ function aznz_migration_with_deny()
    echo "route-map TO_AH_V4 deny 5" >> $AZNG_DENY_TEMP_FILE
    echo "route-map TO_AH_V6 deny 5" >> $AZNG_DENY_TEMP_FILE
    echo "no route-map FROM_AH_V6 permit 10" >> $AZNG_DENY_TEMP_FILE
-   echo "no route-map TO_AH_V6 permit 10" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map TO_AH_V6 permit 50" >> $AZNG_DENY_TEMP_FILE
    echo "no route-map FROM_AH_V4 permit 10" >> $AZNG_DENY_TEMP_FILE
-   echo "no route-map TO_AH_V4 permit 10" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map TO_AH_V4 permit 50" >> $AZNG_DENY_TEMP_FILE
    check_and_apply_frr_config_helper "apply" $AZNG_DENY_TEMP_FILE 0
    if [[ $? -eq $EXIT_FAILURE ]]; then
        LOG="AZNG_MIGRATION: Failed when applying deny route-maps and removing pre-migation route-maps"
@@ -286,6 +286,78 @@ function aznz_set_production()
     logger "$LOG"
     echo "$LOG"
     exit ${EXIT_SUCCESS}
+}
+
+function aznz_set_maintenace()
+{
+    NUM_ASIC=$(get_asic_count)
+    local timeout_cmd="timeout 2"
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 0) ]]; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix="-n asic${asic_num}"
+        else
+            asic_suffix=''
+        fi
+        local sonic_db_cli_cmd='sonic-db-cli ${asic_suffix} CONFIG_DB HDEL "DEVICE_METADATA|localhost" slice_type'
+        eval "${timeout_cmd} ${sonic_db_cli_cmd}>/dev/null" || RC=$?
+        if [[ $RC -ne 0 ]]; then
+            echo "Command: $sonic_db_cli_cmd timedout or failed after 2 seconds."
+            exit ${EXIT_FAILURE}
+        fi
+        ((asic_num = asic_num + 1))
+    done
+    local config_save_cmd="timeout 10 sudo config save -y"
+    eval "${config_save_cmd}" || RC=$?
+    if [[ $RC -ne 0 ]]; then
+        echo "Command: $config_save_cmd timedout or failed after 10 seconds."
+        exit ${EXIT_FAILURE}
+    fi
+    LOG="AZNG_MIGRATION: Device Metadata successfully updated for rollback to AZNG Premigration."
+    logger "$LOG"
+    echo "$LOG"
+    exit ${EXIT_SUCCESS}
+}
+
+function aznz_migration_rollback()
+{
+
+   AZNG_PREMIGRATION_TEMP_FILE=$(mktemp)
+   echo "route-map FROM_AH_V4 permit 10" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "call FROM_AZNG_MIGRATION_FILTER_V4" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "route-map FROM_AH_V6 permit 10" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "call FROM_AZNG_MIGRATION_FILTER_V6" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "route-map TO_AH_V4 permit 50" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "call TO_AZNG_MIGRATION_FILTER_V4" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "route-map TO_AH_V6 permit 50" >> $AZNG_PREMIGRATION_TEMP_FILE
+   echo "call TO_AZNG_MIGRATION_FILTER_V6" >> $AZNG_PREMIGRATION_TEMP_FILE
+
+   check_and_apply_frr_config_helper "apply" $AZNG_PREMIGRATION_TEMP_FILE 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Failed when applying pre-migation route-maps"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_PREMIGRATION_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   local ah_premigration_route_maps=(
+        "FROM_AH_V6 permit 10"
+        "TO_AH_V6 permit 50"
+        "FROM_AH_V4 permit 10"
+        "TO_AH_V4 permit 50"
+    )
+   check_and_apply_frr_config_helper "check" ah_premigration_maps[@] 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Post check Failed for AZNG Premigration route-map present"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_PREMIGRATION_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   LOG="AZNG_MIGRATION: Switch from Production to Pre-Migration AZNG route-maps successful"
+   logger "$LOG"
+   echo "$LOG"
+   aznz_set_maintenace
 }
 
 function parseOptions()
