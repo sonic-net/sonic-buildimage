@@ -20,7 +20,15 @@
 #include "uart_sys_api.h"
 
 #define UART_TTYS1_OFFSET   (0x2f8)
+#define BMC_VER_CMD (0xd)
+#define BMC_VER_SUBCMD1 (0xaa)
+#define BMC_VER_SUBCMD2 (0xaa)
+
+extern void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, union i2c_smbus_data *bmc_read_data);
+
 struct mutex uart_lock;
+u8 calmode = 0;
+EXPORT_SYMBOL(calmode);
 
 static int uart_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
 {
@@ -67,6 +75,28 @@ static int uart_probe(struct i2c_client *client, const struct i2c_device_id *dev
 	return 0;
 }
 
+static int calmode_get(struct i2c_client *client, const struct i2c_device_id *dev_id)
+{
+    int major, minor, patch;
+    union i2c_smbus_data bmc_version_data = {.block={0x00}};
+
+    get_bmc_data(BMC_VER_CMD, BMC_VER_SUBCMD1, BMC_VER_SUBCMD2, 3, &bmc_version_data);
+    major = bmc_version_data.block[1];
+    minor = bmc_version_data.block[2];
+    patch = bmc_version_data.block[3];
+
+    if (bmc_version_data.block[0] == 0)
+    calmode = 0;
+    else if (major > 1 || (major == 1 && minor > 3) || (major == 1 && minor == 3 && patch >= 1)) 
+    calmode = 2;
+    else 
+    calmode = 1;
+
+    // printk("calmode = %d", calmode);
+
+    return 0;
+}
+
 static int uart_remove(struct i2c_client *client)
 {
     SYS_PDATA *pdata = (SYS_PDATA *)(client->dev.platform_data); 
@@ -80,8 +110,8 @@ struct pddf_ops_t pddf_sys_ops = {
 	.pre_init = NULL,
 	.post_init = NULL,
 
-	.pre_probe = NULL,
-	.post_probe = uart_probe,
+	.pre_probe = uart_probe,
+	.post_probe = calmode_get,
 
 	.pre_remove = uart_remove,
 	.post_remove = NULL,
@@ -90,8 +120,8 @@ struct pddf_ops_t pddf_sys_ops = {
 	.post_exit = NULL,
 };
 
-SYS_SYSFS_ATTR_DATA access_uart_shutdown_set = {SYS_SHUTDOWN_SET, S_IRUGO | S_IWUSR, NULL, NULL, NULL, NULL, sys_store_default, NULL, sys_set_shutdown, NULL};
-EXPORT_SYMBOL(access_uart_shutdown_set);
+SYS_SYSFS_ATTR_DATA access_uart_enable_set = {SYS_ENABLE_SET, S_IRUGO | S_IWUSR, NULL, NULL, NULL, NULL, sys_store_default, NULL, sys_set_enable, NULL};
+EXPORT_SYMBOL(access_uart_enable_set);
 
 SYS_SYSFS_ATTR_DATA access_uart_bmc_version = {SYS_BMC_VERSION, S_IRUGO, sys_show_default, NULL, sys_get_bmc_version, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(access_uart_bmc_version);
@@ -113,7 +143,7 @@ EXPORT_SYMBOL(access_uart_rtc_time_set);
 
 SYS_SYSFS_ATTR_DATA_ENTRY sys_sysfs_attr_data_tbl[]=
 {
-	{ "shutdown_set", &access_uart_shutdown_set},
+	{ "shutdown_set", &access_uart_enable_set},
 	{ "bmc_version", &access_uart_bmc_version},
 	{ "cpld1_version", &access_uart_cpld_version},
 	{ "cpld2_version", &access_uart_cpld_version},
@@ -127,6 +157,7 @@ SYS_SYSFS_ATTR_DATA_ENTRY sys_sysfs_attr_data_tbl[]=
 	{ "heartbeat_open", &access_uart_heartbeat_default},
 	{ "heartbeat_set", &access_uart_heartbeat_default},
 	{ "rtc_time_set", &access_uart_rtc_time_set},
+    { "cp2112_1_reset", &access_uart_enable_set},
 };
 
 void *get_uart_sys_access_data(char *name)
@@ -134,7 +165,7 @@ void *get_uart_sys_access_data(char *name)
 	int i=0;
 	for(i=0; i<(sizeof(sys_sysfs_attr_data_tbl)/sizeof(sys_sysfs_attr_data_tbl[0])); i++)
 	{
-		if(strcmp(name, sys_sysfs_attr_data_tbl[i].name) ==0)
+		if(strncmp(name, sys_sysfs_attr_data_tbl[i].name, ATTR_NAME_LEN) ==0)
 		{
 			return &sys_sysfs_attr_data_tbl[i];
 		}
@@ -174,7 +205,6 @@ static int sys_probe(struct i2c_client *client,
     i2c_set_clientdata(client, data); 
     
     mutex_init(&uart_lock); 
-    EXPORT_SYMBOL(uart_lock);
 
     dev_info(&client->dev, "chip found\n"); 
     
@@ -199,14 +229,14 @@ static int sys_probe(struct i2c_client *client,
 
         dy_ptr = (struct sensor_device_attribute *)kzalloc(sizeof(struct sensor_device_attribute)+ATTR_NAME_LEN, GFP_KERNEL);
 		dy_ptr->dev_attr.attr.name = (char *)&dy_ptr[1];
-		strcpy((char *)dy_ptr->dev_attr.attr.name, data_attr->aname);
+		strlcpy((char *)dy_ptr->dev_attr.attr.name, data_attr->aname, ATTR_NAME_LEN);
 		dy_ptr->dev_attr.attr.mode = sysfs_data_entry->a_ptr->mode;
 		dy_ptr->dev_attr.show = sysfs_data_entry->a_ptr->show;
 		dy_ptr->dev_attr.store = sysfs_data_entry->a_ptr->store;
 		dy_ptr->index = sysfs_data_entry->a_ptr->index;
 		
 		data->sys_attribute_list[i] = &dy_ptr->dev_attr.attr;
-		strcpy(data->attr_info[i].name, data_attr->aname);
+		strlcpy(data->attr_info[i].name, data_attr->aname, sizeof(data->attr_info[i].name));
 		data->attr_info[i].valid = 0;
 		mutex_init(&data->attr_info[i].update_lock);
 
@@ -257,6 +287,7 @@ exit:
     
     return status;
 }
+EXPORT_SYMBOL(uart_lock);
 
 static void sys_remove(struct i2c_client *client)
 {

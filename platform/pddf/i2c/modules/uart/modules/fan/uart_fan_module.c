@@ -69,7 +69,7 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
     FAN_SYSFS_ATTR_DATA_ENTRY *access_ptr;
 
 
-    pdata->fan_attrs[pdata->len] = pdata->fan_attr; // 把当前属性的参数添加到总属性表
+    pdata->fan_attrs[pdata->len] = pdata->fan_attr;
     access_ptr = get_uart_fan_access_data(pdata->fan_attrs[pdata->len].aname);
     if (access_ptr != NULL && access_ptr->a_ptr != NULL)
     {
@@ -85,33 +85,33 @@ static ssize_t do_attr_operation(struct device *dev, struct device_attribute *da
 
 struct i2c_board_info *i2c_get_fan_board_info(FAN_DATA *pdata, NEW_DEV_ATTR *cdata)
 {
-    int num = pdata->len; // 属性数量
+    int num = pdata->len;
     int i = 0;
     static struct i2c_board_info board_info;
     FAN_PDATA *fan_platform_data;
     
     
-    if (strcmp(cdata->dev_type, "fan_uart")==0 || strcmp(cdata->dev_type, "fan_eeprom")==0 )
+    if (strncmp(cdata->dev_type, "fan_uart", GEN_NAME_SIZE)==0 || strncmp(cdata->dev_type, "fan_eeprom", GEN_NAME_SIZE)==0 )
     {
         /* Allocate the fan_platform_data */
         fan_platform_data = (FAN_PDATA *)kzalloc(sizeof(FAN_PDATA), GFP_KERNEL);
         fan_platform_data->fan_attrs = (FAN_DATA_ATTR *)kzalloc(num*sizeof(FAN_DATA_ATTR), GFP_KERNEL);
 
         fan_platform_data->idx = pdata->idx;
-        fan_platform_data->num_fantrays = pdata->num_fantrays; // fan数量，从json中读取
-        fan_platform_data->len = pdata->len; // 属性数量
+        fan_platform_data->num_fantrays = pdata->num_fantrays;
+        fan_platform_data->len = pdata->len;
 
         for (i=0;i<num;i++)
         {
-            fan_platform_data->fan_attrs[i] = pdata->fan_attrs[i]; // 把属性参数表赋值过来
+            fan_platform_data->fan_attrs[i] = pdata->fan_attrs[i];
         }
 
         board_info = (struct i2c_board_info) {
-            .platform_data = fan_platform_data, // 在设备中存入平台信息，传递给那边调用
+            .platform_data = fan_platform_data,
         };
 
-        board_info.addr = cdata->dev_addr; //地址 例如0x40
-        strcpy(board_info.type, cdata->dev_type); // 例如fan_uart
+        board_info.addr = cdata->dev_addr;
+        strlcpy(board_info.type, cdata->dev_type, sizeof(board_info.type));
     }
     else
     {
@@ -132,9 +132,9 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     struct i2c_client *client_ptr;
 
 
-    if (strncmp(buf, "add", strlen(buf)-1)==0)
+    if (strncmp(buf, "add", strlen("add"))==0)
     {
-        adapter = i2c_get_adapter(cdata->parent_bus); // 40
+        adapter = i2c_get_adapter(cdata->parent_bus);
         board_info = i2c_get_fan_board_info(pdata, cdata);
 
         /* Populate the platform data for fan */
@@ -144,7 +144,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
         {
             i2c_put_adapter(adapter);
             pddf_dbg("UART_FAN", KERN_ERR "Created a %s client: 0x%p\n", cdata->i2c_name , (void *)client_ptr);
-            add_device_table(cdata->i2c_name, (void*)client_ptr); // FAN-PMBUS
+            add_device_table(cdata->i2c_name, (void*)client_ptr);
         }
         else
         {
@@ -152,7 +152,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             goto free_data;
         }
     }
-    else if (strncmp(buf, "delete", strlen(buf)-1)==0)
+    else if (strncmp(buf, "delete", strlen("delete"))==0)
     {
         /*Get the i2c_client handle for the created client*/
         client_ptr = (struct i2c_client *)get_device_table(cdata->i2c_name);

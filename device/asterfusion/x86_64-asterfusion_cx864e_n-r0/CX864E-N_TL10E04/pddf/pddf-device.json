@@ -112,8 +112,7 @@
                 {"dev": "PAYLOAD10"},
                 {"dev": "PAYLOAD11"},
                 {"dev": "PAYLOAD12"},
-                {"dev": "PAYLOAD13"},
-                {"dev": "PAYLOAD14"}
+                {"dev": "PAYLOAD13"}
 			]
 		}
 	},
@@ -281,14 +280,14 @@
 			"dev_attr": { "virt_bus":"0x26"},
 			"channel":
 			[
-                { "chn":"0", "dev":"PORT33" },
-                { "chn":"1", "dev":"PORT34" },
-                { "chn":"2", "dev":"PORT35" },
-                { "chn":"3", "dev":"PORT36" },
-                { "chn":"4", "dev":"PORT37" },
-				{ "chn":"5", "dev":"PORT38" },
-				{ "chn":"6", "dev":"PORT39" },
-				{ "chn":"7", "dev":"PORT40" }
+                { "chn":"0", "dev":"PORT34" },
+                { "chn":"1", "dev":"PORT33" },
+                { "chn":"2", "dev":"PORT36" },
+                { "chn":"3", "dev":"PORT35" },
+                { "chn":"4", "dev":"PORT38" },
+				{ "chn":"5", "dev":"PORT37" },
+				{ "chn":"6", "dev":"PORT40" },
+				{ "chn":"7", "dev":"PORT39" }
 			]
 		}
 	},
@@ -302,14 +301,14 @@
 			"dev_attr": { "virt_bus":"0x2e"},
 			"channel":
 			[
-                { "chn":"0", "dev":"PORT41" },
-                { "chn":"1", "dev":"PORT42" },
-                { "chn":"2", "dev":"PORT43" },
-                { "chn":"3", "dev":"PORT44" },
-                { "chn":"4", "dev":"PORT45" },
-				{ "chn":"5", "dev":"PORT46" },
-				{ "chn":"6", "dev":"PORT47" },
-				{ "chn":"7", "dev":"PORT48" }
+                { "chn":"0", "dev":"PORT42" },
+                { "chn":"1", "dev":"PORT41" },
+                { "chn":"2", "dev":"PORT44" },
+                { "chn":"3", "dev":"PORT43" },
+                { "chn":"4", "dev":"PORT46" },
+				{ "chn":"5", "dev":"PORT45" },
+				{ "chn":"6", "dev":"PORT48" },
+				{ "chn":"7", "dev":"PORT47" }
 			]
 		}
 	},
@@ -323,14 +322,14 @@
 			"dev_attr": { "virt_bus":"0x36"},
 			"channel":
 			[
-                { "chn":"0", "dev":"PORT49" },
-                { "chn":"1", "dev":"PORT50" },
-                { "chn":"2", "dev":"PORT51" },
-                { "chn":"3", "dev":"PORT52" },
-                { "chn":"4", "dev":"PORT53" },
-				{ "chn":"5", "dev":"PORT54" },
-				{ "chn":"6", "dev":"PORT55" },
-				{ "chn":"7", "dev":"PORT56" }
+                { "chn":"0", "dev":"PORT50" },
+                { "chn":"1", "dev":"PORT49" },
+                { "chn":"2", "dev":"PORT52" },
+                { "chn":"3", "dev":"PORT51" },
+                { "chn":"4", "dev":"PORT54" },
+				{ "chn":"5", "dev":"PORT53" },
+				{ "chn":"6", "dev":"PORT56" },
+				{ "chn":"7", "dev":"PORT55" }
 			]
 		}
 	},
@@ -344,14 +343,14 @@
 			"dev_attr": { "virt_bus":"0x3e"},
 			"channel":
 			[
-                { "chn":"0", "dev":"PORT57" },
-                { "chn":"1", "dev":"PORT58" },
-                { "chn":"2", "dev":"PORT59" },
-                { "chn":"3", "dev":"PORT60" },
-                { "chn":"4", "dev":"PORT61" },
-				{ "chn":"5", "dev":"PORT62" },
-				{ "chn":"6", "dev":"PORT63" },
-				{ "chn":"7", "dev":"PORT64" }
+                { "chn":"0", "dev":"PORT58" },
+                { "chn":"1", "dev":"PORT57" },
+                { "chn":"2", "dev":"PORT60" },
+                { "chn":"3", "dev":"PORT59" },
+                { "chn":"4", "dev":"PORT62" },
+				{ "chn":"5", "dev":"PORT61" },
+				{ "chn":"6", "dev":"PORT64" },
+				{ "chn":"7", "dev":"PORT63" }
 			]
 		}
 	},
@@ -366,8 +365,8 @@
 			"channel":
 			[
                 { "chn":"1", "dev":"CPLD1" },
-				{ "chn":"5", "dev":"PORT65" },
-				{ "chn":"6", "dev":"PORT66" }
+				{ "chn":"5", "dev":"PORT66" },
+				{ "chn":"6", "dev":"PORT65" }
 			]
 		}
 	},
@@ -1681,7 +1680,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT33-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT33"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1693,7 +1692,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT33-CTRL", "device_parent":"MUX5", "virt_parent":"PORT33"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1721,7 +1720,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT34-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT34"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1733,7 +1732,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT34-CTRL", "device_parent":"MUX5", "virt_parent":"PORT34"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x27", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x26", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1761,7 +1760,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT35-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT35"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1773,7 +1772,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT35-CTRL", "device_parent":"MUX5", "virt_parent":"PORT35"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1801,7 +1800,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT36-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT36"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1813,7 +1812,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT36-CTRL", "device_parent":"MUX5", "virt_parent":"PORT36"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x29", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x28", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1841,7 +1840,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT37-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT37"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1853,7 +1852,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT37-CTRL", "device_parent":"MUX5", "virt_parent":"PORT37"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1881,7 +1880,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT38-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT38"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1893,7 +1892,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT38-CTRL", "device_parent":"MUX5", "virt_parent":"PORT38"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1921,7 +1920,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT39-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT39"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1933,7 +1932,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT39-CTRL", "device_parent":"MUX5", "virt_parent":"PORT39"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -1961,7 +1960,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT40-EEPROM", "device_parent":"MUX5", "virt_parent":"PORT40"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -1973,7 +1972,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT40-CTRL", "device_parent":"MUX5", "virt_parent":"PORT40"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x21", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2001,7 +2000,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT41-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT41"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2013,7 +2012,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT41-CTRL", "device_parent":"MUX6", "virt_parent":"PORT41"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2041,7 +2040,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT42-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT42"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2053,7 +2052,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT42-CTRL", "device_parent":"MUX6", "virt_parent":"PORT42"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2081,7 +2080,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT43-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT43"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2093,7 +2092,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT43-CTRL", "device_parent":"MUX6", "virt_parent":"PORT43"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2121,7 +2120,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT44-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT44"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2133,7 +2132,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT44-CTRL", "device_parent":"MUX6", "virt_parent":"PORT44"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x31", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x30", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2161,7 +2160,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT45-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT45"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2173,7 +2172,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT45-CTRL", "device_parent":"MUX6", "virt_parent":"PORT45"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2201,7 +2200,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT46-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT46"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2213,7 +2212,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT46-CTRL", "device_parent":"MUX6", "virt_parent":"PORT46"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x33", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x32", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2241,7 +2240,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT47-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT47"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2253,7 +2252,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT47-CTRL", "device_parent":"MUX6", "virt_parent":"PORT47"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2281,7 +2280,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT48-EEPROM", "device_parent":"MUX6", "virt_parent":"PORT48"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2293,7 +2292,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT48-CTRL", "device_parent":"MUX6", "virt_parent":"PORT48"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x35", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x34", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x22", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2321,7 +2320,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT49-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT49"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2333,7 +2332,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT49-CTRL", "device_parent":"MUX7", "virt_parent":"PORT49"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2361,7 +2360,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT50-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT50"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2373,7 +2372,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT50-CTRL", "device_parent":"MUX7", "virt_parent":"PORT50"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x37", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x36", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2401,7 +2400,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT51-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT51"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2413,7 +2412,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT51-CTRL", "device_parent":"MUX7", "virt_parent":"PORT51"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2441,7 +2440,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT52-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT52"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2453,7 +2452,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT52-CTRL", "device_parent":"MUX7", "virt_parent":"PORT52"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x39", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x38", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2481,7 +2480,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT53-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT53"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2493,7 +2492,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT53-CTRL", "device_parent":"MUX7", "virt_parent":"PORT53"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2521,7 +2520,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT54-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT54"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2533,7 +2532,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT54-CTRL", "device_parent":"MUX7", "virt_parent":"PORT54"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2561,7 +2560,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT55-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT55"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2573,7 +2572,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT55-CTRL", "device_parent":"MUX7", "virt_parent":"PORT55"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2601,7 +2600,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT56-EEPROM", "device_parent":"MUX7", "virt_parent":"PORT56"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2613,7 +2612,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT56-CTRL", "device_parent":"MUX7", "virt_parent":"PORT56"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x23", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2641,7 +2640,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT57-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT57"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2653,7 +2652,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT57-CTRL", "device_parent":"MUX8", "virt_parent":"PORT57"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2681,7 +2680,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT58-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT58"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2693,7 +2692,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT58-CTRL", "device_parent":"MUX8", "virt_parent":"PORT58"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x3f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x3e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x1", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2721,7 +2720,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT59-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT59"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2733,7 +2732,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT59-CTRL", "device_parent":"MUX8", "virt_parent":"PORT59"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x2", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2761,7 +2760,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT60-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT60"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2773,7 +2772,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT60-CTRL", "device_parent":"MUX8", "virt_parent":"PORT60"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x41", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x40", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2801,7 +2800,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT61-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT61"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2813,7 +2812,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT61-CTRL", "device_parent":"MUX8", "virt_parent":"PORT61"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2841,7 +2840,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT62-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT62"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2853,7 +2852,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT62-CTRL", "device_parent":"MUX8", "virt_parent":"PORT62"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x43", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x42", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x5", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2881,7 +2880,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT63-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT63"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2893,7 +2892,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT63-CTRL", "device_parent":"MUX8", "virt_parent":"PORT63"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x6", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2921,7 +2920,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT64-EEPROM", "device_parent":"MUX8", "virt_parent":"PORT64"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x50", "dev_type":"optoe1"},
+            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x50", "dev_type":"optoe1"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2933,7 +2932,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT64-CTRL", "device_parent":"MUX8", "virt_parent":"PORT64"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x45", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x44", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x24", "attr_mask":"0x7", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -2961,7 +2960,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT65-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT65"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x50", "dev_type":"optoe2"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -2973,7 +2972,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT65-CTRL", "device_parent":"MUX9", "virt_parent":"PORT65"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x2d", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -3000,7 +2999,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT66-EEPROM", "device_parent":"MUX9", "virt_parent":"PORT66"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x50", "dev_type":"optoe2"},
+            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x50", "dev_type":"optoe2"},
             "attr_list":
             [
                 { "attr_name":"eeprom"}
@@ -3012,7 +3011,7 @@
         "dev_info": { "device_type":"", "device_name":"PORT66-CTRL", "device_parent":"MUX9", "virt_parent":"PORT66"},
         "i2c":
         {
-            "topo_info": { "parent_bus":"0x4c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
+            "topo_info": { "parent_bus":"0x4b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
                 { "attr_name":"xcvr_present", "attr_devaddr":"0x40", "attr_devtype":"cpld", "attr_devname":"CPLD1", "attr_offset":"0x2d", "attr_mask":"0x3", "attr_cmpval":"0x0", "attr_len":"1"},
@@ -3046,12 +3045,12 @@
                 { "attr_name":"psu_type", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"13"},
                 { "attr_name":"psu_status", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"1"},
                 { "attr_name":"psu_presence", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"3"},
-                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"1", "attr_calmode":"2"},
-                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"3", "attr_calmode":"2"},
-                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"5", "attr_calmode":"2"},
-                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"7", "attr_calmode":"2"},
-                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"11", "attr_calmode":"2"},
-                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"9", "attr_calmode":"2"},
+                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"1"},
+                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"3"},
+                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"5"},
+                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"7"},
+                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"11"},
+                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"9"},
                 { "attr_name":"psu_direction", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"3"},
                 { "attr_name":"psu_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"2"},
                 { "attr_name":"psu_direction_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"2"},
@@ -3086,12 +3085,12 @@
                 { "attr_name":"psu_type", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"26"},
                 { "attr_name":"psu_status", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"4"},
                 { "attr_name":"psu_presence", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"6"},
-                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"14", "attr_calmode":"2"},
-                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"16", "attr_calmode":"2"},
-                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"18", "attr_calmode":"2"},
-                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"20", "attr_calmode":"2"},
-                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"24", "attr_calmode":"2"},
-                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"22", "attr_calmode":"2"},
+                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"14"},
+                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"16"},
+                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"18"},
+                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"20"},
+                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"24"},
+                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"22"},
                 { "attr_name":"psu_direction", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"6"},
                 { "attr_name":"psu_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"5"},
                 { "attr_name":"psu_direction_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"5"},
@@ -3219,10 +3218,11 @@
 		"uart":
 		{
 			"topo_info": { "parent_bus":"0x0", "dev_addr":"0x11", "dev_type":"sys_uart"},
-            "dev_attr": { "sys_idx":"1", "uart_sirq":"3"},
+            "dev_attr": { "sys_idx":"1", "uart_sirq":"0"},
 			"attr_list":
 			[
-                { "attr_name":"shutdown_set", "attr_cmd":"0xa", "attr_subcmd1":"0xa1", "attr_subcmd2":"0xaa", "attr_byte":"2"},
+                { "attr_name":"shutdown_set", "attr_cmd":"0xa", "attr_subcmd1":"0xa1", "attr_subcmd2":"0xaa"},
+                { "attr_name":"cp2112_1_reset", "attr_cmd":"0x10", "attr_subcmd1":"0x01", "attr_subcmd2":"0xaa"},
                 { "attr_name":"bmc_version", "attr_cmd":"0xd", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1"},
                 { "attr_name":"cpld1_version", "attr_cmd":"0xd", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"1", "attr_devname":"BMC"},
                 { "attr_name":"cpld2_version", "attr_cmd":"0xd", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"4", "attr_devname":"BMC"},
@@ -3348,7 +3348,7 @@
             "dev_attr": { "payload_idx":"1"},
 			"attr_list":
 			[
-                { "attr_name":"payload_12v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1", "attr_calmode":"2"}
+                { "attr_name":"payload_12v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1"}
 			]
 		}
 	},
@@ -3362,7 +3362,7 @@
             "dev_attr": { "payload_idx":"2"},
 			"attr_list":
 			[
-                { "attr_name":"standby_12v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"3", "attr_calmode":"2"}
+                { "attr_name":"standby_12v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"3"}
 			]
 		}
 	},
@@ -3376,7 +3376,7 @@
             "dev_attr": { "payload_idx":"3"},
 			"attr_list":
 			[
-                { "attr_name":"mgmt_board_payload_5_0v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"5", "attr_calmode":"2"}
+                { "attr_name":"standby_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"5"}
 			]
 		}
 	},
@@ -3390,7 +3390,7 @@
             "dev_attr": { "payload_idx":"4"},
 			"attr_list":
 			[
-                { "attr_name":"standby_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"7", "attr_calmode":"2"}
+                { "attr_name":"mgmt_board_payload_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"7"}
 			]
 		}
 	},
@@ -3404,7 +3404,7 @@
             "dev_attr": { "payload_idx":"5"},
 			"attr_list":
 			[
-                { "attr_name":"mgmt_board_payload_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"9", "attr_calmode":"2"}
+                { "attr_name":"standby_1_1v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"9"}
 			]
 		}
 	},
@@ -3418,7 +3418,7 @@
             "dev_attr": { "payload_idx":"6"},
 			"attr_list":
 			[
-                { "attr_name":"standby_1_1v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"11", "attr_calmode":"2"}
+                { "attr_name":"main_board_payload_right_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"11"}
 			]
 		}
 	},
@@ -3432,7 +3432,7 @@
             "dev_attr": { "payload_idx":"7"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_payload_right_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"13", "attr_calmode":"2"}
+                { "attr_name":"main_board_payload_left_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"13"}
 			]
 		}
 	},
@@ -3446,7 +3446,7 @@
             "dev_attr": { "payload_idx":"8"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_payload_left_3_3v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"15", "attr_calmode":"2"}
+                { "attr_name":"main_board_payload_5_0v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"15"}
 			]
 		}
 	},
@@ -3460,7 +3460,7 @@
             "dev_attr": { "payload_idx":"9"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_payload_5_0v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"17", "attr_calmode":"2"}
+                { "attr_name":"main_board_tl10_core_0_8v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"17"}
 			]
 		}
 	},
@@ -3474,7 +3474,7 @@
             "dev_attr": { "payload_idx":"10"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_tl10_core_0_8v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"19", "attr_calmode":"2"}
+                { "attr_name":"main_board_tl10_avdd_1_05v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"19"}
 			]
 		}
 	},
@@ -3488,7 +3488,7 @@
             "dev_attr": { "payload_idx":"11"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_tl10_avdd_1_05v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"21", "attr_calmode":"2"}
+                { "attr_name":"main_board_tl10_1_8v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"21"}
 			]
 		}
 	},
@@ -3502,7 +3502,7 @@
             "dev_attr": { "payload_idx":"12"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_tl10_1_8v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"23", "attr_calmode":"2"}
+                { "attr_name":"main_board_tl10_1_2v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"23"}
 			]
 		}
 	},
@@ -3516,21 +3516,7 @@
             "dev_attr": { "payload_idx":"13"},
 			"attr_list":
 			[
-                { "attr_name":"main_board_tl10_1_2v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"25", "attr_calmode":"2"}
-			]
-		}
-	},
-
-    "PAYLOAD14":
-	{
-		"dev_info": { "device_type":"PAYLOAD", "device_name":"PAYLOAD14-UART", "device_parent":"UART0"},
-		"uart":
-		{
-			"topo_info": { "parent_bus":"0x0", "dev_addr":"0x38", "dev_type":"payload_uart"},
-            "dev_attr": { "payload_idx":"14"},
-			"attr_list":
-			[
-                { "attr_name":"main_board_tl10_0_75v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"27", "attr_calmode":"2"}
+                { "attr_name":"main_board_tl10_0_75v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"25"}
 			]
 		}
 	}

@@ -118,7 +118,7 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->fan_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->fan_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->fan_attrs[i];
@@ -136,16 +136,16 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
     switch(attr->index)
     {
         case FAN_BOARD_TYPE:
-            return sprintf(buf, "%x\n", sysfs_attr_info->val.charval);
+            return scnprintf(buf, PAGE_SIZE, "%x\n", sysfs_attr_info->val.charval);
             break;
         case FAN_STATUS:
         case FAN_PRESENCE:
         case FAN_DIRECTION:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.charval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.charval);
             break;
         case FAN_FRONT_SPEED_RPM:
         case FAN_REAR_SPEED_RPM:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.shortval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.shortval);
             break;
         case FAN_EEPROM_MODEL:
         case FAN_EEPROM_SERIAL_NUMBER:
@@ -153,7 +153,7 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
         case FAN_EEPROM_MODULE_MODEL:
         case FAN_EEPROM_MODULE_BRAND:
         case FAN_EEPROM_DIRECTION:
-            return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
+            return scnprintf(buf, PAGE_SIZE, "%s\n", sysfs_attr_info->val.strval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -161,7 +161,7 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -177,7 +177,7 @@ ssize_t fan_store_default(struct device *dev, struct device_attribute *da, const
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->fan_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->fan_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->fan_attrs[i];
@@ -332,7 +332,7 @@ int bmc_get_fan_eeprom_model(struct i2c_client *client, FAN_DATA_ATTR *info, voi
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -347,7 +347,7 @@ int bmc_get_fan_eeprom_serial_number(struct i2c_client *client, FAN_DATA_ATTR *i
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -362,7 +362,7 @@ int bmc_get_fan_eeprom_manufacturer(struct i2c_client *client, FAN_DATA_ATTR *in
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -377,7 +377,7 @@ int bmc_get_fan_eeprom_module_model(struct i2c_client *client, FAN_DATA_ATTR *in
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -392,7 +392,7 @@ int bmc_get_fan_eeprom_module_brand(struct i2c_client *client, FAN_DATA_ATTR *in
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -407,6 +407,6 @@ int bmc_get_fan_eeprom_direction(struct i2c_client *client, FAN_DATA_ATTR *info,
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }

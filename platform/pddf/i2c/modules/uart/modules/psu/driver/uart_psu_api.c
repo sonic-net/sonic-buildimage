@@ -25,6 +25,7 @@
 #define psu_dbg(...)
 #endif
 
+extern u8 calmode;
 extern void set_bmc_data(const char *command, const char *fst_command, const char *sec_command, const u8 vnum_command);
 extern void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, union i2c_smbus_data *bmc_read_data);
 
@@ -118,7 +119,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->psu_attrs[i];
@@ -142,7 +143,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         case PSU_WARNING:
         case PSU_DIRECTION_WARNING:
         case PSU_TEMP:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.charval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.charval);
             break;
         case PSU_VIN:
         case PSU_VOUT:
@@ -152,10 +153,10 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         case PSU_POUT:
         case PSU_MODEL:
         case PSU_SERIAL_NUMBER:
-            return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
+            return scnprintf(buf, PAGE_SIZE, "%s\n", sysfs_attr_info->val.strval);
             break;
         case PSU_FAN_SPEED:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.intval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.intval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -163,7 +164,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -179,7 +180,7 @@ ssize_t psu_store_default(struct device *dev, struct device_attribute *da, const
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->psu_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->psu_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->psu_attrs[i];
@@ -256,7 +257,6 @@ int bmc_get_psu_v_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -264,17 +264,17 @@ int bmc_get_psu_v_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = bmc_read_data.block[byte] * 1000 + bmc_read_data.block[byte + 1] * 100;
-        sprintf(padata->val.strval, "%d", value);  
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value);  
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -286,7 +286,6 @@ int bmc_get_psu_v_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -294,17 +293,17 @@ int bmc_get_psu_v_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = bmc_read_data.block[byte] * 1000 + bmc_read_data.block[byte + 1] * 100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -316,7 +315,6 @@ int bmc_get_psu_i_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -324,17 +322,17 @@ int bmc_get_psu_i_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = bmc_read_data.block[byte] * 1000 + bmc_read_data.block[byte + 1] * 100;
-        sprintf(padata->val.strval, "%d", value);
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value);
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -346,7 +344,6 @@ int bmc_get_psu_i_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -354,17 +351,17 @@ int bmc_get_psu_i_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = bmc_read_data.block[byte] * 1000 + bmc_read_data.block[byte + 1] * 100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -376,7 +373,6 @@ int bmc_get_psu_p_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -384,17 +380,17 @@ int bmc_get_psu_p_in(struct i2c_client *client, PSU_DATA_ATTR *info, void *data)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff)) * 1000;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -406,7 +402,6 @@ int bmc_get_psu_p_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
 	
@@ -414,17 +409,17 @@ int bmc_get_psu_p_out(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff)) * 1000;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff)) * 100;
-        sprintf(padata->val.strval, "%d", value); 
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value); 
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }
@@ -481,7 +476,7 @@ int bmc_get_psu_model(struct i2c_client *client, PSU_DATA_ATTR *info, void *data
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 
@@ -495,7 +490,7 @@ int bmc_get_psu_serial_number(struct i2c_client *client, PSU_DATA_ATTR *info, vo
 	union i2c_smbus_data bmc_read_data = {.block={0x00}};
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "%s", &bmc_read_data.block[byte]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", &bmc_read_data.block[byte]);
     return 0;
 }
 

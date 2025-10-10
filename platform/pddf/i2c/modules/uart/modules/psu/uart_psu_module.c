@@ -38,7 +38,6 @@ PDDF_DATA_ATTR(attr_cmd, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_
 PDDF_DATA_ATTR(attr_subcmd1, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.subcmd1, NULL);
 PDDF_DATA_ATTR(attr_subcmd2, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_UINT32, sizeof(uint32_t), (void*)&psu_data.psu_attr.subcmd2, NULL);
 PDDF_DATA_ATTR(attr_byte, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.byte, NULL);
-PDDF_DATA_ATTR(attr_calmode, S_IWUSR|S_IRUGO, show_pddf_data, store_pddf_data, PDDF_INT_DEC, sizeof(int), (void*)&psu_data.psu_attr.calmode, NULL);
 PDDF_DATA_ATTR(attr_ops, S_IWUSR, NULL, do_attr_operation, PDDF_CHAR, 8, (void*)&psu_data, NULL);
 PDDF_DATA_ATTR(dev_ops, S_IWUSR, NULL, do_device_operation, PDDF_CHAR, 8, (void*)&psu_data, (void*)&pddf_data);
 
@@ -53,7 +52,6 @@ static struct attribute *psu_attributes[] = {
     &attr_attr_subcmd1.dev_attr.attr,
     &attr_attr_subcmd2.dev_attr.attr,
     &attr_attr_byte.dev_attr.attr,
-    &attr_attr_calmode.dev_attr.attr,
     &attr_attr_ops.dev_attr.attr,
     &attr_dev_ops.dev_attr.attr,
     NULL
@@ -92,7 +90,7 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
     PSU_PDATA *psu_platform_data;
     
     
-    if (strcmp(cdata->dev_type, "psu_uart")==0 || strcmp(cdata->dev_type, "psu_eeprom")==0 )
+    if (strncmp(cdata->dev_type, "psu_uart", GEN_NAME_SIZE)==0 || strncmp(cdata->dev_type, "psu_eeprom", GEN_NAME_SIZE)==0 )
     {
         /* Allocate the psu_platform_data */
         psu_platform_data = (PSU_PDATA *)kzalloc(sizeof(PSU_PDATA), GFP_KERNEL);
@@ -113,7 +111,7 @@ struct i2c_board_info *i2c_get_psu_board_info(PSU_DATA *pdata, NEW_DEV_ATTR *cda
         };
 
         board_info.addr = cdata->dev_addr; 
-        strcpy(board_info.type, cdata->dev_type); 
+        strlcpy(board_info.type, cdata->dev_type, sizeof(board_info.type)); 
     }
     else
     {
@@ -134,7 +132,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     struct i2c_client *client_ptr;
 
 
-    if (strncmp(buf, "add", strlen(buf)-1)==0)
+    if (strncmp(buf, "add", strlen("add"))==0)
     {
         adapter = i2c_get_adapter(cdata->parent_bus); 
         board_info = i2c_get_psu_board_info(pdata, cdata);
@@ -155,7 +153,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             goto free_data;
         }
     }
-    else if (strncmp(buf, "delete", strlen(buf)-1)==0)
+    else if (strncmp(buf, "delete", strlen("delete"))==0)
     {
         /*Get the i2c_client handle for the created client*/
         client_ptr = (struct i2c_client *)get_device_table(cdata->i2c_name);

@@ -118,7 +118,7 @@ ssize_t eeprom_show_default(struct device *dev, struct device_attribute *da, cha
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->eeprom_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->eeprom_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->eeprom_attrs[i];
@@ -136,7 +136,7 @@ ssize_t eeprom_show_default(struct device *dev, struct device_attribute *da, cha
     switch(attr->index)
     {
         case EEPROM_DEFAULT:
-            return sprintf(buf, "%s", sysfs_attr_info->val.strval);
+            return scnprintf(buf, PAGE_SIZE, "%s", sysfs_attr_info->val.strval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -144,7 +144,7 @@ ssize_t eeprom_show_default(struct device *dev, struct device_attribute *da, cha
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -160,7 +160,7 @@ ssize_t eeprom_store_default(struct device *dev, struct device_attribute *da, co
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->eeprom_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->eeprom_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->eeprom_attrs[i];
@@ -195,6 +195,6 @@ int bmc_get_eeprom_default(struct i2c_client *client, EEPROM_DATA_ATTR *info, vo
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &eeprom_read_tlv_data);
 	
-    sprintf(padata->val.strval, "%s", eeprom_read_tlv_data.block);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "%s", eeprom_read_tlv_data.block);
     return 0;
 }

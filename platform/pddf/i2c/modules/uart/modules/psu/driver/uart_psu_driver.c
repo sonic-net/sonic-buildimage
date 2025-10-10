@@ -107,7 +107,7 @@ void *get_uart_psu_access_data(char *name)
 	int i=0;
 	for(i=0; i<(sizeof(psu_sysfs_attr_data_tbl)/sizeof(psu_sysfs_attr_data_tbl[0])); i++)
 	{
-		if(strcmp(name, psu_sysfs_attr_data_tbl[i].name) ==0)
+		if(strncmp(name, psu_sysfs_attr_data_tbl[i].name, ATTR_NAME_LEN) ==0)
 		{
 			return &psu_sysfs_attr_data_tbl[i];
 		}
@@ -168,14 +168,14 @@ static int psu_probe(struct i2c_client *client,
 
         dy_ptr = (struct sensor_device_attribute *)kzalloc(sizeof(struct sensor_device_attribute)+ATTR_NAME_LEN, GFP_KERNEL);
 		dy_ptr->dev_attr.attr.name = (char *)&dy_ptr[1];
-		strcpy((char *)dy_ptr->dev_attr.attr.name, data_attr->aname);
+		strlcpy((char *)dy_ptr->dev_attr.attr.name, data_attr->aname, ATTR_NAME_LEN);
 		dy_ptr->dev_attr.attr.mode = sysfs_data_entry->a_ptr->mode;
 		dy_ptr->dev_attr.show = sysfs_data_entry->a_ptr->show;
 		dy_ptr->dev_attr.store = sysfs_data_entry->a_ptr->store;
 		dy_ptr->index = sysfs_data_entry->a_ptr->index;
 		
 		data->psu_attribute_list[i] = &dy_ptr->dev_attr.attr;
-		strcpy(data->attr_info[i].name, data_attr->aname);
+		strlcpy(data->attr_info[i].name, data_attr->aname, sizeof(data->attr_info[i].name));
 		data->attr_info[i].valid = 0;
 		mutex_init(&data->attr_info[i].update_lock);
 

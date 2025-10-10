@@ -40,7 +40,6 @@ typedef struct SYS_DATA_ATTR
     uint32_t byte;
     char devname[ATTR_NAME_LEN];
     uint32_t version;
-    uint32_t calmode;
     void *access_data;
 }SYS_DATA_ATTR;
 
@@ -85,7 +84,7 @@ typedef struct SYS_PDATA
 
 
 enum sys_sysfs_attributes {
-    SYS_SHUTDOWN_SET,
+    SYS_ENABLE_SET,
     SYS_BMC_VERSION,
     SYS_CPLD_VERSION,
     SYS_BOM_VERSION,

@@ -26,6 +26,11 @@
 #endif
 
 #define UART_TTYS1_OFFSET   (0x2f8)   /* /dev/ttyS1 */
+#define MAX_UART_ORDER_SIZE (64)
+#define MAX_RW_DELAY (800000)
+#define MAX_SINGLE_R_DELAY (20000)
+#define UART_TX_WAIT_MIN_US (50)
+#define UART_TX_WAIT_MAX_US (100)
 
 extern struct mutex uart_lock;
 extern void *get_device_table(char *name); 
@@ -86,48 +91,56 @@ static unsigned short CRC16(u8 *q, int len)
 
 static int cmp_read_crc(u8 *ptr_str, int len)
 {
-	u8 crc_read[2] = {ptr_str[len - 2], ptr_str[len - 1]}; 
-	unsigned short read_crc_cal = CRC16(ptr_str, len - 2);
-//	printf("crc1 = %x %x, crc2 = %x %x\n", crc_read[0], crc_read[1], (read_crc_cal&0xff00)>>8, (read_crc_cal&0xff));
-	if(crc_read[0] == ((read_crc_cal&0xff00)>>8) && crc_read[1] == (read_crc_cal&0xff))
-		return 0;
-	else
-		return -1;
+    if (len > 2)
+    {
+        u8 crc_read[2];
+        crc_read[0] = ptr_str[len - 2];
+        crc_read[1] = ptr_str[len - 1];
+	    unsigned short read_crc_cal = CRC16(ptr_str, len - 2);
+	    //printf("crc1 = %x %x, crc2 = %x %x\n", crc_read[0], crc_read[1], (read_crc_cal&0xff00)>>8, (read_crc_cal&0xff));
+	    if(crc_read[0] == ((read_crc_cal&0xff00)>>8) && crc_read[1] == (read_crc_cal&0xff))
+	    	return 0;
+	    else
+	    	return -1;
+    }
+    else
+        return -1;
 }
 
 void set_bmc_data(const char *command, const char *fst_command, const char *sec_command, const u8 vnum_command)
 {
-    unsigned int n = 0, size = 0;
+    unsigned int n = 0, size = 0, written = 0;
 	u8 status = 0;
 	unsigned int loop_times = 0;
-	unsigned int max_rw_delay = 800000;
 	char uart_order[BUFFERSIZE] = {0};
-	char crc[10] = "\0";
 	unsigned short crc_value = 0;
-	strncpy(uart_order, "uart_", 5);
+	written = scnprintf(uart_order, BUFFERSIZE, "uart_");
 	if(vnum_command == 1)
-		sprintf(&uart_order[5], "%s", command);
+		written += scnprintf(uart_order + written, BUFFERSIZE - written,
+                            "%s", command);
 	else if(vnum_command == 2)
-		sprintf(&uart_order[5], "%s_%s", command, fst_command);
+		written += scnprintf(uart_order + written, BUFFERSIZE - written,
+                            "%s_%s", command, fst_command);
 	else if(vnum_command == 3)
-		sprintf(&uart_order[5], "%s_%s_%s", command, fst_command, sec_command);
+		written += scnprintf(uart_order + written, BUFFERSIZE - written,
+                            "%s_%s_%s", command, fst_command, sec_command);
 
-	crc_value = CRC16(uart_order, strlen(uart_order));
-	sprintf(crc, "_%x%x#",(crc_value & 0xff00)>>8, crc_value & 0xff); 
-	strcat(uart_order, crc);
+    crc_value = CRC16(uart_order, written);
+    written += scnprintf(uart_order + written, BUFFERSIZE - written,
+                        "_%x%x#", (crc_value & 0xff00)>>8, crc_value & 0xff);
 
     uart_read_lock();
-	size = strlen(uart_order);
+	size = written;
 	do{
 		while(!(inb(UART_TTYS1_OFFSET + UART_LSR) & UART_LSR_TEMT))
 		{
-			usleep_range(50,100);
+			usleep_range(UART_TX_WAIT_MIN_US, UART_TX_WAIT_MAX_US);
 		}
 		outb(uart_order[n] & 0xff,UART_TTYS1_OFFSET);
 		n++;
 	}while(size != n);
 		
-	while(loop_times < max_rw_delay) {
+	while(loop_times < MAX_RW_DELAY) {
 		status = inb(UART_TTYS1_OFFSET + UART_LSR);
 		if (status & UART_LSR_DR)
 		{
@@ -142,38 +155,39 @@ EXPORT_SYMBOL(set_bmc_data);
 
 void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, union i2c_smbus_data *bmc_read_data)
 {
-    unsigned int n = 0, size = 0, r_data_num = 0, i = 0;
+    unsigned int n = 0, size = 0, r_data_num = 0, i = 0, written = 0;
 	u8 status = 0;
 	unsigned int loop_times = 0;
-	unsigned int max_rw_delay = 800000, max_single_r_delay = 20000;
 	u8 temp[BUFFERSIZE]={0};
-	char uart_order[50] = {0};
-	char crc[10] = "\0";
+	char uart_order[MAX_UART_ORDER_SIZE] = {0};
 	unsigned short crc_value = 0;
-	strncpy(uart_order, "uart_", 5);
+    written = scnprintf(uart_order, MAX_UART_ORDER_SIZE, "uart_");
 	if(vnum_command == 1)
-		sprintf(&uart_order[5], "0x%02x", command);
+        written += scnprintf(uart_order + written, MAX_UART_ORDER_SIZE - written,
+                            "0x%02x", command);
 	else if(vnum_command == 2)
-		sprintf(&uart_order[5], "0x%02x_0x%02x", command, fst_command);
+        written += scnprintf(uart_order + written, MAX_UART_ORDER_SIZE - written,
+                            "0x%02x_0x%02x", command, fst_command);
 	else if(vnum_command == 3)
-		sprintf(&uart_order[5], "0x%02x_0x%02x_0x%02x", command, fst_command, sec_command);
+        written += scnprintf(uart_order + written, MAX_UART_ORDER_SIZE - written,
+                            "0x%02x_0x%02x_0x%02x", command, fst_command, sec_command);
 
-	crc_value = CRC16(uart_order, strlen(uart_order));
-	sprintf(crc, "_%x%x#",(crc_value & 0xff00)>>8, crc_value & 0xff); 
-	strcat(uart_order, crc);
+	crc_value = CRC16(uart_order, written);
+    written += scnprintf(uart_order + written, MAX_UART_ORDER_SIZE - written,
+                        "_%x%x#", (crc_value & 0xff00)>>8, crc_value & 0xff);
 
     uart_read_lock();
-	size = strlen(uart_order);
+	size = written;
 	do{
 		while(!(inb(UART_TTYS1_OFFSET + UART_LSR) & UART_LSR_TEMT))
 		{
-			usleep_range(50,100);
+			usleep_range(UART_TX_WAIT_MIN_US, UART_TX_WAIT_MAX_US);
 		}
 		outb(uart_order[n] & 0xff,UART_TTYS1_OFFSET);
 		n++;
 	}while(size != n);
 		
-	while(loop_times < max_rw_delay) {
+	while(loop_times < MAX_RW_DELAY) {
 		status = inb(UART_TTYS1_OFFSET + UART_LSR);
 		if (status & UART_LSR_DR)
 		{
@@ -181,14 +195,15 @@ void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, u
 		}
 		loop_times++;
 	}
-	if(loop_times == max_rw_delay)
+	if(loop_times == MAX_RW_DELAY)
 	{
+        printk(KERN_WARNING "%s: UART read timeout\n", __FUNCTION__);
 		goto _exit;
 	}
 
 	while(1){
 		loop_times = 0;
-		while(loop_times < max_single_r_delay) 
+		while(loop_times < MAX_SINGLE_R_DELAY) 
 		{
 			status = inb(UART_TTYS1_OFFSET + UART_LSR);
 			if (status & UART_LSR_DR)
@@ -197,7 +212,7 @@ void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, u
 			}
 			loop_times++;
 		}
-		if(loop_times == max_single_r_delay)
+		if(loop_times == MAX_SINGLE_R_DELAY)
 		{
 			break;
 		}
@@ -313,7 +328,7 @@ ssize_t sys_show_default(struct device *dev, struct device_attribute *da, char *
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->sys_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->sys_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->sys_attrs[i];
@@ -334,10 +349,10 @@ ssize_t sys_show_default(struct device *dev, struct device_attribute *da, char *
         case SYS_BOM_VERSION:
         case SYS_PCB_VERSION:
         case SYS_HEARTBEAT_DEFAULT:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.charval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.charval);
             break;
         case SYS_BMC_VERSION:
-            return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
+            return scnprintf(buf, PAGE_SIZE, "%s\n", sysfs_attr_info->val.strval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -345,7 +360,7 @@ ssize_t sys_show_default(struct device *dev, struct device_attribute *da, char *
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -362,7 +377,7 @@ ssize_t sys_store_default(struct device *dev, struct device_attribute *da, const
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->sys_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->sys_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->sys_attrs[i];
@@ -376,7 +391,7 @@ ssize_t sys_store_default(struct device *dev, struct device_attribute *da, const
 
     switch(attr->index)
     {
-        case SYS_SHUTDOWN_SET:
+        case SYS_ENABLE_SET:
             if (kstrtoint(buf, 10, &set_value))
             {
                 printk(KERN_ERR "%s: Unable to convert string into value for %s\n", __FUNCTION__, usr_data->aname);
@@ -392,7 +407,7 @@ ssize_t sys_store_default(struct device *dev, struct device_attribute *da, const
             break;
         case SYS_RTC_TIME_SET:
             memset(sysfs_attr_info->val.strval, 0, sizeof(sysfs_attr_info->val.strval)); 
-            strncpy(sysfs_attr_info->val.strval, buf, TIME_SIZE - 1);
+            strlcpy(sysfs_attr_info->val.strval, buf, TIME_SIZE);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find the attr index for %s\n", __FUNCTION__, usr_data->aname);
@@ -417,7 +432,7 @@ int sys_get_bmc_version(struct i2c_client *client, SYS_DATA_ATTR *info, void *da
 
     get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
-    sprintf(padata->val.strval, "V%d.%dR%02d", bmc_read_data.block[byte], bmc_read_data.block[byte + 1], bmc_read_data.block[byte + 2]);
+    scnprintf(padata->val.strval, sizeof(padata->val.strval), "V%d.%dR%02d", bmc_read_data.block[byte], bmc_read_data.block[byte + 1], bmc_read_data.block[byte + 2]);
     return 0;
 }
 
@@ -425,7 +440,7 @@ int sys_get_cpld_version(struct i2c_client *client, SYS_DATA_ATTR *info, void *d
 {
     struct sys_attr_info *padata = (struct sys_attr_info *)data;
 
-    if (strcmp(info->devname, "BMC") == 0)
+    if (strncmp(info->devname, "BMC", ATTR_NAME_LEN) == 0)
     {
         u8 command = info->cmd;
         u8 sub_command_1 = info->subcmd1;
@@ -490,27 +505,16 @@ int sys_heartbeat_default(struct i2c_client *client, SYS_DATA_ATTR *info, void *
     return 0;
 }
 
-int sys_set_shutdown(struct i2c_client *client, SYS_DATA_ATTR *info, void *data)
+int sys_set_enable(struct i2c_client *client, SYS_DATA_ATTR *info, void *data)
 {
     struct sys_attr_info *padata = (struct sys_attr_info *)data;
     u8 command = info->cmd;
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
-    u8 byte = info->byte;
     u32 i = padata->val.intval;
     union i2c_smbus_data bmc_read_data = {.block={0x00}};
     
-    if (byte == 2)
-    {
-        if (i == 1)
-        {
-            get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
-        }
-        else
-        {
-            printk(KERN_ALERT "shutdown_set set wrong Value\n");
-        }
-    }
+    get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
 
     return 0;
 }
@@ -524,9 +528,9 @@ int sys_set_rtc_time(struct i2c_client *client, SYS_DATA_ATTR *info, void *data)
     u8 sub_command_1_str[TIME_SIZE] = {0};
     u8 sub_command_2_str[TIME_SIZE] = {0};
 
-    sprintf(command_str, "0x%02x", command);
-    sprintf(sub_command_1_str, "0x%02x",sub_command_1);
-    strncpy(sub_command_2_str, padata->val.strval, TIME_SIZE - 1);
+    scnprintf(command_str, sizeof(command_str), "0x%02x", command);
+    scnprintf(sub_command_1_str, sizeof(sub_command_1_str), "0x%02x",sub_command_1);
+    strlcpy(sub_command_2_str, padata->val.strval, TIME_SIZE);
     set_bmc_data(command_str, sub_command_1_str, sub_command_2_str, 3);
     return 0;
 }

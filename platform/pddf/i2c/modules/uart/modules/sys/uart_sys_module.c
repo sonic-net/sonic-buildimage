@@ -94,7 +94,7 @@ struct i2c_board_info *i2c_get_sys_board_info(SYS_DATA *pdata, NEW_DEV_ATTR *cda
     SYS_PDATA *sys_platform_data;
     
     
-    if (strcmp(cdata->dev_type, "sys_uart")==0 || strcmp(cdata->dev_type, "sys_sys")==0 )
+    if (strncmp(cdata->dev_type, "sys_uart", GEN_NAME_SIZE)==0 || strncmp(cdata->dev_type, "sys_sys", GEN_NAME_SIZE)==0 )
     {
         /* Allocate the sys_platform_data */
         sys_platform_data = (SYS_PDATA *)kzalloc(sizeof(SYS_PDATA), GFP_KERNEL);
@@ -115,7 +115,7 @@ struct i2c_board_info *i2c_get_sys_board_info(SYS_DATA *pdata, NEW_DEV_ATTR *cda
         };
 
         board_info.addr = cdata->dev_addr; 
-        strcpy(board_info.type, cdata->dev_type); 
+        strlcpy(board_info.type, cdata->dev_type, sizeof(board_info.type)); 
     }
     else
     {
@@ -136,7 +136,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
     struct i2c_client *client_ptr;
 
 
-    if (strncmp(buf, "add", strlen(buf)-1)==0)
+    if (strncmp(buf, "add", strlen("add"))==0)
     {
         adapter = i2c_get_adapter(cdata->parent_bus); 
         board_info = i2c_get_sys_board_info(pdata, cdata);
@@ -156,7 +156,7 @@ static ssize_t do_device_operation(struct device *dev, struct device_attribute *
             goto free_data;
         }
     }
-    else if (strncmp(buf, "delete", strlen(buf)-1)==0)
+    else if (strncmp(buf, "delete", strlen("delete"))==0)
     {
         /*Get the i2c_client handle for the created client*/
         client_ptr = (struct i2c_client *)get_device_table(cdata->i2c_name);

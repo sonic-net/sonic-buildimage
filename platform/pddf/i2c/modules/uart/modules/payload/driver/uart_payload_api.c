@@ -25,6 +25,7 @@
 #define payload_dbg(...)
 #endif
 
+extern u8 calmode;
 extern void set_bmc_data(const char *command, const char *fst_command, const char *sec_command, const u8 vnum_command);
 extern void get_bmc_data(u8 command, u8 fst_command, u8 sec_command, u8 vnum_command, union i2c_smbus_data *bmc_read_data);
 
@@ -118,7 +119,7 @@ ssize_t payload_show_default(struct device *dev, struct device_attribute *da, ch
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->payload_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->payload_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->payload_attrs[i];
@@ -136,7 +137,7 @@ ssize_t payload_show_default(struct device *dev, struct device_attribute *da, ch
     switch(attr->index)
     {
         case PAYLOAD_GET:
-            return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
+            return scnprintf(buf, PAGE_SIZE, "%s\n", sysfs_attr_info->val.strval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -144,7 +145,7 @@ ssize_t payload_show_default(struct device *dev, struct device_attribute *da, ch
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -160,7 +161,7 @@ ssize_t payload_store_default(struct device *dev, struct device_attribute *da, c
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->payload_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->payload_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->payload_attrs[i];
@@ -192,7 +193,6 @@ int bmc_get_payload(struct i2c_client *client, PAYLOAD_DATA_ATTR *info, void *da
     u8 sub_command_1 = info->subcmd1;
     u8 sub_command_2 = info->subcmd2;
     u8 byte = info->byte;
-    u8 calmode = info->calmode;
     u32 value = 0;
     union i2c_smbus_data bmc_read_data = {.block={0x00}};
 
@@ -200,17 +200,17 @@ int bmc_get_payload(struct i2c_client *client, PAYLOAD_DATA_ATTR *info, void *da
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = bmc_read_data.block[byte] * 1000 + bmc_read_data.block[byte + 1] * 100;
-        sprintf(padata->val.strval, "%d", value);
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value);
     }
     else if (calmode == 2)
     {
         get_bmc_data(command, sub_command_1, sub_command_2, 3, &bmc_read_data);
         value = (((bmc_read_data.block[byte] << 8) & 0xff00) | (bmc_read_data.block[byte + 1] & 0xff))*100;
-        sprintf(padata->val.strval, "%d", value);
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "%d", value);
     }
     else
     {
-        sprintf(padata->val.strval, "wrong calmode!");
+        scnprintf(padata->val.strval, sizeof(padata->val.strval), "wrong calmode!");
     }
     return 0;
 }

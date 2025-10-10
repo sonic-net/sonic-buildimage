@@ -118,7 +118,7 @@ ssize_t thermal_show_default(struct device *dev, struct device_attribute *da, ch
 
     for (i=0;i<data->num_attr;i++)
     {
-        if ( strcmp(attr->dev_attr.attr.name, pdata->thermal_attrs[i].aname) == 0 ) 
+        if ( strncmp(attr->dev_attr.attr.name, pdata->thermal_attrs[i].aname, ATTR_NAME_LEN) == 0 ) 
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->thermal_attrs[i];
@@ -136,7 +136,7 @@ ssize_t thermal_show_default(struct device *dev, struct device_attribute *da, ch
     switch(attr->index)
     {
         case THERMAL_TEMP_GET:
-            return sprintf(buf, "%d\n", sysfs_attr_info->val.charval);
+            return scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_attr_info->val.charval);
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -144,7 +144,7 @@ ssize_t thermal_show_default(struct device *dev, struct device_attribute *da, ch
     }
 
 exit:
-    return sprintf(buf, "%d\n", status);
+    return scnprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
 
@@ -161,7 +161,7 @@ ssize_t thermal_store_default(struct device *dev, struct device_attribute *da, c
 
     for (i=0;i<data->num_attr;i++)
     {
-        if (strcmp(data->attr_info[i].name, attr->dev_attr.attr.name) == 0 && strcmp(pdata->thermal_attrs[i].aname, attr->dev_attr.attr.name) == 0)
+        if (strncmp(data->attr_info[i].name, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0 && strncmp(pdata->thermal_attrs[i].aname, attr->dev_attr.attr.name, ATTR_NAME_LEN) == 0)
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->thermal_attrs[i];

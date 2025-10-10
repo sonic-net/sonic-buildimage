@@ -37,7 +37,6 @@ typedef struct PSU_DATA_ATTR
     uint32_t subcmd1;
     uint32_t subcmd2;
     uint32_t byte;
-    uint32_t calmode;
     void *access_data;
 }PSU_DATA_ATTR;
 

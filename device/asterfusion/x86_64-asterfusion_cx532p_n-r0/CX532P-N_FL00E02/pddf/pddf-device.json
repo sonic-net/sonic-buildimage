@@ -1633,12 +1633,12 @@
                 { "attr_name":"psu_type", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"13"},
                 { "attr_name":"psu_status", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"1"},
                 { "attr_name":"psu_presence", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"3"},
-                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"1", "attr_calmode":"1"},
-                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"3", "attr_calmode":"1"},
-                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"5", "attr_calmode":"1"},
-                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"7", "attr_calmode":"1"},
-                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"11", "attr_calmode":"1"},
-                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"9", "attr_calmode":"1"},
+                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"1"},
+                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"3"},
+                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"5"},
+                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"7"},
+                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"11"},
+                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"9"},
                 { "attr_name":"psu_direction", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"3"},
                 { "attr_name":"psu_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"2"},
                 { "attr_name":"psu_direction_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"2"}
@@ -1671,12 +1671,12 @@
                 { "attr_name":"psu_type", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"26"},
                 { "attr_name":"psu_status", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa","attr_byte":"4"},
                 { "attr_name":"psu_presence", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"6"},
-                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"14", "attr_calmode":"1"},
-                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"16", "attr_calmode":"1"},
-                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"18", "attr_calmode":"1"},
-                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"20", "attr_calmode":"1"},
-                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"24", "attr_calmode":"1"},
-                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"22", "attr_calmode":"1"},
+                { "attr_name":"psu_v_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"14"},
+                { "attr_name":"psu_v_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"16"},
+                { "attr_name":"psu_i_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"18"},
+                { "attr_name":"psu_i_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"20"},
+                { "attr_name":"psu_p_in", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"24"},
+                { "attr_name":"psu_p_out", "attr_cmd":"0xb", "attr_subcmd1":"0x1", "attr_subcmd2":"0xaa", "attr_byte":"22"},
                 { "attr_name":"psu_direction", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"6"},
                 { "attr_name":"psu_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"5"},
                 { "attr_name":"psu_direction_warning", "attr_cmd":"0xb", "attr_subcmd1":"0x0", "attr_subcmd2":"0xaa", "attr_byte":"5"}
@@ -1823,10 +1823,11 @@
 		"uart":
 		{
 			"topo_info": { "parent_bus":"0x0", "dev_addr":"0x11", "dev_type":"sys_uart"},
-            "dev_attr": { "sys_idx":"1", "uart_sirq":"11"},
+            "dev_attr": { "sys_idx":"1", "uart_sirq":"0"},
 			"attr_list":
 			[
-                { "attr_name":"shutdown_set", "attr_cmd":"0xa", "attr_subcmd1":"0xa1", "attr_subcmd2":"0xaa", "attr_byte":"2"},
+                { "attr_name":"shutdown_set", "attr_cmd":"0xa", "attr_subcmd1":"0xa1", "attr_subcmd2":"0xaa"},
+                { "attr_name":"cp2112_1_reset", "attr_cmd":"0x10", "attr_subcmd1":"0x01", "attr_subcmd2":"0xaa"},
                 { "attr_name":"bmc_version", "attr_cmd":"0xd", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1"},
                 { "attr_name":"cpld1_version", "attr_devname":"CPLD1", "attr_version":"0x0"},
                 { "attr_name":"cpld2_version", "attr_devname":"CPLD1", "attr_version":"0x12"}
@@ -1914,7 +1915,7 @@
             "dev_attr": { "payload_idx":"1"},
 			"attr_list":
 			[
-                { "attr_name":"payload_12_0v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1", "attr_calmode":"1"}
+                { "attr_name":"payload_12_0v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"1"}
 			]
 		}
 	},
@@ -1928,7 +1929,7 @@
             "dev_attr": { "payload_idx":"2"},
 			"attr_list":
 			[
-                { "attr_name":"payload_3_30v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"3", "attr_calmode":"1"}
+                { "attr_name":"payload_3_30v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"3"}
 			]
 		}
 	},
@@ -1942,7 +1943,7 @@
             "dev_attr": { "payload_idx":"3"},
 			"attr_list":
 			[
-                { "attr_name":"payload_5_00v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"5", "attr_calmode":"1"}
+                { "attr_name":"payload_5_00v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"5"}
 			]
 		}
 	},
@@ -1956,7 +1957,7 @@
             "dev_attr": { "payload_idx":"4"},
 			"attr_list":
 			[
-                { "attr_name":"falcon_vcc_1_10v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"7", "attr_calmode":"1"}
+                { "attr_name":"falcon_vcc_1_10v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"7"}
 			]
 		}
 	},
@@ -1970,7 +1971,7 @@
             "dev_attr": { "payload_idx":"5"},
 			"attr_list":
 			[
-                { "attr_name":"falcon_vcc_0_80v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"9", "attr_calmode":"1"}
+                { "attr_name":"falcon_vcc_0_80v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"9"}
 			]
 		}
 	},
@@ -1984,7 +1985,7 @@
             "dev_attr": { "payload_idx":"6"},
 			"attr_list":
 			[
-                { "attr_name":"falcon_core_0_88v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"11", "attr_calmode":"1"}
+                { "attr_name":"falcon_core_0_88v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"11"}
 			]
 		}
 	},
@@ -1998,7 +1999,7 @@
             "dev_attr": { "payload_idx":"7"},
 			"attr_list":
 			[
-                { "attr_name":"falcon_vdda_0_90v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"13", "attr_calmode":"1"}
+                { "attr_name":"falcon_vdda_0_90v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"13"}
 			]
 		}
 	},
@@ -2012,7 +2013,7 @@
             "dev_attr": { "payload_idx":"8"},
 			"attr_list":
 			[
-                { "attr_name":"payload_1_80v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"15", "attr_calmode":"1"}
+                { "attr_name":"payload_1_80v", "attr_cmd":"0x8", "attr_subcmd1":"0xaa", "attr_subcmd2":"0xaa", "attr_byte":"15"}
 			]
 		}
 	}
