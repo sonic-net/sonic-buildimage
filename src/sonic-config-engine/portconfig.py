@@ -441,8 +441,13 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
             if child_port in hwsku_entry:
                 for key, item in hwsku_entry[child_port].items():
                     if key in OPTIONAL_HWSKU_ATTRIBUTES:
+                        # Always force to the values in hwsku.json if they are available.
+                        child_ports.get(child_port)[key] = item
+                        # Fallback to current behavior: ensure optional values are applied to all child
+                        # ports in the group, even they only exist for one child port in the group.
                         for child in child_ports:
-                            child_ports.get(child)[key] = item
+                            if key not in child_ports.get(child):
+                                child_ports.get(child)[key] = item
 
         ports.update(child_ports)
 
