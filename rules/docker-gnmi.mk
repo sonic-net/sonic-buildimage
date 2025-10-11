@@ -9,6 +9,7 @@ $(DOCKER_GNMI)_PATH = $(DOCKERS_PATH)/$(DOCKER_GNMI_STEM)
 $(DOCKER_GNMI)_DEPENDS += $(SONIC_MGMT_COMMON)
 $(DOCKER_GNMI)_DEPENDS += $(SONIC_TELEMETRY)
 $(DOCKER_GNMI)_DBG_DEPENDS = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_DEPENDS)
+$(DOCKER_GNMI)_PYTHON_WHEELS = $(SONIC_GCU_PY3)
 
 $(DOCKER_GNMI)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_BOOKWORM)
 
@@ -31,8 +32,9 @@ endif
 
 $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
 $(DOCKER_GNMI)_RUN_OPT += -t
-$(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:rw
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
+$(DOCKER_GNMI)_RUN_OPT += --privileged --pid=host
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
