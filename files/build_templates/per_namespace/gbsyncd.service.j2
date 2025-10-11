@@ -12,7 +12,6 @@ After=sonic.target
 User=root
 Environment=sonic_asic_platform={{ sonic_asic_platform }}
 Environment=gbsyncd_platform={{ docker_container_name }}
-ExecCondition=/usr/bin/gbsyncd-platform.sh
 ExecStartPre=/usr/local/bin/gbsyncd.sh start{% if multi_instance == 'true' %} %i{% endif %}
 ExecStart=/usr/local/bin/gbsyncd.sh wait{% if multi_instance == 'true' %} %i{% endif %}
 ExecStop=/usr/local/bin/gbsyncd.sh stop{% if multi_instance == 'true' %} %i{% endif %}
