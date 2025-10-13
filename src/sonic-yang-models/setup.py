@@ -147,6 +147,7 @@ yang_files = [
     'sonic-smart-switch.yang',
     'sonic-spanning-tree.yang',
     'sonic-srv6.yang',
+    'sonic-user.yang',
 ]
 
 class my_build_py(build_py):

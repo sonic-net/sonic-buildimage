@@ -1,0 +1,102 @@
+module sonic-user {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-user";
+    prefix "sonic-user";
+
+    description "SONIC User Management YANG Module";
+
+    revision 2025-09-12 {
+        description "Initial revision for declarative user management";
+    }
+
+    // Common typedef for user roles
+    typedef user-role {
+        type enumeration {
+            enum "administrator" {
+                description "Grants administrative privileges (e.g., member of sudo, docker, admin, redis groups).";
+            }
+            enum "operator" {
+                description "Grants operator-level (read-only or limited) privileges.";
+            }
+        }
+        description "User role that determines group memberships, privileges, and applicable security policies.";
+    }
+
+    // Top-level container for the User feature
+    container sonic-user {
+        description "Top-level container for local user management configuration";
+
+        container LOCAL_USER {
+            description "LOCAL_USER part of config_db.json";
+
+            list LOCAL_USER_LIST {
+                key "username";
+                description "List of declaratively managed local users.";
+
+                must "count(../LOCAL_USER_LIST[role='administrator' and (not(enabled) or enabled='true')]) >= 1" {
+                    error-message "At least one administrator user must remain enabled.";
+                }
+
+                leaf username {
+                    type string {
+                        pattern '[a-z_][a-z0-9_-]*[$]?' {
+                            error-message "Invalid username. Must start with a lowercase letter or underscore, followed by lowercase letters, numbers, underscores, or hyphens.";
+                        }
+                        length 1..32;
+                    }
+                    must ". != 'root'" {
+                        error-message "Username cannot be 'root'.";
+                    }
+                    description "The username for the local account.";
+                }
+
+                leaf role {
+                    type user-role;
+                    mandatory true;
+                    description "The role assigned to the user, which determines their group memberships and privileges.";
+                }
+
+                leaf password_hash {
+                    type string;
+                    mandatory true;
+                    must "not(starts-with(., '!'))" {
+                        error-message "Password hash cannot start with '!'. Use the 'enabled' attribute to disable user accounts.";
+                    }
+                    description "The hashed password string for the user, as found in /etc/shadow. Password hashes can be generated using 'mkpasswd' utility or programmatically using libraries like 'passlib'. To disable an account, use the 'enabled' attribute instead of prepending '!' to the password hash.";
+                }
+
+                leaf-list ssh_keys {
+                    type string;
+                    description "A list of full public SSH key strings.";
+                }
+
+                leaf enabled {
+                    type boolean;
+                    default true;
+                    description "Whether the user account is enabled. When false, the password is disabled by prepending '!' to prevent password-based login while preserving SSH key access.";
+                }
+            }
+        }
+
+        container LOCAL_ROLE_SECURITY_POLICY {
+            description "LOCAL_ROLE_SECURITY_POLICY part of config_db.json";
+
+            list LOCAL_ROLE_SECURITY_POLICY_LIST {
+                key "role";
+                description "Global security policies applied to users based on their role.";
+
+                leaf role {
+                    type user-role;
+                    description "The role for which this security policy applies.";
+                }
+
+                leaf max_login_attempts {
+                    type uint32 {
+                        range "1..1000";
+                    }
+                    description "Maximum number of failed login attempts before accounts with this role are locked. If not set, system defaults apply.";
+                }
+            }
+        }
+    }
+}

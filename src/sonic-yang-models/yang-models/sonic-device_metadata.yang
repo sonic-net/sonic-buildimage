@@ -116,6 +116,16 @@ module sonic-device_metadata {
                     }
                 }
 
+                leaf local_user_management {
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                    description "Enable or disable local user management feature.
+                                 When enabled, the system will manage local users through the LOCAL_USER table.";
+                }
+
                 leaf frr_mgmt_framework_config {
                     type boolean;
                     description "FRR configurations are handled by sonic-frr-mgmt-framework module when set to true,

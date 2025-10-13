@@ -3111,6 +3111,13 @@
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
         },
+        "LOCAL_USER": {
+            "admin": {
+                "role": "administrator",
+                "password_hash": "$y$j9T$mYVqMrB/TF29nNg.IK63H1$4k1Th1bqfrLXo50z3.KJvsKpffgD7NPMExVmDTrnUc8",
+                "enabled": "true"
+            }
+        },
         "HIGH_FREQUENCY_TELEMETRY_PROFILE": {
             "dummy": {
                 "stream_state": "disabled",
