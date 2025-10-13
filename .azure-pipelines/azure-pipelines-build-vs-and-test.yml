@@ -8,8 +8,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
+    name: xwjiang-ms/sonic-mgmt
+    ref: add_pre_defined_pr
     endpoint: sonic-net
   - repository: buildimage
     type: github
