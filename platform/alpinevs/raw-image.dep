@@ -1,0 +1,2 @@
+#DPKG FRK
+$(SONIC_RAW_IMAGE)_CACHE_MODE  := none

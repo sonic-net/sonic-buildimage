@@ -1,0 +1,10 @@
+# AlpineVS Platform
+
+SONIC_PLATFORM_API_PY3 = sonic_platform-1.0-py3-none-any.whl
+$(SONIC_PLATFORM_API_PY3)_SRC_PATH = src/sonic-alpine/sonic-platform-alpinevs/alpinevs-platform
+$(SONIC_PLATFORM_API_PY3)_PYTHON_VERSION = 3
+$(SONIC_PLATFORM_API_PY3)_DEPENDS = $(SONIC_PY_COMMON_PY3) $(SONIC_PLATFORM_COMMON_PY3) $(SONIC_CONFIG_ENGINE_PY3)
+$(SONIC_PLATFORM_API_PY3)_DEBS_DEPENDS = $(PYTHON3_SWSSCOMMON)
+SONIC_PYTHON_WHEELS += $(SONIC_PLATFORM_API_PY3)
+
+export alpinevs_platform_api_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3))"
