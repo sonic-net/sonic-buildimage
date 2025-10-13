@@ -1,0 +1,2975 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-05-15-1.11" profile="Askboard" dsig="md5" sid="e4650fda-5634-40b1-9d26-860af3e20dcf">
+  <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
+    <askboardplt:typedefs>
+      <askboardplt:typedef>
+        <askboardplt:name>std-string</askboardplt:name>
+        <askboardplt:type>string</askboardplt:type>
+        <askboardplt:description>standard string.</askboardplt:description>
+        <askboardplt:min>1</askboardplt:min>
+        <askboardplt:max>100</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-callback-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies os/ext drv callback types.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>linux-static</askboardplt:name>
+          <askboardplt:description>Linux Static</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>linux-shared</askboardplt:name>
+          <askboardplt:description>Linux Shared Lib mode</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>external</askboardplt:name>
+          <askboardplt:description>External Os</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>freeBsd</askboardplt:name>
+          <askboardplt:description>Free BSD</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-pp-map-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies pci info types.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>fixed</askboardplt:name>
+          <askboardplt:description>Fixed</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>autoscan</askboardplt:name>
+          <askboardplt:description>Auto scan</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-pp-interface-channel-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies channel interface type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>pci</askboardplt:name>
+          <askboardplt:description>PCI</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>smi</askboardplt:name>
+          <askboardplt:description>SMI</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>twsi</askboardplt:name>
+          <askboardplt:description>TWSI</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-pp-as-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies Address space type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>4_regions</askboardplt:name>
+          <askboardplt:description>address-space 4 regions</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>8_regions</askboardplt:name>
+          <askboardplt:description>address-space 8 regions</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>atu</askboardplt:name>
+          <askboardplt:description>address translation unit</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>device-id-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Device ID 0..1</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>1</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>port-mapping-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies port map type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>ethernet_mac</askboardplt:name>
+          <askboardplt:description>ETHERNET_MAC</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>cpu_sdma</askboardplt:name>
+          <askboardplt:description>CPU_SDMA</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>interface-num-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Interface number</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>1023</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>txq-port-number-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>TXq port number </askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>99</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>phy-smi-interface-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Phy SMI interface type.</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>3</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>phy-xsmi-interface-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Phy XSMI interface type.</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>15</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>phy-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the PHY Part Identifier.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>NA</askboardplt:name>
+          <askboardplt:description>No Phy</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E1680</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E1680, used for Copper with speeds of 10M/100M/1G.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E1780</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E1780, Integrated Octal 10/100/1000 Mbps Energy
+Efficient Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2540</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2540, 4 ports 10/100/1000/2.5G/5GBASE-T Ethernet
+Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2580</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2580, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2780</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2780, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:value>5</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-MVCUE1786</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier alaska V MV-CUE 1786, Octal 100/1000BASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:value>6</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E1781</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E1781, Integrated Octal 10/100/1000 Mbps Energy
+Efficient Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>7</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2110</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2110, Integrated Octal 10/100/1000/2.5G/5GBASE-T
+Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>8</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2180</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2180, Integrated Octal 10/100/1000/2.5G/5GBASE-T
+Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>9</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>physical-port-num-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>PHYSICAL PORT NUM</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>1023</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-port-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the ledstream port type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>PORT_TYPE_TRI_SPEED</askboardplt:name>
+          <askboardplt:description>tri-speed port.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PORT_TYPE_XG</askboardplt:name>
+          <askboardplt:description>XG port.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-blink-select-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream blink select type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_SELECT_0</askboardplt:name>
+          <askboardplt:description>Blink 0 signal.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_SELECT_1</askboardplt:name>
+          <askboardplt:description>Blink 1 signal</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-order-mode-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream ordering mode.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>ORDER_MODE_BY_PORT</askboardplt:name>
+          <askboardplt:description>the indication order is arranged by port.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ORDER_MODE_BY_CLASS</askboardplt:name>
+          <askboardplt:description>the indication order is arranged by class.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-blink-duty-cycle-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream blink cycle duty cycle type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DUTY_CYCLE_0</askboardplt:name>
+          <askboardplt:description>25% on, 75% off.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DUTY_CYCLE_1</askboardplt:name>
+          <askboardplt:description>50% on, 50% off.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DUTY_CYCLE_2</askboardplt:name>
+          <askboardplt:description>50% on, 50% off.</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DUTY_CYCLE_3</askboardplt:name>
+          <askboardplt:description>75% on, 25% off.</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-blink-duration-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream blink period type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_0</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_0.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_1</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_1.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_2</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_2.</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_3</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_3.</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_4</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_4.</askboardplt:description>
+          <askboardplt:value>5</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_5</askboardplt:name>
+          <askboardplt:description>BLINK_DURATION_5.</askboardplt:description>
+          <askboardplt:value>6</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_6</askboardplt:name>
+          <askboardplt:description>(APPLICABLE DEVICES: xCat3; AC5; Lion2; Bobcat2; Caelum; Aldrin; AC3X; Bobcat3; Aldrin2; Pipe) .</askboardplt:description>
+          <askboardplt:value>7</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>BLINK_DURATION_7</askboardplt:name>
+          <askboardplt:description>APPLICABLE DEVICES: Bobcat2; Caelum; Aldrin; AC3X; Bobcat3; Aldrin2; Pipe).</askboardplt:description>
+          <askboardplt:value>8</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-pulse-stretch-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream length of stretching for dynamic signals.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_0_NO</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_0_NO.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_1</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_1.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_2</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_2.</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_3</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_3.</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_4</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_4.</askboardplt:description>
+          <askboardplt:value>5</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_5</askboardplt:name>
+          <askboardplt:description>PULSE_STRETCH_5.</askboardplt:description>
+          <askboardplt:value>6</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_6</askboardplt:name>
+          <askboardplt:description>(APPLICABLE DEVICES: Bobcat2; Caelum; Aldrin; AC3X; Bobcat3; Aldrin2; Falcon; AC5P; Pipe).</askboardplt:description>
+          <askboardplt:value>7</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>PULSE_STRETCH_7</askboardplt:name>
+          <askboardplt:description>(APPLICABLE DEVICES: Bobcat2; Caelum; Aldrin; AC3X; Bobcat3; Aldrin2; Falcon; AC5P; Pipe).</askboardplt:description>
+          <askboardplt:value>8</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-clock-out-frequency-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream blink cycle duty cycle type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>_CLOCK_OUT_FREQUENCY_500</askboardplt:name>
+          <askboardplt:description>500 KHz LED clock frequency.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>CLOCK_OUT_FREQUENCY_1000</askboardplt:name>
+          <askboardplt:description>1 MHz LED clock frequency.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>CLOCK_OUT_FREQUENCY_2000</askboardplt:name>
+          <askboardplt:description>2 MHz LED clock frequency.</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>CLOCK_OUT_FREQUENCY_3000</askboardplt:name>
+          <askboardplt:description>3 MHz LED clock frequency.</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-class5-select-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream indication displayed on class5 (for dual-media port/phy).</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>CLASS_5_SELECT_HALF_DUPLEX</askboardplt:name>
+          <askboardplt:description>Half Duplex is displayed on class5.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>CLASS_5_SELECT_FIBER_LINK_UP</askboardplt:name>
+          <askboardplt:description>If port is a dual media port, Fiber Link Up is displayed on class5.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-class13-select-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the LED stream indication displayed on class13 (for dual-media port/phy).</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>CLASS_13_SELECT_LINK_DOWN</askboardplt:name>
+          <askboardplt:description>Link Down is displayed on class13.</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>CLASS_13_SELECT_COPPER_LINK_UP</askboardplt:name>
+          <askboardplt:description>If port is a dual media port, Copper Link Up is displayed on class13.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-class-num-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led Class number</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>11</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>boolean-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Boolean 32 bits , due to bing endian</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>false</askboardplt:name>
+          <askboardplt:description>False</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>true</askboardplt:name>
+          <askboardplt:description>True</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>bus-id-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Bus Id Type, PCI/SMI</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>255</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>function-id-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Function Id Type, PCI/SMI</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>255</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>domain-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Domain, PCI/SMI</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>255</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-interface-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led interface</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>255</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-position-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led position</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>63</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>serdes-lane-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>serdes lane</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>7</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>cpu-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>The CPU Internal/External</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>external</askboardplt:name>
+          <askboardplt:description>Extrenal connected CPU</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>internal</askboardplt:name>
+          <askboardplt:description>Internal CPU</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-stream-clock-frequency-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led Clock Frequency Sip6</askboardplt:description>
+        <askboardplt:min>500</askboardplt:min>
+        <askboardplt:max>80000</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-unit-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led units</askboardplt:description>
+        <askboardplt:min>1</askboardplt:min>
+        <askboardplt:max>16</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-unit-or-no-unit-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led units, 0 for no Unit</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>16</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-group-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Led Group</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>1</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>bit-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Bit range 0..31</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>31</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>bit-size-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Bit leng 1..32</askboardplt:description>
+        <askboardplt:min>1</askboardplt:min>
+        <askboardplt:max>32</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>led-sip-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>The LED scehme</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>na</askboardplt:name>
+          <askboardplt:description>NA</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>sip5</askboardplt:name>
+          <askboardplt:description>SIP5: AC3x</askboardplt:description>
+          <askboardplt:value>5</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>sip6</askboardplt:name>
+          <askboardplt:description>SIP6: Falcon, AC5x</askboardplt:description>
+          <askboardplt:value>6</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>port-cscd-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the cascade port type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>DSA_1_WORD</askboardplt:name>
+          <askboardplt:description>DSA Regular</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>DSA_2_WORDS</askboardplt:name>
+          <askboardplt:description>DSA Extended</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>NETWORK</askboardplt:name>
+          <askboardplt:description>Network.</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>DSA_3_WORDS</askboardplt:name>
+          <askboardplt:description>DSA 3 Words</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>DSA_4_WORD</askboardplt:name>
+          <askboardplt:description>DSA 4 Words</askboardplt:description>
+          <askboardplt:value>4</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>trunk-cscd-type</askboardplt:name>
+        <askboardplt:type>uint32</askboardplt:type>
+        <askboardplt:description>Specifies the Cascade Trunk id.</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>127</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>port-trunk-cscd-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the cascade port type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>cscdPort</askboardplt:name>
+          <askboardplt:description>Cascade port</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>cscdTrunk</askboardplt:name>
+          <askboardplt:description>Csacde trunk</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>hash-cscd-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies the hash used by cascade trunk.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>pkt</askboardplt:name>
+          <askboardplt:description>Hash based on packet</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>srcPort</askboardplt:name>
+          <askboardplt:description>Hash based on source port</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>asic-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>ASIC Type</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC3X</askboardplt:name>
+          <askboardplt:description>AC3X</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC5X</askboardplt:name>
+          <askboardplt:description>AC5X</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_Falcon</askboardplt:name>
+          <askboardplt:description>FALCON</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC5P</askboardplt:name>
+          <askboardplt:description>AC5P</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>mpp-num-type</askboardplt:name>
+        <askboardplt:type>uint8</askboardplt:type>
+        <askboardplt:description>Specifies the MPP pin number.</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>63</askboardplt:max>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>mpp-select-type</askboardplt:name>
+        <askboardplt:type>uint8</askboardplt:type>
+        <askboardplt:description>Specifies the MPP pin value.</askboardplt:description>
+        <askboardplt:min>0</askboardplt:min>
+        <askboardplt:max>15</askboardplt:max>
+      </askboardplt:typedef>
+    </askboardplt:typedefs>
+    <askboardplt:ASIC_Type askboardplt:type="asic-type">ASIC_Falcon</askboardplt:ASIC_Type>
+    <askboardplt:boardName askboardplt:type="std-string">Falcon-12.8T_32x100G</askboardplt:boardName>
+    <askboardplt:osCallType askboardplt:type="board-callback-type">linux-static</askboardplt:osCallType>
+    <askboardplt:extDrvCallType askboardplt:type="board-callback-type">linux-static</askboardplt:extDrvCallType>
+    <askboardplt:mapType askboardplt:type="board-pp-map-type">autoscan</askboardplt:mapType>
+    <askboardplt:cpuType askboardplt:type="cpu-type">external</askboardplt:cpuType>
+    <askboardplt:mngInterfaceType askboardplt:type="board-pp-interface-channel-type">pci</askboardplt:mngInterfaceType>
+    <askboardplt:adressSpaceType askboardplt:type="board-pp-as-type">atu</askboardplt:adressSpaceType>
+    <askboardplt:device-list>
+      <askboardplt:devNum askboardplt:type="device-id-type">0</askboardplt:devNum>
+      <askboardplt:deviceId askboardplt:type="device-id-type">0</askboardplt:deviceId>
+      <askboardplt:pp-profile-name askboardplt:type="std-string">ASK-PP-F12_8T_32x100G.xml</askboardplt:pp-profile-name>
+      <askboardplt:L1-profile-name askboardplt:type="std-string">ASK-L1-F12_8T_32x100G.xml</askboardplt:L1-profile-name>
+      <askboardplt:ledStreamType askboardplt:type="led-sip-type">sip6</askboardplt:ledStreamType>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">0</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">32</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP4</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">1</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">40</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP5</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">2</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">48</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP6</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">3</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">56</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP7</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">4</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">64</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP0</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">5</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">72</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP1</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">6</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">80</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP2</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">7</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">88</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP3</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">8</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">96</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP4</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">9</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">104</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP5</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">10</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">112</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP6</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">11</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">120</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP7</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">12</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">128</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP0</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">13</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">136</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP1</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">14</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">144</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP2</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">15</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">152</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP3</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">16</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">160</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP4</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">17</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">168</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP5</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">18</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">176</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP6</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">19</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">184</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP7</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">20</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">192</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP0</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">21</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">200</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP1</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">22</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">208</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP2</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">23</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">216</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP3</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">24</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">224</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP4</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">25</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">232</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP5</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">26</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">240</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP6</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">27</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">248</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP7</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">28</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">0</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP0</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">29</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">8</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP1</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">30</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">16</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP2</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">31</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">24</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP3</askboardplt:serdesMuxScheme>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">32</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">258</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+        <askboardplt:phy>
+          <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
+        </askboardplt:phy>
+        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
+        <askboardplt:ledstream-port>
+          <askboardplt:ledPosition askboardplt:type="led-position-type"/>
+          <askboardplt:polarityInvertList-list>
+            <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+          </askboardplt:polarityInvertList-list>
+          <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
+        </askboardplt:ledstream-port>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">63</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">273</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">33</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">274</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">34</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">275</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+      </askboardplt:portMap-list>
+      <askboardplt:portMap-list>
+        <askboardplt:portNumber askboardplt:type="physical-port-num-type">35</askboardplt:portNumber>
+        <askboardplt:TXQueue>
+          <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
+          <askboardplt:interfaceNum askboardplt:type="interface-num-type">276</askboardplt:interfaceNum>
+          <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
+        </askboardplt:TXQueue>
+      </askboardplt:portMap-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">32</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">38</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">34</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">39</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">33</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">37</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">36</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">35</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">40</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">45</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">41</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">46</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">42</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">47</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">44</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">43</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">50</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">54</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">49</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">51</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">48</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">52</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">53</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">55</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">57</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">62</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">58</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">63</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">56</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">60</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">59</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">61</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">64</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">71</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">66</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">68</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">65</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">69</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">67</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">70</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">72</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">77</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">73</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">79</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">75</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">74</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">76</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">78</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">81</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">85</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">80</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">87</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">84</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">82</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">83</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">86</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">88</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">94</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">89</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">95</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">90</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">91</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">92</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">93</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">96</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">102</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">98</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">103</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">97</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">101</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">100</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">99</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">104</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">109</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">105</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">110</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">106</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">111</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">108</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">107</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">114</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">118</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">113</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">115</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">112</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">116</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">117</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">119</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">121</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">126</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">122</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">127</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">120</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">124</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">123</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">125</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">128</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">135</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">130</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">132</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">129</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">133</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">131</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">134</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">136</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">141</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">137</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">143</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">139</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">138</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">140</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">142</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">145</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">149</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">144</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">151</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">148</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">146</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">147</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">150</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">152</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">158</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">153</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">159</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">154</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">155</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">156</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">157</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">160</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">166</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">162</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">167</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">161</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">165</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">164</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">163</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">168</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">173</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">169</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">174</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">170</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">175</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">176</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">172</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">171</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">178</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">182</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">177</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">179</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">180</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">181</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">183</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">185</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">190</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">186</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">191</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">184</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">188</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">187</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">189</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">192</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">199</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">194</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">196</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">193</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">197</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">195</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">198</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">200</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">true</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">205</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">201</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">207</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">203</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">202</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">204</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">206</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">209</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">213</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">208</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">215</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">212</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">210</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">211</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">214</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">216</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">222</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">217</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">223</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">218</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">219</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">220</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">221</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">224</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">230</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">226</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">231</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">225</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">229</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">228</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">227</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">232</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">237</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">233</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">238</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">234</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">239</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">236</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">235</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">242</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">246</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">241</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">243</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">240</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">244</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">245</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">247</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">249</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">254</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">250</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">255</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">248</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">252</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">251</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">253</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">0</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">true</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">7</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">2</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">4</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">1</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">5</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">3</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">6</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">8</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">13</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">9</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">15</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">11</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">10</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">12</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">14</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">17</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">21</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">16</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">23</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">20</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">18</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">19</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">22</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">24</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">30</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">25</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">31</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">26</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">27</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">28</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">true</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:laneList-list>
+        <askboardplt:laneNumber askboardplt:type="uint32">29</askboardplt:laneNumber>
+        <askboardplt:invertTx askboardplt:type="boolean-type">false</askboardplt:invertTx>
+        <askboardplt:invertRx askboardplt:type="boolean-type">false</askboardplt:invertRx>
+      </askboardplt:laneList-list>
+      <askboardplt:Ledstream-interface-list>
+        <askboardplt:ledstream-interface-number askboardplt:type="led-interface-type">0</askboardplt:ledstream-interface-number>
+        <askboardplt:ledstream-configSet>
+          <askboardplt:ledOrganize askboardplt:type="led-stream-order-mode-type">ORDER_MODE_BY_CLASS</askboardplt:ledOrganize>
+          <askboardplt:blink0DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_0</askboardplt:blink0DutyCycle>
+          <askboardplt:blink0Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_0</askboardplt:blink0Duration>
+          <askboardplt:blink1DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_0</askboardplt:blink1DutyCycle>
+          <askboardplt:blink1Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_1</askboardplt:blink1Duration>
+          <askboardplt:pulseStretch askboardplt:type="led-stream-pulse-stretch-type">PULSE_STRETCH_1</askboardplt:pulseStretch>
+          <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
+          <askboardplt:SIP6ledClockFrequency askboardplt:type="led-stream-clock-frequency-type">1627</askboardplt:SIP6ledClockFrequency>
+          <askboardplt:ledClockPosEdgeModeEnable askboardplt:type="boolean-type">false</askboardplt:ledClockPosEdgeModeEnable>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">1</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">66</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">2</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">65</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">3</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">65</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">4</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">66</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">5</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">66</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">6</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">65</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">7</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">65</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+          <askboardplt:ledUnit-List>
+            <askboardplt:ledUnit askboardplt:type="led-unit-type">8</askboardplt:ledUnit>
+            <askboardplt:ledStart askboardplt:type="uint32">64</askboardplt:ledStart>
+            <askboardplt:ledEnd askboardplt:type="uint32">66</askboardplt:ledEnd>
+            <askboardplt:ledChainBypass askboardplt:type="boolean-type">false</askboardplt:ledChainBypass>
+          </askboardplt:ledUnit-List>
+        </askboardplt:ledstream-configSet>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">0</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">1</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">2</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">true</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">3</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">4</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+        <askboardplt:ledstream-class-manipulation-list>
+          <askboardplt:classNum askboardplt:type="led-class-num-type">5</askboardplt:classNum>
+          <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
+          <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
+          <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
+          <askboardplt:forceEnable askboardplt:type="boolean-type">false</askboardplt:forceEnable>
+          <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
+          <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">false</askboardplt:disableOnLinkDown>
+        </askboardplt:ledstream-class-manipulation-list>
+      </askboardplt:Ledstream-interface-list>
+    </askboardplt:device-list>
+    <askboardplt:UDSFilePath askboardplt:type="std-string">/tmp/cpss_uds</askboardplt:UDSFilePath>
+    <askboardplt:serdesMux>
+      <askboardplt:serdesMuxSchemePortMod askboardplt:type="uint32">8</askboardplt:serdesMuxSchemePortMod>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP0</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP1</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP2</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP3</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP4</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP5</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP6</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+      <askboardplt:serdesMuxSchemeList>
+        <askboardplt:serdesMuxScheme askboardplt:type="string">MAP7</askboardplt:serdesMuxScheme>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">1</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">6</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">2</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">7</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">0</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">4</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">3</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+        <askboardplt:serdesMuxList>
+          <askboardplt:serdesLane askboardplt:type="serdes-lane-type">5</askboardplt:serdesLane>
+        </askboardplt:serdesMuxList>
+      </askboardplt:serdesMuxSchemeList>
+    </askboardplt:serdesMux>
+  </askboardplt:ASK-Board>
+</data>
