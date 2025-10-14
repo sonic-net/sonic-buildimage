@@ -1,5 +1,42 @@
 #!/usr/bin/env bash
 
+## Populate or remove GNMI client cert entry based on TELEMETRY_CLIENT_CERT_VERIFY_ENABLED
+if [ "${TELEMETRY_CLIENT_CERT_VERIFY_ENABLED}" = "true" ]; then
+    if [ -n "${TELEMETRY_CLIENT_CNAME}" ]; then
+        nsenter --target 1 --pid --mount --uts --ipc --net env TELEMETRY_CLIENT_CNAME="$TELEMETRY_CLIENT_CNAME" bash -c '
+            cname="$TELEMETRY_CLIENT_CNAME"
+            key="GNMI_CLIENT_CERT|${cname}"
+            CURRENT_ENTRY=$(sonic-db-cli CONFIG_DB HGETALL "$key")
+            if [ -z "$CURRENT_ENTRY" ]; then
+                echo "Creating $key entry in CONFIG_DB"
+                RESULT=$(sonic-db-cli CONFIG_DB HSET "$key" role "gnmi_read")
+                echo "sonic-db-cli HSET result: $RESULT"
+            else
+                echo "$key already exists in CONFIG_DB"
+            fi
+        '
+    else
+        echo "TELEMETRY_CLIENT_CNAME not set, skipping CONFIG_DB update"
+    fi
+else
+    if [ -n "${TELEMETRY_CLIENT_CNAME}" ]; then
+        nsenter --target 1 --pid --mount --uts --ipc --net env TELEMETRY_CLIENT_CNAME="$TELEMETRY_CLIENT_CNAME" bash -c '
+            cname="$TELEMETRY_CLIENT_CNAME"
+            key="GNMI_CLIENT_CERT|${cname}"
+            CURRENT_ENTRY=$(sonic-db-cli CONFIG_DB HGETALL "$key")
+            if [ -n "$CURRENT_ENTRY" ]; then
+                echo "Removing $key entry from CONFIG_DB"
+                RESULT=$(sonic-db-cli CONFIG_DB DEL "$key")
+                echo "sonic-db-cli DEL result: $RESULT"
+            else
+                echo "No $key entry exists, nothing to remove"
+            fi
+        '
+    else
+        echo "TELEMETRY_CLIENT_CNAME not set, skipping CONFIG_DB cleanup"
+    fi
+fi
+
 ## Populate serial number to StateDB so telemetry could use it
 ## Only update if decode-syseeprom succeeds and value differs from Redis
 ## Set TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED=true to enable
