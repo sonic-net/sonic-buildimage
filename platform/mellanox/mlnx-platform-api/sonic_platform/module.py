@@ -336,18 +336,11 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
-        # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
         logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
-        if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
-            return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
-            logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
-            return return_value
-        elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
-            # Do not wait for result if we are rebooting NPU + DPUs
-            return_value = self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
-            logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
-            return return_value
-        raise RuntimeError(f"Invalid Reboot Type provided for {self._name}: {reboot_type}")
+        # no_wait=True is not supported at this point, because of race conditions with other drivers
+        return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
 
     def set_admin_state(self, up):
         """
