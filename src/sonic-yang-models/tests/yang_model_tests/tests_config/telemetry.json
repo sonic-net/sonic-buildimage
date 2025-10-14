@@ -72,7 +72,7 @@
             }
         }
     },
-    "TELEMETRY_TABLE_WITH_VALID_CONFIG": {
+    "TELEMETRY_TABLE_WITH_INCORRECT_VRF": {
         "sonic-telemetry:sonic-telemetry": {
             "sonic-telemetry:TELEMETRY": {
                 "certs": {
@@ -86,7 +86,64 @@
                     "port": "50051",
                     "save_on_set": "false",
                     "enable_crl": "true",
-                    "crl_expire_duration": "86400"
+                    "crl_expire_duration": "86400",
+                    "vrf": "Vrf-Red"
+                }
+            }
+        }
+    },
+    "TELEMETRY_TABLE_WITH_VALID_CONFIG_MGMT_VRF": {
+        "sonic-mgmt_vrf:sonic-mgmt_vrf": {
+            "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": "true"
+                }
+            }
+        },
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/telemetry/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
+                    "server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50051",
+                    "save_on_set": "false",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400",
+                    "vrf": "mgmt"
+                }
+            }
+        }
+    },
+    "TELEMETRY_TABLE_WITH_VALID_CONFIG_NON_MGMT_VRF": {
+        "sonic-vrf:sonic-vrf":{
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                    {
+                        "name":"Vrf-Blue"
+                    }
+                ]
+            }
+        },
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/telemetry/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
+                    "server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50051",
+                    "save_on_set": "false",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400",
+                    "vrf": "Vrf-Blue"
                 }
             }
         }
