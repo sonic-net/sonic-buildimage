@@ -35,3 +35,8 @@
 
 - name: "switchcard_fpga_bdf"
   lookup_command: "setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0'"
+
+# Commands to retrieve sysfs path for specific device.
+
+- name: "hwmon_cpu_sysfs_path"
+  lookup_command: "readlink -f /sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon*"
