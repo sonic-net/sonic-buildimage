@@ -81,7 +81,7 @@ class ThermalUpdater:
 
         # Module temperature sysfs nodes
         sfp_count = len(self._sfp_list) if self._sfp_list else 0
-        module_temp_nodes = ['input', 'threshold_hi', 'threshold_lo']
+        module_temp_nodes = ['input', 'threshold_hi', 'threshold_critical_hi']
         for sfp_index in range(sfp_count):
             for temp_node in module_temp_nodes:
                 conditions.append(lambda idx=sfp_index, node=temp_node: os.path.exists(f'/sys/module/sx_core/asic0/module{idx}/temperature/{node}'))

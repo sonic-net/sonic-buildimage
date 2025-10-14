@@ -614,9 +614,9 @@ class TestSfp:
         def mock_read_int_side_effect(file_path, *args, **kwargs):
             if 'temperature/input' in file_path:
                 return 448  # 56.0 * 8.0
-            elif 'temperature/threshold_lo' in file_path:
-                return 448  # 56.0 * 8.0
             elif 'temperature/threshold_hi' in file_path:
+                return 448  # 56.0 * 8.0
+            elif 'temperature/threshold_critical_hi' in file_path:
                 return 480  # 60.0 * 8.0
             return None
 

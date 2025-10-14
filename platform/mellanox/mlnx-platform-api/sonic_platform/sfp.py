@@ -897,7 +897,7 @@ class SFP(NvidiaSFPCommon):
             if not sw_control:
                 # Read thresholds from SDK sysfs
                 threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
-                threshold_lo_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_lo'
+                threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_critical_hi'
 
                 warning_threshold = utils.read_int_from_file(threshold_lo_file, log_func=None)
                 warning_threshold = warning_threshold / SFP_TEMPERATURE_SCALE if warning_threshold is not None else None

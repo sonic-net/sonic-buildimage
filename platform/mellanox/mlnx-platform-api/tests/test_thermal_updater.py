@@ -352,13 +352,13 @@ class TestThermalUpdater:
                 # Module temperature nodes for module 0
                 mock.call('/sys/module/sx_core/asic0/module0/temperature/input'),
                 mock.call('/sys/module/sx_core/asic0/module0/temperature/threshold_hi'),
-                mock.call('/sys/module/sx_core/asic0/module0/temperature/threshold_lo'),
+                mock.call('/sys/module/sx_core/asic0/module0/temperature/threshold_critical_hi'),
                 # Module EEPROM directory for module 0
                 mock.call('/sys/module/sx_core/asic0/module0/eeprom/'),
                 # Module temperature nodes for module 1
                 mock.call('/sys/module/sx_core/asic0/module1/temperature/input'),
                 mock.call('/sys/module/sx_core/asic0/module1/temperature/threshold_hi'),
-                mock.call('/sys/module/sx_core/asic0/module1/temperature/threshold_lo'),
+                mock.call('/sys/module/sx_core/asic0/module1/temperature/threshold_critical_hi'),
                 # Module EEPROM directory for module 1
                 mock.call('/sys/module/sx_core/asic0/module1/eeprom/'),
             ]
