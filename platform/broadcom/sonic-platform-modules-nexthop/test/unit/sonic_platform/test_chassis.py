@@ -10,6 +10,9 @@ python -m pytest test/unit/sonic_platform/test_chassis.py -v
 """
 
 import copy
+import os
+import sys
+import tempfile
 import time
 
 from unittest.mock import patch, Mock
@@ -20,6 +23,20 @@ NUM_TEST_SFPS = 32
 # Xcvr presence states used by xcvrd
 XCVR_INSERTED = "1"
 XCVR_REMOVED = "0"
+
+def _create_temp_file(content: str) -> str:
+    """
+    Creates a temporary file, under a temporary directory.
+    Args:
+        content: content to write to the temporary file.
+    Returns:
+        Path to the created file
+    """
+    root = tempfile.mkdtemp()
+    filepath = os.path.join(root, 'reboot-cause.txt')
+    with open(filepath, 'w+') as file:
+        file.write(content)
+    return filepath
 
 
 class SfpTestHelper:
@@ -199,3 +216,90 @@ class TestChassis:
         chassis.__init__(pddf_data=mock_pddf_data)
 
         assert chassis.get_watchdog() is None
+
+    def test_chassis_get_reboot_cause_sw_reboot(self, chassis):
+        EXPECTED_SW_REBOOT_CAUSE = "reboot"
+        EXPECTED_MINOR_CAUSES = "System powered off due to software disabling data plane power, System powered off due to software disabling data plane power, System powered off due to software disabling data plane power"
+
+        # Given
+        reboot_cause_filepath = _create_temp_file(
+            f"User issued '{EXPECTED_SW_REBOOT_CAUSE}' command [User: admin, Time: Thu Oct  2 11:22:56 PM UTC 2025]"
+        )
+        chassis.__init__(
+            pddf_data={},
+            pddf_plugin_data={
+                "REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}
+            },
+        )
+
+        # When
+        mock_adm1266 = sys.modules["sonic_platform"].adm1266
+        mock_adm1266.get_reboot_cause.return_value = (
+            "Power Loss",
+            EXPECTED_MINOR_CAUSES,
+        )
+
+        # Then
+        assert chassis.get_reboot_cause() == (
+            EXPECTED_SW_REBOOT_CAUSE,
+            EXPECTED_MINOR_CAUSES,
+        )
+
+    def test_chassis_get_reboot_cause_sw_kernel_panic(self, chassis):
+        # Given
+        reboot_cause_filepath = _create_temp_file(
+            f"Kernel Panic [Time: Thu Oct  2 11:22:56 PM UTC 2025]"
+        )
+        chassis.__init__(
+            pddf_data={},
+            pddf_plugin_data={"REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}},
+        )
+
+        # When
+        mock_adm1266 = sys.modules["sonic_platform"].adm1266
+        mock_adm1266.get_reboot_cause.return_value = None
+
+        # Then
+        assert chassis.get_reboot_cause() == (
+            "Kernel Panic",
+            "",
+        )
+
+    def test_chassis_get_reboot_cause_hw(self, chassis):
+        EXPECTED_HW_CAUSE = "Power Loss"
+        EXPECTED_HW_MINOR_CAUSE = "System powered off due to loss of input power on both PSUs, System powered off due to software disabling data plane power"
+
+        # Given
+        reboot_cause_filepath = _create_temp_file("")
+        chassis.__init__(
+            pddf_data={},
+            pddf_plugin_data={"REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}},
+        )
+
+        # When
+        mock_adm1266 = sys.modules["sonic_platform"].adm1266
+        mock_adm1266.get_reboot_cause.return_value = (
+            EXPECTED_HW_CAUSE,
+            EXPECTED_HW_MINOR_CAUSE,
+        )
+
+        # Then
+        assert chassis.get_reboot_cause() == (
+            EXPECTED_HW_CAUSE,
+            EXPECTED_HW_MINOR_CAUSE,
+        )
+
+    def test_chassis_get_reboot_cause_unknown(self, chassis):
+        # Given
+        reboot_cause_filepath = _create_temp_file("unknown")
+        chassis.__init__(
+            pddf_data={},
+            pddf_plugin_data={"REBOOT_CAUSE": {"reboot_cause_file": reboot_cause_filepath}},
+        )
+
+        # When
+        mock_adm1266 = sys.modules["sonic_platform"].adm1266
+        mock_adm1266.get_reboot_cause.return_value = None
+
+        # Then
+        assert chassis.get_reboot_cause() == ("Unknown", "Unknown")
