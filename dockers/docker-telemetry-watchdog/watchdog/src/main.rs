@@ -34,6 +34,8 @@ const CMD_TIMEOUT_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CMD_TIMEOUT_SECS"; // per-
 const GNMI_BASE_CMD: &str = "gnmi_get"; // assumed in PATH
 // optional: set to "false" to skip show api (gnmi xpath) probing
 const SHOW_API_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SHOW_API_PROBE_ENABLED";
+// optional: set to "true" to enable serial number probing
+const SERIALNUMBER_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_SERIALNUMBER_PROBE_ENABLED";
 const TARGET_NAME_ENV_VAR: &str = "TELEMETRY_WATCHDOG_TARGET_NAME"; // optional override for target_name
 const DEFAULT_TARGET_NAME: &str = "server.ndastreaming.ap.gbl";
 const DEFAULT_CA_CRT: &str = "/etc/sonic/telemetry/dsmsroot.cer";
@@ -136,11 +138,12 @@ fn run_gnmi_for_xpath(
     sec: &TelemetrySecurityConfig,
     target_name: &str,
     timeout: Duration,
+    xpath_target: &str,
 ) -> CommandResult {
     let addr = format!("127.0.0.1:{port}");
     let start = Instant::now();
     let mut cmd = Command::new(GNMI_BASE_CMD);
-    cmd.arg("-xpath_target").arg("SHOW")
+    cmd.arg("-xpath_target").arg(xpath_target)
         .arg("-xpath").arg(xpath)
         .arg("-target_addr").arg(addr)
         .arg("-logtostderr")
@@ -293,6 +296,13 @@ fn is_show_api_probe_enabled() -> bool {
     }
 }
 
+fn is_serialnumber_probe_enabled() -> bool {
+    match env::var(SERIALNUMBER_PROBE_ENV_VAR) {
+        Ok(v) if v.eq_ignore_ascii_case("true") => true,
+        _ => false, // default disabled
+    }
+}
+
 fn get_gnmi_port() -> u16 {
     match redis_hget("TELEMETRY|gnmi", "port") {
         Some(p) => p.parse::<u16>().unwrap_or_else(|_| {
@@ -366,20 +376,32 @@ fn main() {
                         if !check_port_result.starts_with("OK") { http_status = "HTTP/1.1 500 Internal Server Error"; }
 
                         // Only run xpath commands if port is OK
-                        if http_status == "HTTP/1.1 200 OK" && is_show_api_probe_enabled() {
-                            let (xpaths, xpath_load_errors) = load_xpath_list();
-                            if !xpath_load_errors.is_empty() {
-                                load_json_errors.extend(xpath_load_errors);
-                                http_status = "HTTP/1.1 500 Internal Server Error";
-                            }
+                        if http_status == "HTTP/1.1 200 OK" {
                             let port = get_gnmi_port();
                             let sec_cfg = get_security_config();
                             let timeout = read_timeout();
                             let target_name = get_target_name();
-                            for xp in xpaths {
-                                let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout);
-                                if !res.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
-                                cmd_results.push(res);
+
+                            // Check Serial Number
+                            if is_serialnumber_probe_enabled() {
+                                let xpath_sn = "DEVICE_METADATA/localhost/chassis_serial_number";
+                                let res_sn = run_gnmi_for_xpath(&xpath_sn, port, &sec_cfg, &target_name, timeout, "STATE_DB");
+                                if !res_sn.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_sn);
+                            }
+
+                            // Check SHOW API xpaths
+                            if is_show_api_probe_enabled() {
+                                let (xpaths, xpath_load_errors) = load_xpath_list();
+                                if !xpath_load_errors.is_empty() {
+                                    load_json_errors.extend(xpath_load_errors);
+                                    http_status = "HTTP/1.1 500 Internal Server Error";
+                                }
+                                for xp in xpaths {
+                                    let res = run_gnmi_for_xpath(&xp, port, &sec_cfg, &target_name, timeout, "SHOW");
+                                    if !res.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                    cmd_results.push(res);
+                                }
                             }
                         }
                     }
