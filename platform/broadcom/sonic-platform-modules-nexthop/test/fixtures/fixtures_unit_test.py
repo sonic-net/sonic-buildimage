@@ -27,7 +27,7 @@ class PddfChassisMock:
         self._watchdog = None
         self._eeprom = Mock()
         self._eeprom.modelstr = Mock(return_value="Test Model")
-        self.plugin_data = {'REBOOT_CAUSE': {'reboot_cause_file': '/tmp/test_reboot_cause'}}
+        self.plugin_data = pddf_plugin_data or {'REBOOT_CAUSE': {'reboot_cause_file': '/tmp/test_reboot_cause'}}
 
     def get_all_sfps(self):
         return self._sfp_list
@@ -69,83 +69,155 @@ def process_input(json_file):
 
     return blackbox_data, expected_records, expected_causes
 
-class DpmInfoMock:
+class Adm1266PlatformSpecMock:
+    pddf_plugin_data = {
+        "DPM": {
+            "dpm-mock": {
+                "dpm_signal_to_fault_cause": [
+                    {
+                        "pdio_mask": "0x0001",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0001",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "PSU_VIN_LOSS",
+                        "hw_desc": "Both PSUs lost input power",
+                        "summary": "PSU input power lost",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                    },
+                    {
+                        "pdio_mask": "0x0002",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0002",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "OVER_TEMP",
+                        "hw_desc": "Switch card temp sensor OT",
+                        "summary": "Temperature exceeded threshold",
+                        "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER"
+                    },
+                    {
+                        "pdio_mask": "0x0004",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0004",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "CPU_PWR_BAD",
+                        "hw_desc": "CPU card power bad",
+                        "summary": "CPU power failure",
+                        "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                    },
+                    {
+                        "pdio_mask": "0x0008",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0008",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "WATCHDOG",
+                        "hw_desc": "FPGA watchdog expired",
+                        "summary": "Watchdog timeout",
+                        "reboot_cause": "REBOOT_CAUSE_WATCHDOG"
+                    },
+                    {
+                        "pdio_mask": "0x0010",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0010",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "ASIC_OT",
+                        "hw_desc": "ASIC MAX_TEMP exceeded OT threshold",
+                        "summary": "ASIC overtemperature",
+                        "reboot_cause": "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC"
+                    },
+                    {
+                        "pdio_mask": "0x0020",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0020",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "NO_FAN_PRSNT",
+                        "hw_desc": "All 4 fans have same ID=0xf",
+                        "summary": "No fans present",
+                        "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
+                    },
+                    {
+                        "pdio_mask": "0x0040",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0040",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "CMD_PWR_CYC",
+                        "hw_desc": "Software commanded power cycle",
+                        "summary": "Software power cycle",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                    },
+                    {
+                        "pdio_mask": "0x0080",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0080",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "DP_PWR_ON",
+                        "hw_desc": "P2 only: from shift chain; not used on P1",
+                        "summary": "DP power on",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                    },
+                    {
+                        "pdio_mask": "0x0100",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0100",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "FPGA_CMD_PCYC",
+                        "hw_desc": "FPGA commanded power cycle",
+                        "summary": "FPGA power cycle",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                    },
+                    {
+                        "pdio_mask": "0x0200",
+                        "gpio_mask": "0x0000",
+                        "pdio_value": "0x0200",
+                        "gpio_value": "0x0000",
+                        "hw_cause": "CMD_ASIC_PWR_OFF",
+                        "hw_desc": "FPGA command ASIC power off",
+                        "summary": "ASIC power off",
+                        "reboot_cause": "REBOOT_CAUSE_POWER_LOSS"
+                    }
+                ],
+                "vpx_to_rail_desc": {
+                    "6": "POS0V75_S5",
+                    "7": "POS1V8_S5",
+                    "8": "POS3V3_S5",
+                    "9": "POS1V1_S0",
+                    "10": "POS0V78_S0",
+                    "11": "POS0V75_S0",
+                    "12": "POS1V8_S0",
+                    "13": "POS3V3_S0",
+                },
+                "vhx_to_rail_desc": {
+                    "5": "POS5V0_S0"
+                }
+            }
+        }
+    }
+
     def __init__(self):
-        # Carelessly made up stuff - Not accurate for any HW platform
-
-        self.dpm_signals = {
-            1 : 2,  # PDIO bit 0 - Fault code bit 2
-            14 : 0, # PDIO bit 13 - Fault code bit 0
-            15 : 1  # PDIO bit 14 - Fault code bit 1
-        }
-        self.dpm_table = {
-            0 : "",
-            1 : "THERMTRIP_L: CPU has exceeded Tdie,shutdown",
-            2 : "CPU_PWR_CYC_REQ",
-            3 : "BMC_PWR_CYC_REQ",
-            4 : "FPGA_PWR_CYC_REQ",
-            5 : "Switch Card CP power bad"
-        }
-        self.power_fault_cause = {
-            0: ("PSU_VIN_LOSS",     "Both PSUs lost input power"),  # PDIO1 (0)
-            1: ("OVER_TEMP",        "Switch card temp sensor OT)"), # PDIO2 (1)
-            2: ("CPU_PWR_BAD",      "CPU card power bad"),          # PDIO3 (2)
-            3: ("WACHDOG",          "FPGA watchdog expired"),       # PDIO4 (3)
-            4: ("ASIC_OT",          "ASIC MAX_TEMP exceeded OT threshold"), # PDIO5 (4)
-            5: ("NO_FAN_PRSNT",     "All 4 fans have same ID=0xf"),         # PDIO6 (5)
-            6: ("CMD_PWR_CYC",      "Software commanded power cycle"),      # PDIO7 (6)
-            7: ("DP_PWR_ON",        "P2 only: from shift chain; not used on P1"), # PDIO8 (7)
-            9: ("FPGA_CMD_PCYC",    "FPGA commanded power cycle"),                # PDIO10 (9)
-            10:("CMD_ASIC_PWR_OFF", "FPGA command ASIC power off"),               # PDIO11 (10)
-        }
-
-        self.vp_to_pdio_desc = {
-                5: { "pdio": 2, "rail": "POS0V75_S5" },  # VP6  -> PDIO3
-                6: { "pdio": 3, "rail": "POS1V8_S5" },   # VP7  -> PDIO4
-                7: { "pdio": 4, "rail": "POS3V3_S5" },   # VP8  -> PDIO5
-                8: { "pdio": 6, "rail": "POS1V1_S0" },   # VP9  -> PDIO7
-                9: { "pdio": 7, "rail": "POS0V78_S0" },  # VP10 -> PDIO8
-                10: { "pdio": 8, "rail": "POS0V75_S0" }, # VP11 -> PDIO9
-                11: { "pdio": 9, "rail": "POS1V8_S0" },  # VP12 -> PDIO10
-                12: { "pdio": 10, "rail": "POS3V3_S0" }, # VP13 -> PDIO11
-        }
-
-        self.vh_to_pdio_desc = {
-                4: { "pdio": 5, "rail": "POS5V0_S0" },   # VH4_UV (bit 4) -> PDIO6 (bit 5)
-        }
-        self._create_nvmem_path()
-
-    def get_vp_to_pdio_desc(self):
-        return self.vp_to_pdio_desc
-
-    def get_vh_to_pdio_desc(self):
-        return self.vh_to_pdio_desc
-
-    def get_dpm_signals(self):
-        return self.dpm_signals
-
-    def get_dpm_table(self):
-        return self.dpm_table
-
-    def get_power_fault_cause(self):
-        return self.power_fault_cause
-
-    def get_nvmem_path(self):
-        return self.nvmem_path
-
-    def get_name(self):
-        return "dpm-mock"
-
-    def _create_nvmem_path(self):
-        """Create temporary file with binary data and return path"""
+        # Create temporary nvmem file
         nvmem_file = tempfile.NamedTemporaryFile(delete=False)
         nvmem_file.close()
-        self.nvmem_path = nvmem_file.name
+        nvmem_path = nvmem_file.name
+        Adm1266PlatformSpecMock.pddf_plugin_data["DPM"]["dpm-mock"]["nvmem_path"] = nvmem_path
+        self.nvmem_path = nvmem_path
+
+        """
+        Create a Adm1266PlatformSpec instance using mock data for testing.
+        """
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        adm1266_platform_spec_path = os.path.join(test_dir, "../../common/sonic_platform/adm1266_platform_spec.py")
+        spec = importlib.util.spec_from_file_location("adm1266_platform_spec", adm1266_platform_spec_path)
+        adm1266_platform_spec_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adm1266_platform_spec_module)
+        adm1266_platform_spec = adm1266_platform_spec_module.Adm1266PlatformSpec("dpm-mock", Adm1266PlatformSpecMock.pddf_plugin_data)
+
+        # Store cleanup info for later
+        self.adm1266_platform_spec = adm1266_platform_spec
 
     def __del__(self):
         """Clean up temporary file"""
         if os.path.exists(self.nvmem_path):
             os.unlink(self.nvmem_path)
+
 
 class Adm1266Mock:
     """
@@ -153,30 +225,51 @@ class Adm1266Mock:
     Reads test data from provided file paths.
     """
     def __init__(self):
-        os.path.dirname(__file__),
+        test_dir = os.path.dirname(__file__)
 
-        json_file = os.path.join(os.path.dirname(__file__), "adm1266_test_spec.json")
+        json_file = os.path.join(test_dir, "adm1266_test_spec.json")
         data, records, causes = process_input(json_file)
         self.blackbox_input = data
         self.expected_records = records
         self.expected_causes = causes
 
-        self.dpm_info = DpmInfoMock()
+        self.adm1266_platform_spec_mock = Adm1266PlatformSpecMock()
 
-        # Load the adm1266 module directly from file path
-        test_dir = os.path.dirname(os.path.realpath(__file__))
+        # SET UP MOCKS BEFORE LOADING adm1266.py
+        # Mock sonic_platform_base.chassis_base that adm1266.py imports
+        chassis_base_mock = Mock()
+        chassis_base_mock.ChassisBase = Mock()
+        sys.modules["sonic_platform_base.chassis_base"] = chassis_base_mock
+
+        # Mock sonic_platform.adm1266_platform_spec so the import works
+        adm1266_platform_spec_mock = Mock()
+        adm1266_platform_spec_mock.Adm1266PlatformSpec = lambda name, pddf_data: self.adm1266_platform_spec_mock.adm1266_platform_spec
+        sys.modules["sonic_platform.adm1266_platform_spec"] = adm1266_platform_spec_mock
+
+        # Mock SystemDPMLogHistory to avoid file system operations
+        dpm_history = Mock()
+        dpm_history.save = Mock()
+        sys.modules["sonic_platform.dpm"] = dpm_history
+
+        # NOW load the adm1266 module directly from file path
         adm1266_path = os.path.join(test_dir, "../../common/sonic_platform/adm1266.py")
-
         spec = importlib.util.spec_from_file_location("adm1266", adm1266_path)
         adm1266_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(adm1266_module)
-        self.adm = adm1266_module.Adm1266(self.dpm_info)
 
+        self.adm = adm1266_module.Adm1266(self.adm1266_platform_spec_mock.adm1266_platform_spec)
+        self.adm_get_reboot_cause = adm1266_module.get_reboot_cause
+
+        # Set up path to test PDDF plugin file
+        # Use absolute path in the container
+        self.test_pddf_path = "/sonic/device/nexthop/x86_64-nexthop_4010-r0/pddf/pd-plugin.json"
+
+        # Write the test blackbox data to the nvmem file
         self._setup_nvmem_file(data)
 
     def _setup_nvmem_file(self, binary_data):
-        """Populate nvmem file with binary data """
-        with open(self.dpm_info.get_nvmem_path(), 'wb') as nvmem_file:
+        """Populate nvmem file with binary data"""
+        with open(self.adm1266_platform_spec_mock.nvmem_path, 'wb') as nvmem_file:
             nvmem_file.write(binary_data)
 
     def get_blackbox_input(self):
@@ -194,14 +287,11 @@ class Adm1266Mock:
     def get_blackbox_records(self):
         return self.adm.get_blackbox_records()
 
-    def get_reboot_causes(self):
-        return self.adm.get_reboot_causes()
-
     def parse_blackbox(self, data):
-        return self.adm.parse_blackbox(data)
+        return self.adm._parse_blackbox(data)
 
     def get_reboot_cause(self):
-        return self.adm.get_reboot_cause()
+        return self.adm_get_reboot_cause(self.test_pddf_path)
 
     def clear_blackbox(self):
         self.adm.clear_blackbox()
@@ -308,31 +398,6 @@ def chassis(mock_pddf_data):
     spec.loader.exec_module(chassis_module)
 
     return chassis_module.Chassis(pddf_data=mock_pddf_data)
-
-@pytest.fixture
-def watchdog(mock_pddf_data):
-    """
-    Fixture providing a Watchdog instance for testing.
-    """
-    # Set up the specific WatchdogBase mock with our test implementation
-    watchdog_base_mock = Mock()
-    watchdog_base_mock.WatchdogBase = WatchdogBaseMock
-    sys.modules["sonic_platform_base.watchdog_base"] = watchdog_base_mock
-
-    # Load the module directly from file path
-    test_dir = os.path.dirname(os.path.realpath(__file__))
-    watchdog_path = os.path.join(test_dir, "../../common/sonic_platform/watchdog.py")
-
-    spec = importlib.util.spec_from_file_location("watchdog", watchdog_path)
-    watchdog_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(watchdog_module)
-
-    return watchdog_module.Watchdog(
-        fpga_pci_addr="FAKE_FPGA_PCI_ADDR",
-        event_driven_power_cycle_control_reg_offset=0x28,
-        watchdog_counter_reg_offset=0x1E0,
-    )
-
 
 @pytest.fixture
 def watchdog(mock_pddf_data):

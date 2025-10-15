@@ -30,7 +30,6 @@
     "std_kos": [
       "at24",
       "i2c-dev",
-      "adm1266",
       "optoe"
     ],
     "pddf_kos": [
@@ -56,6 +55,7 @@
       "pddf_custom_mdio_algo",
       "nh_pmbus_core",
       "nh_tda38740",
+      "nh_adm1266",
       "nh_tmp464"
     ]
   },
@@ -573,11 +573,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp2_max"
+          "drv_attr_name": "temp2_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp2_crit"
+          "drv_attr_name": "temp2_max"
         }
       ]
     }
@@ -600,11 +600,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp3_max"
+          "drv_attr_name": "temp3_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp3_crit"
+          "drv_attr_name": "temp3_max"
         }
       ]
     }
@@ -627,11 +627,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp4_max"
+          "drv_attr_name": "temp4_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp4_crit"
+          "drv_attr_name": "temp4_max"
         }
       ]
     }
@@ -654,11 +654,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp5_max"
+          "drv_attr_name": "temp5_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp5_crit"
+          "drv_attr_name": "temp5_max"
         }
       ]
     }
@@ -681,11 +681,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp6_max"
+          "drv_attr_name": "temp6_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp6_crit"
+          "drv_attr_name": "temp6_max"
         }
       ]
     }
@@ -708,11 +708,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp7_max"
+          "drv_attr_name": "temp7_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp7_crit"
+          "drv_attr_name": "temp7_max"
         }
       ]
     }
@@ -735,11 +735,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp8_max"
+          "drv_attr_name": "temp8_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp8_crit"
+          "drv_attr_name": "temp8_max"
         }
       ]
     }
@@ -762,11 +762,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp9_max"
+          "drv_attr_name": "temp9_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp9_crit"
+          "drv_attr_name": "temp9_max"
         }
       ]
     }
@@ -789,11 +789,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp2_max"
+          "drv_attr_name": "temp2_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp2_crit"
+          "drv_attr_name": "temp2_max"
         }
       ]
     }
@@ -816,11 +816,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp3_max"
+          "drv_attr_name": "temp3_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp3_crit"
+          "drv_attr_name": "temp3_max"
         }
       ]
     }
@@ -843,11 +843,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp4_max"
+          "drv_attr_name": "temp4_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp4_crit"
+          "drv_attr_name": "temp4_max"
         }
       ]
     }
@@ -870,11 +870,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp5_max"
+          "drv_attr_name": "temp5_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp5_crit"
+          "drv_attr_name": "temp5_max"
         }
       ]
     }
@@ -897,11 +897,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp6_max"
+          "drv_attr_name": "temp6_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp6_crit"
+          "drv_attr_name": "temp6_max"
         }
       ]
     }
@@ -924,11 +924,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp7_max"
+          "drv_attr_name": "temp7_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp7_crit"
+          "drv_attr_name": "temp7_max"
         }
       ]
     }
@@ -951,11 +951,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp8_max"
+          "drv_attr_name": "temp8_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp8_crit"
+          "drv_attr_name": "temp8_max"
         }
       ]
     }
@@ -978,11 +978,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp9_max"
+          "drv_attr_name": "temp9_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp9_crit"
+          "drv_attr_name": "temp9_max"
         }
       ]
     }
@@ -12925,7 +12925,7 @@
       "topo_info": {
         "parent_bus": "0x7",
         "dev_addr": "0x41",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -12939,7 +12939,7 @@
       "topo_info": {
         "parent_bus": "0x9",
         "dev_addr": "0x41",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -12953,7 +12953,7 @@
       "topo_info": {
         "parent_bus": "0x9",
         "dev_addr": "0x43",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -12967,7 +12967,7 @@
       "topo_info": {
         "parent_bus": "0x9",
         "dev_addr": "0x45",
-        "dev_type": "adm1266"
+        "dev_type": "nh_adm1266"
       }
     }
   },
@@ -15630,11 +15630,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp2_max"
+          "drv_attr_name": "temp2_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp2_crit"
+          "drv_attr_name": "temp2_max"
         }
       ]
     }
@@ -15657,11 +15657,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp3_max"
+          "drv_attr_name": "temp3_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp3_crit"
+          "drv_attr_name": "temp3_max"
         }
       ]
     }
@@ -15684,11 +15684,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp4_max"
+          "drv_attr_name": "temp4_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp4_crit"
+          "drv_attr_name": "temp4_max"
         }
       ]
     }
@@ -15711,11 +15711,11 @@
         },
         {
           "attr_name": "temp1_high_threshold",
-          "drv_attr_name": "temp5_max"
+          "drv_attr_name": "temp5_crit"
         },
         {
           "attr_name": "temp1_high_crit_threshold",
-          "drv_attr_name": "temp5_crit"
+          "drv_attr_name": "temp5_max"
         }
       ]
     }
