@@ -22,7 +22,7 @@ struct Cli {
     service: Option<Vec<String>>,
 
     #[arg(
-        short = 'd', 
+        short = 'd',
         long = "dependent",
         num_args = 0..,
         help = "other dependent services"
@@ -33,6 +33,10 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    const DEFAULT_DATABASE_GLOBAL_CONFIG_PATH: &'static str = "/var/run/redis/sonic-db/database_global.json";
+    if std::path::Path::new(DEFAULT_DATABASE_GLOBAL_CONFIG_PATH).exists() {
+        swss_common::sonic_db_config_initialize_global(DEFAULT_DATABASE_GLOBAL_CONFIG_PATH, true)?;
+    }
     let identity = CString::new("docker-wait-any-rs")
         .map_err(|e| Error::Syslog(format!("invalid identity string: {}", e)))?;
     let syslog = syslog_tracing::Syslog::new(

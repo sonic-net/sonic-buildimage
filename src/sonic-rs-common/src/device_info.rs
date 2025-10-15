@@ -24,6 +24,11 @@ impl StateDBConnector {
         let db = DbConnector::new_named("STATE_DB", true, 0)?;
         Ok(StateDBConnector { db })
     }
+
+    pub fn new_with_namespace(namespace: &str) -> std::result::Result<Self, swss_common::Exception> {
+        let db = DbConnector::new_keyed("STATE_DB", false, 0, "", namespace)?;
+        Ok(StateDBConnector { db })
+    }
 }
 
 impl StateDBTrait for StateDBConnector {
@@ -65,6 +70,12 @@ pub fn is_fast_reboot_enabled_with_db<T: StateDBTrait>(state_db: &T) -> Result<b
 // Public API functions using production database
 pub fn is_warm_restart_enabled(container_name: &str) -> Result<bool> {
     let state_db = StateDBConnector::new()
+        .map_err(|e| DeviceInfoError::SwSS(e))?;
+    is_warm_restart_enabled_with_db(container_name, &state_db)
+}
+
+pub fn is_warm_restart_enabled_in_namespace(container_name: &str, namespace: &str) -> Result<bool> {
+    let state_db = StateDBConnector::new_with_namespace(namespace)
         .map_err(|e| DeviceInfoError::SwSS(e))?;
     is_warm_restart_enabled_with_db(container_name, &state_db)
 }
