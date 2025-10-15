@@ -1815,6 +1815,19 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_AGGREGATE_ADDRESS": {
+            "192.168.0.0/24": {
+                "bbr-required": "true",
+                "summary-only": "false",
+                "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+            },
+            "fc00::/63": {
+                "bbr-required": "true",
+                "summary-only": "true",
+                "as-set": "true"
+            }
+        },
         "BGP_BBR": {
             "all": {
                 "status": "enabled"
@@ -3133,6 +3146,18 @@
                     "OUT_CURR_OCCUPANCY_BYTES"
                 ]
             }
+        },
+        "STORMOND_CONFIG": {
+            "INTERVALS": {
+                "daemon_polling_interval" : "3600",
+                "fsstats_sync_interval"   : "86400"
+            }
+        },
+        "HEARTBEAT": {
+            "orchagent": {
+                "heartbeat_interval"   : "10000",
+                "alert_interval"       : "60000"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -3144,18 +3169,6 @@
         "TACPLUS": {
             "global": {
             }
-        }
-    },
-    "STORMOND_CONFIG": {
-        "INTERVALS": {
-            "daemon_polling_interval" : "3600",
-            "fsstats_sync_interval"   : "86400"
-        }
-    },
-    "HEARTBEAT": {
-        "orchagent": {
-            "heartbeat_interval"   : "10000",
-            "alert_interval"       : "60000"
         }
     }
 }

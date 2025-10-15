@@ -158,7 +158,6 @@ def get_current_running_from_DB(always_running_containers):
 
     return running_containers
 
-
 def get_current_running_from_dockers():
     """
     @summary: This function will get all running containers from
@@ -172,12 +171,15 @@ def get_current_running_from_dockers():
     try:
         lst = ctrs.list(filters={"status": "running"})
         for ctr in lst:
-            running_containers.add(ctr.name)
+            # Prefer raw_container_name label over actual name
+            if ctr.labels and "raw_container_name" in ctr.labels:
+                running_containers.add(ctr.labels["raw_container_name"])
+            else:
+                running_containers.add(ctr.name)
     except docker.errors.APIError as err:
-        print("Failed to retrieve the running container list. Error: '{}'".format(err))
+        print(f"Failed to retrieve the running container list. Error: '{err}'")
         pass
     return running_containers
-
 
 def get_current_running_containers(always_running_containers):
     """

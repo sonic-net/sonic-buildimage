@@ -57,21 +57,31 @@
                 ],
                 "option-data": [
     {%- for option_name, config in subnet_info["customized_options"].items() %}
+    {%- if config["option_type"] == "customized" %}
                     {
                         "name": "{{ option_name }}",
                         "data": "{{ config["value"] }}",
                         "always-send": {{ config["always_send"] }}
                     },
+    {%- elif config["option_type"] == "standard" %}
+                    {
+                        "code": {{ config["id"] }},
+                        "data": "{{ config["value"] }}",
+                        "always-send": {{ config["always_send"] }},
+                        "csv-format": true
+                    },
+    {%- endif %}
     {%- endfor %}
-    {%- if "gateway" in subnet_info %}
+    {%- if "gateway" in subnet_info -%}
                     {
                         "name": "routers",
                         "data": "{{ subnet_info["gateway"] }}"
                     },
-    {%- endif %}
+    {%- endif -%}
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "{{ subnet_info["server_id"] }}"
+                        "data": "{{ subnet_info["dhcp_server_id_option"]["value"] }}",
+                        "always-send": {{ subnet_info["dhcp_server_id_option"]["always_send"] }}
                     }
                 ],
                 "valid-lifetime": {{ subnet_info["lease_time"] if "lease_time" in subnet_info else default_lease_time }},
