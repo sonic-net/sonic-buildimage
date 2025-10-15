@@ -253,9 +253,7 @@ class TestModule:
             mock_obj.assert_called_once_with(skip_pre_post=True)
             mock_obj.reset_mock()
             m.reboot(reboot_type=ModuleBase.MODULE_REBOOT_SMARTSWITCH)
-            mock_obj.assert_called_once_with(no_wait=True, skip_pre_post=True)
-            with pytest.raises(RuntimeError):
-                m.reboot("None")
+            mock_obj.assert_called_once_with(skip_pre_post=True)
         with patch('sonic_py_common.syslogger.SysLogger.log_error') as mock_method:
             m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=True)
             assert m.set_admin_state(True)

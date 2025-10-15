@@ -1,2 +1,7 @@
-{%- set default_topo = 't1' %}
+{# set default_topo based on switch_role #}
+{%- if DEVICE_METADATA is defined and 'lowerspinerouter' in DEVICE_METADATA['localhost']['type'].lower() -%}
+{%-         set default_topo = 'lt2' %}
+{%- else %}
+{%-         set default_topo = 't1' %}
+{%- endif %}
 {%- include 'buffers_config.j2' %}
