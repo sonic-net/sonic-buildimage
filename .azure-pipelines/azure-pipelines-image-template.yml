@@ -105,13 +105,21 @@ jobs:
               PTF_IMAGE_TAG="pr-$(System.PullRequest.PullRequestNumber)-$(Build.BuildId)"
               echo "PTF_IMAGE_TAG set to: $PTF_IMAGE_TAG"
               echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]$PTF_IMAGE_TAG"
+
+              # Construct Azure DevOps artifact download URL for docker-ptf.gz
+              ARTIFACT_NAME="sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)"
+              PTF_ARTIFACT_URL="$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_apis/build/builds/$(Build.BuildId)/artifacts?artifactName=$ARTIFACT_NAME&api-version=6.0&%24format=file&subPath=%2Ftarget%2Fdocker-ptf.gz"
+              echo "PTF_ARTIFACT_URL set to: $PTF_ARTIFACT_URL"
+              echo "##vso[task.setvariable variable=PTF_ARTIFACT_URL;isOutput=true]$PTF_ARTIFACT_URL"
             else
               echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
               echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]"
+              echo "##vso[task.setvariable variable=PTF_ARTIFACT_URL;isOutput=true]"
             fi
           else
-            echo "Not a PR build, setting empty PTF_IMAGE_TAG"
+            echo "Not a PR build, setting empty PTF_IMAGE_TAG and PTF_ARTIFACT_URL"
             echo "##vso[task.setvariable variable=PTF_IMAGE_TAG;isOutput=true]"
+            echo "##vso[task.setvariable variable=PTF_ARTIFACT_URL;isOutput=true]"
           fi
 
           # Original logic for master branch builds
@@ -157,8 +165,7 @@ jobs:
         env:
           REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
           REGISTRY_USERNAME: $(REGISTRY_USERNAME)
-          REGISTRY_PASSWD: $(REGISTRY_PASSWD)
-        displayName: Publish to Docker Registry and Copy Artifacts
+egistry and Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)
         artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
