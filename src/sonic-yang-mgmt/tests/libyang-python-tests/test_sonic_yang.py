@@ -233,17 +233,15 @@ class Test_SonicYang(object):
     def test_get_data_type(self, yang_s, data):
         for node in data['data_type']:
             xpath = str(node['xpath'])
-            expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
-            data_type = yang_s._get_data_type(xpath)
+            expected_type = node['data_type']
+            data_type = yang_s.get_data_type(xpath)
             assert expected_type == data_type
 
     def test_get_leafref_type(self, yang_s, data):
         for node in data['leafref_type']:
             xpath = str(node['xpath'])
-            expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
-            data_type = yang_s._get_leafref_type(xpath)
+            expected_type = node['data_type']
+            data_type = yang_s.get_leafref_type(xpath)
             assert expected_type == data_type
 
     def test_get_leafref_path(self, yang_s, data):
@@ -256,9 +254,8 @@ class Test_SonicYang(object):
     def test_get_leafref_type_schema(self, yang_s, data):
         for node in data['leafref_type_schema']:
             xpath = str(node['xpath'])
-            expected = node['data_type']
-            expected_type = yang_s._str_to_type(expected)
-            data_type = yang_s._get_leafref_type_schema(xpath)
+            expected_type = node['data_type']
+            data_type = yang_s.get_leafref_type_schema(xpath)
             assert expected_type == data_type
 
     def test_configdb_path_to_xpath(self, yang_s, data):
