@@ -1,5 +1,6 @@
 {
     "chassis": {
+        
         "name": "M2-W6520-48C8QC",
         "thermal_manager": false,
         "status_led": {
