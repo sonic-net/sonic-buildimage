@@ -36,7 +36,11 @@ try:
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
-    from sonic_platform_base.sonic_xcvr.api.public import cmis, sff8636, sff8436
+    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
+
+    from sonic_platform_base.sonic_xcvr.api.public import cmis as cmis_api
+    from sonic_platform_base.sonic_xcvr.codes.public import cmis as cmis_codes
+    from sonic_platform_base.sonic_xcvr.mem_maps.public import cmis as cmis_mem
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -72,6 +76,7 @@ QSFP_DD_TYPE_CODE_LIST = [
 ]
 
 RJ45_TYPE = "RJ45"
+CPO_TYPE = "CPO"
 
 #variables for sdk
 REGISTER_NUM = 1
@@ -375,19 +380,236 @@ class NvidiaSFPCommon(SfpOptoeBase):
         error_description = NvidiaSFPCommon.SDK_ERRORS_TO_DESCRIPTION.get(error_type)
         sfp_state = str(sfp_state_bits)
         return sfp_state, error_description
-    
+
+    # read eeprom specific bytes beginning from offset with size as num_bytes
+    def read_eeprom(self, offset, num_bytes):
+        """
+        Read eeprom specific bytes beginning from a random offset with size as num_bytes
+        Returns:
+            bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
+            None, if the read_eeprom fails
+        """
+        return self._read_eeprom(offset, num_bytes)
+
+    def _read_eeprom(self, offset, num_bytes, log_on_error=True):
+        """Read eeprom specific bytes beginning from a random offset with size as num_bytes
+
+        Args:
+            offset (int): read offset
+            num_bytes (int): read size
+            log_on_error (bool, optional): whether log error when exception occurs. Defaults to True.
+
+        Returns:
+            bytearray: the content of EEPROM
+        """
+        result = bytearray(0)
+        while num_bytes > 0:
+            _, page, page_offset = self._get_page_and_page_offset(offset)
+            if not page:
+                return None
+
+            try:
+                with open(page, mode='rb', buffering=0) as f:
+                    f.seek(page_offset)
+                    content = f.read(num_bytes)
+                    if not result:
+                        result = content
+                    else:
+                        result += content
+                    read_length = len(content)
+                    if read_length == 0:
+                        logger.log_error(f'SFP {self.sdk_index}: EEPROM page {page} is empty, no data retrieved')
+                        return None
+                    num_bytes -= read_length
+                    if num_bytes > 0:
+                        page_size = f.seek(0, os.SEEK_END)
+                        if page_offset + read_length == page_size:
+                            offset += read_length
+                        else:
+                            # Indicate read finished
+                            num_bytes = 0
+                    if ctypes.get_errno() != 0:
+                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+                    logger.log_debug(f'read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
+                        f'size={read_length}, data={content}')
+            except (OSError, IOError) as e:
+                if log_on_error:
+                    logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, '\
+                        f'size={num_bytes}, offset={offset}, error = {e}')
+                return None
+
+        return bytearray(result)
+
+    # write eeprom specific bytes beginning from offset with size as num_bytes
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        """
+        write eeprom specific bytes beginning from a random offset with size as num_bytes
+        and write_buffer as the required bytes
+        Returns:
+            Boolean, true if the write succeeded and false if it did not succeed.
+        Example:
+            mlxreg -d /dev/mst/mt52100_pciconf0 --reg_name MCIA --indexes slot_index=0,module=1,device_address=154,page_number=5,i2c_device_address=0x50,size=1,bank_number=0 --set dword[0]=0x01000000 -y
+        """
+        if num_bytes != len(write_buffer):
+            logger.log_error("Error mismatch between buffer length and number of bytes to be written")
+            return False
+
+        while num_bytes > 0:
+            page_num, page, page_offset = self._get_page_and_page_offset(offset)
+            if not page:
+                return False
+
+            try:
+                if self._is_write_protected(page_num, page_offset, num_bytes):
+                    # write limited eeprom is not supported
+                    raise IOError('write limited bytes')
+                with open(page, mode='r+b', buffering=0) as f:
+                    f.seek(page_offset)
+                    ret = f.write(write_buffer[0:num_bytes])
+                    written_buffer = write_buffer[0:ret]
+                    if ret != num_bytes:
+                        page_size = f.seek(0, os.SEEK_END)
+                        if page_offset + ret == page_size:
+                            # Move to next page
+                            write_buffer = write_buffer[ret:num_bytes]
+                            offset += ret
+                        else:
+                            raise IOError(f'write return code = {ret}')
+                    num_bytes -= ret
+                    if ctypes.get_errno() != 0:
+                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+                    logger.log_debug(f'write EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
+                        f'size={ret}, left={num_bytes}, data={written_buffer}')
+            except (OSError, IOError) as e:
+                data = ''.join('{:02x}'.format(x) for x in write_buffer)
+                logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, '\
+                    f'offset={offset}, data = {data}, error = {e}')
+                return False
+        return True
+
+
+    def _is_write_protected(self, page, page_offset, num_bytes):
+        """Check if the EEPROM read/write operation hit limitation bytes
+
+        Args:
+            page (str): EEPROM page path
+            page_offset (int): EEPROM page offset
+            num_bytes (int): read/write size
+
+        Returns:
+            bool: True if the limited bytes is hit
+        """
+        try:
+            if self.is_sw_control():
+                return False
+        except Exception as e:
+            logger.log_notice(f'Module is under initialization, cannot write module EEPROM - {e}')
+            return True
+
+        eeprom_path = self._get_eeprom_path()
+        limited_data = limited_eeprom.get(self._get_sfp_type_str(eeprom_path))
+        if not limited_data:
+            return False
+
+        access_type = 'write'
+        limited_data = limited_data.get(access_type)
+        if not limited_data:
+            return False
+
+        limited_ranges = limited_data.get(page)
+        if not limited_ranges:
+            return False
+
+        access_begin = page_offset
+        access_end = page_offset + num_bytes - 1
+        for limited_range in limited_ranges:
+            if isinstance(limited_range, int):
+                if access_begin <= limited_range <= access_end:
+                    return True
+            else: # tuple
+                if not (access_end < limited_range[0] or access_begin > limited_range[1]):
+                    return True
+
+        return False
+
+    def _get_eeprom_path(self):
+        return SFP_EEPROM_ROOT_TEMPLATE.format(self.sdk_index)
+
+    def _get_page_and_page_offset(self, overall_offset):
+        """Get EEPROM page and page offset according to overall offset
+
+        Args:
+            overall_offset (int): Overall read offset
+
+        Returns:
+            tuple: (<page_num>, <page_path>, <page_offset>)
+        """
+        eeprom_path = self._get_eeprom_path()
+        if not os.path.exists(eeprom_path):
+            logger.log_error(f'EEPROM file path for sfp {self.sdk_index} does not exist')
+            return None, None, None
+
+        if overall_offset < SFP_PAGE_SIZE:
+            return 0, os.path.join(eeprom_path, SFP_PAGE0_PATH), overall_offset
+
+        if self._get_sfp_type_str(eeprom_path) == SFP_TYPE_SFF8472:
+            page1h_start = SFP_PAGE_SIZE * 2
+            if overall_offset < page1h_start:
+                return -1, os.path.join(eeprom_path, SFP_A2H_PAGE0_PATH), overall_offset - SFP_PAGE_SIZE
+        else:
+            page1h_start = SFP_PAGE_SIZE
+
+        page_num = (overall_offset - page1h_start) // SFP_UPPER_PAGE_OFFSET + 1
+        page = f'{page_num}/data'
+        offset = (overall_offset - page1h_start) % SFP_UPPER_PAGE_OFFSET
+        return page_num, os.path.join(eeprom_path, page), offset
+
+    def _get_sfp_type_str(self, eeprom_path):
+        """Get SFP type by reading first byte of EEPROM
+
+        Args:
+            eeprom_path (str): EEPROM path
+
+        Returns:
+            str: SFP type in string
+        """
+        if self._sfp_type_str is None:
+            page = os.path.join(eeprom_path, SFP_PAGE0_PATH)
+            try:
+                with open(page, mode='rb', buffering=0) as f:
+                    id_byte_raw = bytearray(f.read(1))
+                    id = id_byte_raw[0]
+                    if id == 0x18 or id == 0x19 or id == 0x1e:
+                        self._sfp_type_str = SFP_TYPE_CMIS
+                    elif id == 0x11 or id == 0x0D:
+                        # in sonic-platform-common, 0x0D is treated as sff8436,
+                        # but it shared the same implementation on Nvidia platforms,
+                        # so, we treat it as sff8636 here.
+                        self._sfp_type_str = SFP_TYPE_SFF8636
+                    elif id == 0x03:
+                        self._sfp_type_str = SFP_TYPE_SFF8472
+                    else:
+                        logger.log_error(f'Unsupported sfp type {id}')
+            except (OSError, IOError) as e:
+                # SFP_EEPROM_NOT_AVAILABLE usually indicates SFP is not present, no need
+                # print such error information `to` log
+                if SFP_EEPROM_NOT_AVAILABLE not in str(e):
+                    logger.log_error(f'Failed to get SFP type, index={self.sdk_index}, error={e}')
+                return None
+        return self._sfp_type_str
+
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
     shared_sdk_handle = None
-    
+
     # Class level state machine object, only applicable for module host management
     sm = None
-    
+
     # Class level wait SFP ready task, the task waits for module to load its firmware after resetting,
     # only applicable for module host management
     wait_ready_task = None
-    
+
     # Class level action table which stores the mapping from action name to action function,
     # only applicable for module host management
     action_table = None
@@ -445,11 +667,11 @@ class SFP(NvidiaSFPCommon):
             return False
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
-    
+
     @classmethod
     def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
         not_ready_list = sfp_list
-        
+
         while wait_time > 0:
             not_ready_list = [s for s in not_ready_list if s.state == STATE_FW_CONTROL and s._read_eeprom(0, 2,False) is None]
             if not_ready_list:
@@ -457,115 +679,9 @@ class SFP(NvidiaSFPCommon):
                 wait_time -= 0.1
             else:
                 return
-        
+
         for s in not_ready_list:
             logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
-
-    # read eeprom specfic bytes beginning from offset with size as num_bytes
-    def read_eeprom(self, offset, num_bytes):
-        """
-        Read eeprom specfic bytes beginning from a random offset with size as num_bytes
-        Returns:
-            bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
-            None, if the read_eeprom fails
-        """
-        return self._read_eeprom(offset, num_bytes)
-
-    def _read_eeprom(self, offset, num_bytes, log_on_error=True):
-        """Read eeprom specfic bytes beginning from a random offset with size as num_bytes
-
-        Args:
-            offset (int): read offset
-            num_bytes (int): read size
-            log_on_error (bool, optional): whether log error when exception occurs. Defaults to True.
-
-        Returns:
-            bytearray: the content of EEPROM
-        """
-        result = bytearray(0)
-        while num_bytes > 0:
-            _, page, page_offset = self._get_page_and_page_offset(offset)
-            if not page:
-                return None
-
-            try:
-                with open(page, mode='rb', buffering=0) as f:
-                    f.seek(page_offset)
-                    content = f.read(num_bytes)
-                    if not result:
-                        result = content
-                    else:
-                        result += content
-                    read_length = len(content)
-                    if read_length == 0:
-                        logger.log_error(f'SFP {self.sdk_index}: EEPROM page {page} is empty, no data retrieved')
-                        return None
-                    num_bytes -= read_length
-                    if num_bytes > 0:
-                        page_size = f.seek(0, os.SEEK_END)
-                        if page_offset + read_length == page_size:
-                            offset += read_length
-                        else:
-                            # Indicate read finished
-                            num_bytes = 0
-                    if ctypes.get_errno() != 0:
-                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-                    logger.log_debug(f'read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
-                        f'size={read_length}, data={content}')
-            except (OSError, IOError) as e:
-                if log_on_error:
-                    logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, '\
-                        f'size={num_bytes}, offset={offset}, error = {e}')
-                return None
-
-        return bytearray(result)
-
-    # write eeprom specfic bytes beginning from offset with size as num_bytes
-    def write_eeprom(self, offset, num_bytes, write_buffer):
-        """
-        write eeprom specfic bytes beginning from a random offset with size as num_bytes
-        and write_buffer as the required bytes
-        Returns:
-            Boolean, true if the write succeeded and false if it did not succeed.
-        Example:
-            mlxreg -d /dev/mst/mt52100_pciconf0 --reg_name MCIA --indexes slot_index=0,module=1,device_address=154,page_number=5,i2c_device_address=0x50,size=1,bank_number=0 --set dword[0]=0x01000000 -y
-        """
-        if num_bytes != len(write_buffer):
-            logger.log_error("Error mismatch between buffer length and number of bytes to be written")
-            return False
-
-        while num_bytes > 0:
-            page_num, page, page_offset = self._get_page_and_page_offset(offset)
-            if not page:
-                return False
-
-            try:
-                if self._is_write_protected(page_num, page_offset, num_bytes):
-                    # write limited eeprom is not supported
-                    raise IOError('write limited bytes')
-                with open(page, mode='r+b', buffering=0) as f:
-                    f.seek(page_offset)
-                    ret = f.write(write_buffer[0:num_bytes])
-                    written_buffer = write_buffer[0:ret]
-                    if ret != num_bytes:
-                        page_size = f.seek(0, os.SEEK_END)
-                        if page_offset + ret == page_size:
-                            # Move to next page
-                            write_buffer = write_buffer[ret:num_bytes]
-                            offset += ret
-                        else:
-                            raise IOError(f'write return code = {ret}')
-                    num_bytes -= ret
-                    if ctypes.get_errno() != 0:
-                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-                    logger.log_debug(f'write EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
-                        f'size={ret}, left={num_bytes}, data={written_buffer}')
-            except (OSError, IOError) as e:
-                data = ''.join('{:02x}'.format(x) for x in write_buffer)
-                logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, '\
-                    f'offset={offset}, data = {data}, error = {e}')
-                return False
-        return True
 
     def get_lpmode(self):
         """
@@ -703,116 +819,6 @@ class SFP(NvidiaSFPCommon):
         else:
             error_description = "Unknow SFP module status ({})".format(oper_status)
         return error_description
-
-    def _get_eeprom_path(self):
-        return SFP_EEPROM_ROOT_TEMPLATE.format(self.sdk_index)
-
-    def _get_page_and_page_offset(self, overall_offset):
-        """Get EEPROM page and page offset according to overall offset
-
-        Args:
-            overall_offset (int): Overall read offset
-
-        Returns:
-            tuple: (<page_num>, <page_path>, <page_offset>)
-        """
-        eeprom_path = self._get_eeprom_path()
-        if not os.path.exists(eeprom_path):
-            logger.log_error(f'EEPROM file path for sfp {self.sdk_index} does not exist')
-            return None, None, None
-
-        if overall_offset < SFP_PAGE_SIZE:
-            return 0, os.path.join(eeprom_path, SFP_PAGE0_PATH), overall_offset
-
-        if self._get_sfp_type_str(eeprom_path) == SFP_TYPE_SFF8472:
-            page1h_start = SFP_PAGE_SIZE * 2
-            if overall_offset < page1h_start:
-                return -1, os.path.join(eeprom_path, SFP_A2H_PAGE0_PATH), overall_offset - SFP_PAGE_SIZE
-        else:
-            page1h_start = SFP_PAGE_SIZE
-
-        page_num = (overall_offset - page1h_start) // SFP_UPPER_PAGE_OFFSET + 1
-        page = f'{page_num}/data'
-        offset = (overall_offset - page1h_start) % SFP_UPPER_PAGE_OFFSET
-        return page_num, os.path.join(eeprom_path, page), offset
-
-    def _get_sfp_type_str(self, eeprom_path):
-        """Get SFP type by reading first byte of EEPROM
-
-        Args:
-            eeprom_path (str): EEPROM path
-
-        Returns:
-            str: SFP type in string
-        """
-        if self._sfp_type_str is None:
-            page = os.path.join(eeprom_path, SFP_PAGE0_PATH)
-            try:
-                with open(page, mode='rb', buffering=0) as f:
-                    id_byte_raw = bytearray(f.read(1))
-                    id = id_byte_raw[0]
-                    if id == 0x18 or id == 0x19 or id == 0x1e:
-                        self._sfp_type_str = SFP_TYPE_CMIS
-                    elif id == 0x11 or id == 0x0D:
-                        # in sonic-platform-common, 0x0D is treated as sff8436,
-                        # but it shared the same implementation on Nvidia platforms,
-                        # so, we treat it as sff8636 here.
-                        self._sfp_type_str = SFP_TYPE_SFF8636
-                    elif id == 0x03:
-                        self._sfp_type_str = SFP_TYPE_SFF8472
-                    else:
-                        logger.log_error(f'Unsupported sfp type {id}')
-            except (OSError, IOError) as e:
-                # SFP_EEPROM_NOT_AVAILABLE usually indicates SFP is not present, no need
-                # print such error information to log
-                if SFP_EEPROM_NOT_AVAILABLE not in str(e):
-                    logger.log_error(f'Failed to get SFP type, index={self.sdk_index}, error={e}')
-                return None
-        return self._sfp_type_str
-
-    def _is_write_protected(self, page, page_offset, num_bytes):
-        """Check if the EEPROM read/write operation hit limitation bytes
-
-        Args:
-            page (str): EEPROM page path
-            page_offset (int): EEPROM page offset
-            num_bytes (int): read/write size
-
-        Returns:
-            bool: True if the limited bytes is hit
-        """
-        try:
-            if self.is_sw_control():
-                return False
-        except Exception as e:
-            logger.log_notice(f'Module is under initialization, cannot write module EEPROM - {e}')
-            return True
-
-        eeprom_path = self._get_eeprom_path()
-        limited_data = limited_eeprom.get(self._get_sfp_type_str(eeprom_path))
-        if not limited_data:
-            return False
-
-        access_type = 'write'
-        limited_data = limited_data.get(access_type)
-        if not limited_data:
-            return False
-
-        limited_ranges = limited_data.get(page)
-        if not limited_ranges:
-            return False
-
-        access_begin = page_offset
-        access_end = page_offset + num_bytes - 1
-        for limited_range in limited_ranges:
-            if isinstance(limited_range, int):
-                if access_begin <= limited_range <= access_end:
-                    return True
-            else: # tuple
-                if not (access_end < limited_range[0] or access_begin > limited_range[1]):
-                    return True
-
-        return False
 
     def get_rx_los(self):
         """Accessing rx los is not supproted, return all False
@@ -1086,7 +1092,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api is of type CMIS
         """
-        return isinstance(xcvr_api, cmis.CmisApi)
+        return isinstance(xcvr_api, cmis_api.CmisApi)
 
     def is_sff_api(self, xcvr_api):
         """Check if the api type is SFF
@@ -1558,7 +1564,8 @@ class SFP(NvidiaSFPCommon):
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
         cls.wait_sfp_eeprom_ready(sfp_list, 2)
-        
+
+
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
@@ -1791,6 +1798,9 @@ class RJ45Port(NvidiaSFPCommon):
     def read_eeprom(self, offset, num_bytes):
         return None
 
+    def write_eeprom(self, offset, num_byteFs, write_buffer):
+        return False
+
     def reinit(self):
         """
         Nothing to do for RJ45. Just provide it to avoid exception
@@ -1811,3 +1821,37 @@ class RJ45Port(NvidiaSFPCommon):
         """
         status = super().get_module_status()
         return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status
+
+
+class CpoPort(NvidiaSFPCommon):
+    """class derived from SFP, representing CPO ports"""
+
+    def __init__(self, sfp_index):
+        super(CpoPort, self).__init__(sfp_index)
+        self._sfp_type_str = None
+        self.sfp_type = CPO_TYPE
+
+    def get_transceiver_info(self):
+        transceiver_info_dict = super().get_transceiver_info()
+        transceiver_info_dict['type'] = self.sfp_type
+        return transceiver_info_dict
+
+    def get_xcvr_api(self):
+        if self._xcvr_api is None:
+            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
+        return self._xcvr_api
+
+    def get_presence(self):
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
+        present = utils.read_int_from_file(file_path)
+        return present == 1
+
+    def reinit(self):
+        """
+        Nothing to do for cpo. Just provide it to avoid exception
+        :return:
+        """
+        return
+
+    def write_eeprom(self, offset, num_byteFs, write_buffer):
+        return False
