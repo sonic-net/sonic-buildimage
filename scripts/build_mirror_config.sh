@@ -72,6 +72,14 @@ if [ "$MIRROR_SNAPSHOT" == y ]; then
     sed -i -e "/^#*deb.*packages.trafficmanager.net/! s/^#*deb/#&/" -e "\$a#SET_REPR_MIRRORS" $CONFIG_PATH/sources.list.$ARCHITECTURE
 fi
 
+if [ "$MIRROR_SNAPSHOT" == y ]; then
+    MIRROR_DOMAINS=packages.trafficmanager.net
+else
+    MIRROR_DOMAINS=
+fi
+TEMPLATE=files/apt/prefer-snapshots.j2
+MIRROR_DOMAINS=$MIRROR_DOMAINS j2 $TEMPLATE > $CONFIG_PATH/prefer-snapshots.$ARCHITECTURE
+
 # Handle apt retry count config
 APT_RETRIES_COUNT_FILENAME=apt-retries-count
 TEMPLATE=files/apt/$APT_RETRIES_COUNT_FILENAME.j2
