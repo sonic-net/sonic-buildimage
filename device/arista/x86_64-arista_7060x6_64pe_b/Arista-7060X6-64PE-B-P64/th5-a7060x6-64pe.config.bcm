@@ -46,6 +46,7 @@ bcm_device:
             l3_alpm_large_vrf_mode: 1
             l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
+            sai_pfc_dlr_init_capability: 2
 ---
 device:
     0:
@@ -2325,4 +2326,6 @@ device:
     0:
         TM_SMART_STORE_AND_FORWARD_CONFIG:
             SMART_STORE_AND_FORWARD: 1
+        PORT_CONFIG:
+            SKIP_DST_PORT_DISABLED_OR_LINK_DOWN_PRUNING_ON_SOBMH: 1
 ...
