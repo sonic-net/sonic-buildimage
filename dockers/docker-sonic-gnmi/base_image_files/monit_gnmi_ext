@@ -1,0 +1,5 @@
+###############################################################################
+## Monit configuration for gNMI container
+###############################################################################
+check program container_memory_gnmi with path "/usr/bin/gnmi_memory_checker"
+    if status == 3 for 10 times within 20 cycles then exec "/usr/bin/restart_service gnmi" repeat every 2 cycles
