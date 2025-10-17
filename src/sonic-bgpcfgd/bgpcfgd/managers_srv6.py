@@ -5,6 +5,7 @@ from swsscommon import swsscommon
 
 supported_SRv6_behaviors = {
     'uN',
+    'uA',
     'uDT46',
 }
 
@@ -89,6 +90,17 @@ class SRv6Mgr(Manager):
         sid_cmd = 'sid {} locator {} behavior {}'.format(ip_prefix, locator_name, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
             sid_cmd += ' vrf {}'.format(sid.decap_vrf)
+        if sid.action == 'uA':
+            if sid.interface:
+                sid_cmd += ' interface {}'.format(sid.interface)
+            else:
+                log_err("Found a SRv6 SID config entry that does not specify interface for action uA: {} | {}".format(key, data))
+                return False
+            if sid.adj:
+                sid_cmd += ' nexthop {}'.format(sid.adj)
+            else:
+                log_err("Found a SRv6 SID config entry that does not specify adj for action uA: {} | {}".format(key, data))
+                return False
         cmd_list.append(sid_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
@@ -148,4 +160,5 @@ class SID:
 
         self.action = data['action']
         self.decap_vrf = data['decap_vrf'] if 'decap_vrf' in data else DEFAULT_VRF
-        self.adj = data['adj'].split(',') if 'adj' in data else []
+        self.interface = data['interface'] if 'interface' in data else None
+        self.adj = data['adj'] if 'adj' in data else None
