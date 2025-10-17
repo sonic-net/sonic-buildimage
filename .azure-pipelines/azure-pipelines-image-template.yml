@@ -165,7 +165,8 @@ jobs:
         env:
           REGISTRY_SERVER_PUBLIC: $(REGISTRY_SERVER_PUBLIC)
           REGISTRY_USERNAME: $(REGISTRY_USERNAME)
-egistry and Copy Artifacts
+          REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)
         artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
