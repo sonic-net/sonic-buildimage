@@ -1,0 +1,81 @@
+{%- set device_metadata = DEVICE_METADATA | default({}) -%}
+{%- set hostname = device_metadata.localhost.hostname | default('sonic-switch') -%}
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+
+  # Filter for port metrics
+  filter/ports:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          - port\..*
+
+  # Filter for buffer metrics
+  filter/buffers:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          - buffer_pool\..*
+
+exporters:
+  # Debug exporter for troubleshooting
+  debug:
+    verbosity: detailed
+
+  # Template for InfluxDB exporters - can be configured externally
+  # Examples of what could be configured:
+  #
+  # influxdb/ports:
+  #   endpoint: ${INFLUXDB_PORTS_ENDPOINT:-http://localhost:8086}
+  #   org: ${INFLUXDB_ORG:-default}
+  #   bucket: ${INFLUXDB_PORTS_BUCKET:-ports}
+  #   token: ${INFLUXDB_PORTS_TOKEN}
+  #   timeout: 10s
+  #
+  # influxdb/buffers:
+  #   endpoint: ${INFLUXDB_BUFFERS_ENDPOINT:-http://localhost:8087}
+  #   org: ${INFLUXDB_ORG:-default}
+  #   bucket: ${INFLUXDB_BUFFERS_BUCKET:-buffers}
+  #   token: ${INFLUXDB_BUFFERS_TOKEN}
+  #   timeout: 10s
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+
+  pipelines:
+    # Metrics pipeline for ports - filtered and ready for export
+    metrics/ports:
+      receivers: [otlp]
+      processors: [batch, filter/ports]
+      exporters: [debug, influxdb/ports]
+
+    # Metrics pipeline for buffers - filtered and ready for export
+    metrics/buffers:
+      receivers: [otlp]
+      processors: [batch, filter/buffers]
+      exporters: [debug, influxdb/buffers]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
