@@ -238,12 +238,24 @@ function WaitForDevice() {
 
     if [[ "${NO_MST}" != "${YES_PARAM}" ]]; then
         LogInfo "Restarting MST device"
-        /usr/bin/mst restart --with_i2cdev
-        ERROR_CODE="$?"
-        if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
-            ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
-        fi
+        while : ; do
+            mst_output=$(/usr/bin/mst restart --with_i2cdev)
+            ERROR_CODE="$?"
+            if [[ "${ERROR_CODE}" == "${EXIT_SUCCESS}" ]]; then
+                break
+            fi
+
+            LogInfo "MST device restart failed with error: ${ERROR_CODE}, retrying... mst output:\n${mst_output}"
+            sleep 1s
+            ((QUERY_RETRY_COUNT++))
+
+            if [[ "${QUERY_RETRY_COUNT}" -ge "${QUERY_RETRY_COUNT_MAX}" ]]; then
+                ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
+            fi
+        done
     fi
+
+    QUERY_RETRY_COUNT="0"
 
     while : ; do
         SPC_MST_DEV=$(GetSPCMstDevice)
