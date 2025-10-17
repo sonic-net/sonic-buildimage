@@ -40,28 +40,7 @@ configure_midplane_iface()
     mgmt_mac=$(cat /sys/devices/platform/MLNXBF17:00/net/*/address)
 
     # Create systemd-networkd configuration directory if it doesn't exist
-    mkdir -p /etc/systemd/network
-
-    # Create bridge configuration file if it doesn't exist
-    if [ ! -f /etc/systemd/network/${midplane_iface}.netdev ]; then
-        cat > /etc/systemd/network/${midplane_iface}.netdev << EOF
-[NetDev]
-Name=${midplane_iface}
-Kind=bridge
-MACAddress=$mgmt_mac
-EOF
-    fi
-
-    # Create pf0 configuration file if it doesn't exist
-    if [ ! -f /etc/systemd/network/pf0.network ]; then
-        cat > /etc/systemd/network/pf0.network << EOF
-[Match]
-Name=pf0
-
-[Network]
-Bridge=${midplane_iface}
-EOF
-    fi
+    ip link set dev $midplane_iface address $mgmt_mac
 }
 
 case "$1" in
@@ -76,4 +55,3 @@ case "$1" in
         exit 1
         ;;
 esac
-
