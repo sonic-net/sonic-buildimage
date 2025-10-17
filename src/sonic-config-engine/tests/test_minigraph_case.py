@@ -68,6 +68,12 @@ class TestCfgGenCaseInsensitive(TestCase):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'subtype\']"]
         output = self.run_script(argument)
         self.assertEqual(output.strip(), 'DualToR')
+    
+    def test_minigraph_subtype_lt2(self):
+        sample_graph_lt2 = os.path.join(self.test_dir, 'simple-sample-graph-lt2.xml')
+        argument = ['-m', sample_graph_lt2, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'subtype\']"]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), 'LowerSpineRouter')
 
     def test_minigraph_peer_switch_hostname(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'peer_switch\']"]
