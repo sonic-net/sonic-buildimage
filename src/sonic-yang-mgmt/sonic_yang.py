@@ -719,7 +719,7 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
        name=""
        try:
            name = list(self.mapped_types.keys())[list(self.mapped_types.values()).index(type_int)]
-       except:
+       except ValueError:
            name = "UNKNOWN"
 
        return name
