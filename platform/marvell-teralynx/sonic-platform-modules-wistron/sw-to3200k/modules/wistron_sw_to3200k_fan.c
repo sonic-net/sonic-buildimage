@@ -255,11 +255,7 @@ static const struct attribute_group sw_to3200k_fan_group = {
     .attrs = sw_to3200k_fan_attributes,
 };
 
-static int sw_to3200k_fan_probe
-(
-    struct i2c_client *client,
-    const struct i2c_device_id *dev_id
-)
+static int sw_to3200k_fan_probe(struct i2c_client *client)
 {
     struct sw_to3200k_fan_data  *data;
     int                         status;
