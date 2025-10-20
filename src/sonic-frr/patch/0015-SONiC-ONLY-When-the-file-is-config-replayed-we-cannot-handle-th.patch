@@ -1,0 +1,69 @@
+[PATCH] When the file is config replayed, we cannot handle the errors
+
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Thu, 21 Nov 2024 20:57:11 -0800
+Subject: [PATCH] When the file is config replayed, we cannot handle the errors
+  in command execution. We would let all commands in the file to complete, 
+ irrespective of some of them failing. Also, certain protocols like RIP, RIPng
+ are not supported in SONIC. So, it is expected that their configuration files
+ will not be present.
+
+---
+ lib/vty.c               |   16 +++++++++++++---
+ mgmtd/mgmt_be_adapter.c |    2 +-
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/lib/vty.c b/lib/vty.c
+index fad2ff991..d3006c77a 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -2687,7 +2687,9 @@ void vty_read_file_finish(struct vty *vty, struct nb_config *config)
+ 		nl = strchr(ve->error_buf, '\n');
+ 		if (nl)
+ 			*nl = '\0';
+-		flog_err(EC_LIB_VTY, "%s on config line %u: %s", message,
++		/* When the file is config replayed, we cannot handle the errors in command execution.
++			We would let all commands in the file to complete, irrespective of some of them failing. */
++		flog_warn(EC_LIB_VTY, "%s on config line %u: %s", message,
+ 			 ve->line_num, ve->error_buf);
+ 	}
+ 
+@@ -2806,7 +2808,11 @@ FILE *vty_open_config(const char *config_file, char *config_default_dir)
+ 				flog_warn(EC_LIB_BACKUP_CONFIG,
+ 					  "using backup configuration file!");
+ 			else {
+-				flog_err(
++				/* There are few protocols e.g. RIP, RIPng, which are ununsed in SONIC.
++				   So, there will not be any config file for them.
++				   Flagging error, will be considered a breakage by loganalyzer, whereas
++				   it is valid for these protocol config file to be not present. */
++				flog_warn(
+ 					EC_LIB_VTY,
+ 					"%s: can't open configuration file [%s]",
+ 					__func__, config_file);
+@@ -2855,7 +2861,11 @@ FILE *vty_open_config(const char *config_file, char *config_default_dir)
+ 					  "using backup configuration file!");
+ 				fullpath = config_default_dir;
+ 			} else {
+-				flog_err(EC_LIB_VTY,
++				/* There are few protocols e.g. RIP, RIPng, which are ununsed in SONIC.
++				   So, there will not be any config file for them.
++				   Flagging error, will be considered a breakage by loganalyzer, whereas
++				   it is valid for these protocol config file to be not present. */
++				flog_warn(EC_LIB_VTY,
+ 					 "can't open configuration file [%s]",
+ 					 config_default_dir);
+ 				goto tmp_free_and_out;
+diff --git a/mgmtd/mgmt_be_adapter.c b/mgmtd/mgmt_be_adapter.c
+index ca4588d72..1f1ad4421 100644
+--- a/mgmtd/mgmt_be_adapter.c
++++ b/mgmtd/mgmt_be_adapter.c
+@@ -735,7 +735,7 @@ static void mgmt_be_adapter_conn_init(struct event *thread)
+ 	 * transaction in progress.
+ 	 */
+ 	if (mgmt_txn_notify_be_adapter_conn(adapter, true) != 0) {
+-		zlog_err("XXX txn in progress, retry init");
++		zlog_warn("XXX txn in progress, retry init");
+ 		mgmt_be_adapter_sched_init_event(adapter);
+ 		return;
+ 	}
