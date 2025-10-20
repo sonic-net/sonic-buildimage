@@ -5,14 +5,18 @@ steps:
       do
         sleep 120
         now=$(date +%s)
-        pids=$(ps -C docker -o pid,etime,args | grep "docker build" | cut -d" " -f2)
+        pids=$(ps -C docker-buildx -o pid,etime,args | grep "docker-buildx buildx build" | awk '{print $1}')
         for pid in $pids
         do
-          start=$(date --date="$(ls -dl /proc/$pid --time-style full-iso | awk '{print$6,$7}')" +%s)
-          time_s=$(($now-$start))
-          if [[ $time_s -gt $(DOCKER_BUILD_TIMEOUT) ]]; then
+          start_ticks=$(awk '{print $22}' /proc/$pid/stat)
+          boot_time=$(awk '/btime/ {print $2}' /proc/stat)
+          hertz=$(getconf CLK_TCK)
+          start_time=$((boot_time + start_ticks / hertz))
+          ts=$(date -d "@$((now - start_time))" +%s)
+
+          if [[ $ts -gt $(DOCKER_BUILD_TIMEOUT) ]]; then
             echo =========== $(date +%F%T) $time_s &>> target/daemon.log
-            ps $pid &>> target/daemon.log
+            ps -p $pid -o pid,etime,args ww &>> target/daemon.log
             sudo kill $pid
           fi
         done

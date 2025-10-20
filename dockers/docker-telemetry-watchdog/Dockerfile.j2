@@ -1,0 +1,51 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-sonic-gnmi-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS builder
+
+# Update apt's cache of available packages
+RUN apt-get update && apt-get install -y \
+    build-essential
+
+# Install Rust/Cargo via rustup
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c \
+    'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+ENV RUSTUP_HOME=$RUST_ROOT
+ENV PATH $PATH:$RUST_ROOT/bin
+
+# Copy watchdog source into /watchdog
+WORKDIR /watchdog
+COPY watchdog/ ./
+
+# Build from within /watchdog
+RUN cargo build --release
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV IMAGE_VERSION=$image_version
+
+# Copy supervisord.conf into final stage
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+
+# Copy the compiled Rust binary from the builder stage
+COPY --from=builder /watchdog/target/release/telemetry_watchdog /usr/bin/telemetry_watchdog
+RUN chmod +x /usr/bin/telemetry_watchdog
+COPY --from=builder /watchdog/src/cmd_list.json /cmd_list.json
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

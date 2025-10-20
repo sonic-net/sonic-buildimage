@@ -1554,9 +1554,17 @@
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             },
+            "DASH_METER": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
             "SRV6": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "SWITCH": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "60000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
@@ -1613,7 +1621,8 @@
             "Ethernet9": {
                "action": "drop",
                "detection_time": "100",
-               "restoration_time": "400"
+               "restoration_time": "400",
+               "pfc_stat_history": "enable"
             }
         },
         "PFC_WD": {
@@ -1807,6 +1816,19 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_AGGREGATE_ADDRESS": {
+            "192.168.0.0/24": {
+                "bbr-required": "true",
+                "summary-only": "false",
+                "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+            },
+            "fc00::/63": {
+                "bbr-required": "true",
+                "summary-only": "true",
+                "as-set": "true"
+            }
+        },
         "BGP_BBR": {
             "all": {
                 "status": "enabled"
@@ -1829,7 +1851,8 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
-                "advertise-svi-ip": "true"
+                "advertise-svi-ip": "true",
+                "autort": "rfc8365-compatible"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1956,10 +1979,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
@@ -2131,6 +2158,36 @@
                 ],
                 "rfc6939_support": "true",
                 "interface_id": "true"
+            }
+        },
+        "DHCPV4_RELAY": {
+            "Vlan111": {
+                "dhcpv4_servers": [
+                    "10.222.72.116"
+                ],
+                "server_vrf": "Vrf_blue",
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "enable",
+                "server_id_override": "enable",
+                "agent_relay_mode": "forward_untouched",
+                "max_hop_count": "4"
+            },
+            "Vlan222": {
+                "dhcpv4_servers": [
+                    "10.222.72.116",
+                    "10.222.82.226"
+                ]
+            },
+            "Vlan777": {
+                "dhcpv4_servers": [
+                    "10.222.82.226"
+                ],
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "disable",
+                "server_id_override": "disable",
+                "agent_relay_mode": "discard"
             }
         },
         "DHCP_SERVER_IPV4": {
@@ -2390,6 +2447,14 @@
                 "vxlan_tunnel": "vtep1",
                 "scope": "default",
                 "vni": "100",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
+            },
+            "Vnet55": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "8000",
                 "peer_list": "",
                 "advertise_prefix": "true",
                 "overlay_dmac": "22:33:44:55:66:77"
@@ -2915,6 +2980,7 @@
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "midplane_ipv4": "169.254.200.245",
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
@@ -2928,6 +2994,7 @@
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "midplane_ipv4": "169.254.150.20",
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
@@ -2979,6 +3046,7 @@
         },
         "DASH_HA_GLOBAL_CONFIG": {
             "global": {
+                "vnet_name": "Vnet55",
                 "cp_data_channel_port": "11362",
                 "dp_channel_port": "11368",
                 "dp_channel_src_port_min": "49152",
@@ -3060,6 +3128,41 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+            "dummy": {
+                "stream_state": "disabled",
+                "poll_interval": "100000"
+            },
+            "hft_profile": {
+                "stream_state": "enabled",
+                "poll_interval": "100000"
+            }
+        },
+        "HIGH_FREQUENCY_TELEMETRY_GROUP": {
+            "dummy|PORT": {},
+            "hft_profile|PORT": {
+                "object_names": [
+                    "Ethernet0",
+                    "Ethernet4"
+                ],
+                "object_counters": [
+                    "IF_IN_OCTETS",
+                    "OUT_CURR_OCCUPANCY_BYTES"
+                ]
+            }
+        },
+        "STORMOND_CONFIG": {
+            "INTERVALS": {
+                "daemon_polling_interval" : "3600",
+                "fsstats_sync_interval"   : "86400"
+            }
+        },
+        "HEARTBEAT": {
+            "orchagent": {
+                "heartbeat_interval"   : "10000",
+                "alert_interval"       : "60000"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -3071,18 +3174,6 @@
         "TACPLUS": {
             "global": {
             }
-        }
-    },
-    "STORMOND_CONFIG": {
-        "INTERVALS": {
-            "daemon_polling_interval" : "3600",
-            "fsstats_sync_interval"   : "86400"
-        }
-    },
-    "HEARTBEAT": {
-        "orchagent": {
-            "heartbeat_interval"   : "10000",
-            "alert_interval"       : "60000"
         }
     }
 }

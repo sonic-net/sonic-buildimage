@@ -61,9 +61,13 @@ jobs:
         displayName: 'Checkout commit'
       - script: |
           set -x
+          pwd
+          realpath $(pwd)
+          realpath /mnt/vss
           sudo setfacl -R -b $(Agent.BuildDirectory)
         displayName: 'setfacl'
       - script: |
+          set -ex
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
           git checkout -b $BRANCH_NAME

@@ -1,6 +1,7 @@
 os=unix
 dpp_clock_ratio=2:3
 oversubscribe_mode=1
+oversubscribe_mixed_sister_25_50_enable=1
 core_clock_frequency=1525
 
 l2xmsg_mode=1
@@ -20,6 +21,17 @@ l3_alpm_ipv6_128b_bkt_rsvd=1
 l2_mem_entries=40960
 l3_mem_entries=40960
 
+mem_cache_enable=0
+lpm_scaling_enable=0
+bcm_num_cos=10
+default_cpu_tx_queue=9
+host_as_route_disable=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+sai_fast_convergence_support=1
+flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
+use_all_splithorizon_groups=1
+
 #Tunnels
 bcm_tunnel_term_compatible_mode=1
 use_all_splithorizon_groups=1
@@ -34,9 +46,7 @@ riot_overlay_l3_egress_mem_size=32768
 l3_ecmp_levels=2
 riot_overlay_ecmp_resilient_hash_size=16384
 
-
 stable_size=0x6400000
-
 
 #New Additions
 pfc_deadlock_seq_control=1
@@ -51,6 +61,7 @@ oversubscribe_mixed_sister_25_50_enable=1
 ifp_inports_support_enable=1
 port_flex_enable=1
 phy_an_c73=3
+
 
 portmap_1.0=1:100
 portmap_5.0=5:100

@@ -50,6 +50,7 @@ class Test_yang_models:
             'MaxElements': ['Too many'],
             'UnknownElement': ['Unknown element'],
             'Missing': ['Missing required element'],
+            "InvalidJSON": ['Invalid JSON data'],
             'None': [],
 # New keys are needed for libyang3's messages which are different.  Go
 # ahead and add them now with the libyang1 values (which are duplicates

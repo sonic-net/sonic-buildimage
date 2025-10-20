@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 #include <linux/kobject.h>
+#include "pddf_multifpgapci_defs.h"
 #include "pddf_psu_defs.h"
 #include "pddf_psu_driver.h"
 
@@ -40,25 +41,34 @@
 #define psu_dbg(...)
 #endif
 
+extern void* get_device_table(char *name);
+
+#define PSU_REG_VOUT_MODE 0x20
 
 void get_psu_duplicate_sysfs(int idx, char *str)
 {
     switch (idx)
     {
         case PSU_V_OUT:
-            strcpy(str, "in3_input");
+            strscpy(str, "in3_input", ATTR_NAME_LEN);
             break;
         case PSU_I_OUT:
-            strcpy(str, "curr2_input");
+            strscpy(str, "curr2_input", ATTR_NAME_LEN);
             break;
         case PSU_P_OUT:
-            strcpy(str, "power2_input");
+            strscpy(str, "power2_input", ATTR_NAME_LEN);
             break;
         case PSU_FAN1_SPEED:
-            strcpy(str, "fan1_input");
+            strscpy(str, "fan1_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP1_INPUT:
-            strcpy(str, "temp1_input");
+            strscpy(str, "temp1_input", ATTR_NAME_LEN);
+            break;
+        case PSU_TEMP2_INPUT:
+            strscpy(str, "temp2_input", ATTR_NAME_LEN);
+            break;
+        case PSU_TEMP3_INPUT:
+            strscpy(str, "temp3_input", ATTR_NAME_LEN);
             break;
         default:
             break;
@@ -152,6 +162,167 @@ int psu_update_attr(struct device *dev, struct psu_attr_info *data, PSU_DATA_ATT
     return 0;
 }
 
+static u8 psu_get_vout_mode(struct i2c_client *client)
+{
+    u8 status = 0, retry = 10;
+    uint8_t offset = PSU_REG_VOUT_MODE;
+
+    while (retry)
+    {
+        status = i2c_smbus_read_byte_data((struct i2c_client *)client, offset);
+        if (unlikely(status < 0)) 
+        {
+            msleep(60);
+            retry--;
+            continue;
+        }
+        break;
+    }
+
+    if (status < 0)
+    {
+        printk(KERN_ERR "%s: Get PSU Vout mode failed\n", __func__);
+        return 0;
+    }
+    else
+    {
+        return status;
+    }
+}
+
+static long pmbus_linear11_to_int(u16 value, int multiplier)
+{
+    s16 exponent;
+    s64 mantissa;
+
+    exponent = two_complement_to_int(value >> 11, 5, 0x1f);
+    mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
+
+    if (exponent >= 0)
+    {
+        return (mantissa << exponent) * multiplier;
+    }
+    else
+    {
+        return (mantissa * multiplier) / (1 << -exponent);
+    }
+}
+
+static long pmbus_linear16_to_int(u16 value, u8 vout_mode, int multiplier)
+{
+    s16 exponent;
+    long result;
+
+    /* Extract exponent from VOUT_MODE */
+    if ((vout_mode >> 5) == 0)
+    {
+        /* Mode is linear */
+        exponent = two_complement_to_int(vout_mode & 0x1f, 5, 0x1f);
+    }
+    else
+    {
+        exponent = 0;
+    }
+
+    result = value;
+    result *= multiplier;
+
+    if (exponent >= 0)
+    {
+        result <<= exponent;
+    }
+    else
+    {
+        result >>= -exponent;
+    }
+
+    return result;
+}
+
+static long pmbus_direct_to_int(s16 value, s32 m, s32 b, s32 R, int multiplier)
+{
+    s64 val = value;
+    s64 result;
+
+    if (m == 0)
+        return 0; /* Avoid division by zero */
+
+    /* X = 1/m * (Y * 10^-R - b) */
+    /* First, handle the 10^-R term by scaling val */
+    R = -R; /* Invert R to make the calculations more intuitive */
+
+    /* Scale result to the requested multiplier */
+    val *= multiplier;
+    b *= multiplier;
+
+    /* Apply power of 10 scaling */
+    while (R > 0)
+    {
+        val *= 10;
+        R--;
+    }
+    while (R < 0)
+    {
+        val = div_s64(val + 5, 10); /* Round to nearest */
+        R++;
+    }
+
+    /* Now calculate (Y - b) / m */
+    val -= b;
+    result = div_s64(val, m);
+
+    return (long)result;
+}
+
+static long get_real_world_value(struct i2c_client *client,
+                                PSU_DATA_ATTR *usr_data,
+                                struct psu_attr_info *sysfs_attr_info,
+                                const char *default_format,
+                                int multiplier)
+{
+    u16 reg_value;
+    u8 vout_mode;
+    const char *data_format;
+
+    reg_value = sysfs_attr_info->val.shortval;
+
+    if (usr_data->data_format && usr_data->data_format[0] != '\0')
+    {
+        data_format = usr_data->data_format;
+    }
+    else
+    {
+        data_format = default_format;
+    }
+
+    if (strcmp(data_format, "linear11") == 0)
+    {
+        return pmbus_linear11_to_int(reg_value, multiplier);
+    }
+    else if (strcmp(data_format, "direct") == 0)
+    {
+        return pmbus_direct_to_int(reg_value, usr_data->m, usr_data->b, usr_data->r, multiplier);
+    }
+    else if (strcmp(data_format, "linear16") == 0)
+    {
+        vout_mode = psu_get_vout_mode(client);
+        return pmbus_linear16_to_int(reg_value, vout_mode, multiplier);
+    }
+
+    /* Default to linear11 if format is unknown or NULL */
+    if (data_format)
+    {
+        printk(KERN_WARNING "%s: Unknown data format '%s', defaulting to linear11\n",
+               __func__, data_format);
+    }
+    else
+    {
+        printk(KERN_WARNING "%s: NULL data format, defaulting to linear11\n", __func__);
+    }
+
+    return pmbus_linear11_to_int(reg_value, multiplier);
+}
+
 ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *buf)
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
@@ -161,8 +332,6 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     PSU_DATA_ATTR *usr_data = NULL;
     struct psu_attr_info *sysfs_attr_info = NULL;
     int i, status=0;
-    u16 value = 0;
-    int exponent, mantissa;
     int multiplier = 1000;
     char new_str[ATTR_NAME_LEN] = "";
     PSU_SYSFS_ATTR_DATA *ptr = NULL;
@@ -208,48 +377,25 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         case PSU_I_IN:
         case PSU_P_OUT_MAX:
             multiplier = 1000;
-            value = sysfs_attr_info->val.shortval;
-            exponent = two_complement_to_int(value >> 11, 5, 0x1f);
-            mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
-            if (exponent >= 0)
-                return sprintf(buf, "%d\n", (mantissa << exponent) * multiplier);
-            else
-                return sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
-
+            return sprintf(buf, "%ld\n", get_real_world_value(client, usr_data, sysfs_attr_info, "linear11", multiplier));
             break;
         case PSU_P_IN:
         case PSU_P_OUT:
             multiplier = 1000000;
-            value = sysfs_attr_info->val.shortval;
-            exponent = two_complement_to_int(value >> 11, 5, 0x1f);
-            mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
-            if (exponent >= 0)
-                return sprintf(buf, "%d\n", (mantissa << exponent) * multiplier);
-            else
-                return sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
-
+            return sprintf(buf, "%ld\n", get_real_world_value(client, usr_data, sysfs_attr_info, "linear11", multiplier));
             break;
         case PSU_FAN1_SPEED:
-            value = sysfs_attr_info->val.shortval;
-            exponent = two_complement_to_int(value >> 11, 5, 0x1f);
-            mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
-            if (exponent >= 0)
-                return sprintf(buf, "%d\n", (mantissa << exponent));
-            else
-                return sprintf(buf, "%d\n", (mantissa) / (1 << -exponent));
-
+            multiplier = 1;
+            return sprintf(buf, "%ld\n", get_real_world_value(client, usr_data, sysfs_attr_info, "linear11", multiplier));
             break;
         case PSU_TEMP1_INPUT:
         case PSU_TEMP1_HIGH_THRESHOLD:
+        case PSU_TEMP2_INPUT:
+        case PSU_TEMP2_HIGH_THRESHOLD:
+        case PSU_TEMP3_INPUT:
+        case PSU_TEMP3_HIGH_THRESHOLD:
             multiplier = 1000;
-            value = sysfs_attr_info->val.shortval;
-            exponent = two_complement_to_int(value >> 11, 5, 0x1f);
-            mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);
-            if (exponent >= 0)
-                return sprintf(buf, "%d\n", (mantissa << exponent) * multiplier);
-            else
-                return sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
-
+            return sprintf(buf, "%ld\n", get_real_world_value(client, usr_data, sysfs_attr_info, "linear11", multiplier));
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -298,6 +444,22 @@ exit:
     return count;
 }
 
+int psu_multifpgapci_read(PSU_DATA_ATTR *adata, int *output) {
+    struct pci_dev *pci_dev = NULL;
+
+    if (ptr_multifpgapci_readpci == NULL) {
+        printk(KERN_ERR "PDDF_PSU: pddf_multifpgapci_module is not loaded");
+        return -1;
+    }
+
+    pci_dev = (struct pci_dev *)get_device_table(adata->devname);
+    if (pci_dev == NULL) {
+        printk(KERN_ERR "PDDF_PSU: Unable to get pci_dev of %s for %s\n", adata->devname, adata->aname);
+        return -1;
+    }
+    return ptr_multifpgapci_readpci(pci_dev, adata->offset, output);
+}
+
 int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
     int status = 0;
@@ -310,8 +472,24 @@ int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *dat
         val = board_i2c_cpld_read(adata->devaddr , adata->offset);
         if (val < 0)
             return val;
-        padata->val.intval =  ((val & adata->mask) == adata->cmpval);
-        psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+    }
+    else if (strncmp(adata->devtype, "multifpgapci", strlen("multifpgapci")) == 0)
+    {
+        status = psu_multifpgapci_read(adata, &val);
+        if (status)
+          goto ret;
+    }
+    else
+    {
+        printk(KERN_ERR "%s: Unexpected devtype = ", __FUNCTION__, adata->devtype);
+    }
+
+    padata->val.intval =  ((val & adata->mask) == adata->cmpval);
+    psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+
+ret:
+    if (status) {
+        printk(KERN_ERR "%s: Error status = %d", __FUNCTION__, status);
     }
 
     return status;

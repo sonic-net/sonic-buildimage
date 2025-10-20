@@ -112,7 +112,7 @@ def info(db, dhcp_interface, with_customized_options):
         interface = key.split("|")[1]
         table.append([interface, entry["mode"], entry["gateway"], entry["netmask"], entry["lease_time"], entry["state"]])
         if with_customized_options:
-            table[-1].append(entry["customized_options@"])
+            table[-1].append(entry["customized_options@"] if "customized_options@" in entry else "")
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 

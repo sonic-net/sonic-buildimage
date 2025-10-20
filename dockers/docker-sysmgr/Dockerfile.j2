@@ -27,7 +27,6 @@ RUN mkdir -p /var/sonic
 RUN echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE

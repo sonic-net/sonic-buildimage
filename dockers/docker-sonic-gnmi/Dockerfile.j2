@@ -25,7 +25,6 @@ RUN apt-get update
 COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 FROM $BASE

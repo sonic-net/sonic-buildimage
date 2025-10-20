@@ -46,7 +46,6 @@ COPY ["TSA", "/usr/bin/TSA"]
 COPY ["TSB", "/usr/bin/TSB"]
 COPY ["TSC", "/usr/bin/TSC"]
 COPY ["TS", "/usr/bin/TS"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["zsocket.sh", "/usr/bin/"]
 RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSB && \
