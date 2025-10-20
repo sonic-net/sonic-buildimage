@@ -31,8 +31,8 @@ libsnmp-base==5.9.3+dfsg-2
 libsnmp40==5.9.3+dfsg-2
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
-libssl-dev==3.0.17-1~deb12u2
-libssl3==3.0.17-1~deb12u2
+libssl-dev==3.0.17-1~deb12u3
+libssl3==3.0.17-1~deb12u3
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
@@ -41,7 +41,7 @@ libyang3-dbgsym==3.12.2-1
 logrotate==3.21.0-1
 lsof==4.95.0-1
 openssh-client==1:9.2p1-2+deb12u7
-openssl==3.0.17-1~deb12u2
+openssl==3.0.17-1~deb12u3
 pci.ids==0.0~2023.04.11-1
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
