@@ -20,12 +20,12 @@ libswsscommon==1.0.0
 libtirpc-dev==1.3.3+ds-1
 libxml2==2.9.14+dfsg-1.3~deb12u4
 libxml2-dev==2.9.14+dfsg-1.3~deb12u4
-libxslt1-dev==1.1.35-1+deb12u2
-libxslt1.1==1.1.35-1+deb12u2
+libxslt1-dev==1.1.35-1+deb12u3
+libxslt1.1==1.1.35-1+deb12u3
 libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==6.1.148-1
+linux-libc-dev==6.1.153-1
 python3-swsscommon==1.0.0
 python3-yaml==6.0-3+b2
 python3-yang==1.0.73

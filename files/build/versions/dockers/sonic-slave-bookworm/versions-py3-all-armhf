@@ -1,2 +1,2 @@
 protobuf==4.25.8
-psutil==7.0.0
+psutil==7.1.0
