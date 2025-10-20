@@ -2311,7 +2311,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	if (fnc->use_route_replace && op == DPLANE_OP_ROUTE_UPDATE) {
 		nexthop = dplane_ctx_get_ng(ctx)->nexthop;
 		if (nexthop && nexthop->nh_srv6) {
-			// Dont change op for srv6 yet. Not sure if update
+			// Don't change op for srv6 yet. Not sure if update
 			// semantics will work or not
 		} else {
 			op = DPLANE_OP_ROUTE_INSTALL;
