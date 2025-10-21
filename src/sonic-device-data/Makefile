@@ -55,7 +55,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 				echo "Reserve midplane interface for $$(dirname $$d)"; \
 				i=$$(($$i+1)); \
 			fi; \
-			while IFS= read -r line; do \
+			while IFS= read -r line || [ -n "$$line" ]; do \
 				if ! grep -q "^#" <<< "$$line"; then \
 					i=$$(($$i+1)); \
 					lanes=$$(echo "$$line" | awk '{print $$2}'); \
@@ -97,7 +97,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 				if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/port_config.ini ]; then \
 					last_line=$$(tail -n 1 device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/port_config.ini); \
 					num_columns=$$(echo $$last_line | awk '{print NF}'); \
-					while IFS= read -r line; do \
+					while IFS= read -r line || [ -n "$$line" ]; do \
 						if ! grep -q "^#" <<< "$$line"; then \
 							i=$$(($$i+1)); \
 							lanes=$$(echo "$$line" | awk '{print $$2}'); \
