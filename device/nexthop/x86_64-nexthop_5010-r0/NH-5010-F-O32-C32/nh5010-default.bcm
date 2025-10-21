@@ -2258,3 +2258,8 @@ eventor_sbus_dma_channels.BCM8887X=0,24,0,25,1,24,1,25
 
 #Default CPU Tx Tc Queue
 sai_default_cpu_tx_tc=7
+
+#macsec properties
+xflow_macsec_secure_chan_to_num_secure_assoc=4
+xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
+xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
