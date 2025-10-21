@@ -426,6 +426,7 @@ sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog-container.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 j2 $IMAGE_CONFIGS/rsyslog/rsyslog.d/00-sonic.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/rsyslog.d/00-sonic.conf
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.d/*.conf $FILESYSTEM_ROOT/etc/rsyslog.d/
+sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.d/*.json $FILESYSTEM_ROOT/etc/rsyslog.d/
 echo "rsyslog-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy containercfgd configuration files
