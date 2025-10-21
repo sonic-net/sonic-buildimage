@@ -3,9 +3,6 @@ FROM {{ prefix }}ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN sed -i '2i if [ "$EUID" -ne 0 ]; then\n  exec sudo "$0" "$@"\nfi\n' /usr/local/share/buildinfo/scripts/post_run_buildinfo
-RUN sed -i '2i if [ "$EUID" -ne 0 ]; then\n  exec sudo "$0" "$@"\nfi\n' /usr/local/share/buildinfo/scripts/post_run_cleanup
-
 RUN apt-get update && apt-get install -y \
     apt-transport-https \
     apt-utils \
@@ -46,10 +43,13 @@ RUN apt-get update && apt-get install -y \
     telnet \
     vim
 
+# Ubuntu 24.04 recommends installing pip packages in a virtual environment
+# Create a virtual environment at /opt/venv and install all required python packages there
 RUN python3 -m venv --system-site-packages /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Configure system-wide PATH and sudo secure_path for /opt/venv/bin access
+# Without this change, running pip or python with sudo will not use the binaries from /opt/venv/bin
 RUN sed -i 's|^PATH="|PATH="/opt/venv/bin:|' /etc/environment \
     && sed -i 's|secure_path="\([^"]*\)"|secure_path="/opt/venv/bin:\1"|' /etc/sudoers
 
@@ -87,6 +87,9 @@ RUN pip install --no-cache-dir \
     ncclient \
     netaddr \
     netmiko \
+    opentelemetry-api==1.27.0 \
+    opentelemetry-sdk==1.27.0 \
+    opentelemetry-exporter-otlp==1.27.0 \
     pandas \
     paramiko \
     passlib \
