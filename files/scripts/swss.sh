@@ -127,15 +127,16 @@ function clean_up_chassis_db_tables()
 
     switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
     platform=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'platform'`
-    chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
-    if [ ! -e $chassis_config ]; then
-       debug "No chassis config found"
-       return
-    fi
 
     # Run clean up only in swss running for voq switches
     if is_chassis_supervisor || [[ $switch_type != 'voq' ]]; then
         return
+    fi
+
+    chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
+    if [ ! -e $chassis_config ]; then
+       debug "No chassis config found"
+       return
     fi
 
     until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
