@@ -1,0 +1,10 @@
+Source: sonic-h3c-platform-modules
+Section: main
+Priority: extra
+Maintainer: h3c-sonic-team <sonic@h3c.com>
+Build-Depends: debhelper (>= 9), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-h3c-s9855-48cd8d-w1
+Architecture: amd64
+Description: platform device kernel modules (2025-10-13 11:21)

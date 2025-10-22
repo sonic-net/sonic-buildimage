@@ -1,0 +1,14 @@
+[Unit]
+Description=Platform modules service for H3C
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/h3c_util.py -f install
+ExecStop=/usr/local/bin/h3c_util.py -f clean
+RemainAfterExit=yes
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
