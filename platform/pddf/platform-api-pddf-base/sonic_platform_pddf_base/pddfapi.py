@@ -359,6 +359,12 @@ class PddfApi():
         return ret
 
     def show_attr_hwmon_device(self, dev, ops, data_sysfs_key):
+        def _path_expand(*path):
+            full_path = glob.glob(os.path.join(*path))
+            if not full_path:
+                return None
+            return full_path[0]
+
         ret = []
         if 'i2c' not in dev.keys():
             return ret
@@ -386,12 +392,13 @@ class PddfApi():
                 if 'topo_info' in i2c_dev['i2c']:
                     path = self.show_device_sysfs(i2c_dev, ops)+"/%d-00%02x/"%(int(i2c_dev['i2c']['topo_info']['parent_bus'], 0),
                             int(i2c_dev['i2c']['topo_info']['dev_addr'], 0))
-                    if (os.path.exists(path)):
-                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
+                    full_path = _path_expand(path, 'hwmon', 'hwmon*', real_name)
                 elif 'path_info' in i2c_dev['i2c']:
                     path = i2c_dev['i2c']['path_info']['sysfs_base_path']
-                    if (os.path.exists(path)):
-                        full_path = "/".join([path, real_name])
+                    full_path = _path_expand(path, real_name)
+
+                if full_path is None:
+                    return []
 
                 dsysfs_path = full_path
                 if dsysfs_path not in self.data_sysfs_obj[KEY]:

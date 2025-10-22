@@ -257,7 +257,7 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
             return False
 
-        if self.switch_role and self.switch_role != "SpineRouter":
+        if self.switch_role and self.switch_role not in ["SpineRouter", "LowerSpineRouter", "UpperSpineRouter"]:
             log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on %s" % self.switch_role)
             return True
 
