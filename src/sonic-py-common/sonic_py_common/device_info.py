@@ -614,7 +614,7 @@ def is_multi_npu():
     return (num_npus > 1)
 
 
-def is_single_voq():
+def is_chassis_config_absent():
     chassis_db_conf_file_path = get_chassis_db_conf_file_path()
     if chassis_db_conf_file_path is None:
         return True
@@ -624,7 +624,7 @@ def is_single_voq():
 
 def is_voq_chassis():
     switch_type = get_platform_info().get('switch_type')
-    single_voq = is_single_voq()
+    single_voq = is_chassis_config_absent()
 
     return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
