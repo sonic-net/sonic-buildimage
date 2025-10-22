@@ -170,10 +170,10 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinf
 # Install Python module for ipaddr
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
-# Install Python module for grpcio and grpcio-toole
+# Install Python module for grpcio and grpcio-tools
 if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.58.0"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.58.0"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio==1.66.2"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install "grpcio-tools==1.66.2"
 fi
 
 # Install Python module for smbus2
@@ -191,11 +191,14 @@ if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
 fi
 
 # Install sonic-yang-models Python 3 package, install dependencies
-install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb
+install_deb_package $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb $debs_path/libpcre3_*.deb
 install_pip_package {{sonic_yang_models_py3_wheel_path}}
 
 # Install sonic-yang-mgmt Python3 package
 install_pip_package {{sonic_yang_mgmt_py3_wheel_path}}
+
+# Install some dependencies for pyangbind
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-lxml python3-regex
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -226,7 +229,8 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift
 install_pip_package {{system_health_py3_wheel_path}}
 
 # Install m2crypto, cryptography, cffi, and pynacl packages, used by sonic-utilities
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-nacl
+# Install python packages used by sonic-utilities
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-m2crypto python3-cryptography python3-cffi python3-natsort python3-netifaces python3-paramiko python3-scp python3-enlighten python3-requests python3-click
 
 # install libffi-dev to match utilities' dependency.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libffi-dev
@@ -238,7 +242,8 @@ install_pip_package {{sonic_utilities_py3_wheel_path}}
 install_deb_package $debs_path/sonic-utilities-data_*.deb
 
 # Install customized bash version to patch bash plugin support.
-install_deb_package $debs_path/bash_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/bash_*.deb
 
 # sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
 # in bash.bashrc, so we copy a version of the file with it enabled here.
@@ -318,8 +323,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus ldap
 sudo sed -i -e '/^passwd/s/ tacplus//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install pam-radius-auth and nss-radius
-install_deb_package $debs_path/libpam-radius-auth_*.deb
-install_deb_package $debs_path/libnss-radius_*.deb
+# TODO(trixie): Fix compilation
+#install_deb_package $debs_path/libpam-radius-auth_*.deb
+#install_deb_package $debs_path/libnss-radius_*.deb
 # Disable radius by default
 # radius does not have any profiles
 #sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove radius tacplus
@@ -372,12 +378,12 @@ sudo cp $IMAGE_CONFIGS/monit/mgmt_oper_status.py $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mgmt_oper_status.py
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
-# TODO: are mismatching versions fine for bookworm?
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -t bookworm-backports smartmontools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install smartmontools
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
-install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
+# TODO(trixie): Fix bash compilation
+#install_deb_package $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
 
 {% if sonic_asic_platform == 'broadcom' %}
 # Install custom-built flashrom
@@ -528,7 +534,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 {% endif %}
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-watchdog
 
 # sonic-ctrmgrd-rs is required by container script
 install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
@@ -661,6 +667,12 @@ sudo cp $IMAGE_CONFIGS/config-chassisdb/config-chassisdb $FILESYSTEM_ROOT/usr/bi
 echo "config-chassisdb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable config-chassisdb.service
 
+# Copy basic script to handle NPU/DPU-specific things that cannot otherwise be handled
+# Note: Intentionally not setting executable bit because users generally won't
+# need to manually run these scripts.
+sudo cp $IMAGE_CONFIGS/midplane-network/is-npu-or-dpu.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp $IMAGE_CONFIGS/midplane-network/define-npu-specific-netdevs.sh $FILESYSTEM_ROOT/usr/local/bin/
+
 # Copy midplane network service file for smart switch
 sudo cp $IMAGE_CONFIGS/midplane-network/bridge-midplane.netdev $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/bridge-midplane.netdev
 sudo cp $IMAGE_CONFIGS/midplane-network/bridge-midplane.network $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_NETWORK/bridge-midplane.network
@@ -673,29 +685,16 @@ sudo cp $IMAGE_CONFIGS/midplane-network/midplane-network-dpu.service $FILESYSTEM
 
 # Disable smart switch unit by default, these units will be controlled by systemd-sonic-generator
 sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/bridge-midplane.netdev
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/bridge-midplane.network
 sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.netdev
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/dummy-midplane.network
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/midplane-network-npu.network
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/network/midplane-network-dpu.network
-echo "midplane-network-npu.service" | sudo tee -a $GENERATED_SERVICE_FILE
+#echo "midplane-network-npu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-npu.service
-echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
+#echo "midplane-network-dpu.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu0.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu1.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu2.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu3.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu4.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu5.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu6.service
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu7.service
+
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
-
-sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/systemd-networkd.service
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable systemd-networkd-wait-online.service
+sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
+sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
 
 # Copy backend-acl script and service file
 sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/backend-acl.service
@@ -1186,14 +1185,14 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
+{% if installer_python_debs.strip() -%}
 # Install FIPS python package will break apt-get purge command, so install after all purge command finish 
 if [ "$INCLUDE_FIPS" == y ]; then
-    {% if installer_python_debs.strip() -%}
     {% for deb in installer_python_debs.strip().split(' ') -%}
     install_deb_package {{deb}}
     {% endfor %}
-    {% endif %}
 fi
+{% endif %}
 
 
 {% if installer_debs.strip() -%}
@@ -1211,3 +1210,5 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
+
+

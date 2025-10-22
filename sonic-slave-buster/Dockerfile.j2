@@ -641,6 +641,7 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
 # Install m2crypto package, needed by SWI tools
 RUN pip2 install m2crypto==0.36.0
+RUN pip3 install m2crypto==0.45.1
 
 # Install swi tools
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
