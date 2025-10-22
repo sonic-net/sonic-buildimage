@@ -2,10 +2,10 @@
 
 {%- include 'buffer_ports.j2' %}
 
-{%- macro generate_port_lists(PORT_ALL) %}
+{%- macro generate_qos_bypass_port_list(PORT_QOS_BYPASS) %}
     {# Generate list of ports #}
-    {%- for port_idx in range(0,256,8) %}
-        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- for port_idx in range(256, 261, 4) %}
+        {%- if PORT_QOS_BYPASS.append("Ethernet%d" % (port_idx)) %}{%- endif %}
     {%- endfor %}
 {%- endmacro %}
 

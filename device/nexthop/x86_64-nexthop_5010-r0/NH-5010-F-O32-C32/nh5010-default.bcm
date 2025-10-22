@@ -1823,6 +1823,11 @@ serdes_tx_taps_255.BCM8887X=mode:PAM4,pre:0,main:168,post:0,pre2:0,post2:0,pre3:
 
 # ----------------------------------------------------------------------------------------------------
 #     core_32
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
 # ----------------------------------------------------------------------------------------------------
 ucode_port_257.BCM8887X=CGE64:core_2.33
 tm_port_header_type_out_257.BCM8887X=ETH
@@ -1850,6 +1855,11 @@ phy_tx_polarity_flip_phy259.BCM8887X=0
 
 # ----------------------------------------------------------------------------------------------------
 #     core_33
+#
+#     NOTE:
+#     The QoS configuration (refer qos.json.j2 and buffers_defaults_XXX.j2 file per SKU)
+#     does not include this management port. If you are modifying the management port, ensure that the
+#     QoS configuration is updated accordingly to reflect the change.
 # ----------------------------------------------------------------------------------------------------
 ucode_port_261.BCM8887X=CGE65:core_6.33
 tm_port_header_type_out_261.BCM8887X=ETH
@@ -2014,9 +2024,6 @@ ucode_port_385.BCM8887X=CPU.12:core_7.205
 ucode_port_386.BCM8887X=CPU.20:core_4.206
 ucode_port_387.BCM8887X=CPU.28:core_5.207
 
-#SDK 6.5.31
-custom_feature_statdma_enable.BCM8887X=1
-
 #special ports
 ucode_port_330.BCM8887X=EVENTOR:core_0.230
 
@@ -2110,7 +2117,7 @@ stable_size.BCM8887X=1700000000
 stable_size.BCM8887X_ADAPTER=1700000000
 
 #disable counter thread
-bcm_stat_interval.BCM8887X_ADAPTER=0
+bcm_stat_interval.BCM8887X_ADAPTER=1000000
 
 #########################
 #########################
@@ -2242,9 +2249,6 @@ port_init_speed_fabric.BCM8887X=53125
 custom_feature_adapter_do_collect_enable.BCM8887X_ADAPTER=1
 custom_feature_use_new_access.BCM8887X_ADAPTER=1
 mem_cache_enable_all.BCM8887X_ADAPTER=1
-
-#Disable DMA stat
-custom_feature_statdma_enable.BCM8887X_ADAPTER=0
 
 #dram
 
