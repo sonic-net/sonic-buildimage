@@ -1,0 +1,444 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 09a2
+  name: 'System peripheral: Intel Corporation Ice Lake Memory Map/VT-d (rev 04)'
+- bus: '00'
+  dev: '00'
+  fn: '1'
+  id: 09a4
+  name: 'System peripheral: Intel Corporation Ice Lake Mesh 2 PCIe (rev 04)'
+- bus: '00'
+  dev: '00'
+  fn: '2'
+  id: 09a3
+  name: 'System peripheral: Intel Corporation Ice Lake RAS (rev 04)'
+- bus: '00'
+  dev: '00'
+  fn: '3'
+  id: 09a5
+  name: 'System peripheral: Intel Corporation Device 09a5 (rev 04)'
+- bus: '00'
+  dev: '00'
+  fn: '4'
+  id: 0998
+  name: 'Host bridge: Intel Corporation Ice Lake IEH'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '2'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '3'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '4'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '5'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '6'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '01'
+  fn: '7'
+  id: '0b00'
+  name: 'System peripheral: Intel Corporation Ice Lake CBDMA [QuickData Technology]'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 09a6
+  name: 'System peripheral: Intel Corporation Ice Lake MSM'
+- bus: '00'
+  dev: '02'
+  fn: '1'
+  id: 09a7
+  name: 'System peripheral: Intel Corporation Ice Lake PMON MSM'
+- bus: '00'
+  dev: '02'
+  fn: '4'
+  id: '3456'
+  name: 'Non-Essential Instrumentation [1300]: Intel Corporation Ice Lake NorthPeak
+    (rev 01)'
+- bus: '00'
+  dev: '07'
+  fn: '0'
+  id: 18b2
+  name: 'SATA controller: Intel Corporation Device 18b2 (rev 11)'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: 18c2
+  name: 'SATA controller: Intel Corporation Device 18c2 (rev 11)'
+- bus: '00'
+  dev: 0f
+  fn: '0'
+  id: 18ac
+  name: 'System peripheral: Intel Corporation Device 18ac (rev 11)'
+- bus: '00'
+  dev: '11'
+  fn: '0'
+  id: 18a9
+  name: 'PCI bridge: Intel Corporation Device 18a9 (rev 11)'
+- bus: '00'
+  dev: '12'
+  fn: '0'
+  id: 18aa
+  name: 'PCI bridge: Intel Corporation Device 18aa (rev 11)'
+- bus: '00'
+  dev: '13'
+  fn: '0'
+  id: 18ab
+  name: 'PCI bridge: Intel Corporation Device 18ab (rev 11)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 18ad
+  name: 'PCI bridge: Intel Corporation Device 18ad (rev 11)'
+- bus: '00'
+  dev: '15'
+  fn: '0'
+  id: 18ae
+  name: 'PCI bridge: Intel Corporation Device 18ae (rev 11)'
+- bus: '00'
+  dev: '18'
+  fn: '0'
+  id: 18d3
+  name: 'Communication controller: Intel Corporation Atom Processor P5xxx Series MEI
+    Controller (rev 11)'
+- bus: '00'
+  dev: '18'
+  fn: '4'
+  id: 18d6
+  name: 'Communication controller: Intel Corporation Atom Processor P5xxx Series MEI
+    Controller (rev 11)'
+- bus: '00'
+  dev: 1a
+  fn: '0'
+  id: 18d8
+  name: 'Serial controller: Intel Corporation Device 18d8 (rev 11)'
+- bus: '00'
+  dev: 1a
+  fn: '1'
+  id: 18d8
+  name: 'Serial controller: Intel Corporation Device 18d8 (rev 11)'
+- bus: '00'
+  dev: 1a
+  fn: '2'
+  id: 18d8
+  name: 'Serial controller: Intel Corporation Device 18d8 (rev 11)'
+- bus: '00'
+  dev: 1a
+  fn: '3'
+  id: 18d9
+  name: 'Unassigned class [ff00]: Intel Corporation Device 18d9 (rev 11)'
+- bus: '00'
+  dev: 1d
+  fn: '0'
+  id: 0998
+  name: 'Host bridge: Intel Corporation Ice Lake IEH'
+- bus: '00'
+  dev: 1e
+  fn: '0'
+  id: 18d0
+  name: 'USB controller: Intel Corporation Atom Processor P5xxx Series USB xHCI Controller
+    (rev 11)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: 18dc
+  name: 'ISA bridge: Intel Corporation Device 18dc (rev 11)'
+- bus: '00'
+  dev: 1f
+  fn: '4'
+  id: 18df
+  name: 'SMBus: Intel Corporation Atom Processor P5xxx Series SMBus Controller (rev
+    11)'
+- bus: '00'
+  dev: 1f
+  fn: '5'
+  id: 18e0
+  name: 'Serial bus controller: Intel Corporation Atom Processor P5xxx Series SPI
+    Controller (rev 11)'
+- bus: '00'
+  dev: 1f
+  fn: '7'
+  id: 18e1
+  name: 'Non-Essential Instrumentation [1300]: Intel Corporation Atom Processor P5xxx
+    Series Trace Hub (rev 11)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: '1533'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: '1150'
+  name: 'PCI bridge: ASPEED Technology, Inc. AST1150 PCI-to-PCI Bridge (rev 06)'
+- bus: '05'
+  dev: '00'
+  fn: '0'
+  id: '0001'
+  name: 'Non-VGA unclassified device: Device 0000:0001 (rev 01)'
+- bus: '14'
+  dev: '00'
+  fn: '0'
+  id: 09a2
+  name: 'System peripheral: Intel Corporation Ice Lake Memory Map/VT-d (rev 04)'
+- bus: '14'
+  dev: '00'
+  fn: '1'
+  id: 09a4
+  name: 'System peripheral: Intel Corporation Ice Lake Mesh 2 PCIe (rev 04)'
+- bus: '14'
+  dev: '00'
+  fn: '2'
+  id: 09a3
+  name: 'System peripheral: Intel Corporation Ice Lake RAS (rev 04)'
+- bus: '14'
+  dev: '00'
+  fn: '3'
+  id: 09a5
+  name: 'System peripheral: Intel Corporation Device 09a5 (rev 04)'
+- bus: '14'
+  dev: '00'
+  fn: '4'
+  id: 0998
+  name: 'Host bridge: Intel Corporation Ice Lake IEH'
+- bus: '14'
+  dev: '02'
+  fn: '0'
+  id: 347a
+  name: 'PCI bridge: Intel Corporation Device 347a (rev 06)'
+- bus: '14'
+  dev: '03'
+  fn: '0'
+  id: 347b
+  name: 'PCI bridge: Intel Corporation Device 347b (rev 06)'
+- bus: '14'
+  dev: '04'
+  fn: '0'
+  id: 347c
+  name: 'PCI bridge: Intel Corporation Device 347c (rev 06)'
+- bus: '14'
+  dev: '05'
+  fn: '0'
+  id: 347d
+  name: 'PCI bridge: Intel Corporation Device 347d (rev 06)'
+- bus: '18'
+  dev: '00'
+  fn: '0'
+  id: b990
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM56990 Switch ASIC
+    [Tomahawk4] (rev 11)'
+- bus: f3
+  dev: '00'
+  fn: '0'
+  id: 09a2
+  name: 'System peripheral: Intel Corporation Ice Lake Memory Map/VT-d (rev 04)'
+- bus: f3
+  dev: '00'
+  fn: '1'
+  id: 09a4
+  name: 'System peripheral: Intel Corporation Ice Lake Mesh 2 PCIe (rev 04)'
+- bus: f3
+  dev: '00'
+  fn: '2'
+  id: 09a3
+  name: 'System peripheral: Intel Corporation Ice Lake RAS (rev 04)'
+- bus: f3
+  dev: '00'
+  fn: '3'
+  id: 09a5
+  name: 'System peripheral: Intel Corporation Device 09a5 (rev 04)'
+- bus: f3
+  dev: '00'
+  fn: '4'
+  id: 0998
+  name: 'Host bridge: Intel Corporation Ice Lake IEH'
+- bus: f3
+  dev: '04'
+  fn: '0'
+  id: 18d1
+  name: 'PCI bridge: Intel Corporation Device 18d1'
+- bus: f4
+  dev: '00'
+  fn: '0'
+  id: 124c
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection E823-L for backplane'
+- bus: f4
+  dev: '00'
+  fn: '1'
+  id: 124c
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection E823-L for backplane'
+- bus: f4
+  dev: '00'
+  fn: '2'
+  id: 124c
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection E823-L for backplane'
+- bus: f4
+  dev: '00'
+  fn: '3'
+  id: 124c
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection E823-L for backplane'
+- bus: fe
+  dev: '00'
+  fn: '0'
+  id: '3450'
+  name: 'System peripheral: Intel Corporation Device 3450'
+- bus: fe
+  dev: '00'
+  fn: '1'
+  id: '3451'
+  name: 'System peripheral: Intel Corporation Device 3451'
+- bus: fe
+  dev: '00'
+  fn: '2'
+  id: '3452'
+  name: 'System peripheral: Intel Corporation Device 3452'
+- bus: fe
+  dev: '00'
+  fn: '3'
+  id: 0998
+  name: 'Host bridge: Intel Corporation Ice Lake IEH'
+- bus: fe
+  dev: '00'
+  fn: '5'
+  id: '3455'
+  name: 'System peripheral: Intel Corporation Device 3455'
+- bus: fe
+  dev: 0b
+  fn: '0'
+  id: '3448'
+  name: 'System peripheral: Intel Corporation Device 3448'
+- bus: fe
+  dev: 0b
+  fn: '1'
+  id: '3448'
+  name: 'System peripheral: Intel Corporation Device 3448'
+- bus: fe
+  dev: 0b
+  fn: '2'
+  id: 344b
+  name: 'System peripheral: Intel Corporation Device 344b'
+- bus: fe
+  dev: 0c
+  fn: '0'
+  id: 344a
+  name: 'Performance counters: Intel Corporation Device 344a'
+- bus: fe
+  dev: 1a
+  fn: '0'
+  id: '2880'
+  name: 'Performance counters: Intel Corporation Device 2880'
+- bus: ff
+  dev: '00'
+  fn: '0'
+  id: 344c
+  name: 'System peripheral: Intel Corporation Device 344c'
+- bus: ff
+  dev: '00'
+  fn: '1'
+  id: 344c
+  name: 'System peripheral: Intel Corporation Device 344c'
+- bus: ff
+  dev: '00'
+  fn: '2'
+  id: 344c
+  name: 'System peripheral: Intel Corporation Device 344c'
+- bus: ff
+  dev: '00'
+  fn: '3'
+  id: 344c
+  name: 'System peripheral: Intel Corporation Device 344c'
+- bus: ff
+  dev: 0a
+  fn: '0'
+  id: 344d
+  name: 'System peripheral: Intel Corporation Device 344d'
+- bus: ff
+  dev: 0a
+  fn: '1'
+  id: 344d
+  name: 'System peripheral: Intel Corporation Device 344d'
+- bus: ff
+  dev: 0a
+  fn: '2'
+  id: 344d
+  name: 'System peripheral: Intel Corporation Device 344d'
+- bus: ff
+  dev: 0a
+  fn: '3'
+  id: 344d
+  name: 'System peripheral: Intel Corporation Device 344d'
+- bus: ff
+  dev: 1d
+  fn: '0'
+  id: 344f
+  name: 'System peripheral: Intel Corporation Device 344f'
+- bus: ff
+  dev: 1d
+  fn: '1'
+  id: '3457'
+  name: 'System peripheral: Intel Corporation Device 3457'
+- bus: ff
+  dev: 1e
+  fn: '0'
+  id: '3458'
+  name: 'System peripheral: Intel Corporation Device 3458 (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '1'
+  id: '3459'
+  name: 'System peripheral: Intel Corporation Device 3459 (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '2'
+  id: 345a
+  name: 'System peripheral: Intel Corporation Device 345a (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '3'
+  id: 345b
+  name: 'System peripheral: Intel Corporation Device 345b (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '4'
+  id: 345c
+  name: 'System peripheral: Intel Corporation Device 345c (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '5'
+  id: 345d
+  name: 'System peripheral: Intel Corporation Device 345d (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '6'
+  id: 345e
+  name: 'System peripheral: Intel Corporation Device 345e (rev 01)'
+- bus: ff
+  dev: 1e
+  fn: '7'
+  id: 345f
+  name: 'System peripheral: Intel Corporation Device 345f (rev 01)'
