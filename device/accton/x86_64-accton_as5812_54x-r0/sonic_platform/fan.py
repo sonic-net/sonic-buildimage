@@ -81,15 +81,8 @@ class Fan(FanBase):
         
 
         if not self.is_psu_fan:
-            dir_str = "{}{}{}".format(CPLD_FAN_PATH, self.fan_tray_index+1, '_direction')
-            val=self._api_helper.read_txt_file(dir_str)
-            if val is not None:
-                if int(val, 10)==0:
-                    direction=self.FAN_DIRECTION_EXHAUST
-                else:
-                    direction=self.FAN_DIRECTION_INTAKE
-            else:
-                direction=self.FAN_DIRECTION_EXHAUST
+            #Possible hardware aging; displayed as 'N/A' to prevent inaccurate results.
+            direction=self.FAN_DIRECTION_NOT_APPLICABLE
         else: #For PSU
             psu_path = "{}{}".format(self.psu_cpld_path, 'psu_power_good')
             val = self._api_helper.read_txt_file(psu_path)

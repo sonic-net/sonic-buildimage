@@ -1,6 +1,7 @@
 import struct
 import json
 import fcntl
+import os
 from mmap import *
 from sonic_py_common import device_info
 from sonic_py_common import logger
