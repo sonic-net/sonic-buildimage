@@ -1978,10 +1978,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
