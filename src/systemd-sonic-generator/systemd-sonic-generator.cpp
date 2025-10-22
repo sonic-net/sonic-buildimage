@@ -119,6 +119,7 @@ static bool smart_switch_npu;
 static bool smart_switch_dpu;
 static bool smart_switch;
 static int num_dpus;
+static bool is_bmc_device;
 static char* platform = NULL;
 static struct json_object *platform_info = NULL;
 
@@ -458,6 +459,7 @@ static void update_environment(const std::filesystem::path& install_dir, const s
     std::unordered_map<std::string, std::string> env_vars;
     env_vars["IS_DPU_DEVICE"] = (smart_switch_dpu ? "true" : "false");
     env_vars["NUM_DPU"] = std::to_string(num_dpus);
+    env_vars["IS_BMC_DEVICE"] = (is_bmc_device ? "true" : "false");
 
     unit_environment_file << "[Service]\n";
 
@@ -922,7 +924,7 @@ static bool is_smart_switch_npu() {
 
 /**
  * Checks if the current platform is a smart switch with a DPU (Data Processing Unit).
- * 
+ *
  * @return true if the platform is a smart switch with a DPU, false otherwise.
  */
 static bool is_smart_switch_dpu() {
@@ -932,6 +934,20 @@ static bool is_smart_switch_dpu() {
         return false;
     }
     return json_object_object_get_ex(platform_info, "DPU", &dpu);
+}
+
+
+/**
+ * Checks if the current platform is a BMC (Baseboard Management Controller) device.
+ *
+ * @return true if the platform contains "aspeed", false otherwise.
+ */
+static bool is_bmc_platform() {
+    const char* platform = get_platform();
+    if (platform == NULL) {
+        return false;
+    }
+    return (strstr(platform, "aspeed") != NULL);
 }
 
 
@@ -1008,6 +1024,7 @@ int ssg_main(int argc, char **argv) {
     smart_switch_dpu = is_smart_switch_dpu();
     smart_switch = smart_switch_npu || smart_switch_dpu;
     num_dpus = get_num_of_dpu();
+    is_bmc_device = is_bmc_platform();
 
     install_dir = std::string(argv[1]) + "/";
     const char* config_file = get_config_file();

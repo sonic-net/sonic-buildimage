@@ -1,0 +1,18 @@
+[Unit]
+Description=SONiC Thermal Control Daemon
+Documentation=https://github.com/sonic-net/SONiC/wiki/
+After=database.service redis.service
+Requires=database.service
+PartOf=sonic.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/thermalctld
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target sonic.target
+

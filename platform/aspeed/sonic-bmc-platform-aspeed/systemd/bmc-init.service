@@ -1,0 +1,17 @@
+[Unit]
+Description=BMC Initialization Service
+Documentation=https://github.com/sonic-net/SONiC/wiki/
+After=local-fs.target
+Before=database.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bmc_init.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

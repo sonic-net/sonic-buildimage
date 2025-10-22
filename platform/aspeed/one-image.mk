@@ -1,0 +1,21 @@
+# ONIE installer for Aspeed BMC platform with U-Boot
+
+SONIC_ONE_IMAGE = sonic-aspeed.bin
+$(SONIC_ONE_IMAGE)_ARCH = arm64
+$(SONIC_ONE_IMAGE)_MACHINE = aspeed
+$(SONIC_ONE_IMAGE)_PLATFORM = aspeed
+$(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie  # Change from 'raw' to 'onie'
+
+# Aspeed BMC is a minimal embedded platform - only include essential components
+DISABLED_PACKAGES_LOCAL = $(DOCKER_DHCP_RELAY) $(DOCKER_SFLOW) $(DOCKER_MGMT_FRAMEWORK) \
+                          $(DOCKER_NAT) $(DOCKER_TEAMD) $(DOCKER_ROUTER_ADVERTISER) \
+                          $(DOCKER_MUX) $(DOCKER_MACSEC) $(DOCKER_TELEMETRY) \
+                          $(DOCKER_EVENTD) $(DOCKER_DASH_HA) $(DOCKER_STP)
+
+$(info [aspeed] Filtering out packages: $(DISABLED_PACKAGES_LOCAL))
+SONIC_PACKAGES_LOCAL := $(filter-out $(DISABLED_PACKAGES_LOCAL), $(SONIC_PACKAGES_LOCAL))
+
+$(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
+$(SONIC_ONE_IMAGE)_INSTALLS += $(BMC_PLATFORM_ASPEED)
+$(SONIC_ONE_IMAGE)_DOCKERS = $(DOCKER_DATABASE) $(DOCKER_GNMI) $(DOCKER_RESTAPI) $(DOCKER_PLATFORM_MONITOR)
+SONIC_INSTALLERS += $(SONIC_ONE_IMAGE)

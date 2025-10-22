@@ -1,0 +1,88 @@
+/dts-v1/;
+
+/*
+ * FIT Image Configuration for AST2700 SONiC
+ *
+ * NOTE: This is a TEMPLATE file. The actual paths are substituted during build.
+ * Kernel version and paths are read from platform_arm64.conf
+ *
+ * Load addresses are chosen based on AST2700 memory map:
+ * - RAM: 0x400000000 - 0x47e000000 (2016 MB)
+ * - Reserved regions: 0x41b800000-0x423ffffff, 0x42c000000-0x431bfffff
+ *
+ * Safe load addresses (avoiding reserved regions):
+ * - Kernel:   0x403000000 (U-Boot default loadaddr, ~10 MB)
+ * - Ramdisk:  0x440000000 (after reserved regions, 192 MB allocated)
+ *             Production initramfs: 37.4 MB compressed, 160 MB uncompressed
+ *             IMPORTANT: Kernel decompresses initramfs IN PLACE!
+ * - FDT:      0x44C000000 (after ramdisk: 0x440000000 + 192 MB)
+ *
+ * Memory Layout:
+ *   0x403000000 ──> Kernel (10 MB)
+ *   0x440000000 ──> Ramdisk (192 MB allocated for decompression)
+ *                   Compressed: 37.4 MB (zstd)
+ *                   Uncompressed: 160 MB (in-place decompression)
+ *   0x44C000000 ──> DTB (50 KB)
+ *
+ * Two-cell address format: <0xHIGH 0xLOW>
+ * Example: 0x44C000000 = <0x4 0x4C000000>
+ *
+ * See platform/aspeed/AST2700-MEMORY-MAP.md for details.
+ */
+
+/ {
+	description = "Kernel fitImage for SONiC AST2700 (__KERNEL_VERSION__)";
+	#address-cells = <2>;
+
+	images {
+		kernel-1 {
+			description = "Linux kernel";
+			data = /incbin/("__KERNEL_PATH__");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x4 0x03000000>;
+			entry = <0x4 0x03000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		fdt-__DTB_NAME__ {
+			description = "Flattened Device Tree blob";
+			data = /incbin/("__DTB_PATH__");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4 0x4C000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+		ramdisk-1 {
+			description = "Initramfs";
+			data = /incbin/("__INITRD_PATH__");
+			type = "ramdisk";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x4 0x40000000>;
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "conf-__DTB_NAME__";
+		conf-__DTB_NAME__ {
+			description = "1 Linux kernel, FDT blob, ramdisk";
+			kernel = "kernel-1";
+			fdt = "fdt-__DTB_NAME__";
+			ramdisk = "ramdisk-1";
+			hash-1 {
+				algo = "sha256";
+			};
+		};
+	};
+};

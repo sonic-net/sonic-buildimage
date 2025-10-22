@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+PLATFORM_NAME := arm64-aspeed_ast2700-r0
+BUILD_DIR := $(shell pwd)/build
+WHEEL_BUILD_DIR := $(BUILD_DIR)/wheel
+
+%:
+	dh $@ --buildsystem=makefile
+
+override_dh_auto_configure:
+	# Skip auto-configure
+
+override_dh_auto_build:
+	# Build Python wheel for sonic_platform
+	python3 setup.py bdist_wheel -d $(WHEEL_BUILD_DIR)
+
+override_dh_auto_test:
+	# Skip auto-test
+
+override_dh_auto_install:
+	# Install systemd service files
+	install -D -m 0644 systemd/bmc-init.service debian/sonic-bmc-platform-aspeed/usr/lib/systemd/system/bmc-init.service
+
+	# Install scripts
+	install -D -m 0755 scripts/bmc_init.sh debian/sonic-bmc-platform-aspeed/usr/bin/bmc_init.sh
+
+	# Install sonic_platform Python module to system location
+	install -D -m 0644 sonic_platform/__init__.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/__init__.py
+	install -D -m 0644 sonic_platform/platform.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/platform.py
+	install -D -m 0644 sonic_platform/chassis.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/chassis.py
+	install -D -m 0644 sonic_platform/watchdog.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/watchdog.py
+	install -D -m 0644 sonic_platform/thermal.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/thermal.py
+	install -D -m 0644 sonic_platform/fan.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/fan.py
+	install -D -m 0644 sonic_platform/fan_drawer.py debian/sonic-bmc-platform-aspeed/usr/lib/python3/dist-packages/sonic_platform/fan_drawer.py
+
+	# Install Python wheel and device files to device directory for pmon container
+	install -d debian/sonic-bmc-platform-aspeed/usr/share/sonic/device/$(PLATFORM_NAME)
+	cp -r $(WHEEL_BUILD_DIR)/* debian/sonic-bmc-platform-aspeed/usr/share/sonic/device/$(PLATFORM_NAME)/
+
+	# Copy device-specific configuration files
+	cp -r ../../device/aspeed/$(PLATFORM_NAME)/* debian/sonic-bmc-platform-aspeed/usr/share/sonic/device/$(PLATFORM_NAME)/ || true
+
+override_dh_clean:
+	rm -fr $(BUILD_DIR)
+	rm -fr *.egg-info
+	dh_clean

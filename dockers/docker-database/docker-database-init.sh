@@ -41,6 +41,11 @@ then
     fi
 fi
 
+if [[ $IS_BMC_DEVICE == "true" ]]
+then
+    export DATABASE_TYPE="bmcdb"
+fi
+
 export BMP_DB_PORT=6400
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
@@ -143,6 +148,8 @@ done
 
 chown -R redis:redis $REDIS_DIR
 REDIS_BMP_DIR="/var/lib/redis_bmp"
-chown -R redis:redis $REDIS_BMP_DIR
+if [[ -d $REDIS_BMP_DIR ]]; then
+    chown -R redis:redis $REDIS_BMP_DIR
+fi
 
 exec /usr/local/bin/supervisord

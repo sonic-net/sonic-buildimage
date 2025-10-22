@@ -756,9 +756,71 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             ## Overwriting the initrd image with uInitrd
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
         else
-            sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            # Check if sonic_fit.its uses placeholders (template-based)
+            if grep -q "__KERNEL_VERSION__\|__KERNEL_PATH__" $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its 2>/dev/null; then
+                # Generate sonic_fit.its with actual kernel version
+                # Detect the actual installed kernel version from the filesystem
+                # The kernel package may have a different version suffix than LINUX_KERNEL_VERSION
+                KERNEL_FILE=$(ls $FILESYSTEM_ROOT/boot/vmlinuz-* 2>/dev/null | head -1)
+                if [ -z "$KERNEL_FILE" ]; then
+                    echo "Error: No kernel found in $FILESYSTEM_ROOT/boot/"
+                    exit 1
+                fi
+                KERNEL_VERSION_FULL=$(basename "$KERNEL_FILE" | sed 's/^vmlinuz-//')
+
+                # Replace placeholders with actual paths
+                KERNEL_PATH="/boot/vmlinuz-${KERNEL_VERSION_FULL}"
+                INITRD_PATH="/boot/initrd.img-${KERNEL_VERSION_FULL}"
+
+                # Read DTB name from platform config if available
+                platform_conf_file="$PLATFORM_DIR/$CONFIGURED_PLATFORM/platform_${CONFIGURED_ARCH}.conf"
+                if [ ! -f "$platform_conf_file" ]; then
+                    platform_conf_file="$PLATFORM_DIR/$CONFIGURED_PLATFORM/platform.conf"
+                fi
+
+                # Extract dtb_name from platform config (e.g., dtb_name="ast2700-evb.dtb")
+                # Strip quotes and comments
+                DTB_NAME=$(grep "^dtb_name=" "$platform_conf_file" 2>/dev/null | cut -d'=' -f2 | sed 's/#.*//' | tr -d '"' | tr -d "'" | tr -d ' ')
+
+                if [ -z "$DTB_NAME" ]; then
+                    echo "Warning: dtb_name not found in $platform_conf_file, using default"
+                    DTB_NAME="default.dtb"
+                fi
+
+                # Construct DTB path based on platform
+                if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+                    DTB_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/aspeed/${DTB_NAME}"
+                else
+                    # Generic fallback - use platform name
+                    DTB_PATH="/usr/lib/linux-image-${KERNEL_VERSION_FULL}/${CONFIGURED_PLATFORM}/${DTB_NAME}"
+                fi
+
+                # Substitute placeholders in sonic_fit.its template
+                sed -e "s|__KERNEL_VERSION__|${KERNEL_VERSION_FULL}|g" \
+                    -e "s|__KERNEL_PATH__|${KERNEL_PATH}|g" \
+                    -e "s|__INITRD_PATH__|${INITRD_PATH}|g" \
+                    -e "s|__DTB_PATH__|${DTB_PATH}|g" \
+                    -e "s|__DTB_NAME__|${DTB_NAME}|g" \
+                    $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its > /tmp/sonic_fit.its.tmp
+
+                sudo cp -v /tmp/sonic_fit.its.tmp $FILESYSTEM_ROOT/boot/sonic_fit.its
+                rm -f /tmp/sonic_fit.its.tmp
+            else
+                # Platform uses hardcoded paths - copy as-is
+                sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            fi
+
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
         fi
+    fi
+
+    # Install U-Boot environment initialization script and service for aspeed platform
+    if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+        echo "Installing U-Boot environment initialization service for aspeed platform..."
+        sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic-uboot-env-init.sh $FILESYSTEM_ROOT/usr/bin/
+        sudo chmod +x $FILESYSTEM_ROOT/usr/bin/sonic-uboot-env-init.sh
+        sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic-uboot-env-init.service $FILESYSTEM_ROOT/etc/systemd/system/
+        sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic-uboot-env-init.service
     fi
 fi
 

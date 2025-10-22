@@ -97,7 +97,9 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            if [[ "$DATABASE_TYPE" != "bmcdb" ]]; then
+                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
+            fi
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -620,6 +622,7 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
             DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
+            DB_OPT=$DB_OPT" --env IS_BMC_DEVICE=$IS_BMC_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -847,6 +850,10 @@ fi
 
 if [[ "$DEV" == *"dpu"* ]]; then
     DATABASE_TYPE="dpudb"
+fi
+
+if [[ "$IS_BMC_DEVICE" == "true" ]]; then
+    DATABASE_TYPE="bmcdb"
 fi
 
 {%- endif %}

@@ -1,0 +1,9 @@
+sonic-bmc-platform-aspeed (1.0.0) unstable; urgency=low
+
+  * Initial release
+  * BMC platform support for Aspeed AST2700
+  * BMC services: init
+  * Watchdog support
+  * Reboot cause detection
+
+ -- Nexthop <opensource@nexthop.ai>  Tue, 03 Dec 2024 00:00:00 +0000

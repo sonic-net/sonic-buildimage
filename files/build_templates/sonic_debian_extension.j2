@@ -1221,4 +1221,40 @@ sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
 # Install syslog counter plugin
 install_deb_package $debs_path/syslog-counter_*.deb
 
+#############################################################################
+# PLATFORM-SPECIFIC SERVICE FILTERING
+# This section MUST remain at the end of the file to ensure all services
+# have been added to GENERATED_SERVICE_FILE before filtering.
+# DO NOT add service registrations (tee -a $GENERATED_SERVICE_FILE) after this point!
+#############################################################################
+
+# Aspeed BMC platform: Filter services for BMC use case
+if [[ $CONFIGURED_PLATFORM == aspeed ]]; then
+    # Show original service count
+    ORIGINAL_COUNT=$(wc -l < $GENERATED_SERVICE_FILE)
+
+    # Use filter script to remove unwanted services and add BMC services
+    sudo cp $BUILD_SCRIPTS_DIR/aspeed_bmc_filter_services.py $FILESYSTEM_ROOT/tmp/
+    sudo chmod a+x $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+
+    # Filter the generated services and mask excluded services
+    sudo python3 $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py \
+        $GENERATED_SERVICE_FILE \
+        $GENERATED_SERVICE_FILE.filtered \
+        $FILESYSTEM_ROOT
+
+    # Show filtered service count
+    FILTERED_COUNT=$(wc -l < $GENERATED_SERVICE_FILE.filtered)
+
+    # Replace with filtered version
+    sudo mv $GENERATED_SERVICE_FILE.filtered $GENERATED_SERVICE_FILE
+
+    # Cleanup
+    sudo rm -f $FILESYSTEM_ROOT/tmp/aspeed_bmc_filter_services.py
+fi
+
+#############################################################################
+# END OF FILE - Platform-specific service filtering complete
+#############################################################################
+
 
