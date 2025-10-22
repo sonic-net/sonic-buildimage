@@ -67,7 +67,7 @@ COMPILE_WHL: $(COMPILE_DIRS)
 	done)
 
 binary: binary-indep
-	@echo "======================================================="
+	@echo "========================================================"
 
 binary-indep:
 	# Resuming debhelper scripts
