@@ -262,7 +262,7 @@ class Adm1266Mock:
 
         # Set up path to test PDDF plugin file
         # Use absolute path in the container
-        self.test_pddf_path = "/sonic/device/nexthop/x86_64-nexthop_4010-r0/pddf/pd-plugin.json"
+        self.test_pddf_path = "/sonic/device/nexthop/x86_64-nexthop_5010-r0/pddf/pd-plugin.json"
 
         # Write the test blackbox data to the nvmem file
         self._setup_nvmem_file(data)
