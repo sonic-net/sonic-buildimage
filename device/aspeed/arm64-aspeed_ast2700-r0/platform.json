@@ -1,0 +1,23 @@
+{
+    "chassis": {
+        "name": "AST2700-BMC",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": true,
+            "colors": ["green", "amber", "off"]
+        },
+        "components": [
+            {
+                "name": "BMC"
+            },
+            {
+                "name": "BIOS"
+            }
+        ],
+        "fans": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": []
+    },
+    "interfaces": {}
+}
