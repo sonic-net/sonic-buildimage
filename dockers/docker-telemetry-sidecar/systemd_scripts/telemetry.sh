@@ -49,7 +49,15 @@ pod_names_on_node() {
 
 delete_pod_with_retry() {
   local name="$1"
-  kubectl_retry -n "${NS}" delete pod "${name}" --force --grace-period=0 --wait=false
+  local out rc
+  out=$(kubectl_retry -n "${NS}" delete pod "${name}" --force --grace-period=0 --wait=false 2>&1)
+  rc=$?
+  if (( rc != 0 )); then
+    log "ERROR delete pod '${name}' failed rc=${rc}: ${out}"
+  else
+    log "Deleted pod '${name}'"
+  fi
+  return "$rc"
 }
 
 kill_pods() {
@@ -58,15 +66,40 @@ kill_pods() {
     log "No pods found on ${NODE_NAME} (ns=${NS})."
     return 0
   fi
+
   log "Deleting pods on ${NODE_NAME}: ${names[*]}"
-  local rc=0
+
+  local rc_any=0 rc=0
   for p in "${names[@]}"; do
-    [[ -n "$p" ]] && delete_pod_with_retry "$p" || rc=1
+    [[ -z "$p" ]] && continue
+    if ! delete_pod_with_retry "$p"; then
+      rc_any=1
+    fi
   done
-  return "$rc"
+
+  if (( rc_any != 0 )); then
+    log "ERROR one or more pod deletions failed on ${NODE_NAME}"
+  else
+    log "All targeted pods deleted on ${NODE_NAME}"
+  fi
+  return "$rc_any"
 }
 
-cmd_start()   { kill_pods; }     # start == kill (DS restarts)
+cmd_start() {
+  if command -v systemd-cat >/dev/null 2>&1; then
+    # background + pipe to journald with distinct priorities
+    ( kill_pods ) \
+      > >(systemd-cat -t telemetry-start -p info) \
+      2> >(systemd-cat -t telemetry-start -p err)
+  else
+    # background + pipe to syslog via logger in case systemd-journald is masked/disabled
+    ( kill_pods ) \
+      > >(logger -t "telemetry-start" -p user.info) \
+      2> >(logger -t "telemetry-start" -p user.err)
+  fi &
+  disown
+  exit 0
+}
 cmd_stop()    { kill_pods; }
 cmd_restart() { kill_pods; }
 
