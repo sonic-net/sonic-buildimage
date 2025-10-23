@@ -1,0 +1,241 @@
+module sonic-igmp-snooping {
+	namespace "http://github.com/Azure/sonic-igmp-snooping";
+	prefix sigmps;
+	yang-version 1.1;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import sonic-port {
+		prefix prt;
+	}
+
+    import sonic-portchannel {
+		prefix lag;
+	}
+
+	import sonic-vlan {
+        prefix svlan;
+    }
+
+	organization
+		"SONIC";
+
+	contact
+		"SONiC";
+
+	description
+		"SONIC IGMP SNOOPING";
+
+	revision 2019-10-15 {
+		description
+			"Initial revision.";
+	}
+
+	container sonic-igmp-snooping {
+
+		container L2MC_STATIC_GROUP {
+
+			list L2MC_STATIC_GROUP_LIST {
+				key "vlan-name group-addr";
+
+				leaf vlan-name {
+					type leafref {
+                        path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    }
+				}
+
+				leaf group-addr {
+					type inet:ipv4-address;
+				}
+
+				leaf-list static-members {
+					type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+					description "List of interfaces/portchannels for the multicast group.";
+				}
+			}			
+		}
+
+		container L2MC_STATIC_MEMBER {
+
+			list L2MC_STATIC_MEMBER_LIST {
+
+				key "vlan-name group-addr out-intf";
+
+				leaf vlan-name {
+					type leafref {
+                        path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    }	
+				}
+
+				leaf group-addr {
+					type inet:ipv4-address;
+				}
+
+				leaf out-intf {
+					type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+				}
+				leaf port {
+					type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+				}			
+			}
+		}
+
+		container L2MC_MROUTER {
+
+			list L2MC_MROUTER_LIST {
+
+				key "vlan-name mrouter-intf";
+
+				leaf vlan-name {
+					type leafref {
+                        path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    }
+				}
+
+				leaf mrouter-intf {
+					type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+				}
+
+				leaf mrouter_port {
+					type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+				}			
+			}		
+		}
+
+		container L2MC {		
+
+			list L2MC_LIST {
+				key "vlan-name";
+
+				leaf vlan-name {
+					type leafref {
+                        path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    }
+				} 
+
+				leaf enabled {
+					type boolean;
+					default false;
+				}
+
+				leaf querier {
+					type boolean;
+					default false;
+				}
+
+				leaf fast-leave {
+					type boolean;	
+					default false;							
+				}			
+
+				leaf version {
+					type uint8 {
+						range "1..3"{
+							error-message "Invalid IGMP Snooping version.";
+					}
+					}
+					default 2;
+				}
+
+				leaf query-interval {
+					must "current() > ../query-max-response-time" {
+						error-message "Invalid IGMP Snooping query interval value.";
+					}
+
+					type uint32 {
+						range "1..18000" {
+							error-message "Invalid IGMP Snooping Query Interval.";
+						}
+					}
+					default 125;
+				}
+
+				leaf last-member-query-interval {
+					type uint32 {
+						range "100..25500"{
+							error-message "Invalid IGMP Snooping Last Member Query Interval.";
+					}
+					}
+					default 1000;
+				}
+
+				leaf query-max-response-time {
+					must "current() < ../query-interval" {
+						error-message "Invalid IGMP Snooping query interval value.";
+					}				
+					type uint16 {
+						range "1..25"{
+							error-message "Invalid IGMP Snooping Query Max Response Time.";
+					}
+					}
+					default 10;
+				}				
+			}		
+		}
+
+		container L2MC_SUPPRESS {
+
+			list L2MC_SUPPRESS_LIST {
+
+				key "vlan-name";
+
+				leaf vlan-name {
+					type leafref {
+                        path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    }
+				} 
+
+				leaf link-local-groups-suppression {
+					type enumeration {
+                        enum enable;
+                        enum disable;
+                    }	
+				}
+
+				leaf optimised-multicast-flood {
+					type enumeration {
+                        enum enable;
+                        enum disable;
+                    }	
+				}
+			} 
+		}
+	}
+}
