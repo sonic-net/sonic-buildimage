@@ -85,7 +85,18 @@
 		    "trap_action": "trap",
 		    "trap_priority": "1"
 
-	    }
+	    },
+        "igmp_group": {
+            "cir":"300",
+            "cbs":"300",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "red_action":"drop",
+            "trap_action":"trap",
+            "trap_priority":"3",
+            "queue": "3",
+            "yellow_action":"drop"
+		}
     },
     "COPP_TRAP": {
 	    "bgp": {
@@ -136,6 +147,10 @@
 		    "trap_ids": "neighbor_miss",
 		    "trap_group": "queue1_group3",
 		    "always_enabled": "true"
+	    },
+		"l2mcd": {
+            "trap_ids": "igmp_v1_report,igmp_query,igmp_leave,igmp_v2_report,igmp_v3_report",
+            "trap_group": "igmp_group"
 	    }
     }
 }

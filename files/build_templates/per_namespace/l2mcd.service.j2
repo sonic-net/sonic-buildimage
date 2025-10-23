@@ -1,0 +1,22 @@
+[Unit]
+Description=L2MCD container
+Requires=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=syncd{% if multi_instance == 'true' %}@%i{% endif %}.service
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+Before=ntp-config.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+User={{ sonicadmin_user }}
+ExecStartPre=/usr/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

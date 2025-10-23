@@ -163,3 +163,6 @@
 [submodule "src/supervisor"]
 	path = src/supervisor
 	url = https://github.com/Supervisor/supervisor
+[submodule "src/sonic-l2mcd"]
+	path = src/sonic-l2mcd
+	url = https://github.com/sonic-net/sonic-l2mcd

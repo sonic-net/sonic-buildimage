@@ -125,6 +125,9 @@ INCLUDE_SYSTEM_TELEMETRY = n
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
 
+# INCLUDE_L2MCD - build docker-l2mcd for IGMP Snooping
+INCLUDE_L2MCD = y
+
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
 
