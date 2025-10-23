@@ -84,7 +84,7 @@ libqt5core5a==5.15.8+dfsg-11+deb12u2
 libsai==1.0.0
 libsaivs==1.0.0
 libsodium-dev==1.0.18-1
-libssl3==3.0.17-1~deb12u2
+libssl3==3.0.17-1~deb12u3
 libteam-utils==1.31-1
 libtirpc-dev==1.3.3+ds-1
 libunwind8==1.6.2-3
@@ -93,7 +93,7 @@ libxml2-dev==2.9.14+dfsg-1.3~deb12u4
 libyang2t64==2.1.148-0.2
 libyang3==3.12.2-1
 libzmq3-dev==4.3.4-6
-linux-libc-dev==6.1.148-1
+linux-libc-dev==6.1.153-1
 logrotate==3.21.0-1
 lsof==4.95.0-1
 ndisc6==1.0.5-1+b2
@@ -101,14 +101,14 @@ netbase==6.4
 openssh-client==1:9.2p1-2+deb12u7
 openssh-server==1:9.2p1-2+deb12u7
 openssh-sftp-server==1:9.2p1-2+deb12u7
-openssl==3.0.17-1~deb12u2
+openssl==3.0.17-1~deb12u3
 pinentry-curses==1.2.1-1
 pkgconf==1.8.1-1
 protobuf-c-compiler==1.4.1-1+b1
 psmisc==23.6-1
 python3-gi==3.42.2-3+b1
 python3-scapy==2.5.0+dfsg-2
-redis-server==5:7.0.15-1~deb12u5
+redis-server==5:7.0.15-1~deb12u6
 rpcsvc-proto==1.4.3-1
 runit-helper==2.15.2
 sensible-utils==0.0.17+nmu1
