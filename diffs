@@ -1,0 +1,242 @@
+commit 29f801e297671ae912da21102ad519d455fd3892
+Author: Sreemoolanathan Iyer <sbiyer@google.com>
+Date:   Thu Oct 23 09:47:39 2025 +0000
+
+    [alpinevs] Changes to scripts and makefiles
+
+diff --git a/build_image.sh b/build_image.sh
+index 2ef9be097..687de0db6 100755
+--- a/build_image.sh
++++ b/build_image.sh
+@@ -112,6 +112,11 @@ generate_device_list()
+             fi;
+         fi;
+     done
++
++    # Add kvm to the list
++    if [ "$TARGET_MACHINE" = "alpinevs" ] ; then
++      echo "x86_64-kvm_x86_64-r0" >> "$platforms_asic";
++    fi
+ }
+ 
+ if [ "$IMAGE_TYPE" = "onie" ]; then
+diff --git a/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/platform.json b/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/platform.json
+new file mode 100644
+index 000000000..2aeb61fdc
+--- /dev/null
++++ b/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/platform.json
+@@ -0,0 +1,84 @@
++{
++    "interfaces": {
++        "Ethernet0": {
++            "index": "1",
++            "lanes": "1,2,3,4,5,6,7,8",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet8": {
++            "index": "2",
++            "lanes": "9,10,11,12,13,14,15,16",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet16": {
++            "index": "3",
++            "lanes": "17,18,19,20,21,22,23,24",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet24": {
++            "index": "4",
++            "lanes": "25,26,27,28,29,30,31,32",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet32": {
++            "index": "5",
++            "lanes": "33,34,35,36,37,38,39,40",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet40": {
++            "index": "6",
++            "lanes": "41,42,43,44,45,46,47,48",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet48": {
++            "index": "7",
++            "lanes": "49,50,51,52,53,54,55,56",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet56": {
++            "index": "8",
++            "lanes": "57,58,59,60,61,62,63,64",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet64": {
++            "index": "9",
++            "lanes": "65,66,67,68,69,70,71,72",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet72": {
++            "index": "10",
++            "lanes": "73,74,75,76,77,78,79,80",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet80": {
++            "index": "11",
++            "lanes": "81,82,83,84,85,86,87,88",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet88": {
++            "index": "12",
++            "lanes": "89,90,91,92,93,94,95,96",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet96": {
++            "index": "13",
++            "lanes": "97,98,99,100,101,102,103,104",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet104": {
++            "index": "14",
++            "lanes": "105,106,107,108,109,110,111,112",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet112": {
++            "index": "15",
++            "lanes": "113,114,115,116,117,118,119,120",
++            "breakout_modes": "1x100G"
++        },
++        "Ethernet120": {
++            "index": "16",
++            "lanes": "121,122,123,124,125,126,127,128",
++            "breakout_modes": "1x100G"
++        }
++    }
++}
+diff --git a/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/pmon_daemon_control.json b/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/pmon_daemon_control.json
+new file mode 100644
+index 000000000..caeb08be0
+--- /dev/null
++++ b/device/virtual/x86_64-kvm_x86_64-r0/alpine_vs/pmon_daemon_control.json
+@@ -0,0 +1,15 @@
++{
++    "ledd_extended": true,
++    "skip_chassis_db_init": true,
++    "skip_componentd": true,
++    "skip_fancontrol": true,
++    "skip_ledd": true,
++    "skip_pcied": true,
++    "skip_platform_telemetryd": true,
++    "skip_psud": true,
++    "skip_sensors": true,
++    "skip_syseepromd": true,
++    "skip_thermalctld": true,
++    "skip_xcvrd": false,
++    "skip_ycabled": true
++}
+diff --git a/dockers/docker-sonic-p4rt/p4rt.sh b/dockers/docker-sonic-p4rt/p4rt.sh
+index 128d21742..687cf6f50 100755
+--- a/dockers/docker-sonic-p4rt/p4rt.sh
++++ b/dockers/docker-sonic-p4rt/p4rt.sh
+@@ -89,6 +89,10 @@ fi
+ # Try to read P4RT unix socket config from ConfigDB.
+ readonly UNIX_SOCKET=$(echo ${P4RT} | jq -r '.p4rt_unix_socket // empty')
+ if [ ! -z "${UNIX_SOCKET}" ]; then
++    SOCK_DIR="$(dirname "$UNIX_SOCKET")"
++    if [ ! -d "$SOCK_DIR" ]; then
++        mkdir -p "$SOCK_DIR"
++    fi
+     P4RT_ARGS+=" --p4rt_unix_socket=${UNIX_SOCKET}"
+ fi
+ 
+diff --git a/files/build_templates/sonic_debian_extension.j2 b/files/build_templates/sonic_debian_extension.j2
+index 4eb8c66a3..cbf7343f2 100644
+--- a/files/build_templates/sonic_debian_extension.j2
++++ b/files/build_templates/sonic_debian_extension.j2
+@@ -409,10 +409,14 @@ sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.sh $FILESYSTEM_ROOT/usr/bin/
+ sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+ echo "serial-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+ 
++# Don't copy warmboot-finalizer for Alpine. The cleanup will be done by
++# RebootBackend.
++{% if sonic_asic_platform != "alpinevs" %}
+ # Copy warmboot-finalizer files
+ sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/finalize-warmboot.sh $FILESYSTEM_ROOT/usr/local/bin/finalize-warmboot.sh
+ sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/warmboot-finalizer.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+ echo "warmboot-finalizer.service" | sudo tee -a $GENERATED_SERVICE_FILE
++{% endif %}
+ 
+ # Copy watchdog-control files
+ sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.sh $FILESYSTEM_ROOT/usr/local/bin/watchdog-control.sh
+@@ -1177,6 +1181,45 @@ sudo chmod -R 640 $FILESYSTEM_ROOT/etc/sonic/frr/
+ sudo chmod 750 $FILESYSTEM_ROOT/etc/sonic/frr
+ {%- endif %}
+ 
++{% if sonic_asic_platform == "alpinevs" %}
++
++# Adding fake platform files for Alpine
++ALPINE_SERVICES=src/sonic-alpine/services
++ALPINE_PLATFORM=src/sonic-alpine/platform
++sudo mkdir -p $FILESYSTEM_ROOT/usr/share/sonic/device/gfpga-platform
++ALPINE_SSD=$FILESYSTEM_ROOT/usr/share/sonic/device/host_block/sda
++sudo mkdir -p $ALPINE_SSD
++sudo cp $ALPINE_PLATFORM/smartctl.txt $ALPINE_SSD
++sudo cp $ALPINE_PLATFORM/removable $ALPINE_SSD
++sudo cp $ALPINE_PLATFORM/stat $ALPINE_SSD
++GENERIC_PCIE_DEVICE=$FILESYSTEM_ROOT/usr/share/sonic/device/pci/0000:00:01.0
++sudo mkdir -p $GENERIC_PCIE_DEVICE
++sudo cp $ALPINE_PLATFORM/aer_dev_correctable $GENERIC_PCIE_DEVICE
++sudo cp $ALPINE_PLATFORM/aer_dev_fatal $GENERIC_PCIE_DEVICE
++sudo cp $ALPINE_PLATFORM/aer_dev_nonfatal $GENERIC_PCIE_DEVICE
++
++#Including add-on services for Alpine
++sudo cp $ALPINE_SERVICES/config/alpinevs-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
++echo "alpinevs-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
++sudo cp $ALPINE_SERVICES/config/alpinevs-config.sh $FILESYSTEM_ROOT/usr/bin/
++
++sudo cp $ALPINE_SERVICES/init/alpinevs-init.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
++echo "alpinevs-init.service" | sudo tee -a $GENERATED_SERVICE_FILE
++sudo cp $ALPINE_SERVICES/init/alpinevs-init.sh $FILESYSTEM_ROOT/usr/bin/
++
++sudo cp $ALPINE_SERVICES/config/alpinevs-appdb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
++echo "alpinevs-appdb.service" | sudo tee -a $GENERATED_SERVICE_FILE
++sudo cp $ALPINE_SERVICES/config/alpinevs-appdb.sh $FILESYSTEM_ROOT/usr/bin/
++
++# Alpine warm-boot related files
++ALPINE_WARMBOOT=$ALPINE_PLATFORM/warm-boot
++sudo cp $ALPINE_WARMBOOT/alpine-warm-reboot $FILESYSTEM_ROOT/usr/local/bin/
++sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/alpine-warm-reboot
++
++sudo cp $ALPINE_PLATFORM/copp_cfg.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
++
++{%- endif %}
++
+ # Mask services which are disabled by default
+ sudo cp $BUILD_SCRIPTS_DIR/mask_disabled_services.py $FILESYSTEM_ROOT/tmp/
+ sudo chmod a+x $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
+diff --git a/rules/docker-p4rt.mk b/rules/docker-p4rt.mk
+index b0ced39f7..552346f54 100644
+--- a/rules/docker-p4rt.mk
++++ b/rules/docker-p4rt.mk
+@@ -31,7 +31,7 @@ endif
+ 
+ $(DOCKER_P4RT)_CONTAINER_NAME = p4rt
+ $(DOCKER_P4RT)_RUN_OPT += -t
+-$(DOCKER_P4RT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
++$(DOCKER_P4RT)_RUN_OPT += -v /etc/sonic:/etc/sonic:rw
+ $(DOCKER_P4RT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
+ $(DOCKER_P4RT)_GIT_COMMIT = $(shell cd "$($(SONIC_P4RT)_SRC_PATH)" && git log -n 1 --format=format:"%H %s" || echo "Unable to fetch git log for p4rt")
+ 
+diff --git a/src/sonic-device-data/src/Makefile b/src/sonic-device-data/src/Makefile
+index c6e05b5a8..b15efd728 100644
+--- a/src/sonic-device-data/src/Makefile
++++ b/src/sonic-device-data/src/Makefile
+@@ -12,6 +12,11 @@ test:
+ 	    ./media_checker $$f
+ 	done
+ 	for f in $$(find ../../../device -name platform.json); do
++		if [[ $$(dirname $$f) =~ '../../../device/virtual/x86_64-kvm_x86_64-r0/alpine_' ]]; then
++		# Tests expect the platform.json to be in a certain format different
++		# from what Alpine uses
++			continue
++		fi
+ 	    ./platform_json_checker $$f
+ 	done
+ 	for f in $$(find ../../../device -name hwsku.json); do
