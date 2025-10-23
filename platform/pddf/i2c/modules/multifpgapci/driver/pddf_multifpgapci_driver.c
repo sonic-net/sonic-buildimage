@@ -51,6 +51,7 @@
 
 #include "pddf_client_defs.h"
 #include "pddf_multifpgapci_defs.h"
+#include "pddf_multifpgapci_gpio_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
 
 #define BDF_NAME_SIZE 32
@@ -86,6 +87,9 @@ struct pddf_attrs {
 	PDDF_ATTR attr_dev_ops;
 };
 
+#define NUM_FPGA_ATTRS \
+	(sizeof(struct pddf_attrs) / sizeof(PDDF_ATTR))
+
 struct pddf_multi_fpgapci_ops_t pddf_multi_fpgapci_ops;
 
 EXPORT_SYMBOL(pddf_multi_fpgapci_ops);
@@ -95,10 +99,16 @@ struct fpga_data_node {
 	char dev_name[DEVICE_NAME_SIZE]; // device_name as defined in pddf-device.json.
 	struct kobject *kobj;
 	struct pci_dev *dev;
-	struct pddf_attrs attrs;
 	void __iomem *fpga_ctl_addr;
 	unsigned long bar_start;
 	struct list_head list;
+
+	// sysfs attrs
+	struct pddf_attrs attrs;
+	struct attribute *fpga_attrs[NUM_FPGA_ATTRS + 1];
+	struct attribute_group fpga_attr_group;
+	bool fpga_attr_group_initialized;
+	bool pddf_clients_data_group_initialized;
 };
 
 LIST_HEAD(fpga_list);
@@ -165,12 +175,22 @@ void free_pci_drvdata(struct pci_dev *pci_dev)
 	}
 	KOBJ_FREE(pci_drvdata->i2c_kobj);
 
+	if (pci_drvdata->gpio_chip_drvdata_initialized) {
+		pddf_multifpgapci_gpio_module_exit(pci_dev,
+						   pci_drvdata->gpio_kobj);
+	}
+	KOBJ_FREE(pci_drvdata->gpio_kobj);
+
 	pci_set_drvdata(pci_dev, NULL);
 }
 
 void free_sysfs_attr_groups(struct fpga_data_node *node)
 {
-	sysfs_remove_group(node->kobj, &pddf_clients_data_group);
+	if (node->fpga_attr_group_initialized)
+		sysfs_remove_group(node->kobj, &node->fpga_attr_group);
+
+	if (node->pddf_clients_data_group_initialized)
+		sysfs_remove_group(node->kobj, &pddf_clients_data_group);
 }
 
 void delete_fpga_data_node(const char *bdf)
@@ -181,11 +201,9 @@ void delete_fpga_data_node(const char *bdf)
 
 	list_for_each_entry_safe(node, tmp, &fpga_list, list) {
 		if (strcmp(node->bdf, bdf) == 0) {
-			KOBJ_FREE(node->kobj);
-
 			free_pci_drvdata(node->dev);
 			free_sysfs_attr_groups(node);
-
+			KOBJ_FREE(node->kobj);
 			list_del(&node->list);
 			kfree(node);
 			break;
@@ -290,6 +308,23 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 	}
 	pci_drvdata->i2c_adapter_drvdata_initialized = true;
 
+	pci_drvdata->gpio_kobj = kobject_create_and_add("gpio", fpga_data->kobj);
+	if (!pci_drvdata->gpio_kobj) {
+		pddf_dbg(MULTIFPGA, KERN_ERR "%s create gpio kobj failed\n",
+			 __FUNCTION__);
+		ret = -ENOMEM;
+		goto free_i2c_dirs;
+	}
+
+	ret = pddf_multifpgapci_gpio_module_init(dev, pci_drvdata->gpio_kobj);
+	if (ret) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR "%s create add gpio module failed %d\n",
+			 __FUNCTION__, ret);
+		goto free_gpio_kobj;
+	}
+	pci_drvdata->gpio_chip_drvdata_initialized = true;
+
 	fpga_data->dev = dev;
 
 	PDDF_DATA_ATTR(
@@ -298,40 +333,50 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 
 	fpga_data->attrs.attr_dev_ops = attr_dev_ops;
 
-	struct attribute *attrs_fpgapci[] = {
-		&fpga_data->attrs.attr_dev_ops.dev_attr.attr,
-		NULL,
-	};
+	fpga_data->fpga_attrs[0] = &fpga_data->attrs.attr_dev_ops.dev_attr.attr;
+	fpga_data->fpga_attrs[1] = NULL;
 
-	struct attribute_group attr_group_fpgapci = {
-		.attrs = attrs_fpgapci,
-	};
+	fpga_data->fpga_attr_group.attrs = fpga_data->fpga_attrs;
 
-	mutex_lock(&fpga_list_lock);
-	list_add(&fpga_data->list, &fpga_list);
-	mutex_unlock(&fpga_list_lock);
-
-	ret = sysfs_create_group(fpga_data->kobj, &attr_group_fpgapci);
+	ret = sysfs_create_group(fpga_data->kobj, &fpga_data->fpga_attr_group);
 
 	if (ret) {
 		pddf_dbg(MULTIFPGA,
 			 KERN_ERR "%s create fpga sysfs attributes failed\n",
 			 __FUNCTION__);
-		return ret;
+		goto free_gpio_dirs;
 	}
+	fpga_data->fpga_attr_group_initialized = true;
 
 	ret = sysfs_create_group(fpga_data->kobj, &pddf_clients_data_group);
 	if (ret) {
 		pddf_dbg(MULTIFPGA,
-			 KERN_ERR "[%s] sysfs_create_group failed: %d\n",
+			 KERN_ERR "[%s] create pddf_clients_data_group failed: %d\n",
 			 __FUNCTION__, ret);
 		goto free_fpga_attr_group;
 	}
+	fpga_data->pddf_clients_data_group_initialized = true;
+
+	mutex_lock(&fpga_list_lock);
+	list_add(&fpga_data->list, &fpga_list);
+	mutex_unlock(&fpga_list_lock);
 
 	return 0;
 
 free_fpga_attr_group:
-	sysfs_remove_group(fpga_data->kobj, &attr_group_fpgapci);
+	fpga_data->fpga_attr_group_initialized = false;
+	sysfs_remove_group(fpga_data->kobj, &fpga_data->fpga_attr_group);
+
+free_gpio_dirs:
+	pci_drvdata->gpio_chip_drvdata_initialized = false;
+	pddf_multifpgapci_gpio_module_exit(dev, pci_drvdata->gpio_kobj);
+
+free_gpio_kobj:
+	kobject_put(pci_drvdata->gpio_kobj);
+
+free_i2c_dirs:
+	pci_drvdata->i2c_adapter_drvdata_initialized = false;
+	pddf_multifpgapci_i2c_module_exit(dev, pci_drvdata->i2c_kobj);
 
 free_i2c_kobj:
 	kobject_put(pci_drvdata->i2c_kobj);
@@ -571,7 +616,7 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 			 KERN_ERR
 			 "[%s] pci_enable_device failed. dev:%s err:%#x\n",
 			 __FUNCTION__, pci_name(dev), err);
-		return err;
+		goto error_enable_dev;
 	}
 
 	// Enable DMA
@@ -595,6 +640,7 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 			 KERN_ERR
 			 "[%s] couldn't allocate pci_privdata memory\n",
 			 __FUNCTION__);
+		err = -ENOMEM;
 		goto error_pci_req;
 	}
 
@@ -605,10 +651,10 @@ static int pddf_multifpgapci_probe(struct pci_dev *dev,
 
 	return 0;
 
-// ERROR HANDLING
 error_pci_req:
 	pci_disable_device(dev);
-	return -ENODEV;
+error_enable_dev:
+	return err;
 }
 
 // Initialize the driver module (but not any device) and register
