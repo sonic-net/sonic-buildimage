@@ -112,9 +112,9 @@ class Watchdog(WatchdogBase):
             return -1
 
         try:
-            self._update_watchdog_countdown_value(milliseconds=milliseconds)
-            self._toggle_watchdog_reboot(True)
             self._toggle_watchdog_counter_enable(True)
+            self._toggle_watchdog_reboot(True)
+            self._update_watchdog_countdown_value(milliseconds=milliseconds)
         except Exception as e:
             _logger.log_error(f"cannot arm watchdog: {e}")
             return -1
