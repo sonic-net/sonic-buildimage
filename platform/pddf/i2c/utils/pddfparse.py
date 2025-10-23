@@ -562,6 +562,28 @@ class PddfParse():
 
         return create_ret.append(ret)
 
+    def create_gpio_device(self, bdf, gpio_dev, ops):
+        create_ret = []
+        ret = 0
+
+        for line in gpio_dev.keys():
+            for attr in gpio_dev[line]['attr_list']:
+                ret = self.create_device(attr, "pddf/devices/multifpgapci/{}/gpio/line".format(bdf), ops)
+                if ret != 0:
+                    return create_ret.append(ret)
+
+            cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/line/create_line".format(bdf)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return create_ret.append(ret)
+
+        cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/create_chip".format(bdf)
+        ret = self.runcmd(cmd)
+        if ret != 0:
+            return create_ret.append(ret)
+
+        return create_ret.append(ret)
+
     def create_mdio_bus(self, bdf, mdio_dev, ops):
         for bus in range(int(mdio_dev['dev_attr']['num_virt_ch'], 16)):
             cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/mdio/new_mdio_bus".format(bus, bdf)

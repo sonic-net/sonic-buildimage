@@ -370,7 +370,7 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 	ret = sysfs_create_group(fpga_data->kobj, &fpga_data->fpga_attr_group);
 	if (ret) {
 		pddf_dbg(MULTIFPGA,
-			 KERN_ERR "[%s] sysfs_create_group failed: %d\n",
+			 KERN_ERR "[%s] create pddf_clients_data_group failed: %d\n",
 			 __FUNCTION__, ret);
 		goto free_fpga_kobj;
 	}
