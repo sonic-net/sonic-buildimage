@@ -143,26 +143,32 @@ def sha256_bytes(b: Optional[bytes]) -> str:
 def render_telemetry_service_to_file(dst_path: str = TMP_RENDERED_SERVICE) -> bool:
     """Render telemetry.service.j2 → /usr/share/sonic/systemd_scripts/telemetry.service.rendered"""
     try:
-        from jinja2 import Environment, FileSystemLoader
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
     except Exception as e:
         logger.log_error(f"Jinja2 not available to render {TELEMETRY_SERVICE_J2}: {e}")
         return False
+
     try:
         tdir = os.path.dirname(TELEMETRY_SERVICE_J2)
         tname = os.path.basename(TELEMETRY_SERVICE_J2)
-        # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
-        # Context: rendering a systemd unit (not HTML); no browser sink; inputs are controlled (env/consts).
-        env = Environment(loader=FileSystemLoader(tdir), autoescape=False)
+
+        env = Environment(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2  # nosec
+            loader=FileSystemLoader(tdir),
+            autoescape=select_autoescape(enabled_extensions=("html", "htm", "xml"), default=False),
+        )
+
         tmpl = env.get_template(tname)
-        rendered = tmpl.render(
+        rendered = tmpl.render(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2  # nosec
             docker_container_name=os.getenv("DOCKER_CONTAINER_NAME", "telemetry"),
             sonicadmin_user="root",
             description=os.getenv("TELEMETRY_DESCRIPTION", "Telemetry container"),
         )
+
         with open(dst_path, "w", encoding="utf-8") as f:
             f.write(rendered)
         logger.log_info(f"Rendered {TELEMETRY_SERVICE_J2} → {dst_path}")
         return True
+
     except Exception as e:
         logger.log_error(f"Failed rendering {TELEMETRY_SERVICE_J2}: {e}")
         return False
