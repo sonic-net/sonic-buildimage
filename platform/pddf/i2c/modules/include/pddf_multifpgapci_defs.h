@@ -21,6 +21,7 @@
 #include "linux/types.h"
 #include <linux/pci.h>
 
+#include "pddf_multifpgapci_gpio_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
 
 #define NAME_SIZE 32
@@ -37,6 +38,10 @@ struct pddf_multifpgapci_drvdata {
 	struct kobject *i2c_kobj;
 	struct i2c_adapter_drvdata i2c_adapter_drvdata;
 	bool i2c_adapter_drvdata_initialized;
+	// gpio
+	struct kobject *gpio_kobj;
+	struct gpio_chip_drvdata gpio_chip_drvdata;
+	bool gpio_chip_drvdata_initialized;
 };
 
 // FPGA
