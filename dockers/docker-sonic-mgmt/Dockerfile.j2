@@ -198,6 +198,6 @@ RUN chmod +x /azp/start.sh
 ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BUNDLED_FREETDS=1
 
 # Remove the default ubuntu user of Ubuntu 24.04 to avoid conflicts with setup-container.sh in sonic-mgmt repo
-# Usually SONiC community use the setup-container.sh tool in the sonic-mgmt repo to create sonic-mgmt container.
+# The SONiC community usually uses the setup-container.sh tool in the sonic-mgmt repo to create the sonic-mgmt container.
 # The tool will create a user with the same uid and gid of the host user who runs the tool.
 RUN if getent passwd ubuntu; then userdel -r ubuntu; fi
