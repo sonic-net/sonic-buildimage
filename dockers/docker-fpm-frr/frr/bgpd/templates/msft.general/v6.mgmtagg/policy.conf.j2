@@ -3,8 +3,8 @@
 !
 ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
 !
-bgp as-path access-list LOCALROUTES permit ^$ any
-bgp as-path access-list WAN_ASNS permit _58593_ any
+bgp as-path access-list LOCALROUTES permit ^$
+bgp as-path access-list WAN_ASNS permit _58593_
 !
 {% if peer_group_type == 'DOWNSTREAM_V6' %}
 route-map TO_{{ peer_group_type }} permit 10
