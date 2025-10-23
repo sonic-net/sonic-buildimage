@@ -155,6 +155,8 @@ def render_telemetry_service_to_file(dst_path: str = TMP_RENDERED_SERVICE) -> bo
         env = Environment(loader=FileSystemLoader(tdir), autoescape=False)
         tmpl = env.get_template(tname)
         rendered = tmpl.render(
+            docker_container_name=os.getenv("DOCKER_CONTAINER_NAME", "telemetry"),
+            sonicadmin_user="root",
             description=os.getenv("TELEMETRY_DESCRIPTION", "Telemetry container"),
         )
         with open(dst_path, "w", encoding="utf-8") as f:

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 1. Uses sudo -n because the systemd service is run as admin user, and kubelet.conf is accessible via root
+# 1. Runs as root via systemd service, so direct access to kubelet.conf is available; sudo is not required
 # 2. Use kubectl to get pods and delete pods with retry
 # 3. start/stop/restart are NON-BLOCKING
 
