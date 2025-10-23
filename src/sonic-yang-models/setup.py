@@ -144,6 +144,7 @@ yang_files = [
     'sonic-serial-console.yang',
     'sonic-smart-switch.yang',
     'sonic-srv6.yang',
+    'sonic-ztp.yang',
 ]
 
 class my_build_py(build_py):
