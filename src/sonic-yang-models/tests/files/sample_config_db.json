@@ -3002,6 +3002,17 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
