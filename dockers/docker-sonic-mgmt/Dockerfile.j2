@@ -182,9 +182,10 @@ COPY \
     0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
     0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch \
     /tmp/
-RUN patch -u -b /opt/venv/lib/python3.12/site-packages/ansible/plugins/loader.py -i /tmp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
-    && patch -u -b /opt/venv/lib/python3.12/site-packages/ptf/dataplane.py  -i /tmp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
-    && patch -u -b /opt/venv/lib/python3.12/site-packages/ptf/dataplane.py  -i /tmp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch
+RUN site_packages_dir=$(/opt/venv/bin/python3 -c "import site; print(site.getsitepackages()[0])") \
+    && patch -u -b "$site_packages_dir/ansible/plugins/loader.py" -i /tmp/0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0002-extend-dataplane-poll-method-to-support-multi-ptf-nn.patch \
+    && patch -u -b "$site_packages_dir/ptf/dataplane.py"  -i /tmp/0003-add-dataplane-mask-counters-to-avoid-dataplane-noise.patch
 
 RUN mkdir /var/run/sshd
 EXPOSE 22
