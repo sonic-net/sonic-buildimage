@@ -1,5 +1,5 @@
 {
-    "certs": {% if "certs" in TELEMETRY.keys() %}{{ TELEMETRY["certs"] }}{% else %}""{% endif %},
-    "gnmi" : {% if "gnmi" in TELEMETRY.keys() %}{{ TELEMETRY["gnmi"] }}{% else %}""{% endif %},
-    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}
+    "certs": {% if GNMI is defined and "certs" in GNMI.keys() %}{{ GNMI["certs"] }}{% else %}""{% endif %},
+    "gnmi" : {% if GNMI is defined and "gnmi" in GNMI.keys() %}{{ GNMI["gnmi"] }}{% else %}""{% endif %},
+    "x509" : {% if DEVICE_METADATA is defined and "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}
 }
