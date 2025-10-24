@@ -1,0 +1,11 @@
+#DPKG FRK
+DPATH       := $($(SYNCD_VS)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/syncd-vs.mk platform/vs/syncd-vs.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(SYNCD_VS)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(SYNCD_VS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(SYNCD_VS)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(SYNCD_VS),$(SYNCD_VS_DBG)))
