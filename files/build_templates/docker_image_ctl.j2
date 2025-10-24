@@ -717,6 +717,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(for cpld_device in /dev/cpld*; do if [ -c "$cpld_device" ]; then echo "--device=$cpld_device:$cpld_device"; fi; done) \
     $(if [ -e "/dev/i2c-0" ]; then echo "--device=/dev/i2c-0:/dev/i2c-0"; fi) \
     $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
     $(if [ -e "/dev/sda" ]; then echo "--device=/dev/sda:/dev/sda"; fi) \
