@@ -1,0 +1,2 @@
+# Chrony needs to hook its API to the NSS plugin nss_tacplus and need access to tacacs config file.
+/etc/tacplus_nss.conf r,
