@@ -231,6 +231,7 @@ free_data:
     {
         printk(KERN_ERR "%s: Unable to register a cpldmux device. Freeing the platform data\n", __FUNCTION__);
         kfree(cpldmux_platform_data);
+        plat_dev->dev.platform_data = NULL;
     }
 
     /* Put the platform device structure */
