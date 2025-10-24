@@ -161,7 +161,7 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 endif
 
 ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
-	override LEGACY_SONIC_MGMT_DOCKER = y
+	override LEGACY_SONIC_MGMT_DOCKER = n
 endif
 
 ifeq ($(CONFIGURED_ARCH),amd64)
