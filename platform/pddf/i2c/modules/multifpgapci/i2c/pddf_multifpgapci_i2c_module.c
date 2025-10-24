@@ -16,6 +16,7 @@
  */
 
 #include <asm-generic/errno-base.h>
+#include <linux/xarray.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
 #include <linux/kernel.h>
@@ -25,6 +26,8 @@
 
 #include "pddf_multifpgapci_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
+
+DEFINE_XARRAY(i2c_drvdata_map);
 
 int (*pddf_i2c_multifpgapci_add_numbered_bus)(struct i2c_adapter *, int) = NULL;
 EXPORT_SYMBOL(pddf_i2c_multifpgapci_add_numbered_bus);
@@ -50,10 +53,21 @@ ssize_t new_i2c_adapter(struct device *dev, struct device_attribute *da,
 
 	struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
 	struct pci_dev *pci_dev = (struct pci_dev *)_ptr->addr;
-	struct pddf_multifpgapci_drvdata *pci_drvdata =
-		pci_get_drvdata(pci_dev);
-	struct i2c_adapter_drvdata *i2c_privdata =
-		&pci_drvdata->i2c_adapter_drvdata;
+	struct i2c_adapter_drvdata *i2c_privdata;
+
+	pddf_dbg(MULTIFPGA, KERN_INFO "[%s] pci_dev %s\n", __FUNCTION__,
+		 pci_name(pci_dev));
+
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	i2c_privdata = xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to retrieve i2c_privdata for device %s",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -ENODEV;
+	}
+
 	struct i2c_adapter *i2c_adapters = i2c_privdata->i2c_adapters;
 
 	if (i2c_privdata->i2c_adapter_registered[index]) {
@@ -116,14 +130,16 @@ ssize_t del_i2c_adapter(struct device *dev, struct device_attribute *da,
 	}
 
 	struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
-	struct i2c_adapter_drvdata *i2c_privdata =
-		(struct i2c_adapter_drvdata *)_ptr->addr;
-	struct i2c_adapter *i2c_adapters = i2c_privdata->i2c_adapters;
+	struct pci_dev *pci_dev = (struct pci_dev *)_ptr->addr;
+	struct i2c_adapter_drvdata *i2c_privdata;
 
-	if (!i2c_privdata->i2c_adapter_registered[index]) {
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	i2c_privdata = xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
 		pddf_dbg(MULTIFPGA,
-			 KERN_ERR "%s: I2C Adapter %d doesn't exist\n",
-			 __FUNCTION__, index);
+			 KERN_ERR
+			 "[%s] unable to retrieve i2c_privdata for device %s",
+			 __FUNCTION__, pci_name(pci_dev));
 		return -ENODEV;
 	}
 
@@ -131,23 +147,60 @@ ssize_t del_i2c_adapter(struct device *dev, struct device_attribute *da,
 		 KERN_INFO "[%s] Attempting delete of bus index: %d\n",
 		 __FUNCTION__, index);
 
-	i2c_del_adapter(&i2c_adapters[index]);
+	i2c_del_adapter(&i2c_privdata->i2c_adapters[index]);
 
 	i2c_privdata->i2c_adapter_registered[index] = false;
 
 	return count;
 }
 
-int pddf_multifpgapci_i2c_module_init(struct pci_dev *pci_dev,
-				      struct kobject *kobj)
+int pddf_multifpgapci_i2c_get_adapter_data(struct pci_dev *pci_dev,
+					   struct i2c_adapter_data *data)
+{
+	if (!data) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR "[%s] NULL i2c_adapter_data pointers for device %s",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -EINVAL;
+	}
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	struct i2c_adapter_drvdata *i2c_privdata =
+		xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to retrieve i2c_privdata for device %s",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -ENODEV;
+	}
+	data->virt_bus = i2c_privdata->virt_bus;
+	data->ch_base_addr = i2c_privdata->ch_base_addr;
+	data->ch_size = i2c_privdata->ch_size;
+	data->num_virt_ch = i2c_privdata->num_virt_ch;
+	return 0;
+}
+EXPORT_SYMBOL(pddf_multifpgapci_i2c_get_adapter_data);
+
+static int pddf_multifpgapci_i2c_attach(struct pci_dev *pci_dev,
+					struct kobject *kobj)
 {
 	pddf_dbg(MULTIFPGA, KERN_INFO "[%s] pci_dev %s\n", __FUNCTION__,
 		 pci_name(pci_dev));
-	struct pddf_multifpgapci_drvdata *pci_drvdata =
-		pci_get_drvdata(pci_dev);
-	struct i2c_adapter_drvdata *i2c_privdata =
-		&pci_drvdata->i2c_adapter_drvdata;
+	struct i2c_adapter_drvdata *i2c_privdata;
 	int err;
+
+	i2c_privdata = kzalloc(sizeof(struct i2c_adapter_drvdata), GFP_KERNEL);
+	if (!i2c_privdata) {
+		return -ENOMEM;
+	}
+	i2c_privdata->pci_dev = pci_dev;
+
+	i2c_privdata->i2c_kobj = kobject_create_and_add("i2c", kobj);
+	if (!i2c_privdata->i2c_kobj) {
+		pddf_dbg(MULTIFPGA, KERN_ERR "[%s] create i2c kobj failed\n",
+			 __FUNCTION__);
+		return -ENOMEM;
+	}
 
 	memset(i2c_privdata->i2c_adapter_registered, 0,
 	       sizeof(i2c_privdata->i2c_adapter_registered));
@@ -173,8 +226,8 @@ int pddf_multifpgapci_i2c_module_init(struct pci_dev *pci_dev,
 		new_i2c_adapter, PDDF_CHAR, NAME_SIZE, (void *)pci_dev, NULL);
 	PDDF_DATA_ATTR(
 		del_i2c_adapter, S_IWUSR | S_IRUGO, show_pddf_data,
-		del_i2c_adapter, PDDF_CHAR, NAME_SIZE, (void *)i2c_privdata, NULL);
-	
+		del_i2c_adapter, PDDF_CHAR, NAME_SIZE, (void *)pci_dev, NULL);
+
 	i2c_privdata->attrs.attr_virt_bus = attr_virt_bus;
 	i2c_privdata->attrs.attr_ch_base_offset = attr_ch_base_offset;
 	i2c_privdata->attrs.attr_ch_size = attr_ch_size;
@@ -200,26 +253,38 @@ int pddf_multifpgapci_i2c_module_init(struct pci_dev *pci_dev,
 	i2c_privdata->i2c_adapter_attr_group.attrs =
 		i2c_privdata->i2c_adapter_attrs;
 
-	err = sysfs_create_group(kobj, &i2c_privdata->i2c_adapter_attr_group);
+	err = sysfs_create_group(i2c_privdata->i2c_kobj,
+				 &i2c_privdata->i2c_adapter_attr_group);
 	if (err) {
 		pddf_dbg(MULTIFPGA,
 			 KERN_ERR "[%s] sysfs_create_group error, status: %d\n",
 			 __FUNCTION__, err);
 		return err;
 	}
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	xa_store(&i2c_drvdata_map, dev_index, i2c_privdata, GFP_KERNEL);
 
 	return 0;
 }
-EXPORT_SYMBOL(pddf_multifpgapci_i2c_module_init);
 
-void pddf_multifpgapci_i2c_module_exit(struct pci_dev *pci_dev,
-				       struct kobject *kobj)
+static void pddf_multifpgapci_i2c_detach(struct pci_dev *pci_dev,
+					 struct kobject *kobj)
 {
-	struct pddf_multifpgapci_drvdata *pci_drvdata =
-		pci_get_drvdata(pci_dev);
-	struct i2c_adapter_drvdata *i2c_privdata =
-		&pci_drvdata->i2c_adapter_drvdata;
+	struct i2c_adapter_drvdata *i2c_privdata;
 	int i;
+	pddf_dbg(MULTIFPGA, KERN_INFO "[%s] pci_dev %s\n", __FUNCTION__,
+		 pci_name(pci_dev));
+
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	i2c_privdata = xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to find i2c module data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return;
+	}
+
 	for (i = 0; i < I2C_PCI_MAX_BUS; i++) {
 		if (i2c_privdata->i2c_adapter_registered[i]) {
 			pddf_dbg(MULTIFPGA,
@@ -229,9 +294,86 @@ void pddf_multifpgapci_i2c_module_exit(struct pci_dev *pci_dev,
 			i2c_del_adapter(&i2c_privdata->i2c_adapters[i]);
 		}
 	}
-	sysfs_remove_group(kobj, &i2c_privdata->i2c_adapter_attr_group);
+	if (i2c_privdata->i2c_kobj) {
+		sysfs_remove_group(i2c_privdata->i2c_kobj,
+				   &i2c_privdata->i2c_adapter_attr_group);
+		kobject_put(i2c_privdata->i2c_kobj);
+		i2c_privdata->i2c_kobj = NULL;
+	}
+	xa_erase(&i2c_drvdata_map, (unsigned long)pci_dev);
+}
+
+static void pddf_multifpgapci_i2c_map_bar(struct pci_dev *pci_dev,
+					  void __iomem *bar_base,
+					  unsigned long bar_start,
+					  unsigned long bar_len)
+{
+	struct i2c_adapter_drvdata *i2c_privdata;
+	pddf_dbg(MULTIFPGA, KERN_INFO "[%s] pci_dev %s\n", __FUNCTION__,
+		 pci_name(pci_dev));
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	i2c_privdata = xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to find i2c module data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return;
+	}
+	// i2c specific data store
+	struct i2c_adapter_sysfs_vals *i2c_pddf_data =
+		&i2c_privdata->temp_sysfs_vals;
+
+	i2c_privdata->virt_bus = i2c_pddf_data->virt_bus;
+	i2c_privdata->ch_base_addr = bar_base + i2c_pddf_data->ch_base_offset;
+	i2c_privdata->num_virt_ch = i2c_pddf_data->num_virt_ch;
+	i2c_privdata->ch_size = i2c_pddf_data->ch_size;
+}
+
+static void pddf_multifpgapci_i2c_unmap_bar(struct pci_dev *pci_dev,
+					    void __iomem *bar_base,
+					    unsigned long bar_start,
+					    unsigned long bar_len)
+{
+	struct i2c_adapter_drvdata *i2c_privdata;
+	pddf_dbg(MULTIFPGA, KERN_INFO "[%s] pci_dev %s\n", __FUNCTION__,
+		 pci_name(pci_dev));
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	i2c_privdata = xa_load(&i2c_drvdata_map, dev_index);
+	if (!i2c_privdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to find i2c module data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return;
+	}
+	i2c_privdata->ch_base_addr = NULL;
+}
+
+static struct protocol_ops i2c_protocol_ops = {
+	.attach = pddf_multifpgapci_i2c_attach,
+	.detach = pddf_multifpgapci_i2c_detach,
+	.map_bar = pddf_multifpgapci_i2c_map_bar,
+	.unmap_bar = pddf_multifpgapci_i2c_unmap_bar,
+	.name = "i2c",
 };
-EXPORT_SYMBOL(pddf_multifpgapci_i2c_module_exit);
+
+static int __init pddf_multifpgapci_i2c_init(void)
+{
+	pddf_dbg(MULTIFPGA, KERN_INFO "Loading I2C protocol module\n");
+	xa_init(&i2c_drvdata_map);
+	return multifpgapci_register_protocol("i2c", &i2c_protocol_ops);
+}
+
+static void __exit pddf_multifpgapci_i2c_exit(void)
+{
+	pddf_dbg(MULTIFPGA, KERN_INFO "Unloading I2C protocol module\n");
+	multifpgapci_unregister_protocol("i2c");
+	xa_destroy(&i2c_drvdata_map);
+}
+
+module_init(pddf_multifpgapci_i2c_init);
+module_exit(pddf_multifpgapci_i2c_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nexthop Systems");

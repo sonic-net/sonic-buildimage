@@ -23,25 +23,22 @@
 
 #include "pddf_multifpgapci_gpio_defs.h"
 #include "pddf_multifpgapci_i2c_defs.h"
+#include "pddf_multifpgapci_mdio_defs.h"
 
 #define NAME_SIZE 32
+
+#ifndef KOBJ_FREE
 #define KOBJ_FREE(obj) \
 	if (obj)       \
 		kobject_put(obj);
+#endif
 
 struct pddf_multifpgapci_drvdata {
 	struct pci_dev *pci_dev;
 	resource_size_t bar_start;
 	void *__iomem fpga_data_base_addr;
-	// i2c
 	size_t bar_length;
-	struct kobject *i2c_kobj;
-	struct i2c_adapter_drvdata i2c_adapter_drvdata;
-	bool i2c_adapter_drvdata_initialized;
-	// gpio
-	struct kobject *gpio_kobj;
-	struct gpio_chip_drvdata gpio_chip_drvdata;
-	bool gpio_chip_drvdata_initialized;
+	bool bar_initialized;
 };
 
 // FPGA
@@ -54,9 +51,31 @@ struct pddf_multi_fpgapci_ops_t {
 	int (*post_device_operation)(struct pci_dev *);
 };
 
+// Protocol function pointer types
+typedef int (*attach_fn)(struct pci_dev *pci_dev, struct kobject *kobj);
+typedef void (*detach_fn)(struct pci_dev *pci_dev, struct kobject *kobj);
+typedef void (*map_bar_fn)(struct pci_dev *pci_dev, void *__iomem bar_base,
+			   unsigned long bar_start, unsigned long bar_len);
+typedef void (*unmap_bar_fn)(struct pci_dev *pci_dev, void *__iomem bar_base,
+			     unsigned long bar_start, unsigned long bar_len);
+
+// Protocol operations structure
+struct protocol_ops {
+	attach_fn attach;
+	detach_fn detach;
+	map_bar_fn map_bar;
+	unmap_bar_fn unmap_bar;
+	const char *name;
+};
+
 extern struct pddf_multi_fpgapci_ops_t pddf_multi_fpgapci_ops;
 
 extern int (*ptr_multifpgapci_readpci)(struct pci_dev *, uint32_t, uint32_t *);
 extern int (*ptr_multifpgapci_writepci)(struct pci_dev *, uint32_t, uint32_t);
+
+extern int multifpgapci_register_protocol(const char *name,
+					  struct protocol_ops *ops);
+extern void multifpgapci_unregister_protocol(const char *name);
+extern unsigned long multifpgapci_get_pci_dev_index(struct pci_dev *pci_dev);
 
 #endif
