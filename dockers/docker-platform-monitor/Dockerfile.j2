@@ -32,7 +32,8 @@ RUN apt-get update &&   \
         pciutils        \
         nvme-cli        \
         ethtool         \
-        xxd
+        xxd             \
+        python3-humanize
 {% if sonic_asic_platform == 'mellanox' %}
 RUN apt-get install -y dbus
 {% endif %}
