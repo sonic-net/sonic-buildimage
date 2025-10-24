@@ -99,6 +99,14 @@ fi
 
 chown -R frr:frr /etc/frr/
 
+if ! ip link show sr0 > /dev/null 2>&1; then
+    echo "Interface sr0 does not exist. Creating sr0..."
+    ip link add sr0 type dummy
+else
+    echo "Interface sr0 already exists."
+fi
+ip link set sr0 up
+
 chown root:root /usr/sbin/bgp-isolate
 chmod 0755 /usr/sbin/bgp-isolate
 
