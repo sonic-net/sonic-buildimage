@@ -2015,6 +2015,31 @@ class PddfParse():
                     return ret[0]
         return create_ret
 
+    def create_subtree(self, device_name):
+        subtree = self.data.get(device_name)
+        if not subtree:
+            print(f"Invalid device_name {device_name}")
+            return 1
+
+        ret = self.dev_parse(subtree, {"cmd": "create", "target": "all", "attr": "all"})
+        if ret:
+            if ret[0] != 0:
+                return ret[0]
+
+        return 0
+
+    def delete_subtree(self, device_name):
+        subtree = self.data.get(device_name)
+        if not subtree:
+            print(f"Invalid device_name {device_name}")
+            return 1
+
+        ret = self.dev_parse(self.data[device_name], {"cmd": "delete", "target": "all", "attr": "all"})
+        if ret:
+            if ret[0] != 0:
+                return ret[0]
+
+        return 0
 
     def delete_pddf_devices(self):
         self.dev_parse(self.data['SYSTEM'], {"cmd": "delete", "target": "all", "attr": "all"})
@@ -2257,6 +2282,10 @@ def main():
     parser.add_argument("--validate", action='store', help="Validate the device specific attribute data elements")
     parser.add_argument("--schema", action='store', nargs="+",  help="Schema Validation")
     parser.add_argument("--modules", action='store', nargs="+", help="Loaded modules validation")
+    parser.add_argument("--create-subtree", type=str,
+        help="Create a specified node and all its descendant nodes in the I2C topology.")
+    parser.add_argument("--delete-subtree", type=str,
+        help="Remove a specified node and all its descendant nodes from the I2C topology.")
 
     args = parser.parse_args()
 
@@ -2322,6 +2351,11 @@ def main():
     if args.modules:
         pddf_obj.modules_validation(args.modules[0])
 
+    if args.create_subtree:
+        sys.exit(pddf_obj.create_subtree(args.create_subtree))
+
+    if args.delete_subtree:
+        sys.exit(pddf_obj.delete_subtree(args.delete_subtree))
 
 if __name__ == "__main__":
     main()
