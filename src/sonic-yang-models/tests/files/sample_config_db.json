@@ -2530,7 +2530,7 @@
                 "uplink_fast": "false"
             }
         },
-        
+
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -3166,6 +3166,17 @@
             "orchagent": {
                 "heartbeat_interval"   : "10000",
                 "alert_interval"       : "60000"
+            }
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
             }
         }
     },
