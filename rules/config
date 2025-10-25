@@ -230,12 +230,15 @@ SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 # Full Secure Boot feature flags.
 # SECURE_UPGRADE_DEV_SIGNING_KEY - path to development signing key, used for image signing during build
 # SECURE_UPGRADE_SIGNING_CERT - path to development signing certificate, used for image signing during build
+# SECURE_UPGRADE_KERNEL_CAFILE - path to a file containing trusted certificates in PEM format to embed into the kernel.
+#                                Defaults to the value in SECURE_UPGRADE_SIGNING_CERT if not specified.
 # SECURE_UPGRADE_MODE - enum value for secure upgrade mode, valid options are "dev", "prod" and "no_sign"
 # SECURE_UPGRADE_PROD_SIGNING_TOOL - path to a vendor signing tool for production flow.
 # SECURE_UPGRADE_PROD_TOOL_ARGS - Extra arguments options for vendor to use to run his specific prod signing script
 SECURE_UPGRADE_DEV_SIGNING_KEY ?= 
 SECURE_UPGRADE_SIGNING_CERT ?= 
 SECURE_UPGRADE_MODE ?= "no_sign"
+SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 # PACKAGE_URL_PREFIX - the package url prefix
