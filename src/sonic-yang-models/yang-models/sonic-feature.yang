@@ -120,7 +120,7 @@ module sonic-feature{
 
                 leaf has_sonic_dhcpv4_relay {
                      when "../name = 'dhcp_relay'";
-                     description "This configuration controls the dhcpv4 relay process";
+                     description "This configuration controls the DHCPv4 relay process";
                      type stypes:boolean_type;
                      default "false";
                 }
