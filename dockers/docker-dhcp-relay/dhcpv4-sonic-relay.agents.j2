@@ -1,8 +1,6 @@
 {# Append DHCPv4 sonic agent #}
 [program:dhcp4relay]
-command=/usr/sbin/dhcp4relay
-{#- Dual ToR Option #}
-{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0 {% endif %}
+command=/usr/sbin/dhcp4relay{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif %}
 
 priority=3
 autostart=false
