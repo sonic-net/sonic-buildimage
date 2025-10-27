@@ -1,0 +1,28 @@
+Zebra patch to fix a bug in zebra_ns_link_ifp()
+
+From: dileep <dileep@arista.com>
+
+This function should first check whether the given interface is valid (i.e. an
+RTM_NEWLINK has been processed for the interface and it has a valid ifindex) before
+updating zebra_ns.ifp_tree.
+---
+ zebra/zebra_ns.c |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/zebra/zebra_ns.c b/zebra/zebra_ns.c
+index 8edfc9f3f..e9e83ae33 100644
+--- a/zebra/zebra_ns.c
++++ b/zebra/zebra_ns.c
+@@ -49,6 +49,12 @@ void zebra_ns_link_ifp(struct zebra_ns *zns, struct interface *ifp)
+ 	struct zebra_if *zif;
+ 	struct ifp_tree_link *link, tlink = {};
+ 
++	if (ifp->ifindex == IFINDEX_INTERNAL) {
++		if (IS_ZEBRA_DEBUG_EVENT)
++			zlog_debug("%s: interface %s not ready, ignoring", __func__, ifp->name);
++		return;
++	}
++
+ 	zif = ifp->info;
+ 	assert(zif != NULL);
+ 

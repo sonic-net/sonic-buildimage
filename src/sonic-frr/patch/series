@@ -57,3 +57,4 @@
 0057-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
 0058-mgmtd-normalize-argument-order-to-copy-dst-src.patch
 0059-zebra-Ensure-that-the-dplane-can-send-the-full-packe.patch
+0060-zebra-if-speed-change-check-fix.patch
