@@ -1,12 +1,22 @@
 #!/bin/bash
 
+# Ran during boot up and after syncd reset
+
 LOCKFD=200
 LOCKFILE="/var/run/nexthop-asic-init.lock"
-FPGA_BDF="0000:04:00.0"
-LOG_TAG="asic_init"
-ASIC_PCI_VENDOR_ID="14e4"
+FPGA_BDF=$(setpci -s 00:02.2 0x19.b | xargs printf '0000:%s:00.0')
+ASIC_BDF=$(setpci -s 00:01.2 0x19.b | xargs printf '%s:00.0')
 LOG_PRIO="user.info"
 LOG_ERR="user.err"
+
+lsmod | grep -q 'linux_ngbde'
+IS_OPENNSL_INITIALLY_LOADED=$?
+
+if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+  LOG_TAG="asic_reset"
+else
+  LOG_TAG="asic_init"
+fi
 
 fpga_write() {
   local offset="$1"
@@ -14,9 +24,9 @@ fpga_write() {
   local bits="$3"
 
   if [ -n "$bits" ]; then
-    fpga write32 "$FPGA_BDF" "$offset" "$value" --bits "$bits"
+    fpga write32 "$FPGA_BDF" "$offset" "$value" --bits "$bits" > /dev/null
   else
-    fpga write32 "$FPGA_BDF" "$offset" "$value"
+    fpga write32 "$FPGA_BDF" "$offset" "$value" > /dev/null
   fi
 
   if [ $? -ne 0 ]; then
@@ -91,31 +101,13 @@ fi
 
 acquire_lock
 
-# Per HW, do this right before taking the ASIC out of reset.
-clear_sticky_bits
-
-# Take the asic out of reset, first we'll set the reset bit, then clear it
-# Setting the reset bit should be a no-op as the FPGA default for this bit is 0.
-logger -t $LOG_TAG -p $LOG_PRIO "NH-4010-r1 asic init, putting ASIC into reset, then releasing reset"
-fpga_write 0x8 0x0 "10:10"
-sleep 0.1
-fpga_write 0x8 0x1 "10:10"
-
-# We need to wait for the asic to come up
-sleep 1
-
-# Check if switch ASIC is up
-lspci -n | grep -q "$ASIC_PCI_VENDOR_ID"
-if [ $? -eq 0 ]; then
-  logger -t $LOG_TAG -p $LOG_PRIO "Switch ASIC is up"
-  release_lock
-  exit 0
+if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+  logger -t $LOG_TAG -p $LOG_PRIO "Removing ASIC modules"
+  /etc/init.d/opennsl-modules stop
 fi
 
-logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not present, power cycling"
-
 # Try power cycling, up to two times, or until Switch ASIC chip is found
-for attempt in {1..2}; do
+for attempt in {0..2}; do
   # Powercycle the asic, then take it out of reset
   fpga_write 0x8 0x1 "3:3"
   sleep 2
@@ -124,18 +116,42 @@ for attempt in {1..2}; do
   fpga_write 0x8 0x1 "10:10"
 
   # We need to wait for the asic to come up
-  sleep 1
+  sleep 3
 
   # Check if switch ASIC is up
-  lspci -n | grep -q "$ASIC_PCI_VENDOR_ID"
+  lspci -n | grep -q "$ASIC_BDF"
   if [ $? -eq 0 ]; then
-    logger -t $LOG_TAG -p $LOG_PRIO "Switch ASIC is up after power cycle attempt $attempt"
+    if [ "$attempt" -eq 0 ]; then
+        logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up"
+    else
+        logger -t "$LOG_TAG" -p "$LOG_PRIO" "Switch ASIC is up after power cycle $attempt"
+    fi
+
+    logger -t $LOG_TAG -p $LOG_PRIO "Current lspci error(s) output"
+    output=$(lspci -vvv 2>/dev/null | grep -i -e '^0' -e 'CESta' | grep -B 1 -e 'CESta' | grep -B 1 -e '+ ' -e '+$')
+    logger -t $LOG_TAG -p $LOG_PRIO "lspci Errors: ${output}"
+
+    logger -t $LOG_TAG -p $LOG_PRIO "Clearing lspci errors"
+    setpci -s "00:01.2" 0x160.l=$(setpci -s "00:01.2" 0x160.l)
+
+    # Enable CommClk use
+    setpci -s 01:00.0 0xbc.w=0x40
+    setpci -s 0:1.2 0x68.w=0x40
+    setpci -s 0:1.2 0x68.w=0x60
+
+    if [ "$IS_OPENNSL_INITIALLY_LOADED" -eq 0 ]; then
+      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules: $(lsmod | grep linux_ngbde)"
+      /etc/init.d/opennsl-modules start
+      logger -t $LOG_TAG -p $LOG_PRIO "Inserting ASIC modules done: $(lsmod | grep linux_ngbde)"
+    fi
+
     release_lock
     exit 0
   fi
 done
 
-logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempt $attempt, giving up."
+logger -t $LOG_TAG -p $LOG_ERR "Switch ASIC not found after power cycle attempt $attempt, giving up, powering it down."
+fpga_write 0x8 0x1 "3:3"
 
 release_lock
 
