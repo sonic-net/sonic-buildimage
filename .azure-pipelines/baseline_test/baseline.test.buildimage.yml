@@ -78,57 +78,49 @@ stages:
     dependsOn: BuildVS
     condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
     jobs:
-    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    - template: baseline.test.template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      repositories:
-        buildimage: buildimage
 
   - stage: Test_round_2
     dependsOn:
     - Test_round_1
     condition: succeededOrFailed('Test_round_1')
     jobs:
-    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    - template: baseline.test.template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      repositories:
-        buildimage: buildimage
 
   - stage: Test_round_3
     dependsOn:
     - Test_round_2
     condition: succeededOrFailed('Test_round_2')
     jobs:
-    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    - template: baseline.test.template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      repositories:
-        buildimage: buildimage
 
   - stage: Test_round_4
     dependsOn:
     - Test_round_3
     condition: succeededOrFailed('Test_round_3')
     jobs:
-    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    - template: baseline.test.template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      repositories:
-        buildimage: buildimage
