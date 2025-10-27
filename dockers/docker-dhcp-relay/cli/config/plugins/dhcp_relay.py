@@ -297,7 +297,7 @@ def update_dhcpv4_relay(db, vlan_name, dhcpv4_servers, source_interface, link_se
         updated_fields.append(f"Agent Relay Mode as {agent_relay_mode}")
 
     if max_hop_count:
-        if not (1<= max_hop_count <=16):
+        if not (1 <= max_hop_count <= 16):
             ctx.fail("max-hop-count must be between 1 to 16")
         updated_entry["max_hop_count"] = max_hop_count
         updated_fields.append(f"Max Hop Count as {max_hop_count}")
@@ -376,7 +376,7 @@ def add_dhcpv4_relay(db, dhcpv4_servers, vlan_name, source_interface, link_selec
         added_fields.append(f"Agent Relay Mode as {agent_relay_mode}")
 
     if max_hop_count:
-        if not (1<= max_hop_count <=16):
+        if not (1 <= max_hop_count <= 16):
             ctx.fail("max-hop-count must be between 1 to 16")
         relay_entry["max_hop_count"] = max_hop_count
         added_fields.append(f"Max Hop Count as {max_hop_count}")
@@ -528,10 +528,10 @@ def add_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers, source_interface, li
         return
 
     if check_sonic_dhcpv4_relay_flag(db):
-        add_dhcpv4_relay.callback(",".join(dhcp_relay_helpers), "Vlan"+str(vid), source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
+        add_dhcpv4_relay.callback(db, ",".join(dhcp_relay_helpers), "Vlan"+str(vid), source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
         return
     else:
-        if source_interface or link_selection or vrf_selection or server_id_override or server_vrf or agent_relay_mode or max_hop_count :
+        if source_interface or link_selection or vrf_selection or server_id_override or server_vrf or agent_relay_mode or max_hop_count:
             click.echo(f"These parameters are applicable for new DHCPv4 Relay feature")
             return
 
@@ -555,7 +555,7 @@ def update_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers, source_interface,
         return
 
     if check_sonic_dhcpv4_relay_flag(db):
-        update_dhcpv4_relay.callback("Vlan"+str(vid), ",".join(dhcp_relay_helpers), source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
+        update_dhcpv4_relay.callback(db, "Vlan"+str(vid), ",".join(dhcp_relay_helpers), source_interface, link_selection, vrf_selection, server_id_override, server_vrf, agent_relay_mode, max_hop_count)
     else:
         click.echo(f"This command is applicable for new DHCPv4 Relay feature")
 
@@ -684,7 +684,7 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
 
     ip_version = IPV4 if clicommon.ipaddress_type(ip_addr) == 4 else IPV6
     # Update DHCPV4_RELAY table if needed
-    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db) :
+    if ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db):
         if dhcpv4_relay_changed:
             if len(dhcpv4_servers) == 0:
                 db.cfgdb.set_entry('DHCPV4_RELAY', vlan_name, None)

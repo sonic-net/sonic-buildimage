@@ -19,7 +19,7 @@ DHCPv6_COUNTER_TABLE = 'DHCPv6_COUNTER_TABLE'
 
 # DHCPv4 Counter Messages
 dhcpv4_messages = [
-     'Unknown', 'Discover', 'Offer', 'Request', 'Acknowledge','NegativeAcknowledge', 'Release',
+     'Unknown', 'Discover', 'Offer', 'Request', 'Acknowledge', 'NegativeAcknowledge', 'Release',
      'Inform', 'Decline', 'Malformed', 'Dropped'
 ]
 
@@ -297,7 +297,7 @@ def get_dhcpv4_relay_data_with_header(table_data, entry_names, dhcp_server_enabl
                     row.append(entry_data)
         vlan_relay.append(row)
 
-    headers = ["Interface", "DHCP Relay Address", "Server Vrf", "Source Interface", "Link Selection", "VRF Selection", "Server ID Overrride", "Agent Relay Mode", "Max Hop Count"]
+    headers = ["Interface", "DHCP Relay Address", "Server Vrf", "Source Interface", "Link Selection", "VRF Selection", "Server ID Override", "Agent Relay Mode", "Max Hop Count"]
 
     return tabulate(vlan_relay, tablefmt='grid', stralign='right', headers=headers) + '\n'
 
