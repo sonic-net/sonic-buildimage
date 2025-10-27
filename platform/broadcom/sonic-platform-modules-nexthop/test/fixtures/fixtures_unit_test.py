@@ -39,11 +39,51 @@ class PddfChassisMock:
         return "green"
 
 
+class WatchdogBaseMock:
+    """Mock of WatchdogBase for testing."""
+
+    def arm(self, seconds):
+        raise NotImplementedError
+
+    def disarm(self):
+        raise NotImplementedError
+
+    def is_armed(self):
+        raise NotImplementedError
+
+    def get_remaining_time(self):
+        raise NotImplementedError
+
+
+class WatchdogMock(WatchdogBaseMock):
+    def __init__(
+        self,
+        fpga_pci_addr: str,
+        event_driven_power_cycle_control_reg_offset: int,
+        watchdog_counter_reg_offset: int,
+    ):
+        self.fpga_pci_addr: str = fpga_pci_addr
+        self.event_driven_power_cycle_control_reg_offset: int = event_driven_power_cycle_control_reg_offset
+        self.watchdog_counter_reg_offset: int = watchdog_counter_reg_offset
+
+
 @pytest.fixture
 def mock_pddf_data():
     """Fixture providing mock PDDF data for tests."""
     data_mock = Mock()
-    data_mock.data = {'PLATFORM': {'num_nexthop_fpga_asic_temp_sensors': 0}}
+    data_mock.data = {
+        "PLATFORM": {"num_nexthop_fpga_asic_temp_sensors": 0},
+        "WATCHDOG": {
+            "dev_info": {"device_parent": "FAKE_MULTIFPGAPCIE1"},
+            "dev_attr": {
+                "event_driven_power_cycle_control_reg_offset": "0x28",
+                "watchdog_counter_reg_offset": "0x1E0",
+            },
+        },
+        "FAKE_MULTIFPGAPCIE1": {
+            "dev_info": {"device_bdf": "FAKE_ADDR"},
+        },
+    }
     return data_mock
 
 
@@ -56,17 +96,45 @@ def chassis(mock_pddf_data):
     # Set up the specific PddfChassis mock with our test implementation
     pddf_chassis_mock = Mock()
     pddf_chassis_mock.PddfChassis = PddfChassisMock
-    sys.modules['sonic_platform_pddf_base.pddf_chassis'] = pddf_chassis_mock
-    
+    sys.modules["sonic_platform_pddf_base.pddf_chassis"] = pddf_chassis_mock
+
+    watchdog_mock = Mock()
+    watchdog_mock.Watchdog = WatchdogMock
+    sys.modules["sonic_platform.watchdog"] = watchdog_mock
+
     # Load the chassis module directly from file path
     test_dir = os.path.dirname(os.path.realpath(__file__))
     chassis_path = os.path.join(test_dir, "../../common/sonic_platform/chassis.py")
-    
+
     spec = importlib.util.spec_from_file_location("chassis", chassis_path)
     chassis_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(chassis_module)
-    
+
     return chassis_module.Chassis(pddf_data=mock_pddf_data)
+
+@pytest.fixture
+def watchdog(mock_pddf_data):
+    """
+    Fixture providing a Watchdog instance for testing.
+    """
+    # Set up the specific WatchdogBase mock with our test implementation
+    watchdog_base_mock = Mock()
+    watchdog_base_mock.WatchdogBase = WatchdogBaseMock
+    sys.modules["sonic_platform_base.watchdog_base"] = watchdog_base_mock
+
+    # Load the module directly from file path
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+    watchdog_path = os.path.join(test_dir, "../../common/sonic_platform/watchdog.py")
+
+    spec = importlib.util.spec_from_file_location("watchdog", watchdog_path)
+    watchdog_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(watchdog_module)
+
+    return watchdog_module.Watchdog(
+        fpga_pci_addr="FAKE_FPGA_PCI_ADDR",
+        event_driven_power_cycle_control_reg_offset=0x28,
+        watchdog_counter_reg_offset=0x1E0,
+    )
 
 
 @pytest.fixture
@@ -98,7 +166,7 @@ def pid_params():
         "Ki": 1.0,
         "Kd": 1.0,
         "min_speed": 30,
-        "max_speed": 100
+        "max_speed": 100,
     }
 
 
