@@ -11,9 +11,6 @@ config_dhcp_relay_add_output = """\
 Added DHCP relay address [{}] to Vlan1000
 Restarting DHCP relay service...
 """
-config_dhcp_relay_update_output = """\
-Updated DHCPv4 Servers as {} to Vlan1000
-"""
 config_dhcp_relay_del_output = """\
 Removed DHCP relay address [{}] from Vlan1000
 Restarting DHCP relay service...
@@ -107,8 +104,8 @@ IP_VER_TEST_PARAM_MAP = {
 }
 
 
-@pytest.fixture(scope="module", params=["ipv4", "ipv4_dhcp", "ipv6"])
-def version(request):
+@pytest.fixture(scope="module", params=["ipv4", "ipv6"])
+def ip_version(request):
     """
     Parametrize Ip version
 
@@ -169,15 +166,13 @@ class TestConfigDhcpRelay(object):
             assert "Error: Vlan1001 doesn't exist" in result.output
             assert mock_run_command.call_count == 0
 
-    def test_config_add_del_dhcp_relay_with_invalid_ip(self, version, op):
+    def test_config_add_del_dhcp_relay_with_invalid_ip(self, ip_version, op):
         runner = CliRunner()
-        invalid_ip = IP_VER_TEST_PARAM_MAP[version]["invalid_ip"]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
-        if version == "ipv4_dhvp":
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        invalid_ip = IP_VER_TEST_PARAM_MAP[ip_version]["invalid_ip"]
+
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands[op], ["1000", invalid_ip])
             print(result.exit_code)
             print(result.output)
@@ -185,45 +180,40 @@ class TestConfigDhcpRelay(object):
             assert "Error: {} is invalid IP address".format(invalid_ip) in result.output
             assert mock_run_command.call_count == 0
 
-    def test_config_add_dhcp_with_exist_ip(self, mock_cfgdb, version):
+    def test_config_add_dhcp_with_exist_ip(self, mock_cfgdb, ip_version):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        exist_ip = IP_VER_TEST_PARAM_MAP[version]["exist_ip"]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
-        if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        exist_ip = IP_VER_TEST_PARAM_MAP[ip_version]["exist_ip"]
+
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands["add"], ["1000", exist_ip], obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code != 0
-            if version == "ipv4_dhcp":
-                assert "DHCPv4 relay entry for Vlan1000 already exists. Use 'update' instead." in result.output
+            if ip_version == "ipv4":
+                assert "{} is already a DHCPv4 relay for Vlan1000".format(exist_ip) in result.output
             else:
                 assert "{} is already a DHCP relay for Vlan1000".format(exist_ip) in result.output
             assert mock_run_command.call_count == 0
         db.cfgdb.set_entry.reset_mock()
 
-    def test_config_del_nonexist_dhcp_relay(self, mock_cfgdb, version):
+    def test_config_del_nonexist_dhcp_relay(self, mock_cfgdb, ip_version):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        nonexist_ip = IP_VER_TEST_PARAM_MAP[version]["nonexist_ip"]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
-        if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        nonexist_ip = IP_VER_TEST_PARAM_MAP[ip_version]["nonexist_ip"]
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands["del"], ["1000", nonexist_ip], obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code != 0
-            if version == "ipv4_dhcp":
+            if ip_version == "ipv4":
                 assert "Error: {} is not a DHCPv4 relay for Vlan1000".format(nonexist_ip) in result.output
             else:
                 assert "Error: {} is not a DHCP relay for Vlan1000".format(nonexist_ip) in result.output
@@ -231,64 +221,56 @@ class TestConfigDhcpRelay(object):
             assert mock_run_command.call_count == 0
         db.cfgdb.set_entry.reset_mock()
 
-    def test_config_add_del_dhcp_relay(self, mock_cfgdb, version):
+    def test_config_add_del_dhcp_relay(self, mock_cfgdb, ip_version):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        test_ip = IP_VER_TEST_PARAM_MAP[version]["ips"][0]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
-        config_db_table = IP_VER_TEST_PARAM_MAP[version]["table"]
+        test_ip = IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0]
+        config_db_table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
-        if version == "ipv4_dhcp":
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        if ip_version == "ipv4" :
             dhcp4_config_db_table = IP_VER_TEST_PARAM_MAP["ipv4_dhcp"]["table"]
-            op = "update"
-        else:
-            op = "add"
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # add new dhcp relay
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
-                                   .commands[op], ["1000", test_ip], obj=db)
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands["add"], ["1000", test_ip], obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_add_output.format(test_ip)
+            assert result.output == config_dhcp_relay_add_output.format(test_ip)
+            if ip_version != "ipv4":
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
-                    == expected_dhcp_relay_add_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                    == expected_dhcp_relay_add_config_db_output[ip_version]
+            assert mock_run_command.call_count == 3
 
-            if version == "ipv4_dhcp" :
-                assert result.output == config_dhcp_relay_update_output.format(test_ip)
+            if ip_version == "ipv4" :
                 expected_calls = [
-                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_add_config_db_output["ipv4_dhcp"])
                 ]
 
                 assert db.cfgdb.set_entry.call_args_list == expected_calls
             else:
                 db.cfgdb.set_entry.assert_called_once_with(config_db_table, "Vlan1000",
-                                                       expected_dhcp_relay_add_config_db_output[version])
+                                                       expected_dhcp_relay_add_config_db_output[ip_version])
 
         db.cfgdb.set_entry.reset_mock()
         # del dhcp relay
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands["del"], ["1000", test_ip], obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_del_output.format(test_ip)
+            assert result.output == config_dhcp_relay_del_output.format(test_ip)
+            assert mock_run_command.call_count == 3
+            if ip_version != "ipv4":
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
-                    == expected_dhcp_relay_del_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                    == expected_dhcp_relay_del_config_db_output[ip_version]
 
-            if version == "ipv4_dhcp" :
-                assert "Removed DHCP relay address [{}] from Vlan1000".format(test_ip) in result.output
+            if ip_version == "ipv4" :
                 expected_calls = [
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_del_config_db_output["ipv4_dhcp"])
                 ]
@@ -297,7 +279,7 @@ class TestConfigDhcpRelay(object):
 
             else:
                 db.cfgdb.set_entry.assert_called_once_with(config_db_table, "Vlan1000",
-                                                           expected_dhcp_relay_del_config_db_output[version])
+                                                           expected_dhcp_relay_del_config_db_output[ip_version])
 
     def test_config_add_del_dhcp_relay_with_enable_dhcp_server(self, mock_cfgdb):
         runner = CliRunner()
@@ -329,63 +311,55 @@ class TestConfigDhcpRelay(object):
             assert result.exit_code == 0
             assert "Cannot change ipv4 dhcp_relay configuration when dhcp_server feature is enabled" in result.output
 
-    def test_config_add_del_multiple_dhcp_relay(self, mock_cfgdb, version):
+    def test_config_add_del_multiple_dhcp_relay(self, mock_cfgdb, ip_version):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        test_ips = IP_VER_TEST_PARAM_MAP[version]["ips"]
-        config_db_table = IP_VER_TEST_PARAM_MAP[version]["table"]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
+        test_ips = IP_VER_TEST_PARAM_MAP[ip_version]["ips"]
+        config_db_table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
-        if version == "ipv4_dhcp" :
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        if ip_version == "ipv4" :
             dhcp4_config_db_table = IP_VER_TEST_PARAM_MAP["ipv4_dhcp"]["table"]
-            op = "update"
-        else:
-            op = "add"
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # add new dhcp relay
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
-                                   .commands[op], ["1000"] + test_ips, obj=db)
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands["add"], ["1000"] + test_ips, obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_add_output.format(",".join(test_ips))
+            assert result.output == config_dhcp_relay_add_output.format(",".join(test_ips))
+            if ip_version != "ipv4":
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
-                    == expected_dhcp_relay_add_multi_config_db_output[version]
-                assert mock_run_command.call_count == 3
+                    == expected_dhcp_relay_add_multi_config_db_output[ip_version]
+            assert mock_run_command.call_count == 3
 
-            if version == "ipv4_dhcp" :
-                assert result.output == config_dhcp_relay_update_output.format(",".join(test_ips))
+            if ip_version == "ipv4" :
                 expected_calls = [
-                    mock.call('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'}),
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_add_multi_config_db_output["ipv4_dhcp"]),
                 ]
 
                 assert db.cfgdb.set_entry.call_args_list == expected_calls
             else:
                 db.cfgdb.set_entry.assert_called_once_with(config_db_table, "Vlan1000",
-                                                       expected_dhcp_relay_add_multi_config_db_output[version])
+                                                       expected_dhcp_relay_add_multi_config_db_output[ip_version])
 
         db.cfgdb.set_entry.reset_mock()
         # del dhcp relay
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands["del"], ["1000"] + test_ips, obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code == 0
-            if version != "ipv4_dhcp":
-                assert result.output == config_dhcp_relay_del_output.format(",".join(test_ips))
-                assert mock_run_command.call_count == 3
+            assert result.output == config_dhcp_relay_del_output.format(",".join(test_ips))
+            assert mock_run_command.call_count == 3
+            if ip_version != "ipv4":
                 assert db.cfgdb.get_entry(config_db_table, "Vlan1000") \
-                    == expected_dhcp_relay_del_config_db_output[version]
-            if ip_version == "ipv4_dhcp":
-                assert "Removed DHCP relay address [{}] from Vlan1000".format(",".join(test_ip)) in result.output
+                    == expected_dhcp_relay_del_config_db_output[ip_version]
+            if ip_version == "ipv4":
                 expected_calls = [
                     mock.call(dhcp4_config_db_table, "Vlan1000", expected_dhcp_relay_del_config_db_output["ipv4_dhcp"]),
                 ]
@@ -393,32 +367,25 @@ class TestConfigDhcpRelay(object):
                 assert db.cfgdb.set_entry.call_args_list == expected_calls
             else:
                 db.cfgdb.set_entry.assert_called_once_with(config_db_table, "Vlan1000",
-                                                           expected_dhcp_relay_del_config_db_output[version])
+                                                           expected_dhcp_relay_del_config_db_output[ip_version])
 
         db.cfgdb.set_entry.reset_mock()
 
-    def test_config_add_del_duplicate_dhcp_relay(self, mock_cfgdb, version, op):
+    def test_config_add_del_duplicate_dhcp_relay(self, mock_cfgdb, ip_version, op):
         runner = CliRunner()
         db = Db()
         db.cfgdb = mock_cfgdb
-        test_ip = IP_VER_TEST_PARAM_MAP[version]["ips"][0] if op == "add" \
-            else IP_VER_TEST_PARAM_MAP[version]["exist_ip"]
-        ip_version = "ipv6" if version == "ipv6" else "ipv4"
-
-        if version == "ipv4_dhcp" :
-            db.cfgdb.set_entry('DEVICE_METADATA', 'localhost', {'has_sonic_dhcpv4_relay': 'True'})
+        test_ip = IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0] if op == "add" \
+            else IP_VER_TEST_PARAM_MAP[ip_version]["exist_ip"]
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
-                                   .commands[IP_VER_TEST_PARAM_MAP[version]["command"]]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
                                    .commands[op], ["1000", test_ip, test_ip], obj=db)
             print(result.exit_code)
             print(result.output)
             assert result.exit_code != 0
-            if version == "ipv4_dhcp" and op == "add":
-                assert "Error: DHCPv4 relay entry for Vlan1000 already exists. Use 'update' instead." in result.output
-            else:
-                assert "Error: Find duplicate DHCP relay ip {} in {} list".format(test_ip, op) in result.output
+            assert "Error: Find duplicate DHCP relay ip {} in {} list".format(test_ip, op) in result.output
             assert mock_run_command.call_count == 0
 
     def test_config_add_dhcp_relay_ipv6_with_non_entry(self, mock_cfgdb):
@@ -452,7 +419,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "True"})
+        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
         db.cfgdb.set_entry("DHCPV4_RELAY", "Vlan1000", None)
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
@@ -496,7 +463,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "True"})
+        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Present delete cmd should work with new feature flag enabled
@@ -518,7 +485,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #unset feature flag
-        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "False"})
+        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "False"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
 
@@ -552,7 +519,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #set feature flag
-        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay":"True"})
+        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay":"True"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Updating parameters also should work with new feature flag set
@@ -584,7 +551,7 @@ class TestConfigDhcpRelay(object):
         table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
 
         #unset feature flag
-        db.cfgdb.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay":"False"})
+        db.cfgdb.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay":"False"})
 
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             # Update cmd is available only for new feature, it should NOT work when flag is disabled

@@ -204,8 +204,8 @@ MULTI_TEST_DATA = [
                         "max_hop_count": "5"
                     }
                 },
-                'DEVICE_METADATA': {
-                    'localhost': {
+                'FEATURE': {
+                    'dhcp_relay': {
                         'has_sonic_dhcpv4_relay' : "False"
                     }
                 }

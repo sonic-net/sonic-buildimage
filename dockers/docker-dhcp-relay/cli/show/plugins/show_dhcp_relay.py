@@ -52,7 +52,7 @@ def check_sonic_dhcpv4_relay_flag():
         return
 
     config_db.connect()
-    table = config_db.get_entry("DEVICE_METADATA", "localhost")
+    table = config_db.get_entry("FEATURE", "dhcp_relay")
     if('has_sonic_dhcpv4_relay' in table and table['has_sonic_dhcpv4_relay'] == 'True'):
         return True
     return False

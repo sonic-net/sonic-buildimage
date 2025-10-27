@@ -23,8 +23,8 @@ def mock_cfgdb():
                 'dhcpv6_servers': ['fc02:2000::1']
             }
         },
-        'DEVICE_METADATA': {
-            'localhost': {
+        'FEATURE': {
+            'dhcp_relay': {
                 'has_sonic_dhcpv4_relay' : "False"
             }
         },
