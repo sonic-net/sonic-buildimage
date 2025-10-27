@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "5812-54X-O-AC-F": {
+            "component": {
+                "MB_CPLD1": { },
+                "MB_CPLD2": { },
+                "MB_CPLD3": { },
+                "BIOS": { }                
+            }
+        }
+    }
+}
