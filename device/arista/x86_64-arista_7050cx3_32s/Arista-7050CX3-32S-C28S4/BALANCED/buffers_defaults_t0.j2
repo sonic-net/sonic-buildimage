@@ -7,8 +7,8 @@
     {%- endfor %}
 {%- endmacro %}
 
-{%- set ingress_lossless_pool_size = '32689152' %}
-{%- set egress_lossless_pool_size = '32340992' %}
+{%- set ingress_lossless_pool_size = '32732160' %}
+{%- set egress_lossless_pool_size = '32599040' %}
 {%- if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'] == 'DualToR') %}
     {%- set ingress_lossless_pool_size = '32441856' %}
     {%- set egress_lossless_pool_size = '32441856' %}
