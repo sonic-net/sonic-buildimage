@@ -598,6 +598,9 @@ if [[ ! -f './asic_config_checksum' ]]; then
 fi
 sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
 
+## Copy gNOI Debug RPC command whitelist
+sudo cp files/image_config/gnoi/debug/command_whitelist.yaml $FILESYSTEM_ROOT/etc/sonic/command_whitelist.yaml
+
 ## Check if not a last stage of RFS build
 fi
 

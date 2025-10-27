@@ -1,0 +1,43 @@
+read_whitelist:
+  - ls
+  - cat
+  - echo
+  - ping
+  - grep
+  - dmesg
+  - zgrep
+  - tail
+  - teamshow
+  - ps
+  - uptime
+  - awk
+  - xargs
+  - show
+  - TSC
+
+write_whitelist:
+  - docker
+  - reboot
+  - mv
+  - systemctl
+  - ip
+  - ifconfig
+  - TSA
+  - TSB
+  - sonic-installer
+  - sonic_installer
+  - config
+  - tcpdump
+  - acl-loader
+  - counterpoll
+  - bcmcmd
+  - redis-cli
+  - sonic-db-cli
+  - sonic-clear
+  - wc
+  - portstat
+  - pfcwd
+  - lspci
+  - pcieutil
+  - include
+  - vtysh
