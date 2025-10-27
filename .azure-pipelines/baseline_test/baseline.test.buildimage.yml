@@ -1,8 +1,15 @@
+name: BaselineTest_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
 pr: none
 trigger: none
 
-
-name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+schedules:
+  - cron: "0 8 * * *"
+    displayName: Baseline test Scheduler
+    branches:
+      include:
+        - master
+    always: true
 
 resources:
   repositories:
@@ -63,7 +70,7 @@ stages:
     jobs:
     - template: ../azure-pipelines-build.yml
       parameters:
-        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
         jobGroups:
         - name: vs
 
@@ -78,6 +85,8 @@ stages:
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      repositories:
+        buildimage: buildimage
 
   - stage: Test_round_2
     dependsOn:
@@ -91,6 +100,8 @@ stages:
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      repositories:
+        buildimage: buildimage
 
   - stage: Test_round_3
     dependsOn:
@@ -104,6 +115,8 @@ stages:
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      repositories:
+        buildimage: buildimage
 
   - stage: Test_round_4
     dependsOn:
@@ -117,3 +130,5 @@ stages:
         RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
         TEST_PLAN_STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+      repositories:
+        buildimage: buildimage
