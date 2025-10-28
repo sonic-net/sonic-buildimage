@@ -142,3 +142,6 @@
 [submodule "platform/marvell-teralynx/mrvl-teralynx"]
 	path = platform/marvell-teralynx/mrvl-teralynx
 	url = https://github.com/Marvell-switching/mrvl-teralynx.git
+[submodule "src/sonic-l2mcd"]
+	path = src/sonic-l2mcd
+	url = https://github.com/sonic-net/sonic-l2mcd
