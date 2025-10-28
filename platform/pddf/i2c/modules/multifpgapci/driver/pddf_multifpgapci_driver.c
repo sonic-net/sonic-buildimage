@@ -376,8 +376,20 @@ static int pddf_pci_add_fpga(char *bdf, struct pci_dev *dev)
 	}
 	fpga_data->fpga_attr_group_initialized = true;
 
+	ret = sysfs_create_group(fpga_data->kobj, &pddf_clients_data_group);
+	if (ret) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR "[%s] sysfs_create_group failed: %d\n",
+			 __FUNCTION__, ret);
+		goto free_fpga_attr_group;
+	}
+	fpga_data->pddf_clients_data_group_initialized = true;
+
 	return 0;
 
+free_fpga_attr_group:
+	sysfs_remove_group(fpga_data->kobj, &fpga_data->fpga_attr_group);
+	fpga_data->fpga_attr_group_initialized = false;
 free_fpga_kobj:
 	attach_protocols_for_fpga(dev, fpga_data->kobj);
 	kobject_put(fpga_data->kobj);
