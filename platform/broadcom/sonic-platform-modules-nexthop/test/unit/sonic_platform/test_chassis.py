@@ -177,5 +177,25 @@ class TestChassis:
         assert chassis is not None
 
         # Test that get_change_event method exists and is callable
-        assert hasattr(chassis, 'get_change_event')
-        assert callable(getattr(chassis, 'get_change_event'))
+        assert hasattr(chassis, "get_change_event")
+        assert callable(getattr(chassis, "get_change_event"))
+
+    def test_chassis_get_watchdog(self, chassis):
+        actual_watchdog = chassis.get_watchdog()
+        assert actual_watchdog.fpga_pci_addr == "FAKE_ADDR"
+        assert actual_watchdog.event_driven_power_cycle_control_reg_offset == 0x28
+        assert actual_watchdog.watchdog_counter_reg_offset == 0x1E0
+
+    def test_chassis_get_watchdog_pddf_data_is_empty(self, chassis):
+        # Re-initiailize chasis with an empty pddf_data
+        chassis.__init__(pddf_data={})
+
+        assert chassis.get_watchdog() is None
+
+    def test_chassis_get_watchdog_no_watchdog_presence_in_pddf_data(self, chassis):
+        # Re-initiailize chasis with an empty pddf_data
+        mock_pddf_data = Mock()
+        mock_pddf_data.data = {"device": {}}
+        chassis.__init__(pddf_data=mock_pddf_data)
+
+        assert chassis.get_watchdog() is None

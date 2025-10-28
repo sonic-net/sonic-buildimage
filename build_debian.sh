@@ -737,12 +737,11 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         # verifying all EFI files and kernel modules in $OUTPUT_SEC_BOOT_DIR
         sudo ./scripts/secure_boot_signature_verification.sh -e $OUTPUT_SEC_BOOT_DIR \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+                                                             -k ${FILESYSTEM_ROOT}/usr/lib/modules
 
         # verifying vmlinuz file.
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH} \
-                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT
     fi
     echo "Secure Boot support build stage: END."
 fi
