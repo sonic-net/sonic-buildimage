@@ -21,6 +21,7 @@ include $(PLATFORM_PATH)/platform-modules-quanta.mk
 #include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.mk
 #include $(PLATFORM_PATH)/platform-modules-ruijie.mk
 #include $(PLATFORM_PATH)/platform-modules-ragile.mk
+include $(PLATFORM_PATH)/platform-modules-supermicro.mk
 #include $(PLATFORM_PATH)/platform-modules-tencent.mk
 include $(PLATFORM_PATH)/platform-modules-ufispace.mk
 include $(PLATFORM_PATH)/platform-modules-micas.mk
