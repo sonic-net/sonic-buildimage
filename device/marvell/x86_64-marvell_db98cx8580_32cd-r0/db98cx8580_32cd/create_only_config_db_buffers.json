@@ -1,7 +1,0 @@
-{
-    "DEVICE_METADATA": {
-        "localhost": {
-            "create_only_config_db_buffers": "true"
-        }
-    }
-}
