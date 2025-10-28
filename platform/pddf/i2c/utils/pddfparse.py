@@ -545,13 +545,13 @@ class PddfParse():
                 return create_ret.append(ret)
 
         if 'gpio' in dev:
-            ret = self.create_gpio_device(bdf, dev['gpio'], ops)
+            ret = self.create_multifpgapci_gpio_device(bdf, dev['gpio'], ops)
             if ret != 0:
                 return create_ret.append(ret)
 
         return create_ret.append(ret)
 
-    def create_gpio_device(self, bdf, gpio_dev, ops):
+    def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
         create_ret = []
         ret = 0
 
