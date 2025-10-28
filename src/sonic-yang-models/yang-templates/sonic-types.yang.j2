@@ -470,6 +470,24 @@ module sonic-types {
             enum EGRESS_VLAN_FILTER;
         }
     }
+    
+    typedef relay-agent-mode {
+        type enumeration {
+            enum forward_and_append {
+                description "Forward and append our own relay option";
+            }
+            enum forward_and_replace {
+                description "Forward, but replace theirs with ours";
+            }
+            enum forward_untouched {
+                description "Forward without changes";
+            }
+            enum discard {
+                description "Discard the packet";
+            }
+        }
+        description "This enumeration type defines what to do about a dhcp packets that already has a relay option.";
+    }    
 
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */
