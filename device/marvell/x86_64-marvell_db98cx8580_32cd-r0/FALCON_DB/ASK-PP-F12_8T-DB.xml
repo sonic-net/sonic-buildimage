@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="Askpp" dsig="md5" sid="85d852e5-1e5a-4b9b-a68d-7c1f65f7a541">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-07-13-1.12" profile="Askpp" dsig="md5" sid="7c7cd070-986a-47bf-835d-aeec3cbeaa84">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -1176,10 +1176,12 @@
         <askppplt:initPha askppplt:type="boolean-type">true</askppplt:initPha>
         <askppplt:Pha-params>
           <askppplt:packetOrderChangeEnable askppplt:type="boolean-type">false</askppplt:packetOrderChangeEnable>
-          <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">02</askppplt:phaFwImageId>
           <askppplt:phaFwImageIdVersion askppplt:type="uint32">0</askppplt:phaFwImageIdVersion>
         </askppplt:Pha-params>
       </askppplt:LibInit>
+      <askppplt:PhaParams>
+        <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">DEFAULT</askppplt:phaFwImageId>
+      </askppplt:PhaParams>
     </askppplt:PPInit>
   </askppplt:ASK-PP>
 </data>
