@@ -120,6 +120,7 @@ jobs:
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         env:
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        name: PublishAndSetPtfTag
         displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)
