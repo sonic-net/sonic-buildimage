@@ -326,34 +326,6 @@ class WatchdogMock(WatchdogBaseMock):
         self.watchdog_counter_reg_offset: int = watchdog_counter_reg_offset
 
 
-class WatchdogBaseMock:
-    """Mock of WatchdogBase for testing."""
-
-    def arm(self, seconds):
-        raise NotImplementedError
-
-    def disarm(self):
-        raise NotImplementedError
-
-    def is_armed(self):
-        raise NotImplementedError
-
-    def get_remaining_time(self):
-        raise NotImplementedError
-
-
-class WatchdogMock(WatchdogBaseMock):
-    def __init__(
-        self,
-        fpga_pci_addr: str,
-        event_driven_power_cycle_control_reg_offset: int,
-        watchdog_counter_reg_offset: int,
-    ):
-        self.fpga_pci_addr: str = fpga_pci_addr
-        self.event_driven_power_cycle_control_reg_offset: int = event_driven_power_cycle_control_reg_offset
-        self.watchdog_counter_reg_offset: int = watchdog_counter_reg_offset
-
-
 @pytest.fixture
 def mock_pddf_data():
     """Fixture providing mock PDDF data for tests."""
