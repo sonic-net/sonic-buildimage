@@ -29,6 +29,21 @@ class Fan(PddfFan):
         """
         return super().get_presence()
 
+    def get_name(self):
+        """
+        Retrieves the fan name
+        Returns: String containing fan-name
+        """
+        fan_name = None
+
+        if self.is_psu_fan and "fan_name" in self.plugin_data['PSU']:
+            fan_name = self.plugin_data['PSU']['fan_name'][str(self.fans_psu_index)][str(self.fan_index)]
+
+        elif not self.is_psu_fan and "name" in self.plugin_data['FAN']:
+            fan_name = self.plugin_data['FAN']['name'][str(self.fantray_index)][str(self.fan_index)]
+
+        return super().get_name() if fan_name is None else fan_name
+
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan

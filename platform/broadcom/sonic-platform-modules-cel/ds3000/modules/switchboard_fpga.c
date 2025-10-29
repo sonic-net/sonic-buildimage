@@ -1857,7 +1857,7 @@ static struct i2c_adapter * ds3000_i2c_init(struct platform_device *pdev,
     }
 
     new_adapter->owner = THIS_MODULE;
-    new_adapter->class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+    new_adapter->class = I2C_CLASS_HWMON;
     new_adapter->algo  = &ds3000_i2c_algorithm;
     /* If the bus offset is -1, use dynamic bus number */
     if (bus_number_offset == -1) {
@@ -2089,7 +2089,7 @@ static int ds3000_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int ds3000_drv_remove(struct platform_device *pdev)
+static void ds3000_drv_remove(struct platform_device *pdev)
 {
     int portid_count;
     struct sff_device_data *rem_data;
@@ -2124,7 +2124,6 @@ static int ds3000_drv_remove(struct platform_device *pdev)
     kobject_put(cpld2);
     device_destroy(fpgafwclass, MKDEV(0, 0));
     devm_kfree(&pdev->dev, fpga_data);
-    return 0;
 }
 
 static struct platform_driver ds3000_drv = {
@@ -2315,7 +2314,7 @@ static int fpgafw_init(void) {
     printk(KERN_INFO "Device registered correctly with major number %d\n", majorNumber);
 
     // Register the device class
-    fpgafwclass = class_create(THIS_MODULE, CLASS_NAME);
+    fpgafwclass = class_create(CLASS_NAME);
     if (IS_ERR(fpgafwclass)) {               // Check for error and clean up if there is
         unregister_chrdev(majorNumber, DEVICE_NAME);
         printk(KERN_ALERT "Failed to register device class\n");
