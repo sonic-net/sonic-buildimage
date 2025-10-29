@@ -10,14 +10,16 @@ import subprocess
 import os
 import os.path
 
+from sonic_py_common import device_info
+(platform_name, _) = device_info.get_platform_and_hwsku()
 
 class PrePddfInit(object):
-    def __init__(self):
+    def __init__(self, platform):
         self.ker_path = "/usr/lib/modules/{}/extra"
         self.lpc_basecpld_name = "pddf_custom_lpc_basecpld"
         self.lpc_basecpld_ko = "pddf_custom_lpc_basecpld.ko"
         self.bmc_exist_cmd = "/sys/bus/platform/devices/sys_cpld/bmc_present"
-        self.platform_name = "x86_64-cel_silverstone_v2-r0"
+        self.platform_name = platform
         self.bmc_present = False
 
     @staticmethod
@@ -68,21 +70,20 @@ class PrePddfInit(object):
     def choose_pddf_device_json(self):
         """
         Depending on the state of the BMC, different pddf-device.json file configurations will be used:
-        1.BMC exist: cp pddf-device.json-bmc pddf-device.json
-        2.None BMC : cp pddf-device.json-nonebmc pddf-device.json
+        1.BMC exist: cp pddf-device-bmc.json pddf-device.json
+        2.None BMC : cp pddf-device-nonbmc.json pddf-device.json
         """
-        device_name = "pddf-device.json-bmc" if self.bmc_present else "pddf-device.json-nonebmc"
+        device_name = "pddf-device-bmc.json" if self.bmc_present else "pddf-device-nonbmc.json"
         device_path = "/usr/share/sonic/device/%s/pddf/" % self.platform_name
         self.run_command("cp %s%s %spddf-device.json" % (device_path, device_name, device_path))
 
     def choose_platform_components(self):
         """
         Depending on the state of the BMC, different platform_components.json file configurations will be used:
-        1.BMC exist: cp platform_components.json-bmc platform_components.json
-        2.None BMC : cp platform_components.json-nonebmc platform_components.json
+        1.BMC exist: cp platform_components-bmc.json platform_components.json
+        2.None BMC : cp platform_components-nonbmc.json platform_components.json
         """
-        # ./usr/share/sonic/device/x86_64-cel_silverstone_v2-r0/platform_components.json
-        device_name = "platform_components.json-bmc" if self.bmc_present else "platform_components.json-nonebmc"
+        device_name = "platform_components-bmc.json" if self.bmc_present else "platform_components-nonbmc.json"
         device_path = "/usr/share/sonic/device/%s/" % self.platform_name
         self.run_command("cp %s%s %splatform_components.json" % (device_path, device_name, device_path))
 
@@ -95,6 +96,6 @@ class PrePddfInit(object):
 
 
 if __name__ == '__main__':
-    if not os.path.isfile("/usr/share/sonic/device/x86_64-cel_silverstone_v2-r0/bmc_status"):
-        pre_init = PrePddfInit()
+    if not os.path.isfile(f"/usr/share/sonic/device/{platform_name}/bmc_status"):
+        pre_init = PrePddfInit(platform_name)
         pre_init.main()
