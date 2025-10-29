@@ -29,7 +29,7 @@ test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
-from sonic_platform.sfp import SFP, RJ45Port, SX_PORT_MODULE_STATUS_INITIALIZING, SX_PORT_MODULE_STATUS_PLUGGED, SX_PORT_MODULE_STATUS_UNPLUGGED, SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR, SX_PORT_MODULE_STATUS_PLUGGED_DISABLED
+from sonic_platform.sfp import SFP, NvidiaSFPCommon, RJ45Port, SX_PORT_MODULE_STATUS_INITIALIZING, SX_PORT_MODULE_STATUS_PLUGGED, SX_PORT_MODULE_STATUS_UNPLUGGED, SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR, SX_PORT_MODULE_STATUS_PLUGGED_DISABLED
 from sonic_platform.chassis import Chassis
 
 
@@ -543,19 +543,104 @@ class TestSfp:
         # Test software control (is_sw_control = True)
         sfp.is_sw_control.return_value = True
         mock_super_get_temperature.return_value = 58.0
+        # Reset cached thresholds to force re-read (use 0.0 instead of None)
+        sfp.temp_high_threshold = 0.0
+        sfp.temp_critical_threshold = 0.0
         assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
 
+        # Test when thresh_support is None (returns 0.0, will trigger retry due to "not 0.0")
+        sfp.temp_high_threshold = 0.0
+        sfp.temp_critical_threshold = 0.0
+        sfp.retry_read_threshold = 5
         mock_api.get_transceiver_thresholds_support.return_value = None
-        assert sfp.get_temperature_info() == (58.0, None, None)
+        temp, warn, crit = sfp.get_temperature_info()
+        assert (temp, warn, crit) == (58.0, 0.0, 0.0)
+        assert sfp.retry_read_threshold == 4  # Decrements retry because "not 0.0" is True
 
+        # Test when thresh_support is False (returns 0.0, will trigger retry due to "not 0.0")
+        sfp.temp_high_threshold = 0.0
+        sfp.temp_critical_threshold = 0.0
+        sfp.retry_read_threshold = 5
         mock_api.get_transceiver_thresholds_support.return_value = False
-        assert sfp.get_temperature_info() == (58.0, 0.0, 0.0)
+        temp, warn, crit = sfp.get_temperature_info()
+        assert (temp, warn, crit) == (58.0, 0.0, 0.0)
+        assert sfp.retry_read_threshold == 4  # Decrements retry because "not 0.0" is True
 
         # Reset cached thresholds and set thresholds support back to True
-        sfp.temp_high_threshold = None
-        sfp.temp_critical_threshold = None
+        sfp.temp_high_threshold = 0.0
+        sfp.temp_critical_threshold = 0.0
         mock_api.get_transceiver_thresholds_support.return_value = True
         sfp.reinit_if_sn_changed.return_value = False
         assert sfp.get_temperature_info() == (58.0, 75.0, 85.0)
         sfp.is_sw_control.side_effect = Exception('')
         assert sfp.get_temperature_info() == (None, None, None)
+
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    @mock.patch('sonic_platform.sfp.logger')
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch.object(NvidiaSFPCommon, 'get_temperature')
+    def test_get_temperature_info_with_zero_thresholds(self, mock_super_get_temperature, mock_read_int, mock_logger, mock_is_sw_control):
+        """Test that 0.0 thresholds trigger retry due to 'not 0.0' being True"""
+        sfp = SFP(0)
+        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
+        mock_is_sw_control.return_value = True
+        mock_super_get_temperature.return_value = 58.0
+
+        mock_api = mock.MagicMock()
+        mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=True)
+        mock_api.xcvr_eeprom = mock.MagicMock()
+
+        # Mock threshold reads to return 0.0
+        def mock_read_zero(field):
+            return 0.0
+
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read_zero)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
+
+        # Set retry counter to 2
+        sfp.retry_read_threshold = 2
+
+        # Call should return 0.0 and decrement retry (0.0 triggers "not 0.0" condition)
+        temp, warn, crit = sfp.get_temperature_info()
+        assert temp == 58.0
+        assert warn == 0.0
+        assert crit == 0.0
+        assert sfp.retry_read_threshold == 1  # Decrements retry because "not 0.0" is True
+        mock_logger.log_notice.assert_not_called()  # No log yet, retry not exhausted
+
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch.object(NvidiaSFPCommon, 'get_temperature')
+    def test_get_temperature_info_retry_stops_on_success(self, mock_super_get_temperature, mock_read_int, mock_is_sw_control):
+        """Test that retry counter is set to 0 when thresholds are successfully read"""
+        from sonic_platform_base.sonic_xcvr.fields import consts
+
+        sfp = SFP(0)
+        sfp.reinit_if_sn_changed = mock.MagicMock(return_value=True)
+        mock_is_sw_control.return_value = True
+        mock_super_get_temperature.return_value = 58.0
+
+        mock_api = mock.MagicMock()
+        mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=True)
+        mock_api.xcvr_eeprom = mock.MagicMock()
+
+        # Mock threshold reads to return valid values
+        def mock_read_success(field):
+            if field == consts.TEMP_HIGH_ALARM_FIELD:
+                return 85.0
+            elif field == consts.TEMP_HIGH_WARNING_FIELD:
+                return 75.0
+            return None
+
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read_success)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
+
+        # Set retry counter to 5
+        sfp.retry_read_threshold = 5
+
+        # Call should return valid thresholds and set retry counter to 0
+        temp, warn, crit = sfp.get_temperature_info()
+        assert temp == 58.0
+        assert warn == 75.0
+        assert crit == 85.0
+        assert sfp.retry_read_threshold == 0  # Should be set to 0 on success
