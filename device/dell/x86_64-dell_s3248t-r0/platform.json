@@ -357,24 +357,5 @@
             }
         ]
     },
-    "interfaces": {
-        "Ethernet52": {
-            "index":"53,53,53,53",
-            "lanes":"69,70,71,72",
-            "breakout_modes": {
-                "1x100G[40G]": ["Eth53"],
-                "4x25G[10G]": ["Eth53/1", "Eth53/2", "Eth53/3", "Eth53/4"],
-                "1x25G[10G]": ["Eth53/1"]
-            }
-        },
-        "Ethernet56": {
-            "index":"54,54,54,54",
-            "lanes":"73,74,75,76",
-            "breakout_modes": {
-                "1x100G[40G]": ["Eth54"],
-                "4x25G[10G]": ["Eth54/1", "Eth54/2", "Eth54/3", "Eth54/4"],
-                "1x25G[10G]": ["Eth54/1"]
-            }
-        }
-    }
+    "interfaces": {}
 }
