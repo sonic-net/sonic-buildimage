@@ -142,3 +142,6 @@
 [submodule "platform/marvell-teralynx/mrvl-teralynx"]
 	path = platform/marvell-teralynx/mrvl-teralynx
 	url = https://github.com/Marvell-switching/mrvl-teralynx.git
+[submodule "src/supervisor"]
+	path = src/supervisor
+	url = https://github.com/Supervisor/supervisor
