@@ -43,6 +43,7 @@ bcm_device:
             l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
             stat_custom_receive0_management_mode: 1
+            sai_pfc_dlr_init_capability: 2
 ---
 device:
     0:
