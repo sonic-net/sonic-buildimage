@@ -51,4 +51,4 @@ module sonic-ztp {
     }
     /* end of top level container */
 }
-/* end of module sonic-ztp */
+/* end of module sonic--ztp */
