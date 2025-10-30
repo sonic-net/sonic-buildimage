@@ -1,0 +1,35 @@
+#!/usr/bin/make -f
+
+OR_TOOLS_TARBALL := v$(OR_TOOLS_VERSION).tar.gz
+OR_TOOLS_SRC_DIR := or-tools
+
+BUILD_FLAGS := -DBUILD_DEPS=ON \
+			-DBUILD_SHARED_LIBS=ON \
+			-DBUILD_EXAMPLES=OFF \
+			-DBUILD_TESTING=OFF \
+			-DBUILD_TOOLS=OFF
+
+CXX_FLAGS := -DCMAKE_CXX_FLAGS="-Wno-deprecated-declarations -D_GLIBCXX_USE_CXX11_ABI=0"
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	rm -rf $(OR_TOOLS_SRC_DIR) $(OR_TOOLS_TARBALL)
+	wget https://github.com/google/or-tools/archive/refs/tags/$(OR_TOOLS_TARBALL)
+	mkdir $(OR_TOOLS_SRC_DIR)
+	tar -xzvf $(OR_TOOLS_TARBALL) -C $(OR_TOOLS_SRC_DIR) --strip-components=1
+	cd $(OR_TOOLS_SRC_DIR) && \
+		cmake -S . -B build $(BUILD_FLAGS) -DCMAKE_BUILD_TYPE=Release $(CXX_FLAGS)
+
+override_dh_auto_build:
+	cmake --build $(OR_TOOLS_SRC_DIR)/build --target ortools -j$(SONIC_CONFIG_MAKE_JOBS)
+
+override_dh_auto_install:
+	# Skip install
+
+override_dh_auto_clean:
+	rm -rf $(OR_TOOLS_SRC_DIR) $(OR_TOOLS_TARBALL)
+
+override_dh_auto_test:
+	# Skip tests
