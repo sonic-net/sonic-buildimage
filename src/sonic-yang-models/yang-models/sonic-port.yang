@@ -99,7 +99,7 @@ module sonic-port{
 				leaf speed {
 					mandatory true;
 					type uint32 {
-						range 1..800000;
+						range 1..1600000;
 					}
 				}
 
@@ -130,7 +130,7 @@ module sonic-port{
 
 					type union {
 						type uint32 {
-							range 1..800000;
+							range 1..1600000;
 						}
 						type string {
 							pattern "all";
@@ -168,7 +168,7 @@ module sonic-port{
 				leaf subport {
 					description "Logical subport(s) for physical port breakout";
 					type uint8 {
-						range 0..8;
+						range 0..12;
 					}
 				}
 

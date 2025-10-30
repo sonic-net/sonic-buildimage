@@ -50,6 +50,7 @@ declare -r SPC1_ASIC="spc1"
 declare -r SPC2_ASIC="spc2"
 declare -r SPC3_ASIC="spc3"
 declare -r SPC4_ASIC="spc4"
+declare -r SPC5_ASIC="spc5"
 declare -r BF3_NIC="bf3"
 declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
@@ -59,6 +60,7 @@ declare -rA FW_FILE_MAP=( \
     [$SPC2_ASIC]="fw-SPC2.mfa" \
     [$SPC3_ASIC]="fw-SPC3.mfa" \
     [$SPC4_ASIC]="fw-SPC4.mfa" \
+    [$SPC5_ASIC]="fw-SPC5.mfa" \
     [$BF3_NIC]="fw-BF3.mfa" \
 )
 
@@ -81,12 +83,14 @@ function PrintHelp() {
     echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  -r, --reset    Reset firmware configuration (NVIDIA BlueField platform only)"
+    echo "  -n, --no-mst  Do not start MST drivers (NVIDIA BlueField platform only)"
 {% endif %}
     echo "  -h, --help     Print help"
     echo
     echo "Examples:"
     echo "  ./${SCRIPT_NAME} --verbose"
     echo "  ./${SCRIPT_NAME} --upgrade"
+    echo "  ./${SCRIPT_NAME} --no-mst"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  ./${SCRIPT_NAME} --reset"
 {% endif %}
@@ -113,6 +117,9 @@ function ParseArguments() {
             ;;
             -c|--clear-semaphore)
                 CLEAR_SEMAPHORE="${YES_PARAM}"
+            ;;
+            -n|--no-mst)
+                NO_MST="${YES_PARAM}"
             ;;
 {% if sonic_asic_platform == "nvidia-bluefield" %}
             -r|--reset)
@@ -207,7 +214,7 @@ function GetMstDeviceType() {
     local -r asic_type=$(/usr/bin/asic_detect/asic_detect.sh)
 
     case $asic_type in
-    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC})
+    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC}|${SPC5_ASIC})
         echo "Spectrum"
         return ${EXIT_SUCCESS}
         ;;
@@ -228,6 +235,15 @@ function WaitForDevice() {
     local -r DEVICE_TYPE=$(GetMstDeviceType)
     local SPC_MST_DEV
     local QUERY_RC=""
+
+    if [[ "${NO_MST}" != "${YES_PARAM}" ]]; then
+        LogInfo "Restarting MST device"
+        /usr/bin/mst restart --with_i2cdev
+        ERROR_CODE="$?"
+        if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+            ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
+        fi
+    fi
 
     while : ; do
         SPC_MST_DEV=$(GetSPCMstDevice)
