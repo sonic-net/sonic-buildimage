@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import time
 import subprocess
 import sys
 from sonic_py_common import logger as log
@@ -18,8 +19,8 @@ CONFIG_FILES = "/usr/share/sonic/auditd_config_files/"
 # Expected hash values
 CONFIG_HASHES = {
     "rules": {
-        "default": "3042c67383dccff079755c5f3daa2820e2ca392a",
-        "nokia": "fffb00199104c493d04a621b257c579c48d77225"
+        "64bit": "1c532e73fdd3f7366d9c516eb712102d3063bd5a",
+        "32bit": "ac45b13d45de02f08e12918e38b4122206859555"
     },
     "auditd_conf": "7cdbd1450570c7c12bdc67115b46d9ae778cbd76"
 }
@@ -27,6 +28,7 @@ CONFIG_HASHES = {
 # Command definitions
 RULES_HASH_CMD = f"sh -c \"find {RULES_DIR} -name '*.rules' -type f | sort | xargs cat 2>/dev/null | sha1sum\""
 AUDIT_CONF_HASH_CMD = "cat {} | sha1sum".format(AUDIT_CONF)
+NSENTER_CMD = "nsenter --target 1 --pid --mount --uts --ipc --net "
 
 
 def run_command(cmd):
@@ -45,18 +47,31 @@ def run_command(cmd):
     return p.returncode, error
 
 
-def get_hwsku():
-    hwsku_cmd = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
-    rc, out = run_command(hwsku_cmd)
-    return out.rstrip('\n')
+def get_bitness():
+    cmd = NSENTER_CMD + "file -L /bin/sh"
+    rc, out = run_command(cmd)
+    if rc != 0:
+        logger.log_error("Failed to get bitness")
+        sys.exit(1)
+
+    out = out.strip()
+    if "64-bit" in out:
+        return "64-bit"
+    elif "32-bit" in out:
+        return "32-bit"
+    else:
+        logger.log_error(f"Unknown bitness from output: {out}")
+        sys.exit(1)
 
 
 def is_auditd_rules_configured():
-    hwsku = get_hwsku()
-    if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
-        EXPECTED_HASH = CONFIG_HASHES["rules"]["nokia"]
+    bitness = get_bitness()
+    if "32-bit" in bitness:
+        EXPECTED_HASH = CONFIG_HASHES["rules"]["32bit"]
+    elif "64-bit" in bitness:
+        EXPECTED_HASH = CONFIG_HASHES["rules"]["64bit"]
     else:
-        EXPECTED_HASH = CONFIG_HASHES["rules"]["default"]
+        EXPECTED_HASH = "unexpected"
 
     rc, out = run_command(RULES_HASH_CMD)
     is_configured = EXPECTED_HASH in out
@@ -93,7 +108,7 @@ def is_auditd_service_configured():
 
 def check_rules_syntax():
     logger.log_info("Checking auditd rules syntax...")
-    rc, out = run_command("auditctl -R /etc/audit/audit.rules")
+    rc, out = run_command(NSENTER_CMD + "auditctl -R /etc/audit/audit.rules")
     if rc != 0:
         logger.log_error("auditctl -R failed: {}".format(out))
         return False
@@ -103,16 +118,22 @@ def check_rules_syntax():
 
 def main():
     is_configured = True
-    hwsku = get_hwsku()
+    bitness = get_bitness()
 
     # Check rules configuration
     if not is_auditd_rules_configured():
         logger.log_info("Updating auditd rules...")
-        run_command("rm -f {}/*.rules".format(RULES_DIR))
-        run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
-        if "Nokia-7215" in hwsku or "Nokia-M0-7215" in hwsku:
-            logger.log_info("Installing Nokia-specific rules")
+        if "32-bit" in bitness:
+            logger.log_info("Installing 32-bit rules")
+            run_command("rm -f {}/*.rules".format(RULES_DIR))
+            run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
             run_command("cp {}/32bit/*.rules {}".format(CONFIG_FILES, RULES_DIR))
+        elif "64-bit" in bitness:
+            logger.log_info("Installing 64-bit rules")
+            run_command("rm -f {}/*.rules".format(RULES_DIR))
+            run_command("cp {}/*.rules {}".format(CONFIG_FILES, RULES_DIR))
+        else:
+            logger.log_error("Unknown system bitness")
         is_configured = False
 
     # Check syslog configuration
@@ -136,8 +157,8 @@ def main():
     # If configuration has been modified, restart service
     if not is_configured:
         logger.log_info("Configuration changed, restarting auditd service...")
-        run_command("nsenter --target 1 --pid --mount --uts --ipc --net systemctl daemon-reload")
-        run_command("nsenter --target 1 --pid --mount --uts --ipc --net systemctl restart auditd")
+        run_command(NSENTER_CMD + "systemctl daemon-reload")
+        run_command(NSENTER_CMD + "systemctl restart auditd")
         logger.log_info("auditd service restart completed")
 
         # check rules syntax by reload all rules file
@@ -152,4 +173,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        time.sleep(900)

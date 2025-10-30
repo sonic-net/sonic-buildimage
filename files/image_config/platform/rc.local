@@ -207,6 +207,17 @@ program_console_speed()
     systemctl daemon-reload
 }
 
+request_dpu_midplane_ip()
+{
+    local INTERFACE="eth0-midplane"
+    if ip link show "$INTERFACE" 2> /dev/null; then
+        echo "dhclient -r $INTERFACE"
+        /usr/sbin/dhclient -r "$INTERFACE"
+        sleep 1
+        echo "dhclient $INTERFACE"
+        /usr/sbin/dhclient "$INTERFACE"
+    fi
+}
 
 #### Begin Main Body ####
 
@@ -240,16 +251,26 @@ fi
 
 program_console_speed
 
+platform=""
+if [ -n "$aboot_platform" ]; then
+    platform=$aboot_platform
+elif [ -n "$onie_platform" ]; then
+    platform=$onie_platform
+else
+    echo "Unknown SONiC platform"
+fi
+
+# W/A for https://github.com/sonic-net/sonic-buildimage/issues/24086
+if /usr/bin/jq -e 'has("DPU")' /usr/share/sonic/device/$platform/platform.json 2>/dev/null; then
+    echo "DPU type detected. Requesting IP ..."
+    request_dpu_midplane_ip
+fi
+
 if [ -f $FIRST_BOOT_FILE ]; then
 
     echo "First boot detected. Performing first boot tasks..."
 
-    if [ -n "$aboot_platform" ]; then
-        platform=$aboot_platform
-    elif [ -n "$onie_platform" ]; then
-        platform=$onie_platform
-    else
-        echo "Unknown SONiC platform"
+    if [ -z "$platform" ]; then
         firsttime_exit
     fi
 

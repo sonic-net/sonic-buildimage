@@ -1,26 +1,14 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 {% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm
+ARG BASE=--platform=linux/arm/v7 {{ prefix }}debian:bookworm
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM --platform=linux/arm64 {{ prefix }}debian:bookworm
+ARG BASE=--platform=linux/arm64 {{ prefix }}debian:bookworm
 {% else %}
-FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bookworm
+ARG BASE={{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bookworm
 {% endif %}
 
-# Clean documentation in FROM image
-RUN find /usr/share/doc -depth \( -type f -o -type l \) ! -name copyright | xargs rm || true
-
-# Clean doc directories that are empty or only contain empty directories
-RUN while [ -n "$(find /usr/share/doc -depth -type d -empty -print -exec rmdir {} +)" ]; do :; done && \
-    rm -rf               \
-    /usr/share/man/*     \
-    /usr/share/groff/*   \
-    /usr/share/info/*    \
-    /usr/share/lintian/* \
-    /usr/share/linda/*   \
-    /var/cache/man/*     \
-    /usr/share/locale/*
+FROM $BASE AS base
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -47,6 +35,8 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
+# Install rsync for copying over only changes between layers
+        rsync                \
 # Install redis-tools
         redis-tools          \
 # common dependencies
@@ -70,11 +60,16 @@ COPY ["pip.conf", "/etc/pip.conf"]
 RUN pip3 install --upgrade pip
 RUN apt purge -y python3-pip
 
+{% if docker_base_bookworm_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_base_bookworm_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_base_bookworm_whls.split(' ')) }}
+{% endif %}
+
 # For templating
 RUN pip3 install j2cli
-
-# Install supervisor
-RUN pip3 install supervisor==4.2.5
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
@@ -84,12 +79,6 @@ RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
 
-RUN apt-get -y purge   \
-    exim4              \
-    exim4-base         \
-    exim4-config       \
-    exim4-daemon-light
-
 {% if docker_base_bookworm_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_base_bookworm_debs.split(' '), "/debs/") }}
@@ -98,13 +87,6 @@ RUN apt-get -y purge   \
 {{ install_debian_packages(docker_base_bookworm_debs.split(' ')) }}
 {%- endif %}
 
-# Clean up apt
-# Remove /var/lib/apt/lists/*, could be obsoleted for derived images
-RUN apt-get clean -y                     && \
-    apt-get autoclean -y                 && \
-    apt-get autoremove -y                && \
-    rm -rf /var/lib/apt/lists/* /tmp/* ~/.cache
-
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
@@ -112,3 +94,7 @@ COPY ["root/.vimrc", "/root/.vimrc"]
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+
+FROM scratch
+
+COPY --from=base / /

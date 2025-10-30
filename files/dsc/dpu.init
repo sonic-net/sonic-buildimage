@@ -41,7 +41,8 @@ function start_polaris()
     mkdir -p $HOST_DIR_POLARIS/obfl
     mkdir -p $HOST_DIR_POLARIS/data
     mkdir -p $HOST_DIR_POLARIS/share
-    mount -t tmpfs -o size=20M sharetmps $HOST_DIR_POLARIS/share
+    mount -t tmpfs -o size=20M tmpfs $HOST_DIR_POLARIS/share
+    mount -t tmpfs -o size=5M tmpfs $HOST_DIR_POLARIS/external
     mkdir -p $HOST_DIR_POLARIS/dsc
     mount -t tmpfs -o size=5M dsctmps $HOST_DIR_POLARIS/dsc
     mkdir -p $HOST_DIR_POLARIS/mnt
@@ -61,7 +62,7 @@ function start_polaris()
 
     docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
 
-    docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/share:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
+    docker run -v $HOST_DIR_POLARIS/update:/update -v $HOST_DIR_POLARIS/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR_POLARIS/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR_POLARIS/obfl/a:/obfl -v $HOST_DIR_POLARIS/obfl:/var/log/obfl -v $HOST_DIR_POLARIS/data:/data -v $HOST_DIR_POLARIS/share:/share -v $HOST_DIR_POLARIS/external:/external -v $HOST_DIR_POLARIS/mnt/a:/ro -v /dev:/dev -v /sys:/sys --net=host --name=$CONTAINER_NAME_POLARIS --privileged $IMAGE_NAME:$TAG &
 
     if [ -f /boot/first_boot ]; then
         device="/usr/share/sonic/device"
@@ -74,6 +75,9 @@ function start_polaris()
     sleep 5
     INTERFACE="eth0-midplane"
     if ip link show "$INTERFACE" &> /dev/null; then
+        echo "dhclient -r $INTERFACE"
+        /usr/sbin/dhclient -r $INTERFACE
+        sleep 1
         echo "dhclient $INTERFACE"
         /usr/sbin/dhclient $INTERFACE
     fi

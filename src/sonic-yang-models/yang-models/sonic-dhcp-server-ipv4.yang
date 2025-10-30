@@ -159,6 +159,12 @@ module sonic-dhcp-server-ipv4 {
                         type uint32;
                     }
                 }
+
+                leaf always_send {
+                    description "Always send option or not";
+                    type boolean;
+                    default true;
+                }
             }
             /* end of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST */
         }

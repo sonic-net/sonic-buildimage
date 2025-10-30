@@ -46,7 +46,6 @@ jobs:
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
-      ss_image: no
       ${{ if parameters.qemuOrCrossBuild }}:
         SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
         CACHE_MODE: 'none'
@@ -73,39 +72,20 @@ jobs:
             docker_syncd_rpc_image: yes
             platform_rpc: brcm
 
-        - name: centec
-          variables:
-            dbg_image: yes
-            docker_syncd_rpc_image: yes
-            platform_rpc: centec
-
-        - name: centec-arm64
-          ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
-          timeoutInMinutes: 2880
-          variables:
-            PLATFORM_ARCH: arm64
-
-        - name: generic
-          variables:
-            dbg_image: yes
-
         - name: marvell-teralynx
           variables:
             dbg_image: yes
 
         - name: marvell-prestera-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-armhf
-          timeoutInMinutes: 2880
+            pool: sonicso1ES-armhf
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: armhf
 
         - name: marvell-prestera-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
-          timeoutInMinutes: 2880
+            pool: sonicso1ES-arm64
           variables:
             PLATFORM_NAME: marvell-prestera
             PLATFORM_ARCH: arm64
@@ -115,7 +95,6 @@ jobs:
         - name: mellanox
           variables:
             dbg_image: yes
-            ss_image: yes
             docker_syncd_rpc_image: yes
             syncd_rpc_image: yes
             platform_rpc: mlnx
@@ -127,12 +106,12 @@ jobs:
             platform_rpc: nephos
 
         - name: pensando
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
         - name: nvidia-bluefield
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
@@ -145,6 +124,9 @@ jobs:
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
           set -ex
+          if echo $(GROUP_NAME) | grep mellanox; then
+            BUILD_OPTIONS="$BUILD_OPTIONS INCLUDE_DHCP_SERVER=y"
+          fi
           if [ $(GROUP_NAME) == pensando ]; then
             make $BUILD_OPTIONS target/sonic-pensando.tar
           elif [ $(GROUP_NAME) == vs ]; then
@@ -164,8 +146,8 @@ jobs:
               mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
               rm target/sonic-vs.img
             fi
-            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
-            make $BUILD_OPTIONS target/docker-ptf-sai.gz
+            make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz
+            make $BUILD_OPTIONS target/docker-ptf.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
               SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
@@ -181,10 +163,6 @@ jobs:
             if [ $(dbg_image) == yes ]; then
               make  $BUILD_OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-$(GROUP_NAME).bin
               mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-dbg.bin
-            fi
-            if [ $(ss_image) == yes ]; then
-              make $BUILD_OPTIONS SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-$(GROUP_NAME).bin
-              mv target/sonic-$(GROUP_NAME).bin target/sonic-$(GROUP_NAME)-smartswitch.bin
             fi
             if [ $(swi_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi

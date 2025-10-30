@@ -51,10 +51,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 			last_line=$$(tail -n 1 device/x86_64-kvm_x86_64-r0/$$(basename $$d)/port_config.ini); \
 			num_columns=$$(echo $$last_line | awk '{print NF}'); \
 			i=0; \
-			if [ -f $$(dirname $$d)/chassisdb.conf ]; then \
+			if [ -f $$(dirname $$d)/chassisdb.conf ] && ! grep -q '^disaggregated_chassis=1' $$(dirname $$d)/platform_env.conf; then \
+				echo "Reserve midplane interface for $$(dirname $$d)"; \
 				i=$$(($$i+1)); \
 			fi; \
-			while IFS= read -r line; do \
+			while IFS= read -r line || [ -n "$$line" ]; do \
 				if ! grep -q "^#" <<< "$$line"; then \
 					i=$$(($$i+1)); \
 					lanes=$$(echo "$$line" | awk '{print $$2}'); \
@@ -70,7 +71,6 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/context_config.json ]; then \
 			rm device/x86_64-kvm_x86_64-r0/$$(basename $$d)/context_config.json; \
 		fi; \
-		i=0; \
 		if [ -f $$(dirname $$d)/chassisdb.conf ]; then \
 			# Append Cpu0 Port in lanemap.ini
 			if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/lanemap.ini ]; then \
@@ -79,6 +79,10 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 			if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/coreportindexmap.ini ]; then \
 				echo "Cpu0:0,0" >> device/x86_64-kvm_x86_64-r0/$$(basename $$d)/coreportindexmap.ini; \
 			fi; \
+		fi; \
+		i=0; \
+		if [ -f $$(dirname $$d)/chassisdb.conf ] && ! grep -q '^disaggregated_chassis=1' $$(dirname $$d)/platform_env.conf; then \
+			echo "Reserve midplane interface for $$(dirname $$d)"; \
 			i=$$(($$i+1)); \
 		fi; \
 		subdirs="0 1 2"; \
@@ -93,7 +97,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 				if [ -f device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/port_config.ini ]; then \
 					last_line=$$(tail -n 1 device/x86_64-kvm_x86_64-r0/$$(basename $$d)/$$(basename $$subdir)/port_config.ini); \
 					num_columns=$$(echo $$last_line | awk '{print NF}'); \
-					while IFS= read -r line; do \
+					while IFS= read -r line || [ -n "$$line" ]; do \
 						if ! grep -q "^#" <<< "$$line"; then \
 							i=$$(($$i+1)); \
 							lanes=$$(echo "$$line" | awk '{print $$2}'); \
