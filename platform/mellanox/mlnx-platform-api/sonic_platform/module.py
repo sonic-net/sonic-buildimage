@@ -425,6 +425,24 @@ class DpuModule(ModuleBase):
             REBOOT_CAUSE_HOST_POWERCYCLED_DPU, REBOOT_CAUSE_SW_THERMAL,
             REBOOT_CAUSE_DPU_SELF_REBOOT
         """
+        # Check for Watchdog reboot first
+        pcie_path = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+        try:
+            op = subprocess.check_output(['mlxreg', '-d', pcie_path, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+            logger.log_notice(f"Watchdog reason for {self._name}! {op}")
+        except subprocess.CalledProcessError as e:
+            logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+            op = b''
+        reset_reason_value = None
+        for line in op.decode().split('\n'):
+            if 'reset_reason' in line:
+                # Extract the value after the '|'
+                reset_reason_value = line.split('|')[1].strip()
+                break
+        if reset_reason_value and int(reset_reason_value,16) == 2:
+            return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
                 return rd
