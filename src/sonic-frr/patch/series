@@ -58,3 +58,4 @@
 0058-mgmtd-normalize-argument-order-to-copy-dst-src.patch
 0059-zebra-Ensure-that-the-dplane-can-send-the-full-packe.patch
 0060-zebra-if-speed-change-check-fix.patch
+0061-bgpd-Fix-JSON-wrapper-brace-consistency-in-neighbor.patch
