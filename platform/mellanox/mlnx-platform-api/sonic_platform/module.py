@@ -280,6 +280,9 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_pwr_off':
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
+        self.MLX_DPU_REBOOT_CAUSE_WARM = 0
+        self.MLX_DPU_REBOOT_CAUSE_COLD = 1
+        self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
 
@@ -430,7 +433,6 @@ class DpuModule(ModuleBase):
         # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
         try:
             op = subprocess.check_output(['mlxreg', '-d', pcie_path, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
-            logger.log_notice(f"Watchdog reason for {self._name}! {op}")
         except subprocess.CalledProcessError as e:
             logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
             op = b''
@@ -440,11 +442,13 @@ class DpuModule(ModuleBase):
                 # Extract the value after the '|'
                 reset_reason_value = line.split('|')[1].strip()
                 break
-        if reset_reason_value and int(reset_reason_value,16) == 2:
+        if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+            logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
             return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
         # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
