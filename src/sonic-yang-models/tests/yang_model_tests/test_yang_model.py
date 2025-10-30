@@ -51,7 +51,7 @@ class Test_yang_models:
             'MaxElements': ['Too many'],
             'UnknownElement': ['not found as a child'],
             'Missing': ['Missing required element'],
-            "InvalidJSON": ['Invalid JSON data'],
+            "InvalidJSON": ['Expecting JSON'],
             'None': [],
             'Length': ['Unsatisfied length'],
             'DecimalFractionExceed': ['Value', 'exceeds defined number', 'fraction digits'],
