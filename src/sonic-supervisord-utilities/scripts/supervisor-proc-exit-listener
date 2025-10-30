@@ -115,12 +115,7 @@ def get_autorestart_state(container_name, use_unix_socket_path):
         syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve feature '{}'. Exiting...".format(container_name))
         return ""
 
-    is_auto_restart = features_table[container_name].get('auto_restart')
-    if not is_auto_restart:
-        syslog.syslog(
-            syslog.LOG_WARNING, "Unable to determine auto-restart feature status for '{}'. Exiting...".format(container_name))
-        return ""
-
+    is_auto_restart = features_table[container_name].get('auto_restart', 'enabled')  ## Use default if field not found
     return is_auto_restart
 
 def load_heartbeat_alert_interval(use_unix_socket_path):
