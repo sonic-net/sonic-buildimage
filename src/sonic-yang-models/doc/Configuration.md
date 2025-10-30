@@ -2351,7 +2351,8 @@ the system generates logs.
             "rate_limit_burst": "100",
             "format": "welf",
             "welf_firewall_name": "bla",
-            "severity": "info"
+            "severity": "info",
+            "preserve_fqdn": "false"
         }
     }
 }
@@ -2362,6 +2363,7 @@ the system generates logs.
 * `format` - syslog log format: `{standard, welf}`
 * `welf_firewall_name` - WELF format firewall name: `string`
 * `severity` - global log severity: `{emerg, alert, crit, error, warning, notice, info, debug}`
+* `preserve_fqdn` - preserve Fully Qualified Domain Name in remote syslog messages: `boolean`
 
 ***Syslog Rate Limit***
 
