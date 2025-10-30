@@ -163,7 +163,6 @@ int fpga_mdio_write(struct mii_bus *bus, int phy_addr, int reg_num,
 		    uint16_t val)
 {
 	struct fpga_mdio_priv *priv = bus->priv;
-	uint32_t cmd_val;
 	int ret;
 
 	if (!priv || !priv->reg_base) {
