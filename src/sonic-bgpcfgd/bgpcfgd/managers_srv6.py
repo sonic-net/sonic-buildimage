@@ -1,6 +1,7 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
 from ipaddress import IPv6Network
+from ipaddress import IPv6Address
 from swsscommon import swsscommon
 
 supported_SRv6_behaviors = {
@@ -80,6 +81,11 @@ class SRv6Mgr(Manager):
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
         locator_prefix = IPv6Network(locator.prefix)
         sid_prefix = IPv6Network(ip_prefix)
+        locator_block = IPv6Network(locator.block)
+        if not locator_block.supernet_of(sid_prefix):
+            log_err("Found a SRv6 SID config entry that does not match the locator block: {} | {}; locator {}".format(key, data, locator))
+            return False
+
         if data['action'] != 'uA' and not locator_prefix.supernet_of(sid_prefix):
             log_err("Found a SRv6 SID config entry that does not match the locator prefix: {} | {}; locator {}".format(key, data, locator))
             return False
@@ -149,6 +155,11 @@ class Locator:
         self.func_len = int(data['func_len'] if 'func_len' in data else 16)
         self.arg_len = int(data['arg_len'] if 'arg_len' in data else 0)
         self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
+        ip = IPv6Address(data['prefix'].lower())
+        network_int = (int(ip)>>(128-self.block_len))<<(128-self.block_len)
+        network_ip = IPv6Address(network_int)
+        ip_str = str(network_ip)
+        self.block = f"{ip_str}/{self.block_len}"
 
 class SID:
     def __init__(self, locator, ip_prefix, data):
