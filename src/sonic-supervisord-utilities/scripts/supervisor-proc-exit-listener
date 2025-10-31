@@ -110,11 +110,15 @@ def get_autorestart_state(container_name, use_unix_socket_path):
         syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve features table from Config DB: {}".format(e))
         return ""
 
-    if container_name not in features_table:
-        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve feature '{}'. Exiting...".format(container_name))
+    if not features_table:
+        syslog.syslog(syslog.LOG_WARNING, "Empyt features table")
         return ""
 
-    is_auto_restart = features_table[container_name].get('auto_restart', 'enabled')  ## Use default if field not found
+    if container_name not in features_table:
+        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve feature '{}'".format(container_name))
+        return ""
+
+    is_auto_restart = features_table[container_name].get('auto_restart', 'enabled')  # Use default if field not found
     return is_auto_restart
 
 def load_heartbeat_alert_interval(use_unix_socket_path):
