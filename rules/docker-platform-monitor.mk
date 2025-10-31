@@ -57,6 +57,7 @@ $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:r
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/pmon/stormond:/usr/share/stormond:rw
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/platform_cache:/var/run/platform_cache:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/device/pddf:/usr/share/sonic/device/pddf:ro
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/lock/pddf-locks:/var/lock/pddf-locks:rw
 # Add sysfs mounts for hardware access
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /sys/:/sys/:rw
 
