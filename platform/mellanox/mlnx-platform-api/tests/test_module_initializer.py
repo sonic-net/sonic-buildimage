@@ -61,6 +61,7 @@ class TestModuleInitializer:
         initializer.wait_module_ready()
         assert not initializer.initialized
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.wait_sysfs_ready', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
