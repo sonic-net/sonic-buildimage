@@ -27,7 +27,7 @@ else
 MFT_TGZ_URL = http://www.mellanox.com/downloads/MFT/$(MFT_TGZ)
 endif
 
-BUILD_ARCH = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+BUILD_ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 KERNEL_MFT_TARGET = kernel-mft-dkms-modules-$(KVERSION)_$(MFT_VERSION)_$(BUILD_ARCH).deb
 
 MAIN_TARGET = mft_$(MFT_VERSION)-$(MFT_REVISION)_arm64.deb
