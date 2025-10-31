@@ -421,6 +421,7 @@ class SFP(NvidiaSFPCommon):
         self.sn = None
         self.temp_high_threshold = None
         self.temp_critical_threshold = None
+        self.retry_read_threshold = 5
 
     def __str__(self):
         return f'SFP {self.sdk_index}'
@@ -851,6 +852,7 @@ class SFP(NvidiaSFPCommon):
             self.sn = self.get_serial()
             self.temp_high_threshold = None
             self.temp_critical_threshold = None
+            self.retry_read_threshold = 5
             return True
         return False
             
@@ -862,39 +864,64 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             sw_control = self.is_sw_control()
+
+            # Get temperature based on control mode
             if not sw_control:
-                return sw_control, None, None, None
+                # firmware control, read from SDK sysfs
+                temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
+                temperature = utils.read_int_from_file(temp_file, log_func=None)
+                if temperature is None:
+                    return None, None, None
+                temperature = temperature / SFP_TEMPERATURE_SCALE
+            else:
+                # software control, read from EEPROM
+                temperature = super().get_temperature()
+                # None means read eeprom fail
+                if temperature is None:
+                    return None, None, None
+                # 0.0 means module doesn't support temperature reading
+                elif temperature == 0.0:
+                    return 0.0, 0.0, 0.0
 
             sn_changed = self.reinit_if_sn_changed()
-            # software control, read from EEPROM
-            temperature = super().get_temperature()
-            if temperature is None:
-                # Failed to read temperature, no need read threshold
-                return sw_control, None, None, None
-            elif temperature == 0.0:
-                # Temperature is not supported, no need read threshold
-                return sw_control, 0.0, 0.0, 0.0
+            # Use cached thresholds if serial number hasn't changed
+            if not sn_changed and self.retry_read_threshold <= 0:
+                return temperature, self.temp_high_threshold, self.temp_critical_threshold
+
+            # Read thresholds based on control mode
+            if not sw_control:
+                # Read thresholds from SDK sysfs
+                threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
+                threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_critical_hi'
+
+                warning_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
+                warning_threshold = warning_threshold / SFP_TEMPERATURE_SCALE
+
+                critical_threshold = utils.read_int_from_file(threshold_critical_file, log_func=None)
+                critical_threshold = critical_threshold / SFP_TEMPERATURE_SCALE
             else:
-                if not sn_changed and self.temp_high_threshold is not None and self.temp_critical_threshold is not None:
-                    return sw_control, temperature, self.temp_high_threshold, self.temp_critical_threshold
-                else:
-                    # Read threshold from EEPROM
-                    api = self.get_xcvr_api()
-                    thresh_support = api.get_transceiver_thresholds_support()
-                    if thresh_support is None:
-                        # Failed to read threshold support field, no need read threshold
-                        return sw_control, temperature, None, None
-                    if thresh_support:
-                        # Read threshold from EEPROM
-                        self.temp_high_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_WARNING_FIELD)
-                        self.temp_critical_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_ALARM_FIELD)
-                        return sw_control, temperature, self.temp_high_threshold, self.temp_critical_threshold
-                    else:
-                        # No threshold support, use default threshold
-                        return sw_control, temperature, 0.0, 0.0
+                # Read threshold from EEPROM
+                api = self.get_xcvr_api()
+                thresh_support = api.get_transceiver_thresholds_support()
+                if thresh_support: # True means support
+                    warning_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_WARNING_FIELD)
+                    critical_threshold = api.xcvr_eeprom.read(consts.TEMP_HIGH_ALARM_FIELD)
+                else: # False means not support
+                    warning_threshold = 0.0
+                    critical_threshold = 0.0
+
+            # Cache the thresholds for future use
+            self.temp_high_threshold = warning_threshold
+            self.temp_critical_threshold = critical_threshold
+            if not warning_threshold or not critical_threshold:
+                self.retry_read_threshold -= 1
+            else:
+                self.retry_read_threshold = 0
+
+            return temperature, warning_threshold, critical_threshold
         except:
             # module under initialization, return as temperature not supported
-            return False, None, None, None
+            return None, None, None
 
     def get_temperature(self):
         """Get SFP temperature
