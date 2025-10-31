@@ -95,8 +95,7 @@ class MPFAManager(object):
             raise RuntimeError("MPFA metadata doesn't exist: path={}".format(metadata_path))
 
         cp = configparser.ConfigParser()
-        with io.open(metadata_path, 'r') as metadata_ini:
-            cp.readfp(metadata_ini)
+        cp.read(metadata_path)
 
         self.__metadata = cp
 
