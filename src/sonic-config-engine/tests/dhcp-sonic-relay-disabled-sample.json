@@ -14,10 +14,14 @@
             "has_per_asic_scope": "False",
             "high_mem_alert": "disabled",
             "set_owner": "local",
-            "has_sonic_dhcpv4_relay": "False",
             "state": "enabled",
             "support_syslog_rate_limit": "True"
         }
 
+    },
+    "DEVICE_METADATA": {
+        "localhost": {
+            "has_sonic_dhcpv4_relay": "False"
+        }
     }
 }
