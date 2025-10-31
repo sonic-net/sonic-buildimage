@@ -30,6 +30,7 @@ try:
     from sonic_py_common import device_info
     from functools import reduce
     from .utils import extract_RJ45_ports_index
+    from .utils import extract_asic_id_map
     from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
@@ -119,6 +120,9 @@ class Chassis(ChassisBase):
         # Build the RJ45 port list from platform.json and hwsku.json
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
+
+        # Mapping from SFP index to ASIC ID
+        self._asic_id_map = None
 
         Chassis.chassis_instance = self
 
@@ -256,6 +260,13 @@ class Chassis(ChassisBase):
     # SFP methods
     ##############################################
 
+    def _get_asic_id_by_sfp_index(self, sfp_index):
+        if not DeviceDataManager.is_multi_asic_platform():
+            return 'asic0'
+        if not self._asic_id_map:
+            self._asic_id_map = extract_asic_id_map(DeviceDataManager.get_asic_count())
+        return f'asic{self._asic_id_map.get(sfp_index)}'
+
     def _import_sfp_module(self):
         if not self.sfp_module:
             from . import sfp as sfp_module
@@ -275,10 +286,11 @@ class Chassis(ChassisBase):
 
                     if not self._sfp_list[index]:
                         sfp_module = self._import_sfp_module()
+                        asic_id = self._get_asic_id_by_sfp_index(index)
                         if self.RJ45_port_list and index in self.RJ45_port_list:
-                            self._sfp_list[index] = sfp_module.RJ45Port(index)
+                            self._sfp_list[index] = sfp_module.RJ45Port(index, asic_id=asic_id)
                         else:
-                            self._sfp_list[index] = sfp_module.SFP(index)
+                            self._sfp_list[index] = sfp_module.SFP(index, asic_id=asic_id)
                         self.sfp_initialized_count += 1
 
     def initialize_sfp(self):
@@ -292,20 +304,22 @@ class Chassis(ChassisBase):
                     if not self._sfp_list:
                         sfp_module = self._import_sfp_module()
                         for index in range(sfp_count):
+                            asic_id = self._get_asic_id_by_sfp_index(index)
                             if self.RJ45_port_list and index in self.RJ45_port_list:
-                                sfp_object = sfp_module.RJ45Port(index)
+                                sfp_object = sfp_module.RJ45Port(index, asic_id=asic_id)
                             else:
-                                sfp_object = sfp_module.SFP(index)
+                                sfp_object = sfp_module.SFP(index, asic_id=asic_id)
                             self._sfp_list.append(sfp_object)
                         self.sfp_initialized_count = sfp_count
                     elif self.sfp_initialized_count != len(self._sfp_list):
                         sfp_module = self._import_sfp_module()
                         for index in range(len(self._sfp_list)):
                             if self._sfp_list[index] is None:
+                                asic_id = self._get_asic_id_by_sfp_index(index)
                                 if self.RJ45_port_list and index in self.RJ45_port_list:
-                                    self._sfp_list[index] = sfp_module.RJ45Port(index)
+                                    self._sfp_list[index] = sfp_module.RJ45Port(index, asic_id=asic_id)
                                 else:
-                                    self._sfp_list[index] = sfp_module.SFP(index)
+                                    self._sfp_list[index] = sfp_module.SFP(index, asic_id=asic_id)
                         self.sfp_initialized_count = len(self._sfp_list)
 
     def get_num_sfps(self):

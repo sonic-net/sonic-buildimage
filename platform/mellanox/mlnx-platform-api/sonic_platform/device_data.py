@@ -24,6 +24,7 @@ from enum import Enum
 
 from . import utils
 from sonic_py_common.general import check_output_pipe
+from swsscommon import swsscommon
 
 DEFAULT_WD_PERIOD = 65535
 
@@ -211,6 +212,9 @@ DEVICE_DATA = {
 
 
 class DeviceDataManager:
+    _port_init_done_tables = {}
+    _port_init_done_status = {}
+
     @classmethod
     @utils.read_only_cache()
     def get_platform_name(cls):
@@ -416,3 +420,53 @@ class DeviceDataManager:
             return None
 
         return sfp_data.get('fw_control_ports')
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_asic_count(cls):
+        from sonic_py_common import device_info
+        return device_info.get_num_npus()
+
+    @classmethod
+    @utils.read_only_cache()
+    def is_multi_asic_platform(cls):
+        return cls.get_asic_count() > 1
+
+    @classmethod
+    def _get_appl_db_port_tables(cls):
+        if cls._port_init_done_tables:
+            return cls._port_init_done_tables
+
+        asic_tables = {}
+        if cls.is_multi_asic_platform():
+            if not swsscommon.SonicDBConfig.isGlobalInit():
+                swsscommon.SonicDBConfig.initializeGlobalConfig()
+            for asic in range(cls.get_asic_count()):
+                appl_db = swsscommon.DBConnector("APPL_DB", 0, True, f'asic{asic}')
+                port_tbl = swsscommon.Table(appl_db, swsscommon.APP_PORT_TABLE_NAME)
+                asic_tables[f"asic{asic}"] = port_tbl
+        else:
+            if not swsscommon.SonicDBConfig.isInit():
+                swsscommon.SonicDBConfig.initialize()
+            appl_db = swsscommon.DBConnector("APPL_DB", 0, True, '')
+            port_tbl = swsscommon.Table(appl_db, swsscommon.APP_PORT_TABLE_NAME)
+            asic_tables["asic0"] = port_tbl
+
+        cls._port_init_done_tables = asic_tables
+        return cls._port_init_done_tables
+
+    @classmethod
+    def _check_port_init_done_asic(cls, asic):
+        if cls._port_init_done_status.get(asic, None):
+            return cls._port_init_done_status[asic]
+
+        table = cls._get_appl_db_port_tables().get(asic)
+        if not table:
+            raise ValueError(f"PORT_TABLE for asic '{asic}' not found")
+        keys = table.getKeys()
+        cls._port_init_done_status[asic] = "PortInitDone" in keys or "PortConfigDone" in keys
+        return cls._port_init_done_status[asic]
+
+    @classmethod
+    def is_port_init_done(cls, asic='asic0'):
+        return cls._check_port_init_done_asic(asic)
