@@ -107,9 +107,8 @@ def get_autorestart_state(container_name, use_unix_socket_path):
         config_db.connect()
         features_table = config_db.get_table(FEATURE_TABLE_NAME)
     except RuntimeError as e:
-        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve features table from Config DB.")
+        syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve features table from Config DB: {}".format(e))
         return ""
-
 
     if container_name not in features_table:
         syslog.syslog(syslog.LOG_WARNING, "Unable to retrieve feature '{}'. Exiting...".format(container_name))
