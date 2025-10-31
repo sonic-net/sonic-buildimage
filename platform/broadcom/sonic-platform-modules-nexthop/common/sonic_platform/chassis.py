@@ -14,6 +14,7 @@ import re
 import sys
 import time
 
+from sonic_platform import adm1266
 from sonic_platform.thermal import NexthopFpgaAsicThermal
 from sonic_platform.watchdog import Watchdog
 
@@ -153,26 +154,58 @@ class Chassis(PddfChassis):
     def get_status_led(self):
         return self.get_system_led("SYS_LED")
 
+    def _get_sw_reboot_cause(self) -> str | None:
+        # The presence of reboot-cause.txt with valid content indicates that reboot
+        # was triggered by software at some point before the current boot. We trust that
+        # determine-reboot-cause.service will clear the content in this file after
+        # calling this function.
+        reboot_cause_path = self.plugin_data.get("REBOOT_CAUSE", {}).get(
+            "reboot_cause_file", None
+        )
+        if not reboot_cause_path or not os.path.exists(reboot_cause_path):
+            return None
+
+        with open(reboot_cause_path, "r", errors="replace") as file:
+            sw_reboot_cause = file.read().strip()
+
+            # We parse the SW cause here, so we can attach the HW events as a minor cause.
+            # Note: This logic is taken from `determine-reboot-cause`.
+            if match := re.search(r"User issued '(.*)' command", sw_reboot_cause):
+                # Normally, it is from one of the reboot scripts, e.g. 'reboot', 'warm-reboot'.
+                return match.group(1)
+            elif re.search(r"Kernel Panic", sw_reboot_cause):
+                return "Kernel Panic"
+            elif re.search(r"Heartbeat with the Supervisor card lost", sw_reboot_cause):
+                return "Heartbeat with the Supervisor card lost"
+            else:
+                return None
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
 
         Returns:
-            A tuple (string, string) where the first element is a string
-            containing the cause of the previous reboot. This string must be
-            one of the predefined strings in this class. If the first string
-            is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
-            to pass a description of the reboot cause.
+            (string, string):
+                (major reboot cause, minor reboot cause).
+                - major cause can be from either SW or HW.
+                - minor cause contains all of the HW fault
+                  events from ADM1266 blackbox records since
+                  the last successful boot.
+                - determine-reboot-cause.service will display
+                  the cause as "<major_cause> (<minor_cause>)"
         """
-
-        reboot_cause_path = self.plugin_data['REBOOT_CAUSE']['reboot_cause_file']
-
-        try:
-            with open(reboot_cause_path, 'r', errors='replace') as fd:
-                data = fd.read()
-                sw_reboot_cause = data.strip()
-        except IOError:
-            sw_reboot_cause = "Unknown"
+        # Always show hardware events for diagnostics, regardless of SW or HW.
+        # TODO: currently, when SW reboot cause is present, we assume it is
+        # the major cause. However, we should check based on the timestamp
+        # whether SW cause or HW cause came first.
+        sw_cause = self._get_sw_reboot_cause()
+        hw_cause, all_hw_fault_events = adm1266.get_reboot_cause() or (None, "")
+        if sw_cause:
+            return (sw_cause, all_hw_fault_events)
+        elif hw_cause:
+            return (hw_cause, all_hw_fault_events)
+        else:
+            return ("Unknown", "Unknown")
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
 
@@ -210,4 +243,5 @@ class Chassis(PddfChassis):
 
     def get_thermal_manager(self):
         from .thermal_manager import ThermalManager
+
         return ThermalManager

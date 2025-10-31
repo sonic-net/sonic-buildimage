@@ -66,6 +66,8 @@ enum chips {
 	raa228004,
 	raa228006,
 	raa228228,
+	raa228234,
+	raa228236,
 	raa229001,
 	raa229004,
 };
@@ -318,6 +320,8 @@ static const struct i2c_device_id raa_dmpvr_id[] = {
 	{"nh_raa228004", raa_dmpvr2_hv},
 	{"nh_raa228006", raa_dmpvr2_hv},
 	{"nh_raa228228", raa_dmpvr2_2rail_nontc},
+	{"nh_raa228234", raa_dmpvr2_2rail_nontc},
+	{"nh_raa228236", raa_dmpvr2_2rail_nontc},
 	{"nh_raa229001", raa_dmpvr2_2rail},
 	{"nh_raa229004", raa_dmpvr2_2rail},
 	{}
