@@ -106,13 +106,24 @@ stages:
   - name: testbed_file
     value: vtestbed.csv
   - name: PTF_MODIFIED
-    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], 'false') ]
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script.PTF_MODIFIED'], stageDependencies.BuildVS.vs.outputs['script1.PTF_MODIFIED'], 'false') ]
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
 # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
   jobs:
+  - job: debug_variables
+    pool: sonic-ubuntu-1c
+    displayName: "Debug PTF_MODIFIED Variable"
+    steps:
+    - script: |
+        echo "PTF_MODIFIED variable value: $(PTF_MODIFIED)"
+        echo "Available stage dependencies:"
+        echo "BuildVS stage outputs:"
+        echo '${{ convertToJson(stageDependencies.BuildVS) }}' || echo "No BuildVS stage dependencies found"
+      displayName: "Debug PTF_MODIFIED and Stage Dependencies"
+
   - job:
     pool: sonictest
     displayName: "vstest"
