@@ -4,7 +4,44 @@
 import ctypes
 import mmap
 import os
+import json
+
 from typing import Union
+from  nexthop.pddf_config_parser import load_pddf_device_config
+
+
+def bdf_to_name(device_bdf, pddf_config=None):
+    """  Get device name for a given BDF address """
+
+    if pddf_config is None:
+        pddf_config = load_pddf_device_config()
+    
+    for device_config in pddf_config.values():
+        if isinstance(device_config, dict) and 'dev_info' in device_config:
+            dev_info = device_config['dev_info']
+            
+            if (dev_info.get('device_type') == 'MULTIFPGAPCIE' and 
+                dev_info.get('device_bdf') == device_bdf):
+                return dev_info.get('device_name')
+    
+    return None
+
+
+def name_to_bdf(device_name, pddf_config=None):
+    """  Get BDF address for a given device name """
+
+    if pddf_config is None:
+        pddf_config = load_pddf_device_config()
+    
+    for device_config in pddf_config.values():
+        if isinstance(device_config, dict) and 'dev_info' in device_config:
+            dev_info = device_config['dev_info']
+            
+            if (dev_info.get('device_type') == 'MULTIFPGAPCIE' and 
+                dev_info.get('device_name') == device_name):
+                return dev_info.get('device_bdf')
+    
+    return None
 
 
 def find_pci_devices(vendor_id: int, device_id: Union[int, None], root="") -> list[str]:
@@ -49,7 +86,10 @@ def write_32(pci_address: str, offset: int, val: int, root=""):
         aligned_offset = offset & ~(page_size - 1)
         offset_in_page = offset - aligned_offset
         mm = mmap.mmap(
-            f.fileno(), length=page_size, offset=aligned_offset, access=mmap.ACCESS_WRITE
+            f.fileno(),
+            length=page_size,
+            offset=aligned_offset,
+            access=mmap.ACCESS_WRITE,
         )
         mm_buf = (ctypes.c_char * page_size).from_buffer(mm)
         base_ptr = ctypes.cast(mm_buf, ctypes.POINTER(ctypes.c_uint32))

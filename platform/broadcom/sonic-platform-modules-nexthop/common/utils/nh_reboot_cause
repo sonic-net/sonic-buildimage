@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Nexthop reboot-cause display utility.
+
+Displays reboot-cause information from saved DPM fault records.
+Reads persisted JSON files only - no device access or recomputation.
+"""
+
+import os
+import click
+from typing import List
+
+from sonic_platform.adm1266 import Adm1266Display
+from sonic_platform.dpm import SystemDPMLogHistory
+
+
+@click.command()
+@click.option('--history', is_flag=True,
+              help='Show history of all saved reboot-cause records')
+def reboot_cause(history: bool) -> None:
+    """Show reboot-cause information from DPM fault records.
+
+    By default, displays the most recent reboot-cause.
+    Use --history to show all saved historical records.
+    """
+    if history:
+        show_history()
+    else:
+        show_current()
+
+
+def show_current() -> None:
+    """Display the most recent reboot-cause from saved data."""
+    dpm_type, records = SystemDPMLogHistory().load()
+
+    if not records:
+        click.echo("No reboot-cause records found")
+        return
+
+    if dpm_type != "adm1266":
+        click.echo(f"Error: Unsupported DPM type '{dpm_type}' (expected 'adm1266')")
+        return
+
+    messages = Adm1266Display(records).render(is_first=True)
+    for msg in messages:
+        if msg:
+            click.echo(msg)
+
+
+def show_history() -> None:
+    """Display reboot-cause history with most recent entry first."""
+    history = SystemDPMLogHistory()
+    files: List[str] = list(getattr(history, '_history_files', []))
+
+    if not files:
+        click.echo("No reboot-cause history found")
+        return
+
+    # Determine the current (most recent) file
+    latest = None
+    if os.path.exists(history.prev_link) or os.path.islink(history.prev_link):
+        try:
+            latest = os.path.realpath(history.prev_link)
+        except Exception:
+            pass
+
+    # Build display order: current first, then remaining files newest to oldest
+    ordered: List[str] = []
+    if latest and latest in files:
+        ordered.append(latest)
+
+    for path in reversed(files):
+        if path != latest:
+            ordered.append(path)
+
+    # Display each history entry
+    is_first = True
+    for path in ordered:
+        timestamp = history.get_timestamp(path)
+        click.echo(f"Logs recorded at {timestamp}")
+
+        dpm_type, records = history.load_file(path)
+        if not records:
+            continue
+
+        if dpm_type != "adm1266":
+            click.echo(f"  Warning: Unsupported DPM type '{dpm_type}' (skipping)")
+            continue
+
+        messages = Adm1266Display(records).render(is_first=is_first)
+        for msg in messages:
+            if msg:
+                click.echo(msg)
+        is_first = False
+
+
+if __name__ == '__main__':
+    reboot_cause()
