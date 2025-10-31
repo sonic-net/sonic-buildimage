@@ -13,10 +13,10 @@ from sonic_platform_base.sonic_thermal_control.thermal_json_object import therma
 if TYPE_CHECKING:
     from sonic_platform_base.fan_base import Fan
 
-from sonic_platform.thermal_infos import FanInfo, ThermalInfo
+from sonic_platform.thermal_infos import FanDrawerInfo, ThermalInfo
 from sonic_platform.syslog import SYSLOG_IDENTIFIER_THERMAL, NhLoggerMixin
 
-# Fan speed constants (percentage)
+# Default range of fan speed (percentage) that PID controller can produce.
 FAN_MIN_SPEED: float = 30.0
 FAN_MAX_SPEED: float = 100.0
 
@@ -89,8 +89,72 @@ class FanSetSpeedAction(ThermalPolicyActionBase, NhLoggerMixin):
         Args:
             thermal_info_dict: Dictionary containing thermal information
         """
-        fan_info = thermal_info_dict.get(FanInfo.INFO_TYPE)
-        set_all_fan_speeds(self, fan_info.get_fans(), self._speed)
+        fan_drawer_info = thermal_info_dict.get(FanDrawerInfo.INFO_TYPE)
+        set_all_fan_speeds(self, fan_drawer_info.get_fans(), self._speed)
+
+@thermal_json_object('fan.set_max_speed')
+class FanSetMaxSpeedAction(ThermalPolicyActionBase, NhLoggerMixin):
+    """Thermal action to set fan speed to a specific percentage."""
+
+    JSON_FIELD_MAX_SPEED: str = 'max_speed'
+
+    def __init__(self) -> None:
+        """Initialize FanSetSpeedAction."""
+        ThermalPolicyActionBase.__init__(self)
+        NhLoggerMixin.__init__(self, SYSLOG_IDENTIFIER_THERMAL)
+        self._max_speed: Optional[float] = None
+        self.log_debug("Initialized")
+
+    def load_from_json(self, set_max_speed_json: Dict[str, Any]) -> None:
+        """
+        Load configuration from JSON.
+
+        Args:
+            set_max_speed_json: JSON object with 'max_speed' field (0-100)
+
+        Raises:
+            KeyError: If 'max_speed' field is missing
+            ValueError: If max_speed value is invalid
+        """
+        try:
+            self._max_speed = float(set_max_speed_json[self.JSON_FIELD_MAX_SPEED])
+            self._validate_json(set_max_speed_json)
+            self.log_info(f"Loaded with max_speed: {self._max_speed}%")
+        except (KeyError, ValueError, TypeError) as e:
+            self.log_error(f"Failed to load from JSON: {e}")
+            raise
+
+    def _validate_json(self, set_max_speed_json: Dict[str, Any]) -> None:
+        """
+        Validate loaded JSON configuration.
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        if self._max_speed is None:
+            raise ValueError("No max_speed defined in JSON policy file")
+        if self._max_speed < FAN_MIN_SPEED or self._max_speed > FAN_MAX_SPEED:
+            raise ValueError(f"Max speed {self._max_speed} is out of range [{FAN_MIN_SPEED}, {FAN_MAX_SPEED}]")
+
+    def execute(self, thermal_info_dict: Dict[str, Any]) -> None:
+        """
+        Set maximum speed for all present fans.
+
+        Args:
+            thermal_info_dict: Dictionary containing thermal information
+        """
+        fan_drawer_info = thermal_info_dict.get(FanDrawerInfo.INFO_TYPE)
+        if not fan_drawer_info:
+            raise ValueError("No fan drawer info available in thermal_info_dict")
+
+        fans = fan_drawer_info.get_fans()
+        if not fans:
+            self.log_error("No fans available to set max_speed")
+            raise FanException("No fans available to set max_speed")
+
+        for fan in fans:
+            fan.set_max_speed(self._max_speed)
+        self.log_info(f"Applied max_speed {self._max_speed:.1f}% to {len(fans)} fans")
 
 @thermal_json_object('thermal.control_algo')
 class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
@@ -154,13 +218,10 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         if not self._fan_limits:
             raise ValueError("No fan limits defined in JSON policy file")
         min_limit = self._fan_limits.get('min')
-        max_limit = self._fan_limits.get('max')
-        if min_limit is None or max_limit is None:
-            raise ValueError("No min/max fan limits defined in JSON policy file")
-        if min_limit > max_limit:
-            raise ValueError(f"Min fan limit {min_limit} is greater than max fan limit {max_limit}")
-        if min_limit < FAN_MIN_SPEED or max_limit > FAN_MAX_SPEED:
-            raise ValueError(f"Fan limits {min_limit}-{max_limit} are out of range [{FAN_MIN_SPEED}, {FAN_MAX_SPEED}]")
+        if min_limit is None:
+            raise ValueError("No min fan limits defined in JSON policy file")
+        if min_limit < FAN_MIN_SPEED or min_limit > FAN_MAX_SPEED:
+            raise ValueError(f"Min fan limit {min_limit} is out of range [{FAN_MIN_SPEED}, {FAN_MAX_SPEED}]")
         if not self._constants.get('interval'):
             raise ValueError("Interval must be defined in JSON policy file")
 
@@ -190,11 +251,17 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         thermal_info = thermal_info_dict.get(ThermalInfo.INFO_TYPE)
         if not thermal_info:
             raise ValueError("No thermal info available in thermal_info_dict")
+        fan_drawer_info = thermal_info_dict.get(FanDrawerInfo.INFO_TYPE)
+        if not fan_drawer_info:
+            raise ValueError("No fan drawer info available in thermal_info_dict")
+
+        # Fan's max speed limit can change at runtime, so retrieve it every time
+        fan_max_speed = self._get_fan_max_speed(fan_drawer_info)
 
         # Initialize PID controllers if needed
         if not self._pidControllers:
             dt = thermal_info.get_thermal_manager().get_interval()
-            self._initialize_pid_controllers(dt)
+            self._initialize_pid_controllers(dt, fan_max_speed)
 
         # Get all thermals and group by PID domain
         thermals = thermal_info.get_thermals()
@@ -204,7 +271,9 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         pid_outputs = {}
         max_error_thermals = {}
         for domain, domain_thermal_list in domain_thermals.items():
-            pid_output, max_error_thermal = self._compute_domain_pid_output(domain, domain_thermal_list)
+            pid_output, max_error_thermal = self._compute_domain_pid_output(
+                domain, domain_thermal_list, fan_max_speed
+            )
             pid_outputs[domain] = pid_output
             max_error_thermals[domain] = max_error_thermal.get_name() if max_error_thermal else "None"
 
@@ -216,7 +285,7 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         max_domain = max(pid_outputs, key=pid_outputs.get)
 
         # Convert PID output to fan speed percentage
-        final_speed = self._convert_pid_output_to_speed(max_output)
+        final_speed = self._convert_pid_output_to_speed(max_output, fan_max_speed)
 
         self.log_info(f"Max PID output: {max_output:.3f} from domain '{max_domain}', "
                       f"setting fan speed to {final_speed:.1f}%")
@@ -224,12 +293,13 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         # Set all fan speeds
         self._set_all_fan_speeds(thermal_info_dict, final_speed)
 
-    def _initialize_pid_controllers(self, interval: int) -> None:
+    def _initialize_pid_controllers(self, interval: int, fan_max_speed: float) -> None:
         """
         Initialize PID controllers for each domain.
 
         Args:
             interval: Control loop interval in seconds
+            fan_max_speed: Maximum fan speed in percentage (0-100)
 
         Raises:
             ValueError: If interval doesn't match configuration
@@ -246,7 +316,7 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
                 integral_gain=domain_config['KI'],
                 derivative_gain=domain_config['KD'],
                 output_min=self._fan_limits.get('min', FAN_MIN_SPEED),
-                output_max=self._fan_limits.get('max', FAN_MAX_SPEED)
+                output_max=fan_max_speed
             )
             self._pidControllers[domain] = controller
             self._extra_setpoint_margin[domain] = domain_config.get('extra_setpoint_margin', 0)
@@ -284,18 +354,24 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         self.log_debug(f"Grouped thermals by domain: {[(d, len(ts)) for d, ts in domain_thermals.items()]}")
         return domain_thermals
 
-    def _compute_domain_pid_output(self, domain: str, domain_thermals: List[Any]) -> tuple[float, Any]:
+    def _compute_domain_pid_output(
+        self, domain: str, domain_thermals: List[Any], fan_max_speed: float
+    ) -> tuple[float, Any]:
         """
         Compute PID output using thermal with largest error in domain.
 
         Args:
             domain: PID domain name
             domain_thermals: List of thermal objects in this domain
+            fan_max_speed: Maximum fan speed in percentage (0-100)
 
         Returns:
             Tuple of (PID output value, max error thermal object)
         """
         controller = self._pidControllers[domain]
+
+        # Fan's max speed limit can change at runtime, so update it first
+        controller.set_output_max(fan_max_speed)
 
         # Find thermal with largest error (current temp - setpoint)
         max_error = None
@@ -330,19 +406,45 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
         pid_output = controller.compute(max_error)
         return pid_output, max_error_thermal
 
-    def _convert_pid_output_to_speed(self, pid_output: float) -> float:
+    def _convert_pid_output_to_speed(self, pid_output: float, max_speed: float) -> float:
         """
         Convert PID output to fan speed percentage.
 
         Args:
             pid_output: Raw PID controller output
+            max_speed: Maximum fan speed in percentage (0-100)
 
         Returns:
             Fan speed percentage saturated to configured limits
         """
         min_speed = self._fan_limits.get('min', FAN_MIN_SPEED)
-        max_speed = self._fan_limits.get('max', FAN_MAX_SPEED)
         return max(min_speed, min(max_speed, pid_output))
+
+    def _get_fan_max_speed(self, fan_drawer_info: FanDrawerInfo) -> float:
+        """
+        Gets fan speed limit that satisfy all fans.
+        
+        If the value is out of range ([self._fan_limits['min'], FAN_MAX_SPEED]),
+        clamps it into the range.
+
+        Args:
+            thermal_info_dict: Dictionary containing thermal information
+
+        Returns:
+            Max speed for all fans, saturated to the configured limits
+        """
+        fans = fan_drawer_info.get_fans()
+        if not fans:
+            raise FanException("No fans available to get max speed")
+        fan_max_speed = min(fan.get_max_speed() for fan in fans)
+        fan_min_speed = self._fan_limits.get('min', FAN_MIN_SPEED)
+        if fan_max_speed < fan_min_speed or fan_max_speed > FAN_MAX_SPEED:
+            self.log_error(
+                f"Fan max speed {fan_max_speed} is out of range [{fan_min_speed}, {FAN_MAX_SPEED}]. "
+                "Clamping it into the range."
+            )
+            fan_max_speed = max(fan_min_speed, min(fan_max_speed, FAN_MAX_SPEED))
+        return fan_max_speed
 
     def _set_all_fan_speeds(self, thermal_info_dict: Dict[str, Any], speed: float) -> None:
         """
@@ -352,7 +454,7 @@ class ThermalControlAlgorithmAction(ThermalPolicyActionBase, NhLoggerMixin):
             thermal_info_dict: Dictionary containing thermal information
             speed: Target fan speed percentage
         """
-        set_all_fan_speeds(self, thermal_info_dict.get(FanInfo.INFO_TYPE).get_fans(), speed)
+        set_all_fan_speeds(self, thermal_info_dict.get(FanDrawerInfo.INFO_TYPE).get_fans(), speed)
 
 class PIDController(NhLoggerMixin):
     def __init__(self,
@@ -403,6 +505,19 @@ class PIDController(NhLoggerMixin):
 
     def log(self, priority: Any, msg: str, also_print_to_console: bool = False) -> None:
         super().log(priority, f"[{self._domain}] {msg}", also_print_to_console)
+
+    def set_output_max(self, output_max: float) -> None:
+        """Updates the maximum output value (fan speed %) as this can change at runtime."""
+        if output_max < self._output_min:
+            self.log_error(
+                f"PIDController for domain '{self._domain}': "
+                f"attempting to set output_max={output_max}, "
+                f"which is below output_min={self._output_min}. "
+                f"Ignoring."
+            )
+            return
+        self._output_max = output_max
+        self.log_info(f"PIDController for domain '{self._domain}': updated output_range=[{self._output_min}, {self._output_max}]")
 
     def compute(self, error: float) -> float:
         """

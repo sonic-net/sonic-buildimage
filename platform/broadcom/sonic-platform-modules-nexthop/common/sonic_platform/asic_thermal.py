@@ -28,3 +28,13 @@ class AsicThermal(PddfAsicThermal, MinMaxTempMixin, PidThermalMixin):
         temp = super().get_temperature()
         self._update_min_max_temp(temp)
         return temp
+
+    def get_minimum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_minimum_recorded(self)
+
+    def get_maximum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_maximum_recorded(self)

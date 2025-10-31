@@ -4,18 +4,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import re
+import threading
 import time
 
 from nexthop import fpga_lib
-from sonic_platform.syslog import SYSLOG_IDENTIFIER_THERMAL
+from sonic_platform_base.thermal_base import ThermalBase
+from sonic_platform_pddf_base.pddf_thermal import PddfThermal
 from sonic_py_common import syslogger
-try:
-    from sonic_platform_base.thermal_base import ThermalBase
-    from sonic_platform_pddf_base.pddf_thermal import PddfThermal
-    from sonic_platform_base.thermal_base import ThermalBase
-except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+from swsscommon import swsscommon
 
+from sonic_platform.syslog import SYSLOG_IDENTIFIER_THERMAL
 
 # Nexthop FPGA thermal sensor value to Celsius conversion
 TYPE_TO_CELSIUS_LAMBDA_DICT = {
@@ -23,6 +22,76 @@ TYPE_TO_CELSIUS_LAMBDA_DICT = {
 }
 
 thermal_syslogger = syslogger.SysLogger(SYSLOG_IDENTIFIER_THERMAL)
+
+
+def _intf_name_key(intf_name):
+    """Convert interface name to key for sorting"""
+    match = re.match(r"Ethernet(\d+)", intf_name)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+class PortIndexMapper:
+    """Singleton class for mapping port index to interface name from CONFIG_DB PORT table"""
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(PortIndexMapper, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
+        self._port_index_to_interface = {}
+        self._mapping_lock = threading.RLock()
+
+    def _build_mapping(self):
+        """Build port index to interface mapping from CONFIG_DB"""
+        with self._mapping_lock:
+            cfg_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            cfg_db.connect(cfg_db.CONFIG_DB)
+            # Get the underlying DBConnector for swsscommon.Table
+            db_connector = cfg_db.get_redis_client(cfg_db.CONFIG_DB)
+            port_tbl = swsscommon.Table(db_connector, swsscommon.CFG_PORT_TABLE_NAME)
+
+            self._port_index_to_interface.clear()
+
+            for intf_name in port_tbl.getKeys():
+                (status, port_data) = port_tbl.get(intf_name)
+                if not status:
+                    continue
+
+                port_dict = dict(port_data)
+                port_index = port_dict.get('index')
+                try:
+                    port_index = int(port_index)
+                except (ValueError, TypeError):
+                    continue
+
+                dict_intf = self._port_index_to_interface.get(port_index)
+                dict_intf_key = float("inf") if dict_intf is None else _intf_name_key(dict_intf)
+                db_intf_key = _intf_name_key(intf_name)
+                if db_intf_key is None:
+                    continue
+
+                # Map to lowest interface name for this port index
+                if db_intf_key < dict_intf_key:
+                    self._port_index_to_interface[port_index] = intf_name
+
+    def get_interface_name(self, port_index):
+        """Get interface name by port index"""
+        with self._mapping_lock:
+            port_index = int(port_index)
+            if port_index not in self._port_index_to_interface:
+                self._build_mapping()
+            return self._port_index_to_interface.get(port_index)
 
 
 class PidThermalMixin(abc.ABC):
@@ -112,6 +181,16 @@ class Thermal(PddfThermal, MinMaxTempMixin, PidThermalMixin):
         temp = PddfThermal.get_temperature(self)
         self._update_min_max_temp(temp)
         return temp
+
+    def get_minimum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_minimum_recorded(self)
+
+    def get_maximum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_maximum_recorded(self)
 
 
 class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
@@ -217,23 +296,42 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
             return float(val)
         return None
 
+    def get_minimum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_minimum_recorded(self)
+
+    def get_maximum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_maximum_recorded(self)
+
 
 class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     """SFP thermal interface class"""
     THRESHOLDS_CACHE_INTERVAL_SEC = 5
     MIN_VALID_SETPOINT = 30.0
-    DEFAULT_SETPOINT = 65.0
+    DEFAULT_SETPOINT = 62.0
 
     def __init__(self, sfp, pddf_data):
-        ThermalBase.__init__(self)
-        MinMaxTempMixin.__init__(self)
-        PidThermalMixin.__init__(self, pddf_data.data['PLATFORM'])
         self._sfp = sfp
         self._min_temperature = None
         self._max_temperature = None
         self._threshold_info = {}
         self._threshold_info_time = 0
         self._invalid_setpoint_logged = False
+        self._state_db = None
+        ThermalBase.__init__(self)
+        MinMaxTempMixin.__init__(self)
+        PidThermalMixin.__init__(self, pddf_data.data["PLATFORM"])
+
+    def __del__(self):
+        """Cleanup database connection when object is destroyed"""
+        if self._state_db:
+            try:
+                self._state_db.close(self._state_db.STATE_DB)
+            except (AttributeError, ConnectionError, OSError):
+                pass  # Ignore errors during cleanup
 
     def get_name(self):
         return f"Transceiver {self._sfp.get_name().capitalize()}"
@@ -242,6 +340,8 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         presence = self._sfp.get_presence()
         if not presence:
             self._threshold_info = {}
+            self._threshold_info_time = 0
+            self._invalid_setpoint_logged = False
         return presence
 
     def get_model(self):
@@ -269,6 +369,13 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._update_min_max_temp(temp)
         return temp
 
+    def _get_state_db(self):
+        """Connect to STATE_DB if not already connected"""
+        if not self._state_db:
+            self._state_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            self._state_db.connect(self._state_db.STATE_DB)
+        return self._state_db
+
     def maybe_update_threshold_info(self):
         time_elapsed = time.monotonic() - self._threshold_info_time
         if time_elapsed < self.THRESHOLDS_CACHE_INTERVAL_SEC:
@@ -276,10 +383,29 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._threshold_info_time = time.monotonic()
         if not self.get_presence():
             return
-        self._threshold_info = self._sfp.get_transceiver_threshold_info() or {}
-        # SFP driver may return "N/A" for unsupported fields. Rest of the thermal code expects None in this case.
-        self._threshold_info = { k : (None if isinstance(v, str) else v)
-                                 for k, v in self._threshold_info.items() }
+
+        self._state_db = self._get_state_db()
+        port_mapper = PortIndexMapper()
+        intf_name = port_mapper.get_interface_name(self._sfp.get_position_in_parent())
+        if not intf_name:
+            thermal_syslogger.log_warning(f"Failed to get interface name for port {self._sfp.get_position_in_parent()}"
+                                          ". Threshold information will not be available.")
+            return
+
+        threshold_key = f"TRANSCEIVER_DOM_THRESHOLD|{intf_name}"
+        threshold_data = self._state_db.get_all(self._state_db.STATE_DB, threshold_key)
+
+        if threshold_data:
+            # Convert string values to float, handle "N/A" and invalid values
+            self._threshold_info = {}
+            for key, value in threshold_data.items():
+                if isinstance(value, str) and value.lower() in ['n/a', 'none', '']:
+                    self._threshold_info[key] = None
+                else:
+                    try:
+                        self._threshold_info[key] = float(value)
+                    except (ValueError, TypeError):
+                        self._threshold_info[key] = None
 
     def get_high_threshold(self):
         self.maybe_update_threshold_info()
@@ -308,11 +434,26 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
 
     def set_low_critical_threshold(self, temperature):
         return False
-    
+
+    def get_minimum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_minimum_recorded(self)
+
+    def get_maximum_recorded(self):
+        # Make sure temp is recorded at least once.
+        self.get_temperature()
+        return MinMaxTempMixin.get_maximum_recorded(self)
+
     def get_pid_setpoint(self):
         setpoint = super().get_pid_setpoint()
         if setpoint is None:
-            return setpoint
+            if self.get_presence():
+                # Threshold info may be a little bit delayed as it is read by xcvrd. Start with a default setpoint
+                # until thresholds are available.
+                return self.DEFAULT_SETPOINT
+            else:
+                return setpoint
         # Setpoint cannot be guaranteed on pluggables - some modules may have invalid values such as 0.
         # For these cases, use a default setpoint.
         if setpoint < self.MIN_VALID_SETPOINT:
