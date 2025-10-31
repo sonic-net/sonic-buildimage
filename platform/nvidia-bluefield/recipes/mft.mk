@@ -36,7 +36,7 @@ $(eval $(call add_derived_package,$(MFT),$(MFT_OEM)))
 KERNEL_MFT_DKMS = kernel-mft-dkms_$(MFT_VERSION)-$(MFT_REVISION)_all.deb
 $(eval $(call add_derived_package,$(MFT),$(KERNEL_MFT_DKMS)))
 
-BUILD_ARCH = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+BUILD_ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 KERNEL_MFT = kernel-mft-dkms-modules-$(KVERSION)_$(MFT_VERSION)_$(BUILD_ARCH).deb
 $(KERNEL_MFT)_SRC_PATH = $(PLATFORM_PATH)/mft
 $(KERNEL_MFT)_DEPENDS += $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON) $(KERNEL_MFT_DKMS)
