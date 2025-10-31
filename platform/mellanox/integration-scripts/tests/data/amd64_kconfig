@@ -1,9 +1,3 @@
-[common]
-CONFIG_LOG_BUF_SHIFT=20
-###-> mellanox_common-start
-###-> mellanox_common-end
-
-[amd64]
 # For Inventec d7032
 CONFIG_GPIO_ICH=m
 # For mitac ly1200
@@ -25,12 +19,3 @@ CONFIG_GPIOLIB=y
 CONFIG_OF_GPIO=y
 CONFIG_OF=y
 CONFIG_OF_MDIO=m
-
-[arm64]
-
-[armhf]
-CONFIG_EEPROM_SFF_8436=m
-CONFIG_EEPROM_OPTOE=m
-CONFIG_I2C_MUX_GPIO=m
-
-[mellanox-arm64]
