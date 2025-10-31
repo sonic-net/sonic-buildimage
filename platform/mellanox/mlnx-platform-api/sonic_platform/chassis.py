@@ -58,6 +58,10 @@ REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
 REBOOT_TYPE_KEXEC_PATTERN_FAST = ".*SONIC_BOOT_TYPE=(fast|fast-reboot).*"
 
+# VPD retry constants
+VPD_MAX_RETRIES = 3
+VPD_RETRY_DELAY = 0.2 
+
 SYS_DISPLAY = "SYS_DISPLAY"
 
 # Global logger class instance
@@ -944,10 +948,22 @@ class Chassis(ChassisBase):
         """
         result = {}
         try:
-            if not os.access(filename, os.R_OK):
-                return result
-
-            result = utils.read_key_value_file(filename, delimeter=": ")
+            for attempt in range(VPD_MAX_RETRIES):
+                if not os.access(filename, os.R_OK):
+                    if attempt < (VPD_MAX_RETRIES - 1):
+                        logger.log_info("VPD file {} not accessible, retrying in {}s (attempt {}/{})".format(
+                            filename, VPD_RETRY_DELAY, attempt + 1, VPD_MAX_RETRIES))
+                        time.sleep(VPD_RETRY_DELAY)
+                        continue
+                    else:
+                        logger.log_error("VPD file {} not accessible after {} attempts".format(filename, VPD_MAX_RETRIES))
+                        return result
+                
+                result = utils.read_key_value_file(filename, delimeter=": ")
+                if result:
+                    if attempt > 0:
+                        logger.log_info("VPD file {} successfully read after {} attempts".format(filename, attempt + 1))
+                    break
                 
         except Exception as e:
             logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
