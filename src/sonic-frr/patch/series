@@ -44,3 +44,4 @@
 0062-zebra-lib-use-internal-rbtree-per-ns.patch
 0063-lib-Return-duplicate-prefix-list-entry-test.patch
 0064-mgmtd-clean-session-config-only-when-it-is-needed.patch
+0065-zebra-if-speed-change-check-fix.patch
