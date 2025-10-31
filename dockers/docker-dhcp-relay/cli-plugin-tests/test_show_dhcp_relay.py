@@ -184,7 +184,7 @@ def test_show_multi_dhcp_relay(test_name, test_data, fs):
     table = config_db.get_table(IP_VER_TEST_PARAM_MAP[ip_version]["table"])
 
     if ip_version == "ipv4_dhcp":
-        config_db.set_entry("FEATURE", "dhcp_relay", {"has_sonic_dhcpv4_relay" : "True"})
+        config_db.set_entry("DEVICE_METADATA", "localhost", {"has_sonic_dhcpv4_relay" : "True"})
         result = show.get_dhcpv4_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])
     else:
         result = show.get_dhcp_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])

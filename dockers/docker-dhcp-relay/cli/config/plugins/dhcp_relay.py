@@ -14,7 +14,7 @@ DHCPV4_RELAY_TABLE = "DHCPV4_RELAY"
 
 
 def check_sonic_dhcpv4_relay_flag(db):
-    table = db.cfgdb.get_entry("FEATURE", "dhcp_relay")
+    table = db.cfgdb.get_entry("DEVICE_METADATA", "localhost")
     if('has_sonic_dhcpv4_relay' in table and table['has_sonic_dhcpv4_relay'] == 'True'):
         return True
     return False
