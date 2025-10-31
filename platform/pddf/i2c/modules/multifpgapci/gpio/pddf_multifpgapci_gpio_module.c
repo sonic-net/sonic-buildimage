@@ -24,13 +24,25 @@
 #include "pddf_multifpgapci_defs.h"
 #include "pddf_multifpgapci_gpio_defs.h"
 
+DEFINE_XARRAY(gpio_drvdata_map);
+
 static ssize_t create_chip(struct device *dev, struct device_attribute *da,
 			   const char *buf, size_t count)
 {
 	struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
-	struct pddf_multifpgapci_gpio_chip_pdata *pdata =
-		(struct pddf_multifpgapci_gpio_chip_pdata *)_ptr->addr;
+	struct pci_dev *pci_dev = (struct pci_dev *)_ptr->addr;
+	struct gpio_chip_drvdata *gpio_drvdata;
 	struct platform_device *pdev;
+
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	gpio_drvdata = xa_load(&gpio_drvdata_map, dev_index);
+	if (!gpio_drvdata) {
+		pddf_dbg(FPGA,
+			 KERN_ERR
+			 "[%s] unable to find gpio data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -ENODEV;
+	}
 
 	if (strncmp(buf, "init", strlen("init")) != 0) {
 		pddf_dbg(FPGA,
@@ -40,10 +52,11 @@ static ssize_t create_chip(struct device *dev, struct device_attribute *da,
 		return -EINVAL;
 	}
 
-	pdev = platform_device_register_data(&pdata->fpga->dev,
+	pdev = platform_device_register_data(&gpio_drvdata->pdata.fpga->dev,
 					     "pddf-multifpgapci-gpio",
-					     PLATFORM_DEVID_AUTO, pdata,
-					     sizeof(*pdata));
+					     PLATFORM_DEVID_AUTO,
+					     &gpio_drvdata->pdata,
+					     sizeof(gpio_drvdata->pdata));
 	if (!pdev) {
 		pddf_dbg(FPGA,
 			 KERN_ERR "[%s] error allocating platform device\n",
@@ -58,7 +71,18 @@ static ssize_t create_line(struct device *dev, struct device_attribute *da,
 			   const char *buf, size_t count)
 {
 	struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
-	struct gpio_chip_drvdata *node = (struct gpio_chip_drvdata *)_ptr->addr;
+	struct pci_dev *pci_dev = (struct pci_dev *)_ptr->addr;
+	struct gpio_chip_drvdata *node;
+
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	node = xa_load(&gpio_drvdata_map, dev_index);
+	if (!node) {
+		pddf_dbg(FPGA,
+			 KERN_ERR
+			 "[%s] unable to find gpio data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -ENODEV;
+	}
 
 	if (strncmp(buf, "init", strlen("init")) != 0) {
 		pddf_dbg(FPGA,
@@ -79,14 +103,28 @@ static ssize_t create_line(struct device *dev, struct device_attribute *da,
 	return count;
 }
 
-int pddf_multifpgapci_gpio_module_init(struct pci_dev *pci_dev,
-				       struct kobject *kobj)
+static int pddf_multifpgapci_gpio_attach(struct pci_dev *pci_dev,
+					 struct kobject *kobj)
 {
-	struct pddf_multifpgapci_drvdata *pci_drvdata =
-		dev_get_drvdata(&pci_dev->dev);
-	struct gpio_chip_drvdata *gpio_drvdata =
-		&pci_drvdata->gpio_chip_drvdata;
+	struct gpio_chip_drvdata *gpio_drvdata;
 	int err;
+	pddf_dbg(MULTIFPGA, KERN_INFO "%s start\n", __FUNCTION__);
+
+	gpio_drvdata = kzalloc(sizeof(struct gpio_chip_drvdata), GFP_KERNEL);
+	if (!gpio_drvdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR "[%s] failed to allocate drvdata for %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return -ENOMEM;
+	}
+
+	gpio_drvdata->gpio_kobj = kobject_create_and_add("gpio", kobj);
+	if (!gpio_drvdata->gpio_kobj) {
+		pddf_dbg(MULTIFPGA, KERN_ERR "[%s] create gpio kobj failed\n",
+			 __FUNCTION__);
+		err = -ENOMEM;
+		goto return_err;
+	}
 
 	gpio_drvdata->pdata.fpga = pci_dev;
 
@@ -95,7 +133,7 @@ int pddf_multifpgapci_gpio_module_init(struct pci_dev *pci_dev,
 		sizeof(uint32_t), (void *)&gpio_drvdata->pdata.ngpio, NULL);
 	PDDF_DATA_ATTR(
 		create_chip, S_IWUSR, NULL, create_chip, PDDF_CHAR,
-		32, (void *)gpio_drvdata, NULL);
+		32, (void *)pci_dev, NULL);
 
 	gpio_drvdata->attrs.attr_ngpio = attr_ngpio;
 	gpio_drvdata->attrs.attr_create = attr_create_chip;
@@ -109,12 +147,22 @@ int pddf_multifpgapci_gpio_module_init(struct pci_dev *pci_dev,
 	gpio_drvdata->gpio_chip_attr_group.attrs =
 		gpio_drvdata->gpio_chip_attrs;
 
-	err = sysfs_create_group(kobj, &gpio_drvdata->gpio_chip_attr_group);
-	if (err)
-		goto return_err;
+	err = sysfs_create_group(gpio_drvdata->gpio_kobj,
+				 &gpio_drvdata->gpio_chip_attr_group);
+	if (err) {
+		pddf_dbg(
+			MULTIFPGA,
+			KERN_ERR
+			"[%s] unable create sysfs files for device %s - error %d\n",
+			__FUNCTION__, pci_name(pci_dev), err);
+		goto remove_gpio_kobj;
+	}
 
-	gpio_drvdata->line_kobj = kobject_create_and_add("line", kobj);
+	gpio_drvdata->line_kobj =
+		kobject_create_and_add("line", gpio_drvdata->gpio_kobj);
 	if (!gpio_drvdata->line_kobj) {
+		pddf_dbg(MULTIFPGA, KERN_ERR "[%s] create line kobj failed\n",
+			 __FUNCTION__);
 		err = -ENOMEM;
 		goto remove_gpio_chip_attr_group;
 	}
@@ -132,8 +180,8 @@ int pddf_multifpgapci_gpio_module_init(struct pci_dev *pci_dev,
 		PDDF_INT_HEX, sizeof(uint32_t),
 		(void *)&gpio_drvdata->temp_line_data.direction, NULL);
 	PDDF_DATA_ATTR(
-		create_line, S_IWUSR, NULL, create_line, PDDF_CHAR, 32,
-		(void *)&gpio_drvdata->pdata, NULL);
+		create_line, S_IWUSR, NULL, create_line,
+		PDDF_CHAR, 32, (void *)pci_dev, NULL);
 
 	gpio_drvdata->attrs.line_attrs.attr_bit = attr_bit;
 	gpio_drvdata->attrs.line_attrs.attr_offset = attr_offset;
@@ -155,35 +203,104 @@ int pddf_multifpgapci_gpio_module_init(struct pci_dev *pci_dev,
 
 	err = sysfs_create_group(gpio_drvdata->line_kobj,
 				 &gpio_drvdata->gpio_line_attr_group);
-	if (err)
+	if (err) {
+		pddf_dbg(
+			MULTIFPGA,
+			KERN_ERR
+			"[%s] unable to create sysfs files for group %s - error %d\n",
+			__FUNCTION__, pci_name(pci_dev), err);
 		goto free_gpio_line_kobj;
+	}
 
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	xa_store(&gpio_drvdata_map, dev_index, gpio_drvdata, GFP_KERNEL);
+	pddf_dbg(MULTIFPGA, KERN_INFO "%s done!\n", __FUNCTION__);
 	return 0;
 
 free_gpio_line_kobj:
 	kobject_put(gpio_drvdata->line_kobj);
 
 remove_gpio_chip_attr_group:
-	sysfs_remove_group(kobj, &gpio_drvdata->gpio_chip_attr_group);
+	sysfs_remove_group(gpio_drvdata->gpio_kobj,
+			   &gpio_drvdata->gpio_chip_attr_group);
+
+remove_gpio_kobj:
+	kobject_put(gpio_drvdata->gpio_kobj);
 
 return_err:
 	return err;
 }
-EXPORT_SYMBOL(pddf_multifpgapci_gpio_module_init);
 
-void pddf_multifpgapci_gpio_module_exit(struct pci_dev *pci_dev,
-					struct kobject *kobj)
+static void pddf_multifpgapci_gpio_detach(struct pci_dev *pci_dev,
+					  struct kobject *kobj)
 {
-	struct pddf_multifpgapci_drvdata *pci_drvdata =
-		pci_get_drvdata(pci_dev);
-	struct gpio_chip_drvdata *gpio_drvdata =
-		&pci_drvdata->gpio_chip_drvdata;
-	sysfs_remove_group(gpio_drvdata->line_kobj,
-			   &gpio_drvdata->gpio_line_attr_group);
-	kobject_put(gpio_drvdata->line_kobj);
-	sysfs_remove_group(kobj, &gpio_drvdata->gpio_chip_attr_group);
+	struct gpio_chip_drvdata *gpio_drvdata;
+
+	unsigned dev_index = multifpgapci_get_pci_dev_index(pci_dev);
+	gpio_drvdata = xa_load(&gpio_drvdata_map, dev_index);
+	if (!gpio_drvdata) {
+		pddf_dbg(MULTIFPGA,
+			 KERN_ERR
+			 "[%s] unable to find gpio module data for device %s\n",
+			 __FUNCTION__, pci_name(pci_dev));
+		return;
+	}
+
+	if (gpio_drvdata->line_kobj) {
+		sysfs_remove_group(gpio_drvdata->line_kobj,
+				   &gpio_drvdata->gpio_line_attr_group);
+		kobject_put(gpio_drvdata->line_kobj);
+		gpio_drvdata->line_kobj = NULL;
+	}
+	if (gpio_drvdata->gpio_kobj) {
+		sysfs_remove_group(gpio_drvdata->gpio_kobj,
+				   &gpio_drvdata->gpio_chip_attr_group);
+		kobject_put(gpio_drvdata->gpio_kobj);
+		gpio_drvdata->gpio_kobj = NULL;
+	}
+
+	kfree(gpio_drvdata);
+	xa_erase(&gpio_drvdata_map, (unsigned long)pci_dev);
+}
+
+static void pddf_multifpgapci_gpio_map_bar(struct pci_dev *pci_dev,
+					   void __iomem *bar_base,
+					   unsigned long bar_start,
+					   unsigned long bar_len)
+{
+}
+
+static void pddf_multifpgapci_gpio_unmap_bar(struct pci_dev *pci_dev,
+					     void __iomem *bar_base,
+					     unsigned long bar_start,
+					     unsigned long bar_len)
+{
+}
+
+static struct protocol_ops gpio_protocol_ops = {
+	.attach = pddf_multifpgapci_gpio_attach,
+	.detach = pddf_multifpgapci_gpio_detach,
+	.map_bar = pddf_multifpgapci_gpio_map_bar,
+	.unmap_bar = pddf_multifpgapci_gpio_unmap_bar,
+	.name = "gpio",
 };
-EXPORT_SYMBOL(pddf_multifpgapci_gpio_module_exit);
+
+static int __init pddf_multifpgapci_gpio_init(void)
+{
+	pddf_dbg(MULTIFPGA, KERN_INFO "Loading GPIO protocol module\n");
+	xa_init(&gpio_drvdata_map);
+	return multifpgapci_register_protocol("gpio", &gpio_protocol_ops);
+}
+
+static void __exit pddf_multifpgapci_gpio_exit(void)
+{
+	pddf_dbg(MULTIFPGA, KERN_INFO "Unloading GPIO protocol module\n");
+	multifpgapci_unregister_protocol("gpio");
+	xa_destroy(&gpio_drvdata_map);
+}
+
+module_init(pddf_multifpgapci_gpio_init);
+module_exit(pddf_multifpgapci_gpio_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nexthop Systems");

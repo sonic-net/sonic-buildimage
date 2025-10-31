@@ -82,6 +82,26 @@ jobs:
           BUILD_REASON=$(Build.Reason)
           echo "Build.Reason = $BUILD_REASON"
           echo "Build.DefinitionName = $BUILD_DEFINITIONNAME"
+          if [[ "$BUILD_REASON" == "PullRequest" ]]; then
+            echo "Checking for changes to dockers/docker-ptf/Dockerfile.j2 in PR..."
+            # Get the target branch and check for changes
+            TARGET_BRANCH="origin/$(System.PullRequest.TargetBranch)"
+            echo "Comparing against target branch: $TARGET_BRANCH"
+            # Fetch target branch to ensure we have the latest
+            git fetch origin $(System.PullRequest.TargetBranch)
+            # Check if docker-ptf Dockerfile.j2 has changes
+            if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
+              echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]true"
+            else
+              echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+            fi
+          else
+            echo "Not a PR build, setting PTF_MODIFIED to false"
+            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+          fi
+
           if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
           then
             PORT=443
@@ -100,6 +120,7 @@ jobs:
           mv target/* $(Build.ArtifactStagingDirectory)/target/
         env:
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        name: PublishAndSetPtfTag
         displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
       - publish:  $(Build.ArtifactStagingDirectory)

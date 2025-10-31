@@ -27,4 +27,6 @@ else
   log -p warning "$ASIC_INIT_PATH not found."
 fi
 
+echo "blacklist adm1266" > /etc/modprobe.d/blacklist-adm1266.conf
+
 exit 0

@@ -59,6 +59,75 @@ module sonic-ssh-server {
                         range 0..100;
                     }
                 }
+                leaf permit_root_login {
+                    description "Specifies whether root can log in using ssh.";
+                    type enumeration {
+                        enum "yes";
+                        enum "prohibit-password";
+                        enum "forced-commands-only";
+                        enum "no";
+                    }
+                }
+                leaf password_authentication {
+                    description "Specifies whether password authentication is enabled.";
+                    type boolean;
+                    default true;
+                }
+                leaf-list ciphers {
+                    description "Specifies the ciphers allowed.";
+                    type enumeration {
+                        enum "3des-cbc";
+                        enum "aes128-cbc";
+                        enum "aes192-cbc";
+                        enum "aes256-cbc";
+                        enum "aes128-ctr";
+                        enum "aes192-ctr";
+                        enum "aes256-ctr";
+                        enum "aes128-gcm@openssh.com";
+                        enum "aes256-gcm@openssh.com";
+                        enum "chacha20-poly1305@openssh.com";
+                    }
+                }
+                leaf-list kex_algorithms {
+                    description "Specifies the available Key Exchange algorithms.";
+                    type enumeration {
+                        enum "diffie-hellman-group1-sha1";
+                        enum "diffie-hellman-group14-sha1";
+                        enum "diffie-hellman-group14-sha256";
+                        enum "diffie-hellman-group16-sha512";
+                        enum "diffie-hellman-group18-sha512";
+                        enum "diffie-hellman-group-exchange-sha1";
+                        enum "diffie-hellman-group-exchange-sha256";
+                        enum "ecdh-sha2-nistp256";
+                        enum "ecdh-sha2-nistp384";
+                        enum "ecdh-sha2-nistp521";
+                        enum "curve25519-sha256";
+                        enum "curve25519-sha256@libssh.org";
+                        enum "sntrup761x25519-sha512";
+                        enum "sntrup761x25519-sha512@openssh.com";
+                    }
+                }
+                leaf-list macs {
+                    description "Specifies the available MAC (message authentication code) algorithms.";
+                    type enumeration {
+                        enum "hmac-sha1";
+                        enum "hmac-sha1-96";
+                        enum "hmac-sha2-256";
+                        enum "hmac-sha2-512";
+                        enum "hmac-md5";
+                        enum "hmac-md5-96";
+                        enum "umac-64@openssh.com";
+                        enum "umac-128@openssh.com";
+                        enum "hmac-sha1-etm@openssh.com";
+                        enum "hmac-sha1-96-etm@openssh.com";
+                        enum "hmac-sha2-256-etm@openssh.com";
+                        enum "hmac-sha2-512-etm@openssh.com";
+                        enum "hmac-md5-etm@openssh.com";
+                        enum "hmac-md5-96-etm@openssh.com";
+                        enum "umac-64-etm@openssh.com";
+                        enum "umac-128-etm@openssh.com";
+                    }
+                }
             }/*container policies */
         } /* container SSH_SERVER  */
     }/* container sonic-ssh-server */

@@ -115,11 +115,13 @@ class DpuCtlPlat():
         if use_print:
             self.logger_info = print_with_time
             self.logger_error = print_with_time 
+            self.logger_warning = print_with_time
             self.logger_debug = print_with_time
             return
         self.logger_debug = logger.log_debug
         self.logger_info = logger.log_info
         self.logger_error = logger.log_error
+        self.logger_warning = logger.log_warning
 
     def log_debug(self, msg=None):
         # Print only in verbose mode
@@ -130,6 +132,9 @@ class DpuCtlPlat():
 
     def log_error(self, msg=None):
         self.logger_error(f"{self.dpu_name}: {msg}")
+
+    def log_warning(self, msg=None):
+        self.logger_warning(f"{self.dpu_name}: {msg}")
 
     def run_cmd_output(self, cmd, raise_exception=True):
         try:
@@ -196,7 +201,8 @@ class DpuCtlPlat():
         except (FileNotFoundError, PermissionError) as inotify_exc:
             raise type(inotify_exc)(f"{self.dpu_name}:{str(inotify_exc)}")
         if not dpu_shtdn_rdy:
-            self.log_error(f"Going Down Unsuccessful")
+            # Log level warning since we have a fallback to force power off
+            self.log_warning(f"Going Down Unsuccessful")
             return False
         return True
 
