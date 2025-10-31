@@ -17,7 +17,7 @@
 
 .ONESHELL:
 SHELL = /bin/bash
-BUILD_ARCH = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+BUILD_ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 
 OFED_TAR = MLNX_OFED_SRC-debian-$(OFED_VER_FULL).tgz
 OFED_SRC = MLNX_OFED_SRC-$(OFED_VER_FULL)
