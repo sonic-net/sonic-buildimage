@@ -67,9 +67,7 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 	chmod +x $(DKMS_TMP)/DEBIAN/postinst
 	chmod +x $(DKMS_TMP)/DEBIAN/postrm
 
-	sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a arm64
-
-	# copy the built modules
+	# Note: Drivers are installed in DKMS_ROOT when the corresponding DKMS package is installed, no need to build again
 	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)*/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 
