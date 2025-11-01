@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+
+import subprocess
+import sys
+import syslog
+import re
+from swsscommon import swsscommon
+
+# Memory thresholds in bytes
+SMARTSWITCH_MEMORY_THRESHOLD = 1073741824  # 1GB for SmartSwitch
+DEFAULT_MEMORY_THRESHOLD = 419430400        # ~400MB for other device types
+
+# Path to the monit configuration file
+MONIT_GNMI_CONFIG_PATH = "/etc/monit/conf.d/monit_gnmi"
+
+def get_device_subtype():
+    """
+    Read device subtype from DEVICE_METADATA table in CONFIG_DB.
+    
+    Returns:
+        str: The device subtype (e.g., 'SmartSwitch') or None if not found
+    """
+    try:
+        config_db = swsscommon.DBConnector("CONFIG_DB", 0, True)
+        metadata_table = swsscommon.Table(config_db, "DEVICE_METADATA")
+        (status, tuples) = metadata_table.get("localhost")
+        
+        if status:
+            entry_info = dict(tuples)
+            return entry_info.get("subtype")
+        
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, 
+                      f"[gnmi_memory_checker] Failed to read DEVICE_METADATA: {e}")
+    
+    return None
+
+def get_memory_threshold():
+    """
+    Determine the appropriate memory threshold based on device subtype.
+    
+    Returns:
+        int: Memory threshold in bytes
+    """
+    subtype = get_device_subtype()
+    
+    if subtype.lower() == "smartswitch":
+        threshold = SMARTSWITCH_MEMORY_THRESHOLD
+        syslog.syslog(syslog.LOG_INFO, 
+                      f"[gnmi_memory_checker] Device subtype is SmartSwitch, using {threshold} bytes threshold")
+    else:
+        threshold = DEFAULT_MEMORY_THRESHOLD
+        subtype_str = subtype if subtype else "unknown"
+        syslog.syslog(syslog.LOG_INFO, 
+                      f"[gnmi_memory_checker] Device subtype is {subtype_str}, using {threshold} bytes threshold")
+    
+    return threshold
+
+def update_monit_config(threshold):
+    """
+    Update the monit_gnmi configuration file with the new memory threshold.
+    
+    Args:
+        threshold (int): Memory threshold in bytes
+    """
+    try:
+        # Read the current monit configuration
+        with open(MONIT_GNMI_CONFIG_PATH, 'r') as f:
+            content = f.read()
+        
+        # Pattern to match the memory_checker command line with threshold
+        pattern = r'("/usr/bin/memory_checker gnmi )\d+(")'
+        replacement = f'\\g<1>{threshold}\\g<2>'
+        
+        # Replace the threshold in the configuration
+        new_content = re.sub(pattern, replacement, content)
+        
+        if new_content != content:
+            # Write the updated configuration back
+            with open(MONIT_GNMI_CONFIG_PATH, 'w') as f:
+                f.write(new_content)
+            
+            syslog.syslog(syslog.LOG_INFO, 
+                          f"[gnmi_memory_checker] Updated monit_gnmi config with threshold {threshold} bytes")
+        else:
+            syslog.syslog(syslog.LOG_WARNING, 
+                          f"[gnmi_memory_checker] No threshold update needed in monit_gnmi config")
+        
+    except FileNotFoundError:
+        syslog.syslog(syslog.LOG_WARNING, 
+                      f"[gnmi_memory_checker] Monit config file not found: {MONIT_GNMI_CONFIG_PATH}")
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, 
+                      f"[gnmi_memory_checker] Failed to update monit config: {e}")
+
+def invoke_memory_checker(container_name, threshold):
+    """
+    Invoke the memory_checker script with the specified container name and threshold.
+    
+    Args:
+        container_name (str): Name of the container to check
+        threshold (int): Memory threshold in bytes
+    """
+    try:
+        cmd = ["/usr/bin/memory_checker", container_name, str(threshold)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Log the memory_checker output
+        if result.stdout:
+            syslog.syslog(syslog.LOG_INFO, 
+                          f"[gnmi_memory_checker] memory_checker output: {result.stdout.strip()}")
+        
+        if result.stderr:
+            syslog.syslog(syslog.LOG_ERR, 
+                          f"[gnmi_memory_checker] memory_checker error: {result.stderr.strip()}")
+        
+        # Exit with the same code as memory_checker
+        sys.exit(result.returncode)
+        
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, 
+                      f"[gnmi_memory_checker] Failed to invoke memory_checker: {e}")
+        sys.exit(1)
+
+def main():
+    """
+    Main function that determines memory threshold based on device subtype
+    and invokes memory_checker for the gNMI container.
+    """
+    container_name = "gnmi"
+    threshold = get_memory_threshold()
+    
+    syslog.syslog(syslog.LOG_INFO, 
+                  f"[gnmi_memory_checker] Checking memory usage for container '{container_name}' with threshold {threshold} bytes")
+    
+    # Update monit configuration with the new threshold
+    update_monit_config(threshold)
+    
+    invoke_memory_checker(container_name, threshold)
+
+
+if __name__ == "__main__":
+    main()
