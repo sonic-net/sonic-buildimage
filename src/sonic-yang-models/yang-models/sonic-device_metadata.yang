@@ -323,6 +323,15 @@ module sonic-device_metadata {
                     default "false";
                 }
 
+                leaf zebra_nexthop {
+                    description "Enable or disable next hop group support. This value only takes effect during boot time";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
+
                 leaf syslog_counter {
                     type boolean;
                     description "Enable syslog counter feature.";
