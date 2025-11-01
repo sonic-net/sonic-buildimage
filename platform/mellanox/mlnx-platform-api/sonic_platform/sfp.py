@@ -36,7 +36,11 @@ try:
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
-    from sonic_platform_base.sonic_xcvr.api.public import cmis, sff8636, sff8436
+    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
+
+    from sonic_platform_base.sonic_xcvr.api.public import cmis as cmis_api
+    from sonic_platform_base.sonic_xcvr.codes.public import cmis as cmis_codes
+    from sonic_platform_base.sonic_xcvr.mem_maps.public import cmis as cmis_mem
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -72,6 +76,7 @@ QSFP_DD_TYPE_CODE_LIST = [
 ]
 
 RJ45_TYPE = "RJ45"
+CPO_TYPE = "CPO"
 
 #variables for sdk
 REGISTER_NUM = 1
@@ -1086,7 +1091,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api is of type CMIS
         """
-        return isinstance(xcvr_api, cmis.CmisApi)
+        return isinstance(xcvr_api, cmis_api.CmisApi)
 
     def is_sff_api(self, xcvr_api):
         """Check if the api type is SFF
@@ -1811,3 +1816,36 @@ class RJ45Port(NvidiaSFPCommon):
         """
         status = super().get_module_status()
         return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status
+
+
+class CpoPort(SFP):
+    """class derived from SFP, representing CPO ports"""
+
+    def __init__(self, sfp_index):
+        super(CpoPort, self).__init__(sfp_index)
+        self._sfp_type_str = None
+        self.sfp_type = CPO_TYPE
+
+    def get_transceiver_info(self):
+        transceiver_info_dict = super().get_transceiver_info()
+        transceiver_info_dict['type'] = self.sfp_type
+        return transceiver_info_dict
+
+    def get_xcvr_api(self):
+        if self._xcvr_api is None:
+            self._xcvr_api = self._xcvr_api_factory._create_api(cmis_codes.CmisCodes, cmis_mem.CmisMemMap, cmis_api.CmisApi)
+        return self._xcvr_api
+
+    def get_presence(self):
+        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_PRESENT
+        present = utils.read_int_from_file(file_path)
+        return present == 1
+
+    def reinit(self):
+        """
+        Nothing to do for cpo. Just provide it to avoid exception
+        :return:
+        """
+        return
+
+
