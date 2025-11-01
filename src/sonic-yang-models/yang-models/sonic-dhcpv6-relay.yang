@@ -37,6 +37,7 @@ module sonic-dhcpv6-relay {
 				leaf-list dhcpv6_servers {
 					description "Configure the dhcp v6 servers";
 					type inet:ipv6-address;
+					ordered-by user;
 				}
 
 				leaf rfc6939_support {
