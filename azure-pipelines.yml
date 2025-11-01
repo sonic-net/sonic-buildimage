@@ -119,10 +119,15 @@ stages:
     steps:
     - script: |
         echo "PTF_MODIFIED variable value: $(PTF_MODIFIED)"
-        echo "Available stage dependencies:"
-        echo "BuildVS stage outputs:"
-        echo '${{ convertToJson(stageDependencies.BuildVS) }}' || echo "No BuildVS stage dependencies found"
-      displayName: "Debug PTF_MODIFIED and Stage Dependencies"
+        echo "Debug: Checking if PTF_MODIFIED is being passed correctly from BuildVS stage"
+        if [ "$(PTF_MODIFIED)" = "true" ]; then
+          echo "SUCCESS: PTF_MODIFIED is true"
+        elif [ "$(PTF_MODIFIED)" = "false" ]; then
+          echo "INFO: PTF_MODIFIED is false"
+        else
+          echo "ERROR: PTF_MODIFIED has unexpected value: $(PTF_MODIFIED)"
+        fi
+      displayName: "Debug PTF_MODIFIED Variable"
 
   - job:
     pool: sonictest
