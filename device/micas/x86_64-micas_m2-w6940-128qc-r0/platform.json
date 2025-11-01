@@ -1,4 +1,542 @@
 {
+    "chassis": {
+        "name": "M2-W6940-128QC",
+        "thermal_manager": false,
+        "status_led": {
+            "controllable": false,
+            "colors": ["green", "blinking_green", "amber", "blinking_amber"]
+        },
+        "components": [
+            {
+                "name": "BASE_CPLD"
+            },
+            {
+                "name": "FAN_CPLD"
+            },
+            {
+                "name": "CPU_CPLD"
+            },
+            {
+                "name": "MISC_CPLD"
+            },
+            {
+                "name": "MAC_CPLDA"
+            },
+            {
+                "name": "MAC_CPLDB"
+            },
+            {
+                "name": "LC_CPLD"
+            },
+            {
+                "name": "MAC FPGA"
+            },
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            }
+        ],
+        "fans": [
+            {
+                "name": "Fantray1_1",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray1_2",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray2_1",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray2_2",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray3_1",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray3_2",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray4_1",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray4_2",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray5_1",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            },
+            {
+                "name": "Fantray5_2",
+                "speed": {
+                    "controllable": false,
+                    "minimum": 50,
+                    "maximum": 100
+                },
+                "status_led": {
+                    "available": false,
+                    "colors": ["off", "red", "amber", "green"]
+                }
+            }
+        ],
+        "fan_drawers":[
+            {
+                "name": "Fantray1",
+                "num_fans" : 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray1_1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray1_2",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray2",
+                "num_fans" : 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray2_1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray2_2",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray3",
+                "num_fans" : 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray3_1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray3_2",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray4",
+                "num_fans" : 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray4_1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray4_2",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Fantray5",
+                "num_fans" : 2,
+                "status_led": {
+                    "controllable": false,
+                    "colors": ["amber", "green", "off"]
+                },
+                "fans": [
+                    {
+                        "name": "Fantray5_1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    },
+                    {
+                        "name": "Fantray5_2",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "Psu1",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": true,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU1_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Psu2",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": true,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU2_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Psu3",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": true,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU3_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Psu4",
+                "voltage": true,
+                "current": true,
+                "power": true,
+                "max_power": false,
+                "voltage_high_threshold": true,
+                "voltage_low_threshold": true,
+                "temperature": true,
+                "fans_target_speed": true,
+                "status_led": {
+                    "controllable": false
+                },
+                "fans": [
+                    {
+                        "name": "PSU4_FAN1",
+                        "speed": {
+                            "controllable": false,
+                            "minimum": 50,
+                            "maximum": 100
+                        },
+                        "status_led": {
+                            "available": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "ASIC_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPU_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "INLET_TEMP_LC",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "INLET_TEMP_PDB",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "OUTLET_1_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "OUTLET_2_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU1_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU2_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU3_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU4_TEMP",
+                "controllable": false,
+                "low-crit-threshold": true,
+                "high-crit-threshold": true,
+                "low-threshold": true,
+                "high-threshold": true,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            }
+        ],
+        "modules": [],
+        "sfps": []
+    },
     "interfaces": {
         "Ethernet1": {
             "index": "0,0,0,0",
