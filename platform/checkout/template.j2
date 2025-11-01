@@ -3,11 +3,13 @@
 {% else %}
 {% set path = env('PLATFORM_PATH') %}
 {% endif %}
-if [ ! -d {{ path }} ]; then git clone {{ module.repo }} {{ path }}; fi;
+{% set platform_repo = env('PLATFORM_REPO') if env('PLATFORM_REPO', '') else module.repo %}
+{% set platform_ref = env('PLATFORM_REF') if env('PLATFORM_REF', '') else (module.ref if module.ref is defined else None) %}
+if [ ! -d {{ path }} ]; then git clone {{ platform_repo }} {{ path }}; fi;
 if [ -d {{ path }}/.git ]; then cd {{ path }} &&
 
-{% if module.ref is defined %}
-git checkout {{ module.ref }} && git submodule update --init --recursive;
+{% if platform_ref %}
+git checkout {{ platform_ref }} && git submodule update --init --recursive;
 {% else %}
 git submodule update --init --recursive;
 {% endif %}
