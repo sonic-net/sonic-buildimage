@@ -206,7 +206,6 @@ stages:
     condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't0_checker')
     variables:
       TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
-      PTF_MODIFIED_BOOL: $[ eq(variables['PTF_MODIFIED'], 'true') ]
     timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     pool: sonic-ubuntu-1c
@@ -226,7 +225,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t0_2vlans_elastictest
     displayName: "impacted-area-kvmtest-t0-2vlans by Elastictest"
@@ -235,7 +234,6 @@ stages:
     condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't0-2vlans_checker')
     variables:
       TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
-      PTF_MODIFIED_BOOL: $[ eq(variables['PTF_MODIFIED'], 'true') ]
     timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
     continueOnError: false
     pool: sonic-ubuntu-1c
@@ -256,7 +254,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t1_lag_elastictest
     displayName: "impacted-area-kvmtest-t1-lag by Elastictest"
@@ -287,7 +285,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_dualtor_elastictest
     displayName: "impacted-area-kvmtest-dualtor by Elastictest"
@@ -318,7 +316,7 @@ stages:
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer --disable_sai_validation "
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_multi_asic_elastictest
     displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest"
@@ -348,7 +346,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t0_sonic_elastictest
     displayName: "impacted-area-kvmtest-t0-sonic by Elastictest"
@@ -379,7 +377,7 @@ stages:
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --disable_sai_validation "
           VM_TYPE: vsonic
           MGMT_BRANCH: $(BUILD_BRANCH)
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
           SPECIFIC_PARAM: '[
             {"name": "bgp/test_bgp_fact.py", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"},
             {"name": "macsec", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"}
@@ -412,7 +410,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
           MGMT_BRANCH: $(BUILD_BRANCH)
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
           SPECIFIC_PARAM: '[
             {"name": "dash/test_dash_vnet.py", "param": "--skip_dataplane_checking"}
             ]'
@@ -446,4 +444,4 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          PTF_MODIFIED: $[ variables['PTF_MODIFIED_BOOL'] ]
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
