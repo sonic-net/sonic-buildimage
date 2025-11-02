@@ -381,9 +381,9 @@ class TestSmartSwitch:
 
     @pytest.mark.parametrize(
         "dpu_id, swbus_port, error_message", [
-            (0, 23606, None),
-            (1, 23607, None),
-            (7, 23613, None)]
+            ("0", 23606, None),
+            ("1", 23607, None),
+            ("7", 23613, None)]
         )
     def test_remote_dpu_swbus_port(self, yang_model, dpu_id, swbus_port, error_message):
         data = {
