@@ -367,6 +367,8 @@ install_deb_package $debs_path/sonic-rsyslog-plugin_*.deb
 
 # Install custom-built monit package and SONiC configuration files
 install_deb_package $debs_path/monit_*.deb
+sudo cp $IMAGE_CONFIGS/monit/monit.service $FILESYSTEM_ROOT/etc/systemd/system/
+sudo chmod 644 $FILESYSTEM_ROOT/etc/systemd/system/monit.service
 sudo cp $IMAGE_CONFIGS/monit/monitrc $FILESYSTEM_ROOT/etc/monit/
 sudo chmod 600 $FILESYSTEM_ROOT/etc/monit/monitrc
 sudo cp $IMAGE_CONFIGS/monit/conf.d/* $FILESYSTEM_ROOT/etc/monit/conf.d/
