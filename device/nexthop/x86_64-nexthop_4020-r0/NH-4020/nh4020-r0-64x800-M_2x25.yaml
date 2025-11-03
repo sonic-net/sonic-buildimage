@@ -784,7 +784,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 9
             ?
-                PORT_ID: 2
+                PORT_ID: 9
             :
                 PC_PHYS_PORT_ID: 1
             ?
@@ -792,7 +792,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 25
             ?
-                PORT_ID: 18
+                PORT_ID: 25
             :
                 PC_PHYS_PORT_ID: 17
             ?
@@ -800,7 +800,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 41
             ?
-                PORT_ID: 35
+                PORT_ID: 42
             :
                 PC_PHYS_PORT_ID: 33
             ?
@@ -808,7 +808,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 57
             ?
-                PORT_ID: 52
+                PORT_ID: 59
             :
                 PC_PHYS_PORT_ID: 49
             ?
@@ -816,7 +816,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 73
             ?
-                PORT_ID: 69
+                PORT_ID: 76
             :
                 PC_PHYS_PORT_ID: 65
             ?
@@ -824,7 +824,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 89
             ?
-                PORT_ID: 86
+                PORT_ID: 93
             :
                 PC_PHYS_PORT_ID: 81
             ?
@@ -832,7 +832,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 105
             ?
-                PORT_ID: 103
+                PORT_ID: 110
             :
                 PC_PHYS_PORT_ID: 97
             ?
@@ -840,7 +840,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 121
             ?
-                PORT_ID: 120
+                PORT_ID: 127
             :
                 PC_PHYS_PORT_ID: 113
             ?
@@ -848,7 +848,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 137
             ?
-                PORT_ID: 137
+                PORT_ID: 144
             :
                 PC_PHYS_PORT_ID: 129
             ?
@@ -856,7 +856,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 153
             ?
-                PORT_ID: 154
+                PORT_ID: 161
             :
                 PC_PHYS_PORT_ID: 145
             ?
@@ -864,7 +864,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 169
             ?
-                PORT_ID: 171
+                PORT_ID: 178
             :
                 PC_PHYS_PORT_ID: 161
             ?
@@ -872,7 +872,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 185
             ?
-                PORT_ID: 188
+                PORT_ID: 195
             :
                 PC_PHYS_PORT_ID: 177
             ?
@@ -880,7 +880,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 201
             ?
-                PORT_ID: 205
+                PORT_ID: 212
             :
                 PC_PHYS_PORT_ID: 193
             ?
@@ -888,7 +888,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 217
             ?
-                PORT_ID: 222
+                PORT_ID: 229
             :
                 PC_PHYS_PORT_ID: 209
             ?
@@ -896,7 +896,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 233
             ?
-                PORT_ID: 239
+                PORT_ID: 246
             :
                 PC_PHYS_PORT_ID: 225
             ?
@@ -904,7 +904,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 249
             ?
-                PORT_ID: 256
+                PORT_ID: 263
             :
                 PC_PHYS_PORT_ID: 241
             ?
@@ -912,7 +912,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 265
             ?
-                PORT_ID: 273
+                PORT_ID: 280
             :
                 PC_PHYS_PORT_ID: 257
             ?
@@ -920,7 +920,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 281
             ?
-                PORT_ID: 290
+                PORT_ID: 297
             :
                 PC_PHYS_PORT_ID: 273
             ?
@@ -928,7 +928,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 297
             ?
-                PORT_ID: 307
+                PORT_ID: 314
             :
                 PC_PHYS_PORT_ID: 289
             ?
@@ -936,7 +936,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 313
             ?
-                PORT_ID: 324
+                PORT_ID: 331
             :
                 PC_PHYS_PORT_ID: 305
             ?
@@ -944,7 +944,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 329
             ?
-                PORT_ID: 341
+                PORT_ID: 348
             :
                 PC_PHYS_PORT_ID: 321
             ?
@@ -952,7 +952,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 345
             ?
-                PORT_ID: 358
+                PORT_ID: 365
             :
                 PC_PHYS_PORT_ID: 337
             ?
@@ -960,7 +960,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 361
             ?
-                PORT_ID: 375
+                PORT_ID: 382
             :
                 PC_PHYS_PORT_ID: 353
             ?
@@ -968,7 +968,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 377
             ?
-                PORT_ID: 392
+                PORT_ID: 399
             :
                 PC_PHYS_PORT_ID: 369
             ?
@@ -976,7 +976,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 393
             ?
-                PORT_ID: 409
+                PORT_ID: 416
             :
                 PC_PHYS_PORT_ID: 385
             ?
@@ -984,7 +984,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 409
             ?
-                PORT_ID: 426
+                PORT_ID: 433
             :
                 PC_PHYS_PORT_ID: 401
             ?
@@ -992,7 +992,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 425
             ?
-                PORT_ID: 443
+                PORT_ID: 450
             :
                 PC_PHYS_PORT_ID: 417
             ?
@@ -1000,7 +1000,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 441
             ?
-                PORT_ID: 460
+                PORT_ID: 467
             :
                 PC_PHYS_PORT_ID: 433
             ?
@@ -1008,7 +1008,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 457
             ?
-                PORT_ID: 477
+                PORT_ID: 484
             :
                 PC_PHYS_PORT_ID: 449
             ?
@@ -1016,7 +1016,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 473
             ?
-                PORT_ID: 494
+                PORT_ID: 501
             :
                 PC_PHYS_PORT_ID: 465
             ?
@@ -1024,7 +1024,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 489
             ?
-                PORT_ID: 511
+                PORT_ID: 518
             :
                 PC_PHYS_PORT_ID: 481
             ?
@@ -1032,7 +1032,7 @@ device:
             :
                 PC_PHYS_PORT_ID: 505
             ?
-                PORT_ID: 528
+                PORT_ID: 535
             :
                 PC_PHYS_PORT_ID: 497
             ?
@@ -1057,7 +1057,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 2
+                PORT_ID: 9
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1073,7 +1073,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 18
+                PORT_ID: 25
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1089,7 +1089,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 35
+                PORT_ID: 42
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1105,7 +1105,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 52
+                PORT_ID: 59
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1121,7 +1121,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 69
+                PORT_ID: 76
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1137,7 +1137,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 86
+                PORT_ID: 93
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1153,7 +1153,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 103
+                PORT_ID: 110
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1169,7 +1169,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 120
+                PORT_ID: 127
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1185,7 +1185,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 137
+                PORT_ID: 144
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1201,7 +1201,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 154
+                PORT_ID: 161
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1217,7 +1217,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 171
+                PORT_ID: 178
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1233,7 +1233,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 188
+                PORT_ID: 195
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1249,7 +1249,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 205
+                PORT_ID: 212
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1265,7 +1265,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 222
+                PORT_ID: 229
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1281,7 +1281,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 239
+                PORT_ID: 246
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1297,7 +1297,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 256
+                PORT_ID: 263
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1313,7 +1313,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 273
+                PORT_ID: 280
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1337,7 +1337,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 290
+                PORT_ID: 297
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1353,7 +1353,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 307
+                PORT_ID: 314
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1369,7 +1369,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 324
+                PORT_ID: 331
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1385,7 +1385,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 341
+                PORT_ID: 348
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1401,7 +1401,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 358
+                PORT_ID: 365
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1417,7 +1417,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 375
+                PORT_ID: 382
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1433,7 +1433,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 392
+                PORT_ID: 399
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1449,7 +1449,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 409
+                PORT_ID: 416
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1473,7 +1473,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 426
+                PORT_ID: 433
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1489,7 +1489,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 443
+                PORT_ID: 450
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1505,7 +1505,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 460
+                PORT_ID: 467
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1521,7 +1521,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 477
+                PORT_ID: 484
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1537,7 +1537,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 494
+                PORT_ID: 501
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1553,7 +1553,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 511
+                PORT_ID: 518
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1569,7 +1569,7 @@ device:
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
             ?
-                PORT_ID: 528
+                PORT_ID: 535
             :
                 ENABLE: 0
                 SPEED: 800000
@@ -1790,7 +1790,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1816,7 +1816,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1842,7 +1842,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1868,7 +1868,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1894,7 +1894,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1920,7 +1920,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1946,7 +1946,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -1972,7 +1972,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 2
+                PORT_ID: 9
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2206,7 +2206,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2232,7 +2232,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2258,7 +2258,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2284,7 +2284,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2310,7 +2310,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2336,7 +2336,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2362,7 +2362,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2388,7 +2388,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 18
+                PORT_ID: 25
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2622,7 +2622,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2648,7 +2648,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2674,7 +2674,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2700,7 +2700,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2726,7 +2726,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2752,7 +2752,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2778,7 +2778,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -2804,7 +2804,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 35
+                PORT_ID: 42
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3038,7 +3038,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3064,7 +3064,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3090,7 +3090,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3116,7 +3116,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3142,7 +3142,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3168,7 +3168,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3194,7 +3194,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3220,7 +3220,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 52
+                PORT_ID: 59
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3454,7 +3454,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3480,7 +3480,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3506,7 +3506,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3532,7 +3532,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3558,7 +3558,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3584,7 +3584,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3610,7 +3610,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3636,7 +3636,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 69
+                PORT_ID: 76
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3870,7 +3870,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3896,7 +3896,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3922,7 +3922,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3948,7 +3948,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -3974,7 +3974,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4000,7 +4000,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4026,7 +4026,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4052,7 +4052,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 86
+                PORT_ID: 93
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4286,7 +4286,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4312,7 +4312,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4338,7 +4338,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4364,7 +4364,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4390,7 +4390,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4416,7 +4416,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4442,7 +4442,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4468,7 +4468,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 103
+                PORT_ID: 110
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4702,7 +4702,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4728,7 +4728,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4754,7 +4754,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4780,7 +4780,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4806,7 +4806,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4832,7 +4832,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4858,7 +4858,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -4884,7 +4884,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 120
+                PORT_ID: 127
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5118,7 +5118,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5144,7 +5144,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5170,7 +5170,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5196,7 +5196,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5222,7 +5222,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5248,7 +5248,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5274,7 +5274,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5300,7 +5300,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 137
+                PORT_ID: 144
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5534,7 +5534,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5560,7 +5560,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5586,7 +5586,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5612,7 +5612,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5638,7 +5638,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5664,7 +5664,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5690,7 +5690,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5716,7 +5716,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 154
+                PORT_ID: 161
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5950,7 +5950,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -5976,7 +5976,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6002,7 +6002,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6028,7 +6028,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6054,7 +6054,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6080,7 +6080,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6106,7 +6106,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6132,7 +6132,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 171
+                PORT_ID: 178
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6366,7 +6366,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6392,7 +6392,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6418,7 +6418,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6444,7 +6444,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6470,7 +6470,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6496,7 +6496,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6522,7 +6522,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6548,7 +6548,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 188
+                PORT_ID: 195
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6782,7 +6782,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6808,7 +6808,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6834,7 +6834,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6860,7 +6860,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6886,7 +6886,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6912,7 +6912,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6938,7 +6938,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -6964,7 +6964,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 205
+                PORT_ID: 212
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7198,7 +7198,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7224,7 +7224,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7250,7 +7250,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7276,7 +7276,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7302,7 +7302,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7328,7 +7328,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7354,7 +7354,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7380,7 +7380,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 222
+                PORT_ID: 229
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7614,7 +7614,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7640,7 +7640,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7666,7 +7666,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7692,7 +7692,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7718,7 +7718,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7744,7 +7744,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7770,7 +7770,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -7796,7 +7796,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 239
+                PORT_ID: 246
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8030,7 +8030,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8056,7 +8056,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8082,7 +8082,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8108,7 +8108,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8134,7 +8134,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8160,7 +8160,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8186,7 +8186,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8212,7 +8212,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 256
+                PORT_ID: 263
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8446,7 +8446,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8472,7 +8472,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8498,7 +8498,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8524,7 +8524,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8550,7 +8550,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8576,7 +8576,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8602,7 +8602,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8628,7 +8628,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 273
+                PORT_ID: 280
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8862,7 +8862,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8888,7 +8888,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8914,7 +8914,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8940,7 +8940,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8966,7 +8966,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -8992,7 +8992,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9018,7 +9018,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9044,7 +9044,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 290
+                PORT_ID: 297
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9278,7 +9278,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9304,7 +9304,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9330,7 +9330,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9356,7 +9356,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9382,7 +9382,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9408,7 +9408,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9434,7 +9434,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9460,7 +9460,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 307
+                PORT_ID: 314
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9694,7 +9694,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9720,7 +9720,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9746,7 +9746,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9772,7 +9772,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9798,7 +9798,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9824,7 +9824,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9850,7 +9850,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -9876,7 +9876,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 324
+                PORT_ID: 331
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10110,7 +10110,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10136,7 +10136,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10162,7 +10162,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10188,7 +10188,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10214,7 +10214,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10240,7 +10240,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10266,7 +10266,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10292,7 +10292,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 341
+                PORT_ID: 348
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10526,7 +10526,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10552,7 +10552,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10578,7 +10578,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10604,7 +10604,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10630,7 +10630,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10656,7 +10656,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10682,7 +10682,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10708,7 +10708,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 358
+                PORT_ID: 365
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10942,7 +10942,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10968,7 +10968,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -10994,7 +10994,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11020,7 +11020,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11046,7 +11046,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11072,7 +11072,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11098,7 +11098,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11124,7 +11124,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 375
+                PORT_ID: 382
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11358,7 +11358,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11384,7 +11384,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11410,7 +11410,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11436,7 +11436,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11462,7 +11462,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11488,7 +11488,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11514,7 +11514,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11540,7 +11540,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 392
+                PORT_ID: 399
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11774,7 +11774,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11800,7 +11800,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11826,7 +11826,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11852,7 +11852,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11878,7 +11878,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11904,7 +11904,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11930,7 +11930,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -11956,7 +11956,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 409
+                PORT_ID: 416
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12190,7 +12190,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12216,7 +12216,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12242,7 +12242,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12268,7 +12268,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12294,7 +12294,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12320,7 +12320,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12346,7 +12346,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12372,7 +12372,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 426
+                PORT_ID: 433
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12606,7 +12606,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12632,7 +12632,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12658,7 +12658,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12684,7 +12684,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12710,7 +12710,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12736,7 +12736,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12762,7 +12762,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -12788,7 +12788,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 443
+                PORT_ID: 450
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13022,7 +13022,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13048,7 +13048,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13074,7 +13074,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13100,7 +13100,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13126,7 +13126,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13152,7 +13152,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13178,7 +13178,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13204,7 +13204,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 460
+                PORT_ID: 467
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13438,7 +13438,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13464,7 +13464,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13490,7 +13490,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13516,7 +13516,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13542,7 +13542,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13568,7 +13568,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13594,7 +13594,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13620,7 +13620,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 477
+                PORT_ID: 484
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13854,7 +13854,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13880,7 +13880,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13906,7 +13906,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13932,7 +13932,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13958,7 +13958,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -13984,7 +13984,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14010,7 +14010,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14036,7 +14036,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 494
+                PORT_ID: 501
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14270,7 +14270,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14296,7 +14296,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14322,7 +14322,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14348,7 +14348,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14374,7 +14374,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14400,7 +14400,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14426,7 +14426,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14452,7 +14452,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 511
+                PORT_ID: 518
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14686,7 +14686,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 0
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14712,7 +14712,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 1
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14738,7 +14738,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 2
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14764,7 +14764,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 3
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14790,7 +14790,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 4
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14816,7 +14816,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 5
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14842,7 +14842,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 6
             :
                 TX_SIG_MODE_AUTO: 0
@@ -14868,7 +14868,7 @@ device:
                 TXFIR_TAP_MODE_AUTO: 0
                 TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
             ?
-                PORT_ID: 528
+                PORT_ID: 535
                 LANE_INDEX: 7
             :
                 TX_SIG_MODE_AUTO: 0
