@@ -22,8 +22,8 @@ After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
 {% if sonic_asic_platform == 'mellanox' %}
-Requires=nv-syncd-shared.service
-After=nv-syncd-shared.service
+Requires=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
+After=mlnx-fw-manager.service sx-kernel.service nv-syncd-shared.service
 {% endif %}
 
 [Service]
@@ -34,6 +34,9 @@ ExecStart=/usr/local/bin/syncd.sh wait{% if multi_instance == 'true' %} %i{% end
 ExecStop=/usr/local/bin/syncd.sh stop{% if multi_instance == 'true' %} %i{% endif %}
 {% if sonic_asic_platform == 'mellanox' %}
 TimeoutStartSec=480
+{% if multi_instance == 'true' %}
+TimeoutStopSec=180
+{% endif %}
 {% endif %}
 
 [Install]

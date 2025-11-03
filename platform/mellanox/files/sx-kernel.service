@@ -1,0 +1,14 @@
+[Unit]
+Description=SX Kernel Driver Service
+After=mlnx-fw-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/sx-kernel.sh start
+ExecStop=/usr/bin/sx-kernel.sh stop
+TimeoutSec=300
+User=root
+
+[Install]
+WantedBy=multi-user.target

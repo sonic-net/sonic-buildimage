@@ -1,0 +1,14 @@
+[Unit]
+Description=Mellanox Firmware Manager Service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/mst start --with_i2cdev
+ExecStart=/usr/bin/mlnx-fw-upgrade.sh -c -v
+ExecStop=/usr/bin/mst stop
+TimeoutSec=300
+User=root
+
+[Install]
+WantedBy=multi-user.target

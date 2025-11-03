@@ -1109,6 +1109,17 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo cp -r platform/mellanox/asic_detect $FILESYSTEM_ROOT/usr/bin/asic_detect
 sudo chmod -R 777 $FILESYSTEM_ROOT/usr/bin/asic_detect/
 
+sudo cp platform/mellanox/files/sx-kernel.sh $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/sx-kernel.sh
+
+sudo cp platform/mellanox/files/sx-kernel.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/sx-kernel.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sx-kernel.service
+
+sudo cp platform/mellanox/files/mlnx-fw-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo chmod 644 $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/mlnx-fw-manager.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable mlnx-fw-manager.service
+
 # Install mlnx-sonic-platform Python 3 package
 install_pip_package {{mlnx_platform_api_py3_wheel_path}}
 
