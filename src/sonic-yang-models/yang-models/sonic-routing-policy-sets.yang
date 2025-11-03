@@ -166,6 +166,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list community_member {
                     type string;
+                    ordered-by user;
                     description
                         "members of the community set.";
                 }
@@ -206,6 +207,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list community_member {
                     type string;
+                    ordered-by user;
                     description
                         "members of the community set.";
                 }
@@ -230,6 +232,7 @@ module sonic-routing-policy-sets {
 
                 leaf-list as_path_set_member {
                     type string;
+                    ordered-by user;
                     description
                         "AS path expression -- list of ASes in the set";
                 }
