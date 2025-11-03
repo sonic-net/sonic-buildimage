@@ -19,7 +19,7 @@ declare -r EXIT_SUCCESS=0
 declare -r EXIT_ERROR=1
 
 declare -r PENDING_COMPONENT_FW="/usr/bin/install-pending-fw.py"
-declare -r FW_UPGRADE_SCRIPT="/usr/bin/mlnx-fw-upgrade.sh"
+declare -r FW_UPGRADE_SCRIPT="/usr/local/bin/mlnx-fw-manager"
 
 
 ${FW_UPGRADE_SCRIPT} --upgrade --verbose

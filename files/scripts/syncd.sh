@@ -2,16 +2,7 @@
 
 . /usr/local/bin/syncd_common.sh
 
-function debug()
-{
-    # Write to syslog with info severity level
-    /usr/bin/logger -p info "$*"
-    # Write to debug log file with timestamp
-    /bin/echo "$(date) - $*" >> ${DEBUGLOG}
-}
-
 function remove_ethernet_interfaces() {
-    # Remove all interfaces that start with "Ethernet"
     debug "remove_ethernet_interfaces: Removing all Ethernet interfaces (NET_NS: $NET_NS)..."
 
     local start_time=$(date +%s)
@@ -26,7 +17,6 @@ function remove_ethernet_interfaces() {
         local interface_count=$(echo "$ethernet_interfaces" | wc -w)
         debug "remove_ethernet_interfaces: Found $interface_count Ethernet interfaces to remove"
 
-        # Sequential removal of interfaces
         for interface in $ethernet_interfaces; do
             if [[ -n "$NET_NS" ]]; then
                 ip netns exec "$NET_NS" ip link del "$interface" 2>/dev/null || debug "Failed to remove interface: $interface"
@@ -54,6 +44,7 @@ function reset_mellanox_drivers() {
         debug "Restarting Mellanox drivers for ASIC $DEV"
         echo "pcidrv_restart" > $mlx_dev
         rm -f /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null || debug "Warning: Could not remove restart flag"
+        debug "Mellanox drivers restarted for ASIC $DEV"
     fi
 
     remove_ethernet_interfaces
@@ -69,9 +60,16 @@ function startplatform() {
             export FAST_BOOT=1
         fi
 
-        debug "BOOT_TYPE: $BOOT_TYPE WARM_BOOT: $WARM_BOOT FAST_BOOT: $FAST_BOOT"
+        local fw_upgrade_args="--status=all"
+        if [[ $DEV != "" ]]; then
+            fw_upgrade_args="--status=$DEV"
+        fi
+        mlnx-fw-manager $fw_upgrade_args
+        if [[ $? != "0" ]]; then
+            debug "ASIC$DEV firmware upgrade status check failed. Please check the firmware upgrade status manually."
+            exit 1
+        fi
 
-        debug "Starting Firmware update procedure"
         reset_mellanox_drivers
 
         if ! echo "mlx_sx_core_restart_required" > /var/run/mlx_sx_core_restart_required$DEV 2>/dev/null; then

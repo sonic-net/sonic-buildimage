@@ -16,17 +16,11 @@
 # limitations under the License.
 #
 
-[Unit]
-Description=Mellanox Firmware Manager Service
+# Mellanox Firmware Manager package
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStartPre=/usr/bin/mst start --with_i2cdev
-ExecStart=/usr/local/bin/mlnx-fw-manager --clear-semaphore --verbose
-ExecStop=/usr/bin/mst stop
-TimeoutSec=300
-User=root
+MELLANOX_FW_MANAGER = mellanox_fw_manager-1.0.0-py3-none-any.whl
+$(MELLANOX_FW_MANAGER)_SRC_PATH = $(PLATFORM_PATH)/fw-manager
+$(MELLANOX_FW_MANAGER)_PYTHON_VERSION = 3
+SONIC_PYTHON_WHEELS += $(MELLANOX_FW_MANAGER)
 
-[Install]
-WantedBy=multi-user.target
+export mellanox_fw_manager_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(MELLANOX_FW_MANAGER))"

@@ -20,6 +20,7 @@ RECIPE_DIR = recipes
 
 override TARGET_BOOTLOADER=grub
 
+include $(PLATFORM_PATH)/fw-manager/fw-manager.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/bluefield-soc.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/mft.mk
 include $(PLATFORM_PATH)/$(RECIPE_DIR)/fw.mk

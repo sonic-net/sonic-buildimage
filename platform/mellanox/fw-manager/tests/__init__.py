@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env python3
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -15,18 +15,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-[Unit]
-Description=Mellanox Firmware Manager Service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStartPre=/usr/bin/mst start --with_i2cdev
-ExecStart=/usr/local/bin/mlnx-fw-manager --clear-semaphore --verbose
-ExecStop=/usr/bin/mst stop
-TimeoutSec=300
-User=root
-
-[Install]
-WantedBy=multi-user.target
