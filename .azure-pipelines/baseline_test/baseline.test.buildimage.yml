@@ -78,7 +78,7 @@ stages:
     dependsOn: BuildVS
     condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
     jobs:
-    - template: baseline.test.template.yml
+    - template: ../pr_test_template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
@@ -91,7 +91,7 @@ stages:
     - Test_round_1
     condition: succeededOrFailed('Test_round_1')
     jobs:
-    - template: baseline.test.template.yml
+    - template: ../pr_test_template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
@@ -104,7 +104,7 @@ stages:
     - Test_round_2
     condition: succeededOrFailed('Test_round_2')
     jobs:
-    - template: baseline.test.template.yml
+    - template: ../pr_test_template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
@@ -117,7 +117,7 @@ stages:
     - Test_round_3
     condition: succeededOrFailed('Test_round_3')
     jobs:
-    - template: baseline.test.template.yml
+    - template: ../pr_test_template.yml
       parameters:
         BUILD_REASON: ${{ parameters.BUILD_REASON }}
         TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}

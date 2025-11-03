@@ -35,9 +35,15 @@ parameters:
   type: string
   default: "sonic-mgmt"
 
-- name: IMPACT_AREA_INFO
+- name: MGMT_COMMIT_HASH
   type: string
   default: ""
+
+# Keys: "dpu_checker","dualtor_checker","t0-2vlans_checker","t0-sonic_checker","t0_checker","t1-multi-asic_checker","t1_checker","t2_checker"
+# Example: {"t0_checker": ["bgp/test_bgp_command.py", "bgp/test_ping_bgp_neighbor.py"], "t1_checker": ["bgp/test_bgp_fact.py"]}
+- name: IMPACT_AREA_INFO
+  type: object
+  default: {}
 
 
 jobs:
@@ -81,6 +87,8 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_t0_2vlans_elastictest
     displayName: "impacted-area-kvmtest-t0-2vlans by Elastictest"
@@ -112,6 +120,8 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_t1_lag_elastictest
     displayName: "impacted-area-kvmtest-t1-lag by Elastictest"
@@ -142,6 +152,8 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_dualtor_elastictest
     displayName: "impacted-area-kvmtest-dualtor by Elastictest"
@@ -172,37 +184,8 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
-
-  - job: impacted_area_multi_asic_elastictest
-    displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest"
-    dependsOn:
-    - get_impacted_area
-    condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't1-multi-asic_checker')
-    variables:
-      TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
-    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-    continueOnError: false
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-multi-asic
-          BUILD_BRANCH: $(BUILD_BRANCH)
-
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-8-lag
-          SCRIPTS: $(SCRIPTS)
-          MIN_WORKER: $(INSTANCE_NUMBER)
-          MAX_WORKER: $(INSTANCE_NUMBER)
-          NUM_ASIC: 4
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-          BUILD_REASON: ${{ parameters.BUILD_REASON }}
-          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
-          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
-          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_t0_sonic_elastictest
     displayName: "impacted-area-kvmtest-t0-sonic by Elastictest"
@@ -238,6 +221,8 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_dpu_elastictest
     displayName: "impacted-area-kvmtest-dpu by Elastictest"
@@ -271,36 +256,42 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   # This PR checker aims to run all t1 test scripts on multi-asic topology.
-  # - job: impacted_area_multi_asic_t1_elastictest
-  #   displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest - optional"
-  #   dependsOn:
-  #   - get_impacted_area
-  #   condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't1_checker')
-  #   variables:
-  #     TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
-  #   timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
-  #   continueOnError: true
-  #   pool: sonic-ubuntu-1c
-  #   steps:
-  #     - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
-  #       parameters:
-  #         TOPOLOGY: t1
-  #         BUILD_BRANCH: $(BUILD_BRANCH)
+  - job: impacted_area_multi_asic_t1_elastictest
+    displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest"
+    dependsOn:
+    - get_impacted_area
+    condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't1_checker')
+    variables:
+      TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+      - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t1
+          BUILD_BRANCH: $(BUILD_BRANCH)
 
-  #     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-  #       parameters:
-  #         TOPOLOGY: t1-8-lag
-  #         STOP_ON_FAILURE: "False"
-  #         SCRIPTS: $(SCRIPTS)
-  #         MIN_WORKER: $(INSTANCE_NUMBER)
-  #         MAX_WORKER: $(INSTANCE_NUMBER)
-  #         NUM_ASIC: 4
-  #         KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-  #         MGMT_BRANCH: $(BUILD_BRANCH)
-  #         COMMON_EXTRA_PARAMS: "--disable_sai_validation "
-  #         BUILD_REASON: ${{ parameters.BUILD_REASON }}
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t1-8-lag
+          SCRIPTS: $(SCRIPTS)
+          MIN_WORKER: $(INSTANCE_NUMBER)
+          MAX_WORKER: $(INSTANCE_NUMBER)
+          NUM_ASIC: 4
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
 
   - job: impacted_area_t2_elastictest
     displayName: "impacted-area-kvmtest-t2 by Elastictest"
@@ -332,3 +323,5 @@ jobs:
           RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
           STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
           TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+          MAX_RUN_TEST_MINUTES: ${{ parameters.MAX_RUN_TEST_MINUTES }}
+          MGMT_COMMIT_HASH: ${{ parameters.MGMT_COMMIT_HASH }}
