@@ -198,6 +198,22 @@ class SonicYang(SonicYangExtMixin, SonicYangPathMixin):
         return (self.ctx, self.root)
 
     """
+    load_module_str_name(): load a module based on the provided string and return
+                            the loaded module name.  This is needed by
+                            sonic-utilities to prevent direct dependency on
+                            libyang.
+    input: yang_module_str yang-formatted module
+    returns: module name on success, exception on failure
+    """
+    def load_module_str_name(self, yang_module_str):
+        try:
+            module = self.ctx.parse_module_mem(yang_module_str, ly.LYS_IN_YANG)
+        except Exception as e:
+            self.fail(e)
+        
+        return module.name()
+
+    """
     print_data_mem():  print the data tree
     input:  option:  "JSON" or "XML"
     """
