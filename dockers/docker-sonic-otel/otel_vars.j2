@@ -12,23 +12,7 @@ receivers:
 processors:
   batch:
     timeout: 1s
-    send_batch_size: 100
-
-  # Filter for port metrics
-  filter/ports:
-    metrics:
-      include:
-        match_type: regexp
-        metric_names:
-          - port\..*
-
-  # Filter for buffer metrics
-  filter/buffers:
-    metrics:
-      include:
-        match_type: regexp
-        metric_names:
-          - buffer_pool\..*
+    send_batch_size: 1000
 
 exporters:
   # Debug exporter for troubleshooting
@@ -38,37 +22,23 @@ exporters:
   # Template for InfluxDB exporters - can be configured externally
   # Examples of what could be configured:
   #
-  # influxdb/ports:
+  # influxdb:
   #   endpoint: ${INFLUXDB_PORTS_ENDPOINT:-http://localhost:8086}
   #   org: ${INFLUXDB_ORG:-default}
-  #   bucket: ${INFLUXDB_PORTS_BUCKET:-ports}
+  #   bucket: ${INFLUXDB_PORTS_BUCKET:-home}
   #   token: ${INFLUXDB_PORTS_TOKEN}
   #   timeout: 10s
-  #
-  # influxdb/buffers:
-  #   endpoint: ${INFLUXDB_BUFFERS_ENDPOINT:-http://localhost:8087}
-  #   org: ${INFLUXDB_ORG:-default}
-  #   bucket: ${INFLUXDB_BUFFERS_BUCKET:-buffers}
-  #   token: ${INFLUXDB_BUFFERS_TOKEN}
-  #   timeout: 10s
-
+  
 service:
   telemetry:
     logs:
       level: "debug"
 
   pipelines:
-    # Metrics pipeline for ports - filtered and ready for export
-    metrics/ports:
+    metrics:
       receivers: [otlp]
-      processors: [batch, filter/ports]
-      exporters: [debug, influxdb/ports]
-
-    # Metrics pipeline for buffers - filtered and ready for export
-    metrics/buffers:
-      receivers: [otlp]
-      processors: [batch, filter/buffers]
-      exporters: [debug, influxdb/buffers]
+      processors: [batch]
+      exporters: [debug, influxdb]
 
     logs:
       receivers: [otlp]

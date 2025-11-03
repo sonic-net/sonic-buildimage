@@ -1,6 +1,9 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
+# Get OTEL Collector from official image
+FROM otel/opentelemetry-collector-contrib:latest AS otelcol
+
 FROM $BASE AS base
 
 ARG docker_container_name
@@ -22,18 +25,12 @@ RUN apt-get update
 {{ install_debian_packages(docker_sonic_otel_debs.split(' ')) }}
 {%- endif %}
 
-# Download & install OTEL Collector binary
-RUN apt-get update && apt-get install -y wget ca-certificates && \
-    ARCH=$(dpkg --print-architecture) && \
-    case "$ARCH" in \
-        amd64) OTEL_ARCH="amd64" ;; \
-        arm64) OTEL_ARCH="arm64" ;; \
-        armhf) OTEL_ARCH="arm" ;; \
-        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
-    esac && \
-    wget -O /tmp/otelcol-contrib.deb "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_${OTEL_ARCH}.deb" && \
-    dpkg -i /tmp/otelcol-contrib.deb && \
-    rm /tmp/otelcol-contrib.deb
+# Install dependencies and copy OTEL Collector binary
+RUN apt-get update && apt-get install -y ca-certificates
+
+# Copy OTEL Collector binary from official image
+COPY --from=otelcol /otelcol-contrib /usr/local/bin/otelcol-contrib
+RUN chmod +x /usr/local/bin/otelcol-contrib
 
 RUN mkdir -p /etc/otel-collector
 
