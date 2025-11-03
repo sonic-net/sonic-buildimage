@@ -236,11 +236,13 @@ module sonic-vlan {
 				leaf-list dhcp_servers {
 					description "Configure the dhcp v4 servers";
 					type inet:ip-address;
+					ordered-by user;
 				}
 
 				leaf-list dhcpv6_servers {
 					description "Configure the dhcp v6 servers";
 					type inet:ipv6-address;
+					ordered-by user;
 				}
 
 				leaf mtu {
