@@ -105,6 +105,8 @@ stages:
     value: veos_vtb
   - name: testbed_file
     value: vtestbed.csv
+  - name: PTF_MODIFIED
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], 'false') ]
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
