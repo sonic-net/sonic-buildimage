@@ -579,19 +579,19 @@ class PddfParse():
             for attr in gpio_dev[line]['attr_list']:
                 ret = self.create_device(attr, "pddf/devices/multifpgapci/{}/gpio/line".format(bdf), ops)
                 if ret != 0:
-                    return ret
+                    return create_ret.append(ret)
 
             cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/line/create_line".format(bdf)
             ret = self.runcmd(cmd)
             if ret != 0:
-                return ret
+                return create_ret.append(ret)
 
         cmd = "echo 'init' > /sys/kernel/pddf/devices/multifpgapci/{}/gpio/create_chip".format(bdf)
         ret = self.runcmd(cmd)
         if ret != 0:
-            return ret
+            return create_ret.append(ret)
 
-        return 0
+        return create_ret.append(ret)
 
     #################################################################################################################################
     #   DELETE DEFS
