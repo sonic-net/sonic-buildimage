@@ -87,7 +87,7 @@
             "size":"0",
             "dynamic_th":"1"
         },
-        "ingress_lossy_profile": {
+        "ingress_lossy_port_profile": {
             "pool":"ingress_lossy_pool",
             "size":"0",
             "dynamic_th":"4"
@@ -107,7 +107,7 @@
             "size":"2048",
             "dynamic_th":"0"
         },
-        "ingress_lossy_pg_profile": {
+        "ingress_lossy_profile": {
             "pool":"ingress_lossy_pool",
             "size":"0",
             "dynamic_th":"0"
@@ -119,7 +119,7 @@
     "BUFFER_PORT_INGRESS_PROFILE_LIST": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}": {
-            "profile_list" : "ingress_lossless_profile,ingress_lossy_profile"
+            "profile_list" : "ingress_lossless_profile,ingress_lossy_port_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -128,7 +128,7 @@
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
 {% if dynamic_mode is defined %}
-            "profile_list" : "ingress_lossless_profile,ingress_lossy_profile"
+            "profile_list" : "ingress_lossless_profile,ingress_lossy_port_profile"
 {% else %}
             "profile_list" : "ingress_lossless_zero_profile,ingress_lossy_zero_profile"
 {% endif %}
@@ -228,7 +228,7 @@
         },
 {% endif %}
         "{{ port }}|0": {
-            "profile" : "ingress_lossy_pg_profile"
+            "profile" : "ingress_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -242,7 +242,7 @@
 {% endif %}
        "{{ port }}|0": {
 {% if dynamic_mode is defined %}
-            "profile" : "ingress_lossy_pg_profile"
+            "profile" : "ingress_lossy_profile"
 {% else %}
             "profile" : "ingress_lossy_pg_zero_profile"
 {% endif %}
