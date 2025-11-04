@@ -6,7 +6,7 @@ index 5c6941c2..4e9d4b3b 100644
          config_syncd_nephos
      elif [ "$SONIC_ASIC_TYPE" == "vs" ]; then
          config_syncd_vs
-+    elif [ "$SONIC_ASIC_TYPE" == "vs-hw" ]; then
++    elif [ "$SONIC_ASIC_TYPE" == "nokia-vs" ]; then
 +        config_syncd_vs
      elif [ "$SONIC_ASIC_TYPE" == "vpp" ]; then
          config_syncd_vpp
