@@ -56,6 +56,7 @@ module sonic-bgp-peerrange {
 
                 leaf-list ip_range {
                     type stypes:sonic-ip-prefix;
+                    ordered-by user;
                     description "A range of addresses";
                 }
             }

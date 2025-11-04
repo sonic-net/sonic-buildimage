@@ -256,7 +256,7 @@
                         "profile_name": "invalid_dummy",
                         "group_name": "BUFFER_POOL",
                         "object_names": "",
-                        "object_counters": ""
+                        "object_counters": []
                     }
                 ]
             }
@@ -279,7 +279,7 @@
                         "profile_name": "invalid_dummy",
                         "group_name": "PORT",
                         "object_names": [],
-                        "object_counters": []
+                        "object_counters": ""
                     }
                 ]
             }

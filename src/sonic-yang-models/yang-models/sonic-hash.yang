@@ -55,11 +55,13 @@ module sonic-hash {
                 leaf-list ecmp_hash {
                     description "Hash fields for hashing packets going through ECMP";
                     type hash:hash-field;
+                    ordered-by user;
                 }
 
                 leaf-list lag_hash  {
                     description "Hash fields for hashing packets going through LAG";
                     type hash:hash-field;
+                    ordered-by user;
                 }
 
                 leaf ecmp_hash_algorithm {

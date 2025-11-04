@@ -114,7 +114,7 @@ module sonic-ntp {
                             pattern 'eth0';
                         }
                     }
-
+                    ordered-by user;
                     description
                         "This is the interface whose IP address is used as the source IP address for
                          generating NTP traffic. User is required to make sure that the NTP server
