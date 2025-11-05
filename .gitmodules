@@ -132,7 +132,7 @@
 	url = https://github.com/sonic-net/sonic-platform-vpp.git
 [submodule "src/sonic-netconf-server"]
 	path = src/sonic-netconf-server
-	url = https://github.com/sonic-net/sonic-netconf-server
+	url = https://github.com/hussamsh/sonic-netconf
 [submodule "src/sonic-framework/gnoi"]
 	path = src/sonic-framework/gnoi
 	url = https://github.com/openconfig/gnoi
