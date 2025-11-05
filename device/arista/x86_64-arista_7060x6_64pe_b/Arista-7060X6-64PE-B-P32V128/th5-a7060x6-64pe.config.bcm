@@ -2,7 +2,7 @@
 # $Copyright: (c) 2022 Broadcom.
 # Broadcom Proprietary and Confidential. All rights reserved.$
 #
-# BCM78900 64x800g port configuration.
+# BCM78900 32x800g 128x200g port configuration.
 #
 # configuration yaml file
 #   device:
