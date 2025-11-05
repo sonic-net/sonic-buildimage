@@ -15,8 +15,6 @@ Call setup_fake_swsscommon() from a pytest fixture to inject
 the fake swsscommon module.
 """
 
-import sys
-
 from unittest.mock import Mock
 
 
@@ -70,14 +68,57 @@ class FakeTable:
         else:
             return False, {}
 
+    def getKeys(self) -> list[str]:
+        return list(self._global_db[self.db_name][self.table_name].keys())
 
-def setup_fake_swsscommon():
+
+class FakeSonicV2Connector:
+    APPL_DB = "APPL_DB"
+    CONFIG_DB = "CONFIG_DB"
+    STATE_DB = "STATE_DB"
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def connect(self, db):
+        pass
+
+    def get_redis_client(self, db):
+        return FakeDBConnector(db, 0)
+
+    def get(self, db, table_name, key, field):
+        client = self.get_redis_client(db)
+        table = FakeTable(client, table_name)
+        return table.get(key)[1].get(field, None)
+
+    def get_all(self, db, key):
+        parts = key.split("|")
+        if len(parts) != 2:
+            parts = key.split(":")
+        assert (
+            len(parts) == 2
+        ), f"Expected key to be formatted as 'TABLE_NAME|KEY_NAME' or 'TABLE_NAME:KEY_NAME', got '{key}'"
+
+        table_name, real_key = parts
+        db_connector = self.get_redis_client(db)
+        table = FakeTable(db_connector, table_name)
+        return table.get(real_key)[1]
+
+    def close(self, db):
+        pass
+
+
+def fake_swsscommon_modules():
     """
     Sets up mock swsscommon module that contains a fake, simpliflied
-    implementation of the database using an in-memory dictionary. 
+    implementation of the database using an in-memory dictionary.
     """
     swsscommon = Mock()
     swsscommon.swsscommon.DBConnector = FakeDBConnector
     swsscommon.swsscommon.FieldValuePairs = FakeFieldValuePairs
     swsscommon.swsscommon.Table = FakeTable
-    sys.modules["swsscommon"] = swsscommon
+    swsscommon.swsscommon.SonicV2Connector = FakeSonicV2Connector
+
+    # Table names
+    swsscommon.swsscommon.CFG_PORT_TABLE_NAME = "PORT"
+    return {"swsscommon": swsscommon, "swsscommon.swsscommon": swsscommon.swsscommon}

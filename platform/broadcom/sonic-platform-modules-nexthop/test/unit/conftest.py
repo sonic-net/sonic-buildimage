@@ -11,24 +11,20 @@ Unit tests run in isolation from the SONiC environment and require full mocks.
 
 import pytest
 import sys
+from unittest.mock import patch
 
-# Import common mocks that are safe for all test types
-import fixtures.mock_imports_common
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_unit_test_mocks():
-    """
-    Set up unit test mocks automatically for all unit tests.
+@pytest.fixture(scope="function", autouse=True)
+def patch_dependencies():
+    """Sets up mocked/faked dependencies for all unit tests.
+
     This fixture is automatically applied to all tests in the unit/ directory.
+    It uses function scope, so each testcase can override the mocked/faked modules if needed.
     """
-    # Only import and set up unit test mocks when actually running unit tests
-    from fixtures.mock_imports_unit_tests import setup_sonic_platform_mocks
+    from fixtures.mock_imports_unit_tests import dependencies_dict
 
-    # Set up the mocks
-    setup_sonic_platform_mocks()
-
-    yield
+    with patch.dict(sys.modules, dependencies_dict()):
+        # Keep the patch active while a testcase is running
+        yield
 
     # Cleanup is handled automatically by pytest session teardown
-
-from fixtures.fixtures_unit_test import *

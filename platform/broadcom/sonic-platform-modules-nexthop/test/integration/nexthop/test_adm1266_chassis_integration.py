@@ -2,46 +2,47 @@
 
 import pytest
 import sys
-from unittest.mock import Mock, patch, mock_open
-import os
 
-# Import test fixtures
-sys.path.insert(0, '../../fixtures')
-from fixtures_unit_test import Adm1266Mock
-
-
-@pytest.fixture
-def chassis():
-    """Create a mock chassis for integration testing."""
-    from unittest.mock import Mock
-
-    chassis_mock = Mock()
-    chassis_mock._blackbox = None  # Will be set by individual tests
-
-    def mock_get_reboot_cause():
-        if chassis_mock._blackbox is None:
-            return ('REBOOT_CAUSE_NON_HARDWARE', 'Unknown')
-
-        # Delegate to the ADM1266 mock
-        return chassis_mock._blackbox.get_reboot_cause()
-
-    chassis_mock.get_reboot_cause = mock_get_reboot_cause
-    return chassis_mock
+from fixtures.fake_swsscommon import fake_swsscommon_modules
+from fixtures.mock_imports_unit_tests import mock_syslog_modules
+from fixtures.test_helpers_adm1266 import Adm1266TestMixin
+from fixtures.test_helpers_chassis import setup_patch_for_chassis_init
+from unittest.mock import Mock, patch
 
 
-class TestAdm1266ChassisIntegration:
+@pytest.fixture(scope="module")
+def mock_unimportant_modules():
+    """Mock modules that aren't important for integration testing."""
+    modules = {}
+    modules["sonic_py_common"] = Mock()
+    modules["sonic_platform.dpm"] = Mock()
+    modules["sonic_platform.dpm"].SystemDPMLogHistory = Mock()
+    modules.update(mock_syslog_modules())
+    modules.update(fake_swsscommon_modules())
+
+    with patch.dict(sys.modules, modules):
+        yield
+
+
+@pytest.fixture(scope="module")
+def chassis_module(mock_unimportant_modules):
+    """Loads the module before all tests. This is to let conftest.py inject deps first."""
+    from sonic_platform import chassis
+
+    yield chassis
+
+
+class TestAdm1266ChassisIntegration(Adm1266TestMixin):
     """Integration tests for ADM1266 with chassis - reboot cause only."""
 
-    def test_clear_blackbox_integration(self, chassis):
-        """Test blackbox clearing through chassis interface."""
-        chassis._blackbox = Adm1266Mock()
+    def test_chassis_get_reboot_cause(self, chassis_module):
+        # Given
+        with setup_patch_for_chassis_init(self.get_pddf_plugin_data()):
+            chassis = chassis_module.Chassis()
 
-        # Initially has faults
-        fault_data = chassis.get_reboot_cause()
-        assert len(fault_data), "no fault data"
+            # When
+            reboot_cause = chassis.get_reboot_cause()
 
-        # Clear blackbox
-        chassis._blackbox.clear_blackbox()
-
-        # Should now show cleared state
-        assert chassis._blackbox.blackbox_cleared == True
+            # Then
+            assert reboot_cause[0] == "Hardware - Other"
+            assert reboot_cause[1] == ""
