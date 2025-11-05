@@ -3,7 +3,7 @@
 
 use sonic_supervisord_utilities_rs::{
     childutils,
-    supervisor_proc_exit_listener::*,
+    proc_exit_listener::*,
 };
 use swss_common::ConfigDBConnector;
 use injectorpp::interface::injector::*;
@@ -63,7 +63,7 @@ impl MockPoller {
     }
 }
 
-impl sonic_supervisord_utilities_rs::supervisor_proc_exit_listener::Poller for MockPoller {
+impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
     fn poll(&mut self, events: &mut mio::Events, _timeout: Option<std::time::Duration>) -> std::io::Result<()> {
         // We need to actually add an event to make the main loop detect stdin_ready = true
         // Since mio::Event is not easily constructible, we'll use a different approach
@@ -290,7 +290,7 @@ impl TestSupervisorListener {
         init_time_mocker(start_time);
         
         injector
-            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::supervisor_proc_exit_listener::get_current_time)() -> f64))
+            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::proc_exit_listener::get_current_time)() -> f64))
             .will_execute(injectorpp::fake!(
                 func_type: fn() -> f64,
                 returns: get_mock_time() // This will be called each time and return progressive time
@@ -385,7 +385,7 @@ impl TestSupervisorListener {
         init_time_mocker(start_time);
         
         injector
-            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::supervisor_proc_exit_listener::get_current_time)() -> f64))
+            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::proc_exit_listener::get_current_time)() -> f64))
             .will_execute(injectorpp::fake!(
                 func_type: fn() -> f64,
                 returns: get_mock_time() // Progressive time for alerting logic
@@ -546,7 +546,7 @@ mod tests {
         
         // Mock get_current_time to use our progressive time function
         injector
-            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::supervisor_proc_exit_listener::get_current_time)() -> f64))
+            .when_called(injectorpp::func!(fn (sonic_supervisord_utilities_rs::proc_exit_listener::get_current_time)() -> f64))
             .will_execute(injectorpp::fake!(
                 func_type: fn() -> f64,
                 returns: get_mock_time()  // This calls our progressive function

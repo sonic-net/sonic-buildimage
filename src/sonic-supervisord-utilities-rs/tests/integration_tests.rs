@@ -2,7 +2,7 @@
 
 use sonic_supervisord_utilities_rs::{
     childutils,
-    supervisor_proc_exit_listener::*,
+    proc_exit_listener::*,
 };
 use swss_common::ConfigDBConnector;
 use std::io::Write;
