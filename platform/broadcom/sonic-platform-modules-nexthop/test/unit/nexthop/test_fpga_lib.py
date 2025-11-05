@@ -8,20 +8,13 @@ import tempfile
 from dataclasses import dataclass
 from typing import Counter
 
-from nexthop.fpga_lib import (
-    find_pci_devices,
-    find_xilinx_fpgas,
-    get_resource_0_path,
-    read_32,
-    write_32,
-    compute_bitmask,
-    get_field,
-    overwrite_field,
-)
 
-CWD = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(CWD, "../"))
-sys.path.append(os.path.join(CWD, "../../"))
+@pytest.fixture(scope="function", autouse=True)
+def fpga_lib_module():
+    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    from nexthop import fpga_lib
+
+    yield fpga_lib
 
 
 @dataclass
@@ -80,7 +73,7 @@ def create_fake_pci_device(root: str, pci_device: PciDevice):
         ),
     ],
 )
-def test_find_pci_devices(target_vendor_id, target_device_id, pci_devices, expected):
+def test_find_pci_devices(fpga_lib_module, target_vendor_id, target_device_id, pci_devices, expected):
     # Given
     root = tempfile.mkdtemp(prefix="test_fpga_lib.")
     try:
@@ -89,7 +82,7 @@ def test_find_pci_devices(target_vendor_id, target_device_id, pci_devices, expec
             create_fake_pci_device(root, pci_device)
 
         # Then
-        pci_devices = find_pci_devices(target_vendor_id, target_device_id, root)
+        pci_devices = fpga_lib_module.find_pci_devices(target_vendor_id, target_device_id, root)
         assert Counter(pci_devices) == Counter(expected)
     finally:
         shutil.rmtree(root)
@@ -122,7 +115,7 @@ def test_find_pci_devices(target_vendor_id, target_device_id, pci_devices, expec
         ),
     ],
 )
-def test_find_xilinx_fpgas(pci_devices, expected):
+def test_find_xilinx_fpgas(fpga_lib_module, pci_devices, expected):
     # Given
     root = tempfile.mkdtemp(prefix="test_fpga_lib.")
     try:
@@ -131,52 +124,52 @@ def test_find_xilinx_fpgas(pci_devices, expected):
             create_fake_pci_device(root, pci_device)
 
         # Then
-        xilinx_devices = find_xilinx_fpgas(root)
+        xilinx_devices = fpga_lib_module.find_xilinx_fpgas(root)
         assert Counter(xilinx_devices) == Counter(expected)
     finally:
         shutil.rmtree(root)
 
 
 # file is initialized to zero
-def create_fake_resource0(pci_address: str, root: str):
-    resource_0_path = get_resource_0_path(pci_address, root=root)
+def create_fake_resource0(fpga_lib_module, pci_address: str, root: str):
+    resource_0_path = fpga_lib_module.get_resource_0_path(pci_address, root=root)
     os.makedirs(os.path.dirname(resource_0_path), exist_ok=True)
     with open(resource_0_path, "wb") as f:
         f.write(bytearray(0x100000))
 
 
-def do_test_read_write(root: str):
+def do_test_read_write(fpga_lib_module, root: str):
     pci_address = "0000:00:02.0"
-    create_fake_resource0(pci_address, root)
+    create_fake_resource0(fpga_lib_module, pci_address, root)
 
     # file is initially all zeroes
-    assert read_32(pci_address, offset=0x100000 - 4, root=root) == 0
-    assert read_32(pci_address, offset=0x0, root=root) == 0
-    assert read_32(pci_address, offset=0x4, root=root) == 0
-    assert read_32(pci_address, offset=0x8, root=root) == 0
-    assert read_32(pci_address, offset=0xC, root=root) == 0
+    assert fpga_lib_module.read_32(pci_address, offset=0x100000 - 4, root=root) == 0
+    assert fpga_lib_module.read_32(pci_address, offset=0x0, root=root) == 0
+    assert fpga_lib_module.read_32(pci_address, offset=0x4, root=root) == 0
+    assert fpga_lib_module.read_32(pci_address, offset=0x8, root=root) == 0
+    assert fpga_lib_module.read_32(pci_address, offset=0xC, root=root) == 0
 
-    write_32(pci_address, offset=0x100000 - 4, val=1, root=root)
-    write_32(pci_address, offset=0x0, val=2, root=root)
-    write_32(pci_address, offset=0x4, val=3, root=root)
-    write_32(pci_address, offset=0x8, val=4, root=root)
+    fpga_lib_module.write_32(pci_address, offset=0x100000 - 4, val=1, root=root)
+    fpga_lib_module.write_32(pci_address, offset=0x0, val=2, root=root)
+    fpga_lib_module.write_32(pci_address, offset=0x4, val=3, root=root)
+    fpga_lib_module.write_32(pci_address, offset=0x8, val=4, root=root)
     with pytest.raises(ValueError):  # Unaligned writes not allowed.
-        write_32(pci_address, offset=0xC - 1, val=0xDEADBEEF, root=root)
-    write_32(pci_address, offset=0xC, val=0xDEADBEEF, root=root)
+        fpga_lib_module.write_32(pci_address, offset=0xC - 1, val=0xDEADBEEF, root=root)
+    fpga_lib_module.write_32(pci_address, offset=0xC, val=0xDEADBEEF, root=root)
 
-    assert read_32(pci_address, offset=0x100000 - 4, root=root) == 1
-    assert read_32(pci_address, offset=0x0, root=root) == 2
-    assert read_32(pci_address, offset=0x4, root=root) == 3
-    assert read_32(pci_address, offset=0x8, root=root) == 4
-    assert read_32(pci_address, offset=0xC, root=root) == 0xDEADBEEF
+    assert fpga_lib_module.read_32(pci_address, offset=0x100000 - 4, root=root) == 1
+    assert fpga_lib_module.read_32(pci_address, offset=0x0, root=root) == 2
+    assert fpga_lib_module.read_32(pci_address, offset=0x4, root=root) == 3
+    assert fpga_lib_module.read_32(pci_address, offset=0x8, root=root) == 4
+    assert fpga_lib_module.read_32(pci_address, offset=0xC, root=root) == 0xDEADBEEF
 
 
-def test_read_write():
+def test_read_write(fpga_lib_module):
     root = tempfile.mkdtemp(prefix="test_fpga_lib.")
     try:
-        do_test_read_write(root)
+        do_test_read_write(fpga_lib_module, root)
     except AssertionError:
-        resource0_path = get_resource_0_path("0000:00:02.0", root=root)
+        resource0_path = fpga_lib_module.get_resource_0_path("0000:00:02.0", root=root)
         print(f"\nHexdump of {resource0_path}:")
         with open(resource0_path, "rb") as f:
             content = f.read()
@@ -195,46 +188,46 @@ def test_read_write():
         shutil.rmtree(root)
 
 
-def test_compute_bitmask():
+def test_compute_bitmask(fpga_lib_module):
     # Index: 10987654321098765432109876543210
-    assert 0b00000000000000000000000000000001 == compute_bitmask(0, 0)
-    assert 0b00000000000000000000000000000011 == compute_bitmask(0, 1)
-    assert 0b00000000000000000000000010000000 == compute_bitmask(7, 7)
-    assert 0b00000000000000000000001111111100 == compute_bitmask(2, 9)
-    assert 0b00000011111111111000000000000000 == compute_bitmask(15, 25)
-    assert 0b00000000000111111111110000000000 == compute_bitmask(10, 20)
-    assert 0b11000000000000000000000000000000 == compute_bitmask(30, 31)
-    assert 0b11111111111111111111111111111111 == compute_bitmask(0, 31)
+    assert 0b00000000000000000000000000000001 == fpga_lib_module.compute_bitmask(0, 0)
+    assert 0b00000000000000000000000000000011 == fpga_lib_module.compute_bitmask(0, 1)
+    assert 0b00000000000000000000000010000000 == fpga_lib_module.compute_bitmask(7, 7)
+    assert 0b00000000000000000000001111111100 == fpga_lib_module.compute_bitmask(2, 9)
+    assert 0b00000011111111111000000000000000 == fpga_lib_module.compute_bitmask(15, 25)
+    assert 0b00000000000111111111110000000000 == fpga_lib_module.compute_bitmask(10, 20)
+    assert 0b11000000000000000000000000000000 == fpga_lib_module.compute_bitmask(30, 31)
+    assert 0b11111111111111111111111111111111 == fpga_lib_module.compute_bitmask(0, 31)
 
 
-def test_get_field():
+def test_get_field(fpga_lib_module):
     # Index:           10987654321098765432109876543210
-    assert get_field(0b10110011100011110000111110000011, (0, 0)) == 0b1
-    assert get_field(0b10110011100011110000111110000011, (1, 2)) == 0b01
-    assert get_field(0b10110011100011110000111110000011, (0, 2)) == 0b011
-    assert get_field(0b10110011100011110000111110000011, (10, 16)) == 0b1000011
-    assert get_field(0b10110011100011110000111110000011, (25, 30)) == 0b011001
-    assert get_field(0b10110011100011110000111110000011, (31, 31)) == 0b1
-    assert get_field(0xDEADBEEF, (0, 31)) == 0xDEADBEEF
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (0, 0)) == 0b1
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (1, 2)) == 0b01
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (0, 2)) == 0b011
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (10, 16)) == 0b1000011
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (25, 30)) == 0b011001
+    assert fpga_lib_module.get_field(0b10110011100011110000111110000011, (31, 31)) == 0b1
+    assert fpga_lib_module.get_field(0xDEADBEEF, (0, 31)) == 0xDEADBEEF
 
 
-def test_overwrite_field():
-    assert overwrite_field(0xFFFFFFFF, (0, 31), field_val=0) == 0
-    assert overwrite_field(0b11111111, (0, 5), field_val=0) == 0b11000000
-    assert overwrite_field(0b11111111, (2, 4), field_val=0) == 0b11100011
-    assert overwrite_field(0b11111111, (3, 7), field_val=0) == 0b00000111
+def test_overwrite_field(fpga_lib_module):
+    assert fpga_lib_module.overwrite_field(0xFFFFFFFF, (0, 31), field_val=0) == 0
+    assert fpga_lib_module.overwrite_field(0b11111111, (0, 5), field_val=0) == 0b11000000
+    assert fpga_lib_module.overwrite_field(0b11111111, (2, 4), field_val=0) == 0b11100011
+    assert fpga_lib_module.overwrite_field(0b11111111, (3, 7), field_val=0) == 0b00000111
 
-    assert overwrite_field(0b11111111, (2, 4), field_val=0b010) == 0b11101011
-    assert overwrite_field(0b00000000, (2, 4), field_val=0b101) == 0b00010100
-    assert overwrite_field(0b00000000, (0, 7), field_val=0b11000101) == 0b11000101
+    assert fpga_lib_module.overwrite_field(0b11111111, (2, 4), field_val=0b010) == 0b11101011
+    assert fpga_lib_module.overwrite_field(0b00000000, (2, 4), field_val=0b101) == 0b00010100
+    assert fpga_lib_module.overwrite_field(0b00000000, (0, 7), field_val=0b11000101) == 0b11000101
 
-    assert overwrite_field(0b0, (0, 1), field_val=0b11) == 0b11
-    assert overwrite_field(0b0, (30, 31), field_val=0b11) == (0b11 << 30)
+    assert fpga_lib_module.overwrite_field(0b0, (0, 1), field_val=0b11) == 0b11
+    assert fpga_lib_module.overwrite_field(0b0, (30, 31), field_val=0b11) == (0b11 << 30)
 
 
-def test_overwrite_field_raises_when_value_exceed_bit_range():
+def test_overwrite_field_raises_when_value_exceed_bit_range(fpga_lib_module):
     with pytest.raises(
         ValueError,
         match=r"field_value \(0xff\) must be smaller than or equal to \(0x1f\)",
     ):
-        overwrite_field(0xFFFFFFFF, (0, 4), field_val=0xFF)
+        fpga_lib_module.overwrite_field(0xFFFFFFFF, (0, 4), field_val=0xFF)
