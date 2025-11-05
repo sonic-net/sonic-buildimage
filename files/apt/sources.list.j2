@@ -12,7 +12,11 @@ deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }} main contrib {
 deb-src [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }} main contrib {{ nonfree_component }}
 deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-updates main contrib {{ nonfree_component }}
 deb-src [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-updates main contrib {{ nonfree_component }}
+{% if DISTRIBUTION == 'bullseye' %}
+deb [arch={{ ARCHITECTURE }}] http://archive.debian.org/debian/ {{ DISTRIBUTION }}-backports main contrib {{ nonfree_component }}
+{% else %}
 deb [arch={{ ARCHITECTURE }}] {{ mirror_url }} {{ DISTRIBUTION }}-backports main contrib {{ nonfree_component }}
+{% endif %}
 {% endfor %}
 {% for mirror_url in MIRROR_SECURITY_URLS.split(',') %}
 {% set dist_separator='/' %}{% if 'packages.trafficmanager.net/debian' in mirror_url %}{% set dist_separator='_' %}{% endif %}
