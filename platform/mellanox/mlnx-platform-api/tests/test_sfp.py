@@ -302,7 +302,19 @@ class TestSfp:
         sfp = SFP(0)
         api = sfp.get_xcvr_api()
         assert api is None
-        mock_read.return_value = bytearray([0x18])
+
+        # Mock EEPROM reads with proper side_effect to handle different offsets
+        def eeprom_side_effect(offset, length):
+            if (offset, length) == (0, 1):
+                return bytearray([0x18])  # Module ID (CMIS)
+            if (offset, length) == (129, 16):
+                return b'INNOLIGHT       '  # Vendor name (padded to 16 bytes)
+            if (offset, length) == (148, 16):
+                return b'T-DL8CNT-NCI    '  # Vendor part number (padded to 16 bytes)
+            # Return zeros for any other reads
+            return bytearray([0] * length)
+
+        mock_read.side_effect = eeprom_side_effect
         api = sfp.get_xcvr_api()
         assert api is not None
 
