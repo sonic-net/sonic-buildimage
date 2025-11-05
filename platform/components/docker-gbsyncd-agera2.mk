@@ -2,10 +2,10 @@
 LIBSAI_AGERA2_VERSION = 3.14.0-1
 LIBSAI_AGERA2_BRANCH_NAME = REL_3.14
 
-LIBSAI_AGERA2_URL_PREFIX = "<Insert URL prefix here>"
+LIBSAI_AGERA2_URL_PREFIX = "https://packages.trafficmanager.net/public/sai/bcmpai/$(LIBSAI_AGERA2_BRANCH_NAME)/$(LIBSAI_AGERA2_VERSION)"
 
 # Runtime package`
-LIBSAI_AGERA2 = <sai_deb_file>.deb
+LIBSAI_AGERA2 = libsaiagera2_$(LIBSAI_AGERA2_VERSION)_amd64.deb
 $(LIBSAI_AGERA2)_URL = "$(LIBSAI_AGERA2_URL_PREFIX)/$(LIBSAI_AGERA2)"
 
 ifneq ($($(LIBSAI_AGERA2)_URL),)
