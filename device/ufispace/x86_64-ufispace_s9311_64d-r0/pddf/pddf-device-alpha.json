@@ -1154,66 +1154,66 @@
                 "attr_list": [
                     {
                         "attr_name": "fan1_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN0_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN0_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN0_PSNT_L",
+                        "field_name": "FAN0_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan2_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN0_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN0_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN0_PSNT_L",
+                        "field_name": "FAN0_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan3_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN1_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN1_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN1_PSNT_L",
+                        "field_name": "FAN1_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan4_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN1_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN1_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN1_PSNT_L",
+                        "field_name": "FAN1_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan5_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN2_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN2_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN2_PSNT_L",
+                        "field_name": "FAN2_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan6_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN2_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN2_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN2_PSNT_L",
+                        "field_name": "FAN2_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan7_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN3_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN3_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN3_PSNT_L",
+                        "field_name": "FAN3_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
                         "attr_name": "fan8_present",
-                        "bmc_cmd": "ipmitool sdr get -c FAN3_PSNT_L",
+                        "bmc_cmd": "ipmitool sdr get -c FAN3_PRSNT_L",
                         "raw": "0",
                         "separator": ",",
-                        "field_name": "FAN3_PSNT_L",
+                        "field_name": "FAN3_PRSNT_L",
                         "field_pos": "5"
                     },
                     {
