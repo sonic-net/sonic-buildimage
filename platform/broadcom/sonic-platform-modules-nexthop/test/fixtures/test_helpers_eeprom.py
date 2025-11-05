@@ -11,8 +11,6 @@ for EEPROM functionality. It helps avoid code duplication between test files.
 """
 
 import os
-import tempfile
-from typing import Dict
 
 
 # Constants
@@ -37,7 +35,7 @@ class EepromTestHelpers:
             f.write(bytearray([0xFF] * size))
 
     @staticmethod
-    def create_fake_i2c_device(device_name: str, file_to_content: Dict[str, str], root: str) -> None:
+    def create_fake_i2c_device(device_name: str, file_to_content: dict[str, str], root: str) -> None:
         """
         Create a fake I2C device directory structure for testing.
         
@@ -162,7 +160,7 @@ class EepromTestMixin:
         """Create a fake EEPROM file for testing."""
         return EepromTestHelpers.create_fake_eeprom(path_to_file, size)
 
-    def create_fake_i2c_device(self, device_name: str, file_to_content: Dict[str, str], root: str) -> None:
+    def create_fake_i2c_device(self, device_name: str, file_to_content: dict[str, str], root: str) -> None:
         """Create a fake I2C device directory structure for testing."""
         return EepromTestHelpers.create_fake_i2c_device(device_name, file_to_content, root)
 
