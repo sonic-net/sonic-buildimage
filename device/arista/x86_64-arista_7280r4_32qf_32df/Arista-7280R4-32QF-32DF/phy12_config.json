@@ -14,7 +14,7 @@
   ],
   "ports": [
     {
-      "index": 51,
+      "index": 57,
       "mdio_addr": "",
       "system_speed": 100000,
       "system_fec": "rs",
@@ -35,7 +35,7 @@
       "line_adver_media_type": "fiber"
     },
     {
-      "index": 52,
+      "index": 58,
       "mdio_addr": "",
       "system_speed": 100000,
       "system_fec": "rs",
