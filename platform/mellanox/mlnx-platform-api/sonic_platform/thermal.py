@@ -287,6 +287,9 @@ def create_discrete_thermal(rule, position):
     search_pattern = rule.get('search_pattern')
     index_pattern = rule.get('index_pattern')
     thermal_list = []
+    # Treat SODIMM discrete sensors as removable on Smart Switch platforms
+    dpus_present = bool(DeviceDataManager.get_platform_dpus_data()) or \
+        (DeviceDataManager.get_dpu_count() > 0)
     for file_path in glob.iglob(search_pattern):
         file_name = os.path.basename(file_path)
         match = re.search(index_pattern, file_name)
@@ -294,7 +297,22 @@ def create_discrete_thermal(rule, position):
             logger.log_error(f'Failed to extract index from {file_name} using pattern {index_pattern}')
             continue
         index = int(match.group(1))
-        thermal_list.append(create_indexable_thermal(rule, index - 1, CHASSIS_THERMAL_SYSFS_FOLDER, position))
+        presence_cb = None
+        if dpus_present:
+            # Build presence callback checking the exact SODIMM sysfs node
+            temp_path = os.path.join(
+                CHASSIS_THERMAL_SYSFS_FOLDER,
+                rule['temperature'].format(index)
+            )
+            presence_cb = (lambda path=temp_path: (os.path.exists(path), 'Not present'))
+
+        thermal_list.append(create_indexable_thermal(
+            rule,
+            index - 1,
+            CHASSIS_THERMAL_SYSFS_FOLDER,
+            position,
+            presence_cb
+        ))
         position += 1
     return thermal_list
 

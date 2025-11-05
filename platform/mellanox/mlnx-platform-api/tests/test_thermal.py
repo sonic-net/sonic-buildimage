@@ -228,3 +228,52 @@ class TestThermal:
 
         mock_read.return_value = None
         assert thermal.get_high_critical_threshold() is None
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_dpu_count', mock.MagicMock(return_value=1))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_dpus_data', mock.MagicMock(return_value={"dpu0": {}}))
+    @mock.patch('sonic_platform.thermal.glob.iglob', mock.MagicMock(return_value=['/run/hw-management/thermal/sodimm2_temp_input']))
+    @mock.patch('sonic_platform.thermal.logger')
+    @mock.patch('sonic_platform.utils.read_float_from_file')
+    @mock.patch('os.path.exists')
+    def test_sodimm_discrete_removable_on_smart_switch(self, mock_exists, mock_read, mock_logger):
+        from sonic_platform.thermal import THERMAL_NAMING_RULE, create_discrete_thermal, RemovableThermal
+
+        sodimm_rule = None
+        for rule in THERMAL_NAMING_RULE['chassis thermals']:
+            if rule.get('name') == 'SODIMM {} Temp':
+                sodimm_rule = rule
+                break
+        assert sodimm_rule is not None
+
+        # Absent first
+        mock_exists.return_value = False
+        thermals = create_discrete_thermal(sodimm_rule, position=1)
+        assert len(thermals) == 1
+        thermal = thermals[0]
+        assert isinstance(thermal, RemovableThermal)
+        assert thermal.get_temperature() is None
+        mock_read.assert_not_called()
+
+        # Present later
+        mock_exists.return_value = True
+        mock_read.return_value = 50000
+        assert thermal.get_temperature() == 50.0
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_dpu_count', mock.MagicMock(return_value=0))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_dpus_data', mock.MagicMock(return_value=None))
+    @mock.patch('sonic_platform.thermal.glob.iglob', mock.MagicMock(return_value=['/run/hw-management/thermal/sodimm1_temp_input']))
+    def test_sodimm_discrete_non_removable_on_non_smart_switch(self):
+        from sonic_platform.thermal import THERMAL_NAMING_RULE, create_discrete_thermal, Thermal, RemovableThermal
+
+        sodimm_rule = None
+        for rule in THERMAL_NAMING_RULE['chassis thermals']:
+            if rule.get('name') == 'SODIMM {} Temp':
+                sodimm_rule = rule
+                break
+        assert sodimm_rule is not None
+
+        thermals = create_discrete_thermal(sodimm_rule, position=1)
+        assert len(thermals) == 1
+        thermal = thermals[0]
+        assert isinstance(thermal, Thermal)
+        assert not isinstance(thermal, RemovableThermal)
