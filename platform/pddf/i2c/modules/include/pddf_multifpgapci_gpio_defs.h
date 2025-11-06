@@ -61,6 +61,7 @@ struct gpio_chip_attrs {
 	 sizeof(PDDF_ATTR))
 
 struct gpio_chip_drvdata {
+	struct kobject *gpio_kobj;
 	// pdata is passed to gpio platform driver.
 	struct pddf_multifpgapci_gpio_chip_pdata pdata;
 	// temp_line_data is mutated by sysfs attrs and copied to pdata.
