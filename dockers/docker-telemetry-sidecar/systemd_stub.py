@@ -25,6 +25,9 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
 NSENTER_BASE = ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net"]
+# CONFIG_DB reconcile env (kept simple, always uses role=gnmi_read when enabled)
+GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
+GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
 
 @dataclass(frozen=True)
 class SyncItem:
@@ -74,6 +77,72 @@ def run(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = No
 
 def run_nsenter(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = None) -> Tuple[int, str | bytes, str | bytes]:
     return run(NSENTER_BASE + args, text=text, input_bytes=input_bytes)
+
+
+## ───────────── CONFIG_DB reconcile (added) ─────────────
+def _db_hget(key: str, field: str) -> Optional[str]:
+    rc, out, _ = run_nsenter(["sonic-db-cli", "CONFIG_DB", "HGET", key, field], text=True)
+    if rc != 0:
+        return None
+    s = (out or "").strip()
+    return s if s else None
+
+def _db_hgetall(key: str) -> Optional[str]:
+    rc, out, _ = run_nsenter(["sonic-db-cli", "CONFIG_DB", "HGETALL", key], text=True)
+    if rc != 0:
+        return None
+    return (out or "").strip()
+
+def _db_hset(key: str, field: str, value: str) -> bool:
+    rc, _, _ = run_nsenter(["sonic-db-cli", "CONFIG_DB", "HSET", key, field, value], text=True)
+    return rc == 0
+
+def _db_del(key: str) -> bool:
+    rc, _, _ = run_nsenter(["sonic-db-cli", "CONFIG_DB", "DEL", key], text=True)
+    return rc == 0
+
+def _ensure_user_auth_cert() -> None:
+    cur = _db_hget("GNMI|gnmi", "user_auth")
+    if cur != "cert":
+        if _db_hset("GNMI|gnmi", "user_auth", "cert"):
+            logger.log_notice(f"Set GNMI|gnmi.user_auth=cert (was: {cur or '<unset>'})")
+        else:
+            logger.log_error("Failed to set GNMI|gnmi.user_auth=cert")
+
+def _ensure_cname_present(cname: str) -> None:
+    if not cname:
+        logger.log_warning("TELEMETRY_CLIENT_CNAME not set; skip CNAME creation")
+        return
+    key = f"GNMI_CLIENT_CERT|{cname}"
+    if not _db_hgetall(key):
+        if _db_hset(key, "role", "gnmi_read"):
+            logger.log_notice(f"Created {key} with role=gnmi_read")
+        else:
+            logger.log_error(f"Failed to create {key}")
+
+def _ensure_cname_absent(cname: str) -> None:
+    if not cname:
+        return
+    key = f"GNMI_CLIENT_CERT|{cname}"
+    if _db_hgetall(key):
+        if _db_del(key):
+            logger.log_notice(f"Removed {key}")
+        else:
+            logger.log_error(f"Failed to remove {key}")
+
+def reconcile_config_db_once() -> None:
+    """
+    Idempotent drift-correction for CONFIG_DB:
+      - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
+          * Ensure GNMI|gnmi.user_auth=cert
+          * Ensure GNMI_CLIENT_CERT|<CNAME> exists with role=gnmi_read
+      - When false: ensure the CNAME row is absent
+    """
+    if GNMI_VERIFY_ENABLED:
+        _ensure_user_auth_cert()
+        _ensure_cname_present(GNMI_CLIENT_CNAME)
+    else:
+        _ensure_cname_absent(GNMI_CLIENT_CNAME)
 
 
 def read_file_bytes_local(path: str) -> Optional[bytes]:
@@ -203,12 +272,22 @@ def main() -> int:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
 
+    # Reconcile CONFIG_DB before any file sync so auth is correct ASAP
+    try:
+        reconcile_config_db_once()
+    except Exception as e:
+        logger.log_error(f"CONFIG_DB reconcile failed: {e}")
+
     ok = ensure_sync()
     if args.once:
         return 0 if ok else 1
 
     while True:
         time.sleep(args.interval)
+        try:
+            reconcile_config_db_once()
+        except Exception as e:
+            logger.log_error(f"CONFIG_DB reconcile failed: {e}")
         ok = ensure_sync()
 
 if __name__ == "__main__":

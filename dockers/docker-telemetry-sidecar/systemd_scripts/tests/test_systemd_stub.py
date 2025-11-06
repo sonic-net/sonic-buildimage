@@ -2,13 +2,16 @@
 import sys
 import types
 import importlib
-from pathlib import Path
 
 import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
 def fake_logger_module():
+    """
+    Provide a lightweight fake for sonic_py_common.logger.Logger
+    so the module under test can import and use it without side effects.
+    """
     pkg = types.ModuleType("sonic_py_common")
     logger_mod = types.ModuleType("sonic_py_common.logger")
 
@@ -37,9 +40,10 @@ def fake_logger_module():
 def ss(tmp_path, monkeypatch):
     """
     Import systemd_stub fresh for every test, and provide fakes:
-      - run_nsenter: simulates a host FS + systemctl/docker calls
+      - run_nsenter: simulates a host FS + systemctl/docker calls + CONFIG_DB (sonic-db-cli)
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
+      - config_db: dict for CONFIG_DB contents (key -> {field: value})
     """
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
@@ -49,9 +53,60 @@ def ss(tmp_path, monkeypatch):
     host_fs = {}
     commands = []
 
+    # Fake CONFIG_DB (key -> dict(field -> value))
+    config_db = {}
+
+    def _db_hget(key: str, field: str):
+        return config_db.get(key, {}).get(field)
+
+    def _db_hgetall(key: str):
+        d = config_db.get(key)
+        if not d:
+            return ""
+        # Emulate a simple "field value ..." flattening
+        flat = []
+        for k, v in d.items():
+            flat.append(str(k))
+            flat.append(str(v))
+        return " ".join(flat)
+
+    def _db_hset(key: str, field: str, value: str):
+        config_db.setdefault(key, {})[field] = value
+        return "1"
+
+    def _db_del(key: str):
+        if key in config_db:
+            del config_db[key]
+            return "1"
+        return "0"
+
     # Fake run_nsenter
     def fake_run_nsenter(args, *, text=True, input_bytes=None):
         commands.append(("nsenter", tuple(args)))
+
+        # Handle CONFIG_DB via "sonic-db-cli CONFIG_DB <op> ..."
+        if args[:2] == ["sonic-db-cli", "CONFIG_DB"] and len(args) >= 3:
+            op = args[2]
+            if op == "HGET" and len(args) == 5:
+                key, field = args[3], args[4]
+                val = _db_hget(key, field)
+                if val is None:
+                    return 0, "" if text else b"", "" if text else b""
+                return 0, (val if text else val.encode()), "" if text else b""
+            if op == "HGETALL" and len(args) == 4:
+                key = args[3]
+                out = _db_hgetall(key)
+                return 0, (out if text else out.encode()), "" if text else b""
+            if op == "HSET" and len(args) == 6:
+                key, field, value = args[3], args[4], args[5]
+                _db_hset(key, field, value)
+                return 0, "1" if text else b"1", "" if text else b""
+            if op == "DEL" and len(args) == 4:
+                key = args[3]
+                out = _db_del(key)
+                return 0, (out if text else out.encode()), "" if text else b""
+            return 1, "" if text else b"", "unsupported" if text else b"unsupported"
+
         # /bin/cat <path>
         if args[:1] == ["/bin/cat"] and len(args) == 2:
             path = args[1]
@@ -59,11 +114,13 @@ def ss(tmp_path, monkeypatch):
                 out = host_fs[path]
                 return 0, (out if not text else out.decode("utf-8", "ignore")), b"" if not text else ""
             return 1, b"" if not text else "", b"No such file" if text else b"No such file"
+
         # /bin/sh -lc "cat > /tmp/xxx"
         if args[:2] == ["/bin/sh", "-lc"] and len(args) == 3 and args[2].startswith("cat > "):
             tmp_path = args[2].split("cat > ", 1)[1].strip()
             host_fs[tmp_path] = input_bytes or (b"" if text else b"")
             return 0, "" if text else b"", "" if text else b""
+
         # chmod / mkdir / mv / rm
         if args[:1] == ["/bin/chmod"]:
             return 0, "" if text else b"", "" if text else b""
@@ -78,15 +135,18 @@ def ss(tmp_path, monkeypatch):
             target = args[-1]
             host_fs.pop(target, None)
             return 0, "" if text else b"", "" if text else b""
-        # sudo …
+
+        # sudo … (post actions)
         if args[:1] == ["sudo"]:
             return 0, "" if text else b"", "" if text else b""
+
         return 1, "" if text else b"", "unsupported" if text else b"unsupported"
 
     monkeypatch.setattr(ss, "run_nsenter", fake_run_nsenter, raising=True)
 
     # Fake container FS
     container_fs = {}
+
     def fake_read_file_bytes_local(path: str):
         return container_fs.get(path, None)
 
@@ -95,7 +155,7 @@ def ss(tmp_path, monkeypatch):
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
 
-    return ss, container_fs, host_fs, commands
+    return ss, container_fs, host_fs, commands, config_db
 
 
 def test_sha256_bytes_basic():
@@ -108,7 +168,7 @@ def test_sha256_bytes_basic():
 
 
 def test_host_write_atomic_and_read(ss):
-    ss, container_fs, host_fs, commands = ss
+    ss, container_fs, host_fs, commands, config_db = ss
     ok = ss.host_write_atomic("/etc/testfile", b"hello", 0o755)
     assert ok
     data = ss.host_read_bytes("/etc/testfile")
@@ -121,7 +181,7 @@ def test_host_write_atomic_and_read(ss):
 
 
 def test_sync_no_change_fast_path(ss):
-    ss, container_fs, host_fs, commands = ss
+    ss, container_fs, host_fs, commands, config_db = ss
     item = ss.SyncItem("/container/telemetry.sh", "/host/telemetry.sh", 0o755)
     container_fs[item.src_in_container] = b"same"
     host_fs[item.dst_on_host] = b"same"
@@ -129,11 +189,12 @@ def test_sync_no_change_fast_path(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
+    # No write path used
     assert not any("/bin/sh" == c[1][0] and "-lc" in c[1] for c in commands)
 
 
 def test_sync_updates_and_post_actions(ss):
-    ss, container_fs, host_fs, commands = ss
+    ss, container_fs, host_fs, commands, config_db = ss
     item = ss.SyncItem("/container/container_checker", "/bin/container_checker", 0o755)
     container_fs[item.src_in_container] = b"NEW"
     host_fs[item.dst_on_host] = b"OLD"
@@ -154,7 +215,7 @@ def test_sync_updates_and_post_actions(ss):
 
 
 def test_sync_missing_src_returns_false(ss):
-    ss, container_fs, host_fs, commands = ss
+    ss, container_fs, host_fs, commands, config_db = ss
     item = ss.SyncItem("/container/missing.sh", "/usr/local/bin/telemetry.sh", 0o755)
     ss.SYNC_ITEMS[:] = [item]
     ok = ss.ensure_sync()
@@ -162,6 +223,7 @@ def test_sync_missing_src_returns_false(ss):
 
 
 def test_main_once_exits_zero_and_disables_post_actions(monkeypatch):
+    # Default GNMI_VERIFY_ENABLED is False at import ⇒ reconcile is a no-op; no nsenter needed.
     if "systemd_stub" in sys.modules:
         del sys.modules["systemd_stub"]
     ss = importlib.import_module("systemd_stub")
@@ -213,3 +275,36 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     ss = importlib.import_module("systemd_stub")
     assert ss.IS_V1_ENABLED is False
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
+
+
+# ─────────────────────────── New tests for CONFIG_DB reconcile ───────────────────────────
+
+def test_reconcile_enables_user_auth_and_cname(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+    # Set module-level flags directly (they're read at import time)
+    ss.GNMI_VERIFY_ENABLED = True
+    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+
+    # Precondition: empty DB
+    assert config_db == {}
+
+    ss.reconcile_config_db_once()
+
+    # user_auth must be set to 'cert'
+    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
+    # CNAME hash must exist with role=gnmi_read
+    cname_key = f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"
+    assert config_db.get(cname_key, {}).get("role") == "gnmi_read"
+
+
+def test_reconcile_disabled_removes_cname(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+    ss.GNMI_VERIFY_ENABLED = False
+    ss.GNMI_CLIENT_CNAME = "AME Infra CA o6"
+
+    # Seed an existing entry to be removed
+    config_db[f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"] = {"role": "gnmi_read"}
+
+    ss.reconcile_config_db_once()
+
+    assert f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}" not in config_db
