@@ -1,0 +1,70 @@
+module sonic-ztp {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-ztp";
+    prefix ztp;
+
+    description "ZTP YANG Module for SONiC OS";
+
+    revision 2025-04-03 {
+        description "First Revision";
+    }
+
+    container sonic-ztp {
+
+        container ZTP {
+
+            description "ZTP part of config_db.json used only temporarily during ZTP provisioning";
+
+            container mode {
+
+                leaf profile {
+                    type enumeration {
+                        enum active;
+                    }
+                    description "Whether or not ZTP is active";
+                }
+
+                leaf inband {
+                    type boolean;
+                    default true;
+                    description "If in-band ports are allowed to be used for ZTP";
+                }
+
+                leaf out-of-band {
+                    type boolean;
+                    default true;
+                    description "If out-of-band ports are allowed to be used for ZTP";
+                }
+
+                leaf ipv4 {
+                    type boolean;
+                    default true;
+                    description "If ipv4 is allowed to be used for ZTP";
+                }
+
+                leaf ipv6 {
+                    type boolean;
+                    default true;
+                    description "If ipv6 is allowed to be used for ZTP";
+                }
+
+                leaf product-name {
+                    type string;
+                    description "Product string as returned from decode-syseeprom -p";
+                }
+
+                leaf serial-no {
+                    type string;
+                    description "Serial number as returned from decode-syseeprom -s";
+                }
+
+            }
+            /* end of container mode */
+        }
+        /* end of container ZTP */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-ztp */
