@@ -53,7 +53,7 @@ def restart_dhcp_relay_service(db, ip_version):
     Restart dhcp_relay service
     """
     if(ip_version == IPV4 and check_sonic_dhcpv4_relay_flag(db)):
-        # if 'has_sonic_dhcpv4_relay' flag is present in FEATURE['dhcp_relay] and is 'true'
+        # if 'has_sonic_dhcpv4_relay' flag is present in DEVICE_METADATA['localhost'] and is 'true'
         return
     click.echo("Restarting DHCP relay service...")
     clicommon.run_command(['systemctl', 'stop', 'dhcp_relay'], display_cmd=False)
