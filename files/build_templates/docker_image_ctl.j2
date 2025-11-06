@@ -27,6 +27,19 @@ link_namespace() {
 }
 {%- endif %}
 
+{%- if docker_container_name == "pmon" %}
+get_pmon_device_mounts() {
+    local devregex="$(echo 'i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*' | sed -E 's#(^|\|)#\1/dev/#g')"
+    for device in $(find /dev/ -maxdepth 1 | grep -E "$devregex"); do
+        if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then
+            echo "--device=$device"
+        else
+            echo "--mount=type=bind,source=$device,destination=$device"
+        fi
+    done
+}
+{%- endif %}
+
 function updateSyslogConf()
 {
     # On multiNPU platforms, change the syslog target ip to docker0 ip to allow logs from containers
@@ -721,7 +734,7 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
-    $(for device in $(find /dev/ -maxdepth 1 | grep -E "$(echo 'i2c-[0-9]+|ipmi[0-9]+|sd[a-z]+|mmcblk[0-9].*|nvme[0-9].*|uio.*|watchdog[0-9]*' | sed -E 's#(^|\|)#\1/dev/#g')"); do if [ ! -L "$device" ] && [ -b "$device" -o -c "$device" ]; then echo "--device=$device"; else echo --mount=type=bind,source=$device,destination=$device; fi; done) \
+    $(get_pmon_device_mounts) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
