@@ -581,7 +581,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
 # Some scripts will check one file inside sonic_ctrmgmt_py3_wheel to detect include_kubernetes status
-rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
+sudo rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
 {% endif %}
 
 # Copy the buffer configuration template
