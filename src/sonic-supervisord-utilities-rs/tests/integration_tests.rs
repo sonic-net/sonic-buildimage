@@ -69,13 +69,13 @@ fn test_generate_alerting_message() {
     // Test generate_alerting_message function
     // This function should log the message (we can't easily test the actual logging)
     // but we can test that it doesn't panic and follows the expected format
-    generate_alerting_message("test_process", "not running", 5, 3); // LOG_ERR
-    generate_alerting_message("heartbeat_process", "stuck", 2, 4); // LOG_WARNING
-    
+    generate_alerting_message("test_process", "not running", 5, syslog::LOG_ERR);
+    generate_alerting_message("heartbeat_process", "stuck", 2, syslog::LOG_WARNING);
+
     // Test with namespace environment variables
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::set_var("NAMESPACE_ID", "0");
-    generate_alerting_message("test_process", "not running", 10, 3);
+    generate_alerting_message("test_process", "not running", 10, syslog::LOG_ERR);
     
     // Clean up
     std::env::remove_var("NAMESPACE_PREFIX");
@@ -153,21 +153,21 @@ fn test_namespace_detection() {
     // Test namespace detection logic within generate_alerting_message function
     // We can't directly test get_namespace() since it doesn't exist, but we can
     // test the behavior through generate_alerting_message
-    
+
     // Test default namespace (host) - should not panic
     std::env::remove_var("NAMESPACE_PREFIX");
     std::env::remove_var("NAMESPACE_ID");
-    generate_alerting_message("test_process", "not running", 5, 3);
+    generate_alerting_message("test_process", "not running", 5, syslog::LOG_ERR);
 
     // Test asic namespace - should not panic
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::set_var("NAMESPACE_ID", "0");
-    generate_alerting_message("test_process", "not running", 5, 3);
+    generate_alerting_message("test_process", "not running", 5, syslog::LOG_ERR);
 
     // Test partial namespace (should fallback to host) - should not panic
     std::env::set_var("NAMESPACE_PREFIX", "asic");
     std::env::remove_var("NAMESPACE_ID");
-    generate_alerting_message("test_process", "not running", 5, 3);
+    generate_alerting_message("test_process", "not running", 5, syslog::LOG_ERR);
 
     // Cleanup
     std::env::remove_var("NAMESPACE_PREFIX");
@@ -196,10 +196,10 @@ fn test_autorestart_state_checking() {
 fn test_alerting_message_generation() {
     // Test different message types and priorities - function logs but doesn't return string
     // Main test is that it doesn't panic with various inputs
-    generate_alerting_message("orchagent", "not running", 5, 3); // LOG_ERR
-    generate_alerting_message("portsyncd", "stuck", 10, 4); // LOG_WARNING
-    generate_alerting_message("test", "status", 0, 6); // LOG_INFO
-    generate_alerting_message("", "", 999, 1); // Edge case
+    generate_alerting_message("orchagent", "not running", 5, syslog::LOG_ERR);
+    generate_alerting_message("portsyncd", "stuck", 10, syslog::LOG_WARNING);
+    generate_alerting_message("test", "status", 0, syslog::LOG_INFO);
+    generate_alerting_message("", "", 999, syslog::LOG_ALERT); // Edge case
 }
 
 #[test]
@@ -278,11 +278,11 @@ fn test_edge_cases_and_boundary_conditions() {
 #[test]
 fn test_function_robustness() {
     // Test that functions handle edge cases without panicking
-    
+
     // Test generate_alerting_message with various inputs
-    generate_alerting_message("test", "status", 0, 3);
-    generate_alerting_message("", "", 999, 7);
-    generate_alerting_message("very_long_process_name_that_should_work", "some status", 60, 4);
+    generate_alerting_message("test", "status", 0, syslog::LOG_ERR);
+    generate_alerting_message("", "", 999, syslog::LOG_DEBUG);
+    generate_alerting_message("very_long_process_name_that_should_work", "some status", 60, syslog::LOG_WARNING);
     
     // Test get_current_time multiple calls
     let times: Vec<f64> = (0..5).map(|_| {

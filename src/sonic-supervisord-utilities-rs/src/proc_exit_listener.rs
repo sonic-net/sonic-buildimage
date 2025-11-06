@@ -4,8 +4,7 @@
 use crate::childutils;
 use clap::Parser;
 use log::{error, info, warn};
-use mio::{Events, Interest, Poll, Token};
-use mio::unix::SourceFd;
+use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
 use std::collections::HashMap;
@@ -17,6 +16,7 @@ use std::process;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
+use syslog::Severity;
 use thiserror::Error;
 
 // File paths
@@ -129,7 +129,7 @@ pub fn get_group_and_process_list(process_file: &str) -> Result<(Vec<String>, Ve
     let file = File::open(process_file)?;
     let reader = BufReader::new(file);
 
-    for (line_num, line) in reader.lines().enumerate() {
+    for (_line_num, line) in reader.lines().enumerate() {
         let line = line?;
         let line = line.trim();
         
@@ -161,7 +161,7 @@ pub fn get_group_and_process_list(process_file: &str) -> Result<(Vec<String>, Ve
 }
 
 /// Generate alerting message
-pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: i32) {
+pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes: u64, priority: Severity) {
     let namespace_prefix = std::env::var("NAMESPACE_PREFIX").unwrap_or_default();
     let namespace_id = std::env::var("NAMESPACE_ID").unwrap_or_default();
 
@@ -176,11 +176,11 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
         process_name, status, namespace, dead_minutes
     );
 
-    // Log with appropriate priority (matching syslog levels)
+    // Log with appropriate severity (matching syslog levels)
     match priority {
-        3 => error!("{}", message),    // LOG_ERR
-        4 => warn!("{}", message),     // LOG_WARNING
-        6 => info!("{}", message),     // LOG_INFO
+        Severity::LOG_ERR => error!("{}", message),
+        Severity::LOG_WARNING => warn!("{}", message),
+        Severity::LOG_INFO => info!("{}", message),
         _ => error!("{}", message),
     }
 }
@@ -497,8 +497,8 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                     let current_dead_minutes = process_info.get("dead_minutes").unwrap_or(&0.0);
                     let new_dead_minutes = current_dead_minutes + elapsed_mins as f64;
                     process_info.insert("dead_minutes".to_string(), new_dead_minutes);
-                    
-                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, 3); // LOG_ERR
+
+                    generate_alerting_message(process_name, "not running", new_dead_minutes as u64, Severity::LOG_ERR);
                 }
             }
         }
@@ -510,7 +510,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                 let threshold = get_heartbeat_alert_interval(process, config_db);
                 if threshold > 0.0 && elapsed_secs >= threshold {
                     let elapsed_mins = (elapsed_secs / 60.0) as u64;
-                    generate_alerting_message(process, "stuck", elapsed_mins, 4); // LOG_WARNING
+                    generate_alerting_message(process, "stuck", elapsed_mins, Severity::LOG_WARNING);
                 }
             }
         }
