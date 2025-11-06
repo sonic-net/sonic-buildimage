@@ -1,3 +1,20 @@
+# This file contains the command whitelists for read & write users using the gNOI Debug RPC in the
+# SONiC gNMI container.
+#
+# This is intended to provide an interface through which safe commands can be executed remotely
+# from an arbitrary client which implements the Debug RPC, communicating with the gNMI container.
+#
+# Read users should only be able to execute known safe commands, while write users should be able to
+# run a greater variety of commands which are able to affect the running state of a device. This enables
+# read users to diagnose issues with devices, while write users may also mitigate/resolve said issues,
+# without relying on SSH.
+#
+# The validation process ensures that unsafe command structures are not present (e.g. subshells)
+# to prevent bypassing these whitelists, and that each command is present in the whitelist for the user's
+# access level.
+#
+# See the [gNOI Debug Streaming RPC Design](https://github.com/openconfig/gnoi/tree/main/debug) for reference.
+
 read_whitelist:
   - ls
   - cat
