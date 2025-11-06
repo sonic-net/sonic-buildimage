@@ -1092,7 +1092,7 @@ device:
   0:
     PC_PORT:
       ?
-        PORT_ID: [50, 152]
+        PORT_ID: [152, 50]
       :
         ENABLE: 0
         SPEED: 10000
