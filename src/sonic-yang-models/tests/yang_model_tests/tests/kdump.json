@@ -17,6 +17,9 @@
     "KDUMP_WITH_VALID_MEM_OFFSET_2": {
         "desc": "Configuring the kdump with valid values and memory offset."
     },
+    "KDUMP_WITH_VALID_MEM_OFFSET_3": {
+        "desc": "Configuring the kdump with valid values and memory offset."
+    },
     "KDUMP_WITH_INVALID_NUM_DUMPS": {
         "desc": "Configuring kdump config with a invalid number of allowed kdumps.",
         "eStrKey": "Range"
