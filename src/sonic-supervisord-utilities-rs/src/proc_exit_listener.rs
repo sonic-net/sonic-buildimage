@@ -58,7 +58,7 @@ type Result<T> = std::result::Result<T, SupervisorError>;
 /// Trait for polling operations - allows for mocking in tests
 pub trait Poller {
     fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()>;
-    fn register(&self, stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()>;
+    fn register(&self, stdin_fd: std::os::unix::io::RawFd, token: Token) -> std::io::Result<()>;
 }
 
 /// Production implementation using mio::Poll
@@ -78,10 +78,10 @@ impl Poller for MioPoller {
     fn poll(&mut self, events: &mut mio::Events, timeout: Option<std::time::Duration>) -> std::io::Result<()> {
         self.0.poll(events, timeout)
     }
-    
-    fn register(&self, stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()> {
+
+    fn register(&self, stdin_fd: std::os::unix::io::RawFd, token: Token) -> std::io::Result<()> {
         let mut stdin_source = mio::unix::SourceFd(&stdin_fd);
-        self.0.registry().register(&mut stdin_source, mio::Token(0), mio::Interest::READABLE)
+        self.0.registry().register(&mut stdin_source, token, mio::Interest::READABLE)
     }
 }
 
@@ -335,7 +335,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
     
     // Register stdin for reading using the poller
     let stdin_fd = stdin.as_raw_fd();
-    poller.register(stdin_fd).map_err(|e| SupervisorError::Io(e))?;
+    poller.register(stdin_fd, STDIN_TOKEN).map_err(|e| SupervisorError::Io(e))?;
 
     let timeout = Duration::from_secs(SELECT_TIMEOUT_SECS);
 
