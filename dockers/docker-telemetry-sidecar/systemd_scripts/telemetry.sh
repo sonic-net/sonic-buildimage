@@ -2,6 +2,7 @@
 # 1. Runs as root via systemd service, so direct access to kubelet.conf is available; sudo is not required
 # 2. Use kubectl to get pods and delete pods with retry
 # 3. start/stop/restart are NON-BLOCKING
+# 4. Only target pods matching POD_SELECTOR (default: raw_container_name=telemetry)
 
 set -euo pipefail
 
@@ -12,6 +13,10 @@ REQ_TIMEOUT="5s"
 MAX_ATTEMPTS=10
 BACKOFF_START=1
 BACKOFF_MAX=8
+
+# Label selector for telemetry pods; can be overridden via env
+# Example override: POD_SELECTOR="app=telemetry" telemetry.sh start
+POD_SELECTOR="${POD_SELECTOR:-raw_container_name=telemetry}"
 
 NODE_NAME="$(hostname | tr '[:upper:]' '[:lower:]')"
 log() { /usr/bin/logger -t "k8s-podctl#system" "$*"; }
@@ -38,12 +43,14 @@ kubectl_retry() {
 pods_on_node() {
   kubectl_retry -n "${NS}" get pods \
     --field-selector "spec.nodeName=${NODE_NAME}" \
+    -l "${POD_SELECTOR}" \
     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' || true
 }
 
 pod_names_on_node() {
   kubectl_retry -n "${NS}" get pods \
     --field-selector "spec.nodeName=${NODE_NAME}" \
+    -l "${POD_SELECTOR}" \
     -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || true
 }
 
@@ -63,13 +70,13 @@ delete_pod_with_retry() {
 kill_pods() {
   mapfile -t names < <(pod_names_on_node)
   if (( ${#names[@]} == 0 )); then
-    log "No pods found on ${NODE_NAME} (ns=${NS})."
+    log "No pods found on ${NODE_NAME} (ns=${NS}, selector=${POD_SELECTOR})."
     return 0
   fi
 
-  log "Deleting pods on ${NODE_NAME}: ${names[*]}"
+  log "Deleting pods on ${NODE_NAME} (ns=${NS}, selector=${POD_SELECTOR}): ${names[*]}"
 
-  local rc_any=0 rc=0
+  local rc_any=0
   for p in "${names[@]}"; do
     [[ -z "$p" ]] && continue
     if ! delete_pod_with_retry "$p"; then
@@ -78,9 +85,9 @@ kill_pods() {
   done
 
   if (( rc_any != 0 )); then
-    log "ERROR one or more pod deletions failed on ${NODE_NAME}"
+    log "ERROR one or more pod deletions failed on ${NODE_NAME} (selector=${POD_SELECTOR})"
   else
-    log "All targeted pods deleted on ${NODE_NAME}"
+    log "All targeted pods deleted on ${NODE_NAME} (selector=${POD_SELECTOR})"
   fi
   return "$rc_any"
 }
@@ -100,13 +107,14 @@ cmd_start() {
   disown
   exit 0
 }
+
 cmd_stop()    { kill_pods; }
 cmd_restart() { kill_pods; }
 
 cmd_status() {
   local out=""; out="$(pods_on_node)"
   if [[ -z "$out" ]]; then
-    echo "NOT RUNNING (no pod on node ${NODE_NAME})"
+    echo "NOT RUNNING (no pod on node ${NODE_NAME} with selector '${POD_SELECTOR}')"
     exit 3
   fi
   while read -r name phase; do
@@ -121,7 +129,7 @@ cmd_status() {
 }
 
 cmd_wait() {
-  log "Waiting on pods (ns=${NS}) on node ${NODE_NAME})…"
+  log "Waiting on pods (ns=${NS}, selector=${POD_SELECTOR}) on node ${NODE_NAME}…"
   while true; do
     local out=""; out="$(pods_on_node)"
     if [[ -z "$out" ]]; then
