@@ -11,20 +11,27 @@ type MockClient struct {
 	mu sync.Mutex
 
 	// Mock behaviors
-	DownloadImageFunc    func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error
-	VerifyLocalImageFunc func(downloadPath, expectedMD5 string) (bool, error)
-	CloseFunc            func() error
+	DownloadImageFunc      func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error
+	TransferToRemoteFunc   func(ctx context.Context, sourceURL, remotePath string) error
+	VerifyLocalImageFunc   func(downloadPath, expectedMD5 string) (bool, error)
+	CloseFunc              func() error
 
 	// Call tracking
-	DownloadImageCalls    []DownloadImageCall
-	VerifyLocalImageCalls []VerifyLocalImageCall
-	CloseCalls            int
+	DownloadImageCalls      []DownloadImageCall
+	TransferToRemoteCalls   []TransferToRemoteCall
+	VerifyLocalImageCalls   []VerifyLocalImageCall
+	CloseCalls              int
 }
 
 type DownloadImageCall struct {
 	ImageURL     string
 	DownloadPath string
 	ExpectedMD5  string
+}
+
+type TransferToRemoteCall struct {
+	SourceURL  string
+	RemotePath string
 }
 
 type VerifyLocalImageCall struct {
@@ -36,6 +43,9 @@ type VerifyLocalImageCall struct {
 func NewMockClient() *MockClient {
 	return &MockClient{
 		DownloadImageFunc: func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
+			return nil
+		},
+		TransferToRemoteFunc: func(ctx context.Context, sourceURL, remotePath string) error {
 			return nil
 		},
 		VerifyLocalImageFunc: func(downloadPath, expectedMD5 string) (bool, error) {
@@ -58,6 +68,18 @@ func (m *MockClient) DownloadImage(ctx context.Context, imageURL, downloadPath, 
 	})
 
 	return m.DownloadImageFunc(ctx, imageURL, downloadPath, expectedMD5)
+}
+
+func (m *MockClient) TransferToRemote(ctx context.Context, sourceURL, remotePath string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.TransferToRemoteCalls = append(m.TransferToRemoteCalls, TransferToRemoteCall{
+		SourceURL:  sourceURL,
+		RemotePath: remotePath,
+	})
+
+	return m.TransferToRemoteFunc(ctx, sourceURL, remotePath)
 }
 
 func (m *MockClient) VerifyLocalImage(downloadPath, expectedMD5 string) (bool, error) {
@@ -102,6 +124,7 @@ func (m *MockClient) ResetCalls() {
 	defer m.mu.Unlock()
 
 	m.DownloadImageCalls = nil
+	m.TransferToRemoteCalls = nil
 	m.VerifyLocalImageCalls = nil
 	m.CloseCalls = 0
 }

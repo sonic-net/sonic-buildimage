@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/openconfig/gnoi/common"
+	"github.com/openconfig/gnoi/file"
 	"github.com/openconfig/gnoi/system"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,6 +19,8 @@ import (
 type Client interface {
 	// DownloadImage downloads a SONiC image to the specified path
 	DownloadImage(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error
+	// TransferToRemote transfers a file from URL to remote path using gnoi.file service
+	TransferToRemote(ctx context.Context, sourceURL, remotePath string) error
 	// VerifyLocalImage checks if a local file exists and matches the expected MD5
 	VerifyLocalImage(downloadPath, expectedMD5 string) (bool, error)
 	// Close closes the gRPC connection
@@ -28,6 +31,7 @@ type Client interface {
 type grpcClient struct {
 	conn       *grpc.ClientConn
 	systemConn system.SystemClient
+	fileConn   file.FileClient
 }
 
 // NewClient creates a new gNOI client
@@ -40,6 +44,7 @@ func NewClient(endpoint string) (Client, error) {
 	return &grpcClient{
 		conn:       conn,
 		systemConn: system.NewSystemClient(conn),
+		fileConn:   file.NewFileClient(conn),
 	}, nil
 }
 
@@ -104,6 +109,42 @@ func (c *grpcClient) DownloadImage(ctx context.Context, imageURL, downloadPath, 
 		}
 		klog.InfoS("Downloaded image MD5 verified", "md5", expectedMD5)
 	}
+
+	return nil
+}
+
+// TransferToRemote transfers a file from URL to remote path using gnoi.file service
+func (c *grpcClient) TransferToRemote(ctx context.Context, sourceURL, remotePath string) error {
+	klog.InfoS("Starting file transfer via gNOI file service",
+		"sourceURL", sourceURL,
+		"remotePath", remotePath)
+
+	// Check if DRY_RUN mode
+	if os.Getenv("DRY_RUN") == "true" {
+		klog.InfoS("DRY_RUN: Would transfer file via gNOI file.TransferToRemote",
+			"sourceURL", sourceURL,
+			"remotePath", remotePath)
+		return nil
+	}
+
+	// Create TransferToRemote request
+	req := &file.TransferToRemoteRequest{
+		LocalPath: remotePath,
+		RemoteDownload: &common.RemoteDownload{
+			Path:     sourceURL,
+			Protocol: common.RemoteDownload_HTTP,
+		},
+	}
+
+	// Execute the transfer
+	resp, err := c.fileConn.TransferToRemote(ctx, req)
+	if err != nil {
+		return fmt.Errorf("file transfer failed: %w", err)
+	}
+
+	klog.InfoS("File transfer completed successfully",
+		"response", resp.String(),
+		"remotePath", remotePath)
 
 	return nil
 }

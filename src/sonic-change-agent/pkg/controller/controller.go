@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sonic-net/sonic-buildimage/src/sonic-change-agent/pkg/gnoi"
+	"github.com/sonic-net/sonic-buildimage/src/sonic-change-agent/pkg/workflow"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -136,7 +137,16 @@ func (c *Controller) reconcile(obj interface{}) {
 		return
 	}
 
-	// Extract spec fields
+	// Extract workflow type (default to "preload")
+	workflowSpec, _, _ := unstructured.NestedMap(u.Object, "spec", "workflow")
+	workflowType := "preload" // default
+	if workflowSpec != nil {
+		if wt, found, _ := unstructured.NestedString(workflowSpec, "type"); found && wt != "" {
+			workflowType = wt
+		}
+	}
+
+	// Extract spec fields for reconciliation check
 	spec, found, err := unstructured.NestedMap(u.Object, "spec", "os")
 	if !found || err != nil {
 		klog.ErrorS(err, "Failed to get spec.os", "found", found)
@@ -144,15 +154,6 @@ func (c *Controller) reconcile(obj interface{}) {
 	}
 
 	desiredVersion, _, _ := unstructured.NestedString(spec, "desiredVersion")
-	imageURL, _, _ := unstructured.NestedString(spec, "imageURL")
-	downloadPath, _, _ := unstructured.NestedString(spec, "downloadPath")
-	if downloadPath == "" {
-		downloadPath = defaultDownloadPath
-	}
-
-	// Extract checksum if provided
-	checksum, _, _ := unstructured.NestedMap(spec, "checksum")
-	expectedMD5, _, _ := unstructured.NestedString(checksum, "md5")
 
 	// Extract status fields
 	status, found, err := unstructured.NestedMap(u.Object, "status", "downloadStatus")
@@ -167,11 +168,9 @@ func (c *Controller) reconcile(obj interface{}) {
 	}
 
 	klog.InfoS("Reconciliation state",
+		"workflowType", workflowType,
 		"desiredVersion", desiredVersion,
-		"downloadedVersion", downloadedVersion,
-		"imageURL", imageURL,
-		"downloadPath", downloadPath,
-		"expectedMD5", expectedMD5)
+		"downloadedVersion", downloadedVersion)
 
 	// Check if reconciliation needed
 	if desiredVersion == downloadedVersion && downloadedVersion != "" {
@@ -180,43 +179,36 @@ func (c *Controller) reconcile(obj interface{}) {
 		return
 	}
 
-	// Check if file already exists with correct MD5
-	if expectedMD5 != "" {
-		matches, err := c.gnoiClient.VerifyLocalImage(downloadPath, expectedMD5)
-		if err != nil {
-			klog.ErrorS(err, "Failed to verify local image")
-		} else if matches {
-			klog.InfoS("Local image already exists and matches expected MD5",
-				"path", downloadPath,
-				"md5", expectedMD5)
-			c.updateStatus(u, "Succeeded", "Image already present with correct checksum", desiredVersion, expectedMD5)
-			return
-		}
+	// Create workflow
+	wf, err := workflow.NewWorkflow(workflowType, c.gnoiClient)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create workflow", "type", workflowType)
+		c.updateStatus(u, "Failed", fmt.Sprintf("Failed to create workflow: %v", err), "", "")
+		return
 	}
 
-	// Perform download
-	klog.InfoS("Starting image download reconciliation",
-		"desiredVersion", desiredVersion,
-		"imageURL", imageURL,
-		"downloadPath", downloadPath)
+	// Execute workflow
+	klog.InfoS("Starting workflow execution",
+		"workflowType", workflowType,
+		"desiredVersion", desiredVersion)
 
-	c.updateStatus(u, "Downloading", "Downloading image via gNOI", "", "")
+	c.updateStatus(u, "Downloading", fmt.Sprintf("Executing %s workflow", workflowType), "", "")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	err = c.gnoiClient.DownloadImage(ctx, imageURL, downloadPath, expectedMD5)
+	err = wf.Execute(ctx, u)
 	if err != nil {
-		klog.ErrorS(err, "Failed to download image")
-		c.updateStatus(u, "Failed", fmt.Sprintf("Download failed: %v", err), "", "")
+		klog.ErrorS(err, "Workflow execution failed", "type", workflowType)
+		c.updateStatus(u, "Failed", fmt.Sprintf("Workflow failed: %v", err), "", "")
 		return
 	}
 
-	klog.InfoS("Image download completed successfully",
-		"desiredVersion", desiredVersion,
-		"downloadPath", downloadPath)
+	klog.InfoS("Workflow execution completed successfully",
+		"workflowType", workflowType,
+		"desiredVersion", desiredVersion)
 
-	c.updateStatus(u, "Succeeded", "Image downloaded successfully", desiredVersion, expectedMD5)
+	c.updateStatus(u, "Succeeded", "Workflow completed successfully", desiredVersion, "")
 }
 
 // updateStatus updates the NetworkDevice status

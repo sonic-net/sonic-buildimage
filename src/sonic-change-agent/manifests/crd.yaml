@@ -16,6 +16,14 @@ spec:
             type: object
             required: ["os"]
             properties:
+              workflow:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    default: "preload"
+                    enum: ["preload"]
+                    description: "Type of workflow to execute"
               os:
                 type: object
                 required: ["desiredVersion", "imageURL"]
