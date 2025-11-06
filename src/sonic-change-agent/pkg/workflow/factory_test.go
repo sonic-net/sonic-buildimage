@@ -23,6 +23,23 @@ func TestNewWorkflow_Preload(t *testing.T) {
 	}
 }
 
+func TestNewWorkflow_OSUpgradePreloadImage(t *testing.T) {
+	mockClient := gnoi.NewMockClient()
+	
+	workflow, err := NewWorkflow("OSUpgrade-PreloadImage", mockClient)
+	if err != nil {
+		t.Fatalf("Expected no error for 'OSUpgrade-PreloadImage' workflow, got: %v", err)
+	}
+	
+	if workflow == nil {
+		t.Fatal("Expected workflow to be created, got nil")
+	}
+	
+	if workflow.GetName() != "preload" {
+		t.Errorf("Expected workflow name 'preload' (implementation), got '%s'", workflow.GetName())
+	}
+}
+
 func TestNewWorkflow_UnknownType(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 	

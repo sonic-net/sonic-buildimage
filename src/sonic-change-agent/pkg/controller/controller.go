@@ -58,7 +58,7 @@ func NewController(deviceName string, gnoiClient gnoi.Client, kubeConfig *rest.C
 // setupInformer creates the informer for NetworkDevice CRDs
 func (c *Controller) setupInformer() error {
 	gvr := schema.GroupVersionResource{
-		Group:    "sonic.io",
+		Group:    "sonic.k8s.io",
 		Version:  "v1",
 		Resource: "networkdevices",
 	}
@@ -137,100 +137,113 @@ func (c *Controller) reconcile(obj interface{}) {
 		return
 	}
 
-	// Extract workflow type (default to "preload")
-	workflowSpec, _, _ := unstructured.NestedMap(u.Object, "spec", "workflow")
-	workflowType := "preload" // default
-	if workflowSpec != nil {
-		if wt, found, _ := unstructured.NestedString(workflowSpec, "type"); found && wt != "" {
-			workflowType = wt
+	// Extract spec fields
+	deviceType, _, _ := unstructured.NestedString(u.Object, "spec", "type")
+	osVersion, _, _ := unstructured.NestedString(u.Object, "spec", "osVersion")
+	firmwareProfile, _, _ := unstructured.NestedString(u.Object, "spec", "firmwareProfile")
+	operation, _, _ := unstructured.NestedString(u.Object, "spec", "operation")
+	operationAction, _, _ := unstructured.NestedString(u.Object, "spec", "operationAction")
+
+	// Extract status fields
+	currentOSVersion, _, _ := unstructured.NestedString(u.Object, "status", "osVersion")
+	operationState, _, _ := unstructured.NestedString(u.Object, "status", "operationState")
+	operationActionState, _, _ := unstructured.NestedString(u.Object, "status", "operationActionState")
+
+	klog.InfoS("Reconciliation state",
+		"deviceType", deviceType,
+		"osVersion", osVersion,
+		"firmwareProfile", firmwareProfile,
+		"currentOSVersion", currentOSVersion,
+		"operation", operation,
+		"operationAction", operationAction,
+		"operationState", operationState,
+		"operationActionState", operationActionState)
+
+	// Check if reconciliation needed
+	// Skip if no operation or if operation is already in completed state
+	if operation == "" {
+		klog.InfoS("No operation specified, skipping reconciliation")
+		return
+	}
+
+	// For OSUpgrade operations, check if we need to take action
+	if operation == "OSUpgrade" && operationAction == "PreloadImage" {
+		if operationActionState == "completed" {
+			klog.InfoS("PreloadImage already completed, skipping reconciliation")
+			return
+		}
+		if operationState != "proceed" && operationState != "" {
+			klog.InfoS("Operation state not ready for action", "operationState", operationState)
+			return
 		}
 	}
 
-	// Extract spec fields for reconciliation check
-	spec, found, err := unstructured.NestedMap(u.Object, "spec", "os")
-	if !found || err != nil {
-		klog.ErrorS(err, "Failed to get spec.os", "found", found)
-		return
-	}
-
-	desiredVersion, _, _ := unstructured.NestedString(spec, "desiredVersion")
-
-	// Extract status fields
-	status, found, err := unstructured.NestedMap(u.Object, "status", "downloadStatus")
-	if err != nil {
-		klog.ErrorS(err, "Failed to get status.downloadStatus")
-		return
-	}
-
-	var downloadedVersion string
-	if found && status != nil {
-		downloadedVersion, _, _ = unstructured.NestedString(status, "downloadedVersion")
-	}
-
-	klog.InfoS("Reconciliation state",
-		"workflowType", workflowType,
-		"desiredVersion", desiredVersion,
-		"downloadedVersion", downloadedVersion)
-
-	// Check if reconciliation needed
-	if desiredVersion == downloadedVersion && downloadedVersion != "" {
-		klog.InfoS("No reconciliation needed - versions match",
-			"version", desiredVersion)
-		return
-	}
-
-	// Create workflow
+	// Create workflow based on operation and operationAction
+	workflowType := fmt.Sprintf("%s-%s", operation, operationAction)
 	wf, err := workflow.NewWorkflow(workflowType, c.gnoiClient)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create workflow", "type", workflowType)
-		c.updateStatus(u, "Failed", fmt.Sprintf("Failed to create workflow: %v", err), "", "")
+		c.updateOperationStatus(u, "failed", "failed", fmt.Sprintf("Failed to create workflow: %v", err))
 		return
 	}
 
 	// Execute workflow
 	klog.InfoS("Starting workflow execution",
-		"workflowType", workflowType,
-		"desiredVersion", desiredVersion)
+		"operation", operation,
+		"operationAction", operationAction,
+		"osVersion", osVersion)
 
-	c.updateStatus(u, "Downloading", fmt.Sprintf("Executing %s workflow", workflowType), "", "")
+	c.updateOperationStatus(u, "in_progress", "in_progress", fmt.Sprintf("Executing %s %s", operation, operationAction))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	err = wf.Execute(ctx, u)
 	if err != nil {
-		klog.ErrorS(err, "Workflow execution failed", "type", workflowType)
-		c.updateStatus(u, "Failed", fmt.Sprintf("Workflow failed: %v", err), "", "")
+		klog.ErrorS(err, "Workflow execution failed", "operation", operation, "operationAction", operationAction)
+		c.updateOperationStatus(u, "failed", "failed", fmt.Sprintf("Workflow failed: %v", err))
 		return
 	}
 
 	klog.InfoS("Workflow execution completed successfully",
-		"workflowType", workflowType,
-		"desiredVersion", desiredVersion)
+		"operation", operation,
+		"operationAction", operationAction,
+		"osVersion", osVersion)
 
-	c.updateStatus(u, "Succeeded", "Workflow completed successfully", desiredVersion, "")
+	c.updateOperationStatus(u, "completed", "completed", "Workflow completed successfully")
 }
 
-// updateStatus updates the NetworkDevice status
-func (c *Controller) updateStatus(u *unstructured.Unstructured, phase, message, downloadedVersion, downloadedChecksum string) {
-	// Build status object
-	statusUpdate := map[string]interface{}{
-		"downloadStatus": map[string]interface{}{
-			"phase":           phase,
-			"message":         message,
-			"lastAttemptTime": time.Now().Format(time.RFC3339),
-		},
+// updateOperationStatus updates the NetworkDevice operation status
+func (c *Controller) updateOperationStatus(u *unstructured.Unstructured, operationState, operationActionState, message string) {
+	// Get current status or create new one
+	currentStatus, _, _ := unstructured.NestedMap(u.Object, "status")
+	if currentStatus == nil {
+		currentStatus = make(map[string]interface{})
 	}
 
-	if downloadedVersion != "" {
-		statusUpdate["downloadStatus"].(map[string]interface{})["downloadedVersion"] = downloadedVersion
+	// Update operation states
+	if operationState != "" {
+		currentStatus["operationState"] = operationState
 	}
-	if downloadedChecksum != "" {
-		statusUpdate["downloadStatus"].(map[string]interface{})["downloadedChecksum"] = downloadedChecksum
+	if operationActionState != "" {
+		currentStatus["operationActionState"] = operationActionState
+	}
+	currentStatus["lastTransitionTime"] = time.Now().Format(time.RFC3339)
+
+	// Set overall device state based on operation state
+	switch operationState {
+	case "completed":
+		currentStatus["state"] = "Healthy"
+	case "failed":
+		currentStatus["state"] = "Failed"
+	case "in_progress":
+		currentStatus["state"] = "Updating"
+	default:
+		currentStatus["state"] = "Unknown"
 	}
 
 	// Update status subresource
-	if err := unstructured.SetNestedMap(u.Object, statusUpdate, "status"); err != nil {
+	if err := unstructured.SetNestedMap(u.Object, currentStatus, "status"); err != nil {
 		klog.ErrorS(err, "Failed to set status")
 		return
 	}
@@ -238,26 +251,26 @@ func (c *Controller) updateStatus(u *unstructured.Unstructured, phase, message, 
 	// Skip actual API call if dynamicClient is nil (for unit tests)
 	if c.dynamicClient == nil {
 		klog.InfoS("Skipping status update (no dynamic client - unit test mode)",
-			"phase", phase,
-			"message", message,
-			"downloadedVersion", downloadedVersion)
+			"operationState", operationState,
+			"operationActionState", operationActionState,
+			"message", message)
 		return
 	}
 
 	gvr := schema.GroupVersionResource{
-		Group:    "sonic.io",
+		Group:    "sonic.k8s.io",
 		Version:  "v1",
 		Resource: "networkdevices",
 	}
 
 	_, err := c.dynamicClient.Resource(gvr).Namespace(u.GetNamespace()).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update status", "phase", phase, "message", message)
+		klog.ErrorS(err, "Failed to update status", "operationState", operationState, "operationActionState", operationActionState, "message", message)
 		return
 	}
 
-	klog.InfoS("Status updated successfully",
-		"phase", phase,
-		"message", message,
-		"downloadedVersion", downloadedVersion)
+	klog.InfoS("Operation status updated successfully",
+		"operationState", operationState,
+		"operationActionState", operationActionState,
+		"message", message)
 }

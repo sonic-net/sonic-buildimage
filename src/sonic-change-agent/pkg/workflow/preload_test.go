@@ -21,14 +21,12 @@ func TestPreloadWorkflow_Execute(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 	workflow := NewPreloadWorkflow(mockClient)
 
-	// Create a mock device with required fields
+	// Create a mock device with new CRD structure
 	device := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"imageURL":     "http://example.com/image.bin",
-					"downloadPath": "/tmp/test-image.bin",
-				},
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
 			},
 		},
 	}
@@ -45,42 +43,62 @@ func TestPreloadWorkflow_Execute(t *testing.T) {
 	}
 
 	call := mockClient.TransferToRemoteCalls[0]
-	if call.SourceURL != "http://example.com/image.bin" {
-		t.Errorf("Expected sourceURL 'http://example.com/image.bin', got '%s'", call.SourceURL)
+	expectedURL := "http://image-repo.example.com/sonic-202505.01-SONiC-Mellanox-2700-ToRRouter-Storage.bin"
+	if call.SourceURL != expectedURL {
+		t.Errorf("Expected sourceURL '%s', got '%s'", expectedURL, call.SourceURL)
 	}
-	if call.RemotePath != "/tmp/test-image.bin" {
-		t.Errorf("Expected remotePath '/tmp/test-image.bin', got '%s'", call.RemotePath)
+	if call.RemotePath != "/tmp/sonic-image.bin" {
+		t.Errorf("Expected remotePath '/tmp/sonic-image.bin', got '%s'", call.RemotePath)
 	}
 }
 
-func TestPreloadWorkflow_Execute_DefaultPath(t *testing.T) {
+func TestPreloadWorkflow_Execute_MissingOSVersion(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 	workflow := NewPreloadWorkflow(mockClient)
 
-	// Create a mock device without downloadPath (should use default)
+	// Create a mock device without osVersion
 	device := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"imageURL": "http://example.com/image.bin",
-				},
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
 			},
 		},
 	}
 
 	// Execute workflow
 	err := workflow.Execute(context.Background(), device)
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+	if err == nil {
+		t.Fatalf("Expected error for missing osVersion, got nil")
 	}
 
-	// Verify default path was used
-	if len(mockClient.TransferToRemoteCalls) != 1 {
-		t.Fatalf("Expected 1 TransferToRemote call, got %d", len(mockClient.TransferToRemoteCalls))
+	// Verify no transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
+	}
+}
+
+func TestPreloadWorkflow_Execute_EmptyOSVersion(t *testing.T) {
+	mockClient := gnoi.NewMockClient()
+	workflow := NewPreloadWorkflow(mockClient)
+
+	// Create a mock device with empty osVersion
+	device := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"spec": map[string]interface{}{
+				"osVersion":       "",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+			},
+		},
 	}
 
-	call := mockClient.TransferToRemoteCalls[0]
-	if call.RemotePath != "/tmp/sonic-image.bin" {
-		t.Errorf("Expected default remotePath '/tmp/sonic-image.bin', got '%s'", call.RemotePath)
+	// Execute workflow
+	err := workflow.Execute(context.Background(), device)
+	if err == nil {
+		t.Fatalf("Expected error for empty osVersion, got nil")
+	}
+
+	// Verify no transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }

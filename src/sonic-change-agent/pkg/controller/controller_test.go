@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func TestReconcile_NoReconciliationNeeded(t *testing.T) {
+func TestReconcile_NoReconciliationNeeded_NoOperation(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
 	// Create controller (we'll call reconcile directly, not through informer)
@@ -19,44 +19,41 @@ func TestReconcile_NoReconciliationNeeded(t *testing.T) {
 		gnoiClient: mockClient,
 	}
 
-	// Create NetworkDevice object where spec matches status
+	// Create NetworkDevice object without operation
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.01",
-					"imageURL":       "http://example.com/sonic.bin",
-				},
+				"type":            "leafRouter",
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
 			},
 			"status": map[string]interface{}{
-				"downloadStatus": map[string]interface{}{
-					"downloadedVersion": "202511.01",
-					"phase":             "Succeeded",
-				},
+				"state":     "Healthy",
+				"osVersion": "202505.01",
 			},
 		},
 	}
 
-	// Reconcile should do nothing since versions match
+	// Reconcile should do nothing since no operation is specified
 	ctrl.reconcile(obj)
 
-	// Verify no download was attempted
-	if mockClient.GetDownloadImageCallCount() != 0 {
-		t.Errorf("Expected 0 DownloadImage calls, got %d", mockClient.GetDownloadImageCallCount())
+	// Verify no workflow execution was attempted
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }
 
-func TestReconcile_DownloadNeeded(t *testing.T) {
+func TestReconcile_PreloadImage_Success(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
-	// Mock successful download
-	mockClient.DownloadImageFunc = func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
+	// Mock successful transfer
+	mockClient.TransferToRemoteFunc = func(ctx context.Context, sourceURL, remotePath string) error {
 		return nil
 	}
 
@@ -65,155 +62,141 @@ func TestReconcile_DownloadNeeded(t *testing.T) {
 		gnoiClient: mockClient,
 	}
 
-	// Create NetworkDevice with version mismatch
+	// Create NetworkDevice with OSUpgrade-PreloadImage operation
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.02",
-					"imageURL":       "http://example.com/sonic-202511.02.bin",
-					"downloadPath":   "/tmp/sonic-test.bin",
-					"checksum": map[string]interface{}{
-						"md5": "abc123def456abc123def456abc12345",
-					},
-				},
+				"type":            "leafRouter",
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+				"operation":       "OSUpgrade",
+				"operationAction": "PreloadImage",
 			},
 			"status": map[string]interface{}{
-				"downloadStatus": map[string]interface{}{
-					"downloadedVersion": "202511.01",
-					"phase":             "Succeeded",
-				},
+				"state":                "Healthy",
+				"osVersion":            "202505.01", 
+				"operationState":       "proceed",
+				"operationActionState": "proceed",
 			},
 		},
 	}
 
-	// Reconcile should trigger download
+	// Reconcile should trigger preload workflow
 	ctrl.reconcile(obj)
 
-	// Verify download was attempted
-	if mockClient.GetDownloadImageCallCount() != 1 {
-		t.Fatalf("Expected 1 DownloadImage call, got %d", mockClient.GetDownloadImageCallCount())
+	// Verify transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 1 {
+		t.Fatalf("Expected 1 TransferToRemote call, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 
-	// Verify download parameters
-	call, err := mockClient.GetLastDownloadImageCall()
-	if err != nil {
-		t.Fatalf("Failed to get last call: %v", err)
+	// Verify transfer parameters (constructed URL based on osVersion and firmwareProfile)
+	call := mockClient.TransferToRemoteCalls[0]
+	expectedURL := "http://image-repo.example.com/sonic-202505.01-SONiC-Mellanox-2700-ToRRouter-Storage.bin"
+	if call.SourceURL != expectedURL {
+		t.Errorf("Expected sourceURL '%s', got '%s'", expectedURL, call.SourceURL)
 	}
 
-	if call.ImageURL != "http://example.com/sonic-202511.02.bin" {
-		t.Errorf("Expected imageURL 'http://example.com/sonic-202511.02.bin', got '%s'", call.ImageURL)
-	}
-
-	if call.DownloadPath != "/tmp/sonic-test.bin" {
-		t.Errorf("Expected downloadPath '/tmp/sonic-test.bin', got '%s'", call.DownloadPath)
-	}
-
-	if call.ExpectedMD5 != "abc123def456abc123def456abc12345" {
-		t.Errorf("Expected MD5 'abc123def456abc123def456abc12345', got '%s'", call.ExpectedMD5)
+	expectedPath := "/tmp/sonic-image.bin"
+	if call.RemotePath != expectedPath {
+		t.Errorf("Expected remotePath '%s', got '%s'", expectedPath, call.RemotePath)
 	}
 }
 
-func TestReconcile_LocalImageExists(t *testing.T) {
+func TestReconcile_OperationAlreadyCompleted(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
-
-	// Mock that local image exists and matches
-	mockClient.VerifyLocalImageFunc = func(downloadPath, expectedMD5 string) (bool, error) {
-		return true, nil
-	}
 
 	ctrl := &Controller{
 		deviceName: "test-device",
 		gnoiClient: mockClient,
 	}
 
+	// Create NetworkDevice where operation is already completed
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
-				"name":      "test-device",
+				"name":      "test-device", 
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.02",
-					"imageURL":       "http://example.com/sonic.bin",
-					"checksum": map[string]interface{}{
-						"md5": "abc123def456abc123def456abc12345",
-					},
-				},
+				"type":            "leafRouter",
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+				"operation":       "OSUpgrade",
+				"operationAction": "PreloadImage",
 			},
 			"status": map[string]interface{}{
-				"downloadStatus": map[string]interface{}{
-					"downloadedVersion": "202511.01",
-				},
+				"state":                "Healthy",
+				"osVersion":            "202505.01",
+				"operationState":       "completed",
+				"operationActionState": "completed",
 			},
 		},
 	}
 
-	// Reconcile should skip download since file exists with correct MD5
+	// Reconcile should do nothing since operation is completed
 	ctrl.reconcile(obj)
 
-	// Verify download was NOT attempted
-	if mockClient.GetDownloadImageCallCount() != 0 {
-		t.Errorf("Expected 0 DownloadImage calls (file exists), got %d", mockClient.GetDownloadImageCallCount())
+	// Verify no transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }
 
-func TestReconcile_DefaultDownloadPath(t *testing.T) {
+func TestReconcile_OperationNotReady(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
-	mockClient.DownloadImageFunc = func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
-		return nil
-	}
 
 	ctrl := &Controller{
 		deviceName: "test-device",
 		gnoiClient: mockClient,
 	}
 
-	// NetworkDevice without explicit downloadPath
+	// Create NetworkDevice where operation state is not ready
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.01",
-					"imageURL":       "http://example.com/sonic.bin",
-				},
+				"type":            "leafRouter",
+				"osVersion":       "202505.01", 
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+				"operation":       "OSUpgrade",
+				"operationAction": "PreloadImage",
 			},
-			"status": map[string]interface{}{},
+			"status": map[string]interface{}{
+				"state":                "Healthy",
+				"osVersion":            "202505.01",
+				"operationState":       "pending",
+				"operationActionState": "pending",
+			},
 		},
 	}
 
+	// Reconcile should skip since operation state is not "proceed"
 	ctrl.reconcile(obj)
 
-	if mockClient.GetDownloadImageCallCount() != 1 {
-		t.Fatalf("Expected 1 DownloadImage call, got %d", mockClient.GetDownloadImageCallCount())
-	}
-
-	call, _ := mockClient.GetLastDownloadImageCall()
-	if call.DownloadPath != defaultDownloadPath {
-		t.Errorf("Expected default path '%s', got '%s'", defaultDownloadPath, call.DownloadPath)
+	// Verify no transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }
 
 func TestReconcile_ConcurrentCalls(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
-	// Make download slow to test mutex
-	mockClient.DownloadImageFunc = func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
+	// Make transfer slow to test mutex
+	mockClient.TransferToRemoteFunc = func(ctx context.Context, sourceURL, remotePath string) error {
 		time.Sleep(100 * time.Millisecond)
 		return nil
 	}
@@ -225,19 +208,24 @@ func TestReconcile_ConcurrentCalls(t *testing.T) {
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.01",
-					"imageURL":       "http://example.com/sonic.bin",
-				},
+				"type":            "leafRouter",
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+				"operation":       "OSUpgrade",
+				"operationAction": "PreloadImage",
 			},
-			"status": map[string]interface{}{},
+			"status": map[string]interface{}{
+				"state":                "Healthy",
+				"operationState":       "proceed",
+				"operationActionState": "proceed",
+			},
 		},
 	}
 
@@ -256,19 +244,17 @@ func TestReconcile_ConcurrentCalls(t *testing.T) {
 	<-done
 	<-done
 
-	// Due to mutex, only one should have executed
-	// (The second call will see the first is in progress and either wait or the status will be updated)
-	// For now, we just verify no crash occurred
-	if mockClient.GetDownloadImageCallCount() > 2 {
-		t.Errorf("Expected at most 2 DownloadImage calls, got %d", mockClient.GetDownloadImageCallCount())
+	// Due to mutex, verify no crash occurred and at most 2 calls were made
+	if len(mockClient.TransferToRemoteCalls) > 2 {
+		t.Errorf("Expected at most 2 TransferToRemote calls, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }
 
-func TestReconcile_DownloadFailure(t *testing.T) {
+func TestReconcile_WorkflowFailure(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
-	// Mock failed download
-	mockClient.DownloadImageFunc = func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
+	// Mock failed transfer
+	mockClient.TransferToRemoteFunc = func(ctx context.Context, sourceURL, remotePath string) error {
 		return fmt.Errorf("network error: connection timeout")
 	}
 
@@ -279,82 +265,48 @@ func TestReconcile_DownloadFailure(t *testing.T) {
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.02",
-					"imageURL":       "http://example.com/sonic.bin",
-				},
+				"type":            "leafRouter", 
+				"osVersion":       "202505.01",
+				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
+				"operation":       "OSUpgrade",
+				"operationAction": "PreloadImage",
 			},
-			"status": map[string]interface{}{},
+			"status": map[string]interface{}{
+				"operationState":       "proceed",
+				"operationActionState": "proceed",
+			},
 		},
 	}
 
-	// Reconcile should attempt download and handle error
+	// Reconcile should attempt workflow and handle error
 	ctrl.reconcile(obj)
 
-	// Verify download was attempted
-	if mockClient.GetDownloadImageCallCount() != 1 {
-		t.Errorf("Expected 1 DownloadImage call, got %d", mockClient.GetDownloadImageCallCount())
+	// Verify transfer was attempted
+	if len(mockClient.TransferToRemoteCalls) != 1 {
+		t.Errorf("Expected 1 TransferToRemote call, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 
-	// Verify status was updated to Failed
-	statusMap, _, _ := unstructured.NestedMap(obj.Object, "status", "downloadStatus")
-	phase, _, _ := unstructured.NestedString(statusMap, "phase")
-	if phase != "Failed" {
-		t.Errorf("Expected phase 'Failed', got '%s'", phase)
-	}
-}
-
-func TestReconcile_VerifyImageError(t *testing.T) {
-	mockClient := gnoi.NewMockClient()
-
-	// Mock VerifyLocalImage returns error
-	mockClient.VerifyLocalImageFunc = func(downloadPath, expectedMD5 string) (bool, error) {
-		return false, fmt.Errorf("permission denied")
+	// Verify status was updated to failed
+	operationState, _, _ := unstructured.NestedString(obj.Object, "status", "operationState")
+	if operationState != "failed" {
+		t.Errorf("Expected operationState 'failed', got '%s'", operationState)
 	}
 
-	ctrl := &Controller{
-		deviceName: "test-device",
-		gnoiClient: mockClient,
+	operationActionState, _, _ := unstructured.NestedString(obj.Object, "status", "operationActionState") 
+	if operationActionState != "failed" {
+		t.Errorf("Expected operationActionState 'failed', got '%s'", operationActionState)
 	}
 
-	obj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
-			"kind":       "NetworkDevice",
-			"metadata": map[string]interface{}{
-				"name":      "test-device",
-				"namespace": "default",
-			},
-			"spec": map[string]interface{}{
-				"os": map[string]interface{}{
-					"desiredVersion": "202511.02",
-					"imageURL":       "http://example.com/sonic.bin",
-					"checksum": map[string]interface{}{
-						"md5": "abc123def456abc123def456abc12345",
-					},
-				},
-			},
-			"status": map[string]interface{}{},
-		},
-	}
-
-	// Should continue with download despite verify error
-	mockClient.DownloadImageFunc = func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error {
-		return nil
-	}
-
-	ctrl.reconcile(obj)
-
-	// Should still attempt download
-	if mockClient.GetDownloadImageCallCount() != 1 {
-		t.Errorf("Expected 1 DownloadImage call, got %d", mockClient.GetDownloadImageCallCount())
+	state, _, _ := unstructured.NestedString(obj.Object, "status", "state")
+	if state != "Failed" {
+		t.Errorf("Expected state 'Failed', got '%s'", state)
 	}
 }
 
@@ -370,41 +322,55 @@ func TestReconcile_InvalidObject(t *testing.T) {
 	ctrl.reconcile("not an unstructured object")
 
 	// Should not crash, just return early
-	if mockClient.GetDownloadImageCallCount() != 0 {
-		t.Errorf("Expected 0 DownloadImage calls for invalid object, got %d", mockClient.GetDownloadImageCallCount())
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls for invalid object, got %d", len(mockClient.TransferToRemoteCalls))
 	}
 }
 
-func TestReconcile_MissingSpec(t *testing.T) {
+func TestReconcile_MissingOSVersion(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
 	ctrl := &Controller{
-		deviceName: "test-device",
+		deviceName: "test-device", 
 		gnoiClient: mockClient,
 	}
 
-	// Object without spec.os
+	// Object without osVersion
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{},
+			"spec": map[string]interface{}{
+				"type":            "leafRouter",
+				"operation":       "OSUpgrade", 
+				"operationAction": "PreloadImage",
+			},
+			"status": map[string]interface{}{
+				"operationState":       "proceed",
+				"operationActionState": "proceed",
+			},
 		},
 	}
 
 	ctrl.reconcile(obj)
 
-	// Should return early without download
-	if mockClient.GetDownloadImageCallCount() != 0 {
-		t.Errorf("Expected 0 DownloadImage calls for missing spec, got %d", mockClient.GetDownloadImageCallCount())
+	// Should still attempt workflow, but workflow will fail
+	if len(mockClient.TransferToRemoteCalls) != 0 {
+		t.Errorf("Expected 0 TransferToRemote calls when workflow fails, got %d", len(mockClient.TransferToRemoteCalls))
+	}
+
+	// Should have failed due to missing osVersion
+	operationState, _, _ := unstructured.NestedString(obj.Object, "status", "operationState")
+	if operationState != "failed" {
+		t.Errorf("Expected operationState 'failed' due to missing osVersion, got '%s'", operationState)
 	}
 }
 
-func TestUpdateStatus_WithDynamicClient(t *testing.T) {
+func TestUpdateOperationStatus_WithDynamicClient(t *testing.T) {
 	// This tests the status update logic itself
 	ctrl := &Controller{
 		deviceName:    "test-device",
@@ -413,7 +379,7 @@ func TestUpdateStatus_WithDynamicClient(t *testing.T) {
 
 	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "sonic.io/v1",
+			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
 				"name":      "test-device",
@@ -423,32 +389,64 @@ func TestUpdateStatus_WithDynamicClient(t *testing.T) {
 		},
 	}
 
-	// Call updateStatus directly
-	ctrl.updateStatus(obj, "Succeeded", "Test message", "202511.01", "abc123")
+	// Call updateOperationStatus directly
+	ctrl.updateOperationStatus(obj, "completed", "completed", "Test message")
 
 	// Verify status was updated in object
-	statusMap, found, err := unstructured.NestedMap(obj.Object, "status", "downloadStatus")
-	if !found || err != nil {
-		t.Fatalf("Failed to get status: found=%v, err=%v", found, err)
+	operationState, _, _ := unstructured.NestedString(obj.Object, "status", "operationState")
+	if operationState != "completed" {
+		t.Errorf("Expected operationState 'completed', got '%s'", operationState)
 	}
 
-	phase, _, _ := unstructured.NestedString(statusMap, "phase")
-	if phase != "Succeeded" {
-		t.Errorf("Expected phase 'Succeeded', got '%s'", phase)
+	operationActionState, _, _ := unstructured.NestedString(obj.Object, "status", "operationActionState")
+	if operationActionState != "completed" {
+		t.Errorf("Expected operationActionState 'completed', got '%s'", operationActionState)
 	}
 
-	message, _, _ := unstructured.NestedString(statusMap, "message")
-	if message != "Test message" {
-		t.Errorf("Expected message 'Test message', got '%s'", message)
+	state, _, _ := unstructured.NestedString(obj.Object, "status", "state")
+	if state != "Healthy" {
+		t.Errorf("Expected state 'Healthy', got '%s'", state)
 	}
 
-	version, _, _ := unstructured.NestedString(statusMap, "downloadedVersion")
-	if version != "202511.01" {
-		t.Errorf("Expected downloadedVersion '202511.01', got '%s'", version)
+	lastTransitionTime, _, _ := unstructured.NestedString(obj.Object, "status", "lastTransitionTime")
+	if lastTransitionTime == "" {
+		t.Error("Expected lastTransitionTime to be set")
+	}
+}
+
+func TestUpdateOperationStatus_StateMapping(t *testing.T) {
+	ctrl := &Controller{
+		deviceName:    "test-device",
+		dynamicClient: nil,
 	}
 
-	checksum, _, _ := unstructured.NestedString(statusMap, "downloadedChecksum")
-	if checksum != "abc123" {
-		t.Errorf("Expected downloadedChecksum 'abc123', got '%s'", checksum)
+	obj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "sonic.k8s.io/v1",
+			"kind":       "NetworkDevice",
+		},
+	}
+
+	// Test different state mappings
+	testCases := []struct {
+		operationState string
+		expectedState  string
+	}{
+		{"completed", "Healthy"},
+		{"failed", "Failed"},
+		{"in_progress", "Updating"},
+		{"unknown_state", "Unknown"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.operationState, func(t *testing.T) {
+			ctrl.updateOperationStatus(obj, tc.operationState, tc.operationState, "Test message")
+			
+			state, _, _ := unstructured.NestedString(obj.Object, "status", "state")
+			if state != tc.expectedState {
+				t.Errorf("Expected state '%s' for operationState '%s', got '%s'", 
+					tc.expectedState, tc.operationState, state)
+			}
+		})
 	}
 }

@@ -1,9 +1,9 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: networkdevices.sonic.io
+  name: networkdevice.sonic.k8s.io
 spec:
-  group: sonic.io
+  group: sonic.k8s.io
   versions:
   - name: v1
     served: true
@@ -14,70 +14,59 @@ spec:
         properties:
           spec:
             type: object
-            required: ["os"]
             properties:
-              workflow:
-                type: object
-                properties:
-                  type:
-                    type: string
-                    default: "preload"
-                    enum: ["preload"]
-                    description: "Type of workflow to execute"
-              os:
-                type: object
-                required: ["desiredVersion", "imageURL"]
-                properties:
-                  desiredVersion:
-                    type: string
-                    description: "Target SONiC OS version to download"
-                  imageURL:
-                    type: string
-                    format: uri
-                    description: "HTTP/HTTPS URL to download SONiC binary image from"
-                  checksum:
-                    type: object
-                    description: "Checksum for download verification"
-                    properties:
-                      md5:
-                        type: string
-                        pattern: '^[a-f0-9]{32}$'
-                  downloadPath:
-                    type: string
-                    default: "/tmp/sonic-image.bin"
-                    description: "Local path to save downloaded SONiC binary"
+              type:
+                type: string
+                description: "Type of network device (e.g., leafRouter, spineRouter)"
+              osVersion:
+                type: string
+                description: "Target SONiC OS version"
+              firmwareProfile:
+                type: string
+                description: "Firmware profile for the device"
+              operation:
+                type: string
+                description: "Operation to perform (e.g., OSUpgrade)"
+              operationAction:
+                type: string
+                description: "Specific action for the operation (e.g., PreloadImage)"
           status:
             type: object
             properties:
-              downloadStatus:
-                type: object
-                properties:
-                  phase:
-                    type: string
-                    enum: ["Pending", "Downloading", "Succeeded", "Failed"]
-                  message:
-                    type: string
-                  lastAttemptTime:
-                    type: string
-                    format: date-time
-                  downloadedVersion:
-                    type: string
-                    description: "Version of SONiC binary currently downloaded"
-                  downloadedChecksum:
-                    type: string
-                    description: "MD5 of currently downloaded file"
+              state:
+                type: string
+                description: "Overall device state (e.g., Healthy, Degraded, Failed)"
+              lastTransitionTime:
+                type: string
+                format: date-time
+                description: "Time of last state transition"
+              osVersion:
+                type: string
+                description: "Currently running OS version"
+              operationState:
+                type: string
+                description: "State of the current operation (e.g., proceed, pending, failed)"
+              operationActionState:
+                type: string
+                description: "State of the current operation action (e.g., proceed, pending, failed)"
     subresources:
       status: {}
     additionalPrinterColumns:
-    - name: Desired Version
+    - name: Type
       type: string
-      jsonPath: .spec.os.desiredVersion
-    - name: Download Status
+      jsonPath: .spec.type
+    - name: OS Version
       type: string
-      jsonPath: .status.downloadStatus.phase
-    - name: Downloaded Version
+      jsonPath: .spec.osVersion
+    - name: Operation
       type: string
-      jsonPath: .status.downloadStatus.downloadedVersion
+      jsonPath: .spec.operation
+    - name: Operation Action
+      type: string
+      jsonPath: .spec.operationAction
+    - name: State
+      type: string
+      jsonPath: .status.state
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
