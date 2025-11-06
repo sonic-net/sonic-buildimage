@@ -599,6 +599,10 @@ fi
 sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
 
 ## Copy gNOI Debug RPC command whitelist
+if [[ ! -f 'files/image_config/gnoi/debug/command_whitelist.yaml' ]]; then
+    echo 'command_whitelist.yaml not found'
+    exit 1
+fi
 sudo cp files/image_config/gnoi/debug/command_whitelist.yaml $FILESYSTEM_ROOT/etc/sonic/command_whitelist.yaml
 
 ## Check if not a last stage of RFS build
