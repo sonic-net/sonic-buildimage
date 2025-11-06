@@ -9,10 +9,13 @@ import hashlib
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
+from swsscommon.swsscommon import ConfigDBConnector
 from sonic_py_common import logger as log
+
 logger = log.Logger()
+
 
 def get_bool_env_var(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
@@ -20,11 +23,21 @@ def get_bool_env_var(name: str, default: bool = False) -> bool:
         return default
     return val.strip().lower() in ("1", "true", "yes", "y", "on")
 
+
 IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
 NSENTER_BASE = ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net"]
+
+# CONFIG_DB reconcile env
+GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
+GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
+GNMI_CLIENT_ROLE = os.getenv("GNMI_CLIENT_ROLE", "gnmi_read")
+
+logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
+logger.log_notice(f"GNMI_CLIENT_ROLE={GNMI_CLIENT_ROLE}")
+
 
 @dataclass(frozen=True)
 class SyncItem:
@@ -38,7 +51,7 @@ _TELEMETRY_SRC = (
     if IS_V1_ENABLED
     else "/usr/share/sonic/systemd_scripts/telemetry.sh"
 )
-logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}; telemetry source set to {_TELEMETRY_SRC}")
+logger.log_notice(f"telemetry source set to {_TELEMETRY_SRC}")
 
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
@@ -76,6 +89,140 @@ def run_nsenter(args: List[str], *, text: bool = True, input_bytes: Optional[byt
     return run(NSENTER_BASE + args, text=text, input_bytes=input_bytes)
 
 
+# ───────── CONFIG_DB via ConfigDBConnector ─────────
+_config_db: Optional[ConfigDBConnector] = None
+
+
+def _get_config_db() -> Optional[ConfigDBConnector]:
+    global _config_db
+    if _config_db is None:
+        try:
+            db = ConfigDBConnector()
+            db.connect()
+            _config_db = db
+            logger.log_info("Connected to CONFIG_DB via ConfigDBConnector")
+        except Exception as e:
+            logger.log_error(f"Failed to connect to CONFIG_DB: {e}")
+            _config_db = None
+    return _config_db
+
+
+def _split_redis_key(key: str) -> Tuple[str, str]:
+    # Expect "TABLE|KEY"
+    parts = key.split("|", 1)
+    if len(parts) != 2:
+        raise ValueError(f"Invalid CONFIG_DB key format (expected 'TABLE|KEY'): {key!r}")
+    return parts[0], parts[1]
+
+
+def _db_hget(key: str, field: str) -> Optional[str]:
+    db = _get_config_db()
+    if db is None:
+        return None
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: Dict[str, str] = db.get_entry(table, entry_key)
+    except Exception as e:
+        logger.log_error(f"_db_hget failed for {key} field {field}: {e}")
+        return None
+
+    val = entry.get(field)
+    if val is None or val == "":
+        return None
+    return val
+
+
+def _db_hgetall(key: str) -> Dict[str, str]:
+    db = _get_config_db()
+    if db is None:
+        return {}
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        return entry or {}
+    except Exception as e:
+        logger.log_error(f"_db_hgetall failed for {key}: {e}")
+        return {}
+
+
+def _db_hset(key: str, field: str, value: str) -> bool:
+    db = _get_config_db()
+    if db is None:
+        return False
+    try:
+        table, entry_key = _split_redis_key(key)
+        entry: Dict[str, str] = db.get_entry(table, entry_key)
+        entry[field] = value
+        db.set_entry(table, entry_key, entry)
+        return True
+    except Exception as e:
+        logger.log_error(f"_db_hset failed for {key} field {field}: {e}")
+        return False
+
+
+def _db_del(key: str) -> bool:
+    db = _get_config_db()
+    if db is None:
+        return False
+    try:
+        table, entry_key = _split_redis_key(key)
+        # In ConfigDBConnector, setting an empty dict deletes the key
+        db.set_entry(table, entry_key, {})
+        return True
+    except Exception as e:
+        logger.log_error(f"_db_del failed for {key}: {e}")
+        return False
+
+
+def _ensure_user_auth_cert() -> None:
+    cur = _db_hget("GNMI|gnmi", "user_auth")
+    if cur != "cert":
+        if _db_hset("GNMI|gnmi", "user_auth", "cert"):
+            logger.log_notice(f"Set GNMI|gnmi.user_auth=cert (was: {cur or '<unset>'})")
+        else:
+            logger.log_error("Failed to set GNMI|gnmi.user_auth=cert")
+
+
+def _ensure_cname_present(cname: str) -> None:
+    if not cname:
+        logger.log_warning("TELEMETRY_CLIENT_CNAME not set; skip CNAME creation")
+        return
+
+    key = f"GNMI_CLIENT_CERT|{cname}"
+    entry = _db_hgetall(key)
+    if not entry:
+        if _db_hset(key, "role", GNMI_CLIENT_ROLE):
+            logger.log_notice(f"Created {key} with role={GNMI_CLIENT_ROLE}")
+        else:
+            logger.log_error(f"Failed to create {key}")
+
+
+def _ensure_cname_absent(cname: str) -> None:
+    if not cname:
+        return
+    key = f"GNMI_CLIENT_CERT|{cname}"
+    if _db_hgetall(key):
+        if _db_del(key):
+            logger.log_notice(f"Removed {key}")
+        else:
+            logger.log_error(f"Failed to remove {key}")
+
+
+def reconcile_config_db_once() -> None:
+    """
+    Idempotent drift-correction for CONFIG_DB:
+      - When TELEMETRY_CLIENT_CERT_VERIFY_ENABLED=true:
+          * Ensure GNMI|gnmi.user_auth=cert
+          * Ensure GNMI_CLIENT_CERT|<CNAME> exists with role=<GNMI_CLIENT_ROLE>
+      - When false: ensure the CNAME row is absent
+    """
+    if GNMI_VERIFY_ENABLED:
+        _ensure_user_auth_cert()
+        _ensure_cname_present(GNMI_CLIENT_CNAME)
+    else:
+        _ensure_cname_absent(GNMI_CLIENT_CNAME)
+
+
 def read_file_bytes_local(path: str) -> Optional[bytes]:
     try:
         with open(path, "rb") as f:
@@ -92,6 +239,7 @@ def host_read_bytes(path_on_host: str) -> Optional[bytes]:
     if rc != 0:
         return None
     return out
+
 
 def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
     tmp_path = f"/tmp/{os.path.basename(dst_on_host)}.tmp"
@@ -127,6 +275,7 @@ def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
 
     return True
 
+
 def run_host_actions_for(path_on_host: str) -> None:
     actions = POST_COPY_ACTIONS.get(path_on_host, [])
     for cmd in actions:
@@ -144,6 +293,7 @@ def sha256_bytes(b: Optional[bytes]) -> str:
     h = hashlib.sha256()
     h.update(b)
     return h.hexdigest()
+
 
 def sync_items(items: List[SyncItem]) -> bool:
     all_ok = True
@@ -176,7 +326,8 @@ def sync_items(items: List[SyncItem]) -> bool:
         new_sha = sha256_bytes(new_host_bytes)
         if new_sha != container_file_sha:
             logger.log_error(
-                f"Post-copy SHA mismatch for {item.dst_on_host}: host {new_sha or 'read-failed'} vs container {container_file_sha}"
+                f"Post-copy SHA mismatch for {item.dst_on_host}: "
+                f"host {new_sha or 'read-failed'} vs container {container_file_sha}"
             )
             all_ok = False
         else:
@@ -185,16 +336,29 @@ def sync_items(items: List[SyncItem]) -> bool:
 
     return all_ok
 
+
 def ensure_sync() -> bool:
     return sync_items(SYNC_ITEMS)
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Sync host scripts from this container to the host via nsenter (syslog logging).")
+    p = argparse.ArgumentParser(
+        description="Sync host scripts from this container to the host via nsenter (syslog logging)."
+    )
     p.add_argument("--once", action="store_true", help="Run one sync pass and exit")
-    p.add_argument("--interval", type=int, default=SYNC_INTERVAL_S, help=f"Loop interval seconds (default: {SYNC_INTERVAL_S})")
-    p.add_argument("--no-post-actions", action="store_true", help="(Optional) Skip host systemctl actions (for debugging)")
+    p.add_argument(
+        "--interval",
+        type=int,
+        default=SYNC_INTERVAL_S,
+        help=f"Loop interval seconds (default: {SYNC_INTERVAL_S})",
+    )
+    p.add_argument(
+        "--no-post-actions",
+        action="store_true",
+        help="(Optional) Skip host systemctl actions (for debugging)",
+    )
     return p.parse_args()
+
 
 def main() -> int:
     args = parse_args()
@@ -203,13 +367,24 @@ def main() -> int:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
 
+    # Reconcile CONFIG_DB before any file sync so auth is correct ASAP
+    try:
+        reconcile_config_db_once()
+    except Exception as e:
+        logger.log_error(f"CONFIG_DB reconcile failed: {e}")
+
     ok = ensure_sync()
     if args.once:
         return 0 if ok else 1
 
     while True:
         time.sleep(args.interval)
+        try:
+            reconcile_config_db_once()
+        except Exception as e:
+            logger.log_error(f"CONFIG_DB reconcile failed: {e}")
         ok = ensure_sync()
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
