@@ -730,7 +730,26 @@ class TestJ2Files(TestCase):
                                                 minigraph=test_data[3],
                                                 buffer_template=test_data[4],
                                                 expected=test_data[5])
-
+            
+    def test_buffers_lt2_ft2_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            # Skip on python2 as the change will not be backported to previous version
+            return
+        
+        TEST_DATA = [
+            # (vendor, platform, sku, minigraph, buffer_template, sample_output )
+            ('arista', 'x86_64-arista_7060x6_64pe_b', 'Arista-7060X6-64PE-P32O64', 'sample-lt2-p32o64-minigraph.xml', 'buffers.json.j2', 'buffer-lt2-p32o64.json'),
+            ('arista', 'x86_64-arista_7060x6_64pe_b', 'Arista-7060X6-64PE-P64', 'sample-ft2-p64-minigraph.xml', 'buffers.json.j2', 'buffer-ft2-p64.json')
+        ]
+        
+        for test_data in TEST_DATA:
+            self._test_buffers_render_template(vendor=test_data[0],
+                                                platform=test_data[1],
+                                                sku=test_data[2],
+                                                minigraph=test_data[3],
+                                                buffer_template=test_data[4],
+                                                expected=test_data[5])
+    
     def test_ipinip_multi_asic(self):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.multi_asic_minigraph, '-p', self.multi_asic_port_config, '-t', ipinip_file, '-n', 'asic0']
