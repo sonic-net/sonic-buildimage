@@ -1,6 +1,8 @@
 # This file contains the command whitelists for read & write users using the gNOI Debug RPC in the
 # SONiC gNMI container.
 #
+# Consumed here: [Debug RPC Implementation](https://github.com/sonic-net/sonic-gnmi/pull/524/files)
+#
 # This is intended to provide an interface through which safe commands can be executed remotely
 # from an arbitrary client which implements the Debug RPC, communicating with the gNMI container.
 #
