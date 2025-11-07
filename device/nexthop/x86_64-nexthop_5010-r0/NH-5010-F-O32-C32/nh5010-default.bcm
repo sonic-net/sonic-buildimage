@@ -2124,7 +2124,7 @@ bcm_stat_interval.BCM8887X_ADAPTER=1000000
 #########################
 
 ### MDB configuration ###
-mdb_profile.BCM8887X=Elastic-Balanced
+mdb_profile.BCM8887X=L3-Optimized
 
 ### Enable Descriptor-DMA ###
 dma_desc_aggregator_chain_length_max.BCM8887X=256
