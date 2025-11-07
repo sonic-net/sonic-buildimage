@@ -30,7 +30,6 @@ read_whitelist:
   - ps
   - uptime
   - awk
-  - xargs
   - show
   - TSC
 
