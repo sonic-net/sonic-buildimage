@@ -87,7 +87,10 @@
                             "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             },
             {
                 "name": "psu2",
@@ -98,7 +101,10 @@
                             "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             }
         ],
         "thermals": [
