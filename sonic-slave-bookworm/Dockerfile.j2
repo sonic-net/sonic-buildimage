@@ -779,5 +779,7 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
 
+# RUN rustup override set nightly
+
 # Install cargo-tarpaulin for code coverage
-RUN $RUST_ROOT/bin/cargo install cargo-tarpaulin
+RUN $RUST_ROOT/bin/cargo install cargo-tarpaulin --locked
