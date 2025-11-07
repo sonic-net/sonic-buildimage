@@ -27,8 +27,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
+    name: xwjiang-ms/sonic-mgmt
+    ref: add_checkout_sonic_mgmt_param
     endpoint: sonic-net
   - repository: buildimage
     type: github
@@ -40,6 +40,10 @@ parameters:
 - name: TIMEOUT_IN_MINUTES_PR_TEST
   type: number
   default: 480
+
+- name: CHECKOUT_SONIC_MGMT
+  type: boolean
+  default: true
 
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
@@ -173,4 +177,6 @@ stages:
         testRunTitle: vstest
 
   # KVM based PR test jobs
-  - template: .azure-pipelines/pr_test_template.yml
+  - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+    parameters:
+      CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
