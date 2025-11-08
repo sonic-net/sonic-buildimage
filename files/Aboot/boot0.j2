@@ -901,11 +901,36 @@ regular_install() {
     run_hooks post-install
 }
 
+run_quirks() {
+    # only run in Aboot
+    if $in_aboot && [ -f "/etc/cmdline" ]; then
+        if [ "$aboot_machine" = "arista_7060x6_64pe_b" ]; then
+            info "Resetting switch chip for $aboot_machine"
+            setpci -s 05:00.0 COMMAND=0002
+            devmem 0x80084000 32 0xC
+            sleep 1
+            devmem 0x80084010 32 0x4
+            sleep 1
+            devmem 0x80084010 32 0x8
+        fi
+        if [ "$aboot_machine" = "arista_7060x6_64pe" ]; then
+            info "Resetting switch chip for $aboot_machine"
+            setpci -s 03:00.0 COMMAND=0002
+            devmem 0xa5184000 32 0xC
+            sleep 1
+            devmem 0xa5184010 32 0x4
+            sleep 1
+            devmem 0xa5184010 32 0x8
+        fi
+    fi
+}
+
 secureboot_boot() {
     # boot material is extracted and generated in RAM.
     # SONiC starts as a live OS.
     info "Preparing image for secureboot"
     prepare_image_secureboot
+    run_quirks
     update_next_boot
     run_kexec
 }
@@ -914,6 +939,7 @@ regular_boot() {
     # boot uses the image installed on the flash
     write_regular_configs "$image_path"
     run_hooks pre-kexec
+    run_quirks
     update_next_boot
     run_kexec
 }
