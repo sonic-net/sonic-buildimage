@@ -88,10 +88,12 @@ class TestChassis:
         chassis._psu_list = []
         assert chassis.get_num_psus() == 3
 
-    def test_fan(self):
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_sysfs_count')
+    def test_fan(self, mock_sysfs_count):
         from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
 
         # Test creating fixed fan
+        mock_sysfs_count.return_value = 4
         DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=False)
         assert DeviceDataManager.get_fan_drawer_count() == 1
         DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
