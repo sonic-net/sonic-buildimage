@@ -246,6 +246,7 @@ class TestSfp:
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_port_init_done', mock.MagicMock(return_value=True))
     def test_sfp_get_presence(self, mock_read, mock_read_int):
         sfp = SFP(0)
 
@@ -262,6 +263,7 @@ class TestSfp:
         assert not sfp.get_presence()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_port_init_done', mock.MagicMock(return_value=True))
     def test_rj45_get_presence(self, mock_read_int):
         sfp = RJ45Port(0)
         mock_read_int.return_value = 0

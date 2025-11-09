@@ -162,3 +162,40 @@ class TestDeviceData:
         for dpu_name in invalid_dpu_names:
             assert not DeviceDataManager.get_dpu_interface(dpu_name, DpuInterfaceEnum.MIDPLANE_INT.value)
         assert not DeviceDataManager.get_dpu_interface("", "")
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.device_data.swsscommon.DBConnector', mock.MagicMock())
+    @mock.patch('sonic_platform.device_data.swsscommon.Table')
+    @pytest.mark.parametrize("is_event_ready", [False, True])
+    def test_is_port_init_done_single_asic(self, mock_table, is_event_ready):
+        DeviceDataManager._port_init_done_tables.clear()
+        DeviceDataManager._port_init_done_status.clear()
+
+        mock_table_instance = mock.MagicMock()
+        mock_table_instance.getKeys.return_value = ['PortInitDone'] if is_event_ready else []
+        mock_table.return_value = mock_table_instance
+
+        assert DeviceDataManager.is_port_init_done() == is_event_ready
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_multi_asic_platform', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_asic_count', mock.MagicMock(return_value=2))
+    @mock.patch('sonic_platform.device_data.swsscommon.DBConnector', mock.MagicMock())
+    @mock.patch('sonic_platform.device_data.swsscommon.Table')
+    def test_is_port_init_done_multi_asic(self, mock_table):
+        DeviceDataManager._port_init_done_tables.clear()
+        DeviceDataManager._port_init_done_status.clear()
+
+        mock_table_no_keys = mock.MagicMock()
+        mock_table_no_keys.getKeys.return_value = []
+
+        mock_table_init_done = mock.MagicMock()
+        mock_table_init_done.getKeys.return_value = ['PortConfigDone']
+
+        mock_table.side_effect = [mock_table_no_keys, mock_table_init_done]
+
+        assert DeviceDataManager.is_port_init_done('asic0') == False
+        assert DeviceDataManager.is_port_init_done('asic1') == True
+        # check cache
+        assert DeviceDataManager.is_port_init_done('asic0') == False
+        assert DeviceDataManager.is_port_init_done('asic1') == True
+        assert mock_table.call_count == 2

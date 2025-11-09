@@ -305,10 +305,11 @@ class NvidiaSFPCommon(SfpOptoeBase):
         0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
     }
 
-    def __init__(self, sfp_index):
+    def __init__(self, sfp_index, asic_id='asic0'):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
         self.sdk_index = sfp_index
+        self.asic_id = asic_id
 
     @classmethod
     def _get_module_info(self, sdk_index):
@@ -376,6 +377,8 @@ class NvidiaSFPCommon(SfpOptoeBase):
         sfp_state = str(sfp_state_bits)
         return sfp_state, error_description
     
+    def get_asic_id(self):
+        return self.asic_id
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
@@ -392,8 +395,8 @@ class SFP(NvidiaSFPCommon):
     # only applicable for module host management
     action_table = None
 
-    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None):
-        super(SFP, self).__init__(sfp_index)
+    def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None, asic_id='asic0'):
+        super(SFP, self).__init__(sfp_index, asic_id=asic_id)
         self._sfp_type = sfp_type
 
         if slot_id == 0: # For non-modular chassis
@@ -440,6 +443,10 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
+
+        if not DeviceDataManager.is_port_init_done(self.get_asic_id()):
+            return False
+
         presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
         if utils.read_int_from_file(presence_sysfs) != 1:
             return False
@@ -1562,8 +1569,8 @@ class SFP(NvidiaSFPCommon):
 class RJ45Port(NvidiaSFPCommon):
     """class derived from SFP, representing RJ45 ports"""
 
-    def __init__(self, sfp_index):
-        super(RJ45Port, self).__init__(sfp_index)
+    def __init__(self, sfp_index, asic_id='asic0'):
+        super(RJ45Port, self).__init__(sfp_index, asic_id=asic_id)
         self.sfp_type = RJ45_TYPE
 
     def get_presence(self):
