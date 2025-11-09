@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,10 +129,11 @@ class TestUtils:
         output = utils.run_command(['ls'])
         assert output
 
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
     @mock.patch('sonic_platform.utils.load_json_file')
     @mock.patch('os.path.exists')
-    @mock.patch('sonic_py_common.device_info.get_path_to_port_config_file', mock.MagicMock(return_value=''))
-    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
     def test_extract_RJ45_ports_index(self, mock_exists, mock_load_json):
         mock_exists.return_value = False
         rj45_list = utils.extract_RJ45_ports_index()
@@ -160,6 +162,93 @@ class TestUtils:
 
         mock_load_json.side_effect = [platform_json, hwsku_json]
         assert utils.extract_RJ45_ports_index() == [0]
+
+    @pytest.mark.parametrize(
+        "mock_exists_value, platform_json, hwsku_json, expected_result",
+        [
+            # Case 1: hwsku.json file does not exist
+            (False, {}, {}, None),
+
+            # Case 2: file exists, but no CPO ports
+            (
+                True,
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "SFP"
+                        }
+                    }
+                },
+                None
+            ),
+
+            # Case 3: one CPO port
+            (
+                True,
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "index": "1",
+                            "lanes": "0",
+                            "breakout_modes": {
+                                "2x400G[200G]": ["etp1a", "etp1b"]
+                            }
+                        }
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {
+                            "default_brkout_mode": "2x400G[200G]",
+                            "port_type": "CPO"
+                        }
+                    }
+                },
+                [0]
+            ),
+
+            # Case 4: multiple CPO ports
+            (
+                True,
+                {
+                    'interfaces': {
+                        "Ethernet0": {"index": "1"},
+                        "Ethernet4": {"index": "5"},
+                        "Ethernet8": {"index": "9"}
+                    }
+                },
+                {
+                    'interfaces': {
+                        "Ethernet0": {"port_type": "CPO"},
+                        "Ethernet4": {"port_type": "CPO"},
+                        "Ethernet8": {"port_type": "CPO"}
+                    }
+                },
+                [0, 4, 8]
+            ),
+        ]
+    )
+    @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='.'))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    @mock.patch('sonic_py_common.device_info.get_hwsku', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    def test_extract_cpo_ports_index(self, mock_exists, mock_load_json, mock_exists_value, platform_json, hwsku_json, expected_result):
+        mock_exists.return_value = mock_exists_value
+        mock_load_json.side_effect = [platform_json, hwsku_json]
+        assert utils.extract_cpo_ports_index() == expected_result
 
     def test_wait_until(self):
         values = []
