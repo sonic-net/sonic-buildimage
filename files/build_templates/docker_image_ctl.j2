@@ -685,7 +685,7 @@ start() {
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
-        -v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw \
+        $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
