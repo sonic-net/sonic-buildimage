@@ -1,0 +1,23 @@
+From 1487e3f84f42a5cf844f147a847e1726ee624932 Mon Sep 17 00:00:00 2001
+From: Shilong Liu <shilongliu@microsoft.com>
+Date: Fri, 7 Nov 2025 10:22:12 +0800
+Subject: [PATCH] [ci] Refine make clean to not break when go mod is readonly
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 4edc705..2b5bb51 100644
+--- a/Makefile
++++ b/Makefile
+@@ -35,5 +35,5 @@ libcswsscommon:
+ 	sudo make -C libcswsscommon install
+ 
+ clean:
+-	rm -rf $(GOPATH)
++	rm -rf $(GOPATH) || true
+ 	make -C libcswsscommon clean
+-- 
+2.51.1.windows.1
+
