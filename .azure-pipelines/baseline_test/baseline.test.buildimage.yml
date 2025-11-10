@@ -15,8 +15,8 @@ resources:
   repositories:
   - repository: sonic-mgmt
     type: github
-    name: xwjiang-ms/sonic-mgmt
-    ref: add_checkout_sonic_mgmt_param
+    name: sonic-net/sonic-mgmt
+    ref: master
     endpoint: sonic-net
   - repository: buildimage
     type: github
