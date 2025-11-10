@@ -60,10 +60,9 @@ jobs:
           fi
         displayName: 'Checkout commit'
       - script: |
-          set -x
-          pwd
-          realpath $(pwd)
-          realpath /mnt/vss
+          set -ex
+          sudo apt-get update
+          sudo apt-get install -y acl
           sudo setfacl -R -b $(Agent.BuildDirectory)
         displayName: 'setfacl'
       - script: |
