@@ -80,7 +80,7 @@ func TestReconcile_PreloadImage_Success(t *testing.T) {
 			},
 			"status": map[string]interface{}{
 				"state":                "Healthy",
-				"osVersion":            "202505.01", 
+				"osVersion":            "202505.01",
 				"operationState":       "proceed",
 				"operationActionState": "proceed",
 			},
@@ -122,7 +122,7 @@ func TestReconcile_OperationAlreadyCompleted(t *testing.T) {
 			"apiVersion": "sonic.k8s.io/v1",
 			"kind":       "NetworkDevice",
 			"metadata": map[string]interface{}{
-				"name":      "test-device", 
+				"name":      "test-device",
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
@@ -169,7 +169,7 @@ func TestReconcile_OperationNotReady(t *testing.T) {
 			},
 			"spec": map[string]interface{}{
 				"type":            "leafRouter",
-				"osVersion":       "202505.01", 
+				"osVersion":       "202505.01",
 				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
 				"operation":       "OSUpgrade",
 				"operationAction": "PreloadImage",
@@ -272,7 +272,7 @@ func TestReconcile_WorkflowFailure(t *testing.T) {
 				"namespace": "default",
 			},
 			"spec": map[string]interface{}{
-				"type":            "leafRouter", 
+				"type":            "leafRouter",
 				"osVersion":       "202505.01",
 				"firmwareProfile": "SONiC-Mellanox-2700-ToRRouter-Storage",
 				"operation":       "OSUpgrade",
@@ -299,7 +299,7 @@ func TestReconcile_WorkflowFailure(t *testing.T) {
 		t.Errorf("Expected operationState 'failed', got '%s'", operationState)
 	}
 
-	operationActionState, _, _ := unstructured.NestedString(obj.Object, "status", "operationActionState") 
+	operationActionState, _, _ := unstructured.NestedString(obj.Object, "status", "operationActionState")
 	if operationActionState != "failed" {
 		t.Errorf("Expected operationActionState 'failed', got '%s'", operationActionState)
 	}
@@ -331,7 +331,7 @@ func TestReconcile_MissingOSVersion(t *testing.T) {
 	mockClient := gnoi.NewMockClient()
 
 	ctrl := &Controller{
-		deviceName: "test-device", 
+		deviceName: "test-device",
 		gnoiClient: mockClient,
 	}
 
@@ -346,7 +346,7 @@ func TestReconcile_MissingOSVersion(t *testing.T) {
 			},
 			"spec": map[string]interface{}{
 				"type":            "leafRouter",
-				"operation":       "OSUpgrade", 
+				"operation":       "OSUpgrade",
 				"operationAction": "PreloadImage",
 			},
 			"status": map[string]interface{}{
@@ -441,10 +441,10 @@ func TestUpdateOperationStatus_StateMapping(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.operationState, func(t *testing.T) {
 			ctrl.updateOperationStatus(obj, tc.operationState, tc.operationState, "Test message")
-			
+
 			state, _, _ := unstructured.NestedString(obj.Object, "status", "state")
 			if state != tc.expectedState {
-				t.Errorf("Expected state '%s' for operationState '%s', got '%s'", 
+				t.Errorf("Expected state '%s' for operationState '%s', got '%s'",
 					tc.expectedState, tc.operationState, state)
 			}
 		})

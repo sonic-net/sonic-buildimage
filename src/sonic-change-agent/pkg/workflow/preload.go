@@ -39,7 +39,7 @@ func (w *PreloadWorkflow) Execute(ctx context.Context, device *unstructured.Unst
 	}
 
 	firmwareProfile, _, _ := unstructured.NestedString(device.Object, "spec", "firmwareProfile")
-	
+
 	// For now, we construct the image URL based on osVersion and firmwareProfile
 	// This logic may need to be updated based on actual image repository structure
 	imageURL := w.constructImageURL(osVersion, firmwareProfile)

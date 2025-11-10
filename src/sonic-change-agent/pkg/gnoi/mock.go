@@ -11,16 +11,16 @@ type MockClient struct {
 	mu sync.Mutex
 
 	// Mock behaviors
-	DownloadImageFunc      func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error
-	TransferToRemoteFunc   func(ctx context.Context, sourceURL, remotePath string) error
-	VerifyLocalImageFunc   func(downloadPath, expectedMD5 string) (bool, error)
-	CloseFunc              func() error
+	DownloadImageFunc    func(ctx context.Context, imageURL, downloadPath, expectedMD5 string) error
+	TransferToRemoteFunc func(ctx context.Context, sourceURL, remotePath string) error
+	VerifyLocalImageFunc func(downloadPath, expectedMD5 string) (bool, error)
+	CloseFunc            func() error
 
 	// Call tracking
-	DownloadImageCalls      []DownloadImageCall
-	TransferToRemoteCalls   []TransferToRemoteCall
-	VerifyLocalImageCalls   []VerifyLocalImageCall
-	CloseCalls              int
+	DownloadImageCalls    []DownloadImageCall
+	TransferToRemoteCalls []TransferToRemoteCall
+	VerifyLocalImageCalls []VerifyLocalImageCall
+	CloseCalls            int
 }
 
 type DownloadImageCall struct {
