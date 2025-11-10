@@ -34,21 +34,26 @@ bool isValidEnable(string enableStr) {
 bool parse_config(const char *filename, unsigned int& days, unsigned int& count) {
     days = EHT_MAX_DAYS;
     count = EHT_MAX_ELEMS;
-    std::ifstream ifs(filename);
+    ifstream ifs(filename);
 
     if (!ifs.is_open()) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
+        SWSS_LOG_ERROR("Failed to open file: %s", filename);
         return false;
     }
 
     json j;
     try {
-      j = json::parse(ifs);
+        j = json::parse(ifs);
     }
-    catch (const std::exception &e) {
+    catch (const json::parse_error &e) {
         SWSS_LOG_ERROR("Error parsing config file %s:%s ", filename, e.what());
         return false;
     }
+    catch (const std::exception &e) {
+        SWSS_LOG_ERROR("Unexpected error parsing config file %s: %s", filename, e.what());
+        return false;
+    }
+
     for (json::iterator it = j.begin(); it != j.end(); ++it) {
         if(it.key() == "max-days") {
             days = it.value();
@@ -69,10 +74,14 @@ bool parse(const char *filename, EventMap& tmp_event_table) {
 
     json j;
     try {
-       file >> j;
+         j = json::parse(file);
+    }
+    catch (const json::parse_error &e) {
+        SWSS_LOG_ERROR("Error parsing profile file %s:%s ", filename, e.what());
+        return false;
     }
     catch (const std::exception &e) {
-        SWSS_LOG_ERROR("Error parsing profile file %s:%s ", filename, e.what());
+        SWSS_LOG_ERROR("Unexpected error parsing config file %s: %s", filename, e.what());
         return false;
     }
 
