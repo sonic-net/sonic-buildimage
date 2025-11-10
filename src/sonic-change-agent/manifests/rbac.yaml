@@ -10,10 +10,10 @@ kind: ClusterRole
 metadata:
   name: sonic-change-agent
 rules:
-- apiGroups: ["sonic.io"]
+- apiGroups: ["sonic.k8s.io"]
   resources: ["networkdevices"]
   verbs: ["get", "list", "watch"]
-- apiGroups: ["sonic.io"]
+- apiGroups: ["sonic.k8s.io"]
   resources: ["networkdevices/status"]
   verbs: ["get", "update", "patch"]
 ---

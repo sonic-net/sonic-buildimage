@@ -1,0 +1,6 @@
+# Test logs and artifacts
+test_logs/
+*.log
+.pytest_cache/
+__pycache__/
+*.pyc

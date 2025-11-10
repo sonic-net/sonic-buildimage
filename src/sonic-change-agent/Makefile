@@ -1,4 +1,4 @@
-.PHONY: all build test clean docker-build fmt vet lint
+.PHONY: all build test test-integration test-all clean docker-build fmt vet lint
 
 # Variables
 BINARY_NAME=sonic-change-agent
@@ -54,5 +54,12 @@ docker-build:
 
 ci: fmt vet test
 	@echo "CI checks passed"
+
+# Integration testing
+test-integration:
+	@echo "Running sonic-change-agent integration tests..."
+	cd test && python3 -m pytest -v
+
+test-all: test test-integration
 
 .DEFAULT_GOAL := all

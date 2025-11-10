@@ -17,15 +17,14 @@ spec:
       serviceAccountName: sonic-change-agent
       # Justification: Required to access SONiC Redis (localhost:6379) and gNOI server (localhost:8080)
       hostNetwork: true # nosemgrep: yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-role.kubernetes.io/control-plane
-                operator: DoesNotExist
-              - key: node-role.kubernetes.io/master
-                operator: DoesNotExist
+      # For minikube testing, allow scheduling on control-plane nodes
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
       containers:
       - name: sonic-change-agent
         image: sonic-change-agent:latest
