@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "wistron_es2227_54ts": {
+            "component": {
+                "U-Boot": { },
+                "ONIE-VERSION": { },
+                "CPLD": { }
+            }
+        }
+    }
+}

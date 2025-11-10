@@ -1,0 +1,110 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "false",
+        "interval": "60"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "any fan absence",
+            "conditions": [
+                {
+                    "type": "fan.any.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed"
+                }
+            ]
+        },
+        {
+            "name": "all fan presence",
+            "conditions": [
+                {
+                    "type": "fan.all.presence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.set_speed"
+                }
+            ]
+        },
+        {
+            "name": "any fan new",
+            "conditions": [
+                {
+                    "type": "fan.any.new"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.new.set_speed"
+                }
+            ]
+        },
+        {
+            "name": "all fan absence",
+              "conditions": [
+                {
+                  "type": "fan.all.absence"
+                }
+            ],
+            "actions": [
+                {
+                  "type": "switch.shutdown"
+                }
+            ]
+        },
+	    {
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "temp over high threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "high_threshold.control"
+                }
+            ]
+        },
+        {
+            "name": "temp over threshold after cool down",
+            "conditions": [
+                {
+                    "type": "thermal.over.threshold_after_cool_down"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.shutdown"
+                }
+            ]
+        }
+    ]
+}
