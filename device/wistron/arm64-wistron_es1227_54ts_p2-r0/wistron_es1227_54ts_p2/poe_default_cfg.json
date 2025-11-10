@@ -1,0 +1,382 @@
+{
+    "PORT": {
+        "Ethernet0": {
+            "lanes": "0",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet1": {
+            "lanes": "1",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet2": {
+            "lanes": "2",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet3": {
+            "lanes": "3",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet4": {
+            "lanes": "4",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet5": {
+            "lanes": "5",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet6": {
+            "lanes": "6",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet7": {
+            "lanes": "7",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet8": {
+            "lanes": "8",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet9": {
+            "lanes": "9",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet10": {
+            "lanes": "10",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet11": {
+            "lanes": "11",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet12": {
+            "lanes": "12",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet13": {
+            "lanes": "13",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet14": {
+            "lanes": "14",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet15": {
+            "lanes": "15",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet16": {
+            "lanes": "16",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet17": {
+            "lanes": "17",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet18": {
+            "lanes": "18",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet19": {
+            "lanes": "19",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet20": {
+            "lanes": "20",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet21": {
+            "lanes": "21",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet22": {
+            "lanes": "22",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet23": {
+            "lanes": "23",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet24": {
+            "lanes": "24",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet25": {
+            "lanes": "25",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet26": {
+            "lanes": "26",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet27": {
+            "lanes": "27",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet28": {
+            "lanes": "28",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet29": {
+            "lanes": "29",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet30": {
+            "lanes": "30",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet31": {
+            "lanes": "31",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet32": {
+            "lanes": "32",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet33": {
+            "lanes": "33",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet34": {
+            "lanes": "34",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet35": {
+            "lanes": "35",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet36": {
+            "lanes": "36",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet37": {
+            "lanes": "37",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet38": {
+            "lanes": "38",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet39": {
+            "lanes": "39",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet40": {
+            "lanes": "40",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet41": {
+            "lanes": "41",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet42": {
+            "lanes": "42",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet43": {
+            "lanes": "43",
+            "poe_pri": "low",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet44": {
+            "lanes": "44",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet45": {
+            "lanes": "45",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet46": {
+            "lanes": "46",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet47": {
+            "lanes": "47",
+            "poe_pri": "critical",
+            "poe_status": "enableDynamic",
+            "poe_maxpower": "0",
+            "poe_tlv": "disable"
+        },
+        "Ethernet48": {
+            "lanes": "48",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet49": {
+            "lanes": "49",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet50": {
+            "lanes": "50",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet51": {
+            "lanes": "51",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet52": {
+            "lanes": "52",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        },
+        "Ethernet53": {
+            "lanes": "52",
+            "poe_pri": "NA",
+            "poe_status": "NA",
+            "poe_maxpower": "0",
+            "poe_tlv": "NA"
+        }
+    }
+}

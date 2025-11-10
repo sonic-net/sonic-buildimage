@@ -28,3 +28,9 @@ Architecture: arm64
 Depends: ${misc:Depends}
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
+
+Package: sonic-platform-es1227-54ts-p2
+Architecture: arm64
+Depends: ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>

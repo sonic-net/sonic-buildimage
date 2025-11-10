@@ -12,7 +12,7 @@ endif
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 INSTALL_MOD_DIR := kernel/extra/
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= es1227_54ts es2227_54ts es2227_54ts_p es1227_36ts_p
+MODULE_DIRS:= es1227_54ts es2227_54ts es2227_54ts_p es1227_36ts_p es1227_54ts_p2
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
