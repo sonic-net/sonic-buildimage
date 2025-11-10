@@ -6,7 +6,7 @@
                 "name": "Aboot()"
             },
             {
-                "name": "Scd(addr=0000:0c:00.0)"
+                "name": "Scd(addr=0000:04:00.0)"
             },
             {
                 "name": "RedstartSysCpld(addr=13-0023)"
@@ -15,7 +15,7 @@
                 "name": "Adm1266(addr=14-0040)"
             },
             {
-                "name": "Scd(addr=0000:0e:00.0)"
+                "name": "Scd(addr=0000:06:00.0)"
             }
         ],
         "fans": [],
