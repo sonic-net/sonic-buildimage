@@ -7,10 +7,10 @@ index 2f430f4..98a704f 100644
  
  /* libnl uses default 32k socket receive buffer size,
 - * which can get too small. Use 960k for all sockets.
-+ * which can get too small. Use 8MB for all sockets.
++ * which can get too small. Use 16MB for all sockets.
   */
 -#define NETLINK_RCVBUF 983040
-+#define NETLINK_RCVBUF 8388608
++#define NETLINK_RCVBUF 16777216
  
  /**
   * @param th		libteam library context
