@@ -255,7 +255,7 @@ class DhcpServCfgGenerator(object):
                         "lease_time": dhcp_config["lease_time"] if "lease_time" in dhcp_config else DEFAULT_LEASE_TIME,
                         "customized_options": curr_options
                     }
-                    if "gateway" in dhcp_config:
+                    if "gateway" in dhcp_config and not smart_switch:
                         subnet_obj["gateway"] = dhcp_config["gateway"]
                     subnets.append(subnet_obj)
         render_obj = {

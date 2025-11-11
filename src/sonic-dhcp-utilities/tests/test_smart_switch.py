@@ -58,10 +58,6 @@ expected_kea_config = {
                 ],
                 "option-data": [
                     {
-                        "name": "routers",
-                        "data": "169.254.200.254"
-                    },
-                    {
                         "name": "dhcp-server-identifier",
                         "data": "169.254.200.254",
                         "always-send": True
