@@ -685,7 +685,7 @@ start() {
         -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
-        -v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw \
+        $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
         -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
@@ -720,6 +720,8 @@ start() {
     $(if [ -e "/dev/sdb" ]; then echo "--device=/dev/sdb:/dev/sdb"; fi) \
     $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
     $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
+    $(for blockdev in /sys/block/*; do if [ -d "$blockdev" ]; then device_name=$(basename "$blockdev"); if [[ "$device_name" =~ ^(sd[a-z]+|nvme[0-9]+n[0-9]+)$ ]] && [[ ! "$device_name" =~ (boot|loop) ]]; then dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; fi; done) \
+    $(for dev_file in /dev/nvme*; do if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; done) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
