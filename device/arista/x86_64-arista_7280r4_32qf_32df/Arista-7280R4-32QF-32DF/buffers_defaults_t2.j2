@@ -15,7 +15,13 @@
 
 {%- macro generate_port_lists(PORT_ALL) %}
     {# Generate list of ports #}
-    {%- for port_idx in range(0,256,4) %}
+    {%- for port_idx in range(0,128,8) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(128,256,4) %}
+        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
+    {%- endfor %}
+    {%- for port_idx in range(256,384,8) %}
         {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
     {%- endfor %}
 {%- endmacro %}
