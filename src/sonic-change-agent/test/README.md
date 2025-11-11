@@ -18,7 +18,13 @@ These tests validate the complete sonic-change-agent workflow:
 # Initial setup (from project root)
 make setup
 
-# Run all integration tests
+# Run all tests (unit + integration)  
+make test
+
+# Run just unit tests
+make unit
+
+# Run just integration tests
 make test-integration
 
 # Run integration tests without rebuilding Docker image (faster)

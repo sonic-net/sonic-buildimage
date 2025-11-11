@@ -1,4 +1,4 @@
-.PHONY: help setup install-deps check dev all build test test-integration test-quick test-all clean clean-test clean-all docker-build fmt vet lint tidy ci
+.PHONY: help setup install-deps check dev all build unit test test-integration test-quick clean docker-build fmt vet lint tidy ci
 
 # Variables
 BINARY_NAME=sonic-change-agent
@@ -44,10 +44,10 @@ help:
 	@echo "  build             Build the binary"
 	@echo ""
 	@echo "Testing:"
-	@echo "  test              Run Go unit tests"
+	@echo "  test              Run all tests (unit + integration)"
+	@echo "  unit              Run Go unit tests only"
 	@echo "  test-integration  Run integration tests with Docker rebuild"
 	@echo "  test-quick        Run integration tests without Docker rebuild"
-	@echo "  test-all          Run all tests (unit + integration)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt               Format Go code"
@@ -61,9 +61,7 @@ help:
 	@echo "  docker-build      Build Docker image"
 	@echo ""
 	@echo "Cleanup:"
-	@echo "  clean             Clean Go build artifacts"
-	@echo "  clean-test        Clean test artifacts (logs, minikube cluster)"
-	@echo "  clean-all         Clean everything"
+	@echo "  clean             Clean all artifacts (build, test, logs, clusters)"
 	@echo ""
 	@echo "Options:"
 	@echo "  PYTEST_ARGS      Pass arguments to pytest (default: -v)"
@@ -83,13 +81,13 @@ install-deps:
 	pip install -r test/requirements.txt
 
 # Development Workflows
-dev: fmt vet test build
+dev: fmt vet unit build
 	@echo "✅ Development workflow completed"
 
 check: fmt vet
 	@echo "✅ Quick validation passed"
 
-all: fmt vet test build
+all: fmt vet unit build
 	@echo "✅ Full workflow completed"
 
 # Build
@@ -97,12 +95,15 @@ build:
 	@echo "Building $(BINARY_NAME)..."
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) ./cmd/sonic-change-agent
 
-# Go Testing
-test:
+# Testing
+unit:
 	@echo "Running Go unit tests..."
 	$(GOTEST) -v -race -coverprofile=coverage.out ./...
 
-coverage: test
+test: unit test-integration
+	@echo "✅ All tests completed"
+
+coverage: unit
 	@echo "Generating coverage report..."
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
@@ -141,8 +142,6 @@ test-quick: _check-test-prereqs
 	@echo "Running integration tests (skipping Docker rebuild)..."
 	cd test && SKIP_DOCKER_BUILD=1 python3 -m pytest $(PYTEST_ARGS)
 
-test-all: test test-integration
-	@echo "✅ All tests completed"
 
 # Internal target to check test prerequisites
 _check-test-prereqs:
@@ -154,21 +153,15 @@ _check-test-prereqs:
 
 # Cleanup
 clean:
-	@echo "Cleaning Go build artifacts..."
+	@echo "Cleaning all artifacts..."
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 	rm -f coverage.out coverage.html
-
-clean-test:
-	@echo "Cleaning test artifacts..."
 	-minikube delete --profile $(MINIKUBE_PROFILE) 2>/dev/null || true
 	-docker rmi $(DOCKER_IMAGE):test 2>/dev/null || true
 	rm -rf test/test_logs test/.pytest_cache
-	@echo "✅ Test artifacts cleaned"
-
-clean-all: clean clean-test
 	@echo "✅ All artifacts cleaned"
 
 # CI/CD
-ci: fmt vet test docker-build test-integration
+ci: fmt vet test docker-build
 	@echo "✅ CI pipeline completed successfully"
