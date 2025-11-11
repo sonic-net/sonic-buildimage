@@ -284,7 +284,7 @@ fi
 install_deb_package $debs_path/sonic-device-data_*.deb
 
 # package for supporting password hardening
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality cracklib-runtime
 
 # Install pam-ldap, nss-ldap, ldap-utils
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
