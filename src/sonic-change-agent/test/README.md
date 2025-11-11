@@ -15,11 +15,17 @@ These tests validate the complete sonic-change-agent workflow:
 ## Quick Start
 
 ```bash
-# Install dependencies (from project root)
-pip install -r test/requirements.txt
+# Initial setup (from project root)
+make setup
 
 # Run all integration tests
 make test-integration
+
+# Run integration tests without rebuilding Docker image (faster)
+make test-quick
+
+# Run specific tests
+make test-integration PYTEST_ARGS='-v -k test_preload'
 
 # Or run pytest directly  
 cd test && python3 -m pytest -v
@@ -47,12 +53,17 @@ cd test && python3 -m pytest -v
 Run specific test categories:
 ```bash
 # Only workflow tests
-cd test && python3 -m pytest -v -m workflow
+make test-integration PYTEST_ARGS='-v -m workflow'
 
 # Exclude slow tests
-cd test && python3 -m pytest -v -m "not slow"
+make test-integration PYTEST_ARGS='-v -m "not slow"'
 
 # Specific test
+make test-integration PYTEST_ARGS='-v test_integration.py::test_preload_workflow'
+
+# Or using pytest directly
+cd test && python3 -m pytest -v -m workflow
+cd test && python3 -m pytest -v -m "not slow"
 cd test && python3 -m pytest -v test_integration.py::test_preload_workflow
 ```
 

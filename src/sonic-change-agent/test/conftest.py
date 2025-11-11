@@ -161,6 +161,17 @@ def docker_image():
     """Build test Docker image."""
     image_name = "sonic-change-agent:test"
     
+    # Check if we should skip Docker build for faster iteration
+    if os.getenv("SKIP_DOCKER_BUILD"):
+        print(f"\n🐳 Skipping Docker build (SKIP_DOCKER_BUILD=1)")
+        # Check if image already exists
+        result = run_cmd(["docker", "inspect", image_name])
+        if result.returncode != 0:
+            pytest.fail(f"Image {image_name} not found and SKIP_DOCKER_BUILD=1. Run 'make test-integration' first.")
+        print(f"✅ Using existing Docker image: {image_name}")
+        yield image_name
+        return
+    
     print(f"\n🐳 Building Docker image: {image_name}")
     
     project_root = os.path.dirname(os.path.abspath(__file__))
@@ -177,9 +188,10 @@ def docker_image():
     
     yield image_name
     
-    # Cleanup
-    print(f"\n🧹 Removing test image: {image_name}")
-    run_cmd(["docker", "rmi", image_name])
+    # Only cleanup if we built the image (don't remove existing images for test-quick)
+    if not os.getenv("SKIP_DOCKER_BUILD"):
+        print(f"\n🧹 Removing test image: {image_name}")
+        run_cmd(["docker", "rmi", image_name])
 
 
 @pytest.fixture(scope="session") 
