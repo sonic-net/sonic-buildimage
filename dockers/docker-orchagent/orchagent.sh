@@ -132,6 +132,15 @@ if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
+# Enable SAI MACSec POST when:
+# - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
+# - MACSec is enabled on platform.
+if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; then
+    if grep -q "macsec_enabled=1" /usr/share/sonic/platform/platform_env.conf 2>/dev/null ; then
+        ORCHAGENT_ARGS+=" -M"
+    fi
+fi
+
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.
 trap '' SIGHUP
 
