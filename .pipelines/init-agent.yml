@@ -28,7 +28,6 @@ steps:
       sudo apt-get update
       sleep 1
       # Upgrade jinja2 to use j2 in Makefile.work
-      sudo pip3 install --upgrade jinja2
       sudo apt-get install -y nfs-common unzip wget
       if echo $arch | grep amd64; then
         sudo apt-get install -y aznfs
