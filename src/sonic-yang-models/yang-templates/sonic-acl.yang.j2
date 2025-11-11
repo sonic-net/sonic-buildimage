@@ -321,11 +321,13 @@ module sonic-acl {
 
 				leaf-list MATCHES {
 					type string;
+					ordered-by user;
 					min-elements 1;
 				}
 
 				leaf-list ACTIONS {
 					type string;
+					ordered-by user;
 					default "";
 				}
 
@@ -334,6 +336,7 @@ module sonic-acl {
 						enum PORT;
 						enum PORTCHANNEL;
 					}
+					ordered-by user;
 					min-elements 1;
 				}
 			}
@@ -376,6 +379,7 @@ module sonic-acl {
 
 				leaf-list services {
 					type string;
+					ordered-by user;
 				}
 
 				/* Validating 'services' exist if ACL type is 'CTRLPLANE' */
@@ -394,6 +398,7 @@ module sonic-acl {
 							pattern "";
 						}
 					}
+					ordered-by user;
 					/* Today in SONiC, we do not delete the list once
 					 * created, instead we set to empty list. Due to that
 					 * below default values are needed.

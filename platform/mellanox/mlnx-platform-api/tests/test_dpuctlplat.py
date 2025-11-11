@@ -78,6 +78,7 @@ class TestDpuCtlPlatInit:
         assert dpuctl_obj.logger_info != print
         assert dpuctl_obj.logger_error != print
         assert dpuctl_obj.logger_debug != print
+        assert dpuctl_obj.logger_warning != print
 
     def test_get_pci_dev_path(self, dpuctl_obj):
         """Test PCI device path retrieval"""
