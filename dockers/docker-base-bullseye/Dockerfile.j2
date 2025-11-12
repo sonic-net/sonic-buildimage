@@ -19,6 +19,7 @@ COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 COPY ["apt-multiple-retries", "/etc/apt/apt.conf.d"]
+COPY ["99-no-ssl-check", "/etc/apt/apt.conf.d"]
 
 # Update apt cache and
 # pre-install fundamental packages
