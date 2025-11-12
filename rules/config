@@ -265,8 +265,12 @@ SECURE_UPGRADE_MODE ?= "no_sign"
 SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
+
+# MIRROR_URL - Default mirror url
+MIRROR_URL ?= https://packages.trafficmanager.net
+
 # PACKAGE_URL_PREFIX - the package url prefix
-PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
+PACKAGE_URL_PREFIX ?= $(MIRROR_URL)/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
 TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc

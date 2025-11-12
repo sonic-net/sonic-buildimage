@@ -39,6 +39,7 @@ COPY ["sources.list", "/etc/apt/sources.list"]
 {% endif %}
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+COPY ["99-no-ssl-check", "/etc/apt/apt.conf.d"]
 RUN apt-get update
 
 # Pre-install fundamental packages

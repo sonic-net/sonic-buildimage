@@ -11,7 +11,6 @@ POST_VERSION_PATH=$BUILDINFO_PATH/post-versions
 VERSION_DEB_PREFERENCE=$BUILDINFO_PATH/versions/01-versions-deb
 WEB_VERSION_FILE=$VERSION_PATH/versions-web
 BUILD_WEB_VERSION_FILE=$BUILD_VERSION_PATH/versions-web
-REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 GET_RETRY_COUNT=5
 
@@ -111,16 +110,19 @@ get_version_cache_option()
 # Enable or disable the reproducible mirrors
 set_reproducible_mirrors()
 {
+    # Escape special characters in MIRROR_URL for use in sed regex
+    local ESCAPED_MIRROR_URL=$(echo "$MIRROR_URL" | sed 's/[\/&.]/\\&/g')
+
     # Remove the charater # in front of the line if matched
-    local expression="s/^#\s*\(.*$REPR_MIRROR_URL_PATTERN\)/\1/"
+    local expression="s/^#\s*\(.*$ESCAPED_MIRROR_URL\)/\1/"
     # Add the character # in front of the line, if not match the URL pattern condition
-    local expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#*deb/#&/"
+    local expression2="/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#*deb/#&/"
     local expression3="\$a#SET_REPR_MIRRORS"
     if [ "$1" = "-d" ]; then
         # Add the charater # in front of the line if match
-        expression="s/^deb.*$REPR_MIRROR_URL_PATTERN/#\0/"
+        expression="s/^deb.*$ESCAPED_MIRROR_URL/#\0/"
         # Remove the character # in front of the line, if not match the URL pattern condition
-        expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#\s*(#*deb)/\1/"
+        expression2="/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#\s*(#*deb)/\1/"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
@@ -132,7 +134,7 @@ set_reproducible_mirrors()
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
     for mirror in $mirrors; do
-        if ! grep -iq "$REPR_MIRROR_URL_PATTERN" "$mirror"; then
+        if ! grep -iq "$ESCAPED_MIRROR_URL" "$mirror"; then
             continue
         fi
 
