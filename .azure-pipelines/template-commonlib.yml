@@ -13,7 +13,7 @@ jobs:
     ${{ if eq(arch,'amd64') }}:
       pool: sonicso1ES-amd64
     ${{ else }}:
-      pool: sonicbld-${{ arch }}
+      pool: sonicso1ES-${{ arch }}
     variables:
       - template: template-variables.yml
     steps:

@@ -74,7 +74,7 @@ stages:
         - ${{ if ne(arch, 'amd64') }}:
           - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
             parameters:
-              pool: sonicbld-${{ arch }}
+              pool: sonicso1ES-${{ arch }}
               arch: ${{ arch }}
               dist: ${{ dist }}
               march: _${{ arch }}

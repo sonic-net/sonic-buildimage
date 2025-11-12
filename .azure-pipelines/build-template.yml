@@ -36,7 +36,6 @@ parameters:
   type: string
   values:
   - sonicso1ES-amd64
-  - sonicbld_8c
   default: sonicso1ES-amd64
 
 - name: dbg_image
