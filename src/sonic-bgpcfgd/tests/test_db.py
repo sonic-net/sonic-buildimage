@@ -30,6 +30,14 @@ def test_set_del_handler():
     assert "test_key2" in m.directory.get_slot(m.db_name, m.table_name)
     assert m.directory.get(m.db_name, m.table_name, "test_key2") == {}
 
+    res = m.set_handler("localhost", {'bgp_asn':'65100','suppress-fib-pending':'enabled'})
+    assert res, "Returns always True"
+    assert m.directory.get(m.db_name, m.table_name, "localhost") == {'bgp_asn':'65100','suppress-fib-pending':'enabled'}
+
+    res = m.set_handler("localhost", {'bgp_asn':'65100','suppress-fib-pending':'disabled'})
+    assert res, "Returns always True"
+    assert m.directory.get(m.db_name, m.table_name, "localhost") == {'bgp_asn':'65100','suppress-fib-pending':'disabled'}
+
     # test del_handler
     m.del_handler("test_key")
     assert "test_key" not in m.directory.get_slot(m.db_name, m.table_name)

@@ -44,7 +44,18 @@ struct i2c_adapter_sysfs_vals {
 	uint32_t num_virt_ch;
 };
 
+struct i2c_adapter_data {
+	int virt_bus;
+	void *__iomem ch_base_addr;
+	int ch_size;
+	int num_virt_ch;
+};
+
 struct i2c_adapter_drvdata {
+	struct pci_dev *pci_dev;
+	size_t bar_length;
+	struct kobject *i2c_kobj;
+
 	// temp_sysfs_vals store temporary values provided by sysfs,
 	// which are eventually copied/saved to I2C adapter platform data.
 	struct i2c_adapter_sysfs_vals temp_sysfs_vals;
@@ -69,5 +80,9 @@ extern int pddf_multifpgapci_i2c_module_init(struct pci_dev *pci_dev,
 // Only called if multifpgapci_i2c_module_init succeeded
 extern void pddf_multifpgapci_i2c_module_exit(struct pci_dev *pci_dev,
 					      struct kobject *kobj);
+
+extern int
+pddf_multifpgapci_i2c_get_adapter_data(struct pci_dev *pci_dev,
+				       struct i2c_adapter_data *data);
 
 #endif
