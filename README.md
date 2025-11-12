@@ -51,7 +51,7 @@
 
 ## SONiC Image Azure Pipelines
 
-All SONiC project build pipeline could be found at [Download Portal for SONiC Images](https://sonic-build.azurewebsites.net)
+All SONiC project build pipelines can be found at [Download Portal for SONiC Images](https://sonic-build.azurewebsites.net/pipelines)
 
 # sonic-buildimage
 
