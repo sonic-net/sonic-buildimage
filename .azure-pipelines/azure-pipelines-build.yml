@@ -72,7 +72,7 @@ jobs:
 
         - name: centec-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
+            pool: sonicso1ES-arm64
           timeoutInMinutes: 2880
           variables:
             PLATFORM_ARCH: arm64
@@ -87,7 +87,7 @@ jobs:
 
         - name: marvell-armhf
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-armhf
+            pool: sonicso1ES-armhf
           timeoutInMinutes: 2880
           variables:
             PLATFORM_NAME: marvell
@@ -95,7 +95,7 @@ jobs:
 
         - name: marvell-arm64
           ${{ if not(parameters.qemuOrCrossBuild) }}:
-            pool: sonicbld-arm64
+            pool: sonicso1ES-arm64
           timeoutInMinutes: 2880
           variables:
             PLATFORM_NAME: marvell
@@ -117,12 +117,12 @@ jobs:
             platform_rpc: nephos
 
         - name: pensando
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
         - name: nvidia-bluefield
-          pool: sonicbld-arm64
+          pool: sonicso1ES-arm64
           variables:
             PLATFORM_ARCH: arm64
 
