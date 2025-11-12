@@ -142,3 +142,6 @@
 [submodule "platform/marvell-teralynx/mrvl-teralynx"]
 	path = platform/marvell-teralynx/mrvl-teralynx
 	url = https://github.com/Marvell-switching/mrvl-teralynx.git
+[submodule "platform/alpinevs"]
+	path = platform/alpinevs
+	url = https://github.com/sonic-net/sonic-alpine.git
