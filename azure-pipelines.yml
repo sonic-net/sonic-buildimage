@@ -51,7 +51,7 @@ variables:
 
 stages:
 - stage: BuildVS
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -60,7 +60,7 @@ stages:
       - name: vs
 
 - stage: Build
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
@@ -79,12 +79,12 @@ stages:
           docker_syncd_rpc_image: yes
           platform_rpc: mlnx
       - name: marvell-arm64
-        pool: sonicbld-arm64
+        pool: sonicso1ES-arm64
         variables:
            PLATFORM_NAME: marvell
            PLATFORM_ARCH: arm64
       - name: marvell-armhf
-        pool: sonicbld-armhf
+        pool: sonicso1ES-armhf
         timeoutInMinutes: 1200
         variables:
           PLATFORM_NAME: marvell

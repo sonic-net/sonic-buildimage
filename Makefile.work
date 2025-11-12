@@ -94,7 +94,7 @@ $(error Add your user account to docker group and use your user account to make.
 endif
 
 # Check for j2cli availability
-J2_VER := $(shell j2 --version 2>&1 | grep j2cli | awk '{printf $$2}')
+J2_VER := $(shell j2 --version 2>&1 | grep j2 | awk '{printf $$2}')
 ifeq ($(J2_VER),)
 $(error Please install j2cli (sudo pip install j2cli))
 endif
