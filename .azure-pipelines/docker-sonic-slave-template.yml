@@ -28,11 +28,11 @@ parameters:
   default: sonicdev
 - name: pool
   type: string
-  default: sonicbld-1es
+  default: sonicso1ES-amd64
   values:
-  - sonicbld-1es
-  - sonicbld-arm64
-  - sonicbld-armhf
+  - sonicso1ES-amd64
+  - sonicso1ES-arm64
+  - sonicso1ES-armhf
 
 jobs:
 - job: sonic_slave_${{ parameters.dist }}${{ parameters.march }}
