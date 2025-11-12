@@ -21,6 +21,10 @@ FROM {{ prefix }}debian:trixie
 
 MAINTAINER gulv@microsoft.com
 
+RUN cp /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates
+RUN rm -f /etc/apt/sources.list.d/debian.sources
+
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
@@ -554,8 +558,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang golang-go
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb '{{ MIRROR_URL }}/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb '{{ MIRROR_URL }}/public/fips/trixie/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-{{ FIPS_GOLANG_MAIN_VERSION }}-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-{{ FIPS_GOLANG_MAIN_VERSION }} /usr/local/go \
  && rm golang-go.deb golang-src.deb
