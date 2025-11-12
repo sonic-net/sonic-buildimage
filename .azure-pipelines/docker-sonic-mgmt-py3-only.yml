@@ -32,7 +32,7 @@ stages:
 - stage: Build
   jobs:
   - job: Build
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 360
     steps:
     - template: cleanup.yml
