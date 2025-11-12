@@ -13,6 +13,10 @@ FROM $BASE AS base
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN cp /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates
+RUN rm -f /etc/apt/sources.list.d/debian.sources
+
 # Configure data sources for apt/dpkg
 COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]

@@ -1,0 +1,3 @@
+Acquire::https::Verify-Peer "false";
+Acquire::https::Verify-Host "false";
+
