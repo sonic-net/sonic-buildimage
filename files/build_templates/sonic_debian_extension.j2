@@ -415,10 +415,14 @@ sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "serial-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
+# Don't copy warmboot-finalizer for Alpine. The cleanup will be done by
+# RebootBackend.
+{% if sonic_asic_platform != "alpinevs" %}
 # Copy warmboot-finalizer files
 sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/finalize-warmboot.sh $FILESYSTEM_ROOT/usr/local/bin/finalize-warmboot.sh
 sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/warmboot-finalizer.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "warmboot-finalizer.service" | sudo tee -a $GENERATED_SERVICE_FILE
+{% endif %}
 
 # Copy watchdog-control files
 sudo LANG=C cp $IMAGE_CONFIGS/watchdog-control/watchdog-control.sh $FILESYSTEM_ROOT/usr/local/bin/watchdog-control.sh
@@ -1185,6 +1189,45 @@ sudo touch $FILESYSTEM_ROOT/etc/sonic/frr/vtysh.conf
 sudo chown -R $FRR_USER_UID:$FRR_USER_GID $FILESYSTEM_ROOT/etc/sonic/frr
 sudo chmod -R 640 $FILESYSTEM_ROOT/etc/sonic/frr/
 sudo chmod 750 $FILESYSTEM_ROOT/etc/sonic/frr
+{%- endif %}
+
+{% if sonic_asic_platform == "alpinevs" %}
+
+# Adding fake platform files for Alpine
+ALPINE_SERVICES=platform/alpinevs/src/services
+ALPINE_PLATFORM=platform/alpinevs/src/platform
+sudo mkdir -p $FILESYSTEM_ROOT/usr/share/sonic/device/gfpga-platform
+ALPINE_SSD=$FILESYSTEM_ROOT/usr/share/sonic/device/host_block/sda
+sudo mkdir -p $ALPINE_SSD
+sudo cp $ALPINE_PLATFORM/smartctl.txt $ALPINE_SSD
+sudo cp $ALPINE_PLATFORM/removable $ALPINE_SSD
+sudo cp $ALPINE_PLATFORM/stat $ALPINE_SSD
+GENERIC_PCIE_DEVICE=$FILESYSTEM_ROOT/usr/share/sonic/device/pci/0000:00:01.0
+sudo mkdir -p $GENERIC_PCIE_DEVICE
+sudo cp $ALPINE_PLATFORM/aer_dev_correctable $GENERIC_PCIE_DEVICE
+sudo cp $ALPINE_PLATFORM/aer_dev_fatal $GENERIC_PCIE_DEVICE
+sudo cp $ALPINE_PLATFORM/aer_dev_nonfatal $GENERIC_PCIE_DEVICE
+
+#Including add-on services for Alpine
+sudo cp $ALPINE_SERVICES/config/alpinevs-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "alpinevs-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $ALPINE_SERVICES/config/alpinevs-config.sh $FILESYSTEM_ROOT/usr/bin/
+
+sudo cp $ALPINE_SERVICES/init/alpinevs-init.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "alpinevs-init.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $ALPINE_SERVICES/init/alpinevs-init.sh $FILESYSTEM_ROOT/usr/bin/
+
+sudo cp $ALPINE_SERVICES/config/alpinevs-appdb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "alpinevs-appdb.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $ALPINE_SERVICES/config/alpinevs-appdb.sh $FILESYSTEM_ROOT/usr/bin/
+
+# Alpine warm-boot related files
+ALPINE_WARMBOOT=$ALPINE_PLATFORM/warm-boot
+sudo cp $ALPINE_WARMBOOT/alpine-warm-reboot $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/alpine-warm-reboot
+
+sudo cp $ALPINE_PLATFORM/copp_cfg.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+
 {%- endif %}
 
 # Mask services which are disabled by default
