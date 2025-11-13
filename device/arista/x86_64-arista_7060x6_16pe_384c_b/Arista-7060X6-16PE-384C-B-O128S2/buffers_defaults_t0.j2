@@ -34,3 +34,8 @@
         }
     },
 {%- endmacro %}
+
+{%- macro generate_service_port_list(PORT_SERVICE) -%}
+    {%- if PORT_SERVICE.append("Ethernet512") %}{% endif %}
+    {%- if PORT_SERVICE.append("Ethernet513") %}{% endif %}
+{%- endmacro %}

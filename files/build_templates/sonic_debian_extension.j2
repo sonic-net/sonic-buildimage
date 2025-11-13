@@ -533,15 +533,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchd
 # sonic-ctrmgrd-rs is required by container script
 install_deb_package $debs_path/sonic-ctrmgrd-rs_*.deb
 
-{% if include_kubernetes == "y" %}
-# Point to kubelet to /etc/resolv.conf
-#
-echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
-
-# Copy Flannel conf file into sonic-templates
-#
-sudo cp $BUILD_TEMPLATES/kube_cni.10-flannel.conflist $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
-
 # Install remote Container mgmt package
 # Required even if include_kubernetes != y, as it contains the
 # the container wrapper for docker start/stop/wait commands.
@@ -550,6 +541,15 @@ SONIC_CTRMGMT_WHEEL_NAME=$(basename {{sonic_ctrmgmt_py3_wheel_path}})
 sudo cp {{sonic_ctrmgmt_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_CTRMGMT_WHEEL_NAME
 sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
+
+{% if include_kubernetes == "y" %}
+# Point to kubelet to /etc/resolv.conf
+#
+echo 'KUBELET_EXTRA_ARGS="--resolv-conf=/etc/resolv.conf --cgroup-driver=cgroupfs --node-ip=::"' | sudo tee -a  $FILESYSTEM_ROOT/etc/default/kubelet
+
+# Copy Flannel conf file into sonic-templates
+#
+sudo cp $BUILD_TEMPLATES/kube_cni.10-flannel.conflist $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
 # Config file used by container mgmt scripts/service
 fl="${files_path}/remote_ctr.config.json"
@@ -580,11 +580,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 # kubelet service is controlled by ctrmgrd daemon.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
-# container script for docker commands, which is required as
-# all docker commands are replaced with container commands.
-# So just copy that file only.
-#
-sudo cp ${files_path}/container $FILESYSTEM_ROOT/usr/local/bin/
+# Some scripts will check one file inside sonic_ctrmgmt_py3_wheel to detect include_kubernetes status
+sudo rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
 {% endif %}
 
 # Copy the buffer configuration template
@@ -623,9 +620,6 @@ sudo cp $IMAGE_CONFIGS/hostname/hostname-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "banner-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.sh $FILESYSTEM_ROOT/usr/bin/
-
-# Copy miscellaneous scripts
-sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 
 # Copy internal topology configuration scripts
 {%- if sonic_asic_platform == "vs" %}
@@ -960,7 +954,18 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-man
 {% set name, path, set_owner, enabled = package.split('|') -%}
 sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT sonic-package-manager install --from-tarball {{ path }} {{ get_install_options(set_owner, enabled) }}
 name_repo=$(basename {{name}} .gz)
-sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
+image_tags=$(sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker images --format "{% raw %}{{.Tag}}{% endraw %}" $name_repo | grep -v "<none>")
+if echo "$image_tags" | grep -q "latest"; then
+    sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:latest $name_repo:"${SONIC_IMAGE_VERSION}"
+else
+    # If not tagged with latest, find existing tag and tag with latest
+    existing_tag=$(echo "$image_tags" | head -1)
+    if [ -n "$existing_tag" ]; then
+        sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag $name_repo:$existing_tag $name_repo:latest
+    else
+        echo "Warning: No existing tag found for image $name_repo, skipping version tagging"
+    fi
+fi
 {% endfor -%}
 
 sudo umount $FILESYSTEM_ROOT/target
@@ -1138,6 +1143,10 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
     sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]}
     sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
 done
+
+# Copy nvidia-bluefield platform files to /usr/bin
+sudo cp platform/nvidia-bluefield/files/bfnet.sh platform/nvidia-bluefield/files/platform-dump.sh $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bfnet.sh $FILESYSTEM_ROOT/usr/bin/platform-dump.sh
 
 sudo install -m 755 platform/nvidia-bluefield/byo/sonic-byo.py $FILESYSTEM_ROOT/usr/bin/sonic-byo.py
 sudo install -m 755 platform/nvidia-bluefield/nasa-cli-helper/nasa-cli-helper.py $FILESYSTEM_ROOT/usr/bin/nasa-cli-helper.py

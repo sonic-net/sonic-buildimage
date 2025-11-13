@@ -31,6 +31,7 @@
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
   * [DHCP_RELAY](#dhcp_relay)
+  * [DHCPV4_RELAY](#dhcpv4_relay)
   * [DHCP Server IPV4](#dhcp_server_ipv4)
   * [BMP](#bmp)
   * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
@@ -1134,6 +1135,28 @@ instance is supported in SONiC.
     ],
     "rfc6939_support": "true",
     "interface_id": "true"
+}
+
+```
+
+### DHCPV4_RELAY
+
+```
+{
+"DHCPV4_RELAY": {
+    "Vlan1000": {
+        "dhcpv4_servers": [
+            "192.168.0.1",
+            "192.168.0.2"
+        ],
+        "server_vrf": "Vrf_RED",
+        "source_interface": "Loopback0",
+        "link_selection": "enable",
+        "vrf_selection": "enable",
+        "server_id_override": "enable",
+        "agent_relay_mode": "append",
+        "max_hop_count": 10
+    }
 }
 
 ```
@@ -2804,33 +2827,73 @@ VOQ_INBAND_INTERFACE holds the name of the inband system port dedicated for cpu 
 
 ### VXLAN
 
-VXLAN_TUNNEL holds the VTEP source ip configuration.
+VXLAN_TUNNEL holds the VTEP source ip configuration (maximum 2 tunnels).
 VXLAN_TUNNEL_MAP holds the vlan to vni and vni to vlan mapping configuration.
 VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered tunnels.
 
+Single tunnel example:
 ```
 {
-"VXLAN_TUNNEL": {
+    "VXLAN_TUNNEL": {
         "vtep1": {
             "src_ip": "10.10.10.10",
             "dst_ip": "12.12.12.12"
         }
-  }
-"VXLAN_TUNNEL_MAP" : {
+    },
+    "VXLAN_TUNNEL_MAP": {
         "vtep1|map_1000_Vlan100": {
-           "vni": "1000",
-           "vlan": "100"
-         },
-        "vtep1|testmap": {
-           "vni": "22000",
-           "vlan": "70"
-         },
-  }
-  "VXLAN_EVPN_NVO": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
         "nvo1": {
             "source_vtep": "vtep1"
         }
-  }
+    }
+}
+```
+
+Dual tunnel example:
+```
+{
+    "VXLAN_TUNNEL": {
+        "vtep1": {
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12"
+        },
+        "vtep2": {
+            "src_ip": "10.20.10.10",
+            "dst_ip": "20.20.20.20"
+        }
+    },
+    "VXLAN_TUNNEL_MAP": {
+        "vtep1|map_1000_Vlan100": {
+            "vni": "1000",
+            "vlan": "100"
+        },
+        "vtep1|map_22000_Vlan70": {
+            "vni": "22000",
+            "vlan": "70"
+        },
+        "vtep2|map_2000_Vlan200": {
+            "vni": "2000",
+            "vlan": "200"
+        },
+        "vtep2|map_3000_Vlan300": {
+            "vni": "3000",
+            "vlan": "300"
+        }
+    },
+    "VXLAN_EVPN_NVO": {
+        "nvo1": {
+            "source_vtep": "vtep1"
+        }
+    }
 }
 ```
 
@@ -2992,6 +3055,15 @@ In this table, we allow configuring ssh server global settings. This will featur
 -   ports - Ssh port numbers - string of port numbers seperated by ','
 -   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
 -   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
+-   permit_root_login - Whether or not to allow root login. Default value: "prohibit-password"
+    - "yes"
+    - "prohibit-password"
+    - "forced-commands-only"
+    - "no"
+-   password_authentication - Whether or not to allow password authentication. Boolean.
+-   ciphers - Ciphers to allow.  See `ssh -Q ciphers`
+-   kex_algorithms - Key Exchange algorithms to allow.  See `ssh -Q kex_algorithms`
+-   macs - MAC algorithms to allow.  See `ssh -Q macs`
 ```
 {
     "SSH_SERVER": {
@@ -3000,7 +3072,12 @@ In this table, we allow configuring ssh server global settings. This will featur
             "login_timeout": "120",
             "ports": "22",
             "inactivity_timeout": "15",
-            "max_sessions": "0"
+            "max_sessions": "0",
+            "permit_root_login": "false",
+            "password_authentication": "true",
+            "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+            "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+            "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
         }
     }
 }
@@ -3260,6 +3337,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::10",
             "pa_ipv4": "192.168.1.10",
             "pa_ipv6": "2001:db8::10",
+            "midplane_ipv4": "169.254.200.245",
             "dpu_id": "0",
             "vdpu_id": "vdpu0",
             "gnmi_port": "50052",
@@ -3272,6 +3350,7 @@ The **DPU** table introduces the configuration for the DPUs (Data Processing Uni
             "vip_ipv6": "2001:db8::20",
             "pa_ipv4": "192.168.1.20",
             "pa_ipv6": "2001:db8::20",
+            "midplane_ipv4": "169.254.150.20",
             "dpu_id": "1",
             "vdpu_id": "vdpu1",
             "gnmi_port": "50052",

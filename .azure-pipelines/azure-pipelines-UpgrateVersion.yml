@@ -26,7 +26,7 @@ resources:
     ref: master
     endpoint: sonic-net
 
-pool: sonicbld-1es
+pool: sonicso1ES-amd64
 
 parameters:
 - name: 'jobFilters'
@@ -34,9 +34,6 @@ parameters:
   default:
   - vs
   - broadcom
-  - centec
-  - centec-arm64
-  - generic
   - marvell-prestera-armhf
   - marvell-prestera-arm64
   - mellanox
@@ -49,8 +46,8 @@ stages:
     steps:
     - script: |
         DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
-        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/snapshot/debian/latest/timestamp)
-        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/snapshot/debian-security/latest/timestamp)
+        DEBIAN_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian/latest)
+        DEBIAN_SECURITY_TIMESTAMP=$(curl $DEFAULT_MIRROR_URL_PREFIX/debian-snapshot/debian-security/latest)
         echo "DEBIAN_TIMESTAMP=$DEBIAN_TIMESTAMP, DEBIAN_SECURITY_TIMESTAMP=$DEBIAN_SECURITY_TIMESTAMP"
         echo "##vso[task.setvariable variable=DEBIAN_TIMESTAMP;isOutput=true]$DEBIAN_TIMESTAMP"
         echo "##vso[task.setvariable variable=DEBIAN_SECURITY_TIMESTAMP;isOutput=true]$DEBIAN_SECURITY_TIMESTAMP"
@@ -74,7 +71,7 @@ stages:
   - template: azure-pipelines-build.yml
     parameters:
       jobFilters: ${{ parameters.jobFilters }}
-      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y'
+      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y NOBUSTER=1 NOBULLSEYE=1'
       preSteps:
       - template: .azure-pipelines/template-clean-sonic-slave.yml@buildimage
       - checkout: self

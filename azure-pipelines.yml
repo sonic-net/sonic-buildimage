@@ -56,7 +56,7 @@ variables:
 
 stages:
 - stage: BuildVS
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -65,7 +65,7 @@ stages:
       - name: vs
 
 - stage: Build
-  pool: sonicbld-1es
+  pool: sonicso1ES-amd64
   dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
@@ -84,12 +84,12 @@ stages:
           docker_syncd_rpc_image: yes
           platform_rpc: mlnx
       - name: marvell-prestera-arm64
-        pool: sonicbld-arm64
+        pool: sonicso1ES-arm64
         variables:
            PLATFORM_NAME: marvell-prestera
            PLATFORM_ARCH: arm64
       - name: marvell-prestera-armhf
-        pool: sonicbld-armhf
+        pool: sonicso1ES-armhf
         timeoutInMinutes: 1200
         variables:
           PLATFORM_NAME: marvell-prestera
@@ -105,6 +105,8 @@ stages:
     value: veos_vtb
   - name: testbed_file
     value: vtestbed.csv
+  - name: PTF_MODIFIED
+    value: $[ coalesce(stageDependencies.BuildVS.vs.outputs['PublishAndSetPtfTag.PTF_MODIFIED'], 'false') ]
 
 # For every test job:
 # continueOnError: false means it's a required test job and will block merge if it fails
@@ -207,6 +209,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t0_2vlans_elastictest
     displayName: "impacted-area-kvmtest-t0-2vlans by Elastictest"
@@ -235,6 +238,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t1_lag_elastictest
     displayName: "impacted-area-kvmtest-t1-lag by Elastictest"
@@ -264,6 +268,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_dualtor_elastictest
     displayName: "impacted-area-kvmtest-dualtor by Elastictest"
@@ -293,6 +298,7 @@ stages:
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer --disable_sai_validation "
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_multi_asic_elastictest
     displayName: "impacted-area-kvmtest-multi-asic-t1 by Elastictest"
@@ -321,6 +327,7 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
 
   - job: impacted_area_t0_sonic_elastictest
     displayName: "impacted-area-kvmtest-t0-sonic by Elastictest"
@@ -350,6 +357,7 @@ stages:
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --disable_sai_validation "
           VM_TYPE: vsonic
           MGMT_BRANCH: $(BUILD_BRANCH)
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
           SPECIFIC_PARAM: '[
             {"name": "bgp/test_bgp_fact.py", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"},
             {"name": "macsec", "param": "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"}
@@ -381,6 +389,36 @@ stages:
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_sai_validation "
           MGMT_BRANCH: $(BUILD_BRANCH)
+          PTF_MODIFIED: ${{ eq(variables['PTF_MODIFIED'], 'true') }}
           SPECIFIC_PARAM: '[
             {"name": "dash/test_dash_vnet.py", "param": "--skip_dataplane_checking"}
             ]'
+
+  - job: impacted_area_t2_lag_elastictest
+    displayName: "impacted-area-kvmtest-t2 by Elastictest"
+    dependsOn:
+      - get_impacted_area
+    condition: contains(dependencies.get_impacted_area.outputs['SetVariableTask.PR_CHECKERS'], 't2_checker')
+    variables:
+      TEST_SCRIPTS: $[ dependencies.get_impacted_area.outputs['SetVariableTask.TEST_SCRIPTS'] ]
+    timeoutInMinutes: ${{ parameters.TIMEOUT_IN_MINUTES_PR_TEST }}
+    continueOnError: false
+    pool: sonic-ubuntu-1c
+    steps:
+      - checkout: sonic-mgmt
+      - template: .azure-pipelines/impacted_area_testing/calculate-instance-numbers.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t2
+          BUILD_BRANCH: $(BUILD_BRANCH)
+          # 50 mins for preparing testbed, 10 mins for pre-test and post-test
+          PREPARE_TIME: 60
+
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t2
+          SCRIPTS: $(SCRIPTS)
+          MIN_WORKER: $(INSTANCE_NUMBER)
+          MAX_WORKER: $(INSTANCE_NUMBER)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          COMMON_EXTRA_PARAMS: "--disable_sai_validation "

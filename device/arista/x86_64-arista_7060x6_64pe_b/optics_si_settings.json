@@ -1,0 +1,84 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-12": {
+            "100G_SPEED": {
+                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 3,
+                        "FixedInputEqTargetTx2": 3,
+                        "FixedInputEqTargetTx3": 3,
+                        "FixedInputEqTargetTx4": 3,
+                        "FixedInputEqTargetTx5": 3,
+                        "FixedInputEqTargetTx6": 3,
+                        "FixedInputEqTargetTx7": 3,
+                        "FixedInputEqTargetTx8": 3
+                    }
+                }
+            }
+        },
+        "13-24": {
+            "100G_SPEED": {
+                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 1,
+                        "FixedInputEqTargetTx2": 1,
+                        "FixedInputEqTargetTx3": 1,
+                        "FixedInputEqTargetTx4": 1,
+                        "FixedInputEqTargetTx5": 1,
+                        "FixedInputEqTargetTx6": 1,
+                        "FixedInputEqTargetTx7": 1,
+                        "FixedInputEqTargetTx8": 1
+                    }
+                }
+            }
+        },
+        "25-40": {
+            "100G_SPEED": {
+                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 0,
+                        "FixedInputEqTargetTx2": 0,
+                        "FixedInputEqTargetTx3": 0,
+                        "FixedInputEqTargetTx4": 0,
+                        "FixedInputEqTargetTx5": 0,
+                        "FixedInputEqTargetTx6": 0,
+                        "FixedInputEqTargetTx7": 0,
+                        "FixedInputEqTargetTx8": 0
+                    }
+                }
+            }
+        },
+        "41-52": {
+            "100G_SPEED": {
+                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 1,
+                        "FixedInputEqTargetTx2": 1,
+                        "FixedInputEqTargetTx3": 1,
+                        "FixedInputEqTargetTx4": 1,
+                        "FixedInputEqTargetTx5": 1,
+                        "FixedInputEqTargetTx6": 1,
+                        "FixedInputEqTargetTx7": 1,
+                        "FixedInputEqTargetTx8": 1
+                    }
+                }
+            }
+        },
+        "53-64": {
+            "100G_SPEED": {
+                "EOPTOLINK-(EO138HGPCT\\d{2}SL1|EOLO138HG5HSDLC)": {
+                    "FixedInputEqTargetTx": {
+                        "FixedInputEqTargetTx1": 3,
+                        "FixedInputEqTargetTx2": 3,
+                        "FixedInputEqTargetTx3": 3,
+                        "FixedInputEqTargetTx4": 3,
+                        "FixedInputEqTargetTx5": 3,
+                        "FixedInputEqTargetTx6": 3,
+                        "FixedInputEqTargetTx7": 3,
+                        "FixedInputEqTargetTx8": 3
+                    }
+                }
+            }
+        }
+    }
+}

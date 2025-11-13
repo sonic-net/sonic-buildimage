@@ -172,6 +172,26 @@
             }
         }
     },
+    "DEVICE_METADATA_TYPE_LOWER_MGMT_AGGREGATOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "LowerMgmtAggregator"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_TYPE_UPPER_MGMT_AGGREGATOR_PATTERN": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65002",
+                    "type": "UpperMgmtAggregator"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_TYPE_SONIC_DPU_PATTERN": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -631,6 +651,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "slice_type": "AZNG_Production"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_LOCATION_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "location_type": "DUMMY_LOCATION"
                 }
             }
         }

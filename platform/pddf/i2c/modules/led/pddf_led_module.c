@@ -302,11 +302,13 @@ ssize_t set_status_led(struct device_attribute *da)
         return (-1);
     }
 
-    pddf_dbg(LED, KERN_ERR "%s: Set [%s;%d] color[%s]\n", __func__,
+#if DEBUG
+    pddf_dbg(LED, KERN_INFO "%s: Set [%s;%d] color[%s]\n", __func__,
         temp_data_ptr->device_name, temp_data_ptr->index,
         temp_data_ptr->cur_state.color);
-    cur_state = find_state_index(_buf);
+#endif
 
+    cur_state = find_state_index(_buf);
     if (cur_state == MAX_LED_STATUS) {
         pddf_dbg(LED, KERN_ERR "ERROR %s: not supported: %s\n", _buf, __func__);
         return (-1);

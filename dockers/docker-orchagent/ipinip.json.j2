@@ -8,6 +8,11 @@
   {% set is_broadcom = true %}
 {% endif %}
 
+{% set is_broadcom_t1 = false %}
+{% if is_broadcom and 'LeafRouter' in DEVICE_METADATA['localhost']['type'] %}
+    {% set is_broadcom_t1 = true %}
+{% endif %}
+
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_vlan_addresses = [] %}
@@ -61,10 +66,10 @@
 {% endfor %}
 {%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
 {%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
-{# FIXME: SAI report tunnel TABLE_FULL for large topo. Disable it temporarily if over 128 IPv4/IPv6 tunnels. #}
+{# SAI report tunnel TABLE_FULL for large topo. Only generating for VLAN and loopback if over 128 routed interfaces.#}
 {% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
-{%- set ipv4_addresses = [] %}
-{%- set ipv6_addresses = [] %}
+{%- set ipv4_addresses = ipv4_loopback_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_loopback_addresses + ipv6_vlan_addresses %}
 {% endif %}
 
 {# Check if AZURE QoS map exists #}
@@ -80,7 +85,11 @@
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
 {% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
             "dscp_mode":"uniform",
+{% endif %}
 {% else %}
             "dscp_mode":"pipe",
 {% if azure_qos_exists %}
@@ -106,7 +115,11 @@
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
 {% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
             "dscp_mode":"uniform",
+{% endif %}
 {% else %}
             "dscp_mode":"pipe",
 {% if azure_qos_exists %}
@@ -139,7 +152,11 @@
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
 {% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
             "dscp_mode":"uniform",
+{% endif %}
 {% else %}
             "dscp_mode":"pipe",
 {% if azure_qos_exists %}
@@ -165,7 +182,11 @@
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
 {% if is_broadcom %}
+{% if is_broadcom_t1 %}
+            "dscp_mode":"pipe",
+{% else %}
             "dscp_mode":"uniform",
+{% endif %}
 {% else %}
             "dscp_mode":"pipe",
 {% if azure_qos_exists %}
