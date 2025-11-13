@@ -14,10 +14,9 @@ from typing import List, Optional, Tuple
 from sonic_py_common import logger as log
 logger = log.Logger()
 
-# ───────────── telemetry.service render/sync paths ─────────────
-TELEMETRY_SERVICE_J2 = "/usr/share/sonic/systemd_scripts/telemetry.service.j2"
+# ───────────── telemetry.service sync paths ─────────────
+CONTAINER_TELEMETRY_SERVICE = "/usr/share/sonic/systemd_scripts/telemetry.service"
 HOST_TELEMETRY_SERVICE = "/lib/systemd/system/telemetry.service"
-TMP_RENDERED_SERVICE = "/usr/share/sonic/systemd_scripts/telemetry.service.rendered"
 
 def get_bool_env_var(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
@@ -47,7 +46,7 @@ logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}; telemetry source set to {_TEL
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
     SyncItem("/usr/share/sonic/systemd_scripts/container_checker", "/bin/container_checker"),
-    SyncItem(TMP_RENDERED_SERVICE, HOST_TELEMETRY_SERVICE, mode=0o644),
+    SyncItem(CONTAINER_TELEMETRY_SERVICE, HOST_TELEMETRY_SERVICE, mode=0o644),
 ]
 
 POST_COPY_ACTIONS = {
@@ -140,39 +139,6 @@ def sha256_bytes(b: Optional[bytes]) -> str:
     h.update(b)
     return h.hexdigest()
 
-def render_telemetry_service_to_file(dst_path: str = TMP_RENDERED_SERVICE) -> bool:
-    """Render telemetry.service.j2 → /usr/share/sonic/systemd_scripts/telemetry.service.rendered"""
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-    except Exception as e:
-        logger.log_error(f"Jinja2 not available to render {TELEMETRY_SERVICE_J2}: {e}")
-        return False
-
-    try:
-        tdir = os.path.dirname(TELEMETRY_SERVICE_J2)
-        tname = os.path.basename(TELEMETRY_SERVICE_J2)
-
-        env = Environment(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2  # nosec
-            loader=FileSystemLoader(tdir),
-            autoescape=select_autoescape(enabled_extensions=("html", "htm", "xml"), default=False),
-        )
-
-        tmpl = env.get_template(tname)
-        rendered = tmpl.render(  # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2  # nosec
-            docker_container_name=os.getenv("DOCKER_CONTAINER_NAME", "telemetry"),
-            sonicadmin_user="root",
-            description=os.getenv("TELEMETRY_DESCRIPTION", "Telemetry container"),
-        )
-
-        with open(dst_path, "w", encoding="utf-8") as f:
-            f.write(rendered)
-        logger.log_info(f"Rendered {TELEMETRY_SERVICE_J2} → {dst_path}")
-        return True
-
-    except Exception as e:
-        logger.log_error(f"Failed rendering {TELEMETRY_SERVICE_J2}: {e}")
-        return False
-
 def sync_items(items: List[SyncItem]) -> bool:
     all_ok = True
     for item in items:
@@ -212,10 +178,6 @@ def sync_items(items: List[SyncItem]) -> bool:
     return all_ok
 
 def ensure_sync() -> bool:
-    # Render telemetry.service before syncing
-    if not render_telemetry_service_to_file():
-        logger.log_error("Skip telemetry.service sync this round due to render failure")
-        return False
     return sync_items(SYNC_ITEMS)
 
 def parse_args() -> argparse.Namespace:

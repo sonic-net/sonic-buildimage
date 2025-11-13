@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y python3-jinja2 && rm -rf /var/lib/apt/l
 COPY ["systemd_stub.py", "/usr/bin/"]
 COPY ["systemd_scripts/", "/usr/share/sonic/systemd_scripts/"]
 COPY ["files/container_checker", "/usr/share/sonic/systemd_scripts/container_checker"]
-COPY ["files/telemetry.service.j2", "/usr/share/sonic/systemd_scripts/telemetry.service.j2"]
+COPY ["files/telemetry.service", "/usr/share/sonic/systemd_scripts/telemetry.service"]
 COPY ["files/telemetry.sh", "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
