@@ -6,15 +6,10 @@ use sonic_supervisord_utilities_rs::{
 };
 use injectorpp::interface::injector::*;
 use injectorpp::interface::injector::InjectorPP;
+use mio::Token;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicU32, Ordering};
-
-// Test data paths
-const TEST_DATA_DIR: &str = "tests/test_data";
-const CRITICAL_PROCESSES_FILE: &str = "tests/test_data/critical_processes";
-const WATCHDOG_PROCESSES_FILE: &str = "tests/test_data/watchdog_processes";
-const STDIN_SAMPLE_FILE: &str = "tests/test_data/stdin_sample";
 
 // Global state for progressive time mocking
 static TIME_MOCK_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -77,7 +72,7 @@ impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
         Ok(())
     }
     
-    fn register(&self, _stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()> {
+    fn register(&self, _stdin_fd: std::os::unix::io::RawFd, _token: Token) -> std::io::Result<()> {
         // Mock registration always succeeds
         Ok(())
     }
