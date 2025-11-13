@@ -60,10 +60,9 @@ jobs:
           fi
         displayName: 'Checkout commit'
       - script: |
-          set -x
-          pwd
-          realpath $(pwd)
-          realpath /mnt/vss
+          set -ex
+          sudo apt-get update
+          sudo apt-get install -y acl
           sudo setfacl -R -b $(Agent.BuildDirectory)
         displayName: 'setfacl'
       - script: |
@@ -72,7 +71,6 @@ jobs:
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
           git checkout -b $BRANCH_NAME
           sudo modprobe overlay
-          sudo apt-get install -y acl
           sudo bash -c "echo 1 > /proc/sys/vm/compact_memory"
           [ -z "$PLATFORM_NAME" ] && PLATFORM_NAME=$(PLATFORM_AZP)
           ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$PLATFORM_NAME PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
@@ -90,16 +88,18 @@ jobs:
             # Fetch target branch to ensure we have the latest
             git fetch origin $(System.PullRequest.TargetBranch)
             # Check if docker-ptf Dockerfile.j2 has changes
+            # NOTE: The PTF_MODIFIED template parameter is of type string
+            # Ensure to set it to "True" or "False" (not boolean true/false)
             if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
               echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]true"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
             else
               echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
             fi
           else
             echo "Not a PR build, setting PTF_MODIFIED to false"
-            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
           fi
 
           if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
