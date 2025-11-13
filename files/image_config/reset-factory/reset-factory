@@ -76,6 +76,19 @@ clear_sonic_dir()
     mount -o remount /
 }
 
+# Remove SSH keys from all users
+reset_ssh_keys()
+{
+    echo "Remove SSH authorized keys from all users"
+    # Remove authorized_keys from all user home directories
+    find /home /root \( -path "*/.ssh/authorized_keys*" -o -path "*/.ssh/known_hosts*" \) \
+                    -type f -print -delete 2>/dev/null | tee -a "$PERMLOG"
+    
+    echo "Remove SSH host keys from /etc/ssh"
+    # Remove existing host keys (will be regenerated on boot)
+    rm -f /etc/ssh/ssh_host_*
+}
+
 # Get list of defaults users names and passwords from DEFAULT_USERS_FILE
 # Delete non-default users and restore default password of default users
 reset_users()
@@ -143,6 +156,18 @@ TEMP_CFG="/tmp/temp_config_db.$$"
 cp ${CONFIG_DB_JSON} ${TEMP_CFG}
 if [ "$FACTORY_TYPE" != "keep-basic" ] && [ "$FACTORY_TYPE" != "keep-all-config" ]; then
     rm -f ${CONFIG_DB_JSON}
+
+    echo "Reset banner/motd file"
+    DEFAULT_MOTD_FILE='/etc/motd_factory_default'
+    if [ -f ${DEFAULT_MOTD_FILE} ]; then
+        cp ${DEFAULT_MOTD_FILE} /etc/motd
+        echo "MOTD restored from factory default" | tee -a "$PERMLOG"
+    else
+        echo "WARNING: Factory default motd file not found at ${DEFAULT_MOTD_FILE}" | tee -a "$PERMLOG"
+    fi
+
+    echo "Removing hostname (will be set on boot)"
+    rm -f /etc/hostname
 fi
 
 echo "Call config-setup factory"
@@ -158,6 +183,9 @@ if [ "$FACTORY_TYPE" != "only-config" ]; then
 
         # Delete non-default users and restore default users passwords
         reset_users
+
+        # Remove SSH keys from all users and host keys
+        reset_ssh_keys
 
         echo "Delete bash, python and vim history files"
         find /home /root -type f -name ".bash_history" -o -name ".python_history" -o -name ".viminfo" | xargs rm -rf
