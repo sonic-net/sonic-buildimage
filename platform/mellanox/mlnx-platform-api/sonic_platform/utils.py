@@ -32,6 +32,7 @@ HWSKU_JSON = 'hwsku.json'
 PORT_INDEX_KEY = "index"
 PORT_TYPE_KEY = "port_type"
 RJ45_PORT_TYPE = "RJ45"
+CPO_PORT_TYPE = "CPO"
 
 logger = Logger()
 
@@ -239,19 +240,14 @@ def load_json_file(filename, log_func=logger.log_error):
         return None
 
 
-def extract_RJ45_ports_index():
-    # Cross check 'platform.json' and 'hwsku.json' to extract the RJ45 port index if exists.
-    hwsku_path = device_info.get_path_to_hwsku_dir()
-    hwsku_file = os.path.join(hwsku_path, HWSKU_JSON)
-    if not os.path.exists(hwsku_file):
-        # Platforms having no hwsku.json do not have RJ45 port
+def _extract_ports_index_by_type(port_type, num_of_asics=1):
+    platform_file = os.path.join(device_info.get_path_to_platform_dir(), device_info.PLATFORM_JSON_FILE)
+    if not os.path.exists(platform_file):
         return None
 
-    platform_file = device_info.get_path_to_port_config_file()
     platform_dict = load_json_file(platform_file)['interfaces']
-    hwsku_dict = load_json_file(hwsku_file)['interfaces']
     port_name_to_index_map_dict = {}
-    RJ45_port_index_list = []
+    port_index_list = []
 
     # Compose a interface name to index mapping from 'platform.json'
     for i, (key, value) in enumerate(platform_dict.items()):
@@ -264,12 +260,37 @@ def extract_RJ45_ports_index():
     if not bool(port_name_to_index_map_dict):
         return None
 
-    # Check if "port_type" specified as "RJ45", if yes, add the port index to the list.
-    for i, (key, value) in enumerate(hwsku_dict.items()):
-        if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == RJ45_PORT_TYPE:
-            RJ45_port_index_list.append(int(port_name_to_index_map_dict[key])-1)
+    hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
+    hwsku_dict = {}
+    for hwsku_json in hwsku_jsons:
+        hwsku_dict.update(load_json_file(hwsku_json)['interfaces'])
 
-    return RJ45_port_index_list if bool(RJ45_port_index_list) else None
+    # Check if "port_type" matches, if yes, add the port index to the list.
+    for i, (key, value) in enumerate(hwsku_dict.items()):
+        if key in port_name_to_index_map_dict and PORT_TYPE_KEY in value and value[PORT_TYPE_KEY] == port_type:
+            port_index_list.append(int(port_name_to_index_map_dict[key]) - 1)
+
+    # Remove duplicates
+    port_index_list = list(dict.fromkeys(port_index_list))
+
+    return port_index_list if port_index_list else None
+
+
+def get_path_list_to_asic_hwsku_dir(num_of_asics):
+    platform_path = device_info.get_path_to_platform_dir()
+    hwsku = device_info.get_hwsku()
+    if num_of_asics == 1:
+        return [os.path.join(platform_path, hwsku, HWSKU_JSON)]
+    else:
+        return [os.path.join(platform_path, hwsku, str(asic_id), HWSKU_JSON) for asic_id in range(num_of_asics)]
+
+
+def extract_RJ45_ports_index(num_of_asics=1):
+    return _extract_ports_index_by_type(RJ45_PORT_TYPE, num_of_asics)
+
+
+def extract_cpo_ports_index(num_of_asics=1):
+    return _extract_ports_index_by_type(CPO_PORT_TYPE, num_of_asics)
 
 
 def wait_until(predict, timeout, interval=1, *args, **kwargs):

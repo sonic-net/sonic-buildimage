@@ -326,7 +326,7 @@ install_deb_package $debs_path/libnss-radius_*.deb
 sudo sed -i -e '/^passwd/s/ radius//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install a custom version of kdump-tools  (and its dependencies via 'apt-get -y install -f')
-if [ "$TARGET_BOOTLOADER" != uboot ]; then
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
     install_deb_package $debs_path/kdump-tools_*.deb
     cat $IMAGE_CONFIGS/kdump/kdump-tools | sudo tee -a $FILESYSTEM_ROOT/etc/default/kdump-tools > /dev/null
 
@@ -579,6 +579,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 
 # kubelet service is controlled by ctrmgrd daemon.
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
+{% else %}
+# Some scripts will check one file inside sonic_ctrmgmt_py3_wheel to detect include_kubernetes status
+sudo rm $FILESYSTEM_ROOT/usr/local/bin/ctrmgr_tools.py
 {% endif %}
 
 # Copy the buffer configuration template
