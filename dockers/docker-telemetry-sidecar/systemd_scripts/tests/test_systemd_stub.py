@@ -87,19 +87,14 @@ def ss(tmp_path, monkeypatch):
 
     # Fake container FS
     container_fs = {}
+
     def fake_read_file_bytes_local(path: str):
         return container_fs.get(path, None)
+
     monkeypatch.setattr(ss, "read_file_bytes_local", fake_read_file_bytes_local, raising=True)
 
     # Isolate POST_COPY_ACTIONS
     monkeypatch.setattr(ss, "POST_COPY_ACTIONS", {}, raising=True)
-
-    # Default: stub the render step so tests that don't care about it aren't affected
-    def fake_render(dst_path: str = None):
-        dst_path = dst_path or ss.TMP_RENDERED_SERVICE
-        container_fs[dst_path] = b"RENDERED"
-        return True
-    monkeypatch.setattr(ss, "render_telemetry_service_to_file", fake_render, raising=False)
 
     return ss, container_fs, host_fs, commands
 
@@ -221,19 +216,17 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
 
 
-def test_rendered_service_syncs_to_host_when_different(ss):
-    """
-    New behavior: the rendered telemetry.service is compared with the host unit
-    and updated if different; systemd post-actions should run.
-    """
+def test_telemetry_service_syncs_to_host_when_different(ss):
     ss, container_fs, host_fs, commands = ss
 
-    # Prepare rendered content and host old content
-    container_fs[ss.TMP_RENDERED_SERVICE] = b"UNIT-NEW"
+    # Prepare container unit content and host old content
+    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
     host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
 
-    # Only include the rendered unit item to make the assertion clear
-    ss.SYNC_ITEMS[:] = [ss.SyncItem(ss.TMP_RENDERED_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)]
+    # Only include the telemetry service item to make the assertion clear
+    ss.SYNC_ITEMS[:] = [
+        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
+    ]
 
     # Add post actions for telemetry.service
     ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
@@ -243,6 +236,7 @@ def test_rendered_service_syncs_to_host_when_different(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
+    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
 
     # Verify systemctl actions were invoked
     post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
