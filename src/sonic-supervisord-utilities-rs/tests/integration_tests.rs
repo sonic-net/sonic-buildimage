@@ -7,8 +7,7 @@ use sonic_supervisord_utilities_rs::{
 use swss_common::ConfigDBConnector;
 use std::io::Write;
 use tempfile::NamedTempFile;
-use std::time::{Duration, SystemTime};
-use std::collections::HashMap;
+use std::time::Duration;
 
 // Helper function to create a ConfigDB connector for tests
 fn create_test_config_db() -> ConfigDBConnector {
@@ -90,7 +89,7 @@ fn test_heartbeat_alert_interval_functions() {
     // Test loading heartbeat alert intervals (would normally load from ConfigDB)
     // This is a basic test since we can't easily mock ConfigDB
     let config_db = create_test_config_db();
-    let result = load_heartbeat_alert_interval(&config_db);
+    let _result = load_heartbeat_alert_interval(&config_db);
     // This might fail if ConfigDB is not available, which is expected in test environment
     
     // Test getting default interval for unknown process
@@ -179,13 +178,13 @@ fn test_autorestart_state_checking() {
     // Test different container types - these will likely fail in test environment
     // without ConfigDB, but we test that the function doesn't panic
     let config_db = create_test_config_db();
-    let result1 = get_autorestart_state("swss", &config_db);
+    let _result1 = get_autorestart_state("swss", &config_db);
     // Result depends on ConfigDB availability - could be Ok or Err
     
-    let result2 = get_autorestart_state("snmp", &config_db);
+    let _result2 = get_autorestart_state("snmp", &config_db);
     // Result depends on ConfigDB availability - could be Ok or Err
     
-    let result3 = get_autorestart_state("unknown", &config_db);
+    let _result3 = get_autorestart_state("unknown", &config_db);
     // Result depends on ConfigDB availability - could be Ok or Err
     
     // Main test is that none of these panic
@@ -349,8 +348,8 @@ fn test_autorestart_logic() {
     // Test that the function exists and has the right signature
     // These will likely fail without ConfigDB, but test they don't panic
     let config_db = create_test_config_db();
-    let result_swss = get_autorestart_state("swss", &config_db);
-    let result_snmp = get_autorestart_state("snmp", &config_db);
+    let _result_swss = get_autorestart_state("swss", &config_db);
+    let _result_snmp = get_autorestart_state("snmp", &config_db);
     
     // The actual values depend on ConfigDB being available
     // In a test environment, these might return errors, which is expected

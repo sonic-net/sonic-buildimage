@@ -2,25 +2,13 @@
 //! Mirrors the Python test_listener.py structure and function names exactly
 
 use sonic_supervisord_utilities_rs::{
-    childutils,
     proc_exit_listener::*,
 };
-use swss_common::ConfigDBConnector;
 use injectorpp::interface::injector::*;
 use injectorpp::interface::injector::InjectorPP;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::{Pid, pipe, write, close};
-use std::sync::Once;
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write, Cursor};
-use std::os::unix::io::AsRawFd;
-use std::path::Path;
-use std::process::Command;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicU32, Ordering};
-use tempfile::NamedTempFile;
 
 // Test data paths
 const TEST_DATA_DIR: &str = "tests/test_data";
@@ -574,7 +562,6 @@ mod tests {
         // This demonstrates how time progression would work in alerting/heartbeat logic
         
         let start_time = 1609459200.0; // 2021-01-01 00:00:00 UTC
-        let mut current_time = start_time;
         
         // Simulate Python TimeMocker behavior: each "call" advances time by 1 hour
         let times: Vec<f64> = (0..5).map(|i| {
@@ -605,9 +592,6 @@ mod tests {
     fn test_critical_process_with_autorestart_enabled_calls_kill() {
         // Test that when a critical process exits and auto-restart is enabled, kill() is called
         let mut injector = InjectorPP::new();
-        let mut kill_called = false;
-        let mut kill_pid = nix::unistd::Pid::from_raw(0);
-        let mut kill_signal = nix::sys::signal::Signal::SIGTERM;
         
         // Mock kill function to capture calls
         injector
@@ -640,7 +624,6 @@ mod tests {
     fn test_critical_process_with_autorestart_disabled_no_kill() {
         // Test that when a critical process exits and auto-restart is disabled, kill() is NOT called
         let mut injector = InjectorPP::new();
-        let mut kill_call_count = 0;
         
         // Mock kill function to count calls - should remain 0
         injector
