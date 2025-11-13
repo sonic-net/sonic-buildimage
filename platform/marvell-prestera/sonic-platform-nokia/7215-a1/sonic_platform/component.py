@@ -36,10 +36,11 @@ class Component(ComponentBase):
     ]
     CPLD_UPDATE_COMMAND = ['./cpldupd_A1', '']
 
-    def __init__(self, component_index):
+    def __init__(self, chassis_model, component_index):
         self.index = component_index
         self.name = self.CHASSIS_COMPONENTS[self.index][0]
         self.description = self.CHASSIS_COMPONENTS[self.index][1]
+        self.chassis_model = chassis_model
 
     def _get_command_result(self, cmdline):
         try:
@@ -52,6 +53,14 @@ class Component(ComponentBase):
             result = None
 
         return result
+    def get_chassis_model(self):
+        """
+        Retrieves the model number of the Fan
+
+        Returns:
+            string: Model number of Fan. Use part number for this.
+        """
+        return self.chassis_model
     
     def _read_sysfs_file(self, sysfs_file):
         # On successful read, returns the value read from given
@@ -175,7 +184,7 @@ class Component(ComponentBase):
             return self._get_cpld_version(self.index)
 
         if self.index == 1:
-            cmdstatus, uboot_version = cmd.getstatusoutput('fw_printenv current_uboot_version |cut -d= -f 2')
+            cmdstatus, uboot_version = cmd.getstatusoutput('cat /proc/device-tree/chosen/u-boot,version')
             return uboot_version or "V1.1"
 
     def install_firmware(self, image_path):
@@ -189,31 +198,68 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         image_name = ntpath.basename(image_path)
-        print(" ixs-7215-A1 - install cpld {}".format(image_name))
+        print(" ixs-7215-A1 - install firmware {}".format(image_name))
 
         # check whether the image file exists
         if not os.path.isfile(image_path):
-            print("ERROR: the cpld image {} doesn't exist ".format(image_path))
+            print("ERROR: the firmware image {} doesn't exist ".format(image_path))
             return False
+        if self.name == "System-CPLD":
+            # check whether the cpld exe exists
+            if not os.path.isfile('/tmp/cpldupd_A1'):
+                print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/cpldupd_A1'))
+                return False
 
-        # check whether the cpld exe exists
-        if not os.path.isfile('/tmp/cpldupd_A1'):
-            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/cpldupd_A1'))
-            return False
+            self.CPLD_UPDATE_COMMAND[1] = image_name
 
-        self.CPLD_UPDATE_COMMAND[1] = image_name
-
-        success_flag = False
+            success_flag = False
  
-        try:   
-            subprocess.check_call(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
+            try:
+                subprocess.check_call(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
 
-            success_flag = True
-        except subprocess.CalledProcessError as e:
-            print("ERROR: Failed to upgrade CPLD: rc={}".format(e.returncode))
+                success_flag = True
+            except subprocess.CalledProcessError as e:
+                print("ERROR: Failed to upgrade CPLD: rc={}".format(e.returncode))
 
-        if success_flag:
-            print("INFO: Refresh or power cycle is required to finish CPLD installation")
+            if success_flag:
+                print("INFO: Refresh or power cycle is required to finish CPLD installation")
 
-        return success_flag
+            return success_flag
+        elif self.name == "U-Boot":
+            ch_model=self.get_chassis_model()
+            if(ch_model[8:10]=='AB'):
+                mount_point = "/mnt/p1"
+                success_flag = False
+                UBOOT_UPDATE_COMMAND1 = ['sudo', 'mkdir', mount_point]
+                UBOOT_UPDATE_COMMAND2 = ['sudo', 'mount', '/dev/mmcblk0p1', mount_point]
+                UBOOT_UPDATE_COMMAND3 = ['cp', image_path, '/mnt/p1/EFI/UpdateCapsule']
+                UBOOT_UPDATE_COMMAND4 = ['sudo', 'umount', mount_point]
+                UBOOT_UPDATE_COMMAND5 = ['sudo', 'rmdir', mount_point]
+                UBOOT_UPDATE_COMMAND6 = ['sudo', 'reboot']
 
+                try:
+                    if not os.path.isdir(mount_point):
+                        subprocess.check_call(UBOOT_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
+                    if not os.path.ismount(mount_point):
+                        subprocess.check_call(UBOOT_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND3, stderr=subprocess.STDOUT)
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND4, stderr=subprocess.STDOUT)
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND5, stderr=subprocess.STDOUT)
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND6, stderr=subprocess.STDOUT)
+                    success_flag = True
+                except subprocess.CalledProcessError as e:
+                    print("ERROR: Failed to upgrade U-BOOT: rc={}",format(e.returncode))
+
+                return success_flag
+            elif(ch_model[8:10]=='AA'):
+                success_flag = False
+                UBOOT_UPDATE_COMMAND1 = ['sudo', 'flashcp', '-A', image_path, '/dev/mtd0']
+                UBOOT_UPDATE_COMMAND2 = ['sudo', 'reboot']
+                try:
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
+                    subprocess.check_call(UBOOT_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
+                    success_flag = True
+                except subprocess.CalledProcessError as e:
+                    print("ERROR: Failed to upgrade U-BOOT: command={}, rc={}",format(e.cmd),format(e.returncode))
+
+                return success_flag
