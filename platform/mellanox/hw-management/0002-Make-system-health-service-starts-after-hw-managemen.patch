@@ -10,11 +10,11 @@ On SN2410, it can fail to read the file led_status_capability if it starts from 
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
-index 6ae63a95..634b4014 100755
+index cd7fb7e2..e6f96743 100755
 --- a/debian/hw-management.hw-management.service
 +++ b/debian/hw-management.hw-management.service
-@@ -4,7 +4,7 @@ Documentation=man:hw-management.service(8)
- Wants=hw-management-sync.service
+@@ -3,7 +3,7 @@ Description=Chassis HW management service of Nvidia systems
+ Documentation=man:hw-management.service(8)
  Wants=hw-management-sysfs-monitor.service
  Wants=hw-management-fast-sysfs-monitor.service
 -Before=determine-reboot-cause.service
@@ -23,5 +23,5 @@ index 6ae63a95..634b4014 100755
  [Service]
  Type=oneshot
 -- 
-2.48.1
+2.49.0
 
