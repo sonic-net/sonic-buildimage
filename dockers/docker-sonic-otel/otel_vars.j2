@@ -15,7 +15,6 @@ processors:
     send_batch_size: 1000
 
 exporters:
-  # Debug exporter for troubleshooting
   debug:
     verbosity: detailed
 
@@ -38,7 +37,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug, influxdb]
+      exporters: [debug]
 
     logs:
       receivers: [otlp]
