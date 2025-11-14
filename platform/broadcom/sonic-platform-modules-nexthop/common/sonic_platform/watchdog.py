@@ -3,12 +3,37 @@
 # Copyright 2025 Nexthop Systems Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import datetime
+import time
+from pathlib import Path
 from sonic_platform_base.watchdog_base import WatchdogBase
 from nexthop import fpga_lib
 from sonic_py_common import syslogger
 
 _SYSLOG_IDENTIFIER = "sonic_platform.watchdog"
 _logger = syslogger.SysLogger(_SYSLOG_IDENTIFIER)
+# Watchdog punching is paused if file is present
+_WATCHDOG_PAUSE_FILE_PATH = Path("/var/lock/pddf-locks/watchdog.pause")
+# How long the watchdog is armed for by the watchdog.timer
+_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS = 360
+
+
+def _pause_watchdog_punching(duration: datetime.timedelta) -> None:
+    """Creates the pause file."""
+    try:
+        pause_until_ts: int = int(time.time() + duration.total_seconds())
+        with open(_WATCHDOG_PAUSE_FILE_PATH, "w") as f:
+            f.write(str(pause_until_ts))
+    except OSError as e:
+        _logger.log_error(
+            "Failed to write watchdog pause file. Continue without pausing "
+            f"watchdog punching: {e}"
+        )
+
+
+def _unpause_watchdog_punching() -> None:
+    # Remove the watchdog pause file to unpause
+    _WATCHDOG_PAUSE_FILE_PATH.unlink(missing_ok=True)
 
 
 class Watchdog(WatchdogBase):
@@ -90,6 +115,29 @@ class Watchdog(WatchdogBase):
             val=new_reg_val,
         )
 
+    def _do_real_arm(self, seconds: int) -> int:
+        """Arm the hardware watchdog.
+
+        Returns:
+            An integer specifying the *actual* number of seconds the watchdog
+            was armed with. On failure returns -1.
+        """
+        try:
+            self._toggle_watchdog_counter_enable(True)
+            self._toggle_watchdog_reboot(True)
+            self._update_watchdog_countdown_value(milliseconds=seconds*1_000)
+        except Exception as e:
+            _logger.log_error(f"cannot arm watchdog: {e}")
+            return -1
+        else:
+            return seconds
+
+    def arm_from_daemon(self) -> int:
+        """Arm the watchdog with a predefined timeout.
+        Meant to be called by watchdog punching.
+        """
+        return self._do_real_arm(_WATCHDOG_PUNCH_DAEMON_ARM_SECONDS)
+
     def arm(self, seconds: int) -> int:
         """
         Arm the hardware watchdog with a timeout of <seconds> seconds.
@@ -99,27 +147,29 @@ class Watchdog(WatchdogBase):
         method should arm the watchdog with the *next greater* available
         value.
 
+        Assumes an active punching timer that arms the watchdog for 6
+        minutes (360 seconds), which is paused when `arm` is called and
+        successfully arms the watchdog. The punching is paused until
+        `disarm` is called.
+
         Returns:
             An integer specifying the *actual* number of seconds the watchdog
             was armed with. On failure returns -1.
         """
         milliseconds = seconds * 1_000
 
-        if milliseconds < 0 or milliseconds > self._MAX_WATCHDOG_COUNTER_MILLISECONDS:
+        if milliseconds <= 0 or milliseconds > self._MAX_WATCHDOG_COUNTER_MILLISECONDS:
             _logger.log_error(
-                f"cannot arm watchdog with {milliseconds} ms. should be within 0 and {self._MAX_WATCHDOG_COUNTER_MILLISECONDS} ms"
+                f"cannot arm watchdog with {milliseconds} ms. should be within "
+                f"0 and {self._MAX_WATCHDOG_COUNTER_MILLISECONDS} ms"
             )
             return -1
 
-        try:
-            self._toggle_watchdog_counter_enable(True)
-            self._toggle_watchdog_reboot(True)
-            self._update_watchdog_countdown_value(milliseconds=milliseconds)
-        except Exception as e:
-            _logger.log_error(f"cannot arm watchdog: {e}")
-            return -1
-        else:
-            return seconds
+        _pause_watchdog_punching(datetime.timedelta(seconds=seconds))
+        ret = self._do_real_arm(seconds=seconds)
+        if ret == -1:
+            _unpause_watchdog_punching()
+        return ret
 
     def disarm(self) -> bool:
         """
@@ -131,6 +181,8 @@ class Watchdog(WatchdogBase):
         try:
             self._toggle_watchdog_counter_enable(False)
             self._toggle_watchdog_reboot(False)
+            # If any step above fails, do not attempt to resume watchdog punching
+            _unpause_watchdog_punching()
         except Exception as e:
             _logger.log_error(f"cannot disarm watchdog: {e}")
             return False

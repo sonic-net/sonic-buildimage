@@ -9,3 +9,5 @@ systemctl enable system-ledd.service
 systemctl start --no-block system-ledd.service
 systemctl enable transceiver-init.service
 systemctl start transceiver-init.service
+systemctl enable watchdog.timer
+systemctl start watchdog.timer
