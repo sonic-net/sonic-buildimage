@@ -72,8 +72,8 @@ class Chassis(ChassisBase):
 
         # Verify optoe2 driver SFP eeprom devices were enumerated and exist
         # then create the sfp nodes
-        eeprom_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/eeprom"
-        mux_dev = sorted(glob.glob("/sys/class/i2c-adapter/i2c-0/i2c-[0-9]"))
+        eeprom_path = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom"
+        mux_dev = sorted(glob.glob("/sys/bus/i2c/devices/i2c-0/i2c-[0-9]"))
         y = 0
         for index in range(self.SFP_PORT_START, self.SFP_PORT_END+1):
             mux_dev_num = mux_dev[y]
