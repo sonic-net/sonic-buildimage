@@ -55,13 +55,13 @@
             }
         }
     },
-    "KDUMP_WITH_VALID_MEM_OFFSET": {
+    "KDUMP_WITH_VALID_MEM_HIGH": {
         "sonic-kdump:sonic-kdump": {
             "sonic-kdump:KDUMP": {
                 "config": {
                     "enabled": "true",
                     "num_dumps": "3",
-                    "memory": "512-4G:37M,4G-8G:41M,8G-:59M@960M",
+                    "memory": "1G,high",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
                     "ssh_path":  "/home/ali/.ssh/id_rsa"
@@ -69,13 +69,13 @@
             }
         }
     },
-    "KDUMP_WITH_VALID_MEM_OFFSET_2": {
+    "KDUMP_WITH_VALID_MEM_HIGH_2": {
         "sonic-kdump:sonic-kdump": {
             "sonic-kdump:KDUMP": {
                 "config": {
                     "enabled": "true",
                     "num_dumps": "3",
-                    "memory": "512-4G:37M,4G-8G:41M,8G-:59M@1G",
+                    "memory": "512M,high",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
                     "ssh_path":  "/home/ali/.ssh/id_rsa"
@@ -126,13 +126,13 @@
             }
         }
     },
-    "KDUMP_WITH_INVALID_MEM_OFFSET": {
+    "KDUMP_WITH_INVALID_MEM_HIGH": {
         "sonic-kdump:sonic-kdump": {
             "sonic-kdump:KDUMP": {
                 "config": {
                     "enabled": "true",
                     "num_dumps": "3",
-                    "memory": "512-4G:37M,4G-8G:41M,8G-:59M@100",
+                    "memory": "100,high",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
                     "ssh_path":  "/home/ali/.ssh/id_rsa"
@@ -140,7 +140,20 @@
             }
         }
     },
-
+    "KDUMP_WITH_INVALID_MEM_HIGH_2": {
+        "sonic-kdump:sonic-kdump": {
+            "sonic-kdump:KDUMP": {
+                "config": {
+                    "enabled": "true",
+                    "num_dumps": "3",
+                    "memory": "1G,highx",
+                    "remote": "true",
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "/home/ali/.ssh/id_rsa"
+                }
+            }
+        }
+    },
     "KDUMP_WITH_VALID_REMOTE_VALUES": {
         "sonic-kdump:sonic-kdump": {
             "sonic-kdump:KDUMP": {
