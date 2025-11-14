@@ -70,12 +70,12 @@ echo tmp75 0x4A > /sys/bus/i2c/devices/i2c-0/new_device
 echo nokia_7215_a1_cpld 0x41 > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate system eeprom
-echo 24c64 0x53 > /sys/class/i2c-adapter/i2c-0/new_device
+echo 24c64 0x53 > /sys/bus/i2c/devices/i2c-0/new_device
 
-file_exists /sys/class/i2c-adapter/i2c-0/0-0053/eeprom
+file_exists /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 status=$?
 if [ "$status" == "1" ]; then
-    chmod 644 /sys/class/i2c-adapter/i2c-0/0-0053/eeprom
+    chmod 644 /sys/bus/i2c/devices/i2c-0/0-0053/eeprom
 else
     echo "SYSEEPROM file not foud"
 fi
@@ -99,7 +99,7 @@ for((i=0; i<10; i++));
 # Enumerate the SFP eeprom device on each mux channel
 for mux in ${ismux_bus}
 do
-    echo optoe2 0x50 > /sys/class/i2c-adapter/${mux}/new_device
+    echo optoe2 0x50 > /sys/bus/i2c/devices/${mux}/new_device
 done
 
 # Enable optical SFP Tx
