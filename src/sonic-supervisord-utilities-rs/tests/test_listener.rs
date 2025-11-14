@@ -7,6 +7,7 @@ use sonic_supervisord_utilities_rs::{
 use injectorpp::interface::injector::*;
 use injectorpp::interface::injector::InjectorPP;
 use mio::Token;
+use scopeguard::guard;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -53,6 +54,12 @@ impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
         
         // Create a temporary pipe just to generate a real mio event
         let (read_fd, write_fd) = nix::unistd::pipe()?;
+        
+        // Ensure read_fd is closed in all code paths (even on error) using RAII guard
+        let _read_fd_guard = guard(read_fd, |fd| {
+            let _ = nix::unistd::close(fd);
+        });
+        
         let mut source = mio::unix::SourceFd(&read_fd);
         
         // Write something to the pipe to make it readable
@@ -66,9 +73,7 @@ impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
         // Poll the temporary poll to get real events
         temp_poll.poll(events, Some(std::time::Duration::from_millis(1)))?;
         
-        // Clean up
-        nix::unistd::close(read_fd)?;
-        
+        // read_fd will be automatically closed when _read_fd_guard goes out of scope
         Ok(())
     }
     
