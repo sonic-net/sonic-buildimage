@@ -476,28 +476,6 @@ mod tests {
         test_listener.test_main_snmp().unwrap();
     }
 
-
-
-    #[test]
-    fn test_injectorpp_kill_mocking_basic() {
-        // Test InjectorPP mocking of nix::sys::signal::kill function
-        let mut injector = InjectorPP::new();
-        
-        // Mock the kill function to track calls
-        injector
-            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
-                returns: Ok(())
-            ));
-        
-        // Test that kill would be called with correct parameters
-        let test_pid = nix::unistd::Pid::from_raw(1234);
-        let result = nix::sys::signal::kill(test_pid, nix::sys::signal::Signal::SIGTERM);
-        
-        assert!(result.is_ok(), "Mocked kill should succeed");
-    }
-
     #[test]
     fn test_progressive_time_mocking() {
         // Test progressive time mocking

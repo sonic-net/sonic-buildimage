@@ -269,7 +269,7 @@ pub fn publish_events(events_handle: &EventPublisher, process_name: &str, contai
     Ok(())
 }
 
-/// Get current monotonic time as seconds since an arbitrary epoch - helper function
+/// Get current monotonic time as seconds since an arbitrary epoch, not wall clock time
 pub fn get_current_time() -> f64 {
     static START_TIME: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     let start = START_TIME.get_or_init(|| Instant::now());
