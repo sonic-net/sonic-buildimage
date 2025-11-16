@@ -4,12 +4,13 @@ import os
 import sys
 import time
 import glob
-import multiprocessing
+import threading
+import queue
 from datetime import datetime
 from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
-from sonic_py_common.task_base import ProcessTaskBase
+from sonic_py_common.task_base import ThreadTaskBase
 from sonic_py_common import device_info
 from .config import Config
 import signal
@@ -25,12 +26,12 @@ TASK_STOP_TIMEOUT = 10
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
-#Subprocess which subscribes to STATE_DB FEATURE table for any update
-#and push service events to main process via queue
-class MonitorStateDbTask(ProcessTaskBase):
+#Thread which subscribes to STATE_DB FEATURE table for any update
+#and push service events to main thread via queue
+class MonitorStateDbTask(ThreadTaskBase):
 
     def __init__(self,myQ):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self.task_queue = myQ
 
     def subscribe_statedb(self):
@@ -67,12 +68,12 @@ class MonitorStateDbTask(ProcessTaskBase):
         self.task_queue.put(msg)
 
 
-#Subprocess which subscribes to system dbus to listen for systemd events
-#and push service events to main process via queue
-class MonitorSystemBusTask(ProcessTaskBase):
+#Thread which subscribes to system dbus to listen for systemd events
+#and push service events to main thread via queue
+class MonitorSystemBusTask(ThreadTaskBase):
 
     def __init__(self,myQ):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self.task_queue = myQ
 
     def on_job_removed(self, id, job, unit, result):
@@ -105,8 +106,11 @@ class MonitorSystemBusTask(ProcessTaskBase):
         self.subscribe_sysbus()
 
     def task_stop(self):
-        # FIXME: Gracefully stop `loop.run()`.
-        self._task_process.kill()
+        # Signal the thread to stop
+        self.task_stopping_event.set()
+        
+        # Note: GLib.MainLoop() doesn't respond to thread stopping event gracefully
+        # The thread will be daemon-like and terminate when main program exits
         return True
 
     def task_notify(self, msg):
@@ -114,19 +118,18 @@ class MonitorSystemBusTask(ProcessTaskBase):
             return
         self.task_queue.put(msg)
 
-#Mainprocess which launches 2 subtasks - systembus task and statedb task
+#Main thread which launches 2 subtasks - systembus task and statedb task
 #and on receiving events, checks and updates the system ready status to state db
-class Sysmonitor(ProcessTaskBase):
+class Sysmonitor(ThreadTaskBase):
 
     def __init__(self):
-        ProcessTaskBase.__init__(self)
+        ThreadTaskBase.__init__(self)
         self._stop_timeout_secs = TASK_STOP_TIMEOUT
         self.dnsrvs_name = set()
         self.state_db = None
         self.config_db = None
         self.config = Config()
-        self.mpmgr = multiprocessing.Manager()
-        self.myQ = self.mpmgr.Queue()
+        self.myQ = queue.Queue()
 
     #Sets system ready status to state db
     def post_system_status(self, state):
@@ -515,14 +518,12 @@ class Sysmonitor(ProcessTaskBase):
     def task_stop(self):
         self.myQ.put("stop")
 
-        # Wait for the process to exit
-        self._task_process.join(self._stop_timeout_secs)
+        # Wait for the thread to exit
+        self._task_thread.join(self._stop_timeout_secs)
 
-        # If the process didn't exit, attempt to kill it
-        if self._task_process.is_alive():
-            logger.log_notice("Attempting to kill sysmon main process with pid {}".format(self._task_process.pid))
-            self._task_process.kill()
-            self._task_process.join()
+        # If the thread didn't exit, log warning
+        if self._task_thread.is_alive():
+            logger.log_notice("Sysmon main thread did not exit within timeout")
             return False
 
         return True
