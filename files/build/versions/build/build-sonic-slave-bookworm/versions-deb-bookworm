@@ -13,6 +13,7 @@ libdoca-sdk-dpdk-bridge-dev==3.0.0058-1
 libdoca-sdk-flow-dev==3.0.0058-1
 libgrpc-dev==1.39.0-1
 libibverbs-dev==2507mlnx58-1.2507090
+libnl-3-200==3.7.0-0.2+b1sonic1
 libnl-3-dev==3.7.0-0.2+b1sonic1
 libnl-cli-3-200==3.7.0-0.2+b1sonic1
 libnl-cli-3-dev==3.7.0-0.2+b1sonic1
@@ -20,6 +21,7 @@ libnl-genl-3-200==3.7.0-0.2+b1sonic1
 libnl-genl-3-dev==3.7.0-0.2+b1sonic1
 libnl-nf-3-200==3.7.0-0.2+b1sonic1
 libnl-nf-3-dev==3.7.0-0.2+b1sonic1
+libnl-route-3-200==3.7.0-0.2+b1sonic1
 libnl-route-3-dev==3.7.0-0.2+b1sonic1
 libnvhws-dev==25.04-1
 libnvhws1==25.04-1
@@ -31,6 +33,7 @@ libsairedis==1.0.0
 libsairedis-dev==1.0.0
 libsaithrift-dev==0.9.4
 libsaivs==1.0.0
+libsaivs-dev==1.0.0
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libtac-dev==1.4.1-1
