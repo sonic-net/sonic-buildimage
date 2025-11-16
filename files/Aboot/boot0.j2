@@ -488,12 +488,7 @@ get_eeprom_value() {
 write_kdump_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
     case "$sid" in
-        OtterLake*)
-            if ! cmdline_has crashkernel; then
-                cmdline_add crashkernel=1G,high
-            fi
-            ;;
-        Wolverine*|Clearwater2*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
+        Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
             if ! cmdline_has crashkernel; then
                 cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
             fi
