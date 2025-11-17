@@ -1191,7 +1191,7 @@ sudo chmod -R 640 $FILESYSTEM_ROOT/etc/sonic/frr/
 sudo chmod 750 $FILESYSTEM_ROOT/etc/sonic/frr
 {%- endif %}
 
-{% if sonic_asic_platform == "alpinevs" %}
+{%- if sonic_asic_platform == "alpinevs" %}
 
 # Adding fake platform files for Alpine
 ALPINE_SERVICES=platform/alpinevs/src/services
@@ -1208,7 +1208,7 @@ sudo cp $ALPINE_PLATFORM/aer_dev_correctable $GENERIC_PCIE_DEVICE
 sudo cp $ALPINE_PLATFORM/aer_dev_fatal $GENERIC_PCIE_DEVICE
 sudo cp $ALPINE_PLATFORM/aer_dev_nonfatal $GENERIC_PCIE_DEVICE
 
-#Including add-on services for Alpine
+# Including add-on services for Alpine
 sudo cp $ALPINE_SERVICES/config/alpinevs-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "alpinevs-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $ALPINE_SERVICES/config/alpinevs-config.sh $FILESYSTEM_ROOT/usr/bin/

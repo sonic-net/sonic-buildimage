@@ -13,8 +13,8 @@ test:
 	done
 	for f in $$(find ../../../device -name platform.json); do
 		if [[ $$(dirname $$f) =~ '../../../device/virtual/x86_64-kvm_x86_64-r0/alpine_' ]]; then
-		# Tests expect the platform.json to be in a certain format different
-		# from what Alpine uses
+			# Tests expect the platform.json to be in a certain format different
+			# from what Alpine uses
 			continue
 		fi
 	    ./platform_json_checker $$f
