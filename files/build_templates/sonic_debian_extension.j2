@@ -283,8 +283,10 @@ fi
 # Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-device-data_*.deb
 
-# package for supporting password hardening
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality
+# package for supporting password hardening (cracklib-runtime is explicitly specified
+# here because it is technically considered a recommended package, and recommended
+# packages aren't installed by default here.)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality cracklib-runtime
 
 # Install pam-ldap, nss-ldap, ldap-utils
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
