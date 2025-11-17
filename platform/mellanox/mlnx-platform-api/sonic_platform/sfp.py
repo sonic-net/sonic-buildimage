@@ -848,13 +848,27 @@ class SFP(NvidiaSFPCommon):
             print(e)
         return [False] * api.NUM_CHANNELS if api else None
 
+    def _get_serial(self):
+        """
+        Get serial number from EEPROM. sfp_base.get_serial() might read from
+        memory cache, which is not always up to date. This function is used by reinit_if_sn_changed() to detect if a SFP is replaced.
+        """
+        api = self.get_xcvr_api()
+        if not api:
+            return None
+
+        sn = api.xcvr_eeprom.read(consts.VENDOR_SERIAL_NO_FIELD)
+        if sn is None:
+            return None
+        return sn.rstrip()
+
     def reinit_if_sn_changed(self):
         """Reinitialize the SFP if the module ID has changed
         """
-        sn = self.get_serial()
+        sn = self._get_serial()
         if sn != self.sn:
             self.reinit()
-            self.sn = self.get_serial()
+            self.sn = self._get_serial()
             self.temp_high_threshold = None
             self.temp_critical_threshold = None
             self.retry_read_threshold = 5
@@ -899,10 +913,10 @@ class SFP(NvidiaSFPCommon):
                 threshold_hi_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_hi'
                 threshold_critical_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/threshold_critical_hi'
 
-                warning_threshold = utils.read_int_from_file(threshold_lo_file, log_func=None)
+                warning_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
                 warning_threshold = warning_threshold / SFP_TEMPERATURE_SCALE if warning_threshold is not None else None
 
-                critical_threshold = utils.read_int_from_file(threshold_hi_file, log_func=None)
+                critical_threshold = utils.read_int_from_file(threshold_critical_file, log_func=None)
                 critical_threshold = critical_threshold / SFP_TEMPERATURE_SCALE if critical_threshold is not None else None
             else:
                 # Read threshold from EEPROM

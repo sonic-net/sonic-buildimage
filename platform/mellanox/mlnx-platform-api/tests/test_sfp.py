@@ -716,3 +716,16 @@ class TestSfp:
         assert warn == 75.0
         assert crit == 85.0
         assert sfp.retry_read_threshold == 0  # Should be set to 0 on success
+
+    def test_reinit_if_sn_changed(self):
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert not sfp.reinit_if_sn_changed()
+
+        sfp.get_xcvr_api.return_value = mock.MagicMock()
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read = mock.MagicMock(return_value='1234567890')
+        assert sfp.reinit_if_sn_changed()
+
+        sfp.get_xcvr_api.return_value.xcvr_eeprom.read.return_value = '1234567891'
+        assert sfp.reinit_if_sn_changed()
+
