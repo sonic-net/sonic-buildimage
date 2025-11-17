@@ -69,6 +69,16 @@
                         "name": "high_frequency_counters",
                         "stream_state": "enabled",
                         "poll_interval": 100
+                    },
+                    {
+                        "name": "partial_objects",
+                        "stream_state": "disabled",
+                        "poll_interval": 100000
+                    },
+                    {
+                        "name": "dummy_profile",
+                        "stream_state": "disabled",
+                        "poll_interval": 100000
                     }
                 ]
             },
@@ -120,6 +130,156 @@
                             "CURR_OCCUPANCY_BYTES",
                             "XOFF_ROOM_WATERMARK_BYTES"
                         ]
+                    },
+                    {
+                        "profile_name": "partial_objects",
+                        "group_name": "PORT",
+                        "object_names": [
+                            "Ethernet0"
+                        ],
+                        "object_counters": [
+                            "IF_IN_OCTETS",
+                            "OUT_CURR_OCCUPANCY_BYTES"
+                        ]
+                    },
+                    {
+                        "profile_name": "dummy_profile",
+                        "group_name": "PORT"
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_PORT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0",
+                        "speed": 25000
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "4",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_port",
+                        "stream_state": "enabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_port",
+                        "group_name": "PORT",
+                        "object_names": [
+                            "Ethernet1"
+                        ],
+                        "object_counters": [
+                            "IF_IN_OCTETS",
+                            "OUT_CURR_OCCUPANCY_BYTES"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_STATS": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "lanes": "0",
+                        "speed": 25000
+                    },
+                    {
+                        "name": "Ethernet4",
+                        "lanes": "4",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_stats",
+                        "stream_state": "enabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_stats",
+                        "group_name": "PORT",
+                        "object_names": [
+                            "Ethernet0"
+                        ],
+                        "object_counters": [
+                            "IF_IN_OCTETS",
+                            "OUT_CURR_OCCUPANCY_BYTES",
+                            "INVALID_STAT"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE1": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_dummy",
+                        "stream_state": "disabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_dummy",
+                        "group_name": "BUFFER_POOL",
+                        "object_names": "",
+                        "object_counters": []
+                    }
+                ]
+            }
+        }
+    },
+    "HIGH_FREQUENCY_TELEMETRY_INVALID_DUMMY_TABLE2": {
+        "sonic-high-frequency-telemetry:sonic-high-frequency-telemetry": {
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+                "HIGH_FREQUENCY_TELEMETRY_PROFILE_LIST": [
+                    {
+                        "name": "invalid_dummy",
+                        "stream_state": "disabled",
+                        "poll_interval": 100
+                    }
+                ]
+            },
+            "sonic-high-frequency-telemetry:HIGH_FREQUENCY_TELEMETRY_GROUP": {
+                "HIGH_FREQUENCY_TELEMETRY_GROUP_LIST": [
+                    {
+                        "profile_name": "invalid_dummy",
+                        "group_name": "PORT",
+                        "object_names": [],
+                        "object_counters": ""
                     }
                 ]
             }

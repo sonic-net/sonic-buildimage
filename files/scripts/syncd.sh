@@ -22,7 +22,6 @@ function startplatform() {
         fi
 
         debug "Starting Firmware update procedure"
-        /usr/bin/mst start --with_i2cdev
 
         /usr/bin/mlnx-fw-upgrade.sh -c -v
         if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
@@ -95,6 +94,10 @@ function stopplatform1() {
         debug "Stopping pmon service ahead of syncd..."
         /bin/systemctl stop pmon
         debug "Stopped pmon service"
+    fi
+
+    if [[ x$sonic_asic_platform == x"mellanox" ]]; then
+        echo "health_check_trigger del_dev 1" > /proc/mlx_sx/sx_core
     fi
 
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then
