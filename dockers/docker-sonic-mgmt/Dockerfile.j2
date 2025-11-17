@@ -253,30 +253,11 @@ RUN mkdir /var/run/sshd
 EXPOSE 22
 
 # Add user
-ARG user
-ARG uid
-ARG guid
 ARG hostname
 
 ENV BUILD_HOSTNAME $hostname
 ENV USER $user
 ENV CC=gcc CPP=cpp CXX=c++ LDSHARED="gcc -pthread -shared" PYMSSQL_BUILD_WITH_BUNDLED_FREETDS=1
-
-RUN groupadd -f -r -g $guid g$user
-
-RUN useradd $user -l -u $uid -g $guid -d /var/$user -m -s /bin/bash
-
-COPY sonic-jenkins.pub /var/$user/.ssh/authorized_keys2
-
-RUN echo "Host *\n\tStrictHostKeyChecking no\n" > /var/$user/.ssh/config
-RUN chown $user /var/$user/.ssh -R
-RUN chmod go= /var/$user/.ssh -R
-
-# Add user to sudoers
-RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
-
-USER $user
-WORKDIR /var/$user
 
 # Add az symlink for backwards compatibility
 RUN mkdir bin && ln -s /usr/bin/az bin/az
