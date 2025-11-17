@@ -46,6 +46,7 @@ if [[ -n "$lspci_output" ]]; then
     for key in "${DEVICE_ORDER[@]}"; do
         if echo "$lspci_output" | grep "$VENDOR_ID:$key" &>/dev/null; then
             DEVICE_TYPE="${DEVICE_DICT[$key]}"
+            DEVICE_PCI_ID=$(echo "$lspci_output" | grep "$VENDOR_ID:$key" | awk '{print $1}' | head -n 1)
             RC=$SUCCESS_CODE
             break
         fi

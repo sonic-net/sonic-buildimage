@@ -297,13 +297,48 @@ def generate_l2_config(data):
             data['VLAN_MEMBER']['Vlan1000|{}'.format(port)] = {'tagging_mode': 'untagged'}
     return data
 
+def generate_appliance_config(data):
+    data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
+    data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SonicHost'
+    data['DEVICE_METADATA']['localhost']['subtype'] = 'Appliance'
+    data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+    data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
+                                  "Loopback0|10.1.0.1/32": {}}
+    data['BGP_NEIGHBOR'] = {}
+    data['DEVICE_NEIGHBOR'] = {}
+    data['INTERFACE'] = {}
+    port_number = 0
+    total_port_amount = len(data['PORT'])
+    for port in natsorted(data['PORT']):
+        data['PORT'][port]['admin_status'] = 'up'
+        data['PORT'][port]['mtu'] = '9100'
+        local_addr = '10.0.{}.{}'.format(2 * port_number // 256, 2 * port_number % 256)
+        peer_addr = '10.0.{}.{}'.format(2 * port_number // 256, 2 * port_number % 256 + 1)
+        peer_name='ARISTA{0:02d}T1'.format(1 + port_number % (total_port_amount // 2 or 1))
+        peer_asn = 64001 + port_number
+        data['INTERFACE']['{}'.format(port)] = {}
+        data['INTERFACE']['{}|{}/31'.format(port, local_addr)] = {}
+        data['BGP_NEIGHBOR'][peer_addr] = {
+                'rrclient': 0,
+                'name': peer_name,
+                'local_addr': local_addr,
+                'nhopself': 0,
+                'holdtime': '180',
+                'asn': str(peer_asn),
+                'keepalive': '60'
+                }
+        port_number += 1
+    return data
+
 _sample_generators = {
         't1': generate_t1_sample_config,
         'l2': generate_l2_config,
         't1-smartswitch': generate_t1_smartswitch_sample_config,
         'empty': generate_empty_config,
         'l1': generate_l1_config,
-        'l3': generate_l3_config
+        'l3': generate_l3_config,
+        'appliance': generate_appliance_config
         }
 
 def get_available_config():

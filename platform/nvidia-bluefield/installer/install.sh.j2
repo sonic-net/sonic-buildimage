@@ -27,7 +27,8 @@ declare -r DOCKERFS_DIR="{{DOCKERFS_DIR}}"
 declare -r FILESYSTEM_SQUASHFS="{{FILESYSTEM_SQUASHFS}}"
 declare -r KERNEL_VERSION="{{KERNEL_VERSION}}"
 declare -r BF2_GRUB_CFG="{{BF2_GRUB_CFG}}"
-declare -r BF3_GRUB_CFG="{{BF3_GRUB_CFG}}"
+declare -r BF3_SIXTEEN_CORE_GRUB_CFG="{{BF3_SIXTEEN_CORE_GRUB_CFG}}"
+declare -r BF3_EIGHT_CORE_GRUB_CFG="{{BF3_EIGHT_CORE_GRUB_CFG}}"
 
 declare -r image_dir="image-$IMAGE_VERSION"
 declare -r demo_volume_revision_label="SONiC-OS-${IMAGE_VERSION}"
@@ -99,8 +100,30 @@ if [ -e /etc/bf.cfg ]; then
 fi
 
 # Flags that can be overwritten by the bf.cfg
-declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
 declare -r FORCE_FW_CONFIG_RESET="${FORCE_FW_CONFIG_RESET:-false}"
+
+# List of platforms that should skip firmware upgrade
+PLATFORMS_SKIP_FW_UPGRADE=(
+	"9009d3b600"
+	"9009d3b400"
+)
+
+# Check if current platform matches any in the skip list
+skip_fw=false
+for platform_id in "${PLATFORMS_SKIP_FW_UPGRADE[@]}"; do
+	if [[ $platform == *"$platform_id"* ]]; then
+		skip_fw=true
+		break
+	fi
+done
+
+if [[ $skip_fw == true ]]; then
+	declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-true}"
+	reboot_is_needed=true
+else
+	declare -r SKIP_FIRMWARE_UPGRADE="${SKIP_FIRMWARE_UPGRADE:-false}"
+	reboot_is_needed=false
+fi
 
 ex() {
     echo "Executing command: $@" > /dev/ttyAMA0
@@ -308,7 +331,11 @@ grub_cfg=$(mktemp)
 # Modify GRUB_CMDLINE_LINUX from bf.cfg file if required
 
 if [[ $module == "BF3" ]]; then
-    DEFAULT_GRUB_CMDLINE_LINUX=$BF3_GRUB_CFG
+    if [[ $platform == *"9009d3b400"* ]]; then	
+        DEFAULT_GRUB_CMDLINE_LINUX=$BF3_EIGHT_CORE_GRUB_CFG
+    else
+        DEFAULT_GRUB_CMDLINE_LINUX=$BF3_SIXTEEN_CORE_GRUB_CFG
+    fi
 else
     DEFAULT_GRUB_CMDLINE_LINUX=$BF2_GRUB_CFG
 fi
@@ -442,7 +469,12 @@ fi
 
 rshim_log "Installation finished"
 
-rshim_log "Waiting for reset from the host..."
-while true; do
-	sleep 1
-done
+
+if [[ $reboot_is_needed == "false" ]]; then
+	rshim_log "Waiting for reset from the host..."
+	while true; do
+		sleep 1
+	done
+fi
+rshim_log "Rebooting..."
+reboot -f

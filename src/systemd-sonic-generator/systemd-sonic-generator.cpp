@@ -81,6 +81,7 @@ static char** multi_instance_services;
 static int num_multi_inst;
 static bool smart_switch_npu;
 static bool smart_switch_dpu;
+static bool appliance_dpu;
 static bool smart_switch;
 static int num_dpus;
 static char* platform = NULL;
@@ -409,7 +410,8 @@ static void update_environment(const std::string &src)
     }
 
     std::unordered_map<std::string, std::string> env_vars;
-    env_vars["IS_DPU_DEVICE"] = (smart_switch_dpu ? "true" : "false");
+    env_vars["IS_DPU_DEVICE"] = (smart_switch_dpu || appliance_dpu ? "true" : "false");
+    env_vars["IS_APPLIANCE_DPU"] = (appliance_dpu ? "true" : "false");
     env_vars["NUM_DPU"] = std::to_string(num_dpus);
 
     for (const auto& [key, value] : env_vars) {
@@ -915,6 +917,15 @@ static bool is_smart_switch_dpu() {
     return json_object_object_get_ex(platform_info, "DPU", &dpu);
 }
 
+static bool is_appliance_dpu() {
+    struct json_object *dpu;
+    const struct json_object *platform_info = get_platform_info();
+    if (platform_info == NULL) {
+        return false;
+    }
+    return json_object_object_get_ex(platform_info, "APPLIANCE_DPU", &dpu);
+}
+
 
 /**
  * @brief Retrieves the number of DPUs (Data Processing Units).
@@ -1164,6 +1175,7 @@ int ssg_main(int argc, char **argv) {
     num_asics = get_num_of_asic();
     smart_switch_npu = is_smart_switch_npu();
     smart_switch_dpu = is_smart_switch_dpu();
+    appliance_dpu = is_appliance_dpu();
     smart_switch = smart_switch_npu || smart_switch_dpu;
     num_dpus = get_num_of_dpu();
 

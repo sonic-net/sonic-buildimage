@@ -315,7 +315,7 @@ class Chassis(ChassisBase):
         Returns:
             Returns:True for SmartSwitch and False for other platforms
         """
-        return True
+        return self.device_data.is_smartswitch()
 
     def is_dpu(self):
         """

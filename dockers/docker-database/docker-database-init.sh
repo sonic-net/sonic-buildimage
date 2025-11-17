@@ -30,15 +30,20 @@ fi
 
 if [[ $IS_DPU_DEVICE == "true" ]]
 then
-    midplane_ip=$( ip -4 -o addr show eth0-midplane | awk '{print $4}' | cut -d'/' -f1  )
-    if [[ $midplane_ip != "" ]]
-    then
+    if [[ $IS_APPLIANCE_DPU == "false" ]]; then
+        midplane_ip=$( ip -4 -o addr show eth0-midplane | awk '{print $4}' | cut -d'/' -f1  )
+        if [[ $midplane_ip != "" ]]
+        then
+            export DATABASE_TYPE="dpudb"
+            export REMOTE_DB_IP="169.254.200.254"
+            # Determine the DB PORT from midplane IP
+            IFS=. read -r a b c d <<< $midplane_ip
+            export REMOTE_DB_PORT=$((6380 + $d))
+        fi
+    else
         export DATABASE_TYPE="dpudb"
-        export REMOTE_DB_IP="169.254.200.254"
-        # Determine the DB PORT from midplane IP
-        IFS=. read -r a b c d <<< $midplane_ip
-        export REMOTE_DB_PORT=$((6380 + $d))
     fi
+
 fi
 
 export BMP_DB_PORT=6400

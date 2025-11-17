@@ -98,7 +98,7 @@ fi
 
 # Enable ZMQ
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
+if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" || x"${LOCALHOST_SUBTYPE}" == x"Appliance" ]]; then
     midplane_mgmt_state=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].operstate" )
     mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
     if [[ $midplane_mgmt_state == "UP" ]]; then

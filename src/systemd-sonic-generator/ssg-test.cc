@@ -201,6 +201,7 @@ struct SsgMainConfig {
     int num_asics = 0;
     bool is_smart_switch_npu = false;
     bool is_smart_switch_dpu = false;
+    bool is_appliance_dpu = false;
     int num_dpus = 0;
 };
 
@@ -367,7 +368,7 @@ class SsgMainTest : public SsgFunctionTest {
 
     void validate_environment_variable(const SsgMainConfig &cfg) {
         std::unordered_map<std::string, std::string> env_vars;
-        env_vars["IS_DPU_DEVICE"] = (cfg.is_smart_switch_dpu ? "true" : "false");
+        env_vars["IS_DPU_DEVICE"] = (cfg.is_smart_switch_dpu || cfg.is_appliance_dpu ? "true" : "false");
         env_vars["NUM_DPU"] = std::to_string(cfg.num_dpus);
 
         std::vector<std::string> checked_service_list;

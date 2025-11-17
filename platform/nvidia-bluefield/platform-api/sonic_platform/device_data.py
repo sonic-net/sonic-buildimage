@@ -41,6 +41,7 @@ class DeviceDataManager:
             raise RuntimeError("{} file does not exists".format(platform_json))
 
         platform_data = json.loads(open(platform_json).read())
+        self._platform_data = platform_data
         self._chassis = platform_data.get('chassis')
         if not self._chassis:
             raise RuntimeError("Chassis data is not found in {} file".format(device_info.PLATFORM_JSON_FILE))
@@ -51,6 +52,10 @@ class DeviceDataManager:
 
     def get_platform_name(self):
         return self._chassis['name']
+    
+    def is_smartswitch(self):
+        # Default 
+        return False if 'APPLIANCE_DPU' in self._platform_data else True
 
     def get_fan_drawer_count(self):
         return len(self._chassis['fan_drawers'])

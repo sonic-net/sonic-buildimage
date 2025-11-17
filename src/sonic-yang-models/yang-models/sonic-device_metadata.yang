@@ -169,7 +169,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|LowerSpineRouter";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC|LowerSpineRouter|Appliance";
                     }
                 }
 
