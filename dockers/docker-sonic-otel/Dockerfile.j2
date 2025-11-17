@@ -26,7 +26,7 @@ RUN apt-get update
 {%- endif %}
 
 # Install dependencies and copy OTEL Collector binary
-RUN apt-get update && apt-get install -y ca-certificates
+RUN apt-get install -y ca-certificates
 
 # Copy OTEL Collector binary from official image
 COPY --from=otelcol /otelcol-contrib /usr/local/bin/otelcol-contrib

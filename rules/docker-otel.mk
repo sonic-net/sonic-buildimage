@@ -6,7 +6,7 @@ DOCKER_OTEL_DBG = $(DOCKER_OTEL_STEM)-$(DBG_IMAGE_MARK).gz
 
 $(DOCKER_OTEL)_PATH = $(DOCKERS_PATH)/$(DOCKER_OTEL_STEM)
 
-# Since OTEL is based on docker-sonic-gnmi, inherit its debug dependencies
+# Since OTEL has similar debug requirements as based on docker-sonic-gnmi, inherit its debug dependencies
 $(DOCKER_OTEL)_DBG_DEPENDS = $($(DOCKER_GNMI)_DBG_DEPENDS)
 
 # Load the gnmi container as base dependency

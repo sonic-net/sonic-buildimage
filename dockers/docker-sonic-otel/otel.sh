@@ -9,12 +9,12 @@ if [ ! -f "$OTEL_VARS_FILE" ]; then
     exit $EXIT_OTEL_VARS_FILE_NOT_FOUND
 fi
 
-# Read telemetry from ConfigDB
+# Generate OTEL configuration from ConfigDB
 echo "Generating OTEL config from template..."
 OTEL_CONFIG=$(sonic-cfggen -d -t $OTEL_VARS_FILE)
 
 if [ $? -ne 0 ] || [ -z "$OTEL_CONFIG" ]; then
-    echo "Failed to generate config from template, this should not happen"
+    echo "Failed to generate OTEL config from template."
     exit 1
 fi
 
