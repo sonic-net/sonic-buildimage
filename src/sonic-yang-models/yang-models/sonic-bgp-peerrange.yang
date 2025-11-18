@@ -36,6 +36,7 @@ module sonic-bgp-peerrange {
     container sonic-bgp-peerrange {
         container BGP_PEER_RANGE {
             list BGP_PEER_RANGE_LIST {
+                description "This list supports BGP_PEER_RANGE_TEMPLATE configurations with vnet and vrf support";
                 key "vrf_name peer_range_name";
 
                 leaf vrf_name {
@@ -82,6 +83,7 @@ module sonic-bgp-peerrange {
             }
 
             list BGP_PEER_RANGE_TEMPLATE_LIST {
+                description "This list is to support template based BGP peer range configurations.";
                 key "peer_range_name";
 
                 leaf peer_range_name {
