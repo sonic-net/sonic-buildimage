@@ -82,7 +82,22 @@ Any server can be a build image server as long as it has:
 
 A good choice of OS for building SONiC is currently Ubuntu 20.04.
 
-## Prerequisites
+## Automated prerequisites installation and repository cloning
+
+For convenience, you can use the automated prerequisites script to handle both prerequisites installation and repository cloning:
+
+```shell
+curl -sSL https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/scripts/prerequisites.sh | bash
+```
+
+This script will automatically:
+* Install required packages (pip, jinja, Docker)
+* Configure Docker for non-root usage
+* Clone the repository with all submodules
+
+After completing this step, proceed to the [Usage](#usage) section below.
+
+## Manual prerequisites installation
 
 * Install pip and jinja in host build machine, execute below commands
    if j2/jinjanator is not available:
@@ -103,7 +118,7 @@ pip3 install --user jinjanator
 > This will avoid [known bugs that falsely report read-only filesystems issues](https://stackoverflow.com/questions/52526219/docker-mkdir-read-only-file-system)
 > during the build process.
 
-## Clone the repository with all the git submodules
+## Manual clone the repository with all the git submodules
 
 To clone the code repository recursively:
 
