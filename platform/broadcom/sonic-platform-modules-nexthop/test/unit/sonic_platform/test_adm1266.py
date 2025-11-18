@@ -2,33 +2,38 @@
 
 import pytest
 import sys
-import tempfile
-import os
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
+from fixtures.test_helpers_adm1266 import Adm1266TestMixin
 
-# Import test fixtures
-sys.path.insert(0, '../../fixtures')
-from fixtures_unit_test import Adm1266Mock
 
-@pytest.fixture(scope="module")
-def decode_power_fault_cause():
-    from fixtures_unit_test import Adm1266Mock
-    adm = Adm1266Mock()
-    _decode_power_fault_cause = adm.adm_get_reboot_cause.__globals__['decode_power_fault_cause']
-    return _decode_power_fault_cause
+@pytest.fixture
+def mock_dpm():
+    """Injects and returns a mock DPM module for testing."""
+    dpm_mock = Mock()
+    dpm_mock.save = Mock()
+    with patch.dict(sys.modules, {"sonic_platform.dpm": dpm_mock}):
+        yield dpm_mock
+
+
+@pytest.fixture
+def adm1266_module(mock_dpm):
+    """Injects and returns a mock ADM1266 module for testing."""
+    from sonic_platform import adm1266
+
+    yield adm1266
+
 
 PSU_VIN_LOSS_PDIO_MASK_AND_VALUE = 0x0001
 OVER_TEMP_PDIO_MASK_AND_VALUE=0x0002
 
-class TestAdm1266Basic:
+class TestAdm1266Basic(Adm1266TestMixin):
     """Test ADM1266 basic properties and interface."""
-    def test_read_blackbox(self):
+    def test_read_blackbox(self, adm1266_module):
         """Test read_blackbox method"""
 
-        adm = Adm1266Mock()
-        blackbox_input = adm.get_blackbox_input()
-        expected_records = adm.get_expected_records()
-        expected_causes = adm.get_expected_causes()
+        blackbox_input = self.get_blackbox_input()
+
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
 
         print("\n--- Testing read_blackbox ---")
         blackbox_data = adm.read_blackbox()
@@ -37,16 +42,15 @@ class TestAdm1266Basic:
         assert blackbox_data == blackbox_input, "Blackbox Data mismatch"
         print("   Passed")
 
-    def test_parse_blackbox(self):
+    def test_parse_blackbox(self, adm1266_module):
         """Test parse_blackbox method"""
         print("\n--- Testing parse_blackbox ---")
-        adm = Adm1266Mock()
-        blackbox_input = adm.get_blackbox_input()
-        expected_records = adm.get_expected_records()
-        expected_causes = adm.get_expected_causes()
+        expected_records = self.get_expected_records()
+
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
 
         blackbox_data = adm.read_blackbox()
-        faults = adm.parse_blackbox(blackbox_data)
+        faults = adm._parse_blackbox(blackbox_data)
         exp = expected_records
         assert exp is not None, "expected_records not provided"
         assert len(faults) == len(exp), f"Fault count mismatch: {len(faults)} != {len(exp)}"
@@ -58,15 +62,12 @@ class TestAdm1266Basic:
                 assert a[ak] == v, f"[{i}] {ak} mismatch: {a[ak]} != {v}"
         print("   Passed")
 
-    def test_get_blackbox_records(self):
+    def test_get_blackbox_records(self, adm1266_module):
         """Integration test for Adm1266.get_blackbox_records with optional JSON expectations."""
         print("\n--- Testing get_blackbox_records ---")
+        expected_records = self.get_expected_records()
 
-        adm = Adm1266Mock()
-        blackbox_input = adm.get_blackbox_input()
-        expected_records = adm.get_expected_records()
-        expected_causes = adm.get_expected_causes()
-
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
 
         records = adm.get_blackbox_records()
         assert len(records) == len(expected_records),\
@@ -79,17 +80,16 @@ class TestAdm1266Basic:
                 assert a[k] == v, f"[{i}] {k}: {a[k]} != {v}"
         print("   Passed")
 
-    def test_get_reboot_causes(self):
+    def test_get_reboot_causes(self, adm1266_module):
         """Test Adm1266.get_blackbox_records by comparing with expected records.
 
         We use expected_records to validate the blackbox record parsing functionality.
         """
         print("\n--- Testing get_blackbox_records ---")
 
-        adm = Adm1266Mock()
-        blackbox_input = adm.get_blackbox_input()
-        expected_records = adm.get_expected_records()
-        expected_causes = adm.get_expected_causes()
+        expected_records = self.get_expected_records()
+
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
 
         records = adm.get_blackbox_records()
         exp = expected_records
@@ -103,15 +103,15 @@ class TestAdm1266Basic:
                 assert a[k] == v, f"[{i}] {k}: {a[k]} != {v}"
         print("   Passed")
 
-    def test_get_name(self):
+    def test_get_name(self, adm1266_module):
         """Test get_name method returns DPM name."""
-        adm = Adm1266Mock()
-        name = adm.adm.get_name()
-        assert name == "dpm-mock"
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
+        assert adm.get_name() == "dpm-mock"
 
-    def test_clear_blackbox(self):
+    def test_clear_blackbox(self, adm1266_module):
         """Test clear_blackbox method clears data."""
-        adm = Adm1266Mock()
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
+
         # Verify we have data initially
         initial_data = adm.read_blackbox()
         assert len(initial_data) > 0
@@ -122,10 +122,11 @@ class TestAdm1266Basic:
         assert len(cleared_data) == 1
         assert cleared_data == b"1"
 
-    def test_get_all_faults(self):
+    def test_get_all_faults(self, adm1266_module):
         """Test get_all_faults method returns fault list."""
-        adm = Adm1266Mock()
-        faults = adm.adm.get_all_faults()
+        adm = adm1266_module.Adm1266(self.get_fake_adm1266_platform_spec())
+
+        faults = adm.get_all_faults()
         assert isinstance(faults, list)
         assert len(faults) > 0
         # Each fault should have required fields
@@ -133,52 +134,43 @@ class TestAdm1266Basic:
             assert 'fault_uid' in fault
             assert 'dpm_name' in fault
 
-    def test_module_get_reboot_cause(self):
+    def test_module_get_reboot_cause(self, adm1266_module):
         """Test module-level get_reboot_cause function."""
-        adm = Adm1266Mock()
-        result = adm.get_reboot_cause()
-        assert result is not None
+        fake_adm1266_platform_spec = self.get_fake_adm1266_platform_spec()
 
-        reboot_cause, debug_msg = result
-        assert reboot_cause is not None
-        assert isinstance(debug_msg, str)
+        adm1266_platform_spec = Mock()
+        adm1266_platform_spec.Adm1266PlatformSpec = lambda name, pddf_data: fake_adm1266_platform_spec
+        with patch.dict(sys.modules, {"sonic_platform.adm1266_platform_spec": adm1266_platform_spec}):
+            result = adm1266_module.get_reboot_cause(self.get_test_pddf_path())
+            assert result is not None
 
-    def test_get_reboot_cause_type(self):
+            reboot_cause, debug_msg = result
+            assert reboot_cause is not None
+            assert isinstance(debug_msg, str)
+
+    def test_get_reboot_cause_type(self, adm1266_module):
         """Test get_reboot_cause_type function."""
-        from fixtures_unit_test import Adm1266Mock
-        adm = Adm1266Mock()
-        # Import the function from the loaded module
-        get_reboot_cause_type = adm.adm_get_reboot_cause.__globals__['get_reboot_cause_type']
-
         # Test with known reboot causes
         causes = ["REBOOT_CAUSE_POWER_LOSS", "REBOOT_CAUSE_WATCHDOG"]
-        result = get_reboot_cause_type(causes)
+        result = adm1266_module.get_reboot_cause_type(causes)
         assert result is not None
 
-    def test_time_since(self):
+    def test_time_since(self, adm1266_module):
         """Test time_since function converts timestamp to readable format."""
-        from fixtures_unit_test import Adm1266Mock
-        adm = Adm1266Mock()
-        time_since = adm.adm_get_reboot_cause.__globals__['time_since']
-
         # Test with 8-byte timestamp
         timestamp = b'\x79\x2e\xee\x02\x00\x00\x00\x00'
-        result = time_since('timestamp', timestamp)
+        result = adm1266_module.time_since('timestamp', timestamp)
         assert isinstance(result, str)
         assert 'seconds after power-on' in result
 
-    def test_channel_names(self):
+    def test_channel_names(self, adm1266_module):
         """Test channel_names function formats GPIO/PDIO bits."""
-        from fixtures_unit_test import Adm1266Mock
-        adm = Adm1266Mock()
-        channel_names = adm.adm_get_reboot_cause.__globals__['channel_names']
-
         # Test GPIO formatting
-        result = channel_names('gpio_in', 15391)  # From test data
+        result = adm1266_module.channel_names('gpio_in', 15391)  # From test data
         assert isinstance(result, str)
         assert 'GPIO' in result or '0b' in result
 
-    def test_decode_power_fault_cause_no_match(self, decode_power_fault_cause):
+    def test_decode_power_fault_cause_no_match(self, adm1266_module):
         """Test decode_power_fault_cause decoding when there is no match """
         dpm_signal_to_fault_cause = [
             {
@@ -192,14 +184,14 @@ class TestAdm1266Basic:
                 "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
             }
         ]
-        hw_cause, hw_desc, summary, reboot_cause = decode_power_fault_cause(
+        hw_cause, hw_desc, summary, reboot_cause = adm1266_module.decode_power_fault_cause(
             dpm_signal_to_fault_cause, 0x0000, 0x0000)
         assert hw_cause == ""
         assert hw_desc == ""
         assert summary == ""
         assert reboot_cause == ""
 
-    def test_decode_power_fault_cause_single_match(self, decode_power_fault_cause):
+    def test_decode_power_fault_cause_single_match(self, adm1266_module):
         """Test decode_power_fault_cause decoding when there is only one match """
         # Test single fault match
         dpm_signal_to_fault_cause = [
@@ -214,14 +206,14 @@ class TestAdm1266Basic:
                 "reboot_cause": "REBOOT_CAUSE_HARDWARE_OTHER"
             }
         ]
-        hw_cause, hw_desc, summary, reboot_cause = decode_power_fault_cause(
+        hw_cause, hw_desc, summary, reboot_cause = adm1266_module.decode_power_fault_cause(
             dpm_signal_to_fault_cause, PSU_VIN_LOSS_PDIO_MASK_AND_VALUE, 0x0000)
         assert hw_cause == "TEST_FAULT"
         assert hw_desc == "Test fault description"
         assert summary == "Test summary"
         assert reboot_cause == "REBOOT_CAUSE_HARDWARE_OTHER"
 
-    def test_decode_power_fault_cause_multiple_match(self, decode_power_fault_cause):
+    def test_decode_power_fault_cause_multiple_match(self, adm1266_module):
         """Test decode_power_fault_cause decoding when there are multiple matches """
         # Test multiple fault matches (comma-separated)
         dpm_signal_to_fault_cause = [
@@ -247,7 +239,7 @@ class TestAdm1266Basic:
             }
         ]
         # Both bits set - should get comma-separated results
-        hw_cause, hw_desc, summary, reboot_cause = decode_power_fault_cause(
+        hw_cause, hw_desc, summary, reboot_cause = adm1266_module.decode_power_fault_cause(
             dpm_signal_to_fault_cause, 
             PSU_VIN_LOSS_PDIO_MASK_AND_VALUE | OVER_TEMP_PDIO_MASK_AND_VALUE,
             0x0000)
@@ -262,22 +254,17 @@ class TestAdm1266Basic:
         "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC, REBOOT_CAUSE_HARDWARE_OTHER",
         "INVALID_CAUSE"
     ])
-    def test_reboot_cause_str_to_type(self, reboot_cause_str):
+    def test_reboot_cause_str_to_type(self, adm1266_module, reboot_cause_str):
         """Test reboot_cause_str_to_type handles single and comma-separated causes."""
-        from fixtures_unit_test import Adm1266Mock
-        adm = Adm1266Mock()
-        reboot_cause_str_to_type = adm.adm_get_reboot_cause.__globals__['reboot_cause_str_to_type']
-        ChassisBase = adm.adm_get_reboot_cause.__globals__['ChassisBase']
-
         reboot_cause_to_type = {
             "REBOOT_CAUSE_POWER_LOSS":
-                ChassisBase.REBOOT_CAUSE_POWER_LOSS,
+                adm1266_module.ChassisBase.REBOOT_CAUSE_POWER_LOSS,
             "REBOOT_CAUSE_POWER_LOSS,REBOOT_CAUSE_WATCHDOG":
-                ChassisBase.REBOOT_CAUSE_POWER_LOSS,
+                adm1266_module.ChassisBase.REBOOT_CAUSE_POWER_LOSS,
             "REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC, REBOOT_CAUSE_HARDWARE_OTHER":
-                ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
-            "INVALID_CAUSE": ChassisBase.INVALID_CAUSE
+                adm1266_module.ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC,
+            "INVALID_CAUSE": adm1266_module.ChassisBase.INVALID_CAUSE
         }
 
         reboot_cause_type = reboot_cause_to_type.get(reboot_cause_str, "")
-        assert reboot_cause_str_to_type(reboot_cause_str) == reboot_cause_type
+        assert adm1266_module.reboot_cause_str_to_type(reboot_cause_str) == reboot_cause_type

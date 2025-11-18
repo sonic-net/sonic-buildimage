@@ -9,6 +9,7 @@ import struct
 from dataclasses import dataclass
 from enum import Enum
 
+
 try:
     from sonic_eeprom import eeprom_tlvinfo
 except ImportError as e:
@@ -389,6 +390,16 @@ def complete_available_eeproms(ctx, args, incomplete):
     return [eeprom for eeprom in eeproms if eeprom.startswith(incomplete)]
 
 
+def click_argument_eeprom_path():
+    "Returns a click.argument with shell autocomplete to hint available EEPROM paths on the system."
+    # click version 8.0 renamed `autocompletion` to `shell_complete`.
+    # This is to support both old versions and new versions.
+    if hasattr(click.Parameter, "shell_complete"):
+        return click.argument("eeprom_path", shell_complete=complete_available_eeproms)
+    else:
+        return click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+
+
 def decode_eeprom(eeprom_path: str):
     eeprom_class = Eeprom(eeprom_path, start=0, status="", ro=True)
     eeprom = eeprom_class.read_eeprom()
@@ -411,6 +422,7 @@ def program_eeprom(
     device_version,
     label_revision,
     platform_name,
+    onie_version,
     manufacturer_name,
     vendor_name,
     service_tag,
@@ -434,6 +446,8 @@ def program_eeprom(
         cmds.append(f"{eeprom_class._TLV_CODE_LABEL_REVISION} = {label_revision}")
     if platform_name is not None:
         cmds.append(f"{eeprom_class._TLV_CODE_PLATFORM_NAME} = {platform_name}")
+    if onie_version is not None:
+        cmds.append(f"{eeprom_class._TLV_CODE_ONIE_VERSION} = {onie_version}")
     if manufacturer_name is not None:
         cmds.append(f"{eeprom_class._TLV_CODE_MANUF_NAME} = {manufacturer_name}")
     if vendor_name is not None:
@@ -477,7 +491,7 @@ def cli_list():
 
 
 @cli.command("decode")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 def decode(eeprom_path):
     check_root_privileges()
     decode_eeprom(eeprom_path)
@@ -492,7 +506,7 @@ def decode_all():
 
 
 @cli.command("program")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 @click.option("--product-name", default=None)
 @click.option("--part-num", default=None)
 @click.option("--serial-num", default=None)
@@ -500,6 +514,7 @@ def decode_all():
 @click.option("--device-version", default=None)
 @click.option("--label-revision", default=None)
 @click.option("--platform-name", default=None)
+@click.option("--onie-version", default=None)
 @click.option("--manufacturer-name", default=None)
 @click.option("--vendor-name", default=None)
 @click.option("--service-tag", default=None)
@@ -522,6 +537,7 @@ def program(
     device_version,
     label_revision,
     platform_name,
+    onie_version,
     manufacturer_name,
     vendor_name,
     service_tag,
@@ -538,6 +554,7 @@ def program(
         device_version,
         label_revision,
         platform_name,
+        onie_version,
         manufacturer_name,
         vendor_name,
         service_tag,
@@ -547,7 +564,7 @@ def program(
 
 
 @cli.command("clear")
-@click.argument("eeprom_path", autocompletion=complete_available_eeproms)
+@click_argument_eeprom_path()
 def clear(eeprom_path):
     check_root_privileges()
     clear_eeprom(eeprom_path)

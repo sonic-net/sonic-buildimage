@@ -20,3 +20,10 @@ class Sfp(PddfSfp):
         self._thermal_list.append(SfpThermal(self, pddf_data))
 
     # Provide the functions/variables below for which implementation is to be overwritten
+    def get_error_description(self):
+        try:
+            return super().get_error_description()
+        except NotImplementedError:
+            if not self.get_presence():
+                return self.SFP_STATUS_UNPLUGGED
+            return self.SFP_STATUS_OK
