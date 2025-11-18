@@ -245,7 +245,7 @@ SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 PACKAGE_URL_PREFIX ?= https://packages.trafficmanager.net/packages
 
 # TRUSTED_GPG_URLS - the trusted gpgs, separated by comma
-TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,https://packages.microsoft.com/keys/microsoft.asc
+TRUSTED_GPG_URLS = https://packages.microsoft.com/keys/microsoft.asc
 
 # SONIC_VERSION_CONTROL_COMPONENTS - Valid values: none|all|components..., the components consist of one or multiple: deb,py2,py3,web,git,docker, seperated by comma
 #   none  : disable the version control
