@@ -4,7 +4,6 @@ DOCKER_SYNCD_PLATFORM_CODE = centec
 include $(PLATFORM_PATH)/../template/docker-syncd-bullseye.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API)
-$(DOCKER_SYNCD_CENTEC)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \
                                 $(LIBSAIMETADATA_DBG) \

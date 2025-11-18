@@ -158,13 +158,12 @@ static void init_rnm(RADIUS_NSS_CONF_B * conf) {
     memset((char *) rnm, 0, sizeof(conf->rnm));
 
     rnm[0].gid   = 999;
-    rnm[0].groups = "docker";
     rnm[0].gecos = "remote_user";
-    rnm[0].shell = "/usr/bin/sonic-launch-shell";
+    rnm[0].shell = "/bin/bash";
     rnm[RADIUS_MAX_MPL-1].gid   = 1000;
     rnm[RADIUS_MAX_MPL-1].groups = "admin,sudo,docker";
     rnm[RADIUS_MAX_MPL-1].gecos = "remote_user_su";
-    rnm[RADIUS_MAX_MPL-1].shell = "/usr/bin/sonic-launch-shell";
+    rnm[RADIUS_MAX_MPL-1].shell = "/bin/bash";
 
 }
 

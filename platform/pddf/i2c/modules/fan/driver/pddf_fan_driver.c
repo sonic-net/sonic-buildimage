@@ -599,6 +599,7 @@ static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
 static const struct i2c_device_id pddf_fan_id[] = {
     { "fan_ctrl", 0 },
     { "fan_cpld", 1 },
+    { "fan_multifpgapci", 2 },
     {}
 };
 MODULE_DEVICE_TABLE(i2c, pddf_fan_id);

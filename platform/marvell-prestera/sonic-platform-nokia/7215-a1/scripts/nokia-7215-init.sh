@@ -2,6 +2,12 @@
 
 # Platform init script
 
+# Check if init is already done previously
+lsmod |grep nokia_7215_ixs_a1_cpld > /dev/null
+if [ "$?" = "0" ]; then
+    exit 0
+fi
+
 # Load required kernel-mode drivers
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"

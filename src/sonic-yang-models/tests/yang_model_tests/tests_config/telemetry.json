@@ -90,5 +90,22 @@
                 }
             }
         }
+    },
+    "TELEMETRY_TABLE_WITH_VALID_USER_AUTH": {
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/telemetry/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
+                    "server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "user_auth": "none",
+                    "log_level": "2",
+                    "port": "50051"
+                }
+            }
+        }
     }
 }

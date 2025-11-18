@@ -21,7 +21,7 @@ Type_1_list_maps_model = [
     'EXP_TO_FC_MAP_LIST',
     'CABLE_LENGTH_LIST',
     'MPLS_TC_TO_TC_MAP_LIST',
-    'TC_TO_DSCP_MAP_LIST'
+    'TC_TO_DSCP_MAP_LIST',
 ]
 
 # Workaround for those fields who is defined as leaf-list in YANG model but have string value in config DB.
@@ -72,6 +72,8 @@ class SonicYangExtMixin(SonicYangPathMixin):
             self._loadJsonYangModel()
             # create a map from config DB table to yang container
             self._createDBTableToModuleMap()
+            # compile uses clause (embed into schema)
+            self._compileUsesClause()
         except Exception as e:
             self.sysLog(msg="Yang Models Load failed:{}".format(str(e)), \
                 debug=syslog.LOG_ERR, doPrint=True)
@@ -130,8 +132,10 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
             for grouping in groupings:
                 gName = grouping["@name"]
-                gLeaf = grouping["leaf"]
-                self.preProcessedYang['grouping'][moduleName][gName] = gLeaf
+                self.preProcessedYang['grouping'][moduleName][gName] = dict()
+                self.preProcessedYang['grouping'][moduleName][gName]["leaf"] = grouping.get('leaf')
+                self.preProcessedYang['grouping'][moduleName][gName]["leaf-list"] = grouping.get('leaf-list')
+                self.preProcessedYang['grouping'][moduleName][gName]["choice"] = grouping.get('choice')
 
         except Exception as e:
             self.sysLog(msg="_preProcessYangGrouping failed:{}".format(str(e)), \
@@ -162,14 +166,113 @@ class SonicYangExtMixin(SonicYangPathMixin):
             raise e
         return
 
-    """
-    Create a map from config DB tables to container in yang model
-    This module name and topLevelContainer are fetched considering YANG models are
-    written using below Guidelines:
-    https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
-    """
-    def _createDBTableToModuleMap(self):
+    def _compileUsesClauseRefineApply(self, refine, model):
+        for item in model:
+            if item["@name"] == refine["@target-node"]:
+                # NOTE: We only handle 'description' and 'mandatory'
+                if refine.get('description') is not None:
+                    item["description"] = refine["description"]
+                if refine.get('mandatory') is not None:
+                    item["mandatory"] = refine["mandatory"]
+                return
 
+    def _compileUsesClauseRefine(self, refine, model):
+        # Nothing to refine
+        if refine is None:
+            return
+
+        # Convert to list if not already
+        if not isinstance(refine, list):
+            refine = [ refine ]
+
+        # Iterate across each refine
+        for r in refine:
+            self._compileUsesClauseRefineApply(r, model)
+
+
+    def _compileUsesClauseList(self, model, group, name, refine):
+        # If group doesn't have this entry, nothing to do.
+        groupobj = group.get(name)
+        if groupobj is None:
+            return
+
+        # model doesn't have this entry type, create it as a list
+        if model.get(name) is None:
+            model[name] = []
+
+        # model has this entry type, but its not a list, convert
+        if not isinstance(model[name], list):
+            model[name] = [ model[name] ]
+
+        if isinstance(groupobj, list):
+            model[name].extend(groupobj)
+        else:
+            model[name].append(groupobj)
+
+        self._compileUsesClauseRefine(refine, model[name])
+
+    def _compileUsesClauseModel(self, module, model):
+        """
+        Recursively process the yang schema looking for the "uses" clause under
+        "container", "list", and "choice"/"case" nodes.  Merge in the "uses"
+        dictionaries for leaf and leaf-list so callers don't need to try to do
+        their own "uses" processing.  Remove the "uses" member when processed so
+        anyone expecting it won't try to re-process.  It will just look like a
+        yang model that doesn't use "uses" so shouldn't cause compatibility issues.
+        """
+        if isinstance(model, list):
+            for item in model:
+                self._compileUsesClauseModel(module, item)
+            return
+
+        for model_name in [ "container", "list", "choice", "case" ]:
+            node = model.get(model_name)
+            if node:
+                self._compileUsesClauseModel(module, node)
+
+        uses_s = model.get("uses")
+        if not uses_s:
+            return
+
+        # Always make as a list
+        if isinstance(uses_s, dict):
+            uses_s = [uses_s]
+
+        # uses Example: "@name": "bgpcmn:sonic-bgp-cmn"
+        for uses in uses_s:
+            # Assume ':'  means reference to another module
+            if ':' in uses['@name']:
+                prefix = uses['@name'].split(':')[0].strip()
+                uses_module_name = self._findYangModuleFromPrefix(prefix, module)
+            else:
+                uses_module_name = module['@name']
+            grouping = uses['@name'].split(':')[-1].strip()
+            groupdata = self.preProcessedYang['grouping'][uses_module_name][grouping]
+
+            # Merge leaf from uses
+            refine = uses.get("refine")
+            self._compileUsesClauseList(model, groupdata, 'leaf', refine)
+            self._compileUsesClauseList(model, groupdata, 'leaf-list', refine)
+            self._compileUsesClauseList(model, groupdata, 'choice', refine)
+
+        # Delete the uses node so callers don't use it.
+        del model["uses"]
+
+    def _compileUsesClause(self):
+        try:
+            for module in self.yJson:
+                self._compileUsesClauseModel(module["module"], module["module"])
+        except Exception as e:
+            traceback.print_exc()
+            raise e
+
+    def _createDBTableToModuleMap(self):
+        """
+        Create a map from config DB tables to container in yang model
+        This module name and topLevelContainer are fetched considering YANG models are
+        written using below Guidelines:
+        https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md.
+        """
         for j in self.yJson:
             # get module name
             moduleName = j['module']['@name']
@@ -328,44 +431,6 @@ class SonicYangExtMixin(SonicYangPathMixin):
             raise e
         return None
 
-    def _fillLeafDictUses(self, uses_s, table, leafDict):
-        '''
-            Find the leaf(s) in a grouping which maps to given uses statement,
-            then fill leafDict with leaf(s) information.
-
-            Parameters:
-                uses_s (str): uses statement in yang module.
-                table (str): config DB table, this table is being translated.
-                leafDict (dict): dict with leaf(s) information for List\Container
-                    corresponding to config DB table.
-
-            Returns:
-                 (void)
-        '''
-        try:
-            # make a list
-            if isinstance(uses_s, dict):
-                uses_s = [uses_s]
-            # find yang module for current table
-            table_module = self.confDbYangMap[table]['yangModule']
-            # uses Example: "@name": "bgpcmn:sonic-bgp-cmn"
-            for uses in uses_s:
-                # Assume ':'  means reference to another module
-                if ':' in uses['@name']:
-                    prefix = uses['@name'].split(':')[0].strip()
-                    uses_module_name = self._findYangModuleFromPrefix(prefix, table_module)
-                else:
-                    uses_module_name = table_module['@name']
-                grouping = uses['@name'].split(':')[-1].strip()
-                leafs = self.preProcessedYang['grouping'][uses_module_name][grouping]
-                self._fillLeafDict(leafs, leafDict)
-        except Exception as e:
-            self.sysLog(msg="_fillLeafDictUses failed:{}".format(str(e)), \
-                debug=syslog.LOG_ERR, doPrint=True)
-            raise e
-
-        return
-
     def _createLeafDict(self, model, table):
         '''
             create a dict to map each key under primary key with a leaf in yang model.
@@ -401,10 +466,6 @@ class SonicYangExtMixin(SonicYangPathMixin):
 
         # leaf-lists
         self._fillLeafDict(model.get('leaf-list'), leafDict, True)
-
-        # uses should map to grouping,
-        if model.get('uses') is not None:
-            self._fillLeafDictUses(model.get('uses'), table, leafDict)
 
         return leafDict
 

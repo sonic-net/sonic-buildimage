@@ -45,6 +45,31 @@ module sonic-debug-counter {
                     description "Group name to organize counters";
                 }
 
+                leaf drop_monitor_status {
+                    type stypes:admin_mode;
+                    default "disabled";
+                    description "Indicates whether the feature is enabled or disabled.";
+                }
+
+                leaf window {
+                    type uint64;
+                    default 900;
+                    units seconds;
+                    description "The length of the time window in seconds";
+                }
+
+                leaf incident_count_threshold {
+                    type uint64;
+                    default 3;
+                    description "The number of incidents that have to occur per window for it to be registered as a syslog";
+                }
+
+                leaf drop_count_threshold {
+                    type uint64;
+                    default 100;
+                    description "The number of packet drops required for being classified as an incident";
+                }
+
                 leaf type {
                     type stypes:debug_counter_type;
                     mandatory true;
@@ -68,6 +93,18 @@ module sonic-debug-counter {
                 leaf reason {
                     type stypes:counter_drop_reason;
                     description "Drop reason which will cause the counter to increment";
+                }
+            }
+        }
+
+        container DEBUG_DROP_MONITOR {
+            container CONFIG {
+                description "Stores configuration for debug drop monitor in CONFIG_DB";
+
+                leaf status {
+                    type stypes:admin_mode;
+                    default "disabled";
+                    description "Indicates whether the feature is enabled or disabled.";
                 }
             }
         }

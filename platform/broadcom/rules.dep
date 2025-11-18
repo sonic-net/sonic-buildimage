@@ -8,6 +8,7 @@ include $(PLATFORM_PATH)/sai.dep
 include $(PLATFORM_PATH)/platform-modules-s6000.dep
 include $(PLATFORM_PATH)/platform-modules-dell.dep
 include $(PLATFORM_PATH)/platform-modules-arista.dep
+include $(PLATFORM_PATH)/platform-modules-nexthop.dep
 include $(PLATFORM_PATH)/platform-modules-ingrasys.dep
 include $(PLATFORM_PATH)/platform-modules-accton.dep
 include $(PLATFORM_PATH)/platform-modules-alphanetworks.dep
@@ -19,6 +20,7 @@ include $(PLATFORM_PATH)/platform-modules-quanta.dep
 #include $(PLATFORM_PATH)/platform-modules-juniper.dep
 #include $(PLATFORM_PATH)/platform-modules-ragile.dep
 include $(PLATFORM_PATH)/platform-modules-ruijie.dep
+include $(PLATFORM_PATH)/platform-modules-supermicro.dep
 include $(PLATFORM_PATH)/platform-modules-brcm-xlr-gts.dep
 include $(PLATFORM_PATH)/platform-modules-ufispace.dep
 include $(PLATFORM_PATH)/platform-modules-micas.dep

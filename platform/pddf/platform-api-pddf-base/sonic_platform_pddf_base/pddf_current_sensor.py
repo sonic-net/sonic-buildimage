@@ -24,7 +24,7 @@ class PddfCurrentSensor(CurrentSensorBase):
             raise ValueError(f"Current sensor {self.sensor_obj_name} not found in PDDF data")
 
         self.sensor_obj = self.pddf_obj.data[self.sensor_obj_name]
-        self.display_name = self.sensor_data.get('dev_attr', {}).get('display_name', self.sensor_obj_name)
+        self.display_name = self.sensor_obj.get('dev_attr', {}).get('display_name', self.sensor_obj_name)
 
     def get_name(self):
         if 'dev_attr' in self.sensor_obj.keys():

@@ -1,0 +1,6 @@
+bitarray==2.8.1
+click==7.0
+lxml==4.9.1
+pyyaml==6.0.1
+urllib3==2.5.0
+zipp==1.2.0

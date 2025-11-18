@@ -121,6 +121,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         jq \
         cron \
         debootstrap \
+        e2fsprogs \
 # For sonic-swss-common
         nlohmann-json3-dev \
         libhiredis-dev \
@@ -184,7 +185,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         python3-twisted \
         phpunit \
         libbit-vector-perl \
-        openjdk-17-jdk \
+        default-jdk \
         javahelper \
         maven-debian-helper \
         ant \
@@ -332,6 +333,9 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For initramfs
         shellcheck \
         bash-completion \
+# For installing the linux image for kernel module builds
+        tiny-initramfs \
+        linux-base \
 {%- if CONFIGURED_ARCH == "amd64" %}
 # For sonic vs image build
         dosfstools \
@@ -363,6 +367,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libevent-dev \
 # For libyang
         swig \
+        pkgconf \
+        tcl-expect \
+        libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
 # For build dtb
         device-tree-compiler \
 # For sonic-mgmt-framework
@@ -418,8 +427,18 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libgirepository1.0-dev \
         libsystemd-dev \
         pkg-config \
+        python3-dbus \
+        python3-systemd \
+        python3-gi \
 # For sonic-utilities build
         python3-cryptography \
+        python3-deepdiff \
+        python3-natsort \
+        python3-netifaces \
+        python3-paramiko \
+        python3-scp \
+        python3-enlighten \
+        python3-requests \
 # For audisp-tacplus
         libauparse-dev \
         auditd \
@@ -445,6 +464,14 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         dmidecode \
         usbutils \
         xmlstarlet \
+# For fips
+        python3-cheetah \
+        python3-docs-theme \
+        ss-dev \
+        liblmdb-dev \
+        libverto-dev \
+        systemtap-sdt-dev \
+        xvfb \
 # For nvidia-bluefield sdk compilation
         cython3 \
         pandoc \
@@ -513,10 +540,10 @@ RUN eatmydata apt-get install -y kernel-wedge
 
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang golang-go
-# TODO - golang version in trixie 1.24 > 1.19. Should be possible to use trixie version
+# TODO(trixie): This needs to be updated with the symcrypt FIPS build
 #{%- if INCLUDE_FIPS == "y" %}
-#RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
-# && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+#RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+# && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
 # && eatmydata dpkg -i golang-go.deb golang-src.deb \
 # && ln -sf /usr/lib/go-1.19 /usr/local/go \
 # && rm golang-go.deb golang-src.deb
@@ -606,7 +633,7 @@ RUN eatmydata apt-get install -y \
 {%- endif %}
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | tee /etc/apt/trusted.gpg.d/docker-stable.asc
 COPY docker.sources /etc/apt/sources.list.d/docker.sources
-# TODO - Migrate to trixie docker packages
+# TODO(trixie) - Migrate to trixie docker packages
 #RUN echo "Suites: $(lsb_release -cs)" >> /etc/apt/sources.list.d/docker.sources
 # Install docker packages from bookworm
 RUN echo "Suites: bookworm" >> /etc/apt/sources.list.d/docker.sources

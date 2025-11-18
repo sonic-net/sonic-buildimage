@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -13,16 +15,12 @@ RUN apt-get update &&       \
         iproute2            \
         ndisc6              \
         tcpdump             \
-        libelf1             \
-        libmnl0             \
         bridge-utils        \
         conntrack           \
         ndppd               \
         python3-protobuf    \
         pciutils            \
-        # Needed for installing netifaces Python package
-        build-essential     \
-        python3-dev
+        python3-netifaces
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Fix for gcc/python/iputils-ping not found in arm docker
@@ -32,9 +30,7 @@ RUN apt-get install -y   \
 {% endif %}
 
 # Dependencies of restore_neighbors.py
-RUN pip3 install \
-         pyroute2==0.5.14 \
-         netifaces==0.10.9
+RUN pip3 install pyroute2==0.5.14
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Remove installed gcc
@@ -58,20 +54,13 @@ RUN apt-get remove -y gcc
 {% endif %}
 
 # Clean up
-RUN apt-get purge -y          \
-        build-essential       \
-        python3-dev        && \
-    apt-get clean -y       && \
-    apt-get autoclean -y   && \
-    apt-get autoremove -y  && \
-    rm -rf /debs ~/.cache
+RUN apt-get purge -y build-essential python3-dev
 
 COPY ["files/arp_update", "/usr/bin"]
 COPY ["arp_update.conf", "files/arp_update_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["ndppd.conf", "tunnel_packet_handler.conf", "/usr/share/sonic/templates/"]
 COPY ["enable_counters.py", "tunnel_packet_handler.py", "/usr/bin/"]
 COPY ["orchagent.sh", "swssconfig.sh", "buffermgrd.sh", "/usr/bin/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 
 # Copy all Jinja2 template files into the templates folder
 COPY ["*.j2", "/usr/share/sonic/templates/"]
@@ -79,5 +68,11 @@ COPY ["*.j2", "/usr/share/sonic/templates/"]
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/docker-init.j2 > /usr/bin/docker-init.sh
 RUN rm -f /usr/share/sonic/templates/docker-init.j2
 RUN chmod 755 /usr/bin/docker-init.sh
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

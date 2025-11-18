@@ -1,4 +1,6 @@
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -31,10 +33,9 @@ COPY ["crshell", "/usr/bin/"]
 COPY ["critical_processes.j2", "/usr/share/sonic/templates"]
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates"]
 
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 
-## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

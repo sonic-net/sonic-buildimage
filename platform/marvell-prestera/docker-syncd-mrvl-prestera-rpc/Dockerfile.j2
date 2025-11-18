@@ -1,14 +1,10 @@
-FROM docker-syncd-mrvl-prestera-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
-{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files %}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-syncd-mrvl-prestera-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-
-COPY \
-{% for deb in docker_syncd_mrvl_prestera_rpc_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
 
 RUN apt-get purge -y syncd
 
@@ -30,10 +26,12 @@ RUN apt-get update \
     libnanomsg5           \
     libnanomsg-dev
 
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_syncd_mrvl_prestera_rpc_debs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
+{% if docker_syncd_mrvl_prestera_rpc_debs.strip() -%}
+# Copy built Debian packages
+{{ copy_files("debs/", docker_syncd_mrvl_prestera_rpc_debs.split(' '), "/debs/") }}
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_mrvl_prestera_rpc_debs.split(' ')) }}
+{%- endif %}
 
 RUN pip3 install cffi    \
  && pip3 install nnpy    \
@@ -53,7 +51,11 @@ COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
 
 ## Clean up
 RUN apt-get purge -y libyaml-dev python3-dev libffi-dev libssl-dev wget build-essential
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
 RUN rm -rf /root/deps
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

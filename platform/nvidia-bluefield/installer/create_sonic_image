@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -184,7 +184,7 @@ cat > scripts/initrd-install << EOF
 #!/bin/bash
 
 depmod -a $KERNEL_VERSION > /dev/null 2>&1
-insmod /mlx-bootctl.ko
+insmod /mlxbf-bootctl.ko
 insmod /sdhci-of-dwcmshc.ko
 insmod /sbsa_gwdt.ko
 /usr/sbin/watchdog
@@ -203,11 +203,11 @@ copy_bin()
     if [ -e $1 ]; then
         bin=$1
     else
-        bin=$(which $1 2> /dev/null)
+        bin=$(which $1 2> /dev/null || true)
     fi
     if [ -z "$bin" ]; then
         echo "ERROR: Cannot find $1"
-        exit 1
+        return 0
     fi
     sudo mkdir -p .$(dirname $bin)
     if [ ! -e .${bin} ]; then
@@ -368,7 +368,7 @@ main() {
     VMLINUZ=$CDIR/$FILESYSTEM_ROOT/boot/vmlinuz-$KERNEL_VERSION
     MODULES_DIR=$CDIR/$FILESYSTEM_ROOT/lib/modules/$KERNEL_VERSION
     WATCHDOG=$MODULES_DIR/kernel/drivers/watchdog/sbsa_gwdt.ko
-    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlx-bootctl.ko
+    BOOTCTL_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-bootctl.ko
     TMFIFO_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/mlxbf-tmfifo.ko
     SDHCI_OF_DWCMSHC_DRIVER=$CHROOT_DIR/usr/lib/modules/$KERNEL_VERSION/extra/sdhci-of-dwcmshc.ko
 

@@ -161,5 +161,23 @@
                 ]
             }
         }
+    },
+    "VALID_DEBUG_DROP_MONITOR_STATUS": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_DROP_MONITOR": {
+                "CONFIG": {
+                    "status": "enabled"
+                }
+            }
+        }
+    },
+    "INVALID_DEBUG_DROP_MONITOR_STATUS": {
+        "sonic-debug-counter:sonic-debug-counter": {
+            "sonic-debug-counter:DEBUG_DROP_MONITOR": {
+                "CONFIG": {
+                    "status": "invalid"
+                }
+            }
+        }
     }
 }

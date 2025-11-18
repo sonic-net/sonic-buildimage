@@ -1,0 +1,33 @@
+[package]
+name = "docker-wait-any-rs"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "docker-wait-any-rs"
+path = "src/main.rs"
+
+[dependencies]
+async-trait = "0.1.77"
+bollard = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+syslog-tracing = { workspace = true }
+sonic-rs-common = { path = "../../../sonic-rs-common" }
+
+[dev-dependencies]
+serial_test = "1.0.0"
+mockall = "0.11.0"
+injectorpp = { git = "https://github.com/microsoft/injectorppforrust.git", rev = "c7317906a1d514ef99bf2fbd4c943908c265d280" } ## For ARM support
+
+[lints]
+workspace = true

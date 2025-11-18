@@ -1,2 +1,2 @@
--a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit
--a always,exit -F arch=b32 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit
+-a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus
+-a always,exit -F arch=b32 -S execve -F auid>=1000 -F auid!=4294967295 -F key=process_audit -F key=tacplus

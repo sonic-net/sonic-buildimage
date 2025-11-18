@@ -4,4 +4,3 @@ dvipng==1.15-1.1
 libnanomsg-dev==1.1.5+dfsg-1.1
 libnanomsg5==1.1.5+dfsg-1.1
 watchdog==5.16-1+b1
-wget==1.21.3-1+b1

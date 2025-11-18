@@ -1,11 +1,11 @@
 DOCKER_GBSYNCD_PLATFORM_CODE = credo
 
 LIBSAI_CREDO = libsaicredo_0.9.9_amd64.deb
-$(LIBSAI_CREDO)_URL = "https://sonicstorage.blob.core.windows.net/public/credosai/$(LIBSAI_CREDO)"
+$(LIBSAI_CREDO)_URL = "https://packages.trafficmanager.net/public/credosai/$(LIBSAI_CREDO)"
 LIBSAI_CREDO_OWL = libsaicredo-owl_0.9.9_amd64.deb
-$(LIBSAI_CREDO_OWL)_URL = "https://sonicstorage.blob.core.windows.net/public/credosai/$(LIBSAI_CREDO_OWL)"
+$(LIBSAI_CREDO_OWL)_URL = "https://packages.trafficmanager.net/public/credosai/$(LIBSAI_CREDO_OWL)"
 LIBSAI_CREDO_BLACKHAWK = libsaicredo-blackhawk_0.9.9_amd64.deb
-$(LIBSAI_CREDO_BLACKHAWK)_URL = "https://sonicstorage.blob.core.windows.net/public/credosai/$(LIBSAI_CREDO_BLACKHAWK)"
+$(LIBSAI_CREDO_BLACKHAWK)_URL = "https://packages.trafficmanager.net/public/credosai/$(LIBSAI_CREDO_BLACKHAWK)"
 
 ifneq ($($(LIBSAI_CREDO)_URL),)
 include $(PLATFORM_PATH)/../template/docker-gbsyncd-bookworm.mk

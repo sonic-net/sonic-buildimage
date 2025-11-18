@@ -92,6 +92,19 @@ module sonic-flex_counter {
                 }
             }
 
+            container DASH_METER {
+                /* METER_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
             container PFCWD {
                 /* PFC_WD_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
@@ -329,6 +342,19 @@ module sonic-flex_counter {
 
             container SRV6 {
                 /* SRV6_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
+            container SWITCH {
+                /* SWITCH_STAT_COUNTER_FLEX_COUNTER_GROUP */
                 leaf FLEX_COUNTER_STATUS {
                     type flex_status;
                 }

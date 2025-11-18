@@ -79,6 +79,25 @@
             }
         }
     },
+    "MIRROR_ERSPAN_ENTRY_WITH_VALID_IPV6_SRC_AND_DST_IP": {
+        "sonic-mirror-session:sonic-mirror-session": {
+            "MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [
+                    {
+                        "name": "erspan",
+                        "type": "ERSPAN",
+                        "dst_ip": "1001::1",
+                        "src_ip": "2002::2",
+                        "gre_type": "0x1234",
+                        "dscp": "10",
+                        "ttl": "64",
+                        "queue": "0",
+                        "direction": "RX"
+                    }
+                ]
+            }
+        }
+    },
     "MIRROR_ERSPAN_ENTRY_WRONG_TYPE": {
         "sonic-mirror-session:sonic-mirror-session": {
             "MIRROR_SESSION": {

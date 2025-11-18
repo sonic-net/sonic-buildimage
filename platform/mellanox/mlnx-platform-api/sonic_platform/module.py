@@ -334,13 +334,8 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
-        # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
-        if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
-            return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
-        elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
-            # Do not wait for result if we are rebooting NPU + DPUs
-            return self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
-        raise RuntimeError(f"Invalid Reboot Type provided for {self._name}: {reboot_type}")
+        # no_wait=True is not supported at this point, because of race conditions with other drivers
+        return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
 
     def set_admin_state(self, up):
         """
@@ -358,11 +353,11 @@ class DpuModule(ModuleBase):
             bool: True if the request has been issued successfully, False if not
         """
         if up:
-            if self.dpuctl_obj.dpu_power_on():
+            if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off()
+        return self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
 
     def get_type(self):
         """
@@ -483,14 +478,13 @@ class DpuModule(ModuleBase):
         Retrieves the bus information.
 
         Returns:
-            Returns the PCI bus information in BDF format like "[DDDD:]BB:SS:F"
+            Returns the PCI bus information in list of BDF format
         """
-        if not self.bus_info:
-            # Cache the data to prevent multiple platform.json parsing
-            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.PCIE_INT.value)
-            # If we are unable to parse platform.json for midplane interface raise RunTimeError
-            if not self.bus_info:
-                raise RuntimeError(f"Unable to obtain bus info from platform.json for {self.get_name()}")
+        if self.bus_info:
+            return self.bus_info
+        bus_paths = self.dpuctl_obj.get_pci_dev_path()
+        # Convert full paths to BDF format
+        self.bus_info = [path.split('/')[-1] for path in bus_paths]
         return self.bus_info
 
     def pci_detach(self):

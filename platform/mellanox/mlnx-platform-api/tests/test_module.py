@@ -253,9 +253,7 @@ class TestModule:
             mock_obj.assert_called_once_with(skip_pre_post=True)
             mock_obj.reset_mock()
             m.reboot(reboot_type=ModuleBase.MODULE_REBOOT_SMARTSWITCH)
-            mock_obj.assert_called_once_with(no_wait=True, skip_pre_post=True)
-            with pytest.raises(RuntimeError):
-                m.reboot("None")
+            mock_obj.assert_called_once_with(skip_pre_post=True)
         with patch('sonic_py_common.syslogger.SysLogger.log_error') as mock_method:
             m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=True)
             assert m.set_admin_state(True)
@@ -343,9 +341,24 @@ class TestModule:
             assert m1._is_midplane_up()
             assert m2._is_midplane_up()
             assert m3._is_midplane_up()
-            assert m1.get_pci_bus_info() == pl_data["dpu0"]['bus_info']
-            assert m2.get_pci_bus_info() == pl_data["dpu1"]['bus_info']
-            assert m3.get_pci_bus_info() == pl_data["dpu2"]['bus_info']
+            
+            # Test get_pci_bus_info function
+            with patch.object(m1.dpuctl_obj, "get_pci_dev_path") as mock_get_pci_dev_path:
+                mock_get_pci_dev_path.return_value = ["0000:08:00.0", "0000:09:00.0"]
+                # First call should get the bus info from dpuctl_obj
+                assert m1.get_pci_bus_info() == ["0000:08:00.0", "0000:09:00.0"]
+                mock_get_pci_dev_path.assert_called_once()
+                # Second call should use cached value
+                assert m1.get_pci_bus_info() == ["0000:08:00.0", "0000:09:00.0"]
+                # Should not call get_pci_dev_path again
+                mock_get_pci_dev_path.assert_called_once()
+
+                # Test with a different module
+                with patch.object(m2.dpuctl_obj, "get_pci_dev_path") as mock_get_pci_dev_path2:
+                    mock_get_pci_dev_path2.return_value = ["0000:09:00.0", "0000:0A:00.0"]
+                    assert m2.get_pci_bus_info() == ["0000:09:00.0", "0000:0A:00.0"]
+                    mock_get_pci_dev_path2.assert_called_once()
+
             with pytest.raises(RuntimeError):
                 m4._is_midplane_up()
                 m4.get_pci_bus_info()

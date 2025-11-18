@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-base-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-base-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -55,3 +57,7 @@ RUN apt-get purge -y               \
     apt-get autoclean -y        && \
     apt-get autoremove -y       && \
     rm -rf /debs /python-wheels ~/.cache
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /

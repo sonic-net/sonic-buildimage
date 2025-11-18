@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="Askboard" dsig="md5" sid="7093bb99-b026-4a69-990a-db984aab32e7">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-05-15-1.11" profile="Askboard" sid="e4650fda-5634-40b1-9d26-860af3e20dcf">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -188,6 +188,18 @@ with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:description>Specifies PHY identifier 88E1781, Integrated Octal 10/100/1000 Mbps Energy
 Efficient Ethernet Transceiver</askboardplt:description>
           <askboardplt:value>7</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2110</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2110, Integrated Octal 10/100/1000/2.5G/5GBASE-T
+Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>8</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E2180</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E2180, Integrated Octal 10/100/1000/2.5G/5GBASE-T
+Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>9</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
       <askboardplt:typedef>

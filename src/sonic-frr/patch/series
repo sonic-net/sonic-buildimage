@@ -54,3 +54,9 @@
 0054-zebra-Prevent-active-setting-if-interface-is-not-ope.patch
 0055-zebra-Add-nexthop-group-id-to-route-dump.patch
 0056-zebra-Display-interface-name-not-ifindex-in-nh-dump.patch
+0057-mgmtd-remove-bogus-hedge-code-which-corrupted-active.patch
+0058-mgmtd-normalize-argument-order-to-copy-dst-src.patch
+0059-zebra-Ensure-that-the-dplane-can-send-the-full-packe.patch
+0060-bgpd-Convert-bmp-path_info-tracking-from-hash-to-rbt.patch
+0061-bgpd-Fix-JSON-wrapper-brace-consistency-in-neighbor.patch
+0062-zebra-if-speed-change-check-fix.patch
