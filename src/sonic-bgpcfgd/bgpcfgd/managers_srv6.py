@@ -85,7 +85,7 @@ class SRv6Mgr(Manager):
             log_err("Found a SRv6 SID config entry that does not match the locator block: {} | {}; locator {}".format(key, data, locator))
             return False
 
-        if data['action'] != 'uA' and not locator_prefix.supernet_of(sid_prefix):
+        if data['action'] == 'uN' and not locator_prefix.supernet_of(sid_prefix):
             log_err("Found a SRv6 SID config entry that does not match the locator prefix: {} | {}; locator {}".format(key, data, locator))
             return False
         
@@ -103,6 +103,9 @@ class SRv6Mgr(Manager):
                 return False
             if sid.adj:
                 sid_cmd += ' nexthop {}'.format(sid.adj)
+            else:
+                log_err("Found a SRv6 SID config entry that does not specify adj for action uA: {} | {}".format(key, data))
+                return False
         cmd_list.append(sid_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
