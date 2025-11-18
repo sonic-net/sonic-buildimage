@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 HWSKU_DIR=/usr/share/sonic/hwsku
+PLATFORM_ENV_CONF=/usr/share/sonic/platform/platform_env.conf
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -136,7 +137,8 @@ fi
 # - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
 # - MACSec is enabled on platform.
 if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; then
-    if grep -q "macsec_enabled=1" /usr/share/sonic/platform/platform_env.conf 2>/dev/null ; then
+    [ -f $PLATFORM_ENV_CONF ] && . $PLATFORM_ENV_CONF
+    if [[ $macsec_enabled -eq 1 ]]; then
         ORCHAGENT_ARGS+=" -M"
     fi
 fi
