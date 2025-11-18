@@ -88,16 +88,18 @@ jobs:
             # Fetch target branch to ensure we have the latest
             git fetch origin $(System.PullRequest.TargetBranch)
             # Check if docker-ptf Dockerfile.j2 has changes
+            # NOTE: The PTF_MODIFIED template parameter is of type string
+            # Ensure to set it to "True" or "False" (not boolean true/false)
             if git diff --name-only $TARGET_BRANCH...HEAD | grep -q "dockers/docker-ptf/Dockerfile.j2"; then
               echo "docker-ptf/Dockerfile.j2 has been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]true"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]True"
             else
               echo "docker-ptf/Dockerfile.j2 has not been modified in this PR"
-              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+              echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
             fi
           else
             echo "Not a PR build, setting PTF_MODIFIED to false"
-            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]false"
+            echo "##vso[task.setvariable variable=PTF_MODIFIED;isOutput=true]False"
           fi
 
           if [[ "$BUILD_REASON" != "PullRequest" && "$BUILD_DEFINITIONNAME" == "Azure.sonic-buildimage.official.vs" ]]
