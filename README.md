@@ -107,6 +107,9 @@ sudo apt install -y python3-pip
 pip3 install --user jinjanator
 ```
 
+> **Note:** If you cannot run the `j2` command after installation, this is likely because the `~/.local/bin` directory was just created and is not yet included in your `$PATH`. Please log out and log back in to refresh your environment, then test the command again.
+
+
 * Install [Docker](https://docs.docker.com/engine/install/) and configure your
   system to allow running the 'docker' command without 'sudo':
   * Add current user to the docker group: `sudo gpasswd -a ${USER} docker`

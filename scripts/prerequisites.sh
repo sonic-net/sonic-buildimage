@@ -18,12 +18,12 @@ run_step() {
 
 ###############################################
 # Configurable Variables
+# Can be overridden via environment variables:
+#   SONIC_REPO=<url> SONIC_DIR=<path> BRANCH=<name> bash prerequisites.sh
 ###############################################
-SONIC_REPO="https://github.com/sonic-net/sonic-buildimage.git"
-SONIC_DIR="$HOME/sonic-buildimage"
-BRANCH="master"          # adjust as needed
-PLATFORM="broadcom"      # adjust as needed
-SONIC_BUILD_JOBS=4
+SONIC_REPO="${SONIC_REPO:-https://github.com/sonic-net/sonic-buildimage.git}"
+SONIC_DIR="${SONIC_DIR:-$HOME/sonic-buildimage}"
+BRANCH="${BRANCH:-master}"
 
 ###############################################
 # Steps Begin
@@ -74,6 +74,15 @@ fi
 
 run_step "Adding user '${USER}' to docker group" \
     sudo gpasswd -a "${USER}" docker
+
+echo "==> Testing Docker availability without sudo..."
+if ! docker ps >/dev/null 2>&1; then
+    echo "[WARNING] Docker cannot be run without sudo yet."
+    echo "Please log out and log back in for the docker group membership to take effect."
+    echo "After logging back in, you can continue with the build process."
+else
+    echo "==> Docker is available without sudo."
+fi
 
 ###############################################
 # Clone SONiC Repo
