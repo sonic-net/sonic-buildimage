@@ -37,6 +37,8 @@
       "optoe"
     ],
     "pddf_kos": [
+      "pddf_multifpgapci_i2c_module",
+      "pddf_multifpgapci_gpio_module",
       "pddf_client_module",
       "pddf_multifpgapci_driver",
       "pddf_multifpgapci_module",
@@ -223,6 +225,10 @@
       "device_parent": "PCIE0",
       "device_bdf": "{{cpu_card_fpga_bdf}}",
       "dev_attr": {}
+    },
+    "dev_attr": {
+      "pwr_cycle_reg_offset": "0x8",
+      "pwr_cycle_enable_word": "0xdeadbeef"
     },
     "i2c": {
       "dev_attr": {
@@ -1378,6 +1384,10 @@
       "device_parent": "PCIE0",
       "device_bdf": "{{switchcard_fpga_bdf}}",
       "dev_attr": {}
+    },
+    "dev_attr": {
+      "pwr_cycle_reg_offset": "0x4",
+      "pwr_cycle_enable_word": "0xdeadbeef"
     },
     "i2c": {
       "dev_attr": {
@@ -13191,6 +13201,16 @@
           "drv_attr_name": "curr4_crit"
         }
       ]
+    }
+  },
+  "WATCHDOG": {
+    "dev_info": {
+      "device_type": "WATCHDOG",
+      "device_parent": "MULTIFPGAPCIE1"
+     },
+     "dev_attr": {
+       "event_driven_power_cycle_control_reg_offset": "0x28",
+       "watchdog_counter_reg_offset": "0x1E0"
      }
   }
 }
