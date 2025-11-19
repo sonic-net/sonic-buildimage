@@ -31,7 +31,8 @@ def enable_rates():
     counters_db.set('COUNTERS_DB', 'RATES:TRAP', 'TRAP_ALPHA', DEFAULT_ALPHA)
     counters_db.set('COUNTERS_DB', 'RATES:TUNNEL', 'TUNNEL_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
     counters_db.set('COUNTERS_DB', 'RATES:TUNNEL', 'TUNNEL_ALPHA', DEFAULT_ALPHA)
-
+    counters_db.set('COUNTERS_DB', 'RATES:QUEUE', 'QUEUE_SMOOTH_INTERVAL', DEFAULT_SMOOTH_INTERVAL)
+    counters_db.set('COUNTERS_DB', 'RATES:QUEUE', 'QUEUE_ALPHA', DEFAULT_ALPHA)
 
 def enable_counters():
     db = swsscommon.ConfigDBConnector()

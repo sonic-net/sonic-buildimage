@@ -1,0 +1,11 @@
+# Special arrangement to make PDDF mode default
+
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable sfp-max-temp-updater.service
+systemctl start sfp-max-temp-updater.service
+systemctl enable system-health.service
+systemctl start --no-block system-health.service
+
+

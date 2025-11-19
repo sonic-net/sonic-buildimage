@@ -124,7 +124,7 @@
         "egress_lossy_profile": {
             "pool":"egress_lossy_pool",
             "size":"9216",
-            "dynamic_th":"-6"
+            "dynamic_th":"7"
         },
         "queue0_downlink_lossy_profile": {
             "dynamic_th": "0",
@@ -137,7 +137,7 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue2_downlink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
@@ -145,7 +145,7 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue3_downlink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
@@ -153,12 +153,12 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue4_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "7"
+            "dynamic_th": "0"
         },
         "queue5_downlink_lossy_profile": {
             "pool": "egress_lossy_pool",
@@ -181,7 +181,7 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue2_uplink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
@@ -189,7 +189,7 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue3_uplink_lossy_profile": {
             {% if traffic_config.traffic_classification_enable %}
@@ -197,12 +197,12 @@
             {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "0"
+            "dynamic_th": "-7"
         },
         "queue4_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th": "7"
+            "dynamic_th": "0"
         },
         "queue5_uplink_lossy_profile": {
             "pool": "egress_lossy_pool",

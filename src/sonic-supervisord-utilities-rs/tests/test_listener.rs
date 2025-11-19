@@ -2,31 +2,15 @@
 //! Mirrors the Python test_listener.py structure and function names exactly
 
 use sonic_supervisord_utilities_rs::{
-    childutils,
     proc_exit_listener::*,
 };
-use swss_common::ConfigDBConnector;
 use injectorpp::interface::injector::*;
 use injectorpp::interface::injector::InjectorPP;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::{Pid, pipe, write, close};
-use std::sync::Once;
+use mio::Token;
+use scopeguard::guard;
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write, Cursor};
-use std::os::unix::io::AsRawFd;
-use std::path::Path;
-use std::process::Command;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicU32, Ordering};
-use tempfile::NamedTempFile;
-
-// Test data paths
-const TEST_DATA_DIR: &str = "tests/test_data";
-const CRITICAL_PROCESSES_FILE: &str = "tests/test_data/critical_processes";
-const WATCHDOG_PROCESSES_FILE: &str = "tests/test_data/watchdog_processes";
-const STDIN_SAMPLE_FILE: &str = "tests/test_data/stdin_sample";
 
 // Global state for progressive time mocking
 static TIME_MOCK_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -70,6 +54,12 @@ impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
         
         // Create a temporary pipe just to generate a real mio event
         let (read_fd, write_fd) = nix::unistd::pipe()?;
+        
+        // Ensure read_fd is closed in all code paths (even on error) using RAII guard
+        let _read_fd_guard = guard(read_fd, |fd| {
+            let _ = nix::unistd::close(fd);
+        });
+        
         let mut source = mio::unix::SourceFd(&read_fd);
         
         // Write something to the pipe to make it readable
@@ -83,13 +73,11 @@ impl sonic_supervisord_utilities_rs::proc_exit_listener::Poller for MockPoller {
         // Poll the temporary poll to get real events
         temp_poll.poll(events, Some(std::time::Duration::from_millis(1)))?;
         
-        // Clean up
-        nix::unistd::close(read_fd)?;
-        
+        // read_fd will be automatically closed when _read_fd_guard goes out of scope
         Ok(())
     }
     
-    fn register(&self, _stdin_fd: std::os::unix::io::RawFd) -> std::io::Result<()> {
+    fn register(&self, _stdin_fd: std::os::unix::io::RawFd, _token: Token) -> std::io::Result<()> {
         // Mock registration always succeeds
         Ok(())
     }
@@ -488,28 +476,6 @@ mod tests {
         test_listener.test_main_snmp().unwrap();
     }
 
-
-
-    #[test]
-    fn test_injectorpp_kill_mocking_basic() {
-        // Test InjectorPP mocking of nix::sys::signal::kill function
-        let mut injector = InjectorPP::new();
-        
-        // Mock the kill function to track calls
-        injector
-            .when_called(injectorpp::func!(fn (nix::sys::signal::kill)(nix::unistd::Pid, nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_pid: nix::unistd::Pid, _signal: nix::sys::signal::Signal) -> Result<(), nix::errno::Errno>,
-                returns: Ok(())
-            ));
-        
-        // Test that kill would be called with correct parameters
-        let test_pid = nix::unistd::Pid::from_raw(1234);
-        let result = nix::sys::signal::kill(test_pid, nix::sys::signal::Signal::SIGTERM);
-        
-        assert!(result.is_ok(), "Mocked kill should succeed");
-    }
-
     #[test]
     fn test_progressive_time_mocking() {
         // Test progressive time mocking
@@ -574,7 +540,6 @@ mod tests {
         // This demonstrates how time progression would work in alerting/heartbeat logic
         
         let start_time = 1609459200.0; // 2021-01-01 00:00:00 UTC
-        let mut current_time = start_time;
         
         // Simulate Python TimeMocker behavior: each "call" advances time by 1 hour
         let times: Vec<f64> = (0..5).map(|i| {
@@ -605,9 +570,6 @@ mod tests {
     fn test_critical_process_with_autorestart_enabled_calls_kill() {
         // Test that when a critical process exits and auto-restart is enabled, kill() is called
         let mut injector = InjectorPP::new();
-        let mut kill_called = false;
-        let mut kill_pid = nix::unistd::Pid::from_raw(0);
-        let mut kill_signal = nix::sys::signal::Signal::SIGTERM;
         
         // Mock kill function to capture calls
         injector
@@ -640,7 +602,6 @@ mod tests {
     fn test_critical_process_with_autorestart_disabled_no_kill() {
         // Test that when a critical process exits and auto-restart is disabled, kill() is NOT called
         let mut injector = InjectorPP::new();
-        let mut kill_call_count = 0;
         
         // Mock kill function to count calls - should remain 0
         injector

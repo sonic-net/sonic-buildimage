@@ -2,7 +2,7 @@ Source: sonic
 Maintainer: SONiC Team <sonic-dev@lists.sonicfoundation.dev>
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 12)
+Build-Depends: debhelper-compat (= 13)
 Standards-Version: 1.0.0
 
 Package: sonic-supervisord-utilities-rs

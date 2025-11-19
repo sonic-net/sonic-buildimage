@@ -33,11 +33,11 @@ class SystemLedd(daemon_base.DaemonBase):
             result = fan_drawer.set_status_led(color)
             if result:
                 self.log_info(
-                    f"Setting FANTRAY_LED_{fan_drawer.fantray_index} to {color}"
+                    f"Setting FANTRAY{fan_drawer.fantray_index}_LED to {color}"
                 )
             else:
                 self.log_error(
-                    f"Failed to set FANTRAY_LED_{fan_drawer.fantray_index} to {color}"
+                    f"Failed to set FANTRAY{fan_drawer.fantray_index}_LED to {color}"
                 )
 
     def _set_fan_led(self, color):

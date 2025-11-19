@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-DPU_SAI_VERSION = SAIBuild0.0.44.0
+DPU_SAI_VERSION = SAIBuild0.0.45.0
 
 # Place here URL where SAI sources exist
 DPU_SAI_SOURCE_BASE_URL=

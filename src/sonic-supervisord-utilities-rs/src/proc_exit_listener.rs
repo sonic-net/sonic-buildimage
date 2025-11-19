@@ -8,7 +8,6 @@ use mio::{Events, Token};
 use nix::sys::signal::{self, Signal};
 use nix::unistd::getppid;
 use std::collections::HashMap;
-use std::collections::HashMap as StdHashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
@@ -88,18 +87,18 @@ impl Poller for MioPoller {
 /// Trait for ConfigDB operations - allows for both real ConfigDBConnector and mocks
 pub trait ConfigDBTrait {
     /// Get table data from database
-    fn get_table(&self, table: &str) -> std::result::Result<StdHashMap<String, StdHashMap<String, String>>, Box<dyn std::error::Error>>;
+    fn get_table(&self, table: &str) -> std::result::Result<HashMap<String, HashMap<String, String>>, Box<dyn std::error::Error>>;
 }
 
 /// Implementation of ConfigDBTrait for the real ConfigDBConnector
 impl ConfigDBTrait for ConfigDBConnector {
-    fn get_table(&self, table: &str) -> std::result::Result<StdHashMap<String, StdHashMap<String, String>>, Box<dyn std::error::Error>> {
+    fn get_table(&self, table: &str) -> std::result::Result<HashMap<String, HashMap<String, String>>, Box<dyn std::error::Error>> {
         let result = self.get_table(table)?;
         
         // Convert from CxxString to String
-        let mut converted_result = StdHashMap::new();
+        let mut converted_result = HashMap::new();
         for (key, value_map) in result {
-            let mut converted_value_map = StdHashMap::new();
+            let mut converted_value_map = HashMap::new();
             for (inner_key, inner_value) in value_map {
                 converted_value_map.insert(inner_key, inner_value.to_string_lossy().to_string());
             }
@@ -270,7 +269,7 @@ pub fn publish_events(events_handle: &EventPublisher, process_name: &str, contai
     Ok(())
 }
 
-/// Get current monotonic time as seconds since an arbitrary epoch - helper function
+/// Get current monotonic time as seconds since an arbitrary epoch, not wall clock time
 pub fn get_current_time() -> f64 {
     static START_TIME: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     let start = START_TIME.get_or_init(|| Instant::now());

@@ -41,7 +41,8 @@ bcm_device:
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
+            l3_ecmp_member_secondary_mem_size: 0
             stat_custom_receive0_management_mode: 1
 ---
 device:
@@ -1396,7 +1397,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0x80
+            sai_stats_support_mask: 0x880
             global_flexctr_ing_action_num_reserved: 20
             global_flexctr_ing_pool_num_reserved: 8
             global_flexctr_ing_op_profile_num_reserved: 20
@@ -1425,4 +1426,11 @@ device:
     0:
         DEVICE_CONFIG:
             AUTOLOAD_BOARD_SETTINGS: 0
+...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
 ...

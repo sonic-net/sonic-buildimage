@@ -26,6 +26,7 @@ swss-common = { path = "../sonic-swss-common/crates/swss-common" }
 tempfile = "3.0"
 injectorpp = { git = "https://github.com/microsoft/injectorppforrust.git", rev = "c7317906a1d514ef99bf2fbd4c943908c265d280" } ## For ARM support
 serde_json = "1.0"
+scopeguard = "1.2"
 
 [profile.release]
 lto = true
