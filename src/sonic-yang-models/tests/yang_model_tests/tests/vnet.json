@@ -75,5 +75,36 @@
     "VNET_ROUTE_TUNNEL_TEST_NONEXISTENT_VNET": {
         "desc": "VNET route tunnel configuration referencing a non-existent VNET name, violating the must condition.",
         "eStrKey" : "LeafRef"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MULTI_ENDPOINT": {
+        "desc": "VNET route tunnel configuration with multiple comma-separated endpoint IPs in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MULTI_MAC": {
+        "desc": "VNET route tunnel configuration with multiple comma-separated MAC addresses in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MULTI_VNI": {
+        "desc": "VNET route tunnel configuration with multiple comma-separated VNI values in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_MULTI_ALL": {
+        "desc": "VNET route tunnel configuration with multiple comma-separated values for all fields (endpoint, mac_address, vni) in VNET_ROUTE_TUNNEL_LIST table."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_ENDPOINT": {
+        "desc": "VNET route tunnel configuration with invalid IP in comma-separated endpoint list.",
+        "eStr": "does not satisfy the constraint"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_MAC": {
+        "desc": "VNET route tunnel configuration with invalid MAC in comma-separated mac_address list.",
+        "eStr": "does not satisfy the constraint"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_VNI": {
+        "desc": "VNET route tunnel configuration with invalid VNI in comma-separated vni list.",
+        "eStr": "does not satisfy the constraint"
     }
 }

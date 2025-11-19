@@ -123,19 +123,19 @@ module sonic-vnet {
                     type stypes:sonic-ip4-prefix;
                 }
                 
-                leaf endpoint {
-                    description "Endpoint/nexthop tunnel IP";
+                leaf-list endpoint {
+                    description "Comma-separated endpoint/nexthop tunnel IPs";
                     type inet:ipv4-address;
                     mandatory true;
                 }
 
-                leaf mac_address {
-                    description "Inner dest mac in encapsulated packet";
+                leaf-list mac_address {
+                    description "Comma-separated inner dest macs in encapsulated packet";
                     type yang:mac-address;
                 }
 
-                leaf vni {
-                    description "A valid and active vni value in encapsulated packet";
+                leaf-list vni {
+                    description "Comma-separated valid and active vni values in encapsulated packet";
                     type stypes:vnid_type;
                 }
             }
