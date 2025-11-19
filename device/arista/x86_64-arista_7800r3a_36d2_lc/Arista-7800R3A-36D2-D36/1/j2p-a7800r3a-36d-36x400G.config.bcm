@@ -240,16 +240,16 @@ stable_size=800000000
 #########################
 #########################
 
-tm_port_header_type_in_0=INJECTED_2_PP
+tm_port_header_type_in_0=INJECTED
 tm_port_header_type_out_0=CPU
 
-tm_port_header_type_in_200=INJECTED_2_PP
+tm_port_header_type_in_200=INJECTED
 tm_port_header_type_out_200=ETH
-tm_port_header_type_in_201=INJECTED_2_PP
+tm_port_header_type_in_201=INJECTED
 tm_port_header_type_out_201=ETH
-tm_port_header_type_in_202=INJECTED_2_PP
+tm_port_header_type_in_202=INJECTED
 tm_port_header_type_out_202=ETH
-tm_port_header_type_in_203=INJECTED_2_PP
+tm_port_header_type_in_203=INJECTED
 tm_port_header_type_out_203=ETH
 
 ### RCY
