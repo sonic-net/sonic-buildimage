@@ -7,7 +7,7 @@
     images {
         kernel_ac5x {
             description = "Linux Kernel for AC5x";
-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -18,44 +18,9 @@
                 algo = "sha1";
             };
         };
-        fdt_ac5x {
-            description = "Flattened Device Tree blob for AC5x";
-            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/ac5-98dx35xx-rd.dtb");
-            type = "flat_dt";
-            arch = "arm64";
-            compression = "none";
-            load = <0x2 0x1000000>;
-            hash@1 {
-                algo = "sha1";
-            };
-        };
-        fdt_7215_a1 {
-            description = "Flattened Device Tree blob for 7215_IXS_A1";
-            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/7215-ixs-a1.dtb");
-            type = "flat_dt";
-            arch = "arm64";
-            compression = "none";
-            load = <0x11000000>;
-            hash@1 {
-                algo = "sha1";
-            };
-        };
-        ramdisk_ac5x {
-            description = "ramdisk for AC5x";
-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
-            type = "ramdisk";
-            arch = "arm64";
-            os = "linux";
-            compression = "gzip";
-            load = <0x2 0x6000000>;
-            entry = <0x2 0x6000000>;
-            hash@1 {
-                algo = "sha1";
-            };
-        };
-        kernel_1 {
-            description = "Linux Kernel";
-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+        kernel_cn9131 {
+            description = "Linux Kernel - cn9131";
+            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -66,22 +31,9 @@
                 algo = "sha1";
             };
         };
-        ramdisk_1 {
-            description = "ramdisk";
-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
-            type = "ramdisk";
-            arch = "arm64";
-            os = "linux";
-            compression = "gzip";
-            load = <0x6000000>;
-            entry = <0x6000000>;
-            hash@1 {
-                algo = "sha1";
-            };
-        };
-        kernel_2 {
-            description = "Linux Kernel";
-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+        kernel_7215_a1 {
+            description = "Linux Kernel - 7215_a1/Nokia";
+            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
             type = "kernel";
             arch = "arm64";
             os = "linux";
@@ -92,22 +44,73 @@
                 algo = "sha1";
             };
         };
-        ramdisk_2 {
-            description = "ramdisk";
-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
+
+        ramdisk_ac5x {
+            description = "ramdisk for AC5x";
+            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
             type = "ramdisk";
             arch = "arm64";
             os = "linux";
-            compression = "gzip";
+            compression = "none";
+            load = <0x2 0x6000000>;
+            entry = <0x2 0x6000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_cn9131 {
+            description = "ramdisk - cn9131";
+            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x6000000>;
+            entry = <0x6000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_7215_a1 {
+            description = "ramdisk - 7215_a1/Nokia";
+            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
             load = <0x18000000>;
             entry = <0x18000000>;
             hash@1 {
                 algo = "sha1";
             };
         };
+
+        /* Take care to sync sync with platform_arm64.conf */
+        fdt_ac5x {
+            description = "Flattened Device Tree blob for AC5x";
+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5-98dx35xx-rd.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_7215_a1 {
+            description = "Flattened Device Tree blob for 7215_IXS_A1";
+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/7215-ixs-a1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x11000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
         fdt_cn9131 {
-            description = "Flattened Device Tree blob";
-            data = /incbin/("/boot/cn9131-db-comexpress.dtb");
+            description = "Flattened Device Tree blob for cn9131";
+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/cn9131-db-comexpress.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -118,31 +121,33 @@
             };
         };
     };
+
+    /* From Uboot env fit_conf_name=#conf_cn9131 */
     configurations {
         default = "conf_ac5x";
         conf_ac5x {
             description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
             kernel = "kernel_ac5x";
-            fdt = "fdt_ac5x";
             ramdisk = "ramdisk_ac5x";
+            fdt = "fdt_ac5x";
             hash@1 {
                 algo = "sha1";
             };
         };
         conf_7215_a1 {
             description = "Boot Linux kernel with FDT blob + ramdisk for 7125_IXS_A1";
-            kernel = "kernel_2";
+            kernel = "kernel_7215_a1";
+            ramdisk = "ramdisk_7215_a1";
             fdt = "fdt_7215_a1";
-            ramdisk = "ramdisk_2";
             hash@1 {
                 algo = "sha1";
             };
         };
         conf_cn9131 {
             description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
-            kernel = "kernel_1";
+            kernel = "kernel_cn9131";
+            ramdisk = "ramdisk_cn9131";
             fdt = "fdt_cn9131";
-            ramdisk = "ramdisk_1";
             hash@1 {
                 algo = "sha1";
             };

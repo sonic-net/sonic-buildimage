@@ -315,7 +315,7 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
         return -1;
     }
     fcb->cb = filter_cb;
-    strlcpy(fcb->desc, desc, sizeof(fcb->desc));
+    strscpy(fcb->desc, desc, sizeof(fcb->desc));
     list_add_tail(&fcb->list, &callback_ctrl.filter_cb_list);
 
     /* Check if any existing filter matches the registered name */

@@ -222,7 +222,7 @@ static int wistron_sw_to3200k_led_probe(struct platform_device *pdev)
     return ret;
 }
 
-static int wistron_sw_to3200k_led_remove(struct platform_device *pdev)
+static void wistron_sw_to3200k_led_remove(struct platform_device *pdev)
 {
     int i;
 
@@ -230,8 +230,6 @@ static int wistron_sw_to3200k_led_remove(struct platform_device *pdev)
     {
         led_classdev_unregister(&wistron_sw_to3200k_leds[i]);
     }
-
-    return 0;
 }
 
 static struct platform_driver wistron_sw_to3200k_led_driver = {

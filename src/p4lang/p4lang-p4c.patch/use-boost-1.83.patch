@@ -1,0 +1,28 @@
+Index: p4lang-p4c-1.2.4.2/debian/control
+===================================================================
+--- p4lang-p4c-1.2.4.2.orig/debian/control
++++ p4lang-p4c-1.2.4.2/debian/control
+@@ -10,10 +10,7 @@ Build-Depends:
+     flex,
+     git,
+     gfortran | gfortran-10,
+-    libboost-dev,
+-    libboost-all-dev,
+-    libboost-graph-dev,
+-    libboost-iostreams-dev,
++    libboost1.83-all-dev,
+     libfl-dev,
+     libgc-dev,
+     libgmp-dev,
+@@ -56,10 +53,7 @@ Depends:
+     ${misc:Depends},
+     ${python3:Depends},
+     cpp,
+-    libboost-dev,
+-    libboost-all-dev,
+-    libboost-graph-dev,
+-    libboost-iostreams-dev,
++    libboost1.83-all-dev,
+     libfl-dev,
+     libgc-dev,
+     libgmp-dev,

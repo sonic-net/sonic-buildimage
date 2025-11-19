@@ -139,9 +139,9 @@ static inline void page_ref_dec(struct page *page)
 #define DMA_FORCE_CONTIGUOUS DMA_ATTR_FORCE_CONTIGUOUS
 #endif
 
-#ifndef PCI_IRQ_LEGACY
+#ifndef PCI_IRQ_INTX
 /* Emulate new IRQ API if not available */
-#define PCI_IRQ_LEGACY          (1 << 0)
+#define PCI_IRQ_INTX          (1 << 0)
 #define PCI_IRQ_MSI             (1 << 1)
 #define PCI_IRQ_MSIX            (1 << 2)
 static inline int
@@ -154,7 +154,7 @@ pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
             return 1;
         }
     }
-    if (flags & PCI_IRQ_LEGACY) {
+    if (flags & PCI_IRQ_INTX) {
         return 1;
     }
     return 0;

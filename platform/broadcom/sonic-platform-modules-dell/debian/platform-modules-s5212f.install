@@ -5,7 +5,7 @@ s5212f/scripts/sensors usr/bin
 s5212f/scripts/qsfp_irq_enable.py usr/bin
 s5212f/cfg/s5212f-modules.conf etc/modules-load.d
 s5212f/systemd/platform-modules-s5212f.service etc/systemd/system
-s5212f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5212f_c3538-r0
+build-s5212f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5212f_c3538-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5212f_c3538-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin
