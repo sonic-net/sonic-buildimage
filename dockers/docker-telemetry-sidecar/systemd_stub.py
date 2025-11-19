@@ -29,6 +29,9 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
 NSENTER_BASE = ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net"]
+# CONFIG_DB reconcile env (kept simple, always uses role=gnmi_read when enabled)
+GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
+GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
 
 # CONFIG_DB reconcile env
 GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
@@ -182,7 +185,6 @@ def _ensure_user_auth_cert() -> None:
         else:
             logger.log_error("Failed to set GNMI|gnmi.user_auth=cert")
 
-
 def _ensure_cname_present(cname: str) -> None:
     if not cname:
         logger.log_warning("TELEMETRY_CLIENT_CNAME not set; skip CNAME creation")
@@ -206,7 +208,6 @@ def _ensure_cname_absent(cname: str) -> None:
             logger.log_notice(f"Removed {key}")
         else:
             logger.log_error(f"Failed to remove {key}")
-
 
 def reconcile_config_db_once() -> None:
     """

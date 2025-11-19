@@ -1978,10 +1978,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
@@ -2526,7 +2530,7 @@
                 "uplink_fast": "false"
             }
         },
-        
+
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -2698,7 +2702,12 @@
                 "login_timeout": "120",
                 "ports": "22",
                 "inactivity_timeout": "15",
-                "max_sessions": "0"
+                "max_sessions": "0",
+                "permit_root_login": "no",
+                "password_authentication": "true",
+                "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+                "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+                "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
             }
         },
 
@@ -3157,6 +3166,17 @@
             "orchagent": {
                 "heartbeat_interval"   : "10000",
                 "alert_interval"       : "60000"
+            }
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
             }
         }
     },

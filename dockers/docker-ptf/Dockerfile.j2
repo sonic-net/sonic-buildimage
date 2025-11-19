@@ -107,6 +107,24 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
 {% endif %}
 
+COPY \
+{% for deb in docker_ptf_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+{% if PTF_ENV_PY_VER == "mixed" %}
+RUN dpkg -i \
+{% for deb in docker_ptf_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+{% else %}
+RUN apt-get update
+# Install p4lang packages for DASH SAI support first and python-saithrift
+RUN apt install -y --reinstall ./debs/p4lang-pi_0.1.0-15_amd64.deb ./debs/p4lang-bmv2_1.15.0-7_amd64.deb ./debs/p4lang-p4c_1.2.4.2-2_amd64.deb ./debs/python-saithrift_0.9.4_amd64.deb
+{% endif %}
+
+
 COPY openbfdd-patches/ /root/openbfdd-patches/
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step
@@ -200,7 +218,7 @@ COPY ["tacacs+", "/etc/default"]
 {% endif %}
 
 
-RUN python3 -m venv --system-site-packages env-python3
+RUN python3 -m venv env-python3
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
 ENV VIRTUAL_ENV=/root/env-python3
 ARG BACKUP_OF_PATH="$PATH"
@@ -337,19 +355,9 @@ RUN git clone https://github.com/karimra/gnoic.git \
     && cd .. \
     && rm -rf gnoic
 
-COPY \
-{% for deb in docker_ptf_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
-
-{% if PTF_ENV_PY_VER == "mixed" %}
-RUN dpkg -i \
-{% for deb in docker_ptf_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor %}
-{% else %}
-RUN dpkg -i debs/python-saithrift_0.9.4_amd64.deb
+{% if PTF_ENV_PY_VER == "py3" %}
+# Install the python-saithrift into the virtual environment
+RUN echo "/usr/lib/python3/dist-packages/saithrift-0.9-py3.11.egg" >> /root/env-python3/lib/python3.11/site-packages/easy-install.pth
 {% endif %}
 
 # {% if PTF_ENV_PY_VER == "py3" %}
