@@ -718,8 +718,13 @@ write_platform_specific_cmdline() {
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi
-    if in_array "$platform" "lorikeet" "hedgehog"; then
+    if in_array "$platform" "lorikeet"; then
         cmdline_add reassign_prefmem
+        read_system_eeprom
+    fi
+    if in_array "$platform" "hedgehog"; then
+        cmdline_add reassign_prefmem
+        cmdline_add nohz=off
         read_system_eeprom
     fi
     if in_array "$platform" "prairieisland"; then
