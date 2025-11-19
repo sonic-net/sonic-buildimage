@@ -8,6 +8,7 @@ parameters:
       - mellanox
       - barefoot
       - marvell-prestera-armhf
+      - marvell-prestera-arm64
       - cisco-8000
       - nvidia-bluefield
       - pensando

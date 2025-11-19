@@ -37,6 +37,7 @@ parameters:
   - broadcom
   - mellanox
   - marvell-prestera-armhf
+  - marvell-prestera-arm64
   - cisco-8000
   - nvidia-bluefield
   - pensando

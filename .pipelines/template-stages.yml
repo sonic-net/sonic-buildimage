@@ -229,6 +229,33 @@ stages:
             parameters:
               PLATFORM_NAME: marvell-prestera-armhf
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+    - ${{ if containsValue(parameters.JOBS, 'marvell-prestera-arm64') }}:
+      - job: marvell_prestera_arm64
+        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+          timeoutInMinutes: 840
+        pool:
+          type: linux
+          isCustom: true
+          name: sonicms1ES-arm64
+        variables:
+          ob_artifactBaseName: sonic-buildimage.marvell-prestera-arm64
+          PLATFORM_ARCH: arm64
+        steps:
+          - template: /.pipelines/template-presteps.yml@self
+            parameters:
+              PLATFORM_NAME: marvell-prestera
+              PLATFORM_ARCH: arm64
+              OPTIONS: ${{ parameters.OPTIONS }}
+          - script: |
+              set -ex
+              set -o pipefail
+              OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-prestera-arm64 INCLUDE_DHCP_SERVER=y"
+              make $OPTIONS target/sonic-marvell-prestera-arm64.bin 2>&1 | tee target/build.log
+            displayName: Build SONiC image
+          - template: /.pipelines/template-poststeps.yml@self
+            parameters:
+              PLATFORM_NAME: marvell-prestera-arm64
+              BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'cisco-8000') }}:
       - template: template-cisco.yml
         parameters:
