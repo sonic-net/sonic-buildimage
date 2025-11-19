@@ -46,7 +46,7 @@ COPY ["cli", "/cli/"]
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
