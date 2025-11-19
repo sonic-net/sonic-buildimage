@@ -488,6 +488,7 @@ get_eeprom_value() {
 write_kdump_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
     case "$sid" in
+        Lodoga*|*Quicksilver*|*Moby|Shearwater*|Moranda*|Gardena*|PikeIsland*|\
         Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
             if ! cmdline_has crashkernel; then
                 cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
@@ -888,7 +889,6 @@ write_regular_configs() {
     cmdline_add "loop=$image_name/fs.squashfs"
     cmdline_add loopfstype=squashfs
     write_cmdline
-    write_kdump_cmdline
 }
 
 run_kexec() {
@@ -935,6 +935,7 @@ regular_install() {
 
     info "Generating boot-config, machine.conf and cmdline"
     write_regular_configs "$image_path"
+    write_kdump_cmdline
 
     info "Installing image under $image_path"
     extract_image
