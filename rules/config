@@ -327,5 +327,5 @@ SONIC_PTF_ENV_PY_VER = py3
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
 
-# skip all tests when building
+# BUILD_SKIP_TEST - skip all tests when building to reduce build time
 BUILD_SKIP_TEST ?= n
