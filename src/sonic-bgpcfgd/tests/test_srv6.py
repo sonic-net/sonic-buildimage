@@ -91,6 +91,78 @@ def test_uN_add():
     print(loc_mgr.directory.data)
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
 
+def test_uA_add_del():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'interface': 'Ethernet0',
+        'adj': '2001:db8::1'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    # test the deletion
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:1:FE01::/64",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'static-sids',
+            'no sid fcbb:bbbb:1:fe01::/64 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:FE01::/48", {
+        'action': 'uA',
+        'interface': 'Ethernet0',
+        'adj': '2001:db8::1'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:fe01::/48 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:fe01::\\48")
+
+    # test the deletion
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:FE01::/48",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'static-sids',
+            'no sid fcbb:bbbb:fe01::/48 locator loc1 behavior uA interface Ethernet0 nexthop 2001:db8::1'
+    ])
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:fe01::\\48")
+
+    # test missing interface
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'adj': '2001:db8::1'
+    }), expected_ret=False, expected_cmds=[])
+
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
+    # test missing adj
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE01::/64", {
+        'action': 'uA',
+        'interface': 'Ethernet0'
+    }), expected_ret=False, expected_cmds=[])
+
+    print(loc_mgr.directory.data)
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe01::\\64")
+
 def test_uDT46_add_vrf1():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
