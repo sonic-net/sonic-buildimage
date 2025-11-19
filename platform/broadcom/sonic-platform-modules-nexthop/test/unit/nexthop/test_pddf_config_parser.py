@@ -254,35 +254,6 @@ class TestExtractXcvrList:
         assert len(names) == len(set(names)), "All transceiver names should be unique"
         assert len(buses) == len(set(buses)), "All bus numbers should be unique"
 
-    def test_extract_xcvr_list_real_4220_config(self, pddf_config_parser_module):
-        """Test extract_xcvr_list with real NH-4220 pddf-device.json configuration."""
-        # Path to the real pddf-device.json file
-        config_path = find_pddf_device_json("x86_64-nexthop_4220-r0")
-
-        # Load the real configuration
-        with open(config_path, "r") as f:
-            config = json.load(f)
-
-        # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
-
-        # Then - validate the results
-        assert isinstance(xcvr_list, list)
-
-        # NH-4220 should have 64 OSFP transceivers
-        assert len(xcvr_list) == 64
-
-        # First port starts at bus 23
-        xcvr_port1 = next(xcvr for xcvr in xcvr_list if xcvr["name"] == "PORT1-CTRL")
-        assert xcvr_port1["bus"] == 24
-        assert xcvr_port1["addr"] == "0008"
-
-        # Verify all entries have unique names and bus numbers
-        names = [xcvr["name"] for xcvr in xcvr_list]
-        buses = [xcvr["bus"] for xcvr in xcvr_list]
-        assert len(names) == len(set(names)), "All transceiver names should be unique"
-        assert len(buses) == len(set(buses)), "All bus numbers should be unique"
-
     def test_extract_xcvr_list_real_5010_config(self, pddf_config_parser_module):
         """Test extract_xcvr_list with real NH-5010 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
@@ -361,7 +332,6 @@ class TestExtractFpgaDevAttrs:
             "x86_64-nexthop_4010-r0",
             "x86_64-nexthop_4010-r1",
             "x86_64-nexthop_4020-r0",
-            "x86_64-nexthop_4220-r0",
             "x86_64-nexthop_5010-r0",
         ],
     )
