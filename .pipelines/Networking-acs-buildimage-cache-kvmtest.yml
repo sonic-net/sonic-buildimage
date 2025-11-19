@@ -48,7 +48,7 @@ stages:
 
   jobs:
   - job: t0_elastictest
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 400
     steps:
@@ -62,7 +62,7 @@ stages:
           EXPECTED_RESULT: "SUCCESS"
 
   - job: t1_lag_elastictest
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 400
     steps:
@@ -77,7 +77,7 @@ stages:
 
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     timeoutInMinutes: 400
     steps:
       - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
@@ -93,7 +93,7 @@ stages:
           EXPECTED_RESULT: "SUCCESS"
 
   - job: t0_2vlans_elastictest
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 400
     steps:
@@ -109,7 +109,7 @@ stages:
         EXPECTED_RESULT: "SUCCESS"
 
   - job: dualtor_elastictest
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 400
     steps:
@@ -125,7 +125,7 @@ stages:
 
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
-    pool: sonic-ubuntu-1c
+    pool: sonic-ubuntu-2c
     timeoutInMinutes: 400
     steps:
       - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
