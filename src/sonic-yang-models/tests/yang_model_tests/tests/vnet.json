@@ -106,5 +106,26 @@
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_VNI": {
         "desc": "VNET route tunnel configuration with invalid VNI in comma-separated vni list.",
         "eStr": "does not satisfy the constraint"
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING": {
+        "desc": "VNET route tunnel configuration with consistent_hashing_buckets field."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MIN": {
+        "desc": "VNET route tunnel configuration with consistent_hashing_buckets minimum value (0)."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MAX": {
+        "desc": "VNET route tunnel configuration with consistent_hashing_buckets maximum value (65535)."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_WITH_MULTI": {
+        "desc": "VNET route tunnel configuration with consistent_hashing_buckets and multiple endpoints."
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_CONSISTENT_HASHING": {
+        "desc": "VNET route tunnel configuration with invalid consistent_hashing_buckets value (exceeds uint16 max).",
+        "eStr": "does not satisfy the constraint"
     }
 }

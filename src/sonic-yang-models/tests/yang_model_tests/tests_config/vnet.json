@@ -841,5 +841,187 @@
                 ]
             }
         }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "consistent_hashing_buckets": "128"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MIN": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "consistent_hashing_buckets": "0"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MAX": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "consistent_hashing_buckets": "65535"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_WITH_MULTI": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1,192.168.1.2,192.168.1.3",
+                        "mac_address": "00:aa:bb:cc:dd:ee,11:22:33:44:55:66,aa:bb:cc:dd:ee:ff",
+                        "vni": "10011,10012,10013",
+                        "consistent_hashing_buckets": "256"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VNET_ROUTE_TUNNEL_TEST_INVALID_CONSISTENT_HASHING": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10001"
+                    }
+                ]
+            },
+
+            "sonic-vnet:VNET_ROUTE_TUNNEL": {
+                "VNET_ROUTE_TUNNEL_LIST": [
+                    {
+                        "vnet_name": "Vnet1",
+                        "prefix":"10.0.0.0/24",
+                        "endpoint": "192.168.1.1",
+                        "consistent_hashing_buckets": "99999"
+                    }
+                ]
+            }
+        }
     }
 }

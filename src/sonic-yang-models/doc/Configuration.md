@@ -2794,6 +2794,7 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
 - ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). It is used to identify the endpoint of the tunnel.
 - MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  It should be a 12-hexadecimal digit value.
 - VNI: Comma-separated VNI values in the encapsulated packet (optional). It should be a numeric value.
+- CONSISTENT_HASHING_BUCKETS: Number of consistent hashing bucket entries received by each nexthop (optional). It should be a numeric value.
 
 ```
 {
@@ -2801,7 +2802,8 @@ VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name 
         "Vnet_1000|100.200.1.1/32": {
         "endpoint": "192.174.1.1,192.174.1.2",
         "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
-        "vni": "10010,10011"
+        "vni": "10010,10011",
+        "consistent_hashing_buckets": "10"
     },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
