@@ -697,6 +697,15 @@ sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu4.service
 sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu5.service
 sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu6.service
 sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@dpu7.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@0.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@1.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@2.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@3.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@4.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@5.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@6.service
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/dash-ha@7.service
+
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
 
