@@ -56,7 +56,7 @@ class Adm1266TestMixin:
 
     # Set up path to test PDDF plugin file
     # Use absolute path in the container
-    TEST_PDDF_PATH = "/sonic/device/nexthop/x86_64-nexthop_4010-r0/pddf/pd-plugin.json"
+    TEST_PDDF_PATH = "/sonic/device/nexthop/x86_64-nexthop_5010-r0/pddf/pd-plugin.json"
 
     EXCERPT_PDDF_PLUGIN_DATA = {
         "DPM": {
