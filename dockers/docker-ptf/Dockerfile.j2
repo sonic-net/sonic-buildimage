@@ -98,14 +98,21 @@ RUN apt-get update          \
         wireshark-common    \
         freeradius          \
         quilt               \
+    {% if CONFIGURED_ARCH == "armhf" %}
+    && GRPCURL_ARCH=linux_armv6 \
+    {% elif CONFIGURED_ARCH == "arm64" %}
+    && GRPCURL_ARCH=linux_arm64 \
+    {% else %}
+    && GRPCURL_ARCH=linux_x86_64 \
+    {% endif %}
     && GRPCURL_VERSION=1.9.1 && \
-    curl -L "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz" \
-      -o /tmp/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    curl -L "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz" \
+      -o /tmp/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
     cd /tmp && \
-    tar xvf grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    tar xvf grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
     mv grpcurl /usr/local/bin/grpcurl && \
     chmod +x /usr/local/bin/grpcurl && \
-    rm -f /tmp/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    rm -f /tmp/grpcurl_${GRPCURL_VERSION}_${GRPCURL_ARCH}.tar.gz && \
     rm -rf /var/lib/apt/lists/*
 
 {% if PTF_ENV_PY_VER == "py3" %}
