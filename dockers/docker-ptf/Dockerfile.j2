@@ -97,7 +97,16 @@ RUN apt-get update          \
         iptables            \
         wireshark-common    \
         freeradius          \
-        quilt
+        quilt               \
+    && GRPCURL_VERSION=1.9.1 && \
+    curl -L "https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz" \
+      -o /tmp/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    cd /tmp && \
+    tar xvf grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    mv grpcurl /usr/local/bin/grpcurl && \
+    chmod +x /usr/local/bin/grpcurl && \
+    rm -f /tmp/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz && \
+    rm -rf /var/lib/apt/lists/*
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
