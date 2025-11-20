@@ -1,4 +1,4 @@
-bfscripts==4.11.0-13611
+bfscripts==4.12.0-13720
 doca-sdk-argp==3.0.0058-1
 doca-sdk-common==3.0.0058-1
 doca-sdk-dpdk-bridge==3.0.0058-1
@@ -56,7 +56,7 @@ mlnx-ofed-kernel-utils==25.07.OFED.25.07.0.9.0.1-1
 mlnx-tools==25.07-0.2507090
 mlx-bootctl-dkms==1.3-0
 mlxbf-bootctl==2.1
-mlxbf-bootimages==4.11.0-13611
+mlxbf-bootimages==4.12.0-13720
 mlxbf-gige-dkms==1.0-0
 mlxbf-pka-dkms==2.0-1
 mlxbf-ptm-dkms==1.0-0
@@ -79,5 +79,5 @@ sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
 stp==1.0.0
-sys-sdk-dev==1.mlnx.4.8.1036
-sys-sdk-main==1.mlnx.4.8.1036
+sys-sdk-dev==1.mlnx.4.8.1086
+sys-sdk-main==1.mlnx.4.8.1086

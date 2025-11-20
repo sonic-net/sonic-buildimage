@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,14 +20,20 @@ SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sonic-bluefield-packages/bin
 
 # Place here URL where SDK sources exist
 SDK_SOURCE_BASE_URL =
-SDK_VERSION = 25.7-RC6
+SDK_VERSION = 25.7-RC11
 
 SDK_COLLECTX_URL = https://linux.mellanox.com/public/repo/doca/1.5.2/debian12/aarch64/
 
 SDK_GH_BASE_URL = https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-$(SDK_VERSION)-$(BLDENV)/
 
+# Place here URL where alternate SDK assets exist
+SDK_ASSETS_BASE_URL =
+
+# Use alternate assets URL if provided, otherwise use GitHub URL
+SDK_ASSETS_URL = $(if $(SDK_ASSETS_BASE_URL),$(SDK_ASSETS_BASE_URL),$(SDK_GH_BASE_URL))
+
 define make_url_sdk
-	$(1)_URL="$(SDK_GH_BASE_URL)/$(1)"
+	$(1)_URL="$(SDK_ASSETS_URL)/$(1)"
 
 endef
 
@@ -35,8 +42,10 @@ define get_sdk_version_file_gh
 
 endef
 
+# Use source build if source URL is provided and no assets URL is set
+SDK_FROM_SRC = $(if $(SDK_SOURCE_BASE_URL),$(if $(SDK_ASSETS_BASE_URL),n,y),n)
+
 ifneq ($(SDK_SOURCE_BASE_URL), )
-SDK_FROM_SRC = y
 SDK_SOURCE_URL = $(SDK_SOURCE_BASE_URL)/$(subst -,/,$(SDK_VERSION))
 SDK_VERSIONS_FILE = $(PLATFORM_PATH)/sdk-src/VERSIONS
 $(eval $(call get_sdk_version_file_gh, "$(SDK_SOURCE_URL)/VERSIONS_FOR_SONIC_BUILD", $(SDK_VERSIONS_FILE)))

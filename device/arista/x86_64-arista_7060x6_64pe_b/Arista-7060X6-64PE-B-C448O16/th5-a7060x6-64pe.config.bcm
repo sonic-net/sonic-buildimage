@@ -44,6 +44,9 @@ bcm_device:
             l3_ecmp_member_first_lkup_mem_size: 0
             l3_ecmp_member_secondary_mem_size: 0
             stat_custom_receive0_management_mode: 1
+            sai_pkt_trim_queue_index: 4
+            # disable DSCP modification for TCs not present in TC_TO_DSCP_MAP:
+            sai_pkt_dscp_modification_disable: 1
 ---
 device:
     0:

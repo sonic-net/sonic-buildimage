@@ -301,6 +301,17 @@ def _get_jinja2_env(paths):
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
 
+    # Introduce a 'template_exists' function to check if a template exists
+    # This is used to conditionally import a template since jinja2 import
+    # statement fails if the template does not exist and does not have native support
+    def template_exists(name):
+        try:
+            loader.get_source(env, name)
+            return True
+        except jinja2.exceptions.TemplateNotFound:
+            return False
+    env.globals['template_exists'] = template_exists
+
     return env
 
 def main():

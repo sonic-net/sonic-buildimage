@@ -780,4 +780,4 @@ ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
 
 # Install cargo-tarpaulin for code coverage
-RUN $RUST_ROOT/bin/cargo install cargo-tarpaulin
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin

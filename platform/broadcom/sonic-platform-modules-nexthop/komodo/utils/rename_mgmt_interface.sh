@@ -1,7 +1,7 @@
 #!/bin/bash
 
-XGBE0="0000:e6:00.2"
-XGBE1="0000:e6:00.3"
+XGBE0=$(setpci -s 00:08.2 0x19.b | xargs printf '0000:%s:00.2')
+XGBE1=$(setpci -s 00:08.2 0x19.b | xargs printf '0000:%s:00.3')
 XGBE_PCI_VENDOR_DEVICE="1022 1458"
 
 echo "$XGBE0" > /sys/bus/pci/drivers/amd-xgbe/unbind 2> /dev/null

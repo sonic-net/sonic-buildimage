@@ -69,7 +69,7 @@
 SHELL = /bin/bash
 
 USER := $(shell id -un)
-PWD := $(shell pwd)
+PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
 DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
@@ -337,6 +337,9 @@ endif
 ifneq ($(SECURE_UPGRADE_SIGNING_CERT),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
 endif
+ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
+endif
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
@@ -559,8 +562,9 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
+                           SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
                            SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
-                           SECURE_UPGRADE_PROD_TOOL_ARGS=$(SECURE_UPGRADE_PROD_TOOL_ARGS) \
+                           SECURE_UPGRADE_PROD_TOOL_ARGS="\"'$(SECURE_UPGRADE_PROD_TOOL_ARGS)'\"" \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \

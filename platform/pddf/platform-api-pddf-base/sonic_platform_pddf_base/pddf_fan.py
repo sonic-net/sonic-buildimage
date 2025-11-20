@@ -85,8 +85,8 @@ class PddfFan(FanBase):
 
     def get_status(self):
         speed = self.get_speed()
-        status = True if (speed != 0) else False
-        return status
+        fault = self.get_fault()
+        return (speed != 0 and not fault)
 
     def get_direction(self):
         """
@@ -131,6 +131,36 @@ class PddfFan(FanBase):
                 direction = val
 
         return direction
+
+    def get_fault(self):
+        """
+        Retrieves the fault status of fan
+
+        Returns:
+            A boolean, True if fault is reported, False if not
+        """
+        if self.is_psu_fan:
+            # Usually no fault reported for PSU fans
+            return False
+        else:
+            idx = (self.fantray_index-1)*self.platform['num_fans_pertray'] + self.fan_index
+            attr = "fan{}_fault".format(idx)
+            output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
+
+            if not output:
+                return False
+
+            mode = output['mode']
+            val = output['status'].rstrip()
+
+            vmap = self.plugin_data['FAN']['fault'][mode]['valmap']
+
+            if val in vmap:
+                fault = vmap[val]
+            else:
+                # Cannot convert fault status to boolean, assume no fault
+                fault = False
+            return fault
 
     def get_speed(self):
         """
