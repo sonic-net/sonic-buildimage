@@ -126,7 +126,7 @@ module sonic-vnet {
                 leaf-list endpoint {
                     description "Comma-separated endpoint/nexthop tunnel IPs";
                     type inet:ipv4-address;
-                    mandatory true;
+                    min-elements 1;
                 }
 
                 leaf-list mac_address {
@@ -137,6 +137,11 @@ module sonic-vnet {
                 leaf-list vni {
                     description "Comma-separated valid and active vni values in encapsulated packet";
                     type stypes:vnid_type;
+                }
+
+                leaf consistent_hashing_buckets {
+                    description "Number of bucket entries received by each nexthop";
+                    type uint16;
                 }
             }
             /* end of list VNET_ROUTE_TUNNEL_LIST */
