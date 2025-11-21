@@ -59,7 +59,7 @@ module sonic-bgp-peerrange {
                 leaf name {
                     type string;
                     must "(current() = current()/../peer_range_name)" {
-                        error-message "Invalid name";
+                        error-message "Invalid name, name must match peer_range_name";
                     }
                 }
 
@@ -94,7 +94,7 @@ module sonic-bgp-peerrange {
                 leaf name {
                     type string;
                     must "(current() = current()/../peer_range_name)" {
-                        error-message "Invalid name";
+                        error-message "Invalid name, name must match peer_range_name";
                     }
                 }
 
