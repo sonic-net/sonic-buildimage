@@ -51,3 +51,4 @@ $(DOCKER_GNMI)_RUN_OPT += --userns=host
 
 
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d
+$(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi_ext:/etc/monit/conf.d
