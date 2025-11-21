@@ -888,10 +888,10 @@ $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install
 		# put a lock here because dpkg does not allow installing packages in parallel
 		if mkdir $(DEBS_PATH)/dpkg_lock &> /dev/null; then
 ifneq ($(CROSS_BUILD_ENVIRON),y)
-			{ sudo DEBIAN_FRONTEND=noninteractive dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
+			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(DEBS_PATH)/$* $(LOG) && rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
 else
 			# Relocate debian packages python libraries to the cross python virtual env location
-			{ sudo DEBIAN_FRONTEND=noninteractive dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
+			{ sudo DEBIAN_FRONTEND=noninteractive $($*_DEB_INSTALL_OPTS) dpkg -i $(if $(findstring $(LINUX_HEADERS),$*),--force-depends) $(DEBS_PATH)/$* $(LOG) && \
 			rm -rf tmp && mkdir tmp && dpkg -x $(DEBS_PATH)/$* tmp && (sudo cp -rf tmp/usr/lib/python2*/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON2)/python2*/site-packages/ 2>/dev/null || true) && \
 			(sudo cp -rf tmp/usr/lib/python3/dist-packages/* $(VIRTENV_LIB_CROSS_PYTHON3)/python3.*/site-packages/ 2>/dev/null || true) && \
 			rm -d $(DEBS_PATH)/dpkg_lock && break; } || { set +e; rm -d $(DEBS_PATH)/dpkg_lock; sudo lsof /var/lib/dpkg/lock-frontend; ps aux; exit 1 ; }
