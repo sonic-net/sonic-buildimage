@@ -18,7 +18,8 @@ from sonic_platform.syslog import SYSLOG_IDENTIFIER_THERMAL
 
 # Nexthop FPGA thermal sensor value to Celsius conversion
 TYPE_TO_CELSIUS_LAMBDA_DICT = {
-  'nh1': lambda field_val:  0.158851 * (3000 - field_val),
+  'th5': lambda field_val:  0.158851 * (3000 - field_val),
+  'th6': lambda field_val:  -0.25968 * (field_val/2 - 1) + 378.85
 }
 
 thermal_syslogger = syslogger.SysLogger(SYSLOG_IDENTIFIER_THERMAL)
