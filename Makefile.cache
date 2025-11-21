@@ -255,7 +255,7 @@ define LOAD_FROM_CACHE
 
 	# Load the cache if cache is enabled and cache file is present in the cache
 	# Update the cache_loaded variable
-	$(if $(and $(CACHE_FILE_SELECT),$(filter $(RCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD))),
+	$(if $(and $(CACHE_FILE_SELECT),$(call CHECK_RCACHE_ENABLED,$(1))),
 		$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo );
 		echo "File $(CACHE_FILE_SELECT) is loaded from cache into $($(1)_BASE_PATH)" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_LOADED := Yes)
@@ -310,13 +310,29 @@ endef
 # Read from the cache
 RCACHE_OPTIONS := cache rcache rwcache
 define CHECK_RCACHE_ENABLED
-$(if $(and $(filter $(RCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)),$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+$(strip \
+	$(if $(and \
+		$(filter $(RCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)), \
+		$(filter-out none,$($(1)_CACHE_MODE)) \
+	),enable) \
+	$(if $(and \
+		$(filter rcache,$($(1)_CACHE_OVERRIDE)), \
+		$(filter-out none,$($(1)_CACHE_MODE)) \
+	),enable) \
+)
 endef
 
 # Write into the cache
 WCACHE_OPTIONS := cache wcache rwcache
 define CHECK_WCACHE_ENABLED
-$(if $(and $(filter $(WCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)),$(filter-out none,$($(1)_CACHE_MODE))),enabled)
+$(strip \
+	$(if $(and \
+		$(filter-out $(LINUX_TARGETS),$(1)), \
+		$(filter $(WCACHE_OPTIONS),$(SONIC_DPKG_CACHE_METHOD)), \
+		$(filter-out none,$($(1)_CACHE_MODE)) \
+	),enable) \
+	$(if $(filter-out rcache,$($(1)_CACHE_OVERRIDE)),enable)
+)
 endef
 
 # It logs the reason why the target is getting built/rebuilt
