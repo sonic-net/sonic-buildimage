@@ -91,7 +91,7 @@ void EventConsume::run()
     
     while (g_run) {
         event_receive_op_t evt;
-        map_str_str_t evtOp;
+
         if (reload_config_flag.load()) {
             read_eventd_config();
             reload_config_flag.store(false);
@@ -390,8 +390,8 @@ void EventConsume::purge_events() {
     while (size >= m_count) {
         pair <uint64_t,uint64_t> oldest_entry = event_history_list.top();
         SWSS_LOG_NOTICE("Rollover based on count(%d/%d). Deleting %lu", size, m_count, oldest_entry.first);
-        m_eventTable.del(to_string(oldest_entry.first));
         modifyEventStats(to_string(oldest_entry.first));
+        m_eventTable.del(to_string(oldest_entry.first));
         event_history_list.pop();
         --size;
     }
@@ -405,8 +405,8 @@ void EventConsume::purge_events() {
 
         if ((tnow_seconds - old_seconds) > PURGE_SECONDS) {
             SWSS_LOG_NOTICE("Rollover based on time (%lu days). Deleting %lu.. now %u old %u", (PURGE_SECONDS/m_days), oldest_entry.second, tnow_seconds, old_seconds);
-            m_eventTable.del(to_string(oldest_entry.first));
             modifyEventStats(to_string(oldest_entry.first));
+            m_eventTable.del(to_string(oldest_entry.first));
             event_history_list.pop();
         } else {
             return;
@@ -422,8 +422,8 @@ void EventConsume::read_config_and_purge() {
     parse_config(m_dbProfile.c_str(), m_days, m_count);
     SWSS_LOG_NOTICE("max-days %d max-records %d", m_days, m_count);
 
-    // update the nanosecond limit
-    PURGE_SECONDS *= m_days; 
+    // calculate purge interval in seconds, 84600 seconds per day
+    PURGE_SECONDS = static_cast<uint64_t>(m_days) * 86400;
 
     // purge events based on # of days
     purge_events();
