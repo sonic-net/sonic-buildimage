@@ -1,15 +1,19 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
 	url = https://github.com/sonic-net/sonic-swss-common
+	branch = 202511
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/sonic-net/sonic-linux-kernel
+	branch = 202511
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
 	url = https://github.com/sonic-net/sonic-sairedis
+	branch = 202511
 [submodule "sonic-swss"]
 	path = src/sonic-swss
 	url = https://github.com/sonic-net/sonic-swss
+	branch = 202511
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -19,12 +23,15 @@
 [submodule "sonic-dbsyncd"]
 	path = src/sonic-dbsyncd
 	url = https://github.com/sonic-net/sonic-dbsyncd
+	branch = 202511
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
 	url = https://github.com/sonic-net/sonic-py-swsssdk.git
+	branch = 202511
 [submodule "src/sonic-snmpagent"]
 	path = src/sonic-snmpagent
 	url = https://github.com/sonic-net/sonic-snmpagent
+	branch = 202511
 [submodule "src/ptf"]
 	path = src/ptf
 	url = https://github.com/p4lang/ptf.git
@@ -37,9 +44,11 @@
 [submodule "src/sonic-platform-common"]
 	path = src/sonic-platform-common
 	url = https://github.com/sonic-net/sonic-platform-common
+	branch = 202511
 [submodule "src/sonic-platform-daemons"]
 	path = src/sonic-platform-daemons
 	url = https://github.com/sonic-net/sonic-platform-daemons
+	branch = 202511
 [submodule "src/sonic-platform-pde"]
 	path = src/sonic-platform-pde
 	url = https://github.com/sonic-net/sonic-platform-pdk-pde
@@ -68,16 +77,18 @@
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
 	url = https://github.com/sonic-net/sonic-mgmt-framework
+	branch = 202511
 [submodule "src/sonic-ztp"]
 	path = src/sonic-ztp
 	url = https://github.com/sonic-net/sonic-ztp
 [submodule "src/sonic-restapi"]
 	path = src/sonic-restapi
 	url = https://github.com/sonic-net/sonic-restapi.git
-	branch = master
+	branch = 202511
 [submodule "src/sonic-mgmt-common"]
 	path = src/sonic-mgmt-common
 	url = https://github.com/sonic-net/sonic-mgmt-common.git
+	branch = 202511
 [submodule "src/wpasupplicant/sonic-wpa-supplicant"]
 	path = src/wpasupplicant/sonic-wpa-supplicant
 	url = https://github.com/sonic-net/sonic-wpa-supplicant.git
@@ -91,6 +102,7 @@
 [submodule "src/linkmgrd"]
 	path = src/linkmgrd
 	url = https://github.com/sonic-net/sonic-linkmgrd.git
+	branch = 202511
 [submodule "src/sonic-p4rt/sonic-pins"]
 	path = src/sonic-p4rt/sonic-pins
 	url = https://github.com/sonic-net/sonic-pins.git
@@ -100,24 +112,30 @@
 [submodule "src/dhcprelay"]
 	path = src/dhcprelay
 	url = https://github.com/sonic-net/sonic-dhcp-relay.git
+	branch = 202511
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
 	url = https://github.com/sonic-net/sonic-host-services
+	branch = 202511
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
+	branch = 202511
 [submodule "src/sonic-bmp"]
 	path = src/sonic-bmp
 	url = https://github.com/sonic-net/sonic-bmp.git
+	branch = 202511
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
 [submodule "src/dhcpmon"]
 	path = src/dhcpmon
 	url = https://github.com/sonic-net/sonic-dhcpmon.git
+	branch = 202511
 [submodule "src/sonic-dash-api"]
 	path = src/sonic-dash-api
 	url = https://github.com/sonic-net/sonic-dash-api.git
+	branch = 202511
 [submodule "src/sonic-dash-ha"]
 	path = src/sonic-dash-ha
 	url = https://github.com/sonic-net/sonic-dash-ha
