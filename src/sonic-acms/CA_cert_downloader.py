@@ -4,7 +4,7 @@
 This script will call dSMS GetIssuers API to download Root Certificate
 '''
 
-import os, re, shutil, time
+import os, re, shutil, time, random
 import urllib.request, urllib.parse, urllib.error
 import json
 import base64
@@ -27,16 +27,8 @@ MAX_WAIT_TIME_FOR_URL = 3600
 # ACMS config file
 acms_conf = "/var/opt/msft/client/acms_secrets.ini"
 
-# Base64 encoded CA name string to obfuscate sensitive references
-_CA_NAME_B64 = "YW1l"
-_ca_name = base64.b64decode(_CA_NAME_B64).decode('ascii')
-
 url_path_dict = {
-    "public": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
-    "fairfax": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
-    "mooncake": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
-    "usnat": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}",
-    "ussec": f"/dsms/issuercertificates?getissuersv3&caname={_ca_name}"
+    "public": "/dsms/issuercertificates?getissuersv3&appType=clientauth"
 }
 
 sonic_logger = logger.Logger()
@@ -48,8 +40,10 @@ def copy_cert(source, destination_dir):
         destination = os.path.join(destination_dir, cert_file)
         if os.path.isfile(destination):
             # Check if Root cert has changed
-            existing_root_cert = open(destination, 'r').read()
-            new_root_cert = open(source, 'r').read()
+            with open(destination, 'r') as f:
+                existing_root_cert = f.read()
+            with open(source, 'r') as f:
+                new_root_cert = f.read()
             if existing_root_cert == new_root_cert:
                 # No changes in root cert, nothing to copy
                 sonic_logger.log_info("CA_cert_downloader: copy_cert: Root cert has not changed")
@@ -71,32 +65,54 @@ def extract_cert(response):
     # Extract certificate from the API response
     if os.path.exists(ROOT_CERT):
         os.remove(ROOT_CERT)
+    if not response['RootsInfos']:
+        sonic_logger.log_error("CA_cert_downloader: extract_cert: No RootsInfos found in response")
+        raise ValueError("No RootsInfos found in response")
+    
+    intermediate_count = 0
+    
     with open(ROOT_CERT, 'w') as root_cert:
-        root = response['RootsInfos'][0]
-        for item in root['Intermediates']:
-            root_cert.write(item['PEM']+"\n")
-        root_cert.write(root['PEM']+"\n")
+        for idx, root in enumerate(response['RootsInfos']):
+            # Log root certificate information
+            root_name = root.get('RootName', '')
+            ca_name = root.get('CaName', '')
+            sonic_logger.log_info(f"CA_cert_downloader: extract_cert: Processing root #{idx} - RootName: {root_name}, CaName: {ca_name}")
+            
+            # Write Intermediates for all RootsInfo
+            intermediates = root.get('Intermediates', [])
+            if intermediates:
+                for item in intermediates:
+                    root_cert.write(item['PEM']+"\n")
+                    intermediate_count += 1
+                sonic_logger.log_info(f"CA_cert_downloader: extract_cert: Wrote {len(intermediates)} intermediate certificates from root #{idx}")
+            
+            root_cert.write(root['PEM']+"\n")
+    
+    sonic_logger.log_info(f"CA_cert_downloader: extract_cert: Successfully wrote {idx + 1} root certificates and {intermediate_count} intermediate certificates to {ROOT_CERT}")
 
 def get_cert(url):
     sonic_logger.log_info("CA_cert_downloader: get_cert: " + url)
     # Call API and get response
     req = urllib.request.Request(url)
-    while True:
-        try:
-            response = urllib.request.urlopen(req)
-            sonic_logger.log_info("CA_cert_downloader: get_cert: URL: "+url)
-            if response.getcode() == 200:
-                json_response = json.loads(response.read())
-                extract_cert(json_response)
-                return True
-            else:
-                sonic_logger.log_error("CA_cert_downloader: get_cert: GET request failed!")
-        except Exception as e:
-            sonic_logger.log_error("CA_cert_downloader: get_cert: Unable to reach "+url)
-            sonic_logger.log_error("CA_cert_downloader: get_cert: "+str(e))
-            # Retry every 5 min
-            sonic_logger.log_error("CA_cert_downloader: get_cert: Retrying in 5min!")
-            time.sleep(60 * 5)
+    
+    try:
+        response = urllib.request.urlopen(req)
+        status_code = response.getcode()
+        if status_code == 200:
+            json_response = json.loads(response.read())
+            extract_cert(json_response)
+            return True
+        else:
+            sonic_logger.log_error("CA_cert_downloader: get_cert: GET request failed with status code: " + str(status_code))
+            return False
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, IOError) as e:
+        # Retryable errors: network issues, HTTP errors, timeouts, SSL errors
+        sonic_logger.log_error("CA_cert_downloader: get_cert: Network error: " + str(e))
+        return False
+    except Exception as e:
+        # Non-retryable errors: JSON parsing, key errors, programming errors
+        sonic_logger.log_error("CA_cert_downloader: get_cert: Non-retryable error: " + str(e))
+        return False
 
 def get_url(conf_file):
     try:
@@ -139,15 +155,33 @@ def main():
     cloud_type = cloud.lower()
     url_path = url_path_dict.get(cloud_type, url_path_dict["public"])
 
+    # Exponential backoff parameters
+    base_delay = 300  # 5 minutes initial delay
+    max_delay = 7200  # 2 hours maximum delay
+    max_attempts = 5  # Cap attempt counter (300s * 2^4 = 4800s, next would exceed max_delay)
+    attempt = 0
+
     while True:
         if get_cert(url+url_path):
             sonic_logger.log_info("CA_cert_downloader: main: Cert extraction completed")
             if copy_cert(ROOT_CERT, CERTS_PATH) == False:
                 sonic_logger.log_error("CA_cert_downloader: main: Root cert move to "+CERTS_PATH+" failed!")
+            # Reset attempt counter on success
+            attempt = 0
+            # Poll dSMS every 12 hours after successful download
+            sonic_logger.log_info("CA_cert_downloader: main: Sleeping for 12 hours before next poll")
+            time.sleep(60 * 60 * 12)
         else:
             sonic_logger.log_error("CA_cert_downloader: main: Cert extraction failed!")
-        # Poll dSMS every 12 hours
-        time.sleep(60 * 60 * 12)
+            # Calculate retry delay with exponential backoff and jitter
+            retry_delay = min(base_delay * (2 ** attempt), max_delay)
+            jitter = random.uniform(0, retry_delay * 0.1)  # Add up to 10% jitter
+            retry_delay = retry_delay + jitter
+            sonic_logger.log_info("CA_cert_downloader: main: Retrying in " + str(int(retry_delay)) + " seconds (attempt " + str(attempt + 1) + ")")
+            time.sleep(retry_delay)
+            # Cap attempt counter to prevent unbounded growth
+            if attempt < max_attempts:
+                attempt += 1
 
 if __name__ == '__main__':
     sonic_logger.set_min_log_priority_info()
