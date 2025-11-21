@@ -14,8 +14,8 @@ extern "C" void openSyslog() {
     openlog (NULL, LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL4);
 }
 
-extern "C" void writeToSyslog(char* ev_id, int ev_sev, char* ev_type, char* ev_act,
-                              char* ev_src, char* ev_msg, char* ev_static_msg) {
+extern "C" void writeToSyslog(const char* ev_id, int ev_sev, const char* ev_type, const char* ev_act,
+                              const char* ev_src, const char* ev_msg, const char* ev_static_msg) {
     int SYSLOG_FACILITY = LOG_LOCAL4;
 
     if (!ev_act || std::strlen(ev_act) == 0) {
