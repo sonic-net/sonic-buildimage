@@ -51,6 +51,7 @@ declare -r SPC2_ASIC="spc2"
 declare -r SPC3_ASIC="spc3"
 declare -r SPC4_ASIC="spc4"
 declare -r SPC5_ASIC="spc5"
+declare -r SPC6_ASIC="spc6"
 declare -r BF3_NIC="bf3"
 declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
@@ -214,7 +215,7 @@ function GetMstDeviceType() {
     local -r asic_type=$(/usr/bin/asic_detect/asic_detect.sh)
 
     case $asic_type in
-    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC}|${SPC5_ASIC})
+    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC}|${SPC5_ASIC}|${SPC6_ASIC})
         echo "Spectrum"
         return ${EXIT_SUCCESS}
         ;;
