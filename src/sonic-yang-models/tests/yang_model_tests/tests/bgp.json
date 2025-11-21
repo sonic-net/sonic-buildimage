@@ -190,6 +190,16 @@
     "BGP_PEERRANGE_ALL_VALID": {
         "desc": "Configure BGP peer range table."
     },
+    "BGP_PEERRANGE_VALID_VNET": {
+        "desc": "Configure BGP peer range with a valid vnet."
+    },
+    "BGP_PEERRANGE_VALID_VRF": {
+        "desc": "Configure BGP peer range with a valid vrf."
+    },
+    "BGP_PEERRANGE_INVALID_VNET_OR_VRF": {
+        "desc": "Configure BGP peer range with an invalid vnet or vrf.",
+        "eStrKey" : "InvalidValue"
+    },
     "BGP_ALLOWED_PREFIXES_ALL_VALID": {
         "desc": "Configue BGP allowed prefix list."
     },
