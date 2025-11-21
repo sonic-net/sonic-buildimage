@@ -16,6 +16,9 @@ from sonic_py_common import logger as log
 
 logger = log.Logger()
 
+# ───────────── telemetry.service sync paths ─────────────
+CONTAINER_TELEMETRY_SERVICE = "/usr/share/sonic/systemd_scripts/telemetry.service"
+HOST_TELEMETRY_SERVICE = "/lib/systemd/system/telemetry.service"
 
 def get_bool_env_var(name: str, default: bool = False) -> bool:
     val = os.getenv(name)
@@ -48,7 +51,6 @@ class SyncItem:
     dst_on_host: str
     mode: int = 0o755
 
-
 _TELEMETRY_SRC = (
     "/usr/share/sonic/systemd_scripts/telemetry_v1.sh"
     if IS_V1_ENABLED
@@ -59,9 +61,14 @@ logger.log_notice(f"telemetry source set to {_TELEMETRY_SRC}")
 SYNC_ITEMS: List[SyncItem] = [
     SyncItem(_TELEMETRY_SRC, "/usr/local/bin/telemetry.sh"),
     SyncItem("/usr/share/sonic/systemd_scripts/container_checker", "/bin/container_checker"),
+    SyncItem(CONTAINER_TELEMETRY_SERVICE, HOST_TELEMETRY_SERVICE, mode=0o644),
 ]
 
 POST_COPY_ACTIONS = {
+    "/lib/systemd/system/telemetry.service": [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "telemetry"],
+    ],
     "/usr/local/bin/telemetry.sh": [
         ["sudo", "docker", "stop", "telemetry"],
         ["sudo", "docker", "rm", "telemetry"],
@@ -74,7 +81,6 @@ POST_COPY_ACTIONS = {
     ],
 }
 
-
 def run(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = None) -> Tuple[int, str | bytes, str | bytes]:
     logger.log_debug("Running: " + " ".join(args))
     p = subprocess.Popen(
@@ -86,7 +92,6 @@ def run(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = No
     )
     out, err = p.communicate(input=input_bytes if input_bytes is not None else None)
     return p.returncode, out, err
-
 
 def run_nsenter(args: List[str], *, text: bool = True, input_bytes: Optional[bytes] = None) -> Tuple[int, str | bytes, str | bytes]:
     return run(NSENTER_BASE + args, text=text, input_bytes=input_bytes)
@@ -228,14 +233,11 @@ def read_file_bytes_local(path: str) -> Optional[bytes]:
     try:
         with open(path, "rb") as f:
             return f.read()
-    except OSError as e:  # covers file-related errors incl. ENOENT, EACCES, EISDIR, etc.
+    except OSError as e:
         logger.log_error(f"read failed for {path}: {e}")
         return None
 
-
-# ───────────── Host file ops via nsenter ─────────────
 def host_read_bytes(path_on_host: str) -> Optional[bytes]:
-    # Use /bin/cat in host namespace
     rc, out, _ = run_nsenter(["/bin/cat", path_on_host], text=False)
     if rc != 0:
         return None
@@ -244,22 +246,18 @@ def host_read_bytes(path_on_host: str) -> Optional[bytes]:
 
 def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
     tmp_path = f"/tmp/{os.path.basename(dst_on_host)}.tmp"
-
-    # 1) write bytes to host tmp via stdin
     rc, _, err = run_nsenter(["/bin/sh", "-lc", f"cat > {shlex.quote(tmp_path)}"], text=False, input_bytes=data)
     if rc != 0:
         emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
         logger.log_error(f"host write tmp failed: {emsg.strip()}")
         return False
 
-    # 2) chmod tmp on host
     rc, _, err = run_nsenter(["/bin/chmod", f"{mode:o}", tmp_path], text=True)
     if rc != 0:
         logger.log_error(f"host chmod failed: {str(err).strip()}")
         run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
         return False
 
-    # 3) ensure parent dir exists on host
     parent = os.path.dirname(dst_on_host) or "/"
     rc, _, err = run_nsenter(["/bin/mkdir", "-p", parent], text=True)
     if rc != 0:
@@ -267,13 +265,11 @@ def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
         run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
         return False
 
-    # 4) atomic replace on host
     rc, _, err = run_nsenter(["/bin/mv", "-f", tmp_path, dst_on_host], text=True)
     if rc != 0:
         logger.log_error(f"host mv failed to {dst_on_host}: {str(err).strip()}")
         run_nsenter(["/bin/rm", "-f", tmp_path], text=True)
         return False
-
     return True
 
 
@@ -286,8 +282,6 @@ def run_host_actions_for(path_on_host: str) -> None:
         else:
             logger.log_error(f"Post-copy action FAILED (rc={rc}): {' '.join(cmd)}; stderr={str(err).strip()}")
 
-
-# ───────────── file Sync logic ─────────────
 def sha256_bytes(b: Optional[bytes]) -> str:
     if b is None:
         return ""
@@ -322,7 +316,6 @@ def sync_items(items: List[SyncItem]) -> bool:
             all_ok = False
             continue
 
-        # verify
         new_host_bytes = host_read_bytes(item.dst_on_host)
         new_sha = sha256_bytes(new_host_bytes)
         if new_sha != container_file_sha:
@@ -334,13 +327,11 @@ def sync_items(items: List[SyncItem]) -> bool:
         else:
             logger.log_info(f"Sync complete for {item.dst_on_host} (sha256={new_sha})")
             run_host_actions_for(item.dst_on_host)
-
     return all_ok
 
 
 def ensure_sync() -> bool:
     return sync_items(SYNC_ITEMS)
-
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -363,7 +354,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-
     if args.no_post_actions:
         POST_COPY_ACTIONS.clear()
         logger.log_info("Post-copy host actions DISABLED for this run")
@@ -377,7 +367,6 @@ def main() -> int:
     ok = ensure_sync()
     if args.once:
         return 0 if ok else 1
-
     while True:
         time.sleep(args.interval)
         try:
