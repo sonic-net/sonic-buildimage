@@ -287,6 +287,34 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
 
 
+def test_telemetry_service_syncs_to_host_when_different(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+
+    # Prepare container unit content and host old content
+    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
+    host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
+
+    # Only include the telemetry service item to make the assertion clear
+    ss.SYNC_ITEMS[:] = [
+        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
+    ]
+
+    # Add post actions for telemetry.service
+    ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "telemetry"],
+    ]
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
+
+    # Verify systemctl actions were invoked
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "daemon-reload") in post_cmds
+    assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
+
+
 # ─────────────────────────── New tests for CONFIG_DB reconcile ───────────────────────────
 
 def test_reconcile_enables_user_auth_and_cname(ss):
@@ -318,29 +346,3 @@ def test_reconcile_disabled_removes_cname(ss):
     ss.reconcile_config_db_once()
 
     assert f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}" not in config_db
-def test_telemetry_service_syncs_to_host_when_different(ss):
-    ss, container_fs, host_fs, commands = ss
-
-    # Prepare container unit content and host old content
-    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
-    host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
-
-    # Only include the telemetry service item to make the assertion clear
-    ss.SYNC_ITEMS[:] = [
-        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
-    ]
-
-    # Add post actions for telemetry.service
-    ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
-        ["sudo", "systemctl", "daemon-reload"],
-        ["sudo", "systemctl", "restart", "telemetry"],
-    ]
-
-    ok = ss.ensure_sync()
-    assert ok is True
-    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
-
-    # Verify systemctl actions were invoked
-    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
-    assert ("sudo", "systemctl", "daemon-reload") in post_cmds
-    assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
