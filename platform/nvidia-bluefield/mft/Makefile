@@ -18,7 +18,7 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-MFT_NAME = mft-$(MFT_VERSION)-$(MFT_REVISION)-arm64-deb
+MFT_NAME = mft-$(MFT_VERSION)-$(MFT_REVISION)-aarch64-deb
 MFT_TGZ = $(MFT_NAME).tgz
 
 ifeq ($(MFT_FROM_INTERNAL),y)
