@@ -343,6 +343,11 @@ ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
 	DOCKER_RUN += -v $(SECURE_UPGRADE_PROD_SIGNING_TOOL):/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL)):ro
 endif
 
+# Pass the Signing prod tool arguments as environment variable to avoid make command-line parsing issues
+ifneq ($(SECURE_UPGRADE_PROD_TOOL_ARGS),)
+	DOCKER_RUN += -e "SECURE_UPGRADE_PROD_TOOL_ARGS=$(SECURE_UPGRADE_PROD_TOOL_ARGS)"
+endif
+
 ifneq ($(SONIC_DPKG_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_DPKG_CACHE_SOURCE):/dpkg_cache:rw"
 endif
@@ -561,7 +566,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
                            SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
                            SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
-                           SECURE_UPGRADE_PROD_TOOL_ARGS="\"'$(SECURE_UPGRADE_PROD_TOOL_ARGS)'\"" \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
@@ -606,6 +610,7 @@ export MIRROR_SECURITY_URLS
 export MIRROR_SNAPSHOT
 export SONIC_VERSION_CONTROL_COMPONENTS
 export PIP_HTTP_TIMEOUT
+export SECURE_UPGRADE_PROD_TOOL_ARGS
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
