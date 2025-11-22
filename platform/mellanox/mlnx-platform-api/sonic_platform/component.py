@@ -30,6 +30,7 @@ try:
     import glob
     import tempfile
     import subprocess
+    import traceback
     from sonic_py_common import device_info
     from sonic_py_common.logger import Logger
     from sonic_py_common.general import check_output_pipe
@@ -912,6 +913,76 @@ class ComponentCPLDSN2201(ComponentCPLD):
             return False
 
         return True
+
+
+class ComponentBMC(Component):
+    COMPONENT_NAME = 'BMC'
+    COMPONENT_DESCRIPTION = 'BMC - Baseboard Management Controller'
+    COMPONENT_FIRMWARE_EXTENSION = ['.fwpkg']
+
+    def __init__(self):
+        super(ComponentBMC, self).__init__()
+        from .bmc import BMC
+        self.bmc = BMC.get_instance()
+        self.name = self.COMPONENT_NAME
+        self.description = self.COMPONENT_DESCRIPTION
+        self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
+
+    def get_firmware_version(self):
+        """
+        Retrieves the BMC firmware version
+
+        Returns:
+            A string containing the BMC firmware version.
+            Returns 'N/A' if the BMC firmware version cannot be retrieved.
+        """
+        if self.bmc is None:
+            return 'N/A'
+        return self.bmc.get_version()
+
+    def get_available_firmware_version(self, image_path):
+        raise NotImplementedError("BMC component doesn't support available firmware version query")
+
+    def get_firmware_update_notification(self, image_path):
+        return "BMC will be automatically restarted to complete BMC firmware update"
+
+    def install_firmware(self, image_path):
+        """
+        Installs the BMC firmware
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            A boolean, True if the BMC firmware is installed successfully, False otherwise.
+        """
+        if self.bmc is None:
+            print("Failed to get BMC instance")
+            return False
+        if not self._check_file_validity(image_path):
+            print(f"Invalid firmware image path: {image_path}")
+            return False
+        print('Starting BMC firmware update, path={}'.format(image_path))
+        try:
+            ret, error_msg = self.bmc.update_firmware(image_path)
+            if ret != 0:
+                print(f'Fail to update BMC firmware. Error {ret}: {error_msg}')
+                return False
+            print('Successfully updated BMC firmware, restarting BMC...')
+            ret, error_msg = self.bmc.request_bmc_reset()
+            if ret != 0:
+                print(f'Failed to restart BMC. Error {ret}: {error_msg}')
+                return False
+            return True
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            print(str(e))
+            print(error_trace)
+            raise
+
+    def update_firmware(self, image_path):
+        return self.install_firmware(image_path)
+
 
 class ComponentCPLDSN4280(ComponentCPLD):
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,13 +39,24 @@ from sonic_platform.component import ComponentONIE,       \
                                      ComponenetFPGADPU,   \
                                      MPFAManager,         \
                                      ONIEUpdater,         \
+                                     ComponentBMC,        \
                                      Component
+
 from sonic_platform_base.component_base import FW_AUTO_INSTALLED,      \
                                                FW_AUTO_UPDATED,        \
                                                FW_AUTO_SCHEDULED,      \
                                                FW_AUTO_ERR_BOOT_TYPE,  \
                                                FW_AUTO_ERR_IMAGE,      \
                                                FW_AUTO_ERR_UNKNOWN
+
+from sonic_platform_base.redfish_client import RedfishClient
+
+class MockBMCComponent:
+    def get_firmware_id(self):
+        return 'MGX_FW_BMC_0'
+
+    def get_name(self):
+        return 'BMC'
 
 
 class TestComponent:
@@ -564,3 +575,19 @@ class TestComponent:
         assert c._check_file_validity(os.path.abspath(__file__))
         c.image_ext_name = '.txt'
         assert not c._check_file_validity(os.path.abspath(__file__))
+
+    @mock.patch('sonic_platform.bmc.BMC._get_component_list', \
+        mock.MagicMock(return_value=[MockBMCComponent()]))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', \
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity', \
+                mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.bmc.BMC.update_firmware')
+    @mock.patch('sonic_platform.bmc.BMC.request_bmc_reset')
+    def test_bmc_update_firmware(self, mock_bmc_reset, mock_update_fw):
+        mock_update_fw.return_value = (RedfishClient.ERR_CODE_OK, '')
+        mock_bmc_reset.return_value = (RedfishClient.ERR_CODE_OK, '')
+        component = ComponentBMC()
+        ret = component.install_firmware('fake_image.fwpkg')
+        assert True == ret
