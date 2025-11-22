@@ -1,6 +1,6 @@
-blessed==1.22.0
+blessed==1.23.0
 click-log==0.4.0
-colorful==0.5.7
+colorful==0.5.8
 deepdiff==8.6.1
 docker==7.1.0
 docker-image-py==0.1.13
@@ -26,7 +26,7 @@ prefixed==0.9.0
 prettyprinter==0.18.0
 ptyprocess==0.7.0
 pycairo==1.26.1
-pynacl==1.6.0
+pynacl==1.6.1
 pyroute2==0.7.12
 python-arptable==0.0.2
 python-sdk-api==4.8.1086

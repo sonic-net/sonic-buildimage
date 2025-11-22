@@ -64,7 +64,7 @@ libtsan2==12.2.0-14+deb12u1
 libubsan1==12.2.0-14+deb12u1
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
-linux-libc-dev==6.1.153-1
+linux-libc-dev==6.1.158-1
 openssh-client==1:9.2p1-2+deb12u7
 openssl==3.0.17-1~deb12u3
 pci.ids==0.0~2023.04.11-1

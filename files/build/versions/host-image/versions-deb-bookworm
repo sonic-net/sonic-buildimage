@@ -280,8 +280,8 @@ libzmq5==4.3.4-6
 linux-base==4.9
 linux-image-6.1.0-29-2-amd64-unsigned==6.1.123-1
 linux-image-6.1.0-29-2-arm64-unsigned==6.1.123-1
-linux-libc-dev==6.1.153-1
-linux-perf==6.1.153-1
+linux-libc-dev==6.1.158-1
+linux-perf==6.1.158-1
 locales==2.36-9+deb12u13
 logrotate==3.21.0-1
 lsof==4.95.0-1
