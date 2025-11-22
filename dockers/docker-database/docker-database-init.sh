@@ -82,8 +82,10 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     VAR_LIB_REDIS_CHASSIS_DIR="/var/lib/redis_chassis"
     mkdir -p $VAR_LIB_REDIS_CHASSIS_DIR   
     update_chassisdb_config -j $db_cfg_file_tmp -k -p $chassis_db_port
+    # Set protected mode based on the hostname
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
     # generate all redis server supervisord configuration file
-    sonic-cfggen -j $db_cfg_file_tmp \
+    sonic-cfggen -j $db_cfg_file_tmp -a "$additional_data_json" \
     -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
     rm $db_cfg_file_tmp
@@ -104,7 +106,13 @@ then
 fi
 # delete chassisdb config to generate supervisord config
 update_chassisdb_config -j $db_cfg_file_tmp -d
-sonic-cfggen -j $db_cfg_file_tmp \
+# Set protected mode based on the hostname
+additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: (.hostname == "127.0.0.1")})}' "$db_cfg_file_tmp")
+# For Linecard databases, disable Redis protected mode to expose them to the midplane.
+if [ -f "$chassisdb_config" ] && [[ "$start_chassis_db" != "1" ]]; then
+    additional_data_json=$(jq -c '{INSTANCES: .INSTANCES | map_values({is_protected_mode: false})}' "$db_cfg_file_tmp")
+fi
+sonic-cfggen -j "$db_cfg_file_tmp" -a "$additional_data_json" \
 -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
 -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
 
