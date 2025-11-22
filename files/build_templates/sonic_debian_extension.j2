@@ -698,6 +698,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.servi
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d
 sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd.service.d/override.conf
+
+# Copy systemd-networkd-wait-online override configuration
+sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d
+sudo cp $IMAGE_CONFIGS/midplane-network/systemd-networkd-wait-online.override.conf $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/systemd-networkd-wait-online.service.d/override.conf
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-networkd-wait-online.service
 
 # Copy backend-acl script and service file
