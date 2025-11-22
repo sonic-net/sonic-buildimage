@@ -1,29 +1,27 @@
-From 69d083e05e39dc82567a338a59a2cefdcd022034 Mon Sep 17 00:00:00 2001
-From: davidza <davidza@nvidia.com>
-Date: Tue, 15 Oct 2024 09:51:11 +0300
-Subject: [PATCH 3/3] Make system-health service starts after hw-management to 
+From 70c3dba295e29a9784bfe4d1f829bb0537ba854f Mon Sep 17 00:00:00 2001
+From: Volodymyr Samotiy <volodymyrs@nvidia.com>
+Date: Thu, 2 Oct 2025 16:23:46 +0300
+Subject: [PATCH 2/2] Make system-health service starts after hw-management to
  avoid failures
 
 On SN2410, it can fail to read the file led_status_capability if it starts from ONIE
-
-Signed-off-by: Stephen Sun <stephens@nvidia.com>
 ---
  debian/hw-management.hw-management.service | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
-index 1a50dc3c..8a5c0423 100755
+index 6ae63a95..634b4014 100755
 --- a/debian/hw-management.hw-management.service
 +++ b/debian/hw-management.hw-management.service
-@@ -2,7 +2,7 @@
- Description=Chassis HW management service of Mellanox systems
- Documentation=man:hw-management.service(8)
+@@ -4,7 +4,7 @@ Documentation=man:hw-management.service(8)
  Wants=hw-management-sync.service
+ Wants=hw-management-sysfs-monitor.service
+ Wants=hw-management-fast-sysfs-monitor.service
 -Before=determine-reboot-cause.service
 +Before=determine-reboot-cause.service system-health.service watchdog-control.service
  
  [Service]
  Type=oneshot
 -- 
-2.34.1
+2.48.1
 
