@@ -22,8 +22,9 @@ start()
 {
     /usr/bin/mst start
 
-    /usr/bin/mlnx-fw-upgrade.sh --dry-run -v
+    /usr/local/bin/mlnx-fw-manager --status
     if [[ $? != "0" ]]; then
+        echo "BF3 DPU firmware upgrade status check failed. Please check the firmware upgrade status manually."
         exit 1
     fi
 }
