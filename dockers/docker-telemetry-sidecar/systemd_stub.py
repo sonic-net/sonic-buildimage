@@ -32,9 +32,6 @@ IS_V1_ENABLED = get_bool_env_var("IS_V1_ENABLED", default=False)
 # ───────────── Config ─────────────
 SYNC_INTERVAL_S = int(os.environ.get("SYNC_INTERVAL_S", "900"))  # seconds
 NSENTER_BASE = ["nsenter", "--target", "1", "--pid", "--mount", "--uts", "--ipc", "--net"]
-# CONFIG_DB reconcile env (kept simple, always uses role=gnmi_read when enabled)
-GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
-GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
 
 # CONFIG_DB reconcile env
 GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
@@ -112,6 +109,7 @@ def _get_config_db() -> Optional[ConfigDBConnector]:
         except Exception as e:
             logger.log_error(f"Failed to connect to CONFIG_DB: {e}")
             _config_db = None
+            # Do not cache failed connection; try again next time
     return _config_db
 
 
@@ -359,20 +357,13 @@ def main() -> int:
         logger.log_info("Post-copy host actions DISABLED for this run")
 
     # Reconcile CONFIG_DB before any file sync so auth is correct ASAP
-    try:
-        reconcile_config_db_once()
-    except Exception as e:
-        logger.log_error(f"CONFIG_DB reconcile failed: {e}")
-
+    reconcile_config_db_once()
     ok = ensure_sync()
     if args.once:
         return 0 if ok else 1
     while True:
         time.sleep(args.interval)
-        try:
-            reconcile_config_db_once()
-        except Exception as e:
-            logger.log_error(f"CONFIG_DB reconcile failed: {e}")
+        reconcile_config_db_once()
         ok = ensure_sync()
 
 
