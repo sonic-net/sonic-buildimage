@@ -6,6 +6,8 @@
 {%- set PORT_UPLINK = [] %}
 {%- set PORT_DOWNLINK = [] %}
 {%- set PORT_SERVICE = [] %}
+{%- set SYSTEM_PORT_ACTIVE [] %}
+
 
 {% if template_exists("buffers.json.j2") %}
     {% import "buffers.json.j2" as buffer_defs with context %}
