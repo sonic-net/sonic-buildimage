@@ -2445,6 +2445,7 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	ssize_t rv;
 	uint64_t obytes, obytes_peak;
 	enum dplane_op_e op = dplane_ctx_get_op(ctx);
+   struct nexthop *nexthop;
 
 	/*
 	 * If we were configured to not use next hop groups, then quit as soon
