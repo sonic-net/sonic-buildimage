@@ -99,6 +99,7 @@ fi
 
 chown -R frr:frr /etc/frr/
 
+# Create sr0 interface for SRv6 support
 if ! ip link show sr0 > /dev/null 2>&1; then
     echo "Interface sr0 does not exist. Creating sr0..."
     ip link add sr0 type dummy || true
