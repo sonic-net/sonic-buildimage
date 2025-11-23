@@ -255,7 +255,6 @@ define LOAD_FROM_CACHE
 
 	# Load the cache if cache is enabled and cache file is present in the cache
 	# Update the cache_loaded variable
-	$(info $(CACHE_FILE_SELECT))
 	$(if $(and $(CACHE_FILE_SELECT),$(call CHECK_RCACHE_ENABLED,$(1))),
 		$(if $(LOAD_DRV_DEB), $($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mxzvf $(CACHE_FILE_SELECT) 1>> $($(1)_DST_PATH)/$(1).log ,echo );
 		echo "File $(CACHE_FILE_SELECT) is loaded from cache into $($(1)_BASE_PATH)" >> $($(1)_DST_PATH)/$(1).log
