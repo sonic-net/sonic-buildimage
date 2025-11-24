@@ -34,7 +34,6 @@ pub const ALERTING_INTERVAL_SECS: u64 = 60;
 const EVENTS_PUBLISHER_SOURCE: &str = "sonic-events-host";
 const EVENTS_PUBLISHER_TAG: &str = "process-exited-unexpectedly";
 
-
 #[derive(Error, Debug)]
 pub enum SupervisorError {
     #[error("IO error: {0}")]
@@ -192,20 +191,23 @@ pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait
         process::exit(2);
     }
 
-    let feature_config = features_table.get(container_name);
-    if feature_config.is_none() {
-        error!("Unable to retrieve feature '{}'. Exiting...", container_name);
-        process::exit(3);
-    }
+    let feature_config = match features_table.get(container_name) {
+        Some(config) => config,
+        None => {
+            error!("Unable to retrieve feature '{}'. Exiting...", container_name);
+            process::exit(3);
+        }
+    };
 
-    let feature_config = feature_config.unwrap();
-    let is_auto_restart = feature_config.get("auto_restart");
-    if is_auto_restart.is_none() {
-        error!("Unable to determine auto-restart feature status for '{}'. Exiting...", container_name);
-        process::exit(4);
-    }
+    let is_auto_restart = match feature_config.get("auto_restart") {
+        Some(value) => value,
+        None => {
+            error!("Unable to determine auto-restart feature status for '{}'. Exiting...", container_name);
+            process::exit(4);
+        }
+    };
 
-    Ok(is_auto_restart.unwrap().clone())
+    Ok(is_auto_restart.clone())
 }
 
 /// Load heartbeat alert intervals from ConfigDB
