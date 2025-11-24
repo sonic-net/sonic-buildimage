@@ -332,11 +332,8 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
 
         let mut stdin_ready = false;
         for event in events.iter() {
-            match event.token() {
-                STDIN_TOKEN => {
-                    stdin_ready = true;
-                }
-                _ => unreachable!(),
+            if event.token() == STDIN_TOKEN {
+                stdin_ready = true;
             }
         }
 
