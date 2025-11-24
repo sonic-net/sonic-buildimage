@@ -181,33 +181,31 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
 }
 
 /// Read auto-restart state from ConfigDB
-pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait) -> Result<String> {
-
-    let features_table = config_db.get_table(FEATURE_TABLE_NAME)
-        .map_err(|e| SupervisorError::Database(format!("Failed to get FEATURE table: {}", e)))?;
+/// Returns empty string on error to allow graceful handling (e.g., when redis-server exits)
+pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait) -> String {
+    let features_table = match config_db.get_table(FEATURE_TABLE_NAME) {
+        Ok(table) => table,
+        Err(e) => {
+            warn!("Unable to retrieve features table from Config DB: {}", e);
+            return String::new();
+        }
+    };
 
     if features_table.is_empty() {
-        error!("Unable to retrieve features table from Config DB. Exiting...");
-        process::exit(2);
+        warn!("Empty features table");
+        return String::new();
     }
 
     let feature_config = match features_table.get(container_name) {
         Some(config) => config,
         None => {
-            error!("Unable to retrieve feature '{}'. Exiting...", container_name);
-            process::exit(3);
+            warn!("Unable to retrieve feature '{}'", container_name);
+            return String::new();
         }
     };
 
-    let is_auto_restart = match feature_config.get("auto_restart") {
-        Some(value) => value,
-        None => {
-            error!("Unable to determine auto-restart feature status for '{}'. Exiting...", container_name);
-            process::exit(4);
-        }
-    };
-
-    Ok(is_auto_restart.clone())
+    // Use default "enabled" if auto_restart field not found
+    feature_config.get("auto_restart").cloned().unwrap_or_else(|| "enabled".to_string())
 }
 
 /// Load heartbeat alert intervals from ConfigDB
@@ -388,17 +386,9 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
 
                             // Check if critical process and handle
                             if (critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name)) && expected == 0 {
-                                let is_auto_restart = match get_autorestart_state(&container_name, config_db) {
-                                    Ok(state) => state,
-                                    Err(e) => {
-                                        error!("Failed to get auto-restart state: {}", e);
-                                        childutils::listener::ok();
-                                        childutils::listener::ready();
-                                        continue;
-                                    }
-                                };
+                                let is_auto_restart = get_autorestart_state(&container_name, config_db);
 
-                                if is_auto_restart != "disabled" {
+                                if is_auto_restart == "enabled" {
                                     // Process exited unexpectedly - terminate supervisor
                                     let msg = format!("Process '{}' exited unexpectedly. Terminating supervisor '{}'", 
                                         process_name, container_name);
