@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 use std::os::unix::io::AsRawFd;
 use std::process;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use swss_common::{ConfigDBConnector, EventPublisher};
 use syslog::Severity;
@@ -34,9 +34,6 @@ pub const ALERTING_INTERVAL_SECS: u64 = 60;
 const EVENTS_PUBLISHER_SOURCE: &str = "sonic-events-host";
 const EVENTS_PUBLISHER_TAG: &str = "process-exited-unexpectedly";
 
-// Global state variables
-static HEARTBEAT_ALERT_INTERVAL_INITIALIZED: OnceLock<bool> = OnceLock::new();
-static HEARTBEAT_ALERT_INTERVAL_MAPPING: OnceLock<Mutex<HashMap<String, f64>>> = OnceLock::new();
 
 #[derive(Error, Debug)]
 pub enum SupervisorError {
@@ -212,48 +209,32 @@ pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait
 }
 
 /// Load heartbeat alert intervals from ConfigDB
-pub fn load_heartbeat_alert_interval(config_db: &dyn ConfigDBTrait) -> Result<()> {
+pub fn load_heartbeat_alert_interval(config_db: &dyn ConfigDBTrait) -> HashMap<String, f64> {
+    let mut mapping = HashMap::new();
 
-    let heartbeat_table = config_db.get_table(HEARTBEAT_TABLE_NAME)
-        .map_err(|e| SupervisorError::Database(format!("Failed to get HEARTBEAT table: {}", e)))?;
+    let heartbeat_table = match config_db.get_table(HEARTBEAT_TABLE_NAME) {
+        Ok(table) => table,
+        Err(e) => {
+            warn!("Failed to get HEARTBEAT table: {}", e);
+            return mapping;
+        }
+    };
 
-    if !heartbeat_table.is_empty() {
-        let mapping = HEARTBEAT_ALERT_INTERVAL_MAPPING.get_or_init(|| Mutex::new(HashMap::new()));
-        let mut mapping = mapping.lock().unwrap();
-        
-        for (process, config) in heartbeat_table {
-            if let Some(alert_interval_str) = config.get("alert_interval") {
-                if let Ok(alert_interval_ms) = alert_interval_str.parse::<i64>() {
-                    // Convert from milliseconds to seconds
-                    mapping.insert(process, alert_interval_ms as f64 / 1000.0);
-                }
+    for (process, config) in heartbeat_table {
+        if let Some(alert_interval_str) = config.get("alert_interval") {
+            if let Ok(alert_interval_ms) = alert_interval_str.parse::<i64>() {
+                // Convert from milliseconds to seconds
+                mapping.insert(process, alert_interval_ms as f64 / 1000.0);
             }
         }
     }
 
-    HEARTBEAT_ALERT_INTERVAL_INITIALIZED.set(true).map_err(|_| {
-        SupervisorError::System("Failed to set heartbeat initialized flag".to_string())
-    })?;
-
-    Ok(())
+    mapping
 }
 
 /// Get heartbeat alert interval for process
-pub fn get_heartbeat_alert_interval(process: &str, config_db: &dyn ConfigDBTrait) -> f64 {
-    if HEARTBEAT_ALERT_INTERVAL_INITIALIZED.get().is_none() {
-        if let Err(e) = load_heartbeat_alert_interval(config_db) {
-            warn!("Failed to load heartbeat alert intervals: {}", e);
-        }
-    }
-
-    let mapping = HEARTBEAT_ALERT_INTERVAL_MAPPING.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Ok(mapping) = mapping.lock() {
-        if let Some(&interval) = mapping.get(process) {
-            return interval;
-        }
-    }
-
-    ALERTING_INTERVAL_SECS as f64
+pub fn get_heartbeat_alert_interval(process: &str, heartbeat_intervals: &HashMap<String, f64>) -> f64 {
+    heartbeat_intervals.get(process).copied().unwrap_or(ALERTING_INTERVAL_SECS as f64)
 }
 
 /// Publish events
@@ -319,6 +300,9 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
     // Process state tracking
     let mut process_under_alerting: HashMap<String, HashMap<String, f64>> = HashMap::new();
     let mut process_heart_beat_info: HashMap<String, HashMap<String, f64>> = HashMap::new();
+
+    // Load heartbeat alert intervals once at startup
+    let heartbeat_intervals = load_heartbeat_alert_interval(config_db);
 
     // Initialize events publisher
     let mut events_handle = EventPublisher::new(EVENTS_PUBLISHER_SOURCE)
@@ -506,7 +490,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
         for (process, process_info) in process_heart_beat_info.iter() {
             if let Some(&last_heart_beat) = process_info.get("last_heart_beat") {
                 let elapsed_secs = current_time - last_heart_beat;
-                let threshold = get_heartbeat_alert_interval(process, config_db);
+                let threshold = get_heartbeat_alert_interval(process, &heartbeat_intervals);
                 if threshold > 0.0 && elapsed_secs >= threshold {
                     let elapsed_mins = (elapsed_secs / 60.0) as u64;
                     generate_alerting_message(process, "stuck", elapsed_mins, Severity::LOG_WARNING);
