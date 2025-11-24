@@ -128,6 +128,12 @@
             },
             {
                 "name": "CPU Pack Temp"
+            },
+            {
+                "name": "PMIC 1 Temp"
+            },
+            {
+                "name": "PMIC 2 Temp"
             }
         ],
         "sfps": [
