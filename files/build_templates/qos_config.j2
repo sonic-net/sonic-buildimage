@@ -524,7 +524,7 @@
             "scheduler": "scheduler.1",
             {% endif -%}
             "wred_profile": "AZURE_LOSSLESS"
-        },
+        }{% if not loop.last %},{% endif %}
 {% for system_port in SYSTEM_PORT_ACTIVE %}
         "{{ system_port }}|0": {
             "scheduler": "scheduler.0"
