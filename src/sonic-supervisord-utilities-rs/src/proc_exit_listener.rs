@@ -181,31 +181,31 @@ pub fn generate_alerting_message(process_name: &str, status: &str, dead_minutes:
 }
 
 /// Read auto-restart state from ConfigDB
-/// Returns empty string on error to allow graceful handling (e.g., when redis-server exits)
-pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait) -> String {
+/// Returns None on error or if the FEATURE table or the container entry is not found
+pub fn get_autorestart_state(container_name: &str, config_db: &dyn ConfigDBTrait) -> Option<String> {
     let features_table = match config_db.get_table(FEATURE_TABLE_NAME) {
         Ok(table) => table,
         Err(e) => {
             warn!("Unable to retrieve features table from Config DB: {}", e);
-            return String::new();
+            return None;
         }
     };
 
     if features_table.is_empty() {
         warn!("Empty features table");
-        return String::new();
+        return None;
     }
 
     let feature_config = match features_table.get(container_name) {
         Some(config) => config,
         None => {
             warn!("Unable to retrieve feature '{}'", container_name);
-            return String::new();
+            return None;
         }
     };
 
     // Use default "enabled" if auto_restart field not found
-    feature_config.get("auto_restart").cloned().unwrap_or_else(|| "enabled".to_string())
+    Some(feature_config.get("auto_restart").cloned().unwrap_or_else(|| "enabled".to_string()))
 }
 
 /// Load heartbeat alert intervals from ConfigDB
@@ -385,7 +385,7 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
                             if (critical_process_list.contains(&process_name) || critical_group_list.contains(&group_name)) && expected == 0 {
                                 let is_auto_restart = get_autorestart_state(&container_name, config_db);
 
-                                if is_auto_restart == "enabled" {
+                                if is_auto_restart == Some("enabled".to_string()) {
                                     // Process exited unexpectedly - terminate supervisor
                                     let msg = format!("Process '{}' exited unexpectedly. Terminating supervisor '{}'", 
                                         process_name, container_name);
