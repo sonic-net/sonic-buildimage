@@ -334,6 +334,8 @@ pub fn main_with_parsed_args_and_stdin<S: Read + AsRawFd, P: Poller>(args: Args,
         for event in events.iter() {
             if event.token() == STDIN_TOKEN {
                 stdin_ready = true;
+            } else {
+                error!("Unexpected event token: {:?}, this may indicate invalid logic", event.token());
             }
         }
 
