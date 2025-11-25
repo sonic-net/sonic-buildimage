@@ -6,14 +6,29 @@ from .user_defined_checker import UserDefinedChecker
 from . import utils
 
 
+# debug
+import logging
+from sonic_py_common.syslogger import SysLogger
+from logging.handlers import SysLogHandler
+dlog = SysLogger(
+    log_identifier='healthd#manager',
+    log_facility=SysLogHandler.LOG_DAEMON,
+    log_level=logging.NOTICE,
+    enable_runtime_config=False
+)
+# debug
+
+
 class HealthCheckerManager(object):
     """
     Manage all system health checkers and system health configuration.
     """
     def __init__(self):
+        dlog.log_notice("Initialize module: started")
         self._checkers = []
         self.config = Config()
         self.initialize()
+        dlog.log_notice("Initialize module: done")
 
     def initialize(self):
         """
@@ -33,14 +48,17 @@ class HealthCheckerManager(object):
         stats = {}
         self.config.load_config()
 
+        dlog.log_notice("Running default system checks")
         for checker in self._checkers:
             self._do_check(checker, stats)
 
+        dlog.log_notice("Running custom user checks")
         if self.config.user_defined_checkers:
             for udc in self.config.user_defined_checkers:
                 checker = UserDefinedChecker(udc)
                 self._do_check(checker, stats)
 
+        dlog.log_notice("Setting chassis led")
         self._set_system_led(chassis)
         return stats
 

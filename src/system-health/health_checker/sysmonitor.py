@@ -25,6 +25,20 @@ TASK_STOP_TIMEOUT = 10
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 exclude_srv_list = ['ztp.service']
 
+
+# debug
+import logging
+from sonic_py_common.syslogger import SysLogger
+from logging.handlers import SysLogHandler
+dlog = SysLogger(
+    log_identifier='healthd#sysmonitor',
+    log_facility=SysLogHandler.LOG_DAEMON,
+    log_level=logging.NOTICE,
+    enable_runtime_config=False
+)
+# debug
+
+
 #Subprocess which subscribes to STATE_DB FEATURE table for any update
 #and push service events to main process via queue
 class MonitorStateDbTask(ProcessTaskBase):
@@ -471,9 +485,11 @@ class Sysmonitor(ProcessTaskBase):
             self.state_db.connect(self.state_db.STATE_DB)
 
         try:
+            dlog.log_notice("Starting system bus monitoring main loop")
             monitor_system_bus = MonitorSystemBusTask(self.myQ)
             monitor_system_bus.task_run()
 
+            dlog.log_notice("Starting state db monitoring main loop")
             monitor_statedb_table = MonitorStateDbTask(self.myQ)
             monitor_statedb_table.task_run()
 
@@ -486,6 +502,7 @@ class Sysmonitor(ProcessTaskBase):
 
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
+        dlog.log_notice("Starting main loop")
         while True:
             try:
                 msg = self.myQ.get(timeout=QUEUE_TIMEOUT)
@@ -496,6 +513,7 @@ class Sysmonitor(ProcessTaskBase):
                 event_time = msg["time"]
                 logger.log_debug("Main process- received event:{} from source:{} time:{}".format(event,event_src,event_time))
                 logger.log_info("check_unit_status for [ "+event+" ] ")
+                dlog.log_notice("Received event:{} from source:{} time:{}".format(event,event_src,event_time))
                 self.check_unit_status(event)
             except (Empty, EOFError):
                 pass

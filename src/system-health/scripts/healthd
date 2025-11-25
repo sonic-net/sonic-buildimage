@@ -34,9 +34,11 @@ class HealthDaemon(DaemonBase):
         Constructor of HealthDaemon.
         """
         DaemonBase.__init__(self, SYSLOG_IDENTIFIER)
+        self.log_notice("Initialize daemon: started")
         self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
         self.stop_event = threading.Event()
+        self.log_notice("Initialize daemon: done")
 
     def deinit(self):
         """
@@ -81,8 +83,10 @@ class HealthDaemon(DaemonBase):
             if not manager.config.config_file_exists():
                 self.log_warning("System health configuration file not found, exit...")
                 return
+            self.log_notice("Starting system monitoring main loop")
             sysmon = Sysmonitor()
             sysmon.task_run()
+            self.log_notice("Starting service checking main loop")
             while self._run_checker(manager, chassis):
                 pass
         except ImportError:
@@ -92,6 +96,7 @@ class HealthDaemon(DaemonBase):
         sysmon.task_stop()
 
     def _run_checker(self, manager, chassis):
+        self.log_notice("Running checks: started")
         begin = time.time()
         stat = manager.check(chassis)
         self._process_stat(chassis, manager.config, stat)
@@ -101,10 +106,13 @@ class HealthDaemon(DaemonBase):
             self.log_notice(f'System health takes {elapse} seconds for one iteration')
             sleep_time_in_sec = 1
         if self.stop_event.wait(sleep_time_in_sec):
+            self.log_notice("Running checks: done")
             return False
+        self.log_notice("Running checks: done")
         return True
 
     def _process_stat(self, chassis, config, stat):
+        self.log_notice("Processing stats: started")
         from health_checker.health_checker import HealthChecker
         self._clear_system_health_table()
         for category, info in stat.items():
@@ -114,6 +122,7 @@ class HealthDaemon(DaemonBase):
                                  obj_data[HealthChecker.INFO_FIELD_OBJECT_MSG])
 
         self._db.set(self._db.STATE_DB, HealthDaemon.SYSTEM_HEALTH_TABLE_NAME, 'summary', HealthChecker.summary)
+        self.log_notice("Processing stats: done")
 
 
 #

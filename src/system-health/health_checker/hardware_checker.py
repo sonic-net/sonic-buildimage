@@ -4,6 +4,19 @@ from swsscommon.swsscommon import SonicV2Connector
 from .health_checker import HealthChecker
 
 
+# debug
+import logging
+from sonic_py_common.syslogger import SysLogger
+from logging.handlers import SysLogHandler
+dlog = SysLogger(
+    log_identifier='healthd#hardware_checker',
+    log_facility=SysLogHandler.LOG_DAEMON,
+    log_level=logging.NOTICE,
+    enable_runtime_config=False
+)
+# debug
+
+
 class HardwareChecker(HealthChecker):
     """
     Check system hardware status. For now, it checks ASIC, PSU and fan status.
@@ -14,18 +27,22 @@ class HardwareChecker(HealthChecker):
     PSU_TABLE_NAME = 'PSU_INFO'
 
     def __init__(self):
+        dlog.log_notice("Initialize module: started")
         HealthChecker.__init__(self)
         self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
+        dlog.log_notice("Initialize module: done")
 
     def get_category(self):
         return 'Hardware'
 
     def check(self, config):
+        dlog.log_notice("Checking hardware: started")
         self.reset()
         self._check_asic_status(config)
         self._check_fan_status(config)
         self._check_psu_status(config)
+        dlog.log_notice("Checking hardware: done")
 
     def _check_asic_status(self, config):
         """

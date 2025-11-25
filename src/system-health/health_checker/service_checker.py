@@ -15,17 +15,34 @@ logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "process-not-running"
 
+
+# debug
+import logging
+from sonic_py_common.syslogger import SysLogger
+from logging.handlers import SysLogHandler
+dlog = SysLogger(
+    log_identifier='healthd#service_checker',
+    log_facility=SysLogHandler.LOG_DAEMON,
+    log_level=logging.NOTICE,
+    enable_runtime_config=False
+)
+# debug
+
+
 def check_docker_image(image_name):
     """
     @summary: This function will check if docker image exists.
     @return:  True if the image exists, otherwise False.
     """
+    dlog.log_notice("Checking docker image({}): started".format(image_name))
     try:
         DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
         DOCKER_CLIENT.images.get(image_name)
+        dlog.log_notice("Checking docker image({}): done".format(image_name))
         return True
     except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
         logger.log_warning("Failed to get image '{}'. Error: '{}'".format(image_name, err))
+        dlog.log_notice("Checking docker image({}): done".format(image_name))
         return False
 
 class ServiceChecker(HealthChecker):
@@ -57,6 +74,8 @@ class ServiceChecker(HealthChecker):
     }
 
     def __init__(self):
+        dlog.log_notice("Initialize module: started")
+
         HealthChecker.__init__(self)
         self.container_critical_processes = {}
         # Containers that has invalid critical_processes file
@@ -71,6 +90,8 @@ class ServiceChecker(HealthChecker):
         self.load_critical_process_cache()
 
         self.events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
+
+        dlog.log_notice("Initialize module: done")
 
     def get_expected_running_containers(self, feature_table):
         """Get a set of containers that are expected to running on SONiC
@@ -146,6 +167,7 @@ class ServiceChecker(HealthChecker):
         Returns:
             running_containers: A set of running container names
         """
+        dlog.log_notice("Fetching current running docker containers: started")
         DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
         running_containers = set()
         ctrs = DOCKER_CLIENT.containers
@@ -159,6 +181,8 @@ class ServiceChecker(HealthChecker):
         except docker.errors.APIError as err:
             logger.log_error("Failed to retrieve the running container list. Error: '{}'".format(err))
 
+        dlog.log_notice("Fetching current running docker containers: done")
+
         return running_containers
 
     def get_critical_process_list_from_file(self, container, critical_processes_file):
@@ -171,6 +195,8 @@ class ServiceChecker(HealthChecker):
         Returns:
             critical_process_list: A list of critical process names
         """
+        dlog.log_notice("Fetching container({}) critical processes list: started".format(container))
+
         critical_process_list = []
 
         with open(critical_processes_file, 'r') as file:
@@ -187,6 +213,8 @@ class ServiceChecker(HealthChecker):
                     identifier_value = match.group(3).strip()
                     if identifier_key == "program" and identifier_value:
                         critical_process_list.append(identifier_value)
+
+        dlog.log_notice("Fetching container({}) critical processes list: done".format(container))
 
         return critical_process_list
 
@@ -339,10 +367,12 @@ class ServiceChecker(HealthChecker):
         Args:
             config (object): Health checker configuration.
         """
+        dlog.log_notice("Checking services: started")
         self.reset()
         self.check_by_monit(config)
         self.check_services(config)
         swsscommon.events_deinit_publisher(self.events_handle)
+        dlog.log_notice("Checking services: done")
 
     def _parse_supervisorctl_status(self, process_status):
         """Expected input:
@@ -379,6 +409,8 @@ class ServiceChecker(HealthChecker):
             config (object): Health checker configuration.
             feature_table (object): Feature table
         """
+        dlog.log_notice("Checking container({}) process existence: started".format(container_name))
+
         feature_name = self.container_feature_dict[container_name]
         if feature_name in feature_table:
             # We look into the 'FEATURE' table to verify whether the container is disabled or not.
@@ -409,3 +441,5 @@ class ServiceChecker(HealthChecker):
                             self.set_object_not_ok('Process', '{}:{}'.format(container_name, process_name), "Process '{}' in container '{}' is not running".format(process_name, container_name))
                         else:
                             self.set_object_ok('Process', '{}:{}'.format(container_name, process_name))
+
+        dlog.log_notice("Checking container({}) process existence: done".format(container_name))
