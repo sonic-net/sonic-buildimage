@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +27,8 @@ include $(PLATFORM_PATH)/docker-syncd-mlnx.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mlnx.mk
 include $(PLATFORM_PATH)/one-image.mk
+include $(PLATFORM_PATH)/onie.mk
+include $(PLATFORM_PATH)/kvm-image.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/mlnx-ffb.mk
 include $(PLATFORM_PATH)/issu-version.mk
@@ -39,6 +42,7 @@ include $(PLATFORM_PATH)/rshim.mk
 include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
+             $(SONIC_KVM_IMAGE) \
              $(DOCKER_FPM)
 
 # Inject mlnx sai into syncd
