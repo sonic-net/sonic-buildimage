@@ -280,11 +280,17 @@ install_deb_package $debs_path/{{pkgname}}
 fi
 {% endfor %}
 
+{% for wheel in installer_python_wheels.strip().split(' ') -%}
+install_pip_package {{wheel}}
+{% endfor %}
+
 # Install SONiC Device Data  (and its dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-device-data_*.deb
 
-# package for supporting password hardening
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality
+# package for supporting password hardening (cracklib-runtime is explicitly specified
+# here because it is technically considered a recommended package, and recommended
+# packages aren't installed by default here.)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality cracklib-runtime
 
 # Install pam-ldap, nss-ldap, ldap-utils
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
@@ -326,7 +332,7 @@ install_deb_package $debs_path/libnss-radius_*.deb
 sudo sed -i -e '/^passwd/s/ radius//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install a custom version of kdump-tools  (and its dependencies via 'apt-get -y install -f')
-if [ "$TARGET_BOOTLOADER" != uboot ]; then
+if [[ $CONFIGURED_ARCH == amd64 || $CONFIGURED_ARCH == arm64 ]]; then
     install_deb_package $debs_path/kdump-tools_*.deb
     cat $IMAGE_CONFIGS/kdump/kdump-tools | sudo tee -a $FILESYSTEM_ROOT/etc/default/kdump-tools > /dev/null
 
@@ -426,6 +432,7 @@ sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog-container.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 j2 $IMAGE_CONFIGS/rsyslog/rsyslog.d/00-sonic.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/rsyslog.d/00-sonic.conf
 sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.d/*.conf $FILESYSTEM_ROOT/etc/rsyslog.d/
+sudo cp $IMAGE_CONFIGS/rsyslog/rsyslog.d/*.json $FILESYSTEM_ROOT/etc/rsyslog.d/
 echo "rsyslog-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy containercfgd configuration files
