@@ -72,7 +72,7 @@ def ss(tmp_path, monkeypatch):
       - run_nsenter: simulates host FS + systemctl/docker calls
       - container_fs: dict for "container" files
       - host_fs: dict for "host" files
-      - config_db: dict for CONFIG_DB contents ( "TABLE|KEY" -> {field: value} )
+      - config_db: dict for CONFIG_DB contents ("TABLE|KEY" -> {field: value})
       - ConfigDBConnector: replaced with a fake that reads/writes config_db
     """
     if "systemd_stub" in sys.modules:
@@ -125,9 +125,17 @@ def ss(tmp_path, monkeypatch):
                 return 0, out, b""
             return 1, "" if text else b"", "No such file" if text else b"No such file"
 
-        # /bin/sh -lc "cat > /tmp/xxx"
-        if args[:2] == ["/bin/sh", "-lc"] and len(args) == 3 and args[2].startswith("cat > "):
-            tmp_path = args[2].split("cat > ", 1)[1].strip()
+        # /bin/sh -c "cat > /tmp/xxx"
+        if (
+            len(args) == 3
+            and args[0] == "/bin/sh"
+            and args[1] in ("-c", "-lc")  # accept both forms
+            and args[2].strip().startswith("cat > ")
+        ):
+            tmp_path = args[2].split("cat >", 1)[1].strip()
+            # strip quotes if shlex.quote added them
+            if tmp_path and tmp_path[0] == tmp_path[-1] and tmp_path[0] in ("'", '"'):
+                tmp_path = tmp_path[1:-1]
             host_fs[tmp_path] = input_bytes or (b"" if text else b"")
             return 0, "" if text else b"", "" if text else b""
 
@@ -199,8 +207,11 @@ def test_sync_no_change_fast_path(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
-    # No write path used
-    assert not any("/bin/sh" == c[1][0] and "-lc" in c[1] for c in commands)
+    # No write path used (no /bin/sh -c cat > tmp)
+    assert not any(
+        c[1][0] == "/bin/sh" and ("-c" in c[1] or "-lc" in c[1])
+        for c in commands
+    )
 
 
 def test_sync_updates_and_post_actions(ss):
@@ -285,6 +296,34 @@ def test_env_controls_telemetry_src_default(monkeypatch):
     ss = importlib.import_module("systemd_stub")
     assert ss.IS_V1_ENABLED is False
     assert ss._TELEMETRY_SRC.endswith("telemetry.sh")
+
+
+def test_telemetry_service_syncs_to_host_when_different(ss):
+    ss, container_fs, host_fs, commands, config_db = ss
+
+    # Prepare container unit content and host old content
+    container_fs[ss.CONTAINER_TELEMETRY_SERVICE] = b"UNIT-NEW"
+    host_fs[ss.HOST_TELEMETRY_SERVICE] = b"UNIT-OLD"
+
+    # Only include the telemetry service item to make the assertion clear
+    ss.SYNC_ITEMS[:] = [
+        ss.SyncItem(ss.CONTAINER_TELEMETRY_SERVICE, ss.HOST_TELEMETRY_SERVICE, 0o644)
+    ]
+
+    # Add post actions for telemetry.service
+    ss.POST_COPY_ACTIONS[ss.HOST_TELEMETRY_SERVICE] = [
+        ["sudo", "systemctl", "daemon-reload"],
+        ["sudo", "systemctl", "restart", "telemetry"],
+    ]
+
+    ok = ss.ensure_sync()
+    assert ok is True
+    assert host_fs[ss.HOST_TELEMETRY_SERVICE] == b"UNIT-NEW"
+
+    # Verify systemctl actions were invoked
+    post_cmds = [args for _, args in commands if args and args[0] == "sudo"]
+    assert ("sudo", "systemctl", "daemon-reload") in post_cmds
+    assert ("sudo", "systemctl", "restart", "telemetry") in post_cmds
 
 
 # ─────────────────────────── New tests for CONFIG_DB reconcile ───────────────────────────
