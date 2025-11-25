@@ -97,7 +97,7 @@ def host_read_bytes(path_on_host: str) -> Optional[bytes]:
 
 def host_write_atomic(dst_on_host: str, data: bytes, mode: int) -> bool:
     tmp_path = f"/tmp/{os.path.basename(dst_on_host)}.tmp"
-    rc, _, err = run_nsenter(["/bin/sh", "-lc", f"cat > {shlex.quote(tmp_path)}"], text=False, input_bytes=data)
+    rc, _, err = run_nsenter(["/bin/sh", "-c", f"cat > {shlex.quote(tmp_path)}"], text=False, input_bytes=data)
     if rc != 0:
         emsg = err.decode(errors="ignore") if isinstance(err, (bytes, bytearray)) else str(err)
         logger.log_error(f"host write tmp failed: {emsg.strip()}")

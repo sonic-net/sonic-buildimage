@@ -59,8 +59,8 @@ def ss(tmp_path, monkeypatch):
                 out = host_fs[path]
                 return 0, (out if not text else out.decode("utf-8", "ignore")), b"" if not text else ""
             return 1, b"" if not text else "", b"No such file" if text else b"No such file"
-        # /bin/sh -lc "cat > /tmp/xxx"
-        if args[:2] == ["/bin/sh", "-lc"] and len(args) == 3 and args[2].startswith("cat > "):
+        # /bin/sh -c "cat > /tmp/xxx"
+        if args[:2] == ["/bin/sh", "-c"] and len(args) == 3 and args[2].startswith("cat > "):
             tmp_path = args[2].split("cat > ", 1)[1].strip()
             host_fs[tmp_path] = input_bytes or (b"" if text else b"")
             return 0, "" if text else b"", "" if text else b""
@@ -130,7 +130,7 @@ def test_sync_no_change_fast_path(ss):
 
     ok = ss.ensure_sync()
     assert ok is True
-    assert not any("/bin/sh" == c[1][0] and "-lc" in c[1] for c in commands)
+    assert not any("/bin/sh" == c[1][0] and "-c" in c[1] for c in commands)
 
 
 def test_sync_updates_and_post_actions(ss):
