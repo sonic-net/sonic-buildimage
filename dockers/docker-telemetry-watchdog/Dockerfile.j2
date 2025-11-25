@@ -40,7 +40,7 @@ COPY --from=builder /watchdog/src/cmd_list.json /cmd_list.json
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
