@@ -36,7 +36,7 @@ GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
 # CONFIG_DB reconcile env
 GNMI_VERIFY_ENABLED = get_bool_env_var("TELEMETRY_CLIENT_CERT_VERIFY_ENABLED", default=False)
 GNMI_CLIENT_CNAME = os.getenv("TELEMETRY_CLIENT_CNAME", "")
-GNMI_CLIENT_ROLE = os.getenv("GNMI_CLIENT_ROLE", "gnmi_read")
+GNMI_CLIENT_ROLE = os.getenv("GNMI_CLIENT_ROLE", "gnmi_show_readonly")
 
 logger.log_notice(f"IS_V1_ENABLED={IS_V1_ENABLED}")
 logger.log_notice(f"GNMI_CLIENT_ROLE={GNMI_CLIENT_ROLE}")
