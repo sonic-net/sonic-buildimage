@@ -2161,6 +2161,10 @@ class BGPConfigDaemon:
             self.config_mode = db_entry['docker_routing_config_mode']
         else:
             self.config_mode = "separated"
+        if 'suppress-fib-pending' in db_entry:
+            self.suppress_fib_pending = db_entry['suppress-fib-pending']
+        else:
+            self.suppress_fib_pending = 'disabled'
         # VRF ==> local_as
         self.bgp_asn = {}
         # VRF ==> confederation peer list
@@ -2365,6 +2369,51 @@ class BGPConfigDaemon:
             self.metadata_asn = None
         else:
             self.metadata_asn = data['bgp_asn']
+
+        # Handle suppress-fib-pending configuration
+        if data is not None and 'suppress-fib-pending' in data:
+            new_suppress_fib_pending = data['suppress-fib-pending']
+            if new_suppress_fib_pending != self.suppress_fib_pending:
+                syslog.syslog(syslog.LOG_INFO,
+                    '[bgp cfgd] suppress-fib-pending changed from {} to {}'.format(
+                        self.suppress_fib_pending, new_suppress_fib_pending))
+                self.suppress_fib_pending = new_suppress_fib_pending
+                self.__apply_suppress_fib_pending()
+        elif data is None:
+            # Reset to default when metadata is deleted
+            if self.suppress_fib_pending != 'disabled':
+                syslog.syslog(syslog.LOG_INFO,
+                    '[bgp cfgd] suppress-fib-pending reset to disabled')
+                self.suppress_fib_pending = 'disabled'
+                self.__apply_suppress_fib_pending()
+
+    def __apply_suppress_fib_pending(self):
+        # Apply to default VRF if it has BGP configured
+        if self.metadata_asn is not None:
+            self.__apply_suppress_fib_pending_to_vrf(self.DEFAULT_VRF, self.metadata_asn)
+
+        # Apply to all non-default VRFs
+        for vrf, local_asn in self.bgp_asn.items():
+            self.__apply_suppress_fib_pending_to_vrf(vrf, local_asn)
+
+    def __apply_suppress_fib_pending_to_vrf(self, vrf, local_asn):
+        if self.suppress_fib_pending == 'enabled':
+            cmd = 'bgp suppress-fib-pending'
+        else:
+            cmd = 'no bgp suppress-fib-pending'
+
+        # frrcfgd uses 'router bgp <asn> vrf <vrf>' format for all VRFs including 'default'
+        command = "vtysh -c 'configure terminal' -c 'router bgp {} vrf {}' -c '{}'".format(
+            local_asn, vrf, cmd)
+
+        if self.__run_command('DEVICE_METADATA', command):
+            syslog.syslog(syslog.LOG_INFO,
+                '[bgp cfgd] Applied suppress-fib-pending {} to VRF {}'.format(
+                    self.suppress_fib_pending, vrf))
+        else:
+            syslog.syslog(syslog.LOG_ERR,
+                '[bgp cfgd] Failed to apply suppress-fib-pending {} to VRF {}'.format(
+                    self.suppress_fib_pending, vrf))
 
     def bfd_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](bfd) value for {} changed to {}'.format(key, data))
@@ -2695,6 +2744,8 @@ class BGPConfigDaemon:
                             if self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_DEBUG, 'set local_asn %s to VRF %s, re-apply all VRF related tables' % (dval.data, vrf))
                                 self.bgp_asn[vrf] = dval.data
+                                # Apply suppress-fib-pending to newly created VRF
+                                self.__apply_suppress_fib_pending_to_vrf(vrf, dval.data)
                                 self.__apply_dep_vrf_table(vrf, 'ROUTE_REDISTRIBUTE')
                                 dval.status = CachedDataWithOp.STAT_SUCC
                             else:
