@@ -10,15 +10,14 @@ route-map FROM_FABRICSPINE_V4 deny 100
 !
 route-map FROM_FABRICSPINE_V4 permit 1000
 !
-route-map TO_FABRICSPINE_V4 deny 1
-  match ip address prefix-list PL_LoopbackV4
-exit
-!
 route-map TO_FABRICSPINE_V4 permit 100 
  match ip address prefix-list DEFAULT_IPV4 
 ! 
 route-map TO_FABRICSPINE_V4 deny 200 
  match community UPPERSPINE_COMMUNITY 
-! 
+!
+route-map TO_FABRICSPINE_V4 permit 300
+  match ip address prefix-list PL_LoopbackV4
+!
 route-map TO_FABRICSPINE_V4 permit 1000
 !
