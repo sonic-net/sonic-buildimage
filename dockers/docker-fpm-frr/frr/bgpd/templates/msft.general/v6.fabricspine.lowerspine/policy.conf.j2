@@ -3,24 +3,18 @@
 !
 ipv6 prefix-list DEFAULT_IPV6 permit ::/0
 !
-{% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
-{% set lo_ipv4 = get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback0") | ip %}
-!
 route-map FROM_LOWERSPINE_V6 permit 100
   set ipv6 next-hop prefer-global
   on-match next
 !
-route-map FROM_LOWERSPINE_V6 permit 200
-{% if lo_ipv4 is not none%}
-  set originator-id {{ lo_ipv4 }}
-{% endif %}
+route-map FROM_LOWERSPINE_V6 permit 1000
 !
 route-map TO_LOWERSPINE_V6 deny 100
-  match ip address prefix-list DEFAULT_IPV6
+  match ipv6 address prefix-list DEFAULT_IPV6
 !
 route-map TO_LOWERSPINE_V6 permit 200
   match ipv6 address prefix-list PL_LoopbackV6
 !
-route-map TO_LOWERSPINE_V6 permit 300
+route-map TO_LOWERSPINE_V6 permit 1000
   set community {{ constants.bgp.fabric_t2_community  }} additive
 !

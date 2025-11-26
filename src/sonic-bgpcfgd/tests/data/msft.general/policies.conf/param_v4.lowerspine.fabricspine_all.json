@@ -12,7 +12,8 @@
     },
     "constants": {
         "bgp": {
-            "fabric_t2_community": "12345:12345"
+            "fabric_t2_community": "12345:12345",
+            "upperspine_community": "44444:44444"
         }
     },
     "bgp_session": {

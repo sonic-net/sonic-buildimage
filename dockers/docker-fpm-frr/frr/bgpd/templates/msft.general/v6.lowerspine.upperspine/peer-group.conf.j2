@@ -4,6 +4,7 @@
   neighbor UPPERSPINE_V6 peer-group
   address-family ipv6 unicast
     neighbor UPPERSPINE_V6 activate
+    neighbor UPPERSPINE_V6 next-hop-self force
     neighbor UPPERSPINE_V6 soft-reconfiguration inbound
     neighbor UPPERSPINE_V6 route-map FROM_UPPERSPINE_V6 in
     neighbor UPPERSPINE_V6 route-map TO_UPPERSPINE_V6 out

@@ -82,3 +82,28 @@ class TestCfgGen(TestCase):
     def test_bgpd_frr_bmp(self):
         extra_data = {"FEATURE": {"frr_bmp": {"state": "enabled"}}}
         self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_bmp.conf', extra_data=extra_data))
+
+    def test_bgpd_ut2_confed_config(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "UpperSpineRouter"}},
+                      "BGP_DEVICE_GLOBAL": {"CONFED": {"asn": 65000, "peers": "65001"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_confed.conf', extra_data=extra_data))
+
+    def test_bgpd_ut2_masic_confed_config(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "UpperSpineRouter", "sub_role": "FrontEnd"}},
+                      "BGP_DEVICE_GLOBAL": {"CONFED": {"asn": 65000, "peers": "65001"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_confed_masic.conf', extra_data=extra_data))
+
+    def test_bgpd_lt2_confed_config(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "LowerSpineRouter"}},
+                      "BGP_DEVICE_GLOBAL": {"CONFED": {"asn": 65000, "peers": "65001 65002"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_confed_lt2.conf', extra_data=extra_data))
+
+    def test_bgpd_lt2_confed_config_2(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "LowerSpineRouter"}},
+                      "BGP_DEVICE_GLOBAL": {"CONFED": {"asn": 65000, "peers": "65001;65002"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_confed_lt2.conf', extra_data=extra_data))
+
+    def test_bgpd_ft2_confed_config(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"type": "FabricSpineRouter"}},
+                      "BGP_DEVICE_GLOBAL": {"CONFED": {"asn": 65000, "peers": "65001"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_confed.conf', extra_data=extra_data))

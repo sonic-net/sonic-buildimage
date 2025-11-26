@@ -10,9 +10,11 @@
         }
     },
     "constants": {
-        "bgp": {
-            "fabric_t2_community": "12345:12345"
-        }
+    "bgp": {
+        "fabric_t2_community": "12345:12345",
+        "hide_internal_community": "55555:55555",
+        "upperspine_community": "44444:44444"
+    }
     },
     "bgp_session": {
         "asn": "11111",

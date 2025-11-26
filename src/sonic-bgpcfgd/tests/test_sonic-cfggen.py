@@ -8,6 +8,38 @@ TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 DATA_PATH = "tests/data/sonic-cfggen/"
 CONSTANTS_PATH = os.path.abspath('../../files/image_config/constants/constants.yml')
 
+def compress_comments(raw_config):
+    comment_counter = 0
+    output = []
+    for line in raw_config.split('\n'):
+        stripped_line = line.strip()
+        # Skip empty lines
+        if stripped_line == '':
+            pass
+        # Write lines without comments
+        elif not stripped_line.startswith('!'):
+            if comment_counter > 0:
+                output.append("!")
+                comment_counter = 0
+            output.append(line)
+        # Write non-empty comments
+        elif stripped_line.startswith('!') and len(stripped_line) > 1:
+            if comment_counter > 0:
+                output.append("!")
+                comment_counter = 0
+            output.append(line)
+        # Count empty comments
+        else: # stripped_line == '!'
+            comment_counter += 1
+    # Flush last comment if we have one
+    if comment_counter > 0:
+        output.append("!")
+    return "\n".join(output) + "\n"
+
+def write_result(fname, raw_result):
+    with open(fname, 'w') as fp:
+        raw_result_w_commpressed_comments = compress_comments(raw_result)
+        fp.write(raw_result_w_commpressed_comments)
 
 def run_test(name, template_path, json_path, match_path):
     template_path = os.path.join(TEMPLATE_PATH, template_path)
@@ -20,7 +52,7 @@ def run_test(name, template_path, json_path, match_path):
     assert "None" not in raw_generated_result, "Test %s" % name
     canonical_generated_result = ConfigMgr.to_canonical(raw_generated_result)
     match_path = os.path.join(DATA_PATH, match_path)
-    # only for development write_result(match_path, raw_generated_result)
+    #only for development   write_result(match_path, raw_generated_result)
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
     canonical_saved_result = ConfigMgr.to_canonical(raw_saved_result)
@@ -229,3 +261,28 @@ def test_prefix_list_del_radian():
              "bgpd/radian/del_radian.conf.j2",
              "radian/del_radian.json",
              "radian/del_radian.conf")
+
+def test_bgp_confed_ut2_multi_asic():
+    run_test("BGP Confederation Upper T2 Multi-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.json",
+             "bgpd.main.conf.j2/multi_asic_upper_t2.conf")
+
+def test_bgp_confed_ut2_single_asic():
+    run_test("BGP Confederation Upper T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_upper_t2.json",
+             "bgpd.main.conf.j2/single_asic_upper_t2.conf")
+
+def test_bgp_confed_lt2_single_asic():
+    run_test("BGP Confederation Lower T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_lt2.json",
+             "bgpd.main.conf.j2/single_asic_lt2.conf")
+
+def test_bgp_confed_ft2_single_asic():
+    run_test("BGP Confederation Fabric T2 Single-ASIC",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/single_asic_ft2.json",
+             "bgpd.main.conf.j2/single_asic_ft2.conf")
+
