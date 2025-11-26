@@ -16,6 +16,8 @@ pub enum Error {
     IO(#[from] std::io::Error),
     #[error("UTF-8 parsing error")]
     UTF8(#[from] std::str::Utf8Error),
+    #[error("Syslog initialization error: {0}")]
+    Syslog(String),
 }
 
 impl<'a> Container<'a> {
