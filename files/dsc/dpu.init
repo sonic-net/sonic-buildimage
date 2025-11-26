@@ -77,6 +77,8 @@ function start_polaris()
     sleep 5
     INTERFACE="eth0-midplane"
     if ip link show "$INTERFACE" &> /dev/null; then
+        echo "dhclient -r $INTERFACE"
+        /usr/sbin/dhclient -r $INTERFACE
         echo "sudo networkctl reconfigure $INTERFACE"
         sudo networkctl reconfigure $INTERFACE
     fi
