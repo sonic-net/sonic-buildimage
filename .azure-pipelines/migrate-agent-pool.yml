@@ -15,41 +15,42 @@ parameters:
     type: string
     default: 'sonic-net/sonic-swss-common sonic-net/sonic-linux-kernel sonic-net/sonic-sairedis sonic-net/sonic-swss krambn/p4c-bm p4lang/p4-hlir sonic-net/sonic-dbsyncd sonic-net/sonic-py-swsssdk sonic-net/sonic-snmpagent p4lang/ptf sonic-net/sonic-utilities aristanetworks/sonic sonic-net/sonic-platform-common sonic-net/sonic-platform-daemons sonic-net/sonic-platform-pdk-pde sonic-net/sonic-frr p4lang/p4-hlir Mellanox/SAI-P4-BM aristanetworks/sonic Mellanox/hw-mgmt p/redis-dump-load secdev/scapy sonic-net/sonic-mgmt-framework sonic-net/sonic-ztp sonic-net/sonic-restapi sonic-net/sonic-mgmt-common sonic-net/sonic-wpa-supplicant sonic-net/saibcm-modules nokia/sonic-platform sonic-net/sonic-linkmgrd sonic-net/sonic-pins p4lang/ptf sonic-net/sonic-dhcp-relay sonic-net/sonic-host-services sonic-net/sonic-gnmi sonic-net/sonic-bmp sonic-net/sonic-genl-packet sonic-net/sonic-dhcpmon sonic-net/sonic-dash-api sonic-net/sonic-dash-ha sonic-net/sonic-stp Marvell-switching/sonic-platform-marvell sonic-net/sonic-platform-vpp Marvell-switching/mrvl-prestera Marvell-switching/sonic-platform-arm64 openconfig/gnoi Marvell-switching/mrvl-teralynx Supervisor/supervisor'
 
-jobs:
-  - job: MigrateAgentPools
-    pool: sonic-ubuntu-1c
-    variables:
-      group: 'sonicbld'
-    steps:
-      - checkout: none
-      - script: |
-          set -ex
-          sudo apt update
-          sudo apt install gh jq -y
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          git config --global user.email "sonicbld@microsoft.com"
-          git config --global user.name "Sonic Automation"
-          git config --global pull.rebase false
-          echo $TOKEN | gh auth login --with-token
-        env:
-          TOKEN: $(GITHUB-TOKEN)
-        displayName: Setup env
-      - script: |
-          if [ ! -f "$(migrate_script)" ]; then
-            echo "Migration script not found at $(migrate_script)"
-            ls -la
-            exit 1
-          fi
-          chmod +x "$(migrate_script)"
-          scripts/migrate_agent_pool.sh
-        env:
-          GITHUB_USER: mssonicbld
-          POOL_MAPPING: $(POOL_MAPPING)
-          BRANCHES: $(BRANCHES)
-          SKIP_REPOS: $(SKIP_REPOS)
-          TARGET_REPOS: $(TARGET_REPOS)
-        displayName: Migrating Agent Pool
-      - script: |
-          set -ex
-          [ -f /tmp/logs/migration_results.log ] && cat /tmp/logs/migration_results.log || echo "No results log found."
-        displayName: Show Results
+pool: sonic-ubuntu-1c
+variables:
+  group: sonicbld
+
+ 
+steps:
+  - checkout: self
+    clean: true
+  - bash: |
+      set -ex
+      sudo apt update
+      sudo apt install gh jq -y
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      git config --global user.email "sonicbld@microsoft.com"
+      git config --global user.name "Sonic Automation"
+      git config --global pull.rebase false
+      echo $TOKEN | gh auth login --with-token
+    env:
+      TOKEN: $(GITHUB-TOKEN)
+    displayName: Setup env
+  - bash: |
+      if [ ! -f "$(migrate_script)" ]; then
+        echo "Migration script not found at $(migrate_script)"
+        ls -la
+        exit 1
+      fi
+      chmod +x "$(migrate_script)"
+      scripts/migrate_agent_pool.sh
+    env:
+      GITHUB_USER: mssonicbld
+      POOL_MAPPING: $(POOL_MAPPING)
+      BRANCHES: $(BRANCHES)
+      SKIP_REPOS: $(SKIP_REPOS)
+      TARGET_REPOS: $(TARGET_REPOS)
+    displayName: Migrating Agent Pool
+  - bash: |
+      set -ex
+      [ -f /tmp/logs/migration_results.log ] && cat /tmp/logs/migration_results.log || echo "No results log found."
+    displayName: Show Results
