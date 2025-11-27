@@ -20,7 +20,6 @@ jobs:
     pool: sonic-ubuntu-1c
     variables:
       group: 'sonicbld'
-      migrate_script: 'scripts/migrate_agent_pool.sh'
     steps:
       - checkout: none
       - script: |
@@ -42,7 +41,7 @@ jobs:
             exit 1
           fi
           chmod +x "$(migrate_script)"
-          "$(migrate_script)"
+          scripts/migrate_agent_pool.sh
         env:
           GITHUB_USER: mssonicbld
           POOL_MAPPING: $(POOL_MAPPING)
