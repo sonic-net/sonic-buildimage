@@ -85,6 +85,9 @@
                         "name": "psu1/1",
                         "status_led": {
                             "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
                         }
                     }
                 ],
@@ -98,6 +101,9 @@
                     {
                         "name": "psu2/1",
                         "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
                             "controllable": false
                         }
                     }
