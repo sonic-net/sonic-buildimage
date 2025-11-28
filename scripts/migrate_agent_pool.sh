@@ -46,7 +46,7 @@ replace_in_files() {
     # iterate only yaml files that are pipelines related and can be tracked by git
     targets=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") # folders or files to check
 
-    git clone https://$GITHUB_USER:$TOKEN@github.com/$repo "$TMP_DIR/${repo##*/}" || { echo "Failed to clone repository: $repo"; return 1; }
+    cd "$TMP_DIR/${repo##*/}" || git clone https://$GITHUB_USER:$TOKEN@github.com/$repo "$TMP_DIR/${repo##*/}" || { echo "Failed to clone repository: $repo"; return 1; }
     cd "$TMP_DIR/${repo##*/}" || { echo "Failed to change directory to temp repo dir"; return 1; }
     echo "Migrating agent pools in files under $repo"
 
