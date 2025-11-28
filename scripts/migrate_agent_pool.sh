@@ -58,7 +58,7 @@ process_repo() {
     echo "\n============= Processing repository: ${repo} ============="
 
     git clone https://github.com/$repo "${TMP_DIR}/${REPO_BASENAME}"
-    pushd ${REPO_BASENAME}
+    pushd "${TMP_DIR}/${REPO_BASENAME}"
 
     if ! git remote | grep -q "fork"; then
         git remote add fork https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
