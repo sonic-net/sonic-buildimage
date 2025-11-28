@@ -45,7 +45,7 @@ steps:
       GITHUB_USER: mssonicbld
       POOL_MAPPING: $(POOL_MAPPING)
       BRANCHES: $(BRANCHES)
-      SKIP_REPOS: ${{SKIP_REPOS}}
+      SKIP_REPOS: ${{ parameters.SKIP_REPOS }}  # make it optional
       TARGET_REPOS: $(TARGET_REPOS)
     displayName: Migrating Agent Pool
   - bash: |
