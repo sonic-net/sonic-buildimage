@@ -10,7 +10,7 @@ parameters:
     default: 'master main 202511 202505 202411 202405 202311'
   - name: SKIP_REPOS
     type: string
-    default: ''
+    default: 'none'
   - name: TARGET_REPOS
     type: string
     default: 'sonic-net/sonic-swss-common sonic-net/sonic-linux-kernel sonic-net/sonic-sairedis sonic-net/sonic-swss krambn/p4c-bm p4lang/p4-hlir sonic-net/sonic-dbsyncd sonic-net/sonic-py-swsssdk sonic-net/sonic-snmpagent p4lang/ptf sonic-net/sonic-utilities aristanetworks/sonic sonic-net/sonic-platform-common sonic-net/sonic-platform-daemons sonic-net/sonic-platform-pdk-pde sonic-net/sonic-frr p4lang/p4-hlir Mellanox/SAI-P4-BM aristanetworks/sonic Mellanox/hw-mgmt p/redis-dump-load secdev/scapy sonic-net/sonic-mgmt-framework sonic-net/sonic-ztp sonic-net/sonic-restapi sonic-net/sonic-mgmt-common sonic-net/sonic-wpa-supplicant sonic-net/saibcm-modules nokia/sonic-platform sonic-net/sonic-linkmgrd sonic-net/sonic-pins p4lang/ptf sonic-net/sonic-dhcp-relay sonic-net/sonic-host-services sonic-net/sonic-gnmi sonic-net/sonic-bmp sonic-net/sonic-genl-packet sonic-net/sonic-dhcpmon sonic-net/sonic-dash-api sonic-net/sonic-dash-ha sonic-net/sonic-stp Marvell-switching/sonic-platform-marvell sonic-net/sonic-platform-vpp Marvell-switching/mrvl-prestera Marvell-switching/sonic-platform-arm64 openconfig/gnoi Marvell-switching/mrvl-teralynx Supervisor/supervisor'
@@ -45,7 +45,7 @@ steps:
       GITHUB_USER: mssonicbld
       POOL_MAPPING: $(POOL_MAPPING)
       BRANCHES: $(BRANCHES)
-      SKIP_REPOS: ${{ parameters.SKIP_REPOS }}  # make it optional
+      SKIP_REPOS: $(SKIP_REPOS)
       TARGET_REPOS: $(TARGET_REPOS)
     displayName: Migrating Agent Pool
   - bash: |
