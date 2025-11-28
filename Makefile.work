@@ -72,9 +72,9 @@ USER := $(shell id -un)
 PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
-DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:trixie uname -m)
 else
-DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+DOCKER_MACHINE := $(shell docker run --rm debian:trixie uname -m)
 endif
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
@@ -217,6 +217,7 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_MAIN_VERSION=$(FIPS_GOLANG_MAIN_VERSION) \
 	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 

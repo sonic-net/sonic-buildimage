@@ -94,7 +94,7 @@
 #if _SIMPLE_MEMORY_ALLOCATION_
 #include <linux/dma-mapping.h>
 #ifndef CONFIG_CMA
-#define DMA_MAX_ALLOC_SIZE (1 << (MAX_ORDER - 1 + PAGE_SHIFT)) /* Maximum size the kernel can allocate in one allocation */
+#define DMA_MAX_ALLOC_SIZE (1 << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT)) /* Maximum size the kernel can allocate in one allocation */
 #endif /* !CONFIG_CMA */
 #endif /* _SIMPLE_MEMORY_ALLOCATION_ */
 
@@ -139,7 +139,7 @@
 #endif
 
 #ifndef KMALLOC_MAX_SIZE
-#define KMALLOC_MAX_SIZE (1UL << (MAX_ORDER - 1 + PAGE_SHIFT))
+#define KMALLOC_MAX_SIZE (1UL << (MAX_PAGE_ORDER - 1 + PAGE_SHIFT))
 #endif
 
 /* Compatibility */
