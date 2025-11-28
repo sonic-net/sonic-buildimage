@@ -1,0 +1,38 @@
+From d2b1ac4e71c37510147bea960d9fce9b71e6d649 Mon Sep 17 00:00:00 2001
+From: Liping Xu <xuliping@microsoft.com>
+Date: Fri, 28 Nov 2025 12:17:11 +0000
+Subject: [PATCH] mgmt: Note that a DS is locked or not in output
+
+---
+ mgmtd/mgmt_ds.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/mgmtd/mgmt_ds.c b/mgmtd/mgmt_ds.c
+index 91592df22..a0e6c8339 100644
+--- a/mgmtd/mgmt_ds.c
++++ b/mgmtd/mgmt_ds.c
+@@ -514,15 +514,21 @@ void mgmt_ds_dump_tree(struct vty *vty, struct mgmt_ds_ctx *ds_ctx,
+ 
+ void mgmt_ds_status_write_one(struct vty *vty, struct mgmt_ds_ctx *ds_ctx)
+ {
++	uint64_t session_id;
++	bool locked;
++
+ 	if (!ds_ctx) {
+ 		vty_out(vty, "    >>>>> Datastore Not Initialized!\n");
+ 		return;
+ 	}
+ 
++	locked = mgmt_ds_is_locked(ds_ctx, &session_id);
+ 	vty_out(vty, "  DS: %s\n", mgmt_ds_id2name(ds_ctx->ds_id));
+ 	vty_out(vty, "    DS-Hndl: \t\t\t%p\n", ds_ctx);
+ 	vty_out(vty, "    Config: \t\t\t%s\n",
+ 		ds_ctx->config_ds ? "True" : "False");
++	vty_out(vty, "    Locked: \t\t\t%s Session-ID: %Lu\n", locked ? "True" : "False",
++		locked ? session_id : 0);
+ }
+ 
+ void mgmt_ds_status_write(struct vty *vty)
+-- 
+2.34.1
+
