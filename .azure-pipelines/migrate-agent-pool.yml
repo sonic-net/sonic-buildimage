@@ -43,10 +43,10 @@ steps:
       scripts/migrate_agent_pool.sh
     env:
       GITHUB_USER: mssonicbld
-      POOL_MAPPING: $(POOL_MAPPING)
-      BRANCHES: $(BRANCHES)
-      SKIP_REPOS: $(SKIP_REPOS)
-      TARGET_REPOS: $(TARGET_REPOS)
+      POOL_MAPPING: ${{ parameters.POOL_MAPPING }}
+      BRANCHES: ${{ parameters.BRANCHES }}
+      SKIP_REPOS: ${{ parameters.SKIP_REPOS }}
+      TARGET_REPOS: ${{ parameters.TARGET_REPOS }}
     displayName: Migrating Agent Pool
   - bash: |
       set -ex
