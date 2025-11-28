@@ -89,6 +89,7 @@ process_repo() {
     if ! git remote | grep -q "origin"; then
         git remote add origin "https://github.com/${repo}.git"
     fi
+    git remote set-url origin "https://github.com/${repo}.git"
     if ! git remote | grep -q "fork"; then
         git remote add fork "https://github.com/${GITHUB_USER}/${REPO_BASENAME}.git"
     fi
@@ -121,7 +122,7 @@ process_repo() {
         if [ -n "$(git -C "$repo_path" diff --cached --name-only)" ]; then
             
             git commit -s -m "${COMMIT_MSG}"
-            git push fork "${NEW_BRANCH}" -f
+            git push https://mssonicbld:$TOKEN@github.com/mssonicbld/"$GITHUB_USER}/${REPO_BASENAME}".git fork "${NEW_BRANCH}"
 
             echo "Creating PR for branch ${branch} in repository ${repo}"
 

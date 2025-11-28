@@ -42,6 +42,7 @@ steps:
       chmod +x scripts/migrate_agent_pool.sh
       scripts/migrate_agent_pool.sh
     env:
+      TOKEN: $(GITHUB-TOKEN)
       GITHUB_USER: mssonicbld
       POOL_MAPPING: ${{ parameters.POOL_MAPPING }}
       BRANCHES: ${{ parameters.BRANCHES }}
