@@ -19,6 +19,7 @@ GITHUB_USER="${GITHUB_USER:-mssonicbld}"
 COMMIT_MSG="Automated agent pool migration"
 PR_TITLE="Automated agent pool migration"
 PR_BODY="This PR is created for automated agent pool migration across branches."
+echo token $TOKEN
 
 PR_BODY+="
 Agent pools to be migrated:
