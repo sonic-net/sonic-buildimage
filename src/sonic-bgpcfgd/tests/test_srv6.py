@@ -108,6 +108,23 @@ def test_uDT46_add_vrf1():
     print(loc_mgr.directory.data)
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
 
+def test_uDT46_add_vrf_default():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:FE00::/64", {
+        'action': 'uDT46',
+        'decap_vrf': 'default'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1:fe00::/64 locator loc1 behavior uDT46 vrf default'
+    ])
+
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe00::\\64")
+
 def test_uN_del():
     loc_mgr, sid_mgr = constructor()
     assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
@@ -154,6 +171,33 @@ def test_uDT46_del_vrf1():
 
     assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
     assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
+
+def test_uDT46_del_vrf_default():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    # add a uN action first to make the uDT46 action not the last function
+    assert sid_mgr.set_handler("loc1|FCBB:BBBB:1::/48", {
+        'action': 'uN'
+    })
+
+    # add the uDT46 action
+    assert sid_mgr.set_handler("loc1|FCBB:BBBB:1:FE00::/64", {
+        'action': 'uDT46',
+        "decap_vrf": "default"
+    })
+
+    # test the deletion of uDT46
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:1:FE00::/64",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'static-sids',
+            'no sid fcbb:bbbb:1:fe00::/64 locator loc1 behavior uDT46 vrf default'
+    ])
+
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:fe00::\\64")
 
 def test_invalid_add():
     _, sid_mgr = constructor()
