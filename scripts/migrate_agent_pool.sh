@@ -81,7 +81,7 @@ process_repo() {
         if git show-ref --verify --quiet "refs/remotes/fork/${NEW_BRANCH}"; then
             git branch -D "${NEW_BRANCH}"
         fi
-        git checkout -c "${NEW_BRANCH}" origin/"${branch}"
+        git checkout -b "${NEW_BRANCH}" origin/"${branch}"
 
         echo "Migrating agent pools in files under $repo"
         for replacement in $POOL_MAPPING; do
