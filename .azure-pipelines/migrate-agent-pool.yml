@@ -34,12 +34,12 @@ steps:
       TOKEN: $(GITHUB-TOKEN)
     displayName: Setup env
   - bash: |
-      if [ ! -f "$(migrate_script)" ]; then
-        echo "Migration script not found at $(migrate_script)"
+      if [ ! -f scripts/migrate_agent_pool.sh ]; then
+        echo "Migration script not found at scripts/migrate_agent_pool.sh"
         ls -la
         exit 1
       fi
-      chmod +x "$(migrate_script)"
+      chmod +x scripts/migrate_agent_pool.sh
       scripts/migrate_agent_pool.sh
     env:
       GITHUB_USER: mssonicbld
