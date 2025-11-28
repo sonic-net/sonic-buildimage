@@ -134,8 +134,8 @@ index 4b0ee78c12a7..7fa133a5cc07 100644
  	 * Send the Release SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_release_sid(zclient, ctx);
-+	ret = srv6_manager_release_sid(zclient, ctx, locator_name);
+-	ret = srv6_manager_release_sid(bgp_zclient, ctx);
++	ret = srv6_manager_release_sid(bgp_zclient, ctx, locator_name);
  	if (ret < 0) {
  		zlog_warn("%s: error releasing SRv6 SID!", __func__);
  		return;
@@ -197,8 +197,8 @@ index 70bc48a41e92..48f7560bc755 100644
  	 * Send the Release SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_release_sid(zclient, ctx);
-+	ret = srv6_manager_release_sid(zclient, ctx, locator_name);
+-	ret = srv6_manager_release_sid(isis_zclient, ctx);
++	ret = srv6_manager_release_sid(isis_zclient, ctx, locator_name);
  	if (ret < 0) {
  		zlog_warn("%s: error releasing SRv6 SID!", __func__);
  		return;
@@ -278,8 +278,8 @@ index 82a2d41afa6f..9f462550a77d 100644
  	}
  
  	/* remove the SRv6 SID from the zebra RIB */
--	ret = srv6_manager_release_sid(zclient, &ctx);
-+	ret = srv6_manager_release_sid(zclient, &ctx, sid->locator->name);
+-	ret = srv6_manager_release_sid(static_zclient, &ctx);
++	ret = srv6_manager_release_sid(static_zclient, &ctx, sid->locator->name);
  	if (ret == ZCLIENT_SEND_FAILURE)
  		flog_err(EC_LIB_ZAPI_SOCKET, "zclient_send_get_srv6_sid() delete failed: %s",
  			 safe_strerror(errno));
@@ -566,9 +566,9 @@ index 7fa133a5cc07..c21ecfce2abf 100644
  	 * Send the Get SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_get_sid(zclient, ctx, sid_value, locator_name,
+-	ret = srv6_manager_get_sid(bgp_zclient, ctx, sid_value, locator_name,
 -				   sid_func);
-+	ret = srv6_manager_get_sid(zclient, ctx, sid_value, locator_name, sid_func, false);
++	ret = srv6_manager_get_sid(bgp_zclient, ctx, sid_value, locator_name, sid_func, false);
  	if (ret < 0) {
  		zlog_warn("%s: error getting SRv6 SID!", __func__);
  		return false;
@@ -576,8 +576,8 @@ index 7fa133a5cc07..c21ecfce2abf 100644
  	 * Send the Release SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_release_sid(zclient, ctx, locator_name);
-+	ret = srv6_manager_release_sid(zclient, ctx, locator_name, false);
+-	ret = srv6_manager_release_sid(bgp_zclient, ctx, locator_name);
++	ret = srv6_manager_release_sid(bgp_zclient, ctx, locator_name, false);
  	if (ret < 0) {
  		zlog_warn("%s: error releasing SRv6 SID!", __func__);
  		return;
@@ -589,8 +589,8 @@ index 48f7560bc755..1670bc5f2b8a 100644
  	 * Send the Get SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_get_sid(zclient, ctx, sid_value, locator_name, NULL);
-+	ret = srv6_manager_get_sid(zclient, ctx, sid_value, locator_name, NULL, false);
+-	ret = srv6_manager_get_sid(isis_zclient, ctx, sid_value, locator_name, NULL);
++	ret = srv6_manager_get_sid(isis_zclient, ctx, sid_value, locator_name, NULL, false);
  	if (ret < 0) {
  		zlog_warn("%s: error getting SRv6 SID!", __func__);
  		return false;
@@ -598,8 +598,8 @@ index 48f7560bc755..1670bc5f2b8a 100644
  	 * Send the Release SRv6 SID request to the SRv6 Manager and check the
  	 * result
  	 */
--	ret = srv6_manager_release_sid(zclient, ctx, locator_name);
-+	ret = srv6_manager_release_sid(zclient, ctx, locator_name, false);
+-	ret = srv6_manager_release_sid(isis_zclient, ctx, locator_name);
++	ret = srv6_manager_release_sid(isis_zclient, ctx, locator_name, false);
  	if (ret < 0) {
  		zlog_warn("%s: error releasing SRv6 SID!", __func__);
  		return;
@@ -679,11 +679,11 @@ index 3c9a6cb8717a..d9ec3135a16b 100644
 --- a/staticd/static_zebra.c
 +++ b/staticd/static_zebra.c
 @@ -1074,7 +1074,7 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
- 	}
  
  	/* Request SRv6 SID from SID Manager */
--	ret = srv6_manager_get_sid(zclient, &ctx, &sid->addr.prefix, sid->locator->name, NULL);
-+	ret = srv6_manager_get_sid(zclient, &ctx, &sid->addr.prefix, sid->locator->name, NULL, false);
+ 	ret = srv6_manager_get_sid(static_zclient, &ctx, &sid->addr.prefix, sid->locator->name,
+-				   NULL);
++				   NULL, false);
  	if (ret < 0)
  		zlog_warn("%s: error getting SRv6 SID!", __func__);
  }
@@ -691,8 +691,8 @@ index 3c9a6cb8717a..d9ec3135a16b 100644
  	}
  
  	/* remove the SRv6 SID from the zebra RIB */
--	ret = srv6_manager_release_sid(zclient, &ctx, sid->locator->name);
-+	ret = srv6_manager_release_sid(zclient, &ctx, sid->locator->name, false);
+-	ret = srv6_manager_release_sid(static_zclient, &ctx, sid->locator->name);
++	ret = srv6_manager_release_sid(static_zclient, &ctx, sid->locator->name, false);
  	if (ret == ZCLIENT_SEND_FAILURE)
  		flog_err(EC_LIB_ZAPI_SOCKET, "zclient_send_get_srv6_sid() delete failed: %s",
  			 safe_strerror(errno));
@@ -1050,11 +1050,11 @@ index d9ec3135a16b..b02156c847ec 100644
  {
  	struct srv6_sid_ctx ctx = {};
 @@ -1074,7 +1091,7 @@ extern void static_zebra_request_srv6_sid(struct static_srv6_sid *sid)
- 	}
  
  	/* Request SRv6 SID from SID Manager */
--	ret = srv6_manager_get_sid(zclient, &ctx, &sid->addr.prefix, sid->locator->name, NULL, false);
-+	ret = srv6_manager_get_sid(zclient, &ctx, &sid->addr.prefix, sid->locator->name, NULL, is_srv6_sid_localonly(sid));
+ 	ret = srv6_manager_get_sid(static_zclient, &ctx, &sid->addr.prefix, sid->locator->name,
+-				   NULL, false);
++				   NULL, is_srv6_sid_localonly(sid));
  	if (ret < 0)
  		zlog_warn("%s: error getting SRv6 SID!", __func__);
  }
@@ -1062,8 +1062,8 @@ index d9ec3135a16b..b02156c847ec 100644
  	}
  
  	/* remove the SRv6 SID from the zebra RIB */
--	ret = srv6_manager_release_sid(zclient, &ctx, sid->locator->name, false);
-+	ret = srv6_manager_release_sid(zclient, &ctx, sid->locator->name,
+-	ret = srv6_manager_release_sid(static_zclient, &ctx, sid->locator->name, false);
++	ret = srv6_manager_release_sid(static_zclient, &ctx, sid->locator->name,
 +				       is_srv6_sid_localonly(sid));
  	if (ret == ZCLIENT_SEND_FAILURE)
  		flog_err(EC_LIB_ZAPI_SOCKET, "zclient_send_get_srv6_sid() delete failed: %s",
@@ -1885,7 +1885,7 @@ index 8fed45012bff..c15d2b470810 100644
 --- a/zebra/zebra_srv6.c
 +++ b/zebra/zebra_srv6.c
 @@ -39,8 +39,7 @@ DEFINE_MTYPE_STATIC(SRV6_MGR, ZEBRA_SRV6_SID_CTX, "SRv6 SID context");
- DEFINE_MTYPE_STATIC(SRV6_MGR, ZEBRA_SRV6_SID_CTX, "SRv6 SID context");
+ static struct zebra_srv6 g_srv6;
  
  /* Prototypes */
 -static int release_srv6_sid_func_dynamic(struct zebra_srv6_sid_block *block,
@@ -1930,7 +1930,7 @@ index 8fed45012bff..c15d2b470810 100644
 -			 * It is not allowed to allocate an explicit SID for a given context if the context
 -			 * is already associated with an explicit SID
 -			 */
--			if (s->ctx.behavior != ZEBRA_SEG6_LOCAL_ACTION_END && s->sid->alloc_mode == SRV6_SID_ALLOC_MODE_EXPLICIT) {
+-			if (s->sid->alloc_mode == SRV6_SID_ALLOC_MODE_EXPLICIT) {
 -				zlog_err("%s: cannot alloc SID %pI6 for ctx %s: ctx already associated with SID %pI6",
 -					 __func__, sid_value,
 -					 srv6_sid_ctx2str(buf, sizeof(buf),
@@ -2153,8 +2153,8 @@ index b27357508ae3..dd269b18e718 100644
  DEFINE_MTYPE_STATIC(SRV6_MGR, ZEBRA_SRV6_SID_CTX, "SRv6 SID context");
 +DEFINE_MTYPE_STATIC(SRV6_MGR, ZEBRA_SRV6_SID_ENTRY_INFO, "SRv6 SID entry information");
  
- /* Prototypes */
- static void release_srv6_sid_func(const struct zebra_srv6_sid_ctx *zctx);
+ static struct zebra_srv6 g_srv6;
+ 
 @@ -205,6 +206,36 @@ struct srv6_sid_format *srv6_sid_format_lookup(const char *name)
  	return NULL;
  }
@@ -3367,7 +3367,7 @@ diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
 index a741cbae137e..a4beca158292 100644
 --- a/zebra/zebra_srv6.c
 +++ b/zebra/zebra_srv6.c
-@@ -43,6 +43,9 @@ static struct zebra_srv6 srv6;
+@@ -43,6 +43,9 @@ static struct zebra_srv6 g_srv6;
  /* Prototypes */
  static void release_srv6_sid_func(const struct zebra_srv6_sid_ctx *zctx);
  
@@ -3819,12 +3819,12 @@ index 073b96c29c47..6e3389c3ced5 100644
  		srv6_sid_format_register(format_uncompressed);
  
 -		/* Init list to store SRv6 SIDs */
--		srv6.sids = list_new();
--		srv6.sids->del = delete_zebra_srv6_sid_ctx;
+-		g_srv6.sids = list_new();
+-		g_srv6.sids->del = delete_zebra_srv6_sid_ctx;
 -
  		/* Init list to store SRv6 SID blocks */
- 		srv6.sid_blocks = list_new();
- 		srv6.sid_blocks->del = delete_zebra_srv6_sid_block;
+ 		g_srv6.sid_blocks = list_new();
+ 		g_srv6.sid_blocks->del = delete_zebra_srv6_sid_block;
 @@ -1776,7 +1801,6 @@ static bool alloc_srv6_sid_func_dynamic(struct zebra_srv6_sid_block *block,
  static int get_srv6_sid_explicit(struct zebra_srv6_sid **sid, struct srv6_sid_ctx *ctx,
  				 struct in6_addr *sid_value, bool is_localonly)
@@ -3980,25 +3980,25 @@ index 073b96c29c47..6e3389c3ced5 100644
  			ret = release_srv6_sid(client, zctx, locator, is_localonly);
  			break;
 @@ -2741,23 +2778,23 @@ void zebra_srv6_terminate(void)
- 		list_delete(&srv6.locators);
+ 		list_delete(&g_srv6.locators);
  	}
  
 -	/* Free SRv6 SIDs */
--	if (srv6.sids) {
--		while (listcount(srv6.sids)) {
--			sid_ctx = listnode_head(srv6.sids);
+-	if (g_srv6.sids) {
+-		while (listcount(g_srv6.sids)) {
+-			sid_ctx = listnode_head(g_srv6.sids);
 -
--			listnode_delete(srv6.sids, sid_ctx);
+-			listnode_delete(g_srv6.sids, sid_ctx);
 -			zebra_srv6_sid_ctx_free(sid_ctx);
 -		}
 -
--		list_delete(&srv6.sids);
+-		list_delete(&g_srv6.sids);
 -	}
 -
  	/* Free SRv6 SID blocks */
- 	if (srv6.sid_blocks) {
- 		while (listcount(srv6.sid_blocks)) {
- 			block = listnode_head(srv6.sid_blocks);
+ 	if (g_srv6.sid_blocks) {
+ 		while (listcount(g_srv6.sid_blocks)) {
+ 			block = listnode_head(g_srv6.sid_blocks);
  
 +			/* Free SRv6 SIDs */
 +			while (listcount(block->sids)) {
@@ -4012,7 +4012,7 @@ index 073b96c29c47..6e3389c3ced5 100644
 +
 +			list_delete(&block->sids);
 +
- 			listnode_delete(srv6.sid_blocks, block);
+ 			listnode_delete(g_srv6.sid_blocks, block);
  			zebra_srv6_sid_block_free(block);
  		}
 diff --git a/zebra/zebra_srv6.h b/zebra/zebra_srv6.h
@@ -4663,7 +4663,7 @@ index 08fec8023859..0a8b8b3605db 100644
  			if (zctx->sid) {
  				entry = zebra_srv6_sid_entry_lookup(zctx->sid, locator->name,
 @@ -2798,16 +2792,16 @@ void zebra_srv6_terminate(void)
- 			block = listnode_head(srv6.sid_blocks);
+ 			block = listnode_head(g_srv6.sid_blocks);
  
  			/* Free SRv6 SIDs */
 -			while (listcount(block->sids)) {
@@ -4681,7 +4681,7 @@ index 08fec8023859..0a8b8b3605db 100644
 -			list_delete(&block->sids);
 +			zebra_srv6_sid_ctx_list_fini(&block->sids);
  
- 			listnode_delete(srv6.sid_blocks, block);
+ 			listnode_delete(g_srv6.sid_blocks, block);
  			zebra_srv6_sid_block_free(block);
 diff --git a/zebra/zebra_srv6.h b/zebra/zebra_srv6.h
 index 374ff7e97637..47511baa2ffd 100644
@@ -5012,8 +5012,8 @@ index b02156c847ec..28c2a42008e8 100644
 +	ctx.flv.lcblock_len = sid->locator->block_bits_length;
 +	ctx.flv.lcnode_func_len = ctx.node_len + ctx.function_len;
 +
- 	static_zebra_send_localsid(ZEBRA_ROUTE_DELETE, &sid->addr.prefix, sid->addr.prefixlen,
- 				   ifp->ifindex, action, &ctx);
+ 	zclient_send_localsid(static_zclient, ZEBRA_ROUTE_DELETE, &sid->addr.prefix,
+ 			      sid->addr.prefixlen, ifp->ifindex, action, &ctx);
  
 
 From 2c5553dbe39f85b1557476caba6d52b304f042eb Mon Sep 17 00:00:00 2001
