@@ -41,7 +41,8 @@ for branch in $BRANCHES; do
     PR_BODY+="- ${branch}"$'\n'
 done  
 
-FILE_TARGETS=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") # folders or files to check
+# folders or files to check
+FILE_TARGETS=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") 
 
 
 process_repo() {
@@ -60,12 +61,14 @@ process_repo() {
     git clone https://github.com/$repo "${TMP_DIR}/${REPO_BASENAME}"
     pushd "${TMP_DIR}/${REPO_BASENAME}"
 
-    if ! git remote | grep -q "fork"; then
-        git remote add fork https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
+    if ! git remote | grep -q "mssonicbld"; then
+        git remote add mssonicbld https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
     fi
     git fetch origin
 
     echo "${repo}" >> /tmp/logs/migration_results.log
+
+    pwd
 
     for branch in $BRANCHES; do
 
@@ -78,7 +81,7 @@ process_repo() {
             continue
         fi
         NEW_BRANCH="migrate-agent-pool-${branch}"
-        if git show-ref --verify --quiet "refs/remotes/fork/${NEW_BRANCH}"; then
+        if git show-ref --verify --quiet "refs/remotes/mssonicbld/${NEW_BRANCH}"; then
             git branch -D "${NEW_BRANCH}"
         fi
         git checkout -b "${NEW_BRANCH}" origin/"${branch}"
@@ -87,7 +90,7 @@ process_repo() {
         for replacement in $POOL_MAPPING; do
             OLD="${replacement%%:*}"
             NEW="${replacement##*:}"
-            find "${FILE_TARGETS[@]}" -type f | while read -r file; do
+            find ${FILE_TARGETS[@]} -type f | while read -r file; do
                 if grep -q "${OLD}" "$file"; then
                     if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
                         rm -f "${file}.bak"
@@ -103,7 +106,7 @@ process_repo() {
         if [ -n "$(git -C "$repo_path" diff --cached --name-only)" ]; then
             
             git commit -s -m "${COMMIT_MSG}"
-            git push -u fork "${NEW_BRANCH}"
+            git push -u mssonicbld "${NEW_BRANCH}"
 
             echo "Creating PR for branch ${branch} in repository ${repo}"
 
