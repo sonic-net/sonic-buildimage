@@ -57,6 +57,8 @@ binary-indep:
 			pkg="es2227-54ts"; \
 		elif [ $$mod = "es2227_54ts_p" ]; then \
 			pkg="es2227-54ts-p"; \
+		elif [ $$mod = "es1227_54ts_p2" ]; then \
+                        pkg="es1227-54ts-p2"; \
 		else \
 			pkg="es1227-36ts-p"; \
 		fi; \
