@@ -58,6 +58,7 @@
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
 #include "lib/srv6.h"
+#include "lib/vrf.h"
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620
@@ -120,7 +121,8 @@ enum custom_rtattr_srv6_localsid {
 	FPM_SRV6_LOCALSID_OIF				= 8,
 	FPM_SRV6_LOCALSID_BPF				= 9,
 	FPM_SRV6_LOCALSID_SIDLIST			= 10,
-	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR		= 11,
+	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR	= 11,
+	FPM_SRV6_LOCALSID_IFNAME			= 12,
 };
 
 enum custom_rtattr_encap_srv6 {
@@ -1165,6 +1167,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	uint32_t table_id;
 	uint32_t action;
 	uint32_t block_len, node_len, func_len, arg_len;
+	struct interface *ifp;
 
 	struct {
 		struct nlmsghdr n;
@@ -1318,6 +1321,13 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		if (!nl_attr_put(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_NH6, &seg6local_ctx->nh6,
 					sizeof(struct in6_addr)))
+			return -1;
+
+		ifp = if_lookup_by_index(seg6local_ctx->ifindex, VRF_DEFAULT);
+		if (ifp)
+			if (!nl_attr_put(&req->n, datalen,
+					FPM_SRV6_LOCALSID_IFNAME, ifp->name,
+					strlen(ifp->name) + 1))
 			return -1;
 		break;
 	case ZEBRA_SEG6_LOCAL_ACTION_END_T:
