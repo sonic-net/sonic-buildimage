@@ -1516,7 +1516,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0
+            sai_stats_support_mask: 0x884
             global_flexctr_ing_action_num_reserved: 20
             global_flexctr_ing_pool_num_reserved: 8
             global_flexctr_ing_op_profile_num_reserved: 20

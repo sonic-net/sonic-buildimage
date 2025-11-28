@@ -1128,7 +1128,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0x880
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             global_flexctr_ing_action_num_reserved: 20
