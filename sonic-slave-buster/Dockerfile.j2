@@ -22,7 +22,6 @@ MAINTAINER gulv@microsoft.com
 
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
-COPY ["99-no-ssl-check", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
