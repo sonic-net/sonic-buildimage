@@ -49,6 +49,7 @@ steps:
       SKIP_REPOS: ${{ parameters.SKIP_REPOS }}
       TARGET_REPOS: ${{ parameters.TARGET_REPOS }}
     displayName: Migrating Agent Pool
+    continueOnError: true
   - bash: |
       set -ex
       [ -f /tmp/logs/migration_results.log ] && cat /tmp/logs/migration_results.log || echo "No results log found."

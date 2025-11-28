@@ -39,35 +39,10 @@ echo "Branches to be processed:"
 for branch in $BRANCHES; do
     echo "  - ${branch}"
     PR_BODY+="- ${branch}"$'\n'
-done
+done  
 
-replace_in_files() {
-    
-    repo="$1"
-    # iterate only yaml files that are pipelines related and can be tracked by git
-    targets=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") # folders or files to check
+FILE_TARGETS=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") # folders or files to check
 
-    cd "$TMP_DIR/${repo##*/}" || git clone https://$GITHUB_USER:$TOKEN@github.com/$repo "$TMP_DIR/${repo##*/}" || { echo "Failed to clone repository: $repo"; return 1; }
-    cd "$TMP_DIR/${repo##*/}" || { echo "Failed to change directory to temp repo dir"; return 1; }
-    echo "Migrating agent pools in files under $repo"
-
-    for replacement in $POOL_MAPPING; do
-        OLD="${replacement%%:*}"
-        NEW="${replacement##*:}"
-        find "${target[@]}" -type f | while read -r file; do
-            if grep -q "${OLD}" "$file"; then
-                if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
-                    rm -f "${file}.bak"
-                    echo "Updated ${file}: ${OLD} -> ${NEW}"
-                else
-                    echo "Failed to update ${file}: ${OLD} -> ${NEW}"
-                fi
-            fi
-        done
-    done
-    cd -
-}
-    
 
 process_repo() {
     local repo="$1"
@@ -82,21 +57,13 @@ process_repo() {
 
     echo "\n============= Processing repository: ${repo} ============="
 
-    if ! gh repo view "${GITHUB_USER}/${REPO_BASENAME}" > /dev/null 2>&1; then
-        echo "Forking repository ${repo} to user ${GITHUB_USER}"
-        gh repo fork ${repo} --clone=false 
-    fi
+    git clone https://github.com/$repo "${TMP_DIR}/${REPO_BASENAME}"
+    pushd ${REPO_BASENAME}
 
-    if ! git remote | grep -q "origin"; then
-        git remote add origin "https://github.com/${repo}.git"
-    fi
-    git remote set-url origin "https://github.com/${repo}.git"
     if ! git remote | grep -q "fork"; then
-        git remote add fork "https://github.com/${GITHUB_USER}/${REPO_BASENAME}.git"
+        git remote add fork https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
     fi
-
     git fetch origin
-    git fetch fork
 
     echo "${repo}" >> /tmp/logs/migration_results.log
 
@@ -110,20 +77,33 @@ process_repo() {
             echo "Branch ${branch} does not exist in ${repo}, skipping."
             continue
         fi
-        git pull origin "$branch" 
         NEW_BRANCH="migrate-agent-pool-${branch}"
         if git show-ref --verify --quiet "refs/remotes/fork/${NEW_BRANCH}"; then
             git branch -D "${NEW_BRANCH}"
         fi
-        git checkout -b "${NEW_BRANCH}"
+        git checkout -c "${NEW_BRANCH}" origin/"${branch}"
 
-        replace_in_files "${GITHUB_USER}/${REPO_BASENAME}"
+        echo "Migrating agent pools in files under $repo"
+        for replacement in $POOL_MAPPING; do
+            OLD="${replacement%%:*}"
+            NEW="${replacement##*:}"
+            find "${FILE_TARGETS[@]}" -type f | while read -r file; do
+                if grep -q "${OLD}" "$file"; then
+                    if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
+                        rm -f "${file}.bak"
+                        echo "Updated ${file}: ${OLD} -> ${NEW}"
+                    else
+                        echo "Failed to update ${file}: ${OLD} -> ${NEW}"
+                    fi
+                fi
+            done
+        done
 
         git -C "$repo_path" diff --name-only --diff-filter=M | xargs -r git -C "$repo_path" add
         if [ -n "$(git -C "$repo_path" diff --cached --name-only)" ]; then
             
             git commit -s -m "${COMMIT_MSG}"
-            git push https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git fork "${NEW_BRANCH}"
+            git push -u fork "${NEW_BRANCH}"
 
             echo "Creating PR for branch ${branch} in repository ${repo}"
 
