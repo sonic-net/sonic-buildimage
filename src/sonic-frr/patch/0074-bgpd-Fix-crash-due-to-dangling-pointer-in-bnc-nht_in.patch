@@ -1,0 +1,67 @@
+From 2a79ef5a9d8aeb24db5590c529123bcafa4d7faf Mon Sep 17 00:00:00 2001
+From: Manpreet Kaur <manpreetk@nvidia.com>
+Date: Tue, 8 Jul 2025 21:14:51 -0700
+Subject: bgpd: Fix crash due to dangling pointer in bnc nht_info
+
+A segmentation fault occurs during "show ip bgp vrf all nexthop json" CLI
+command when accessing the nht_info member of bgp_nexthop_cache structure.
+The nht_info field stores a peer pointer that becomes a dangling pointer
+after peer deletion, as the cleanup process for peer deletion fails to
+set it to NULL due to race condition.
+
+Signed-off-by: Manpreet Kaur <manpreetk@nvidia.com>
+---
+ bgpd/bgp_nht.c | 37 +++++++++++++++++--------------------
+ 1 file changed, 17 insertions(+), 20 deletions(-)
+
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index b720e37bb4..4d31bed1c9 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -532,26 +532,23 @@ void bgp_delete_connected_nexthop(afi_t afi, struct peer *peer)
+ 	if (!peer)
+ 		return;
+ 
+-	/*
+-	 * In case the below check evaluates true and if
+-	 * the bnc has not been freed at this point, then
+-	 * we might have to do something similar to what's
+-	 * done in bgp_unlink_nexthop_by_peer(). Since
+-	 * bgp_unlink_nexthop_by_peer() loops through the
+-	 * nodes of V6 nexthop cache to find the bnc, it is
+-	 * currently not being called here.
+-	 */
+-	if (!sockunion2hostprefix(&peer->connection->su, &p))
+-		return;
+-	/*
+-	 * Gather the ifindex for if up/down events to be
+-	 * tagged into this fun
+-	 */
+-	if (afi == AFI_IP6 &&
+-	    IN6_IS_ADDR_LINKLOCAL(&peer->connection->su.sin6.sin6_addr))
+-		ifindex = peer->connection->su.sin6.sin6_scope_id;
+-	bnc = bnc_find(&peer->bgp->nexthop_cache_table[family2afi(p.family)],
+-		       &p, 0, ifindex);
++	if (!sockunion2hostprefix(&peer->connection->su, &p)) {
++		/*
++		 * If peer->connection->su is cleared before peer deletion,
++		 * find the bnc whose nht_info matches the peer and free it.
++		 */
++		bnc = bgp_find_ipv6_nexthop_matching_peer(peer);
++	} else {
++		/*
++		 * Gather the ifindex for if up/down events to be
++		 * tagged into this fun
++		 */
++		if (afi == AFI_IP6 && IN6_IS_ADDR_LINKLOCAL(&peer->connection->su.sin6.sin6_addr))
++			ifindex = peer->connection->su.sin6.sin6_scope_id;
++		bnc = bnc_find(&peer->bgp->nexthop_cache_table[family2afi(p.family)], &p, 0,
++			       ifindex);
++	}
++
+ 	if (!bnc) {
+ 		if (BGP_DEBUG(nht, NHT))
+ 			zlog_debug(
+-- 
+2.48.1
+
