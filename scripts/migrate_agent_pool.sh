@@ -53,7 +53,7 @@ replace_in_files() {
     for replacement in $POOL_MAPPING; do
         OLD="${replacement%%:*}"
         NEW="${replacement##*:}"
-        find "$target[@]" -type f \( -name "*.yml" -o -name "*.yaml" \) | while read -r file; do
+        find "${target[@]}" -type f \( -name "*.yml" -o -name "*.yaml" \) | while read -r file; do
             if grep -q "${OLD}" "$file"; then
                 if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
                     rm -f "${file}.bak"
@@ -83,9 +83,12 @@ process_repo() {
 
     if ! gh repo view "${GITHUB_USER}/${REPO_BASENAME}" > /dev/null 2>&1; then
         echo "Forking repository ${repo} to user ${GITHUB_USER}"
-        gh repo fork repo --clone=false 
+        gh repo fork ${repo} --clone=false 
     fi
 
+    if ! git remote | grep -q "origin"; then
+        git remote add origin "https://github.com/${repo}.git"
+    fi
     if ! git remote | grep -q "fork"; then
         git remote add fork "https://github.com/${GITHUB_USER}/${REPO_BASENAME}.git"
     fi
