@@ -11,7 +11,7 @@
 # with the agent pool names replaced as specified.
 ##########################################################
 
-set -e
+set -ex
 mkdir -p /tmp/logs
 TMP_DIR=$(mktemp -d)
 
