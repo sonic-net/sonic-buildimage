@@ -17,8 +17,7 @@ parameters:
 
 pool: sonic-ubuntu-1c
 variables:
-  group: sonicbld
-
+  - gourp: sonicbld
  
 steps:
   - checkout: self
