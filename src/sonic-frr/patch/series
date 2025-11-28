@@ -56,14 +56,5 @@
 0094-zebra-fix-yang-data-for-mcast-group.patch
 0095-bgpd-Crash-due-to-usage-of-freed-up-evpn_overlay-att.patch
 0096-bgpd-Notify-all-incoming-outgoing-on-peer-group-noti.patch
-0097-zebra-Add-CLI-to-display-SRv6-SIDs-allocated.patch
-0098-bgpd-add-usid-behavior-for-bgp-srv6-instructions.patch
-0099-bgpd-Implement-Link-Local-Next-Hop-capability.patch
-0100-Add-BGP-redistribution-in-SRv6-BGP.patch
-0101-bgpd-Add-support-for-BGP-to-use-SRv6-SID-in-an-explicit-way.patch
-0102-lib-staticd-isisd-add-B6-ENCAPS-codepoint-extensions.patch
-0103-zebra-Provide-SID-value-when-sending-SRv6-SID-release-notify-message.patch
-0104-zebra-Cleanup-SRv6-output-of-show-running-config.patch
-0105-zebra-Free-up-tt-when-failure-mode-happens.patch
 0106-SRv6-Add-support-for-multiple-SRv6-locators.patch
 0107-zebra-Fix-SRv6-explicit-SID-allocation-to-use-the-provided-locator.patch
