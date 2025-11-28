@@ -53,7 +53,7 @@ replace_in_files() {
     for replacement in $POOL_MAPPING; do
         OLD="${replacement%%:*}"
         NEW="${replacement##*:}"
-        find "${target[@]}" -type f \( -name "*.yml" -o -name "*.yaml" \) | while read -r file; do
+        find "${target[@]}" -type f | while read -r file; do
             if grep -q "${OLD}" "$file"; then
                 if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
                     rm -f "${file}.bak"
@@ -122,7 +122,7 @@ process_repo() {
         if [ -n "$(git -C "$repo_path" diff --cached --name-only)" ]; then
             
             git commit -s -m "${COMMIT_MSG}"
-            git push https://mssonicbld:$TOKEN@github.com/mssonicbld/"$GITHUB_USER}/${REPO_BASENAME}".git fork "${NEW_BRANCH}"
+            git push https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git fork "${NEW_BRANCH}"
 
             echo "Creating PR for branch ${branch} in repository ${repo}"
 
