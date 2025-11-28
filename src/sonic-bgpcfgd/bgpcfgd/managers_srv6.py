@@ -87,7 +87,7 @@ class SRv6Mgr(Manager):
 
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
         sid_cmd = 'sid {} locator {} behavior {}'.format(ip_prefix, locator_name, sid.action)
-        if sid.decap_vrf != DEFAULT_VRF:
+        if data['action'] == 'uDT46':
             sid_cmd += ' vrf {}'.format(sid.decap_vrf)
         cmd_list.append(sid_cmd)
 
