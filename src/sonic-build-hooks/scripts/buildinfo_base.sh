@@ -110,8 +110,8 @@ get_version_cache_option()
 # Enable or disable the reproducible mirrors
 set_reproducible_mirrors()
 {
-    # Escape special characters in MIRROR_URL for use in sed regex
-    local ESCAPED_MIRROR_URL=$(echo "$MIRROR_URL" | sed 's/[\/&.]/\\&/g')
+    # Escape special characters in DEBIAN_SNAP_MIRROR_URL for use in sed regex
+    local ESCAPED_MIRROR_URL=$(echo "$DEBIAN_SNAP_MIRROR_URL" | sed 's/[\/&.]/\\&/g')
 
     # Remove the charater # in front of the line if matched
     local expression="s/^#\s*\(.*$ESCAPED_MIRROR_URL\)/\1/"

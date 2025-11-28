@@ -266,6 +266,10 @@ SECURE_UPGRADE_KERNEL_CAFILE ?= $(SECURE_UPGRADE_SIGNING_CERT)
 SECURE_UPGRADE_PROD_SIGNING_TOOL ?=
 SECURE_UPGRADE_PROD_TOOL_ARGS ?=
 
+# DEBIAN_SNAP_MIRROR_URL - Debian snapshot mirror url
+# Mirror of https://snapshot.debian.org/archive
+DEBIAN_SNAP_MIRROR_URL ?= http://packages.trafficmanager.net/snapshot
+
 # MIRROR_URL - Default mirror url
 MIRROR_URL ?= https://packages.trafficmanager.net
 
