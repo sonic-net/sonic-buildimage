@@ -19,7 +19,9 @@ command=/usr/sbin/dhcrelay -d -m discard -a %%h:%%p %%P --name-alias-map-file /t
 {% if prefix | ipv4 and name != vlan_name %} -iu {{ name }}{% endif -%}
 {% endfor %}
 {% for (name, prefix) in INTERFACE|pfx_filter %}
-{% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
+{%- if prefix | ipv4 %} -iu {{ name }}
+{%- elif prefix | ipv6 %} -ih {{ name }}
+{%- endif %}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %} -iu {{ name }}{% endif -%}
