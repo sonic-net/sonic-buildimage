@@ -36,7 +36,7 @@ run_step "Installing prerequisites (python3-pip, git)" \
     sudo apt install -y python3-pip git
 
 run_step "Installing jinjanator (j2)" \
-    pip3 install --user jinjanator
+    bash -c 'pip3 install --user jinjanator || sudo apt install j2cli'
 
 echo "==> Testing j2 availability..."
 if ! command -v j2 >/dev/null 2>&1; then
