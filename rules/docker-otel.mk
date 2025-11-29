@@ -6,16 +6,13 @@ DOCKER_OTEL_DBG = $(DOCKER_OTEL_STEM)-$(DBG_IMAGE_MARK).gz
 
 $(DOCKER_OTEL)_PATH = $(DOCKERS_PATH)/$(DOCKER_OTEL_STEM)
 
-# Since OTEL has similar debug requirements as based on docker-sonic-gnmi, inherit its debug dependencies
-$(DOCKER_OTEL)_DBG_DEPENDS = $($(DOCKER_GNMI)_DBG_DEPENDS)
-
-# Load the gnmi container as base dependency
-$(DOCKER_OTEL)_LOAD_DOCKERS += $(DOCKER_GNMI)
-
+# OTEL should depend directly on DOCKER_CONFIG_ENGINE_BOOKWORM for debug requirements
+$(DOCKER_OTEL)_DBG_DEPENDS = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_DEPENDS)
+# Load the config engine bookworm container as base dependency
+$(DOCKER_OTEL)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_BOOKWORM)
 $(DOCKER_OTEL)_VERSION = 1.0.0
 $(DOCKER_OTEL)_PACKAGE_NAME = otel
-
-$(DOCKER_OTEL)_DBG_IMAGE_PACKAGES = $($(DOCKER_GNMI)_DBG_IMAGE_PACKAGES)
+$(DOCKER_OTEL)_DBG_IMAGE_PACKAGES = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_IMAGE_PACKAGES)
 
 # Add to build system
 SONIC_DOCKER_IMAGES += $(DOCKER_OTEL)
