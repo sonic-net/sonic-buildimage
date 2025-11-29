@@ -1,0 +1,199 @@
+From 9af1c7aa049acc8e2f70bff5b733521160dc09ae Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Tue, 21 Oct 2025 19:29:54 -0700
+Subject: bgpd: EVPN-MH fix ES-EVI memleak during shutdown
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixed memory leaks in BGP EVPN Multihoming (ES-EVI/ES-VRF)
+structures that occurred during daemon shutdown
+
+Valgrind analysis revealed memory leaks during BGPd shutdown:
+
+**Leaks Fixed:**
+- 80 bytes: ES-EVI VTEP lists (2 blocks)
+- 192 bytes: ES-VRF structures (2 blocks)
+- 304 bytes: ES-EVI structures (2 blocks)
+- **Total: 576 bytes in 6 blocks**
+
+shutdown sequence:
+bgp_delete(bgp_evpn)
+  ├─> Line 4425: bgp_set_evpn(NULL)  ← Global pointer cleared
+  └─> bgp_unlock() → bgp_free()
+       └─> bgp_evpn_cleanup(bgp)  ← bgp parameter available here
+            └─> bgp_evpn_free(bgp, vpn)  ← bgp parameter available here
+                 └─> bgp_evpn_vni_es_cleanup(vpn)  ← bgp param NOT propagated!
+                      └─> bgp_evpn_remote_es_evi_flush(es_evi)  ← No bgp!
+                           └─> bgp = bgp_get_evpn()  ← NULL! ★★★
+
+1. bgp_set_evpn(NULL) executed
+   └─> bm->bgp_evpn = NULL
+
+2. bgp_evpn_vni_es_cleanup() called
+   └─> bgp_evpn_remote_es_evi_flush(es_evi)
+        ├─> bgp = bgp_get_evpn()  ← Returns NULL
+        └─> if (!bgp) return;      ← EARLY RETURN!
+
+3. VTEP processing NEVER happens:
+   ✗ EAD flags NOT cleared
+   ✗ VTEPs NOT freed
+   ✗ VTEP list remains non-empty
+
+4. ES-EVI remote evaluation:
+   └─> if (listcount(es_evi->es_evi_vtep_list))  ← TRUE (not empty)
+        └─> SET_FLAG(es_evi->flags, BGP_EVPNES_EVI_REMOTE)
+
+5. ES-EVI free attempt:
+   └─> if (CHECK_FLAG(es_evi->flags, BGP_EVPNES_EVI_REMOTE))
+        └─> return es_evi;  ← NOT FREED!
+
+6. Cascading failures:
+   ✗ ES-EVI not freed → ES-VRF not dereferenced
+   ✗ ES-VRF ref_cnt stays > 0 → ES-VRF not freed
+
+Result: 576 bytes leaked (VTEPs + ES-EVI + ES-VRF)
+
+valgrind report:
+
+==97021== 80 bytes in 2 blocks are possibly lost in loss record 88 of 153
+==97021==    at 0x48465EF: calloc (vg_replace_malloc.c:1328)
+==97021==    by 0x4943563: qcalloc (memory.c:111)
+==97021==    by 0x492F1C9: list_new (linklist.c:49)
+==97021==    by 0x231B98: bgp_evpn_es_evi_new (bgp_evpn_mh.c:3611)
+==97021==    by 0x23240A: bgp_evpn_local_es_evi_add (bgp_evpn_mh.c:3851)
+==97021==    by 0x344C5D: bgp_zebra_process_local_es_evi (bgp_zebra.c:3253)
+==97021==    by 0x49DD96A: zclient_read (zclient.c:4868)
+==97021==    by 0x49B6AC2: event_call (event.c:2009)
+==97021==    by 0x492E973: frr_run (libfrr.c:1252)
+==97021==    by 0x1F1490: main (bgp_main.c:548)
+==97021==
+==97021== 192 bytes in 2 blocks are possibly lost in loss record 109 of 153
+==97021==    at 0x48465EF: calloc (vg_replace_malloc.c:1328)
+==97021==    by 0x4943563: qcalloc (memory.c:111)
+==97021==    by 0x2308E8: bgp_evpn_es_vrf_create (bgp_evpn_mh.c:3048)
+==97021==    by 0x230CEE: bgp_evpn_es_vrf_ref (bgp_evpn_mh.c:3159)
+==97021==    by 0x231C97: bgp_evpn_es_evi_new (bgp_evpn_mh.c:3628)
+==97021==    by 0x23240A: bgp_evpn_local_es_evi_add (bgp_evpn_mh.c:3851)
+==97021==    by 0x344C5D: bgp_zebra_process_local_es_evi (bgp_zebra.c:3253)
+==97021==    by 0x49DD96A: zclient_read (zclient.c:4868)
+==97021==    by 0x49B6AC2: event_call (event.c:2009)
+==97021==    by 0x492E973: frr_run (libfrr.c:1252)
+==97021==    by 0x1F1490: main (bgp_main.c:548)
+==97021==
+==97021== 304 bytes in 2 blocks are possibly lost in loss record 125 of 153
+==97021==    at 0x48465EF: calloc (vg_replace_malloc.c:1328)
+==97021==    by 0x4943563: qcalloc (memory.c:111)
+==97021==    by 0x231B6D: bgp_evpn_es_evi_new (bgp_evpn_mh.c:3605)
+==97021==    by 0x23240A: bgp_evpn_local_es_evi_add (bgp_evpn_mh.c:3851)
+==97021==    by 0x344C5D: bgp_zebra_process_local_es_evi (bgp_zebra.c:3253)
+==97021==    by 0x49DD96A: zclient_read (zclient.c:4868)
+==97021==    by 0x49B6AC2: event_call (event.c:2009)
+==97021==    by 0x492E973: frr_run (libfrr.c:1252)
+==97021==    by 0x1F1490: main (bgp_main.c:548)
+==97021==
+==97021== LEAK SUMMARY:
+==97021==    definitely lost: 0 bytes in 0 blocks
+==97021==    indirectly lost: 0 bytes in 0 blocks
+==97021==      possibly lost: 576 bytes in 6 blocks
+==97021==    still reachable: 729,154 bytes in 354 blocks
+==97021==         suppressed: 88 bytes in 1 blocks
+
+Cursor
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ bgpd/bgp_evpn_mh.c | 45 ++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 38 insertions(+), 7 deletions(-)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index a08edb0440..f03678af61 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -70,6 +70,8 @@ static void bgp_evpn_run_consistency_checks(struct event *t);
+ static void bgp_evpn_path_nh_info_free(struct bgp_path_evpn_nh_info *nh_info);
+ static void bgp_evpn_path_nh_unlink(struct bgp_path_evpn_nh_info *nh_info);
+ static void bgp_evpn_es_vrf_delete(struct bgp_evpn_es_vrf *es_vrf);
++static struct bgp_evpn_es_evi *bgp_evpn_es_evi_free_internal(struct bgp_evpn_es_evi *es_evi,
++							     bool force);
+ static struct bgp_evpn_es_evi *bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi);
+ 
+ /******************************************************************************
+@@ -3636,21 +3638,20 @@ static struct bgp_evpn_es_evi *bgp_evpn_es_evi_new(struct bgp_evpn_es *es,
+ /* remove the ES-EVI from the per-L2-VNI and per-ES tables and free
+  * up the memory.
+  */
+-static struct bgp_evpn_es_evi *
+-bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi)
++static struct bgp_evpn_es_evi *bgp_evpn_es_evi_free_internal(struct bgp_evpn_es_evi *es_evi,
++							     bool force)
+ {
+ 	struct bgp_evpn_es *es = es_evi->es;
+ 	struct bgpevpn *vpn = es_evi->vpn;
+ 
+ 	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
+-		zlog_debug("Freeing ES-EVI for ES %s VNI %u flags 0x%x", es->esi_str, vpn->vni,
+-			   es_evi->flags);
++		zlog_debug("Freeing ES-EVI for ES %s VNI %u flags 0x%x%s", es->esi_str, vpn->vni,
++			   es_evi->flags, force ? " (forced)" : "");
+ 
+ 	/* cannot free the element as long as there is a local or remote
+-	 * reference
++	 * reference (unless force is set during shutdown)
+ 	 */
+-	if (CHECK_FLAG(es_evi->flags,
+-		       (BGP_EVPNES_EVI_LOCAL | BGP_EVPNES_EVI_REMOTE)))
++	if (!force && CHECK_FLAG(es_evi->flags, (BGP_EVPNES_EVI_LOCAL | BGP_EVPNES_EVI_REMOTE)))
+ 		return es_evi;
+ 	bgp_evpn_es_frag_evi_del(es_evi, false);
+ 	bgp_evpn_es_vrf_deref(es_evi);
+@@ -3673,6 +3674,12 @@ bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi)
+ 	return NULL;
+ }
+ 
++/* Wrapper function for normal operation (non-forced cleanup) */
++static struct bgp_evpn_es_evi *bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi)
++{
++	return bgp_evpn_es_evi_free_internal(es_evi, false);
++}
++
+ /* init local info associated with the ES-EVI */
+ static void bgp_evpn_es_evi_local_info_set(struct bgp_evpn_es_evi *es_evi)
+ {
+@@ -5069,9 +5076,33 @@ void bgp_evpn_mh_finish(void)
+ 	if (BGP_DEBUG(evpn_mh, EVPN_MH_RT))
+ 		zlog_debug("evpn mh finish");
+ 
++	/* Force cleanup of all ES structures including ES-EVI and ES-VRF.
++	 * During shutdown, normal cleanup may fail due to guard conditions
++	 * that prevent freeing structures with REMOTE flags set. We force
++	 * cleanup here to ensure no memory leaks.
++	 */
+ 	RB_FOREACH_SAFE (es, bgp_es_rb_head, &bgp_mh_info->es_rb_tree,
+ 			 es_next) {
++		/* Clear local info first (attempts normal cleanup) */
+ 		bgp_evpn_es_local_info_clear(es, true);
++
++		/* Force cleanup of any remaining structures that couldn't be
++		 * freed due to REMOTE flags or other guard conditions
++		 */
++		if (es->es_evi_list && listcount(es->es_evi_list) > 0) {
++			struct listnode *node, *next;
++			struct bgp_evpn_es_evi *es_evi;
++
++			if (BGP_DEBUG(evpn_mh, EVPN_MH_RT))
++				zlog_debug("evpn mh finish: force cleanup %d ES-EVIs for ES %s",
++					   listcount(es->es_evi_list), es->esi_str);
++
++			for (ALL_LIST_ELEMENTS(es->es_evi_list, node, next, es_evi)) {
++				/* Clear remote flag and force free */
++				UNSET_FLAG(es_evi->flags, BGP_EVPNES_EVI_REMOTE);
++				bgp_evpn_es_evi_free_internal(es_evi, true);
++			}
++		}
+ 	}
+ 	if (bgp_mh_info->t_cons_check)
+ 		event_cancel(&bgp_mh_info->t_cons_check);
+-- 
+2.48.1
+
