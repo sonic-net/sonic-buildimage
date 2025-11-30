@@ -245,7 +245,7 @@ class TestSfp:
         assert page_offset is 0
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
+    @mock.patch('sonic_platform.sfp.SFP.read_eeprom')
     def test_sfp_get_presence(self, mock_read, mock_read_int):
         sfp = SFP(0)
 
