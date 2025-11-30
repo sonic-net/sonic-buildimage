@@ -118,7 +118,7 @@ process_repo() {
                 PR_TITLE_BRANCH="${PR_TITLE} for branch ${branch}"
                 PR_URL=$(gh pr create \
                                 --repo "${GITHUB_USER}/${REPO_BASENAME}" \
-                                --head "${GITHUB_USER}:${NEW_BRANCH}" \
+                                --head "${NEW_BRANCH}" \
                                 --base "${branch}" \
                                 --title "${PR_TITLE_BRANCH}" \
                                 --body "${PR_BODY}" \
