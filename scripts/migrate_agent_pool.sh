@@ -80,9 +80,12 @@ process_repo() {
             continue
         fi
         NEW_BRANCH="migrate-agent-pool-${branch}"
-        if git show-ref --verify --quiet "refs/remotes/mssonicbld/${NEW_BRANCH}"; then
-            echo "Branch ${NEW_BRANCH} already exists in remote, deleting the old one."
+
+        if git show-ref --verify --quiet "refs/heads/${NEW_BRANCH}"; then
+            echo "Branch ${NEW_BRANCH} already exists locally, deleting the old one."
             git branch -D "${NEW_BRANCH}"
+        fi
+        if git ls-remote --exit-code --heads mssonicbld "${NEW_BRANCH}" >/dev/null; then
             git push mssonicbld --delete "${NEW_BRANCH}"
         fi
         git checkout -b "${NEW_BRANCH}" origin/"${branch}"
