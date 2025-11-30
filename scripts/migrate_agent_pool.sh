@@ -81,6 +81,7 @@ process_repo() {
         fi
         NEW_BRANCH="migrate-agent-pool-${branch}"
         if git show-ref --verify --quiet "refs/remotes/mssonicbld/${NEW_BRANCH}"; then
+            echo "Branch ${NEW_BRANCH} already exists in remote, deleting the old one."
             git branch -D "${NEW_BRANCH}"
             git push mssonicbld --delete "${NEW_BRANCH}"
         fi
@@ -90,7 +91,7 @@ process_repo() {
         for replacement in $POOL_MAPPING; do
             OLD="${replacement%%:*}"
             NEW="${replacement##*:}"
-            find ${FILE_TARGETS[@]} -type f | while read -r file; do
+            find ${FILE_TARGETS[@]} -type f 2>/dev/null | while read -r file; do
                 if grep -q "${OLD}" "$file"; then
                     if sed -i.bak "s/${OLD}/${NEW}/g" "$file"; then
                         rm -f "${file}.bak"
