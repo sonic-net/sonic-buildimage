@@ -11,7 +11,7 @@
 # with the agent pool names replaced as specified.
 ##########################################################
 
-set -ex
+set -e
 mkdir -p /tmp/logs
 TMP_DIR=$(mktemp -d)
 
@@ -19,7 +19,6 @@ GITHUB_USER="${GITHUB_USER:-mssonicbld}"
 COMMIT_MSG="Automated agent pool migration"
 PR_TITLE="Automated agent pool migration"
 PR_BODY="This PR is created for automated agent pool migration across branches."
-echo token $TOKEN
 
 PR_BODY+="
 Agent pools to be migrated:
