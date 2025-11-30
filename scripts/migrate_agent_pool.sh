@@ -82,6 +82,7 @@ process_repo() {
         NEW_BRANCH="migrate-agent-pool-${branch}"
         if git show-ref --verify --quiet "refs/remotes/mssonicbld/${NEW_BRANCH}"; then
             git branch -D "${NEW_BRANCH}"
+            git push mssonicbld --delete "${NEW_BRANCH}"
         fi
         git checkout -b "${NEW_BRANCH}" origin/"${branch}"
 
