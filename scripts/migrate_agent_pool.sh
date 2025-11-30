@@ -113,12 +113,11 @@ process_repo() {
             if [ "$(gh pr list --repo "${repo}" --head "${NEW_BRANCH}" --base "${branch}" --json number --jq 'length')" -eq 0 ]; then
                 PR_TITLE_BRANCH="${PR_TITLE} for branch ${branch}"
                 PR_URL=$(gh pr create \
-                                --repo "${repo}" \
                                 --head "${GITHUB_USER}:${NEW_BRANCH}" \
                                 --base "${branch}" \
                                 --title "${PR_TITLE_BRANCH}" \
                                 --body "${PR_BODY}" \
-                                2>&1 | grep -Eo 'https://github\.com/[^ ]+')
+                                2>&1 | grep -Eo 'https://github\.com/[^ ]+')    # --repo "${repo}" \
                 echo "PR created for branch ${branch} in repository ${repo}: ${PR_URL}"
                 echo "[PR created][${branch}]: ${PR_URL}" >>  /tmp/logs/migration_results.log
             else
