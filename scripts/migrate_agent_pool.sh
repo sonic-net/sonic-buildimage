@@ -63,7 +63,7 @@ process_repo() {
     if ! git remote | grep -q "mssonicbld"; then
         git remote add mssonicbld https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
     fi
-    git fetch origin
+    git fetch --all
 
     echo "${repo}" >> /tmp/logs/migration_results.log
 
