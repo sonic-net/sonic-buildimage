@@ -778,3 +778,11 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 {% endif -%}
 ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
+
+# Install cargo-tarpaulin for code coverage
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='bookworm' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

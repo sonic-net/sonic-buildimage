@@ -1815,6 +1815,19 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_AGGREGATE_ADDRESS": {
+            "192.168.0.0/24": {
+                "bbr-required": "true",
+                "summary-only": "false",
+                "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+            },
+            "fc00::/63": {
+                "bbr-required": "true",
+                "summary-only": "true",
+                "as-set": "true"
+            }
+        },
         "BGP_BBR": {
             "all": {
                 "status": "enabled"
@@ -1837,7 +1850,8 @@
             },
             "default|l2vpn_evpn": {
                 "advertise-all-vni": "true",
-                "advertise-svi-ip": "true"
+                "advertise-svi-ip": "true",
+                "autort": "rfc8365-compatible"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1870,6 +1884,20 @@
                     "192.170.0.0/21"
                 ],
                 "name": "BGPVac",
+                "src_address": "10.1.0.32"
+            },
+            "vnet1|BGPWithVnet": {
+                "ip_range": [
+                    "10.10.0.0/24"
+                ],
+                "name": "BGPWithVnet",
+                "src_address": "10.1.0.32"
+            },
+            "Vrf_blue|BGPWithVrf": {
+                "ip_range": [
+                    "10.11.0.0/24"
+                ],
+                "name": "BGPWithVrf",
                 "src_address": "10.1.0.32"
             }
         },
@@ -1964,10 +1992,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
@@ -2139,6 +2171,36 @@
                 ],
                 "rfc6939_support": "true",
                 "interface_id": "true"
+            }
+        },
+        "DHCPV4_RELAY": {
+            "Vlan111": {
+                "dhcpv4_servers": [
+                    "10.222.72.116"
+                ],
+                "server_vrf": "Vrf_blue",
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "enable",
+                "server_id_override": "enable",
+                "agent_relay_mode": "forward_untouched",
+                "max_hop_count": "4"
+            },
+            "Vlan222": {
+                "dhcpv4_servers": [
+                    "10.222.72.116",
+                    "10.222.82.226"
+                ]
+            },
+            "Vlan777": {
+                "dhcpv4_servers": [
+                    "10.222.82.226"
+                ],
+                "source_interface": "Loopback0",
+                "link_selection": "enable",
+                "vrf_selection": "disable",
+                "server_id_override": "disable",
+                "agent_relay_mode": "discard"
             }
         },
         "DHCP_SERVER_IPV4": {
@@ -2482,7 +2544,7 @@
                 "uplink_fast": "false"
             }
         },
-        
+
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -2654,7 +2716,12 @@
                 "login_timeout": "120",
                 "ports": "22",
                 "inactivity_timeout": "15",
-                "max_sessions": "0"
+                "max_sessions": "0",
+                "permit_root_login": "no",
+                "password_authentication": "true",
+                "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+                "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+                "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
             }
         },
 
@@ -2931,6 +2998,7 @@
                 "vip_ipv6": "2001:db8::10",
                 "pa_ipv4": "192.168.1.10",
                 "pa_ipv6": "2001:db8::10",
+                "midplane_ipv4": "169.254.200.245",
                 "dpu_id": "0",
                 "vdpu_id": "vdpu0",
                 "gnmi_port": "50052",
@@ -2944,6 +3012,7 @@
                 "vip_ipv6": "2001:db8::20",
                 "pa_ipv4": "192.168.1.20",
                 "pa_ipv6": "2001:db8::20",
+                "midplane_ipv4": "169.254.150.20",
                 "dpu_id": "1",
                 "vdpu_id": "vdpu1",
                 "gnmi_port": "50052",
@@ -3077,6 +3146,52 @@
         "DEBUG_COUNTER_DROP_REASON": {
             "DEBUG_4|DIP_LINK_LOCAL": {},
             "DEBUG_4|SIP_LINK_LOCAL": {}
+        },
+        "HIGH_FREQUENCY_TELEMETRY_PROFILE": {
+            "dummy": {
+                "stream_state": "disabled",
+                "poll_interval": "100000"
+            },
+            "hft_profile": {
+                "stream_state": "enabled",
+                "poll_interval": "100000"
+            }
+        },
+        "HIGH_FREQUENCY_TELEMETRY_GROUP": {
+            "dummy|PORT": {},
+            "hft_profile|PORT": {
+                "object_names": [
+                    "Ethernet0",
+                    "Ethernet4"
+                ],
+                "object_counters": [
+                    "IF_IN_OCTETS",
+                    "OUT_CURR_OCCUPANCY_BYTES"
+                ]
+            }
+        },
+        "STORMOND_CONFIG": {
+            "INTERVALS": {
+                "daemon_polling_interval" : "3600",
+                "fsstats_sync_interval"   : "86400"
+            }
+        },
+        "HEARTBEAT": {
+            "orchagent": {
+                "heartbeat_interval"   : "10000",
+                "alert_interval"       : "60000"
+            }
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -3088,18 +3203,6 @@
         "TACPLUS": {
             "global": {
             }
-        }
-    },
-    "STORMOND_CONFIG": {
-        "INTERVALS": {
-            "daemon_polling_interval" : "3600",
-            "fsstats_sync_interval"   : "86400"
-        }
-    },
-    "HEARTBEAT": {
-        "orchagent": {
-            "heartbeat_interval"   : "10000",
-            "alert_interval"       : "60000"
         }
     }
 }

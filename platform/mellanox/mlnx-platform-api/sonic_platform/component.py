@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +31,7 @@ try:
     import tempfile
     import subprocess
     from sonic_py_common import device_info
+    from sonic_py_common.logger import Logger
     from sonic_py_common.general import check_output_pipe
     if sys.version_info[0] > 2:
         import configparser
@@ -49,6 +51,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+logger = Logger("mlnx-platform-api")
 
 class MPFAManager(object):
     MPFA_EXTENSION = '.mpfa'
@@ -669,6 +672,7 @@ class ComponentBIOS(Component):
             print("INFO: Staging {} firmware update with ONIE updater".format(self.name))
             self.onie_updater.update_firmware(image_path, allow_reboot)
         except Exception as e:
+            logger.log_warning("Failed to update {} firmware: {}".format(self.name, str(e)))
             print("ERROR: Failed to update {} firmware: {}".format(self.name, str(e)))
             return False
 

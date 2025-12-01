@@ -891,7 +891,7 @@
         </askppplt:Pha-params>
       </askppplt:LibInit>
       <askppplt:PhaParams>
-        <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">01</askppplt:phaFwImageId>
+        <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">DEFAULT</askppplt:phaFwImageId>
       </askppplt:PhaParams>
     </askppplt:PPInit>
   </askppplt:ASK-PP>

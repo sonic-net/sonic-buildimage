@@ -68,7 +68,7 @@ class LldpManager(daemon_base.DaemonBase):
                                               False)
         
         self.pending_cmds = {}
-        self.hostname = "None"
+        self.hostname = None
         self.mgmt_ip = "None"
 
         self.device_table = swsscommon.Table(self.config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
@@ -309,7 +309,7 @@ class LldpManager(daemon_base.DaemonBase):
 
         # Listen for changes to the PORT table in the CONFIG_DB and APP_DB
         while True:
-            (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS)
+            (state, selectableObj) = sel.select(SELECT_TIMEOUT_MS, interrupt_on_signal=True)
 
             if state == swsscommon.Select.OBJECT:
                 if selectableObj.getFd() == sst_mgmt_ip_confdb.getFd():

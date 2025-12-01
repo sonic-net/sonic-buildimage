@@ -196,9 +196,9 @@
                         "name": "Ethernet8",
                         "alias": "eth8",
                         "lanes": "65",
-                        "speed": 800000,
+                        "speed": 1600000,
                         "autoneg": "on",
-                        "adv_speeds": [400000, 800000]
+                        "adv_speeds": [800000, 1600000]
                     }
                 ]
             }
@@ -213,7 +213,7 @@
                         "name": "Ethernet8",
                         "alias": "eth8",
                         "lanes": "65",
-                        "speed": 900000,
+                        "speed": 1700000,
                         "autoneg": "on",
                         "adv_speeds": [25000,40000]
                     }
@@ -266,7 +266,7 @@
                         "lanes": "65",
                         "speed": 25000,
                         "autoneg": "on",
-                        "adv_speeds": [25000,800000]
+                        "adv_speeds": [25000,1600000]
                     }
                 ]
             }
@@ -655,7 +655,7 @@
                          "alias": "etp1a",
                          "lanes": "60, 61",
                          "speed": 100000,
-                         "subport": 9,
+                         "subport": 13,
                          "mode":"trunk"
                      }
                  ]

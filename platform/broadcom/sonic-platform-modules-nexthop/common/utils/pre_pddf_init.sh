@@ -10,6 +10,9 @@ log() {
   logger -t "pre_pddf_init" "$@"
 }
 
+nh_gen pddf_device_json
+nh_gen pcie_yaml
+
 ASIC_INIT_PATH="/usr/local/bin/asic_init.sh"
 if [ -f "$ASIC_INIT_PATH" ]; then
   log "$ASIC_INIT_PATH found. Executing..."
@@ -23,5 +26,7 @@ if [ -f "$ASIC_INIT_PATH" ]; then
 else
   log -p warning "$ASIC_INIT_PATH not found."
 fi
+
+echo "blacklist adm1266" > /etc/modprobe.d/blacklist-adm1266.conf
 
 exit 0

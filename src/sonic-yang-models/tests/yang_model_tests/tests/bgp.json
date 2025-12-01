@@ -2,6 +2,13 @@
     "BGP_GLOBAL_VALID": {
         "desc": "Configure BGP global table."
     },
+    "BGP_GLOBALS_AF_AUTORT_VALID": {
+        "desc": "BGP Address Family l2vpn_evpn with autort set to rfc8365-compatible"
+    },
+    "BGP_GLOBALS_AF_AUTORT_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with autort set to an invalid value",
+        "eStrKey": "InvalidValue"
+    },
     "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_TRUE": {
         "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to true"
     },
@@ -182,6 +189,16 @@
     },
     "BGP_PEERRANGE_ALL_VALID": {
         "desc": "Configure BGP peer range table."
+    },
+    "BGP_PEERRANGE_VALID_VNET": {
+        "desc": "Configure BGP peer range with a valid vnet."
+    },
+    "BGP_PEERRANGE_VALID_VRF": {
+        "desc": "Configure BGP peer range with a valid vrf."
+    },
+    "BGP_PEERRANGE_INVALID_VNET_OR_VRF": {
+        "desc": "Configure BGP peer range with an invalid vnet or vrf.",
+        "eStrKey" : "InvalidValue"
     },
     "BGP_ALLOWED_PREFIXES_ALL_VALID": {
         "desc": "Configue BGP allowed prefix list."

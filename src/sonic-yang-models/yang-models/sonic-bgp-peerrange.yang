@@ -11,6 +11,14 @@ module sonic-bgp-peerrange {
         prefix stypes;
     }
 
+    import sonic-vrf {
+        prefix vrf;
+    }
+
+    import sonic-vnet {
+        prefix svnet;
+    }
+
     organization
         "SONiC";
 
@@ -28,7 +36,20 @@ module sonic-bgp-peerrange {
     container sonic-bgp-peerrange {
         container BGP_PEER_RANGE {
             list BGP_PEER_RANGE_LIST {
-                key "peer_range_name";
+                description "This list supports BGP_PEER_RANGE_TEMPLATE configurations with vnet and vrf support";
+                key "vrf_name peer_range_name";
+
+                leaf vrf_name {
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type leafref {
+                            path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                        }
+                    }
+                    description "vrf or vnet name";
+                }
 
                 leaf peer_range_name {
                     type string;
@@ -38,7 +59,7 @@ module sonic-bgp-peerrange {
                 leaf name {
                     type string;
                     must "(current() = current()/../peer_range_name)" {
-                        error-message "Invalid name";
+                        error-message "Invalid name, name must match peer_range_name";
                     }
                 }
 
@@ -56,6 +77,42 @@ module sonic-bgp-peerrange {
 
                 leaf-list ip_range {
                     type stypes:sonic-ip-prefix;
+                    ordered-by user;
+                    description "A range of addresses";
+                }
+            }
+
+            list BGP_PEER_RANGE_TEMPLATE_LIST {
+                description "This list is to support template based BGP peer range configurations.";
+                key "peer_range_name";
+
+                leaf peer_range_name {
+                    type string;
+                    description "Peer range name";
+                }
+
+                leaf name {
+                    type string;
+                    must "(current() = current()/../peer_range_name)" {
+                        error-message "Invalid name, name must match peer_range_name";
+                    }
+                }
+
+                leaf src_address {
+                    type inet:ip-address;
+                    description "Source address to use for connection";
+                }
+
+                leaf peer_asn {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Peer AS number";
+                }
+
+                leaf-list ip_range {
+                    type stypes:sonic-ip-prefix;
+                    ordered-by user;
                     description "A range of addresses";
                 }
             }
