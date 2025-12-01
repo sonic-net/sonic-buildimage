@@ -116,15 +116,23 @@ process_repo() {
 
             if [ "$(gh pr list --repo "${repo}" --head "${NEW_BRANCH}" --base "${branch}" --json number --jq 'length')" -eq 0 ]; then
                 PR_TITLE_BRANCH="${PR_TITLE} for branch ${branch}"
-                PR_URL=$(gh pr create \
-                                --repo "${GITHUB_USER}/${REPO_BASENAME}" \
-                                --head "${NEW_BRANCH}" \
-                                --base "${branch}" \
-                                --title "${PR_TITLE_BRANCH}" \
-                                --body "${PR_BODY}" \
-                                2>&1 | grep -Eo 'https://github\.com/[^ ]+')    # --repo "${repo}" \
-                echo "PR created for branch ${branch} in repository ${repo}: ${PR_URL}"
-                echo "[PR created][${branch}]: ${PR_URL}" >>  /tmp/logs/migration_results.log
+                echo "before creating PR"
+                gh pr create \
+                    --repo "${GITHUB_USER}/${REPO_BASENAME}" \
+                    --head "${NEW_BRANCH}" \
+                    --base "${branch}" \
+                    --title "${PR_TITLE_BRANCH}" \
+                    --body "${PR_BODY}"
+                echo "after creating PR"
+                # PR_URL=$(gh pr create \
+                #                 --repo "${GITHUB_USER}/${REPO_BASENAME}" \
+                #                 --head "${NEW_BRANCH}" \
+                #                 --base "${branch}" \
+                #                 --title "${PR_TITLE_BRANCH}" \
+                #                 --body "${PR_BODY}" \
+                #                 2>&1 | grep -Eo 'https://github\.com/[^ ]+')    # --repo "${repo}" \
+                # echo "PR created for branch ${branch} in repository ${repo}: ${PR_URL}"
+                # echo "[PR created][${branch}]: ${PR_URL}" >>  /tmp/logs/migration_results.log
             else
                 PR_URL=$(gh pr list --repo "${repo}" --head "${NEW_BRANCH}" --base "${branch}" --json url --jq '.[0].url')
                 echo "A PR already exists for branch ${NEW_BRANCH} in repository ${repo}. PR updated."
