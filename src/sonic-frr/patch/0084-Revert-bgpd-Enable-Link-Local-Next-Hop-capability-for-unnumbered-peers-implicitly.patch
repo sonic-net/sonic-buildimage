@@ -1,0 +1,296 @@
+From 17e3eec63fa2c2c25e302bbb564c5e28a2e9b328 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Fri, 19 Sep 2025 23:34:10 +0300
+Subject: Revert "bgpd: Enable Link-Local Next Hop capability for unnumbered
+ peers implicitly"
+
+If we have a route-map on the receiving side with `set ipv6 next-hop prefer global`,
+then we kinda broke the deployments. We shouldn't enable implicitly this for
+unnumbered peers.
+
+This reverts commit 87da3ec0389bc52a637726001f3735c82a703ece.
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_vty.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index 5aa8d7218e..d87da014c1 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -5172,11 +5172,6 @@ static int peer_conf_interface_get(struct vty *vty, const char *conf_if,
+ 		SET_FLAG(peer->flags_override, PEER_FLAG_CAPABILITY_ENHE);
+ 	}
+ 
+-	/* For unnumbered peers enable Link-Local Next Hop
+-	 * capability implicitly.
+-	 */
+-	peer_flag_set(peer, PEER_FLAG_CAPABILITY_LINK_LOCAL);
+-
+ 	if (peer_group_name) {
+ 		group = peer_group_lookup(bgp, peer_group_name);
+ 		if (!group) {
+-- 
+2.48.1
+
+
+From c42135b227a580f267afb5109ce706fc29d2cec5 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Fri, 19 Sep 2025 23:37:33 +0300
+Subject: tests: Enable link-local capability for r3
+
+This is needed after revert b4905c5e58e44fa616cefc3b28e744f144e9e99e.
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ tests/topotests/bgp_ipv6_link_local_capability/r3/frr.conf | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tests/topotests/bgp_ipv6_link_local_capability/r3/frr.conf b/tests/topotests/bgp_ipv6_link_local_capability/r3/frr.conf
+index b8d1965725..01853584dc 100644
+--- a/tests/topotests/bgp_ipv6_link_local_capability/r3/frr.conf
++++ b/tests/topotests/bgp_ipv6_link_local_capability/r3/frr.conf
+@@ -4,6 +4,7 @@ int lo
+ !
+ router bgp 65003
+  no bgp ebgp-requires-policy
++ bgp default link-local-capability
+  neighbor r3-eth0 interface remote-as auto
+  address-family ipv6 unicast
+   neighbor r3-eth0 activate
+-- 
+2.48.1
+
+
+From b4a81a268c17661f6ff67faddeef1c81246be7c9 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Fri, 19 Sep 2025 23:39:06 +0300
+Subject: doc: Do not enable link-local capability implicitly for unnumbered
+ peers
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ doc/user/bgp.rst | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index ea29757e74..03da0fddef 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -1982,8 +1982,7 @@ Configuring Peers
+    are utilized. This capability standardizes the operation of BGP over a
+    point-to-point links using link-local IPv6 addressing only.
+ 
+-   Enabled by default for the ``datacenter`` profile. Also implicitly enabled
+-   for unnumbered peers.
++   Enabled by default for the ``datacenter`` profile.
+ 
+ .. clicmd:: neighbor <A.B.C.D|X:X::X:X|WORD> accept-own
+ 
+-- 
+2.48.1
+
+
+From 94d9620b99cb49731879ab9a9220e20dc780f8e1 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Sat, 20 Sep 2025 10:30:23 +0300
+Subject: Revert "tests: Adopt bgp_vrf_leaking_5549_routes for LL Next Hop
+ capability"
+
+This reverts commit f8b8286e1b4b6d7c7a73245f3906ce6bd6763f8f.
+
+This is needed after revert b4905c5e58e44fa616cefc3b28e744f144e9e99e.
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ .../pe1/results/vrf10_ipv4_unicast.json                      | 5 ++---
+ .../pe1/results/vrf20_ipv4_unicast.json                      | 5 +++++
+ 2 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf10_ipv4_unicast.json b/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf10_ipv4_unicast.json
+index 7af37467d3..e6cb056140 100644
+--- a/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf10_ipv4_unicast.json
++++ b/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf10_ipv4_unicast.json
+@@ -18,13 +18,12 @@
+                         "hostname": "ce1",
+                         "afi": "ipv6",
+                         "scope": "link-local",
+-                        "length":16
++                        "used": true
+                     },
+                     {
+                         "hostname": "ce1",
+                         "afi": "ipv6",
+-                        "scope": "link-local",
+-                        "used": true
++                        "scope": "link-local"
+                     }
+                 ]
+             }
+diff --git a/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf20_ipv4_unicast.json b/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf20_ipv4_unicast.json
+index b4b00ac41f..0a2825c1fa 100644
+--- a/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf20_ipv4_unicast.json
++++ b/tests/topotests/bgp_vrf_leaking_5549_routes/pe1/results/vrf20_ipv4_unicast.json
+@@ -21,6 +21,11 @@
+                         "afi": "ipv6",
+                         "scope": "link-local",
+                         "used": true
++                    },
++                    {
++                        "hostname": "pe1",
++                        "afi": "ipv6",
++                        "scope": "link-local"
+                     }
+                 ]
+             }
+-- 
+2.48.1
+
+
+From db54103cf0ba5be02c4d5e73963988a611ef4d5f Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Sat, 20 Sep 2025 10:32:51 +0300
+Subject: Revert "tests: Adopt bgp_ipv6_rtadv for LL Next Hop capability"
+
+This reverts commit ed2c3efc274e011f24d78bb74ef0e7cde52a4323.
+
+This is needed after revert b4905c5e58e44fa616cefc3b28e744f144e9e99e.
+---
+ tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv4_routes.json | 4 ++--
+ tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv6_routes.json | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv4_routes.json b/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv4_routes.json
+index 938157cfea..affe5cf8df 100644
+--- a/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv4_routes.json
++++ b/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv4_routes.json
+@@ -18,10 +18,10 @@
+             "path":"102",
+             "origin":"incomplete",
+             "nexthops":[{
++                "ip":"2001:db8:1::2",
+                 "hostname":"r2",
+                 "afi":"ipv6",
+-                "scope":"link-local",
+-                "length":16
++                "scope":"global"
+             },{
+                 "interface":"r1-eth0",
+                 "hostname":"r2",
+diff --git a/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv6_routes.json b/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv6_routes.json
+index 8755e979e0..bccfb45771 100644
+--- a/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv6_routes.json
++++ b/tests/topotests/bgp_ipv6_rtadv/r1/bgp_ipv6_routes.json
+@@ -18,10 +18,10 @@
+             "path":"102",
+             "origin":"incomplete",
+             "nexthops":[{
++                "ip":"2001:db8:1::2",
+                 "hostname":"r2",
+                 "afi":"ipv6",
+-                "scope":"link-local",
+-                "length":16
++                "scope":"global"
+             },{
+                 "interface":"r1-eth0",
+                 "hostname":"r2",
+-- 
+2.48.1
+
+
+From da1c5581d79545c9178431a120789cd7e3c49f15 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Thu, 2 Oct 2025 09:35:41 +0300
+Subject: bgpd: Disable Link-Local capability by default
+
+Related-to: b4905c5e58e44fa616cefc3b28e744f144e9e99e
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ bgpd/bgp_vty.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/bgpd/bgp_vty.c b/bgpd/bgp_vty.c
+index d87da014c1..724c186c44 100644
+--- a/bgpd/bgp_vty.c
++++ b/bgpd/bgp_vty.c
+@@ -116,7 +116,6 @@ FRR_CFG_DEFAULT_BOOL(BGP_SOFT_VERSION_CAPABILITY,
+ 	{ .val_bool = false },
+ );
+ FRR_CFG_DEFAULT_BOOL(BGP_LINK_LOCAL_CAPABILITY,
+-	{ .val_bool = true, .match_profile = "datacenter", },
+ 	{ .val_bool = false },
+ );
+ FRR_CFG_DEFAULT_BOOL(BGP_DYNAMIC_CAPABILITY,
+-- 
+2.48.1
+
+
+From 920c74572182ea07fd334c115b0560a1a6a84605 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Thu, 2 Oct 2025 15:11:24 +0300
+Subject: tests: Enable Link-Local capability for bgp_ipv6_next_hop_self
+ topotest
+
+Related-to: bb0b6e13c226ff13165bcc69fb2d5d70acea145
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ tests/topotests/bgp_ipv6_next_hop_self/r1/frr.conf | 1 +
+ tests/topotests/bgp_ipv6_next_hop_self/r2/frr.conf | 1 +
+ tests/topotests/bgp_ipv6_next_hop_self/r3/frr.conf | 1 +
+ tests/topotests/bgp_ipv6_next_hop_self/r4/frr.conf | 1 +
+ 4 files changed, 4 insertions(+)
+
+diff --git a/tests/topotests/bgp_ipv6_next_hop_self/r1/frr.conf b/tests/topotests/bgp_ipv6_next_hop_self/r1/frr.conf
+index a77f1e2784..61c3c2439e 100644
+--- a/tests/topotests/bgp_ipv6_next_hop_self/r1/frr.conf
++++ b/tests/topotests/bgp_ipv6_next_hop_self/r1/frr.conf
+@@ -18,6 +18,7 @@ router bgp 65000
+  timers bgp 1 3
+  no bgp default ipv4-unicast
+  bgp bestpath as-path multipath-relax
++ bgp default link-local-capability
+  neighbor 2001:db8:1::2 remote-as internal
+  neighbor 2001:db8:1::2 update-source lo
+  neighbor 2001:db8:1::4 remote-as internal
+diff --git a/tests/topotests/bgp_ipv6_next_hop_self/r2/frr.conf b/tests/topotests/bgp_ipv6_next_hop_self/r2/frr.conf
+index f654741443..5a5dd18a44 100644
+--- a/tests/topotests/bgp_ipv6_next_hop_self/r2/frr.conf
++++ b/tests/topotests/bgp_ipv6_next_hop_self/r2/frr.conf
+@@ -16,6 +16,7 @@ router bgp 65000
+  no bgp default ipv4-unicast
+  no bgp network import-check
+  bgp bestpath as-path multipath-relax
++ bgp default link-local-capability
+  neighbor 2001:db8:1::1 remote-as internal
+  neighbor 2001:db8:1::1 update-source lo
+  !
+diff --git a/tests/topotests/bgp_ipv6_next_hop_self/r3/frr.conf b/tests/topotests/bgp_ipv6_next_hop_self/r3/frr.conf
+index 741b0f8428..94d550c492 100644
+--- a/tests/topotests/bgp_ipv6_next_hop_self/r3/frr.conf
++++ b/tests/topotests/bgp_ipv6_next_hop_self/r3/frr.conf
+@@ -12,6 +12,7 @@ router bgp 65100
+  timers bgp 1 3
+  no bgp default ipv4-unicast
+  bgp bestpath as-path multipath-relax
++ bgp default link-local-capability
+  neighbor 2001:db8:3:1::1 remote-as external
+  !
+  address-family ipv6 unicast
+diff --git a/tests/topotests/bgp_ipv6_next_hop_self/r4/frr.conf b/tests/topotests/bgp_ipv6_next_hop_self/r4/frr.conf
+index 30ad4e1151..08cab0fda2 100644
+--- a/tests/topotests/bgp_ipv6_next_hop_self/r4/frr.conf
++++ b/tests/topotests/bgp_ipv6_next_hop_self/r4/frr.conf
+@@ -15,6 +15,7 @@ router bgp 65000
+  timers bgp 1 3
+  no bgp default ipv4-unicast
+  bgp bestpath as-path multipath-relax
++ bgp default link-local-capability
+  neighbor 2001:db8:1::1 remote-as internal
+  neighbor 2001:db8:1::1 update-source lo
+  !
+-- 
+2.48.1
+

@@ -97,6 +97,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
                                $(TENCENT_TCS8400_PLATFORM_MODULE) \
                                $(TENCENT_TCS9400_PLATFORM_MODULE) \
+                               $(UFISPACE_S9311_64D_PLATFORM_MODULE) \
                                $(UFISPACE_S6301_56ST_PLATFORM_MODULE) \
                                $(UFISPACE_S7801_54XS_PLATFORM_MODULE) \
                                $(UFISPACE_S8901_54XC_PLATFORM_MODULE) \
@@ -112,6 +113,10 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R0_PLATFORM_MODULE) \
                                $(NEXTHOP_4010_R1_PLATFORM_MODULE) \
                                $(NEXTHOP_4020_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_4220_PLATFORM_MODULE) \
+                               $(NEXTHOP_4220_R0_PLATFORM_MODULE) \
+                               $(NEXTHOP_5010_PLATFORM_MODULE) \
+                               $(NEXTHOP_5010_R0_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \
@@ -120,7 +125,9 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6940_64OC_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6920_32QC2X_PLATFORM_MODULE) \
 			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE) \
-                   $(MICAS_M2_W6520_48C8QC_PLATFORM_MODULE)
+			       $(MICAS_M2_W6520_48C8QC_PLATFORM_MODULE) \
+			       $(SMCI_SSE_T8164_PLATFORM_MODULE) \
+			       $(SMCI_SSE_T8196_PLATFORM_MODULE)
 
 $(SONIC_ONE_IMAGE)_LAZY_BUILD_INSTALLS = $(BRCM_OPENNSL_KERNEL) $(BRCM_DNX_OPENNSL_KERNEL)
 ifeq ($(INSTALL_DEBUG_TOOLS),y)
