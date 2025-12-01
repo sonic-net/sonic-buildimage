@@ -1,6 +1,7 @@
 /*
  * $Id: ibde.h,v 1.27 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -132,11 +133,17 @@ typedef struct ibde_s {
     uint32  (*read)(int d, uint32 addr);
     int     (*write)(int d, uint32 addr, uint32 data);
 
+    /* 
+     * DMA Management
+     */
     uint32* (*salloc)(int d, int size, const char *name);
     void    (*sfree)(int d, void *ptr);
     int     (*sflush)(int d, void *addr, int length);
     int     (*sinval)(int d, void *addr, int length);
 
+    /* 
+     * Interrupt Management
+     */
     int     (*interrupt_connect)(int d, void (*)(void*), void *data);  
     int     (*interrupt_disconnect)(int d);
 
@@ -165,7 +172,7 @@ typedef struct ibde_s {
     sal_vaddr_t (*shmem_map)(int dev, uint32 addr, uint32 size);
 
     /*
-     *  cmic
+     *  CMIC
      */
     int   (*get_cmic_ver)(int d,  uint32 *ver);
 
@@ -204,6 +211,16 @@ typedef struct ibde_s {
      *  -1: An error happened during device probe.
      */
     int     (*probe)(void);
+
+    /*
+     * Get DMA debug information.
+     *
+     * This function was placed here to retain backward compatibility
+     * with BDE implementations that employ a fixed-order function
+     * list.
+     */
+    int (*sinfo)(int d, int type, uint32 *data);
+
 } ibde_t;
 
 
