@@ -40,7 +40,7 @@ stages:
 - stage: Build
   jobs:
   - job: Build
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 360
     steps:
     - template: cleanup.yml
@@ -55,8 +55,8 @@ stages:
         set -xe
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data src/sonic-dash-api
 
-        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic DOCKER_BUILDKIT=0
-        make -f Makefile.work BLDENV=bullseye SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y LEGACY_SONIC_MGMT_DOCKER=n target/docker-sonic-mgmt.gz
+        make NOBUSTER=1 NOBULLSEYE=1 SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic DOCKER_BUILDKIT=0
+        make -f Makefile.work BLDENV=bookworm SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y target/docker-sonic-mgmt.gz
         cp target -r $(Build.ArtifactStagingDirectory)/target
         docker load -i target/docker-sonic-mgmt.gz
         docker tag docker-sonic-mgmt $REGISTRY_SERVER/docker-sonic-mgmt:latest
@@ -69,7 +69,7 @@ stages:
       displayName: "Archive docker image sonic-mgmt"
 
   - job: validate_docker_image_and_upload
-    pool: sonicbld-1es
+    pool: sonicso1ES-amd64
     timeoutInMinutes: 360
     dependsOn: Build
     steps:

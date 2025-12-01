@@ -11,23 +11,29 @@ from .chassis import Chassis
 from .thermal import Thermal
 from .thermal_manager import ThermalManager
 from .fan import Fan
+from .fan_drawer import FanDrawer
 from .psu import Psu
 
-@thermal_json_object('fan_info')
-class FanInfo(ThermalPolicyInfoBase):
+@thermal_json_object('fan_drawer_info')
+class FanDrawerInfo(ThermalPolicyInfoBase):
     """Fan information for all fan drawers"""
-    INFO_TYPE = 'fan_info'
+    INFO_TYPE = 'fan_drawer_info'
     def __init__(self):
         self._fans = []
+        self._fan_drawers = []
     
     def collect(self, chassis: Chassis):
-        self._fans = chassis.get_all_fans()
-    
+        self._fans = chassis.get_all_fans()[:]
+        self._fan_drawers = chassis.get_all_fan_drawers()[:]
+
     def get_fans(self)->list[Fan]:
         return self._fans
+
+    def get_fan_drawers(self)->list[FanDrawer]:
+        return self._fan_drawers
     
-    def get_num_present_fans(self):
-        return sum([fan.get_presence() for fan in self._fans])
+    def get_num_present_fan_drawers(self):
+        return sum([fan_drawer.get_presence() for fan_drawer in self._fan_drawers])
     
 @thermal_json_object('thermal_info')
 class ThermalInfo(ThermalPolicyInfoBase):
@@ -37,7 +43,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._thermal_manager = None
     
     def collect(self, chassis: Chassis):
-        self._thermals = chassis.get_all_thermals()
+        self._thermals = chassis.get_all_thermals()[:]
         for sfp in chassis.get_all_sfps():
             self._thermals.extend(sfp.get_all_thermals())
         self._thermal_manager = chassis.get_thermal_manager()
@@ -56,7 +62,7 @@ class PsuInfo(ThermalPolicyInfoBase):
         self._psus = []
     
     def collect(self, chassis: Chassis):
-        self._psus = chassis.get_all_psus()
+        self._psus = chassis.get_all_psus()[:]
     
     def get_thermals(self)->list[Psu]:
         return self._psus.get_all_thermals()

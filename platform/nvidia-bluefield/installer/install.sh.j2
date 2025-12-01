@@ -246,18 +246,20 @@ if [[ $SKIP_FIRMWARE_UPGRADE != "true" ]]; then
 
 	ex mst start
 
+        cp -R $sonic_fs_mountpoint/usr/bin/asic_detect/ /usr/bin/
+
 	if function_exists bfb_pre_fw_install; then
 		log "Running bfb_pre_fw_install from bf.cfg"
 		bfb_pre_fw_install
 	fi
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
+	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v --no-mst
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
 	fi
 
 	if [[ $FORCE_FW_CONFIG_RESET == "true" ]]; then
-		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r
+		ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v -r --no-mst
 	fi
 
 	ex umount $sonic_fs_mountpoint

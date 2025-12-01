@@ -1,0 +1,44 @@
+# docker image for docker-telemetry-sidecar
+
+DOCKER_TELEMETRY_SIDECAR_STEM = docker-telemetry-sidecar
+DOCKER_TELEMETRY_SIDECAR = $(DOCKER_TELEMETRY_SIDECAR_STEM).gz
+DOCKER_TELEMETRY_SIDECAR_DBG = $(DOCKER_TELEMETRY_SIDECAR_STEM)-$(DBG_IMAGE_MARK).gz
+
+$(DOCKER_TELEMETRY_SIDECAR)_LOAD_DOCKERS = $(DOCKER_CONFIG_ENGINE_BOOKWORM)
+
+$(DOCKER_TELEMETRY_SIDECAR)_PATH = $(DOCKERS_PATH)/$(DOCKER_TELEMETRY_SIDECAR_STEM)
+
+$(DOCKER_TELEMETRY_SIDECAR)_VERSION = 1.0.0
+$(DOCKER_TELEMETRY_SIDECAR)_PACKAGE_NAME = telemetry-sidecar
+
+SONIC_DOCKER_IMAGES += $(DOCKER_TELEMETRY_SIDECAR)
+SONIC_BOOKWORM_DOCKERS += $(DOCKER_TELEMETRY_SIDECAR)
+SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_TELEMETRY_SIDECAR)
+
+SONIC_DOCKER_DBG_IMAGES += $(DOCKER_TELEMETRY_SIDECAR_DBG)
+SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_TELEMETRY_SIDECAR_DBG)
+SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_TELEMETRY_SIDECAR_DBG)
+
+
+$(DOCKER_TELEMETRY_SIDECAR)_DEPENDS += $(LIBSWSSCOMMON)
+$(DOCKER_TELEMETRY_SIDECAR)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
+                                           $(PYTHON3_SWSSCOMMON) \
+                                           $(LIBYANG_PY3)
+
+$(DOCKER_TELEMETRY_SIDECAR)_CONTAINER_NAME = telemetry-sidecar
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -t --privileged --pid=host
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/audit:/etc/audit:rw
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_TELEMETRY_SIDECAR)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
+
+$(DOCKER_TELEMETRY_SIDECAR)_FILES += $(CONTAINER_CHECKER)
+$(DOCKER_TELEMETRY_SIDECAR)_FILES += $(TELEMETRY_SYSTEMD)
+
+.PHONY: docker-telemetry-sidecar-ut
+docker-telemetry-sidecar-ut:
+	@echo "Running unit tests for systemd_stub.py..."
+	@PYTHONPATH=dockers/docker-telemetry-sidecar \
+		python3 -m pytest -q dockers/docker-telemetry-sidecar/systemd_scripts/tests
+
+target/docker-telemetry-sidecar.gz: docker-telemetry-sidecar-ut

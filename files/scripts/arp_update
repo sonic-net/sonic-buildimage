@@ -17,6 +17,12 @@ logger () {
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
+  if [ $? -ne 0 ]; then
+      logger -p error "arp_update_vars cannot be generated"
+      sleep 300
+      continue
+  fi
+
   SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
   TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.type')
   if [[ "$SWITCH_TYPE" == "chassis-packet" ]] || [[ "$TYPE" == "BackEndToRRouter" ]]; then
@@ -48,7 +54,7 @@ while /bin/true; do
                   interface="${STATIC_ROUTE_IFNAMES[i]}"
                   if [[ -z "$interface" ]]; then
                       # should never be here, handling just in case
-                      logger -p error "missing interface entry for static route $nexthop"
+                      logger -p warning "missing interface entry for static route $nexthop"
                       continue
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")
@@ -188,8 +194,17 @@ while /bin/true; do
   # resolve neighbor entries from CONFIG_DB in case of mismatch with kernel
   DBNEIGH="$DBNEIGH $(sonic-db-cli CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
 
-  KERNEIGH4=$(ip -4 neigh show | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
-  KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
+  # Define kernel neighbors based on device type
+  if [[ "$SUBTYPE" != "dualtor" ]]; then
+    # Non-DualToR: exclude FAILED/INCOMPLETE neighbors
+    KERNEIGH4=$(ip -4 neigh show | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
+    KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
+  else
+    # DualToR: include FAILED/INCOMPLETE neighbors
+    KERNEIGH4=$(ip -4 neigh show | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
+    KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
+  fi
+
   for neigh in $DBNEIGH; do
       intf="$( cut -d ':' -f 2 <<< "$neigh" )"
       ip="$( cut -d ':' -f 3- <<< "$neigh" )"

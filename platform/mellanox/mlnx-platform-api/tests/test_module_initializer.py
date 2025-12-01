@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,9 +60,9 @@ class TestModuleInitializer:
         mock_exists.return_value = False
         initializer.wait_module_ready()
         assert not initializer.initialized
-        
 
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.chassis.extract_cpo_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.sfp.SFP.initialize_sfp_modules', mock.MagicMock())
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.is_initialization_owner')

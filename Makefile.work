@@ -69,7 +69,7 @@
 SHELL = /bin/bash
 
 USER := $(shell id -un)
-PWD := $(shell pwd)
+PWD := $(shell realpath $(shell pwd))
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
 DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
@@ -158,10 +158,6 @@ endif
 
 ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
-endif
-
-ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
-	override LEGACY_SONIC_MGMT_DOCKER = y
 endif
 
 ifeq ($(CONFIGURED_ARCH),amd64)
@@ -337,6 +333,9 @@ endif
 ifneq ($(SECURE_UPGRADE_SIGNING_CERT),)
     DOCKER_RUN += -v $(SECURE_UPGRADE_SIGNING_CERT):$(SECURE_UPGRADE_SIGNING_CERT):ro
 endif
+ifneq ($(SECURE_UPGRADE_KERNEL_CAFILE),)
+    DOCKER_RUN += -v $(SECURE_UPGRADE_KERNEL_CAFILE):$(SECURE_UPGRADE_KERNEL_CAFILE):ro
+endif
 # Mount the Signing prod tool in the slave container
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 ifneq ($(SECURE_UPGRADE_PROD_SIGNING_TOOL),)
@@ -477,6 +476,7 @@ SONIC_SLAVE_BASE_BUILD = \
 		$(DOCKER_SLAVE_BASE_PULL_REGISTRY); \
 	} || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) not found. Building... ; \
 		$(PREPARE_DOCKER) ; \
 		$(DOCKER_SLAVE_BASE_BUILD) ; \
@@ -492,6 +492,7 @@ DOCKER_SLAVE_USER_INSPECT = \
 SONIC_SLAVE_USER_BUILD = \
 	{ $(DOCKER_SLAVE_USER_INSPECT) } || \
 	{ \
+		set -o pipefail ; \
 		echo Image $(SLAVE_IMAGE):$(SLAVE_TAG) not found. Building... ; \
 		$(DOCKER_USER_BUILD) ; \
 	}
@@ -557,8 +558,9 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
+                           SECURE_UPGRADE_KERNEL_CAFILE=$(SECURE_UPGRADE_KERNEL_CAFILE) \
                            SECURE_UPGRADE_PROD_SIGNING_TOOL=$(SECURE_UPGRADE_PROD_SIGNING_TOOL) \
-                           SECURE_UPGRADE_PROD_TOOL_ARGS=$(SECURE_UPGRADE_PROD_TOOL_ARGS) \
+                           SECURE_UPGRADE_PROD_TOOL_ARGS="\"'$(SECURE_UPGRADE_PROD_TOOL_ARGS)'\"" \
                            SONIC_DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
                            ENABLE_HOST_SERVICE_ON_START=$(ENABLE_HOST_SERVICE_ON_START) \
                            SLAVE_DIR=$(SLAVE_DIR) \
@@ -578,7 +580,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
-                           LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)

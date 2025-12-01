@@ -158,26 +158,38 @@ def get_current_running_from_DB(always_running_containers):
 
     return running_containers
 
-
 def get_current_running_from_dockers():
     """
     @summary: This function will get all running containers from
               the list of docker containers in running state.
+              If namespace == 'sonic': it's rollout-ed via kubernetes so add io.kubernetes.container.name
+              If namespace is missing/empty: it's image native container, add ctr.name directly
     @return:  A set which contains containers that are
               in running state.
     """
     DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
     running_containers = set()
-    ctrs = DOCKER_CLIENT.containers
+
     try:
-        lst = ctrs.list(filters={"status": "running"})
-        for ctr in lst:
-            running_containers.add(ctr.name)
+        for ctr in DOCKER_CLIENT.containers.list(filters={"status": "running"}):
+            labels = ctr.labels or {}
+            ns = labels.get("io.kubernetes.pod.namespace")
+            dtype = labels.get("io.kubernetes.docker.type")
+            kname = labels.get("io.kubernetes.container.name")
+
+            if ns == "sonic":
+                if dtype == "container" and kname and kname not in ("<no value>", "POD"):
+                    running_containers.add(kname)
+            elif not ns:
+                running_containers.add(ctr.name)
+
     except docker.errors.APIError as err:
-        print("Failed to retrieve the running container list. Error: '{}'".format(err))
+        print(f"Failed to retrieve the running container list. Error: '{err}'")
+        pass
+    except docker.errors.DockerException as err:
+        print(f"Docker client error: '{err}'")
         pass
     return running_containers
-
 
 def get_current_running_containers(always_running_containers):
     """

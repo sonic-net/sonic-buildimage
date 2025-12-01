@@ -99,7 +99,7 @@ module sonic-port{
 				leaf speed {
 					mandatory true;
 					type uint32 {
-						range 1..800000;
+						range 1..1600000;
 					}
 				}
 
@@ -130,12 +130,13 @@ module sonic-port{
 
 					type union {
 						type uint32 {
-							range 1..800000;
+							range 1..1600000;
 						}
 						type string {
 							pattern "all";
 						}
 					}
+					ordered-by user;
 				}
 
 				must "(count(adv_speeds[text()='all']) = 0) or (count(adv_speeds) = 1)";
@@ -155,6 +156,7 @@ module sonic-port{
 							pattern "all";
 						}
 					}
+					ordered-by user;
 				}
 
 				must "(count(adv_interface_types[text()='all']) = 0) or (count(adv_interface_types) = 1)";
@@ -168,7 +170,7 @@ module sonic-port{
 				leaf subport {
 					description "Logical subport(s) for physical port breakout";
 					type uint8 {
-						range 0..8;
+						range 0..12;
 					}
 				}
 

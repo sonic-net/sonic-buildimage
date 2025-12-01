@@ -41,11 +41,12 @@ bcm_device:
             pfc_deadlock_seq_control : 1
             sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
             stat_custom_receive0_management_mode: 1
             l3_alpm_large_vrf_mode: 1
-            l3_ecmp_member_secondary_mem_size: 4096
+            l3_ecmp_member_secondary_mem_size: 0
             sai_mmu_custom_config: 1
+            sai_pfc_dlr_init_capability: 2
 ---
 device:
     0:
@@ -1263,7 +1264,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0x80
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
@@ -2574,4 +2575,10 @@ device:
                 TRAFFIC_CLASS: OBM_TC_LOSSLESS0
 
 ...
-
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
+...
