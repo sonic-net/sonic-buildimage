@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.3 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -35,8 +36,7 @@ LIBS = $(LIBDIR)/libkern.a
 
 ifeq (1,$(BUILD_DCBLIB))
 ifndef DCBDIR
-DCBDIR = $(SDK)/systems/linux/kernel/modules/dcb
-# $(error 'The $$DCBDIR variable is not set')
+$(error 'The $$DCBDIR variable is not set')
 endif
 ifeq (1,$(NO_PRECOMPILED_MODULE))
 $(error 'DCB_LIB build is not supported if NO_PRECOMPILED_MODULE=1')
