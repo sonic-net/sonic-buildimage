@@ -43,7 +43,7 @@ stages:
   jobs:
   - template: azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) SONIC_DPKG_CACHE_METHOD_OVERRIDE=rcache ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobFilters: none
       ${{ if contains(variables['Build.DefinitionName'], 'cross') }}:
         qemuOrCrossBuild: true
