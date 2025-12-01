@@ -64,7 +64,7 @@ process_repo() {
         git remote add mssonicbld https://mssonicbld:$TOKEN@github.com/mssonicbld/"${REPO_BASENAME}".git
     fi
     git fetch origin
-    git fetch mssonicbld 2>/dev/null || (gh repo fork origin --clone=false && git fetch mssonicbld)
+    git fetch mssonicbld 2>/dev/null || (gh repo fork "${repo}" --clone=false && git fetch mssonicbld)
 
     echo "${repo}" >> /tmp/logs/migration_results.log
 
