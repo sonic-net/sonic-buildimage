@@ -28,8 +28,12 @@ ccflags-y := $(SDK_PMD_KFLAGS) $(LKM_CFLAGS) $(LKM_CPPFLAGS) \
              -I$(SDK)/bcmdrd/include \
              -I$(SDK)/bcmltd/include \
              -I$(SDK)/bcmlrd/include \
+             -I$(SDK)/bcmcnet/include \
              -I$(SDK)/linux/include \
              -I$(SDK)/linux/knetcb \
+             -I$(SDK)/linux/knet \
+             -I$(SDK)/linux/knet/generated/include \
+             -I$(SDK)/linux/knet/generated \
              $(INCLUDES)
 
 linux_ngknetcb-y := $(SDK_PMD_KOBJS) \
