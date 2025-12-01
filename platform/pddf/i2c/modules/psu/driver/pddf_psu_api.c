@@ -193,7 +193,7 @@ static u8 psu_get_vout_mode(struct i2c_client *client)
 static long pmbus_linear11_to_int(u16 value, int multiplier)
 {
     s16 exponent;
-    s32 mantissa;
+    s64 mantissa;
 
     exponent = two_complement_to_int(value >> 11, 5, 0x1f);
     mantissa = two_complement_to_int(value & 0x7ff, 11, 0x7ff);

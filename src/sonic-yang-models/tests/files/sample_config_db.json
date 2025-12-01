@@ -1815,6 +1815,19 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_AGGREGATE_ADDRESS": {
+            "192.168.0.0/24": {
+                "bbr-required": "true",
+                "summary-only": "false",
+                "aggregate-address-prefix-list": "AGG_ROUTES_V4",
+                "contributing-address-prefix-list": "AGG_CONTRIBUTING_ROUTES_V4"
+            },
+            "fc00::/63": {
+                "bbr-required": "true",
+                "summary-only": "true",
+                "as-set": "true"
+            }
+        },
         "BGP_BBR": {
             "all": {
                 "status": "enabled"
@@ -1871,6 +1884,20 @@
                     "192.170.0.0/21"
                 ],
                 "name": "BGPVac",
+                "src_address": "10.1.0.32"
+            },
+            "vnet1|BGPWithVnet": {
+                "ip_range": [
+                    "10.10.0.0/24"
+                ],
+                "name": "BGPWithVnet",
+                "src_address": "10.1.0.32"
+            },
+            "Vrf_blue|BGPWithVrf": {
+                "ip_range": [
+                    "10.11.0.0/24"
+                ],
+                "name": "BGPWithVrf",
                 "src_address": "10.1.0.32"
             }
         },
@@ -1965,10 +1992,14 @@
         },
         "PREFIX_SET": {
             "prefix1": {
+            },
+            "prefix2": {
             }
         },
         "PREFIX": {
             "prefix1|1|10.0.0.0/8|8..16": {
+            },
+            "prefix2|10.0.0.0/8|exact": {
             }
         },
         "CHASSIS_MODULE": {
@@ -2513,7 +2544,7 @@
                 "uplink_fast": "false"
             }
         },
-        
+
 
         "MCLAG_DOMAIN": {
             "123": {
@@ -2685,7 +2716,12 @@
                 "login_timeout": "120",
                 "ports": "22",
                 "inactivity_timeout": "15",
-                "max_sessions": "0"
+                "max_sessions": "0",
+                "permit_root_login": "no",
+                "password_authentication": "true",
+                "ciphers": [ "chacha20-poly1305@openssh.com", "aes256-gcm@openssh.com" ],
+                "kex_algorithms": [ "sntrup761x25519-sha512", "curve25519-sha256", "ecdh-sha2-nistp521" ],
+                "macs": [ "hmac-sha2-512-etm@openssh.com", "hmac-sha2-512" ]
             }
         },
 
@@ -3133,6 +3169,29 @@
                     "OUT_CURR_OCCUPANCY_BYTES"
                 ]
             }
+        },
+        "STORMOND_CONFIG": {
+            "INTERVALS": {
+                "daemon_polling_interval" : "3600",
+                "fsstats_sync_interval"   : "86400"
+            }
+        },
+        "HEARTBEAT": {
+            "orchagent": {
+                "heartbeat_interval"   : "10000",
+                "alert_interval"       : "60000"
+            }
+        },
+        "ZTP" : {
+            "mode" : {
+                "profile" : "active",
+                "inband" : "true",
+                "out-of-band" : "true",
+                "ipv4" : "true",
+                "ipv6" : "true",
+                "product-name" : "product name",
+                "serial-no" : "1234-5678-91A"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -3144,18 +3203,6 @@
         "TACPLUS": {
             "global": {
             }
-        }
-    },
-    "STORMOND_CONFIG": {
-        "INTERVALS": {
-            "daemon_polling_interval" : "3600",
-            "fsstats_sync_interval"   : "86400"
-        }
-    },
-    "HEARTBEAT": {
-        "orchagent": {
-            "heartbeat_interval"   : "10000",
-            "alert_interval"       : "60000"
         }
     }
 }
