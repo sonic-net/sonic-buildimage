@@ -69,7 +69,7 @@
 
     "VNET_ROUTE_TUNNEL_TEST_MISSING_ENDPOINT": {
         "desc": "VNET route tunnel configuration with missing mandatory attribute (endpoint) in VNET_ROUTE_TUNNEL_LIST table.",
-        "eStrKey": "Mandatory"
+        "eStrKey": "MinElements"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_NONEXISTENT_VNET": {
@@ -95,17 +95,17 @@
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_ENDPOINT": {
         "desc": "VNET route tunnel configuration with invalid IP in comma-separated endpoint list.",
-        "eStr": "does not satisfy the constraint"
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_MAC": {
         "desc": "VNET route tunnel configuration with invalid MAC in comma-separated mac_address list.",
-        "eStr": "does not satisfy the constraint"
+        "eStrKey": "Pattern"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_INVALID_MULTI_VNI": {
         "desc": "VNET route tunnel configuration with invalid VNI in comma-separated vni list.",
-        "eStr": "does not satisfy the constraint"
+        "eStrKey": "Range"
     },
 
     "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING": {
