@@ -1,5 +1,5 @@
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -62,8 +62,7 @@ ST_BLDDIR := $(OUTPUT_DIR)/st
 
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
-
-KMODS := bde knet knetcb genl-packet bcmgenl edk ptpclock st
+KMODS := bde knet knetcb bcmgenl edk ptpclock st
 
 kmod: $(KMODS)
 
@@ -84,7 +83,7 @@ knetcb: knet
 		LKM_BLDDIR=$(KNETCB_BLDDIR) $(TARGET)
 	ln -sf $(KNETCB_BLDDIR)/*.ko $(OUTPUT_DIR)
 
-bcmgenl: knet genl-packet
+bcmgenl: knet
 	$(MAKE) -C $(SDK)/linux/bcmgenl SDK=$(SDK) \
 		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
 		LKM_BLDDIR=$(BCMGENL_BLDDIR) $(TARGET)

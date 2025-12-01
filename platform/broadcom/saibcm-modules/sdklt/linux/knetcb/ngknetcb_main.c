@@ -4,7 +4,7 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -129,7 +129,7 @@ static const struct {
 /*
   Change this structure to reflect the match_ids of interest.
   This is an example of how it can be used.
-*/
+ */
 typedef struct cb_match_id_s {
     int egress_pkt_fwd_l2_hdr_etag;
     int egress_pkt_fwd_l2_hdr_l2;
@@ -162,7 +162,7 @@ print_all_rxpmd_fields(
 {
     int rv, fid;
     bcmpkt_rxpmd_fid_support_t support;
-    uint32_t val;
+        uint32_t val;
 
     printk("\n[RX metadata information]:\n");
     bcmpkt_rxpmd_fid_support_get(dev_type, &support);
@@ -172,7 +172,7 @@ print_all_rxpmd_fields(
             (dev_type, (uint32_t *)rxpmd, fid, &val);
         if (rv == 0) {
             printk("  %-26s = %10d [0x%X]\n", rxpmd_info[fid].name, val, val);
-        }
+    }
     }
 }
 
@@ -250,7 +250,7 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
 
     if (BCMPKT_RXPMD_FID_SUPPORT_GET(support, BCMPKT_RXPMD_ING_TAG_TYPE)) {
         rv = bcmpkt_rxpmd_field_get(dev_type, (uint32_t *)rxpmd,
-                                    BCMPKT_RXPMD_ING_TAG_TYPE, &val);
+                                 BCMPKT_RXPMD_ING_TAG_TYPE, &val);
         /* Tomahawk4 family */
 
         /*
@@ -259,7 +259,7 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
          *   0: untagged, 1: tagged
          * For double tag device:
          *   0: untagged, 1: single inner-tag, 2: single outer-tag, 3: double tagged
-         */
+ */
         if (SHR_SUCCESS(rv)) {
             if (1 == val) {
 #ifdef KNET_CB_DEBUG
@@ -282,7 +282,7 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
         /* Trident4 family. */
         uint32_t match_id_data[2];
         bool itag = false, otag = false;
-        
+
         bcmpkt_rxpmd_field_get(dev_type, rxpmd, BCMPKT_RXPMD_MATCH_ID_LO,
                                &match_id_data[0]);
         bcmpkt_rxpmd_field_get(dev_type, rxpmd, BCMPKT_RXPMD_MATCH_ID_HI,
@@ -305,7 +305,7 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
             tag_status = 2;
         } else {
             tag_status = 0;
-        }
+    }
     } else if (BCMPKT_RXPMD_FID_SUPPORT_GET(support, BCMPKT_RXPMD_ARC_ID_LO) &&
                BCMPKT_RXPMD_FID_SUPPORT_GET(support, BCMPKT_RXPMD_ARC_ID_HI)){
         /* Trident5 Family*/
@@ -343,10 +343,10 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
                 printk("  Incoming frame untagged\n");
             } else {
                 printk("  Incoming frame tagged: %s\n", tag_type[tag_status]);
-            }
+        }
         } else {
             printk("  Unsupported tag type\n");
-        }
+    }
     }
 #endif /* KNET_CB_DEBUG */
     return tag_status;
@@ -364,7 +364,7 @@ dump_buffer(uint8_t * data, int size)
 
     buffer_ptr = buffer;
     for (i = 0; i < size; i++) {
-        *buffer_ptr++ = ' ';
+            *buffer_ptr++ = ' ';
         *buffer_ptr++ = to_hex[(data[i] >> 4) & 0xF];
         *buffer_ptr++ = to_hex[data[i] & 0xF];
         if (((i % 16) == 15) || (i == size - 1)) {
@@ -372,7 +372,7 @@ dump_buffer(uint8_t * data, int size)
             buffer_ptr = buffer;
             printk(KERN_INFO "%04X  %s\n", addr, buffer);
             addr = i + 1;
-    }
+        }
     }
 }
 
@@ -404,7 +404,7 @@ strip_tag_rx_cb(struct sk_buff *skb)
     uint32_t dev_type = 0;
     bcmlrd_variant_t var_type;
     uint32_t *rxpmd = NULL;
-   
+
     unit = cbd->dinfo->dev_no;
     rxpmd = (uint32_t *)cbd->pmd;
     rcpu_mode = (cbd->netif->flags & NGKNET_NETIF_F_RCPU_ENCAP)? 1 : 0;
@@ -422,7 +422,7 @@ strip_tag_rx_cb(struct sk_buff *skb)
         if (cbd->filt) {
             printk(KERN_INFO "Filter user data: 0x%08x\n",
                     *(uint32_t *) cbd->filt->user_data);
-        }
+                }
         printk(KERN_INFO "Before SKB (%d bytes):\n", skb->len);
         dump_buffer(skb->data, skb->len);
         printk("rx_cb for dev %d: id %s, %s\n", cbd->dinfo->dev_no, cbd->dinfo->var_str, cbd->dinfo->type_str);
@@ -435,7 +435,7 @@ strip_tag_rx_cb(struct sk_buff *skb)
 
             printk(KERN_INFO "Packet Payload (%d bytes):\n", payload_len);
             dump_buffer(payload_start, payload_len);
-        } else {
+                } else {
             printk(KERN_INFO "Packet (%d bytes):\n", cbd->pkt_len);
             dump_buffer(skb->data, cbd->pkt_len);
         }
@@ -499,7 +499,7 @@ strip_tag_tx_cb(struct sk_buff *skb)
 
     if (debug & 0x1) {
         printk("tx_cb for dev %d: %s\n", cbd->dinfo->dev_no, cbd->dinfo->type_str);
-    }
+            }
     show_pmd(cbd->pmd, cbd->pmd_len);
     show_mac(cbd->pmd + cbd->pmd_len);
 #endif
@@ -543,7 +543,7 @@ static int
 ngknetcb_release(struct inode *inode, struct file *filp)
 {
     return 0;
-}
+    }
 
 static ssize_t
 ngknetcb_write(struct file *file, const char *buf,
@@ -552,13 +552,13 @@ ngknetcb_write(struct file *file, const char *buf,
     memset(&strip_stats, 0, sizeof(strip_stats));
     printk("Cleared NGKNET callback stats\n");
     return count;
-}
+    }
 
 static long
 ngknetcb_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
     return 0;
-}
+    }
 
 static int
 ngknetcb_mmap(struct file *filp, struct vm_area_struct *vma)
@@ -594,7 +594,7 @@ static struct proc_ops ngknetcb_proc_ops = {
 #ifdef KPMD
 /*
   Initialize the desired match_ids for use later in the code.
-*/
+ */
 static void
 init_match_ids(int unit)
 {
@@ -615,12 +615,12 @@ init_match_ids(int unit)
                                   "EGRESS_PKT_FWD_L2_HDR_L2", &val) == 0) {
         match_id.egress_pkt_fwd_l2_hdr_l2 = val;
         printk("EGRESS_PKT_FWD_L2_HDR_L2: %d\n", val);
-    }
+        }
     if (bcmpkt_rxpmd_match_id_get(cb_dev[unit].var_type,
                                   "INGRESS_PKT_INNER_L2_HDR_L2", &val) == 0) {
         match_id.ingress_pkt_inner_l2_hdr_l2 = val;
         printk("INGRESS_PKT_INNER_L2_HDR_L2: %d\n", val);
-    }
+        }
     if (bcmpkt_rxpmd_match_id_get(cb_dev[unit].var_type,
                                   "INGRESS_PKT_FWD_L2_HDR_ETAG", &val) == 0) {
         match_id.ingress_pkt_fwd_l2_hdr_etag = val;
@@ -630,12 +630,12 @@ init_match_ids(int unit)
                                   "INGRESS_PKT_OUTER_L2_HDR_ITAG", &val) == 0) {
         match_id.ingress_pkt_outer_l2_hdr_itag = val;
         printk("INGRESS_PKT_OUTER_L2_HDR_ITAG: %d\n", val);
-    }
+}
     if (bcmpkt_rxpmd_match_id_get(cb_dev[unit].var_type,
                                   "INGRESS_PKT_OUTER_L2_HDR_OTAG", &val) == 0) {
         match_id.ingress_pkt_outer_l2_hdr_otag = val;
         printk("INGRESS_PKT_OUTER_L2_HDR_OTAG: %d\n", val);
-    }
+}
 }
 #endif
 /*!
@@ -665,7 +665,7 @@ init_cb(ngknet_dev_info_t *dinfo)
             cb_dev[unit].dev_type = dt;
             break;
         }
-    }
+}
 
     for (var = 0; var < BCMLRD_VARIANT_T_COUNT; var++) {
         if ((!strcasecmp(dinfo->type_str, variant_types[var].dev_name)) &&
