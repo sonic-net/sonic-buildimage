@@ -94,17 +94,10 @@ function preStartAction()
             # Load redis content from /host/warmboot/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
-            COLD_DIR=/host/coldboot
-            #In case of cold reboot, load redis content from /host/coldboot/dump.rdb
-            if [[ -f $COLD_DIR/dump.rdb ]]; then
-                #Load redis content from /host/coldboot/dump.rdb
-                docker cp $COLD_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
-            else   
-                # Create an emtpy file and overwrite any RDB if already there
-                echo -n > /tmp/dump.rdb
-                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
-                docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
-            fi        
+            # Create an emtpy file and overwrite any RDB if already there
+            echo -n > /tmp/dump.rdb
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
