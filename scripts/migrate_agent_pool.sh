@@ -14,6 +14,7 @@
 set -e
 mkdir -p /tmp/logs
 TMP_DIR=$(mktemp -d)
+git config --get advice.detachedHead false
 
 GITHUB_USER="${GITHUB_USER:-mssonicbld}"
 COMMIT_MSG="Automated agent pool migration"
@@ -43,19 +44,18 @@ done
 # folders or files to check
 FILE_TARGETS=("azure-pipelines" ".azure-pipelines" "azure-pipelines.yml" "azurepipeline.yml") 
 
-
 process_repo() {
     local repo="$1"
     REPO_BASENAME="${repo##*/}"
     
     for skip in $SKIP_REPOS; do
         if [ "${repo}" == "${skip}" ]; then
-            echo "\n============= Skipping repository: ${repo} ============="
+            echo -e "\n============= Skipping repository: ${repo} ============="
             return 0
         fi
     done
 
-    echo "\n============= Processing repository: ${repo} ============="
+    echo -e "\n============= Processing repository: ${repo} ============="
 
     git clone https://github.com/$repo "${TMP_DIR}/${REPO_BASENAME}"
     pushd "${TMP_DIR}/${REPO_BASENAME}"
@@ -68,8 +68,6 @@ process_repo() {
 
     echo "${repo}" >> /tmp/logs/migration_results.log
 
-    pwd
-
     for branch in $BRANCHES; do
 
         echo "=== Processing branch [${branch}] for ${repo} ==="
@@ -80,10 +78,9 @@ process_repo() {
             echo "Branch ${branch} does not exist in ${repo}, skipping."
             continue
         fi
-        NEW_BRANCH="migrate-agent-pool-${branch}"
 
+        NEW_BRANCH="migrate-agent-pool-${branch}"
         if git show-ref --verify --quiet "refs/heads/${NEW_BRANCH}"; then
-            echo "Branch ${NEW_BRANCH} already exists locally, deleting the old one."
             git branch -D "${NEW_BRANCH}"
         fi
         if git ls-remote --exit-code --heads mssonicbld "${NEW_BRANCH}" >/dev/null; then
@@ -118,12 +115,12 @@ process_repo() {
             if [ "$(gh pr list --repo "${repo}" --head "${NEW_BRANCH}" --base "${branch}" --json number --jq 'length')" -eq 0 ]; then
                 PR_TITLE_BRANCH="${PR_TITLE} for branch ${branch}"
                 PR_URL=$(gh pr create \
-                                --repo "${GITHUB_USER}/${REPO_BASENAME}" \
-                                --head "${NEW_BRANCH}" \
+                                --repo "${repo}" \
+                                --head "${GITHUB_USER}:${NEW_BRANCH}" \
                                 --base "${branch}" \
                                 --title "${PR_TITLE_BRANCH}" \
                                 --body "${PR_BODY}" \
-                                2>&1 | grep -Eo 'https://github\.com/[^ ]+')    # --repo "${repo}" \
+                                2>&1 | grep -Eo 'https://github\.com/[^ ]+')
                 echo "PR created for branch ${branch} in repository ${repo}: ${PR_URL}"
                 echo "[PR created][${branch}]: ${PR_URL}" >>  /tmp/logs/migration_results.log
             else
@@ -137,7 +134,7 @@ process_repo() {
         fi
     done
 
-    echo "========================================\n" >> /tmp/logs/migration_results.log
+    echo -e "========================================\n" >> /tmp/logs/migration_results.log
     cd -
 }
 
