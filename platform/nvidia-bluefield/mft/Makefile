@@ -18,7 +18,7 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-MFT_NAME = mft-$(MFT_VERSION)-$(MFT_REVISION)-arm64-deb
+MFT_NAME = mft-$(MFT_VERSION)-$(MFT_REVISION)-aarch64-deb
 MFT_TGZ = $(MFT_NAME).tgz
 
 ifeq ($(MFT_FROM_INTERNAL),y)
@@ -27,7 +27,7 @@ else
 MFT_TGZ_URL = http://www.mellanox.com/downloads/MFT/$(MFT_TGZ)
 endif
 
-BUILD_ARCH = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
+BUILD_ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 KERNEL_MFT_TARGET = kernel-mft-dkms-modules-$(KVERSION)_$(MFT_VERSION)_$(BUILD_ARCH).deb
 
 MAIN_TARGET = mft_$(MFT_VERSION)-$(MFT_REVISION)_arm64.deb
@@ -67,9 +67,7 @@ $(addprefix $(DEST)/, $(KERNEL_MFT_TARGET)): $(DEST)/% :
 	chmod +x $(DKMS_TMP)/DEBIAN/postinst
 	chmod +x $(DKMS_TMP)/DEBIAN/postrm
 
-	sudo dkms build kernel-mft-dkms/$(MFT_VERSION) -k $(KVERSION) -a arm64
-
-	# copy the built modules
+	# Note: Drivers are installed in DKMS_ROOT when the corresponding DKMS package is installed, no need to build again
 	cp -r $(DKMS_CTRL)/kernel-$(KVERSION)*/module/*.ko \
 			$(DKMS_TMP)/lib/modules/$(KVERSION)/updates/dkms/
 

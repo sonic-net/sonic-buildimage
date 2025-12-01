@@ -13,7 +13,7 @@ sonic_dependencies = ['sonic-py-common']
 dependencies = [
     'bitarray==2.8.1',
     'ipaddress==1.0.23',
-    'lxml==4.9.1',
+    'lxml>=4.9.1',
     'netaddr==0.8.0',
 ]
 
@@ -25,7 +25,7 @@ if sys.version_info.major == 3:
         # dependencies section of setuptools followed by uninstall of enum43
         # 'pyangbind==0.8.2',
         'Jinja2>=2.10',
-        'pyyaml==6.0.1',
+        'pyyaml>=6.0.1',
     ]
     sonic_dependencies += [
         'sonic-yang-mgmt>=1.0',

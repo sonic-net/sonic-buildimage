@@ -23,7 +23,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	  filename=$$(basename $$target)
 	  url=$(FIPS_URL_PREFIX)/$$filename
 	  mkdir -p "$$(dirname $(DEST)/$$target)"
-	  wget -O "$(DEST)/$$target" "$$url"
+	  curl -f -o "$(DEST)/$$target" "$$url"
 	  touch "$(DEST)/$$target"
 	done
 

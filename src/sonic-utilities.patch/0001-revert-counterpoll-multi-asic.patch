@@ -1,0 +1,1487 @@
+diff --git a/counterpoll/main.py b/counterpoll/main.py
+old mode 100755
+new mode 100644
+index 95282a3e..65a2212e
+--- a/counterpoll/main.py
++++ b/counterpoll/main.py
+@@ -1,11 +1,13 @@
+ import click
+-import os
+-from sonic_py_common import device_info, multi_asic
++import utilities_common.cli as clicommon
++
+ from tabulate import tabulate
++from sonic_py_common import device_info
+ from flow_counter_util.route import exit_if_route_flow_counter_not_support
+-from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig
++from swsscommon.swsscommon import ConfigDBConnector
+ from swsscommon.swsscommon import CFG_FLEX_COUNTER_TABLE_NAME as CFG_FLEX_COUNTER_TABLE
+ 
++
+ BUFFER_POOL_WATERMARK = "BUFFER_POOL_WATERMARK"
+ PORT_BUFFER_DROP = "PORT_BUFFER_DROP"
+ PG_DROP = "PG_DROP"
+@@ -16,7 +18,6 @@ ENABLE = "enable"
+ DEFLT_60_SEC= "default (60000)"
+ DEFLT_10_SEC= "default (10000)"
+ DEFLT_1_SEC = "default (1000)"
+-DEFAULT_NAMESPACE = ''
+ 
+ 
+ def is_dpu(db):
+@@ -28,246 +29,203 @@ def is_dpu(db):
+         return False
+ 
+ 
+-def connect_to_db(namespace):
+-    if namespace is None:
+-        namespace = DEFAULT_NAMESPACE
+-    else:
+-        if not SonicDBConfig.isGlobalInit():
+-            SonicDBConfig.initializeGlobalConfig()
+-    configdb = ConfigDBConnector(use_unix_socket_path=True, namespace=str(namespace))
+-    configdb.connect()
+-    return configdb
+-
+-
+ @click.group()
+ def cli():
+     """ SONiC Static Counter Poll configurations """
+ 
+-
+ # Queue counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def queue(ctx, namespace):
++def queue():
+     """ Queue counter commands """
+-    ctx.obj = connect_to_db(namespace)
+-
+ 
+-@queue.command(name='interval')
++@queue.command()
+ @click.argument('poll_interval', type=click.IntRange(100, 30000))
+-@click.pass_context
+-def queue_interval(ctx, poll_interval):
++def interval(poll_interval):
+     """ Set queue counter query interval """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     queue_info = {}
+     if poll_interval is not None:
+         queue_info['POLL_INTERVAL'] = poll_interval
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+ 
+-@queue.command(name='enable')
+-@click.pass_context
+-def queue_enable(ctx):
++@queue.command()
++def enable():
+     """ Enable queue counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     queue_info = {}
+     queue_info['FLEX_COUNTER_STATUS'] = 'enable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+ 
+-@queue.command(name='disable')
+-@click.pass_context
+-def queue_disable(ctx):
++@queue.command()
++def disable():
+     """ Disable queue counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     queue_info = {}
+     queue_info['FLEX_COUNTER_STATUS'] = 'disable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE", queue_info)
+ 
+ # Port counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def port(ctx, namespace):
++def port():
+     """ Port counter commands """
+-    ctx.obj = connect_to_db(namespace)
+-
+ 
+-@port.command(name='interval')
++@port.command()
+ @click.argument('poll_interval', type=click.IntRange(100, 30000))
+-@click.pass_context
+-def port_interval(ctx, poll_interval):
++def interval(poll_interval):
+     """ Set port counter query interval """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     if poll_interval is not None:
+         port_info['POLL_INTERVAL'] = poll_interval
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+ 
+-@port.command(name='enable')
+-@click.pass_context
+-def port_enable(ctx):
++@port.command()
++def enable():
+     """ Enable port counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = 'enable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+ 
+-@port.command(name='disable')
+-@click.pass_context
+-def port_disable(ctx):
++@port.command()
++def disable():
+     """ Disable port counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = 'disable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PORT", port_info)
+ 
+ # Port buffer drop counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def port_buffer_drop(ctx, namespace):
++def port_buffer_drop():
+     """ Port buffer drop  counter commands """
+-    ctx.obj = connect_to_db(namespace)
+ 
+-
+-@port_buffer_drop.command(name='interval')
++@port_buffer_drop.command()
+ @click.argument('poll_interval', type=click.IntRange(30000, 300000))
+-@click.pass_context
+-def port_buffer_drop_interval(ctx, poll_interval):
+-    """ Set port_buffer_drop counter query interval
++def interval(poll_interval):
++    """
++    Set port_buffer_drop counter query interval
+     This counter group causes high CPU usage when polled,
+     hence the allowed interval is between 30s and 300s.
+     This is a short term solution and
+-    should be changed once the performance is enhanced """
++    should be changed once the performance is enhanced
++    """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     if poll_interval:
+         port_info['POLL_INTERVAL'] = poll_interval
+-    if os.geteuid() != 0 and os.environ.get("UTILITIES_UNIT_TESTING", "0") == "1":
+-        ctx.obj = connect_to_db(DEFAULT_NAMESPACE)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
+ 
+-@port_buffer_drop.command(name='enable')
+-@click.pass_context
+-def port_buffer_drop_enable(ctx):
++@port_buffer_drop.command()
++def enable():
+     """ Enable port counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = ENABLE
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
+ 
+-@port_buffer_drop.command(name='disable')
+-@click.pass_context
+-def port_buffer_drop_disable(ctx):
++@port_buffer_drop.command()
++def disable():
+     """ Disable port counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = DISABLE
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", PORT_BUFFER_DROP, port_info)
+ 
+ 
+ # Ingress PG drop packet stat
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def pg_drop(ctx, namespace):
++def pg_drop(ctx):
+     """  Ingress PG drop counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+-
+-@pg_drop.command(name='interval')
++@pg_drop.command()
+ @click.argument('poll_interval', type=click.IntRange(1000, 30000))
+ @click.pass_context
+-def pg_drop_interval(ctx, poll_interval):
++def interval(ctx, poll_interval):
+     """
+     Set pg_drop packets counter query interval
+     interval is between 1s and 30s.
+     """
++
+     port_info = {}
+     port_info['POLL_INTERVAL'] = poll_interval
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PG_DROP, port_info)
+ 
+-
+-@pg_drop.command(name='enable')
++@pg_drop.command()
+ @click.pass_context
+-def pg_drop_enable(ctx):
++def enable(ctx):
+     """ Enable pg_drop counter query """
++
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = ENABLE
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PG_DROP, port_info)
+ 
+-
+-@pg_drop.command(name='disable')
++@pg_drop.command()
+ @click.pass_context
+-def pg_drop_disable(ctx):
++def disable(ctx):
+     """ Disable pg_drop counter query """
++
+     port_info = {}
+     port_info['FLEX_COUNTER_STATUS'] = DISABLE
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", PG_DROP, port_info)
+ 
+-
+ # RIF counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def rif(ctx, namespace):
++def rif():
+     """ RIF counter commands """
+-    ctx.obj = connect_to_db(namespace)
+ 
+-
+-@rif.command(name='interval')
++@rif.command()
+ @click.argument('poll_interval')
+-@click.pass_context
+-def rif_interval(ctx, poll_interval):
++def interval(poll_interval):
+     """ Set rif counter query interval """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     rif_info = {}
+     if poll_interval is not None:
+         rif_info['POLL_INTERVAL'] = poll_interval
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
+ 
+-
+-@rif.command(name='enable')
+-@click.pass_context
+-def rif_enable(ctx):
++@rif.command()
++def enable():
+     """ Enable rif counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     rif_info = {}
+     rif_info['FLEX_COUNTER_STATUS'] = 'enable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
+ 
+-@rif.command(name='disable')
+-@click.pass_context
+-def rif_disable(ctx):
++@rif.command()
++def disable():
+     """ Disable rif counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     rif_info = {}
+     rif_info['FLEX_COUNTER_STATUS'] = 'disable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "RIF", rif_info)
+ 
+ # Watermark counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def watermark(ctx, namespace):
++def watermark():
+     """ Watermark counter commands """
+-    ctx.obj = connect_to_db(namespace)
+-
+ 
+-@watermark.command(name='interval')
++@watermark.command()
+ @click.argument('poll_interval', type=click.IntRange(1000, 60000))
+-@click.pass_context
+-def watermark_interval(ctx, poll_interval):
++def interval(poll_interval):
+     """ Set watermark counter query interval for both queue and PG watermarks """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     queue_wm_info = {}
+     pg_wm_info = {}
+     buffer_pool_wm_info = {}
+@@ -275,202 +233,178 @@ def watermark_interval(ctx, poll_interval):
+         queue_wm_info['POLL_INTERVAL'] = poll_interval
+         pg_wm_info['POLL_INTERVAL'] = poll_interval
+         buffer_pool_wm_info['POLL_INTERVAL'] = poll_interval
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", queue_wm_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", pg_wm_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, buffer_pool_wm_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", queue_wm_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", pg_wm_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, buffer_pool_wm_info)
+ 
+-@watermark.command(name='enable')
+-@click.pass_context
+-def watermark_enable(ctx):
++@watermark.command()
++def enable():
+     """ Enable watermark counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'enable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", fc_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", fc_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, fc_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", fc_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", fc_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, fc_info)
+ 
+-@watermark.command(name='disable')
+-@click.pass_context
+-def watermark_disable(ctx):
++@watermark.command()
++def disable():
+     """ Disable watermark counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'disable'
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", fc_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", fc_info)
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, fc_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "QUEUE_WATERMARK", fc_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "PG_WATERMARK", fc_info)
++    configdb.mod_entry("FLEX_COUNTER_TABLE", BUFFER_POOL_WATERMARK, fc_info)
+ 
+ # ACL counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def acl(ctx, namespace):
++def acl(ctx):
+     """  ACL counter commands """
+-    ctx.obj = connect_to_db(namespace)
+-
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+-@acl.command(name='interval')
++@acl.command()
+ @click.argument('poll_interval', type=click.IntRange(1000, 30000))
+ @click.pass_context
+-def acl_interval(ctx, poll_interval):
++def interval(ctx, poll_interval):
+     """
+     Set ACL counters query interval
+     interval is between 1s and 30s.
+     """
++
+     fc_group_cfg = {}
+     fc_group_cfg['POLL_INTERVAL'] = poll_interval
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", ACL, fc_group_cfg)
+ 
+-
+-@acl.command(name='enable')
++@acl.command()
+ @click.pass_context
+-def acl_enable(ctx):
++def enable(ctx):
+     """ Enable ACL counter query """
++
+     fc_group_cfg = {}
+     fc_group_cfg['FLEX_COUNTER_STATUS'] = ENABLE
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", ACL, fc_group_cfg)
+ 
+-
+-@acl.command(name='disable')
++@acl.command()
+ @click.pass_context
+-def acl_disable(ctx):
++def disable(ctx):
+     """ Disable ACL counter query """
++
+     fc_group_cfg = {}
+     fc_group_cfg['FLEX_COUNTER_STATUS'] = DISABLE
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", ACL, fc_group_cfg)
+ 
+-
+ # Tunnel counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def tunnel(ctx, namespace):
++def tunnel():
+     """ Tunnel counter commands """
+-    ctx.obj = connect_to_db(namespace)
+ 
+-
+-@tunnel.command(name='interval')
++@tunnel.command()
+ @click.argument('poll_interval', type=click.IntRange(100, 30000))
+-@click.pass_context
+-def tunnel_interval(ctx, poll_interval):
++def interval(poll_interval):
+     """ Set tunnel counter query interval """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     tunnel_info = {}
+     tunnel_info['POLL_INTERVAL'] = poll_interval
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+ 
+-@tunnel.command(name='enable')
+-@click.pass_context
+-def tunnel_enable(ctx):
++@tunnel.command()
++def enable():
+     """ Enable tunnel counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     tunnel_info = {}
+     tunnel_info['FLEX_COUNTER_STATUS'] = ENABLE
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+ 
+-@tunnel.command(name='disable')
+-@click.pass_context
+-def tunnel_disable(ctx):
++@tunnel.command()
++def disable():
+     """ Disable tunnel counter query """
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     tunnel_info = {}
+     tunnel_info['FLEX_COUNTER_STATUS'] = DISABLE
+-    ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+-
++    configdb.mod_entry("FLEX_COUNTER_TABLE", "TUNNEL", tunnel_info)
+ 
+ # Trap flow counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def flowcnt_trap(ctx, namespace):
++def flowcnt_trap(ctx):
+     """ Trap flow counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+-
+-@flowcnt_trap.command(name='interval')
++@flowcnt_trap.command()
+ @click.argument('poll_interval', type=click.IntRange(1000, 30000))
+ @click.pass_context
+-def flowcnt_trap_interval(ctx, poll_interval):
++def interval(ctx, poll_interval):
+     """ Set trap flow counter query interval """
+     fc_info = {}
+     fc_info['POLL_INTERVAL'] = poll_interval
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_TRAP", fc_info)
+ 
+-
+-@flowcnt_trap.command(name='enable')
++@flowcnt_trap.command()
+ @click.pass_context
+-def flowcnt_trap_enable(ctx):
++def enable(ctx):
+     """ Enable trap flow counter query """
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'enable'
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_TRAP", fc_info)
+ 
+-
+-@flowcnt_trap.command(name='disable')
++@flowcnt_trap.command()
+ @click.pass_context
+-def flowcnt_trap_disable(ctx):
++def disable(ctx):
+     """ Disable trap flow counter query """
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'disable'
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_TRAP", fc_info)
+ 
+-
+ # Route flow counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def flowcnt_route(ctx, namespace):
++def flowcnt_route(ctx):
+     """ Route flow counter commands """
+-    ctx.obj = connect_to_db(namespace)
+     exit_if_route_flow_counter_not_support()
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+-
+-@flowcnt_route.command(name='interval')
++@flowcnt_route.command()
+ @click.argument('poll_interval', type=click.IntRange(1000, 30000))
+ @click.pass_context
+-def flowcnt_route_interval(ctx, poll_interval):
++def interval(ctx, poll_interval):
+     """ Set route flow counter query interval """
+     fc_info = {}
+     fc_info['POLL_INTERVAL'] = poll_interval
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_ROUTE", fc_info)
+ 
+-
+-@flowcnt_route.command(name='enable')
++@flowcnt_route.command()
+ @click.pass_context
+-def flowcnt_route_enable(ctx):
++def enable(ctx):
+     """ Enable route flow counter query """
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'enable'
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_ROUTE", fc_info)
+ 
+-
+-@flowcnt_route.command(name='disable')
++@flowcnt_route.command()
+ @click.pass_context
+-def flowcnt_route_disable(ctx):
++def disable(ctx):
+     """ Disable route flow counter query """
+     fc_info = {}
+     fc_info['FLEX_COUNTER_STATUS'] = 'disable'
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "FLOW_CNT_ROUTE", fc_info)
+ 
+-
+ # ENI counter commands
+ @click.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def eni(ctx, namespace):
++def eni(ctx):
+     """ ENI counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+ 
+ @eni.command(name='interval')
+@@ -503,13 +437,11 @@ def eni_disable(ctx):
+ 
+ # WRED queue counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def wredqueue(ctx, namespace):
++def wredqueue(ctx):
+     """ WRED queue counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+ 
+ @wredqueue.command(name='interval')
+@@ -542,13 +474,11 @@ def wredqueue_disable(ctx):
+ 
+ # WRED port counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def wredport(ctx, namespace):
++def wredport(ctx):
+     """ WRED port counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+ 
+ @wredport.command(name='interval')
+@@ -581,35 +511,33 @@ def wredport_disable(ctx):
+ 
+ # SRv6 counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+ @click.pass_context
+-def srv6(ctx, namespace):
++def srv6(ctx):
+     """ SRv6 counter commands """
+-    ctx.obj = connect_to_db(namespace)
++    ctx.obj = ConfigDBConnector()
++    ctx.obj.connect()
+ 
+ 
+-@srv6.command(name='interval')
+-@click.argument('poll_interval', type=click.IntRange(1000, 30000))
++@srv6.command()
+ @click.pass_context
+-def srv6_interval(ctx, poll_interval):
++@click.argument('poll_interval', type=click.IntRange(1000, 30000))
++def interval(ctx, poll_interval):  # noqa: F811
+     """ Set SRv6 counter query interval """
+     srv6_info = {'POLL_INTERVAL': poll_interval}
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "SRV6", srv6_info)
+ 
+ 
+-@srv6.command(name='enable')
++@srv6.command()
+ @click.pass_context
+-def srv6_enable(ctx):
++def enable(ctx):  # noqa: F811
+     """ Enable SRv6 counter query """
+     srv6_info = {'FLEX_COUNTER_STATUS': ENABLE}
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "SRV6", srv6_info)
+ 
+ 
+-@srv6.command(name='disable')
++@srv6.command()
+ @click.pass_context
+-def srv6_disable(ctx):
++def disable(ctx):  # noqa: F811
+     """ Disable SRv6 counter query """
+     srv6_info = {'FLEX_COUNTER_STATUS': DISABLE}
+     ctx.obj.mod_entry("FLEX_COUNTER_TABLE", "SRV6", srv6_info)
+@@ -617,20 +545,15 @@ def srv6_disable(ctx):
+ 
+ # Switch counter commands
+ @cli.group()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-@click.pass_context
+-def switch(ctx, namespace):
++def switch():
+     """ Switch counter commands """
+-    ctx.obj = connect_to_db(namespace)
+     pass
+ 
+ 
+-@switch.command(name='interval')
++@switch.command()
++@clicommon.pass_db
+ @click.argument("poll_interval", type=click.IntRange(1000, 60000))
+-@click.pass_context
+-def switch_interval(ctx, poll_interval):
++def interval(db, poll_interval):  # noqa: F811
+     """ Set switch counter query interval """
+     table = CFG_FLEX_COUNTER_TABLE
+     key = "SWITCH"
+@@ -639,12 +562,12 @@ def switch_interval(ctx, poll_interval):
+         "POLL_INTERVAL": poll_interval
+     }
+ 
+-    ctx.obj.mod_entry(table, key, data)
++    db.cfgdb.mod_entry(table, key, data)
+ 
+ 
+-@switch.command(name='enable')
+-@click.pass_context
+-def switch_enable(ctx):
++@switch.command()
++@clicommon.pass_db
++def enable(db):  # noqa: F811
+     """ Enable switch counter query """
+     table = CFG_FLEX_COUNTER_TABLE
+     key = "SWITCH"
+@@ -653,12 +576,12 @@ def switch_enable(ctx):
+         "FLEX_COUNTER_STATUS": ENABLE
+     }
+ 
+-    ctx.obj.mod_entry(table, key, data)
++    db.cfgdb.mod_entry(table, key, data)
+ 
+ 
+-@switch.command(name='disable')
+-@click.pass_context
+-def switch_disable(ctx):
++@switch.command()
++@clicommon.pass_db
++def disable(db):  # noqa: F811
+     """ Disable switch counter query """
+     table = CFG_FLEX_COUNTER_TABLE
+     key = "SWITCH"
+@@ -667,16 +590,14 @@ def switch_disable(ctx):
+         "FLEX_COUNTER_STATUS": DISABLE
+     }
+ 
+-    ctx.obj.mod_entry(table, key, data)
++    db.cfgdb.mod_entry(table, key, data)
+ 
+ 
+ @cli.command()
+-@click.option('-n', '--namespace', help='Namespace name',
+-              required=True if multi_asic.is_multi_asic() else False,
+-              type=click.Choice(multi_asic.get_namespace_list()))
+-def show(namespace):
++def show():
+     """ Show the counter configuration """
+-    configdb = connect_to_db(namespace)
++    configdb = ConfigDBConnector()
++    configdb.connect()
+     queue_info = configdb.get_entry('FLEX_COUNTER_TABLE', 'QUEUE')
+     port_info = configdb.get_entry('FLEX_COUNTER_TABLE', 'PORT')
+     port_drop_info = configdb.get_entry('FLEX_COUNTER_TABLE', PORT_BUFFER_DROP)
+diff --git a/scripts/wredstat b/scripts/wredstat
+index 34793797..3c17ec1d 100755
+--- a/scripts/wredstat
++++ b/scripts/wredstat
+@@ -88,33 +88,17 @@ def build_json(port, cnstat):
+         out.update(ports_stats(k))
+     return out
+ 
+-class WredstatWrapper(object):
+-    """A wrapper to execute Wredstat cmd over the correct namespaces"""
+-    def __init__(self, namespace, voq=False):
+-        self.namespace = namespace
+-        self.voq = voq
+ 
+-        # Initialize the multi-asic namespace
+-        self.multi_asic = multi_asic_util.MultiAsic(constants.DISPLAY_ALL, namespace_option=namespace)
++class Wredstat(object):
++    def __init__(self, namespace, voq=False):
+         self.db = None
+-
+-    @multi_asic_util.run_on_multi_asic
+-    def run(self, save_fresh_stats, port_to_show_stats, json_opt, non_zero):
+-        wredstat = Wredstat(self.multi_asic.current_namespace, self.db, self.voq)
+-        if save_fresh_stats:
+-           wredstat.save_fresh_stats()
+-           return
+-
+-        if port_to_show_stats!=None:
+-           wredstat.get_print_port_stat(port_to_show_stats, json_opt, non_zero)
++        self.multi_asic = multi_asic_util.MultiAsic(constants.DISPLAY_ALL, namespace)
++        if namespace is not None:
++            for ns in self.multi_asic.get_ns_list_based_on_options():
++                self.db = multi_asic.connect_to_all_dbs_for_ns(ns)
+         else:
+-           wredstat.get_print_all_stat(json_opt, non_zero)
+-
+-
+-class Wredstat(object):
+-    def __init__(self, namespace, db, voq):
+-        self.db = db
+-        self.namespace = namespace
++            self.db = SonicV2Connector(use_unix_socket_path=False)
++            self.db.connect(self.db.COUNTERS_DB)
+         self.voq = voq
+ 
+         def get_queue_port(table_id):
+@@ -215,7 +199,7 @@ class Wredstat(object):
+             cnstat_dict[queue] = get_counters(queue_map[queue])
+         return cnstat_dict
+ 
+-    def cnstat_print(self, port, cnstat_dict, json_opt, non_zero):
++    def cnstat_print(self, port, cnstat_dict, json_opt):
+         """
+         Print the cnstat. If JSON option is True, return data in
+         JSON format.
+@@ -228,25 +212,19 @@ class Wredstat(object):
+                 if json_opt:
+                     json_output[port][key] = data
+                 continue
+-            if not non_zero or (data['wredDrppacket'] != 'N/A' and data['wredDrppacket'] != '0') or \
+-                               (data['wredDrpbytes'] != 'N/A' and data['wredDrpbytes'] != '0')  or \
+-                               (data['ecnpacket'] != 'N/A' and data['ecnpacket'] != '0') or \
+-                               (data['ecnbytes'] != 'N/A' and data['ecnbytes'] != '0'):
+-                table.append((port, data['queuetype'] + str(data['queueindex']),
+-                             data['wredDrppacket'], data['wredDrpbytes'],
+-                             data['ecnpacket'], data['ecnbytes']))
++            table.append((port, data['queuetype'] + str(data['queueindex']),
++                        data['wredDrppacket'], data['wredDrpbytes'],
++                        data['ecnpacket'], data['ecnbytes']))
+ 
+         if json_opt:
+-            if table:
+-                json_output[port].update(build_json(port, table))
++            json_output[port].update(build_json(port, table))
+             return json_output
+         else:
+-            if table:
+-                hdr = voq_header if self.voq else header
+-                print(tabulate(table, hdr, tablefmt='simple', stralign='right'))
+-                print()
++            hdr = voq_header if self.voq else header
++            print(tabulate(table, hdr, tablefmt='simple', stralign='right'))
++            print()
+ 
+-    def cnstat_diff_print(self, port, cnstat_new_dict, cnstat_old_dict, json_opt, non_zero):
++    def cnstat_diff_print(self, port, cnstat_new_dict, cnstat_old_dict, json_opt):
+         """
+         Print the difference between two cnstat results. If JSON
+         option is True, return data in JSON format.
+@@ -264,36 +242,25 @@ class Wredstat(object):
+                 old_cntr = cnstat_old_dict.get(key)
+ 
+             if old_cntr is not None:
+-                if not non_zero or \
+-                    (cntr['wredDrppacket'] != 'N/A' and ns_diff(cntr['wredDrppacket'], old_cntr['wredDrppacket']) != '0') or \
+-                    (cntr['wredDrpbytes'] != 'N/A' and ns_diff(cntr['wredDrpbytes'], old_cntr['wredDrpbytes']) != '0') or \
+-                    (cntr['ecnpacket'] != 'N/A' and ns_diff(cntr['ecnpacket'], old_cntr['ecnpacket']) != '0') or \
+-                    (cntr['ecnbytes'] != 'N/A' and  ns_diff(cntr['ecnbytes'], old_cntr['ecnbytes']) != '0'):
+-                    table.append((port, cntr['queuetype'] + str(cntr['queueindex']),
+-                             ns_diff(cntr['wredDrppacket'], old_cntr['wredDrppacket']),
+-                             ns_diff(cntr['wredDrpbytes'], old_cntr['wredDrpbytes']),
+-                             ns_diff(cntr['ecnpacket'], old_cntr['ecnpacket']),
+-                             ns_diff(cntr['ecnbytes'], old_cntr['ecnbytes'])))
++                table.append((port, cntr['queuetype'] + str(cntr['queueindex']),
++                            ns_diff(cntr['wredDrppacket'], old_cntr['wredDrppacket']),
++                            ns_diff(cntr['wredDrpbytes'], old_cntr['wredDrpbytes']),
++                            ns_diff(cntr['ecnpacket'], old_cntr['ecnpacket']),
++                            ns_diff(cntr['ecnbytes'], old_cntr['ecnbytes'])))
+             else:
+-                if not non_zero or (cntr['wredDrppacket'] != 'N/A' and cntr['wredDrppacket'] != '0') or \
+-                               (cntr['wredDrpbytes'] != 'N/A' and cntr['wredDrpbytes'] != '0')  or \
+-                               (cntr['ecnpacket'] != 'N/A' and cntr['ecnpacket'] != '0') or \
+-                               (cntr['ecnbytes'] != 'N/A' and cntr['ecnbytes'] != '0'):
+-                    table.append((port, cntr['queuetype'] + str(cntr['queueindex']),
+-                           cntr['wredDrppacket'], cntr['wredDrpbytes'],
+-                           cntr['ecnpacket'], cntr['ecnbytes']))
++                table.append((port, cntr['queuetype'] + str(cntr['queueindex']),
++                        cntr['wredDrppacket'], cntr['wredDrpbytes'],
++                        cntr['ecnpacket'], cntr['ecnbytes']))
+ 
+         if json_opt:
+-            if table:
+-                json_output[port].update(build_json(port, table))
++            json_output[port].update(build_json(port, table))
+             return json_output
+         else:
+-            if table:
+-                hdr = voq_header if self.voq else header
+-                print(tabulate(table, hdr, tablefmt='simple', stralign='right'))
+-                print()
++            hdr = voq_header if self.voq else header
++            print(tabulate(table, hdr, tablefmt='simple', stralign='right'))
++            print()
+ 
+-    def get_print_all_stat(self, json_opt, non_zero):
++    def get_print_all_stat(self, json_opt):
+         """
+         Get stat for each port
+         If JSON option is True, collect data for each port and
+@@ -310,22 +277,22 @@ class Wredstat(object):
+                     cnstat_cached_dict = json.load(open(cnstat_fqn_file_name, 'r'))
+                     if json_opt:
+                         json_output[port].update({"cached_time":cnstat_cached_dict.get('time')})
+-                        json_output.update(self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt, non_zero))
++                        json_output.update(self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt))
+                     else:
+                         print(port + " Last cached time was " + str(cnstat_cached_dict.get('time')))
+-                        self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt, non_zero)
++                        self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt)
+                 except IOError as e:
+                     print(e.errno, e)
+             else:
+                 if json_opt:
+-                    json_output.update(self.cnstat_print(port, cnstat_dict, json_opt, non_zero))
++                    json_output.update(self.cnstat_print(port, cnstat_dict, json_opt))
+                 else:
+-                    self.cnstat_print(port, cnstat_dict, json_opt, non_zero)
++                    self.cnstat_print(port, cnstat_dict, json_opt)
+ 
+         if json_opt:
+             print(json_dump(json_output))
+ 
+-    def get_print_port_stat(self, port, json_opt, non_zero):
++    def get_print_port_stat(self, port, json_opt):
+         """
+         Get stat for the port
+         If JSON option is True  print data in JSON format
+@@ -344,17 +311,17 @@ class Wredstat(object):
+                 cnstat_cached_dict = json.load(open(cnstat_fqn_file_name, 'r'))
+                 if json_opt:
+                     json_output[port].update({"cached_time":cnstat_cached_dict.get('time')})
+-                    json_output.update(self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt, non_zero))
++                    json_output.update(self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt))
+                 else:
+                     print("Last cached time was " + str(cnstat_cached_dict.get('time')))
+-                    self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt, non_zero)
++                    self.cnstat_diff_print(port, cnstat_dict, cnstat_cached_dict, json_opt)
+             except IOError as e:
+                 print(e.errno, e)
+         else:
+             if json_opt:
+-                json_output.update(self.cnstat_print(port, cnstat_dict, json_opt, non_zero))
++                json_output.update(self.cnstat_print(port, cnstat_dict, json_opt))
+             else:
+-                self.cnstat_print(port, cnstat_dict, json_opt, non_zero)
++                self.cnstat_print(port, cnstat_dict, json_opt)
+ 
+         if json_opt:
+             print(json_dump(json_output))
+@@ -391,7 +358,6 @@ Examples:
+     parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0')
+     parser.add_argument('-j', '--json_opt', action='store_true', help='Print in JSON format')
+     parser.add_argument('-V', '--voq', action='store_true', help='display voq stats')
+-    parser.add_argument('-nz', '--non_zero', action='store_true', help='display non-zero wred queue stats')
+     parser.add_argument('-n', '--namespace', default=None, help='Display queue counters for specific namespace')
+     args = parser.parse_args()
+ 
+@@ -400,7 +366,6 @@ Examples:
+     voq = args.voq
+     json_opt = args.json_opt
+     namespace = args.namespace
+-    non_zero = args.non_zero
+ 
+     port_to_show_stats = args.port
+ 
+@@ -412,8 +377,17 @@ Examples:
+     if delete_stats:
+         cache.remove()
+ 
+-    wredstat_wrapper = WredstatWrapper(namespace, voq)
+-    wredstat_wrapper.run(save_fresh_stats, port_to_show_stats, json_opt, non_zero)
++    wredstat = Wredstat( namespace, voq )
++
++    if save_fresh_stats:
++        wredstat.save_fresh_stats()
++        sys.exit(0)
++
++
++    if port_to_show_stats!=None:
++        wredstat.get_print_port_stat(port_to_show_stats, json_opt)
++    else:
++        wredstat.get_print_all_stat(json_opt)
+ 
+     sys.exit(0)
+ 
+diff --git a/show/main.py b/show/main.py
+index 65d27237..edbf549e 100755
+--- a/show/main.py
++++ b/show/main.py
+@@ -801,8 +801,7 @@ def counters(interfacename, namespace, display, all, trim, voq, nonzero, json, v
+ @click.option('--verbose', is_flag=True, help="Enable verbose output")
+ @click.option('--json', is_flag=True, help="JSON output")
+ @click.option('--voq', is_flag=True, help="VOQ counters")
+-@click.option('-nz', '--nonzero', is_flag=True, help="Non Zero Counters")
+-def wredcounters(interfacename, namespace, display, verbose, json, voq, nonzero):
++def wredcounters(interfacename, namespace, display, verbose, json, voq):
+     """Show queue wredcounters"""
+ 
+     cmd = ["wredstat"]
+@@ -823,9 +822,6 @@ def wredcounters(interfacename, namespace, display, verbose, json, voq, nonzero)
+     if voq:
+         cmd += ["-V"]
+ 
+-    if nonzero:
+-        cmd += ["-nz"]
+-
+     run_command(cmd, display_cmd=verbose)
+ 
+ #
+diff --git a/tests/counterpoll_test.py b/tests/counterpoll_test.py
+index 1b036d7c..93eb2657 100644
+--- a/tests/counterpoll_test.py
++++ b/tests/counterpoll_test.py
+@@ -368,7 +368,7 @@ class TestCounterpoll(object):
+         runner = CliRunner()
+         db = Db()
+ 
+-        result = runner.invoke(counterpoll.cli.commands["switch"].commands[status], [], obj=db.cfgdb)
++        result = runner.invoke(counterpoll.cli.commands["switch"].commands[status], [], obj=db)
+         print(result.exit_code, result.output)
+         assert result.exit_code == 0
+ 
+@@ -380,105 +380,13 @@ class TestCounterpoll(object):
+         db = Db()
+         test_interval = "20000"
+ 
+-        result = runner.invoke(counterpoll.cli.commands["switch"].commands["interval"], [test_interval], obj=db.cfgdb)
++        result = runner.invoke(counterpoll.cli.commands["switch"].commands["interval"], [test_interval], obj=db)
+         print(result.exit_code, result.output)
+         assert result.exit_code == 0
+ 
+         table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+         assert test_interval == table["SWITCH"]["POLL_INTERVAL"]
+ 
+-    @pytest.mark.parametrize("status", ["disable", "enable"])
+-    def test_queue_status(self, status):
+-        runner = CliRunner()
+-        db = Db()
+-        result = runner.invoke(counterpoll.cli.commands["queue"].commands[status],
+-                               [], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert status == table["QUEUE"]["FLEX_COUNTER_STATUS"]
+-
+-    def test_queue_interval(self):
+-        runner = CliRunner()
+-        db = Db()
+-        test_interval = "8888"
+-        result = runner.invoke(counterpoll.cli.commands["queue"].commands["interval"],
+-                               [test_interval], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert test_interval == table["QUEUE"]["POLL_INTERVAL"]
+-
+-    @pytest.mark.parametrize("status", ["disable", "enable"])
+-    def test_port_status(self, status):
+-        runner = CliRunner()
+-        db = Db()
+-        result = runner.invoke(counterpoll.cli.commands["port"].commands[status],
+-                               [], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert status == table["PORT"]["FLEX_COUNTER_STATUS"]
+-
+-    def test_port_interval(self):
+-        runner = CliRunner()
+-        db = Db()
+-        test_interval = "6565"
+-        result = runner.invoke(counterpoll.cli.commands["port"].commands["interval"],
+-                               [test_interval], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert test_interval == table["PORT"]["POLL_INTERVAL"]
+-
+-    @pytest.mark.parametrize("status", ["disable", "enable"])
+-    def test_watermark_status(self, status):
+-        runner = CliRunner()
+-        db = Db()
+-        result = runner.invoke(counterpoll.cli.commands["watermark"].commands[status],
+-                               [], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert status == table["QUEUE_WATERMARK"]["FLEX_COUNTER_STATUS"]
+-        assert status == table["PG_WATERMARK"]["FLEX_COUNTER_STATUS"]
+-        assert status == table["BUFFER_POOL_WATERMARK"]["FLEX_COUNTER_STATUS"]
+-
+-    def test_watermark_interval(self):
+-        runner = CliRunner()
+-        db = Db()
+-        test_interval = "8888"
+-        result = runner.invoke(counterpoll.cli.commands["watermark"].commands["interval"],
+-                               [test_interval], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert test_interval == table["QUEUE_WATERMARK"]["POLL_INTERVAL"]
+-        assert test_interval == table["PG_WATERMARK"]["POLL_INTERVAL"]
+-        assert test_interval == table["BUFFER_POOL_WATERMARK"]["POLL_INTERVAL"]
+-
+-    @pytest.mark.parametrize("status", ["disable", "enable"])
+-    def test_tunnel_status(self, status):
+-        runner = CliRunner()
+-        db = Db()
+-        result = runner.invoke(counterpoll.cli.commands["tunnel"].commands[status],
+-                               [], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert status == table["TUNNEL"]["FLEX_COUNTER_STATUS"]
+-
+-    def test_tunnel_interval(self):
+-        runner = CliRunner()
+-        db = Db()
+-        test_interval = "5565"
+-        result = runner.invoke(counterpoll.cli.commands["tunnel"].commands["interval"],
+-                               [test_interval], obj=db.cfgdb)
+-        print(result.exit_code, result.output)
+-        assert result.exit_code == 0
+-        table = db.cfgdb.get_table("FLEX_COUNTER_TABLE")
+-        assert test_interval == table["TUNNEL"]["POLL_INTERVAL"]
+-
+     @classmethod
+     def teardown_class(cls):
+         print("TEARDOWN")
+diff --git a/tests/wred_queue_counter_test.py b/tests/wred_queue_counter_test.py
+index ef914ac0..2cb2eaa6 100644
+--- a/tests/wred_queue_counter_test.py
++++ b/tests/wred_queue_counter_test.py
+@@ -117,75 +117,6 @@ Ethernet8  ALL29             N/A              N/A               N/A
+ 
+ """
+ 
+-show_wred_queue_counters_nz = """\
+-     Port    TxQ    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+----------  -----  --------------  ---------------  ----------------  -----------------
+-Ethernet0    UC1              60               43                39                  1
+-Ethernet0    UC2              82                7                39                 21
+-Ethernet0    UC3              52               70                19                 76
+-Ethernet0    UC4              11               59                12                 94
+-Ethernet0    UC5              36               62                35                 40
+-Ethernet0    UC6              49               91                 2                 88
+-Ethernet0    UC7              33               17                94                 74
+-Ethernet0    UC8              40               71                95                 33
+-Ethernet0    UC9              54                8                93                 78
+-Ethernet0   MC10              83               96                74                  9
+-Ethernet0   MC11              15               60                61                 31
+-Ethernet0   MC12              45               52                82                 94
+-Ethernet0   MC13              55               88                89                 52
+-Ethernet0   MC14              14               70                95                 79
+-Ethernet0   MC15              68               60                66                 81
+-Ethernet0   MC16              63                4                48                 76
+-Ethernet0   MC17              41               73                77                 74
+-Ethernet0   MC18              60               21                56                 54
+-Ethernet0   MC19              57               31                12                 39
+-
+-     Port    TxQ    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+----------  -----  --------------  ---------------  ----------------  -----------------
+-Ethernet4    UC0              41               96                70                 98
+-Ethernet4    UC1              18               49                63                 36
+-Ethernet4    UC2              99               90                 3                 15
+-Ethernet4    UC3              60               89                48                 41
+-Ethernet4    UC4               8               84                82                 94
+-Ethernet4    UC5              83               15                75                 92
+-Ethernet4    UC6              84               26                50                 71
+-Ethernet4    UC7              27               19                49                 80
+-Ethernet4    UC8              13               89                13                 33
+-Ethernet4    UC9              43               48                86                 31
+-Ethernet4   MC10              50                1                57                 82
+-Ethernet4   MC11              67               99                84                 59
+-Ethernet4   MC12               4               58                27                  5
+-Ethernet4   MC13              74                5                57                 39
+-Ethernet4   MC14              21               59                 4                 14
+-Ethernet4   MC15              24               61                19                 53
+-Ethernet4   MC16              51               15                15                 32
+-Ethernet4   MC17              98               18                23                 15
+-Ethernet4   MC18              41               34                 9                 57
+-Ethernet4   MC19              57                7                18                 99
+-
+-     Port    TxQ    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+----------  -----  --------------  ---------------  ----------------  -----------------
+-Ethernet8    UC1              38               17                68                 91
+-Ethernet8    UC2              16               65                79                 51
+-Ethernet8    UC3              11               97                63                 72
+-Ethernet8    UC4              54               89                62                 62
+-Ethernet8    UC5              13               84                30                 59
+-Ethernet8    UC6              49               67                99                 85
+-Ethernet8    UC7               2               63                38                 88
+-Ethernet8    UC8               0               82                93                 43
+-Ethernet8    UC9              80               17                91                 61
+-Ethernet8   MC10              81               63                76                 73
+-Ethernet8   MC11              29               16                29                 66
+-Ethernet8   MC12              32               12                61                 35
+-Ethernet8   MC13              79               17                72                 93
+-Ethernet8   MC14              23               21                67                 50
+-Ethernet8   MC15              37               10                97                 14
+-Ethernet8   MC16              30               17                74                 43
+-Ethernet8   MC17               0               63                54                 84
+-Ethernet8   MC18              69               88                24                 79
+-Ethernet8   MC19              20               12                84                  3
+-
+-"""
+ 
+ show_wred_queue_counters_port = """\
+      Port    TxQ    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+@@ -223,30 +154,6 @@ Ethernet8  ALL29             N/A              N/A               N/A
+ 
+ """
+ 
+-show_wred_queue_counters_port_nz = """\
+-     Port    TxQ    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+----------  -----  --------------  ---------------  ----------------  -----------------
+-Ethernet8    UC1              38               17                68                 91
+-Ethernet8    UC2              16               65                79                 51
+-Ethernet8    UC3              11               97                63                 72
+-Ethernet8    UC4              54               89                62                 62
+-Ethernet8    UC5              13               84                30                 59
+-Ethernet8    UC6              49               67                99                 85
+-Ethernet8    UC7               2               63                38                 88
+-Ethernet8    UC8               0               82                93                 43
+-Ethernet8    UC9              80               17                91                 61
+-Ethernet8   MC10              81               63                76                 73
+-Ethernet8   MC11              29               16                29                 66
+-Ethernet8   MC12              32               12                61                 35
+-Ethernet8   MC13              79               17                72                 93
+-Ethernet8   MC14              23               21                67                 50
+-Ethernet8   MC15              37               10                97                 14
+-Ethernet8   MC16              30               17                74                 43
+-Ethernet8   MC17               0               63                54                 84
+-Ethernet8   MC18              69               88                24                 79
+-Ethernet8   MC19              20               12                84                  3
+-
+-"""
+ show_queue_counters_json = """\
+ {
+   "Ethernet0": {
+@@ -983,126 +890,6 @@ show_queue_counters_port_json = """\
+   }
+ }"""
+ 
+-show_queue_counters_port_json_nz = """\
+-{
+-  "Ethernet8": {
+-    "MC10": {
+-      "ecnmarkedbytes": "73",
+-      "ecnmarkedpacket": "76",
+-      "wreddropbytes": "63",
+-      "wreddroppacket": "81"
+-    },
+-    "MC11": {
+-      "ecnmarkedbytes": "66",
+-      "ecnmarkedpacket": "29",
+-      "wreddropbytes": "16",
+-      "wreddroppacket": "29"
+-    },
+-    "MC12": {
+-      "ecnmarkedbytes": "35",
+-      "ecnmarkedpacket": "61",
+-      "wreddropbytes": "12",
+-      "wreddroppacket": "32"
+-    },
+-    "MC13": {
+-      "ecnmarkedbytes": "93",
+-      "ecnmarkedpacket": "72",
+-      "wreddropbytes": "17",
+-      "wreddroppacket": "79"
+-    },
+-    "MC14": {
+-      "ecnmarkedbytes": "50",
+-      "ecnmarkedpacket": "67",
+-      "wreddropbytes": "21",
+-      "wreddroppacket": "23"
+-    },
+-    "MC15": {
+-      "ecnmarkedbytes": "14",
+-      "ecnmarkedpacket": "97",
+-      "wreddropbytes": "10",
+-      "wreddroppacket": "37"
+-    },
+-    "MC16": {
+-      "ecnmarkedbytes": "43",
+-      "ecnmarkedpacket": "74",
+-      "wreddropbytes": "17",
+-      "wreddroppacket": "30"
+-    },
+-    "MC17": {
+-      "ecnmarkedbytes": "84",
+-      "ecnmarkedpacket": "54",
+-      "wreddropbytes": "63",
+-      "wreddroppacket": "0"
+-    },
+-    "MC18": {
+-      "ecnmarkedbytes": "79",
+-      "ecnmarkedpacket": "24",
+-      "wreddropbytes": "88",
+-      "wreddroppacket": "69"
+-    },
+-    "MC19": {
+-      "ecnmarkedbytes": "3",
+-      "ecnmarkedpacket": "84",
+-      "wreddropbytes": "12",
+-      "wreddroppacket": "20"
+-    },
+-    "UC1": {
+-      "ecnmarkedbytes": "91",
+-      "ecnmarkedpacket": "68",
+-      "wreddropbytes": "17",
+-      "wreddroppacket": "38"
+-    },
+-    "UC2": {
+-      "ecnmarkedbytes": "51",
+-      "ecnmarkedpacket": "79",
+-      "wreddropbytes": "65",
+-      "wreddroppacket": "16"
+-    },
+-    "UC3": {
+-      "ecnmarkedbytes": "72",
+-      "ecnmarkedpacket": "63",
+-      "wreddropbytes": "97",
+-      "wreddroppacket": "11"
+-    },
+-    "UC4": {
+-      "ecnmarkedbytes": "62",
+-      "ecnmarkedpacket": "62",
+-      "wreddropbytes": "89",
+-      "wreddroppacket": "54"
+-    },
+-    "UC5": {
+-      "ecnmarkedbytes": "59",
+-      "ecnmarkedpacket": "30",
+-      "wreddropbytes": "84",
+-      "wreddroppacket": "13"
+-    },
+-    "UC6": {
+-      "ecnmarkedbytes": "85",
+-      "ecnmarkedpacket": "99",
+-      "wreddropbytes": "67",
+-      "wreddroppacket": "49"
+-    },
+-    "UC7": {
+-      "ecnmarkedbytes": "88",
+-      "ecnmarkedpacket": "38",
+-      "wreddropbytes": "63",
+-      "wreddroppacket": "2"
+-    },
+-    "UC8": {
+-      "ecnmarkedbytes": "43",
+-      "ecnmarkedpacket": "93",
+-      "wreddropbytes": "82",
+-      "wreddroppacket": "0"
+-    },
+-    "UC9": {
+-      "ecnmarkedbytes": "61",
+-      "ecnmarkedpacket": "91",
+-      "wreddropbytes": "17",
+-      "wreddroppacket": "80"
+-    }
+-  }
+-}"""
+-
+ show_queue_voq_counters = """\
+             Port    Voq    WredDrp/pkts    WredDrp/bytes    EcnMarked/pkts    EcnMarked/bytes
+ ----------------  -----  --------------  ---------------  ----------------  -----------------
+@@ -1386,16 +1173,6 @@ class TestWredQueue(object):
+         assert result.exit_code == 0
+         assert result.output == show_wred_queue_counters
+ 
+-    def test_queue_counters_nz(self):
+-        runner = CliRunner()
+-        result = runner.invoke(
+-            show.cli.commands["queue"].commands["wredcounters"],
+-            ["-nz"]
+-        )
+-        print(result.output)
+-        assert result.exit_code == 0
+-        assert result.output == show_wred_queue_counters_nz
+-
+     def test_queue_counters_port(self):
+         runner = CliRunner()
+         result = runner.invoke(
+@@ -1406,16 +1183,6 @@ class TestWredQueue(object):
+         assert result.exit_code == 0
+         assert result.output == show_wred_queue_counters_port
+ 
+-    def test_queue_counters_port_nz(self):
+-        runner = CliRunner()
+-        result = runner.invoke(
+-            show.cli.commands["queue"].commands["wredcounters"],
+-            ["Ethernet8", "-nz"]
+-        )
+-        print(result.output)
+-        assert result.exit_code == 0
+-        assert result.output == show_wred_queue_counters_port_nz
+-
+     def test_queue_counters_json(self):
+         runner = CliRunner()
+         result = runner.invoke(
+@@ -1446,22 +1213,6 @@ class TestWredQueue(object):
+             del v["time"]
+         assert json_dump(json_output) == show_queue_counters_port_json
+ 
+-    def test_queue_counters_port_json_nz(self):
+-        runner = CliRunner()
+-        result = runner.invoke(
+-            show.cli.commands["queue"].commands["wredcounters"],
+-            ["Ethernet8", "--json", "-nz"]
+-        )
+-        print(result.output)
+-        print()
+-        assert result.exit_code == 0
+-        json_output = json.loads(result.output)
+-
+-        # remove "time" from the output
+-        for _, v in json_output.items():
+-            del v["time"]
+-        assert json_dump(json_output) == show_queue_counters_port_json_nz
+-
+     def test_queue_voq_counters(self):
+         runner = CliRunner()
+         result = runner.invoke(
+@@ -1523,30 +1274,6 @@ class TestWredQueue(object):
+         assert result.exit_code == 0
+         assert (wredstat_clear_str in result.output)
+ 
+-    def test_queue_counters_after_clear(self):
+-        runner = CliRunner()
+-        result = runner.invoke(
+-            show.cli.commands["queue"].commands["wredcounters"],
+-            ["-nz"]
+-        )
+-        print(result.output)
+-        assert result.exit_code == 0
+-        output = result.output.splitlines()
+-        f_output = [item for item in output if "time" not in item]
+-        assert len(f_output) == 0
+-
+-    def test_queue_counters_port_after_clear(self):
+-        runner = CliRunner()
+-        result = runner.invoke(
+-            show.cli.commands["queue"].commands["wredcounters"],
+-            ["Ethernet8", "-nz"]
+-        )
+-        print(result.output)
+-        assert result.exit_code == 0
+-        output = result.output.splitlines()
+-        f_output = [item for item in output if "time" not in item]
+-        assert len(f_output) == 0
+-
+     def test_invalid_port(self):
+         wredstat_inv_port = "Port does not exist"
+         runner = CliRunner()
