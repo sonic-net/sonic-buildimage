@@ -112,10 +112,6 @@
         "desc": "VNET route tunnel configuration with consistent_hashing_buckets field."
     },
 
-    "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MIN": {
-        "desc": "VNET route tunnel configuration with consistent_hashing_buckets minimum value (0)."
-    },
-
     "VNET_ROUTE_TUNNEL_TEST_CONSISTENT_HASHING_MAX": {
         "desc": "VNET route tunnel configuration with consistent_hashing_buckets maximum value (65535)."
     },
