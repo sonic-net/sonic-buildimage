@@ -23,5 +23,20 @@
         "desc": "A SID configured with invalid action",
         "eStrKey" : "InvalidValue",
         "eStr": ["action"]
+    },
+    "SRV6_MY_SID_UA_VALID": {
+        "desc": "Valid config with action uA"
+    },
+    "SRV6_MY_SID_UA_MISSING_INTERFACE": {
+        "desc": "A SID configured with action uA but missing interface",
+        "eStrKey" : "Must"
+    },
+    "SRV6_MY_SID_UA_MISSING_ADJ": {
+        "desc": "A SID configured with action uA but missing adj",
+        "eStrKey" : "Must"
+    },
+    "SRV6_MY_SID_UA_MISSING_BOTH": {
+        "desc": "A SID configured with action uA but missing both interface and adj",
+        "eStrKey" : "Must"
     }
 }
