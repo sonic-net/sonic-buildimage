@@ -1,12 +1,12 @@
 [Unit]
-Description=Platform es2227_54ts_p Service
+Description=Platform es1227_54ts_p2 Service
 Before=pmon.service
 After=sysinit.target
 DefaultDependencies=no
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/es2227_54ts_p-init.sh
+ExecStart=/usr/local/bin/es1227_54ts_p2-init.sh
 KillSignal=SIGKILL
 SuccessExitStatus=SIGKILL
 #StandardOutput=tty

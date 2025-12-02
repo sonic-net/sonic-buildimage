@@ -1,11 +1,11 @@
 [Unit]
-Description=Platform es2227_54ts_p OOB LED Service
-After=pmon.service es2227_54ts_p-init.service
+Description=Platform es1227_54ts_p2 OOB LED Service
+After=pmon.service es1227_54ts_p2-init.service
 DefaultDependencies=no
 
 [Service]
 ExecStartPre=/usr/bin/sleep 20
-ExecStart=/usr/local/bin/es2227_54ts_p-oob-led.sh
+ExecStart=/usr/local/bin/es1227_54ts_p2-oob-led.sh
 KillSignal=SIGKILL
 SuccessExitStatus=SIGKILL
 Restart=on-failure
