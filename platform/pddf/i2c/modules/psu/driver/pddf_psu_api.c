@@ -499,7 +499,7 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
 {
     int status = 0, retry = 10;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char buf[sizeof(padata->val.strval)]="";  //temporary placeholder for block data
+    char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
     int data_len = adata->len;
     bool is_pmbus = strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0;
@@ -550,12 +550,12 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
         if (is_pmbus)
         {
             buf[pmbus_data_len+1] = '\0';
-            strncpy(padata->val.strval, buf+1, sizeof(padata->val.strval));
+            strscpy(padata->val.strval, buf+1, sizeof(padata->val.strval));
         }
         else
         {
             buf[data_len-1] = '\0';
-            strncpy(padata->val.strval, buf, sizeof(padata->val.strval));
+            strscpy(padata->val.strval, buf, sizeof(padata->val.strval));
         }
     }
 
