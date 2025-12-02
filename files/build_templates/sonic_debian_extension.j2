@@ -231,8 +231,12 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # install libffi-dev to match utilities' dependency.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libffi-dev
 
-# utilities depends on bcrypt, bcrypt don't have armv7 manylinux wheel
-# bcrypt needs rust to compile
+# The 'utilities' package depends on the Python 'bcrypt' package.
+# For the armv7 architecture, there is no pre-built manylinux wheel available for 'bcrypt',
+# so it must be built from source. Building 'bcrypt' from source requires Rust tooling
+# (rustc and cargo). These are installed here and removed after installation to minimize
+# the final image size. If a manylinux wheel becomes available for armv7 in the future,
+# this step may no longer be necessary.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install rustc cargo
 
 # Install SONiC Utilities Python package
