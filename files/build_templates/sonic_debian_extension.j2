@@ -231,11 +231,18 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # install libffi-dev to match utilities' dependency.
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libffi-dev
 
+# utilities depends on bcrypt, bcrypt don't have armv7 manylinux wheel
+# bcrypt needs rust to compile
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install rustc cargo
+
 # Install SONiC Utilities Python package
 install_pip_package {{sonic_utilities_py3_wheel_path}}
 
 # Install sonic-utilities data files (and any dependencies via 'apt-get -y install -f')
 install_deb_package $debs_path/sonic-utilities-data_*.deb
+
+# Uninstall Rust
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y purge rustc cargo
 
 # Install customized bash version to patch bash plugin support.
 install_deb_package $debs_path/bash_*.deb
