@@ -2462,9 +2462,9 @@
         "VNET_ROUTE_TUNNEL" : {
             "vnet1|10.0.0.0/24" : {
                 "endpoint": "192.168.1.1,192.168.1.2",
-                "mac_address": "f9:22:83:99:22:a2,f9:22:83:99:22:a2",
+                "mac_address": "f9:22:83:99:22:a1,f9:22:83:99:22:a2",
                 "vni": "10011,10012",
-                "consisten_hashing_buckets": "10"
+                "consistent_hashing_buckets": "10"
             }
         },
         "PORT_QOS_MAP": {
