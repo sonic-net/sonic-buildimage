@@ -80,7 +80,7 @@ Any server can be a build image server as long as it has:
 > options to expose the full KVM interface to the VM
 > (e.g. [the KVM paravirtualization support on VirtualBox](https://www.virtualbox.org/manual/ch10.html#gimproviders)).
 
-A good choice of OS for building SONiC is currently Ubuntu 20.04.
+A good choice of OS for building SONiC is currently Ubuntu 22.04.
 
 ## Automated prerequisites installation and repository cloning
 

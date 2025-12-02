@@ -1,0 +1,19 @@
+ver:3.0 server:supervisor serial:7951 pool:supervisor-proc-exit-listener poolserial:7918 eventname:PROCESS_STATE_RUNNING len:111
+processname:supervisor-proc-exit-listener groupname:supervisor-proc-exit-listener from_state:STARTING pid:60662
+ver:3.0 server:supervisor serial:7952 pool:supervisor-proc-exit-listener poolserial:7919 eventname:PROCESS_COMMUNICATION_STDOUT len:58
+processname:orchagent groupname:orchagent pid:54
+heartbeat
+ver:3.0 server:supervisor serial:7953 pool:supervisor-proc-exit-listener poolserial:7920 eventname:PROCESS_COMMUNICATION_STDOUT len:58
+processname:orchagent groupname:orchagent pid:54
+heartbeat
+ver:3.0 server:supervisor serial:54 pool:supervisor-proc-exit-listener poolserial:19 eventname:PROCESS_STATE_EXITED len:78
+processname:orchagent groupname:orchagent from_state:RUNNING expected:0 pid:54
+ver:3.0 server:supervisor serial:7951 pool:supervisor-proc-exit-listener poolserial:7918 eventname:PROCESS_STATE_RUNNING len:71
+processname:orchagent groupname:orchagent from_state:STARTING pid:60662
+ver:3.0 server:supervisor serial:54 pool:supervisor-proc-exit-listener poolserial:19 eventname:PROCESS_STATE_EXITED len:70
+processname:snmpd groupname:snmpd from_state:RUNNING expected:0 pid:54
+ver:3.0 server:supervisor serial:7951 pool:supervisor-proc-exit-listener poolserial:7918 eventname:PROCESS_STATE_RUNNING len:63
+processname:snmpd groupname:snmpd from_state:STARTING pid:60662
+ver:3.0 server:supervisor serial:7953 pool:supervisor-proc-exit-listener poolserial:7920 eventname:PROCESS_COMMUNICATION_STDOUT len:54
+processname:snmpd groupname:orchagent pid:54
+heartbeat
