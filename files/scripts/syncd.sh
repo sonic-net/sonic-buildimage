@@ -136,7 +136,6 @@ function stopplatform2() {
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         if [ x$sonic_asic_platform == x'mellanox' ]; then
             /etc/init.d/sxdkernel stop
-            /usr/bin/mst stop
         elif [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
             /usr/bin/bfnet.sh stop
         fi
