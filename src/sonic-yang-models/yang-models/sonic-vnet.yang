@@ -124,18 +124,18 @@ module sonic-vnet {
                 }
                 
                 leaf-list endpoint {
-                    description "Comma-separated endpoint/nexthop tunnel IPs";
+                    description "endpoint/nexthop tunnel IPs";
                     type inet:ipv4-address;
                     min-elements 1;
                 }
 
                 leaf-list mac_address {
-                    description "Comma-separated inner dest macs in encapsulated packet";
+                    description "inner dest macs in encapsulated packet";
                     type yang:mac-address;
                 }
 
                 leaf-list vni {
-                    description "Comma-separated valid and active vni values in encapsulated packet";
+                    description "valid and active vni values in encapsulated packet";
                     type stypes:vnid_type;
                 }
 
