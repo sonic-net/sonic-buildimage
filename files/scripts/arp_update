@@ -17,6 +17,12 @@ logger () {
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
+  if [ $? -ne 0 ]; then
+      logger -p error "arp_update_vars cannot be generated"
+      sleep 300
+      continue
+  fi
+
   SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
   TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.type')
   if [[ "$SWITCH_TYPE" == "chassis-packet" ]] || [[ "$TYPE" == "BackEndToRRouter" ]]; then
@@ -48,7 +54,7 @@ while /bin/true; do
                   interface="${STATIC_ROUTE_IFNAMES[i]}"
                   if [[ -z "$interface" ]]; then
                       # should never be here, handling just in case
-                      logger -p error "missing interface entry for static route $nexthop"
+                      logger -p warning "missing interface entry for static route $nexthop"
                       continue
                   fi
                   intf_up=$(ip link show $interface | grep "state UP")

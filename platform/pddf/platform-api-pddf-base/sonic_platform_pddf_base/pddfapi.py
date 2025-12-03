@@ -13,7 +13,7 @@ from sonic_py_common import device_info
 bmc_cache = {}
 cache = {}
 SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
-LED_CTRL_LOCK_PATH = '/var/lock/pddf-api-led.lock'
+LED_CTRL_LOCK_PATH = '/var/lock/pddf-locks/pddf-api-led.lock'
 HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
 PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 

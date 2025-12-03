@@ -1,4 +1,5 @@
-From 63e37a76cb4f1282b0d8ee4dd655221bec01a1de Mon Sep 17 00:00:00 2001
+[PATCH] bgpd: Fix JSON wrapper brace consistency in neighbor commands
+
 From: Vaideesh Ravi Shankar <vaideeshr@nvidia.com>
 Date: Mon, 15 Sep 2025 14:42:00 -0700
 Subject: [PATCH] bgpd: Fix JSON wrapper brace consistency in neighbor commands
@@ -19,12 +20,16 @@ This ensures proper JSON formatting for all route types while maintaining
 backward compatibility.
 
 Signed-off-by: Vaideesh Ravi Shankar <vaideeshr@nvidia.com>
+---
+ bgpd/bgp_route.c                                   |   35 ++++++---
+ .../test_bgp_received_routes_with_soft_inbound.py  |   75 ++++++++++++++++++++
+ 2 files changed, 99 insertions(+), 11 deletions(-)
 
 diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
-index 4742ccabc6..4ba2c68c0c 100644
+index a8427bc3b..d928588e2 100644
 --- a/bgpd/bgp_route.c
 +++ b/bgpd/bgp_route.c
-@@ -6730,7 +6730,7 @@ static int clear_batch_rib_helper(struct bgp_clearing_info *cinfo)
+@@ -6795,7 +6795,7 @@ static int clear_batch_rib_helper(struct bgp_clearing_info *cinfo)
  					/* This will resume the "inner" walk if necessary */
  					ret = walk_batch_table_helper(cinfo, table, true /*inner*/);
  					if (ret != 0) {
@@ -33,7 +38,7 @@ index 4742ccabc6..4ba2c68c0c 100644
  						 * capture the resume info we need
  						 * from the outer afi/safi and dest
  						 */
-@@ -15534,11 +15534,18 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
+@@ -15692,11 +15692,18 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
  
  	if (!peer || !peer->afc[afi][safi]) {
  		if (use_json) {
@@ -57,7 +62,7 @@ index 4742ccabc6..4ba2c68c0c 100644
  			json_object_free(json_ar);
  		} else
  			vty_out(vty, "%% No such neighbor or address family\n");
-@@ -15551,11 +15558,17 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
+@@ -15709,11 +15716,17 @@ static int peer_adj_routes(struct vty *vty, struct peer *peer, afi_t afi,
  	    && !CHECK_FLAG(peer->af_flags[afi][safi],
  			   PEER_FLAG_SOFT_RECONFIG)) {
  		if (use_json) {
@@ -81,7 +86,7 @@ index 4742ccabc6..4ba2c68c0c 100644
  		} else
  			vty_out(vty,
 diff --git a/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py b/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
-index 0b933add2f..07a14b2767 100644
+index 0b933add2..07a14b276 100644
 --- a/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
 +++ b/tests/topotests/bgp_received_routes_with_soft_inbound/test_bgp_received_routes_with_soft_inbound.py
 @@ -98,6 +98,81 @@ def test_bgp_received_routes_with_soft_inbound():
@@ -166,6 +171,3 @@ index 0b933add2f..07a14b2767 100644
  if __name__ == "__main__":
      args = ["-s"] + sys.argv[1:]
      sys.exit(pytest.main(args))
--- 
-2.50.1
-
