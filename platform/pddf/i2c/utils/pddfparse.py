@@ -530,7 +530,13 @@ class PddfParse():
         ret = self.create_device(dev['i2c']['dev_attr'], "pddf/devices/multifpgapci/{}/i2c".format(bdf), ops)
         if ret != 0:
             return create_ret.append(ret)
-        
+
+        # MDIO specific data store
+        if 'mdio' in dev:
+            ret = self.create_device(dev['mdio']['dev_attr'], "pddf/devices/multifpgapci/{}/mdio".format(bdf), ops)
+            if ret != 0:
+                return create_ret.append(ret)
+
         # TODO: add GPIO & SPI specific data stores
 
         cmd = "echo 'fpgapci_init' > /sys/kernel/pddf/devices/multifpgapci/{}/dev_ops".format(bdf)
@@ -544,14 +550,28 @@ class PddfParse():
             if ret != 0:
                 return create_ret.append(ret)
 
+        if 'mdio' in dev:
+            ret = self.create_mdio_bus(bdf, dev['mdio'], ops)
+            if ret != 0:
+                return create_ret.append(ret)
+
         if 'gpio' in dev:
-            ret = self.create_gpio_device(bdf, dev['gpio'], ops)
+            ret = self.create_multifpgapci_gpio_device(bdf, dev['gpio'], ops)
             if ret != 0:
                 return create_ret.append(ret)
 
         return create_ret.append(ret)
 
-    def create_gpio_device(self, bdf, gpio_dev, ops):
+    def create_mdio_bus(self, bdf, mdio_dev, ops):
+        for bus in range(int(mdio_dev['dev_attr']['num_virt_ch'], 16)):
+            cmd = "echo {} > /sys/kernel/pddf/devices/multifpgapci/{}/mdio/new_mdio_bus".format(bus, bdf)
+            ret = self.runcmd(cmd)
+            if ret != 0:
+                return ret
+
+        return 0
+
+    def create_multifpgapci_gpio_device(self, bdf, gpio_dev, ops):
         create_ret = []
         ret = 0
 
@@ -2015,6 +2035,31 @@ class PddfParse():
                     return ret[0]
         return create_ret
 
+    def create_subtree(self, device_name):
+        subtree = self.data.get(device_name)
+        if not subtree:
+            print(f"Invalid device_name {device_name}")
+            return 1
+
+        ret = self.dev_parse(subtree, {"cmd": "create", "target": "all", "attr": "all"})
+        if ret:
+            if ret[0] != 0:
+                return ret[0]
+
+        return 0
+
+    def delete_subtree(self, device_name):
+        subtree = self.data.get(device_name)
+        if not subtree:
+            print(f"Invalid device_name {device_name}")
+            return 1
+
+        ret = self.dev_parse(self.data[device_name], {"cmd": "delete", "target": "all", "attr": "all"})
+        if ret:
+            if ret[0] != 0:
+                return ret[0]
+
+        return 0
 
     def delete_pddf_devices(self):
         self.dev_parse(self.data['SYSTEM'], {"cmd": "delete", "target": "all", "attr": "all"})
@@ -2257,6 +2302,10 @@ def main():
     parser.add_argument("--validate", action='store', help="Validate the device specific attribute data elements")
     parser.add_argument("--schema", action='store', nargs="+",  help="Schema Validation")
     parser.add_argument("--modules", action='store', nargs="+", help="Loaded modules validation")
+    parser.add_argument("--create-subtree", type=str,
+        help="Create a specified node and all its descendant nodes in the I2C topology.")
+    parser.add_argument("--delete-subtree", type=str,
+        help="Remove a specified node and all its descendant nodes from the I2C topology.")
 
     args = parser.parse_args()
 
@@ -2322,6 +2371,11 @@ def main():
     if args.modules:
         pddf_obj.modules_validation(args.modules[0])
 
+    if args.create_subtree:
+        sys.exit(pddf_obj.create_subtree(args.create_subtree))
+
+    if args.delete_subtree:
+        sys.exit(pddf_obj.delete_subtree(args.delete_subtree))
 
 if __name__ == "__main__":
     main()

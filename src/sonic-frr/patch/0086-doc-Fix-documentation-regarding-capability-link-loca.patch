@@ -1,0 +1,32 @@
+From 6f6e6c4923397b9a41bb686bcbf6fb6397ff2742 Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas@opensourcerouting.org>
+Date: Thu, 9 Oct 2025 13:59:27 +0300
+Subject: doc: Fix documentation regarding capability link-local
+
+Fixes: bb0b6e13c226ff13165bcc69fb2d5d70acea1454 ("bgpd: Disable Link-Local capability by default")
+
+Signed-off-by: Donatas Abraitis <donatas@opensourcerouting.org>
+---
+ doc/user/bgp.rst | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/doc/user/bgp.rst b/doc/user/bgp.rst
+index 03da0fddef..0328c18d57 100644
+--- a/doc/user/bgp.rst
++++ b/doc/user/bgp.rst
+@@ -1982,7 +1982,11 @@ Configuring Peers
+    are utilized. This capability standardizes the operation of BGP over a
+    point-to-point links using link-local IPv6 addressing only.
+ 
+-   Enabled by default for the ``datacenter`` profile.
++   If this capability is enabled, only link-local IPv6 address will be sent as
++   next-hop (16-bytes) to the neighbor instead of global and link-local addresses
++   (32-bytes).
++
++   Disabled by default.
+ 
+ .. clicmd:: neighbor <A.B.C.D|X:X::X:X|WORD> accept-own
+ 
+-- 
+2.48.1
+

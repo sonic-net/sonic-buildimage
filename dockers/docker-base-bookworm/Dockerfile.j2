@@ -60,11 +60,16 @@ COPY ["pip.conf", "/etc/pip.conf"]
 RUN pip3 install --upgrade pip
 RUN apt purge -y python3-pip
 
+{% if docker_base_bookworm_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_base_bookworm_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_base_bookworm_whls.split(' ')) }}
+{% endif %}
+
 # For templating
 RUN pip3 install j2cli
-
-# Install supervisor
-RUN pip3 install supervisor==4.2.5
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0

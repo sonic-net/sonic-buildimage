@@ -106,7 +106,7 @@ class Chassis(ChassisBase):
             self._thermal_list.append(thermal)
 
         for i in range(MAX_7215_COMPONENT):
-            component = Component(i)
+            component = Component(self.get_model(), i)
             self._component_list.append(component)
   
     def _read_sysfs_file(self, sysfs_file):
@@ -259,13 +259,19 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
+        
+        REBOOT_CAUSE_FILE = "/host/reboot-cause/reboot-cause.txt"
+        if os.path.isfile(REBOOT_CAUSE_FILE):
+            with open(REBOOT_CAUSE_FILE) as cause_file:
+                software_reboot_cause = cause_file.readline().rstrip('\n')
+        sonic_logger.log_notice("PAVAN Reboot-cause reported by software  - {}".format(software_reboot_cause))        
         value = self._read_sysfs_file(CPLD_DIR+"last_reset_cause")
         thermal = self._read_sysfs_file(CPLD_DIR+"temp_event_status")
         if (value == 'cold_reset'):
             reboot_cause=(ChassisBase.REBOOT_CAUSE_POWER_LOSS, "Cold Reset")
         elif (value == 'warm_reset'):
             reboot_cause=(ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
-        elif (value == 'wdog_reset'):
+        elif (value == 'wdog_reset' and software_reboot_cause == 'Unknown'):
             reboot_cause=(ChassisBase.REBOOT_CAUSE_WATCHDOG, None)
         elif (value == 'thermal_reset'):
             reboot_cause=(ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, thermal)
