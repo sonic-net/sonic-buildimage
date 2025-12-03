@@ -102,8 +102,7 @@
 	url = https://github.com/sonic-net/sonic-dhcp-relay.git
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
-	url = https://github.com/qiluo-msft/sonic-host-services
-	branch = qiluo/procdockerstatsd-rs
+	url = https://github.com/sonic-net/sonic-host-services
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
