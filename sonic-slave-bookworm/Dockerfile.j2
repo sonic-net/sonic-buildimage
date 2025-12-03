@@ -21,10 +21,6 @@ FROM {{ prefix }}debian:bookworm
 
 MAINTAINER gulv@microsoft.com
 
-RUN cp /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
-RUN apt-get update && apt-get install -y apt-transport-https ca-certificates
-RUN rm -f /etc/apt/sources.list.d/debian.sources
-
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
