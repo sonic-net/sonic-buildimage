@@ -125,11 +125,15 @@ set_reproducible_mirrors()
         expression2="/^#*deb.*$ESCAPED_MIRROR_URL/! s/^#\s*(#*deb)/\1/"
         expression3="/#SET_REPR_MIRRORS/d"
     fi
+    if [[ "$1" == "-c" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
+        # Install ca-certificates for https support
+        $SUDO apt-get update && $SUDO apt-get install -y apt-transport-https ca-certificates
+    fi
     if [[ "$1" != "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources ]; then
-        mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.back
+        $SUDO mv /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.back
     fi
     if [[ "$1" == "-d" ]] && [ -f /etc/apt/sources.list.d/debian.sources.back ]; then
-        mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
+        $SUDO mv /etc/apt/sources.list.d/debian.sources.back /etc/apt/sources.list.d/debian.sources
     fi
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
