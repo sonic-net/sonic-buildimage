@@ -582,6 +582,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+                           SONIC_BUILD_NOCHECK=$(SONIC_BUILD_NOCHECK) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

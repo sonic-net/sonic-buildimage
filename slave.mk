@@ -330,8 +330,13 @@ ifeq ($(CONFIGURED_PLATFORM),vs)
 export BUILD_MULTIASIC_KVM
 endif
 
-ifeq ($(CROSS_BUILD_ENVIRON),y)
+ifeq ($(SONIC_BUILD_NOCHECK),y)
 DEB_BUILD_OPTIONS_GENERIC += nocheck
+else ifeq ($(CROSS_BUILD_ENVIRON),y)
+DEB_BUILD_OPTIONS_GENERIC += nocheck
+endif
+
+ifeq ($(CROSS_BUILD_ENVIRON),y)
 export $(dpkg-architecture -a$(CONFIGURED_ARCH))
 ifeq ($(ENABLE_PY2_MODULES),n)
 ANT_DEB_CROSS_PROFILES=nopython2
@@ -485,6 +490,7 @@ $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
 $(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
+$(info "SONIC_BUILD_NOCHECK"             : "$(SONIC_BUILD_NOCHECK)")
 $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
