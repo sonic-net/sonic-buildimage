@@ -184,6 +184,7 @@ yang_files = [
     'sonic-snmp.yang',
     'sonic-spanning-tree.yang',
     'sonic-igmp-snooping.yang',
+    'sonic-mld-snooping.yang',
     'sonic-srv6.yang',
     'sonic-ssh-server.yang',
     'sonic-static-route.yang',
