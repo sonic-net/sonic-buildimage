@@ -68,8 +68,17 @@ RUN post_run_cleanup '${IMAGENAME}'
 
 # Add the auto-generate code if it is not added in the target Dockerfile
 if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCKERFILE_TARGET; then
-    # Insert the docker build script before the RUN command
-    LINE_NUMBER=$(grep -Fn -m 1 'RUN' $DOCKERFILE | cut -d: -f1)
+    # Check if sources.list is copied to /etc/apt/sources.list
+    SOURCES_COPY_LINE=$(grep -n 'COPY.*sources\.list.*"/etc/apt/sources\.list"' $DOCKERFILE | head -n 1 | cut -d: -f1)
+
+    # Insert the docker build script before the sources.list COPY command if it exists
+    # Otherwise, insert before the first RUN command
+    if [ -n "$SOURCES_COPY_LINE" ]; then
+        LINE_NUMBER=$SOURCES_COPY_LINE
+    else
+        LINE_NUMBER=$(grep -Fn -m 1 'RUN' $DOCKERFILE | cut -d: -f1)
+    fi
+
     COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM \$BASE$' $DOCKERFILE | cut -d: -f1)
     if [ -z "$COPY_BASE_LINE_NUMBER" ]; then
         COPY_BASE_LINE_NUMBER=$(grep -n -m 1 'FROM scratch$' $DOCKERFILE | cut -d: -f1)
