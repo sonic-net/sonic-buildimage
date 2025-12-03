@@ -3169,6 +3169,17 @@
                 "version": "2"
             }
         },
+        "MLD_L2MC": {
+            "Vlan100": {
+                "enabled": "true",
+                "fast-leave": "false",
+                "last-member-query-interval": "1000",
+                "querier": "false",
+                "query-interval": "125",
+                "query-max-response-time": "10",
+                "version": "2"
+            }
+        },
         "STORMOND_CONFIG": {
             "INTERVALS": {
                 "daemon_polling_interval" : "3600",
