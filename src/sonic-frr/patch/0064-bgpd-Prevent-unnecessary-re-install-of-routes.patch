@@ -1,0 +1,49 @@
+From b7bd0b097586fbd492b0dc61346b89efb1a7b420 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Sat, 18 Oct 2025 10:22:56 -0400
+Subject: [PATCH] bgpd: Prevent unnecessary re-install of routes
+
+There is this sequence of events that is happening:
+
+a) BGP registers for a nexthop resolution for address A
+b) <time passes and BGP comes fully up>
+c) Something else in the system requests for the same
+nexthop resolution tracking for A
+d) Zebra wakes up and decides to send a update to BGP
+about the nexthop, even when nothing has happened.
+e) BGP decides that the nexthop has not changed but goes
+ahead and reinstalls everything again anyways.
+
+Let's modify BGP to be a bit smarter here.  It already
+knows that the nexthop hasn't changed, there is no need
+to run bgp_process on each route that is using the BNC.
+Let's stop this from happening.
+
+This is only 1/2 the fix.  I want to protect BGP from zebra
+but I also want zebra to not send the update to BGP in this case.
+That change is going to come in a different set of commits because
+it's a bit larger of a problem and will need a bit more work.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+---
+ bgpd/bgp_nht.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/bgpd/bgp_nht.c b/bgpd/bgp_nht.c
+index 330af64379..b720e37bb4 100644
+--- a/bgpd/bgp_nht.c
++++ b/bgpd/bgp_nht.c
+@@ -1472,7 +1472,9 @@ void evaluate_paths(struct bgp_nexthop_cache *bnc)
+ 		if (path_valid != bnc_is_valid_nexthop)
+ 			hook_call(bgp_nht_path_update, bgp_path, path, bnc_is_valid_nexthop);
+ 
+-		bgp_process(bgp_path, dest, path, afi, safi);
++		if (CHECK_FLAG(bnc->change_flags, BGP_NEXTHOP_METRIC_CHANGED) ||
++		    CHECK_FLAG(bnc->change_flags, BGP_NEXTHOP_CHANGED))
++			bgp_process(bgp_path, dest, path, afi, safi);
+ 	}
+ 
+ 	if (peer) {
+-- 
+2.48.1
+
