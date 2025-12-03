@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+echo "enter pmon docker_init.j2"
+
 # Generate supervisord config file and the start.sh scripts
 mkdir -p /etc/supervisor/conf.d/
 
@@ -30,6 +32,8 @@ if [ "${RUNTIME_OWNER}" == "" ]; then
     RUNTIME_OWNER="kube"
 fi
 
+echo "confirm the existing for container_startup.py"
+
 CTR_SCRIPT="/usr/share/sonic/scripts/container_startup.py"
 if test -f ${CTR_SCRIPT}
 then
@@ -48,6 +52,8 @@ if [ -e /usr/share/sonic/platform/platform_wait ]; then
     fi
 fi
 
+echo "confirm the installation of sonic-platform package python2 version"
+
 # If the Python 2 sonic-platform package is not installed, try to install it
 python2 -c "import sonic_platform" > /dev/null 2>&1 || pip2 show sonic-platform > /dev/null 2>&1
 if [ $? -ne 0 ]; then
@@ -64,6 +70,8 @@ if [ $? -ne 0 ]; then
        echo "Error: Unable to locate ${SONIC_PLATFORM_WHEEL}"
     fi
 fi
+
+echo "confirm the installation of sonic-platform package python3 version"
 
 # If the Python 3 sonic-platform package is not installed, try to install it
 python3 -c "import sonic_platform" > /dev/null 2>&1 || pip3 show sonic-platform > /dev/null 2>&1
@@ -87,6 +95,7 @@ fi
 
 {% if CONFIGURED_PLATFORM == "mellanox" %}
 
+echo "dynamic sensors.conf setup"
 # Dynamic sensors.conf setup: create a symlink from SONiC platform directory sensors.conf -> hw-management sensors.conf
 # This allows pmon container to use the latest sensor configuration from hw-management
 HW_MGMT_SENSORS_CONF="/var/run/hw-management/config/lm_sensors_config"
@@ -112,6 +121,8 @@ fi
     mount -t debugfs none /sys/kernel/debug
 {% endif %}
 
+echo "confirm the existing for sensors.conf"
+
 if [ -e $SENSORS_CONF_FILE ]; then
     HAVE_SENSORS_CONF=1
     mkdir -p /etc/sensors.d
@@ -126,11 +137,15 @@ if [ -e $SENSORS_CONF_FILE ]; then
     /bin/cp -f $SENSORS_CONF_FILE /etc/sensors.d/sensors.conf
 fi
 
+echo "confirm the existing for fancontrol.conf"
+
 if [ -e $FANCONTROL_CONF_FILE ]; then
     HAVE_FANCONTROL_CONF=1
     rm -f /var/run/fancontrol.pid
     /bin/cp -f $FANCONTROL_CONF_FILE /etc/
 fi
+
+echo "confirm the existing for platform_env.conf"
 
 if [ -e $PLATFORM_ENV_CONF_FILE ]; then
     source $PLATFORM_ENV_CONF_FILE
@@ -142,11 +157,15 @@ fi
 
 confvar="{\"HAVE_SENSORS_CONF\":$HAVE_SENSORS_CONF, \"HAVE_FANCONTROL_CONF\":$HAVE_FANCONTROL_CONF, \"API_VERSION\":$SONIC_PLATFORM_API_PYTHON_VERSION, \"IS_MODULAR_CHASSIS\":$IS_MODULAR_CHASSIS}"
 
+echo "generate supervisord config file"
+
 if [ -e $PMON_DAEMON_CONTROL_FILE ];
 then
     sonic-cfggen -d -j $PMON_DAEMON_CONTROL_FILE -a "$confvar" -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
 else
     sonic-cfggen -d -a "$confvar" -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
 fi
+
+echo "start supervisord"
 
 exec /usr/local/bin/supervisord
