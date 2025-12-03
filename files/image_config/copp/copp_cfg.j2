@@ -87,8 +87,8 @@
 
 	    },
         "igmp_group": {
-            "cir":"300",
-            "cbs":"300",
+            "cir":"600",
+            "cbs":"600",
             "meter_type":"packets",
             "mode":"sr_tcm",
             "red_action":"drop",
@@ -149,7 +149,7 @@
 		    "always_enabled": "true"
 	    },
 		"l2mcd": {
-            "trap_ids": "igmp_v1_report,igmp_query,igmp_leave,igmp_v2_report,igmp_v3_report",
+            "trap_ids": "igmp_v1_report,igmp_query,igmp_leave,igmp_v2_report,igmp_v3_report,mld_v1_v2,mld_v1_report,mld_v1_done,mld_v2_report",
             "trap_group": "igmp_group"
 	    }
     }
