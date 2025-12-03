@@ -90,6 +90,7 @@ class BgpdClientMgr(threading.Thread):
             'BGP_PEER_GROUP_AF': ['bgpd'],
             'BGP_NEIGHBOR_AF': ['bgpd'],
             'BGP_GLOBALS_LISTEN_PREFIX': ['bgpd'],
+            'BGP_MONITORS': ['bgpd'],
             'NEIGHBOR_SET': ['bgpd'],
             'NEXTHOP_SET': ['bgpd'],
             'TAG_SET': ['bgpd'],
@@ -2299,6 +2300,7 @@ class BGPConfigDaemon:
             ('BGP_NEIGHBOR_AF', self.bgp_table_handler_common),
             ('BGP_GLOBALS_LISTEN_PREFIX', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI', self.bgp_table_handler_common),
+            ('BGP_MONITORS', self.bgp_monitors_handler),
             ('BGP_GLOBALS_EVPN_RT', self.bgp_table_handler_common),
             ('BGP_GLOBALS_EVPN_VNI_RT', self.bgp_table_handler_common),
             ('BFD_PEER', self.bfd_handler),
@@ -2641,11 +2643,18 @@ class BGPConfigDaemon:
                 # bypass non-compatible neighbor table
                 continue
             data_list.append((table, key, data))
-            if len(key_list) > 1:
-                key = key_list[1]
+
+            # Special handling for BGP_MONITORS - key is just the monitor IP, no VRF prefix
+            if table == 'BGP_MONITORS':
+                prefix = None
+                key = key_list[0]
             else:
-                key = None
-            prefix = key_list[0]
+                # Standard VRF-based table handling
+                if len(key_list) > 1:
+                    key = key_list[1]
+                else:
+                    key = None
+                prefix = key_list[0]
             syslog.syslog(syslog.LOG_INFO, 'value for table {} prefix {} key {} changed to {}'.format(table, prefix, key, data))
             if self.__vrf_based_table(table):
                 vrf = prefix
@@ -2654,6 +2663,23 @@ class BGPConfigDaemon:
                     syslog.syslog(syslog.LOG_DEBUG, 'ignore table {} update because local_asn for VRF {} was not configured'.\
                             format(table, vrf))
                     continue
+                # Process VRF-based tables - continue to table-specific processing below
+            elif table == 'BGP_MONITORS':
+                # Not VRF-based, key is just monitor IP address, uses default VRF
+                monitor_ip = key
+                default_vrf = self.DEFAULT_VRF
+                local_asn = self.__get_vrf_asn(default_vrf)
+                if local_asn is None:
+                    syslog.syslog(syslog.LOG_ERR, 'local ASN for default VRF was not configured, '\
+                                  'cannot process BGP monitor {}'.format(monitor_ip))
+                    continue
+                if self.__process_bgp_monitor(default_vrf, local_asn, monitor_ip, data, del_table, table):
+                    for dkey, dval in data.items():
+                        dval.status = CachedDataWithOp.STAT_SUCC
+                    syslog.syslog(syslog.LOG_INFO, 'BGP monitor {} processed successfully'.format(monitor_ip))
+                else:
+                    syslog.syslog(syslog.LOG_ERR, 'failed to process BGP monitor {}'.format(monitor_ip))
+                continue
             if table in self.tbl_to_key_map:
                 tbl_key = None
                 if table == 'BGP_NEIGHBOR_AF' or table == 'BGP_PEER_GROUP_AF' and key is not None:
@@ -3917,6 +3943,149 @@ class BGPConfigDaemon:
                                                          {'remote-address', 'vrf', 'interface', 'local-address'}])
     def bfd_mhop_handler(self, table, key, data):
         self.bgp_table_handler_common(table, key, data, [{'remote-address', 'vrf', 'local-address'}])
+
+    def bgp_monitors_handler(self, table, key, data):
+        upd_data = {}
+        del_table = False
+        if data is None:
+            upd_data = {}
+            del_table = True
+        else:
+            for upd_key, upd_val in data.items():
+                upd_data[upd_key] = CachedDataWithOp(upd_val, CachedDataWithOp.OP_ADD)
+        # Queue the message for processing in __update_bgp
+        self.bgp_message.put((self.config_db.serialize_key(key), del_table, table, upd_data))
+        # Process the message immediately like other handlers do
+        upd_data_list = []
+        self.__update_bgp(upd_data_list)
+        for table_name, key_name, data_item in upd_data_list:
+            table_key = ExtConfigDBConnector.get_table_key(table_name, key_name)
+            self.__update_cache_data(table_key, data_item)
+
+    def __ensure_bgpmon_infrastructure(self, vrf, local_asn, table):
+        if 'BGPMON' not in self.bgp_peer_group.setdefault(vrf, {}):
+            # Create router bgp command with proper VRF handling (same pattern as __delete_vrf_asn)
+            if vrf == self.DEFAULT_VRF:
+                router_bgp_cmd = "router bgp {}".format(local_asn)
+            else:
+                router_bgp_cmd = "router bgp {} vrf {}".format(local_asn, vrf)
+
+            command = "vtysh -c 'configure terminal' -c '{}' ".format(router_bgp_cmd)
+            command += "-c 'neighbor BGPMON peer-group'"
+            if not self.__run_command(table, command):
+                syslog.syslog(syslog.LOG_ERR, 'failed to create BGPMON peer-group for VRF %s' % vrf)
+                return False
+
+            self.bgp_peer_group[vrf]['BGPMON'] = BGPPeerGroup(vrf)
+            ipv4_commands = [
+                "vtysh -c 'configure terminal' -c '{}' -c 'address-family ipv4' "
+                "-c 'neighbor BGPMON activate' -c 'neighbor BGPMON route-map FROM_BGPMON in' "
+                "-c 'neighbor BGPMON route-map TO_BGPMON out' -c 'neighbor BGPMON send-community' "
+                "-c 'neighbor BGPMON maximum-prefix 1' -c 'exit-address-family'".format(router_bgp_cmd)
+            ]
+            ipv6_commands = [
+                "vtysh -c 'configure terminal' -c '{}' -c 'address-family ipv6' "
+                "-c 'neighbor BGPMON activate' -c 'neighbor BGPMON route-map FROM_BGPMON in' "
+                "-c 'neighbor BGPMON route-map TO_BGPMON out' -c 'neighbor BGPMON send-community' "
+                "-c 'neighbor BGPMON maximum-prefix 1' -c 'exit-address-family'".format(router_bgp_cmd)
+            ]
+            for cmd in ipv4_commands + ipv6_commands:
+                if not self.__run_command(table, cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'failed to configure BGPMON peer-group address families')
+                    return False
+
+        self.__ensure_bgpmon_route_maps(table)
+        return True
+
+    def __ensure_bgpmon_route_maps(self, table):
+        if 'FROM_BGPMON' not in self.route_map:
+            # Create FROM_BGPMON route map (deny all)
+            command = "vtysh -c 'configure terminal' -c 'route-map FROM_BGPMON deny 10'"
+            if self.__run_command(table, command):
+                self.route_map.setdefault('FROM_BGPMON', {})['10'] = 'deny'
+                syslog.syslog(syslog.LOG_DEBUG, 'Created FROM_BGPMON route map')
+
+        if 'TO_BGPMON' not in self.route_map:
+            # Create TO_BGPMON route map (permit all)
+            command = "vtysh -c 'configure terminal' -c 'route-map TO_BGPMON permit 10'"
+            if self.__run_command(table, command):
+                self.route_map.setdefault('TO_BGPMON', {})['10'] = 'permit'
+                syslog.syslog(syslog.LOG_DEBUG, 'Created TO_BGPMON route map')
+
+    def __process_bgp_monitor(self, vrf, local_asn, key, data, del_table, table):
+        monitor_ip = key
+        if not del_table:
+            return self.__add_bgp_monitor(vrf, local_asn, monitor_ip, data, table)
+        else:
+            return self.__delete_bgp_monitor(vrf, local_asn, monitor_ip, table)
+
+    def __add_bgp_monitor(self, vrf, local_asn, monitor_ip, data, table):
+        if not self.__ensure_bgpmon_infrastructure(vrf, local_asn, table):
+            syslog.syslog(syslog.LOG_INFO, 'failed to ensure BGPMON infrastructure for VRF %s' % vrf)
+            return False
+
+        # Process monitor neighbor configuration using existing neighbor patterns
+        if 'asn' in data and data['asn'].op != CachedDataWithOp.OP_DELETE:
+            monitor_asn = data['asn'].data
+            monitor_description = 'BGPMON'
+            if 'peer_name' in data and data['peer_name'].op != CachedDataWithOp.OP_DELETE:
+                monitor_description = data['peer_name'].data
+            elif 'name' in data and data['name'].op != CachedDataWithOp.OP_DELETE:
+                monitor_description = data['name'].data
+
+            # Get local address for update-source if available
+            monitor_local_addr = None
+            if 'local_addr' in data and data['local_addr'].op != CachedDataWithOp.OP_DELETE:
+                monitor_local_addr = data['local_addr'].data
+
+            if vrf == self.DEFAULT_VRF:
+                router_bgp_cmd = "router bgp {}".format(local_asn)
+            else:
+                router_bgp_cmd = "router bgp {} vrf {}".format(local_asn, vrf)
+
+            commands = [
+                "vtysh -c 'configure terminal' -c '{}' -c 'neighbor {} remote-as {}'".\
+                    format(router_bgp_cmd, monitor_ip, monitor_asn),
+                "vtysh -c 'configure terminal' -c '{}' -c 'neighbor {} peer-group BGPMON'".\
+                    format(router_bgp_cmd, monitor_ip),
+                "vtysh -c 'configure terminal' -c '{}' -c 'neighbor {} description {}'".\
+                    format(router_bgp_cmd, monitor_ip, monitor_description)
+            ]
+            if monitor_local_addr:
+                commands.append("vtysh -c 'configure terminal' -c '{}' -c 'neighbor {} update-source {}'".\
+                                format(router_bgp_cmd, monitor_ip, monitor_local_addr))
+
+            for cmd in commands:
+                if not self.__run_command(table, cmd):
+                    syslog.syslog(syslog.LOG_ERR, 'failed to configure BGP monitor {}'.format(monitor_ip))
+                    return False
+
+            if 'BGPMON' in self.bgp_peer_group[vrf]:
+                self.bgp_peer_group[vrf]['BGPMON'].ref_nbrs.add(monitor_ip)
+
+            syslog.syslog(syslog.LOG_INFO, 'Successfully configured BGP monitor {} with ASN {}'.\
+                          format(monitor_ip, monitor_asn))
+            return True
+
+        return True  # No ASN to configure, but not an error
+
+    def __delete_bgp_monitor(self, vrf, local_asn, monitor_ip, table):
+        if vrf == self.DEFAULT_VRF:
+            router_bgp_cmd = "router bgp {}".format(local_asn)
+        else:
+            router_bgp_cmd = "router bgp {} vrf {}".format(local_asn, vrf)
+
+        command = "vtysh -c 'configure terminal' -c '{}' -c 'no neighbor {}'".format(router_bgp_cmd, monitor_ip)
+        if self.__run_command(table, command):
+            # Remove monitor from BGPMON peer group tracking
+            if vrf in self.bgp_peer_group and 'BGPMON' in self.bgp_peer_group[vrf]:
+                self.bgp_peer_group[vrf]['BGPMON'].ref_nbrs.discard(monitor_ip)
+
+            syslog.syslog(syslog.LOG_INFO, 'Successfully removed BGP monitor {}'.format(monitor_ip))
+            return True
+        else:
+            syslog.syslog(syslog.LOG_ERR, 'failed to remove BGP monitor {}'.format(monitor_ip))
+            return False
 
     def start(self):
         self.subscribe_all()
