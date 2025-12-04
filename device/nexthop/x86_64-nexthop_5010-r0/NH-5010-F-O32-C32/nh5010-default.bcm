@@ -2138,28 +2138,28 @@ dma_desc_aggregator_enable_specific_INIT.BCM8887X=1
 pmf_maps_payload_size.BCM8887X=30
 
 # Set CPU to work with PTCHoITMH header incoming direction and CPU - system headers + network headers outgoing direction
-tm_port_header_type_in_0.BCM8887X=INJECTED
+tm_port_header_type_in_0.BCM8887X=INJECTED_2
 tm_port_header_type_out_0.BCM8887X=CPU
 
-tm_port_header_type_in_380.BCM8887X=INJECTED
+tm_port_header_type_in_380.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_380.BCM8887X=ETH
-tm_port_header_type_in_381.BCM8887X=INJECTED
+tm_port_header_type_in_381.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_381.BCM8887X=ETH
-tm_port_header_type_in_382.BCM8887X=INJECTED
+tm_port_header_type_in_382.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_382.BCM8887X=ETH
-tm_port_header_type_in_383.BCM8887X=INJECTED
+tm_port_header_type_in_383.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_383.BCM8887X=ETH
-tm_port_header_type_in_384.BCM8887X=INJECTED
+tm_port_header_type_in_384.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_384.BCM8887X=ETH
-tm_port_header_type_in_385.BCM8887X=INJECTED
+tm_port_header_type_in_385.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_385.BCM8887X=ETH
-tm_port_header_type_in_386.BCM8887X=INJECTED
+tm_port_header_type_in_386.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_386.BCM8887X=ETH
-tm_port_header_type_in_387.BCM8887X=INJECTED
+tm_port_header_type_in_387.BCM8887X=INJECTED_2_PP
 tm_port_header_type_out_387.BCM8887X=ETH
 
 # set EVENTOR port to work with PTCHoITMH
-tm_port_header_type_in_330.BCM8887X=INJECTED
+tm_port_header_type_in_330.BCM8887X=INJECTED_2
 
 
 #OAMP
