@@ -6,15 +6,14 @@ KVERSION     ?= $(shell uname -r)
 KERNEL_SRC   := /lib/modules/$(KVERSION)
 SERVICE_DIR  := service
 INITD_DIR    := init.d
-MODULE_SRC   := $(shell pwd)/modules
+MODULE_SRC   := $(shell pwd)
 CURRENT_DIR  := $(cd "$(dirname "$0")"; pwd)
 
 %:
 	dh $@
 
 override_dh_auto_build:
-	ls
-	make -C $(MODULE_SRC)
+	make -C $(MODULE_SRC) all
 
 override_dh_auto_install:
 	dh_installdirs -p$(PACKAGE_NAME) /lib/systemd/system
@@ -29,6 +28,5 @@ override_dh_usrlocal:
 override_dh_pysupport:
 
 override_dh_clean:
-	dh_clean
 	test -d $(MODULE_SRC)/build || rm -rf $(MODULE_SRC)/build	
 
