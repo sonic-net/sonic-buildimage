@@ -20,7 +20,7 @@ auto eth0
 allow-hotplug eth0
 iface eth0 inet dhcp
 iface eth0 inet6 dhcp
-    up sysctl net.ipv6.conf.eth0.accept_ra=1
+    up sysctl net.ipv6.conf.eth0.accept_ra=2
     down sysctl net.ipv6.conf.eth0.accept_ra=0
 
 

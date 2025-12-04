@@ -19,9 +19,25 @@
 
 SUCCESS_CODE=0
 RC=-1
+RETURN_PCI_ID=false
 
-if [[ -f "/usr/bin/asic_detect/asic_type" ]]; then
-    cat /usr/bin/asic_detect/asic_type
+# Parse command line arguments
+while getopts "p" opt; do
+    case $opt in
+        p)
+            RETURN_PCI_ID=true
+            ;;
+        *)
+            ;;
+    esac
+done
+
+if [[ -f "/usr/bin/asic_detect/asic_type" ]] && [[ -f "/usr/bin/asic_detect/asic_pci_id" ]]; then
+    if [[ "$RETURN_PCI_ID" == true ]]; then
+        cat /usr/bin/asic_detect/asic_pci_id
+    else
+        cat /usr/bin/asic_detect/asic_type
+    fi
     exit $SUCCESS_CODE
 fi
 
@@ -38,6 +54,7 @@ declare -A DEVICE_DICT=(
 TYPE_UNKNOWN="unknown"
 VENDOR_ID="15b3"
 DEVICE_TYPE=$TYPE_UNKNOWN
+DEVICE_PCI_ID=""
 
 # bf3 should be the last device in the list
 DEVICE_ORDER=("cb84" "cf6c" "cf70" "cf80" "cf82" "cf84" "a2dc")
@@ -47,12 +64,21 @@ if [[ -n "$lspci_output" ]]; then
     for key in "${DEVICE_ORDER[@]}"; do
         if echo "$lspci_output" | grep "$VENDOR_ID:$key" &>/dev/null; then
             DEVICE_TYPE="${DEVICE_DICT[$key]}"
+            DEVICE_PCI_ID=$(echo "$lspci_output" | grep "$VENDOR_ID:$key" | awk '{print $1}')
             RC=$SUCCESS_CODE
             break
         fi
     done
     if [[ -n "$DEVICE_TYPE" ]]; then
-        echo "$DEVICE_TYPE" | tee >( [[ "$DEVICE_TYPE" != "$TYPE_UNKNOWN" ]] && cat > /usr/bin/asic_detect/asic_type )
+        if [[ "$RETURN_PCI_ID" == true ]]; then
+            echo "$DEVICE_PCI_ID"
+        else
+            echo "$DEVICE_TYPE"
+        fi
+        if [[ "$DEVICE_TYPE" != "$TYPE_UNKNOWN" ]] && [[ -n "$DEVICE_PCI_ID" ]]; then
+            echo "$DEVICE_TYPE" > /usr/bin/asic_detect/asic_type
+            echo "$DEVICE_PCI_ID" > /usr/bin/asic_detect/asic_pci_id
+        fi
     fi
     exit $RC
 fi
