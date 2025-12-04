@@ -340,7 +340,7 @@ def test_reconcile_enables_user_auth_and_cname(ss):
     ss.reconcile_config_db_once()
 
     # user_auth must be set to 'cert'
-    assert config_db.get("GNMI|gnmi", {}).get("user_auth") == "cert"
+    assert config_db.get("TELEMETRY|gnmi", {}).get("user_auth") == "cert"
     # CNAME hash must exist with role=gnmi_show_readonly (default GNMI_CLIENT_ROLE)
     cname_key = f"GNMI_CLIENT_CERT|{ss.GNMI_CLIENT_CNAME}"
     assert config_db.get(cname_key, {}).get("role") == "gnmi_show_readonly"
