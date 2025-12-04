@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2016-2022 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +61,7 @@ RUN rm -rf /debs
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --omit-dir-times --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]
