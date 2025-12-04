@@ -62,7 +62,7 @@ libxslt1.1==1.1.35-1+deb12u3
 libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==6.1.153-1
+linux-libc-dev==6.1.158-1
 make==4.3-4.1
 patch==2.7.6-7
 python3-swsscommon==1.0.0
@@ -72,5 +72,6 @@ python3.11-dev==3.11.2-6+deb12u6
 rpcsvc-proto==1.4.3-1
 sonic-db-cli==1.0.0
 sonic-eventd==1.0.0-0
+sonic-supervisord-utilities-rs==1.0.0
 xz-utils==5.4.1-1
 zlib1g-dev==1:1.2.13.dfsg-1

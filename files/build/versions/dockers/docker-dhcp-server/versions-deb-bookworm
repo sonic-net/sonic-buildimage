@@ -67,7 +67,7 @@ libtsan2==12.2.0-14+deb12u1
 libubsan1==12.2.0-14+deb12u1
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
-linux-libc-dev==6.1.153-1
+linux-libc-dev==6.1.158-1
 make==4.3-4.1
 mariadb-common==1:10.11.14-0+deb12u2
 mysql-common==5.8+1.1.0
