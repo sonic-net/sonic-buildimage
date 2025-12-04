@@ -52,6 +52,56 @@ class TestACL:
 
         yang_model.load_data(data)
 
+    def test_valid_data_copy_action(self, yang_model):
+        data = {
+            "sonic-port:sonic-port": {
+                "sonic-port:PORT": {
+                    "PORT_LIST": [
+                        {
+                            "name": "Ethernet0",
+                            "lanes": "0,1,2,3",
+                            "speed": "100000"
+                        }
+                    ]
+                }
+            },
+            "sonic-acl:sonic-acl": {
+                "sonic-acl:ACL_TABLE_TYPE": {
+                    "ACL_TABLE_TYPE_LIST": [
+                        {
+                            "ACL_TABLE_TYPE_NAME": "MIRROR_L3",
+                            "BIND_POINTS": [ "PORT" ],
+                            "MATCHES": [ "SRC_IP" ],
+                            "ACTIONS": [ "PACKET_ACTION" ]
+                        }
+                    ]
+                },
+                "sonic-acl:ACL_TABLE": {
+                    "ACL_TABLE_LIST": [
+                        {
+                            "ACL_TABLE_NAME": "MIRROR_TABLE",
+                            "type": "MIRROR_L3",
+                            "stage": "INGRESS",
+                            "ports": [ "Ethernet0" ]
+                        }
+                    ]
+                },
+                "sonic-acl:ACL_RULE": {
+                    "ACL_RULE_LIST": [
+                        {
+                            "ACL_TABLE_NAME": "MIRROR_TABLE",
+                            "RULE_NAME": "MIRROR_RULE",
+                            "PRIORITY": "999",
+                            "SRC_IP": "1.1.1.1/32",
+                            "PACKET_ACTION": "COPY"
+                        }
+                    ]
+                }
+            }
+        }
+
+        yang_model.load_data(data)
+
     @pytest.mark.parametrize(
         "action,error_message", [
             pytest.param('INVALID_VALUE', 'Invalid enumeration value', id="invalid-value")
