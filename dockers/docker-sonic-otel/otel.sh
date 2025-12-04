@@ -62,12 +62,4 @@ fi
 echo "otel collector args: $OTEL_ARGS"
 echo "Starting OTEL Collector with config file: $CONFIG_FILE"
 
-# Test the config before starting
-echo "Testing configuration..."
-/usr/local/bin/otelcol-contrib --config=$CONFIG_FILE --dry-run 2>&1
-if [ $? -ne 0 ]; then
-    echo "ERROR: Configuration test failed"
-    exit 1
-fi
-
 exec /usr/local/bin/otelcol-contrib ${OTEL_ARGS}
