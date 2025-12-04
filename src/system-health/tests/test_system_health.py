@@ -471,9 +471,37 @@ def test_hardware_checker():
         }
     })
 
+    MockConnector.data.update({
+        'LIQUID_COOLING_INFO|liquid_cooling_1': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_1'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_2': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_2'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_3': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_3'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_4': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_4'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_5': {
+            'leak_status': 'Yes',
+            'leak_sensor_name': 'liquid_cooling_5'
+        },
+        'LIQUID_COOLING_INFO|liquid_cooling_6': {
+            'leak_status': 'No',
+            'leak_sensor_name': 'liquid_cooling_6'
+        }
+    })
+
     checker = HardwareChecker()
     assert checker.get_category() == 'Hardware'
     config = Config()
+    config.include_devices = ['liquid_cooling']
     checker.check(config)
 
     assert 'ASIC' in checker._info
@@ -521,6 +549,24 @@ def test_hardware_checker():
     assert checker._info['PSU 7'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
     assert checker._info['PSU 7'][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'System power exceeds threshold but power_critical_threshold is invalid'
 
+    assert 'liquid_cooling_1' in checker._info
+    assert checker._info['liquid_cooling_1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_2' in checker._info
+    assert checker._info['liquid_cooling_2'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'liquid_cooling_3' in checker._info
+    assert checker._info['liquid_cooling_3'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_4' in checker._info
+    assert checker._info['liquid_cooling_4'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
+    assert 'liquid_cooling_5' in checker._info
+    assert checker._info['liquid_cooling_5'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+
+    assert 'liquid_cooling_6' in checker._info
+    assert checker._info['liquid_cooling_6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
+
 
 def test_config():
     config = Config()
@@ -532,6 +578,7 @@ def test_config():
     assert 'dummy_service' in config.ignore_services
     assert 'psu.voltage' in config.ignore_devices
     assert len(config.user_defined_checkers) == 0
+    assert 'liquid_cooling' in config.include_devices
 
     assert config.get_led_color('fault') == 'orange'
     assert config.get_led_color('normal') == 'green'
@@ -543,6 +590,7 @@ def test_config():
     assert not config.ignore_devices
     assert not config.user_defined_checkers
     assert not config.config_data
+    assert not config.include_devices
 
     assert config.get_led_color('fault') == 'red'
     assert config.get_led_color('normal') == 'green'

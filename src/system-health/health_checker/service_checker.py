@@ -70,8 +70,6 @@ class ServiceChecker(HealthChecker):
 
         self.load_critical_process_cache()
 
-        self.events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
-
     def get_expected_running_containers(self, feature_table):
         """Get a set of containers that are expected to running on SONiC
 
@@ -342,7 +340,6 @@ class ServiceChecker(HealthChecker):
         self.reset()
         self.check_by_monit(config)
         self.check_services(config)
-        swsscommon.events_deinit_publisher(self.events_handle)
 
     def _parse_supervisorctl_status(self, process_status):
         """Expected input:
@@ -366,9 +363,11 @@ class ServiceChecker(HealthChecker):
     def publish_events(self, container_name, critical_process_list):
         params = swsscommon.FieldValueMap()
         params["ctr_name"] = container_name
+        events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
         for process_name in critical_process_list:
             params["process_name"] = process_name
-            swsscommon.event_publish(self.events_handle, EVENTS_PUBLISHER_TAG, params)
+            swsscommon.event_publish(events_handle, EVENTS_PUBLISHER_TAG, params)
+        swsscommon.events_deinit_publisher(events_handle)
 
     def check_process_existence(self, container_name, critical_process_list, config, feature_table):
         """Check whether the process in the specified container is running or not.
