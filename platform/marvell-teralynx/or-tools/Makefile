@@ -35,10 +35,16 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	cmake --build build --target ortools -j$(SONIC_CONFIG_MAKE_JOBS)
 	
 	pushd build
-	make install DESTDIR=./install_root
+
+	@echo "=== Preparing release files (libraries only) ==="
+	mkdir -p install_release/usr/lib
+	cp -P lib/libortools* install_release/usr/lib/
 	
 	@echo "=== Creating debian package with CPack ==="
-	cpack -G DEB
+	cpack -G DEB \
+		-D CPACK_INSTALL_CMAKE_PROJECTS="" \
+		-D CPACK_INSTALLED_DIRECTORIES="`pwd`/install_release/usr;/usr" \
+		-D CPACK_PACKAGING_INSTALL_PREFIX=""
 	popd
 	popd
 	
