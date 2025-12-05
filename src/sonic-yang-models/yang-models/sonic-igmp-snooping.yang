@@ -222,14 +222,28 @@ module sonic-igmp-snooping {
                     }
 				} 
 
-				leaf link-local-groups-suppression {
+				leaf ipv4-link-local-groups-suppression {
 					type enumeration {
                         enum enable;
                         enum disable;
                     }	
 				}
 
-				leaf optimised-multicast-flood {
+				leaf ipv4-optimised-multicast-flood {
+					type enumeration {
+                        enum enable;
+                        enum disable;
+                    }	
+				}
+
+				leaf ipv6-link-local-groups-suppression {
+					type enumeration {
+                        enum enable;
+                        enum disable;
+                    }	
+				}
+
+				leaf ipv6-optimised-multicast-flood {
 					type enumeration {
                         enum enable;
                         enum disable;
