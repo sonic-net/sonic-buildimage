@@ -44,6 +44,20 @@ const DEFAULT_SERVER_KEY: &str = "/etc/sonic/telemetry/streamingtelemetryserver.
 // Max stderr we keep per gnmi_get (bytes) before truncation.
 const STDERR_TRUNCATE_LIMIT: usize = 16 * 1024; // 16KB
 
+const CERT_PROBE_ENV_VAR: &str = "TELEMETRY_WATCHDOG_CERT_PROBE_ENABLED";
+
+// BAD (expected fail) probe
+const DEFAULT_BAD_CA: &str = "/etc/sonic/telemetry/dsmsroot.cer";
+const DEFAULT_BAD_CERT: &str = "/etc/sonic/telemetry/streamingtelemetryserver.cer";
+const DEFAULT_BAD_KEY: &str = "/etc/sonic/telemetry/streamingtelemetryserver.key";
+const DEFAULT_BAD_TNAME: &str = "server.ndastreaming.ap.gbl";
+
+// GOOD (expected success) probe
+const DEFAULT_GOOD_CA: &str = "/etc/sonic/credentials/AME_ROOT_CERTIFICATE.pem";
+const DEFAULT_GOOD_CERT: &str = "/etc/sonic/credentials/sonick8sclient2.crt";
+const DEFAULT_GOOD_KEY: &str = "/etc/sonic/credentials/sonick8sclient2.key";
+const DEFAULT_GOOD_TNAME: &str = "SonicK8sDashboard.NETWORK-test-bl6p.bl6p.ap.gbl";
+
 // Configuration:
 // 1. JSON file (/cmd_list.json) optional. Format:
 //    {
@@ -303,6 +317,13 @@ fn is_serialnumber_probe_enabled() -> bool {
     }
 }
 
+fn is_cert_probe_enabled() -> bool {
+    match env::var(CERT_PROBE_ENV_VAR) {
+        Ok(v) if v.eq_ignore_ascii_case("false") => false,
+        _ => true, // default enabled
+    }
+}
+
 fn get_gnmi_port() -> u16 {
     match redis_hget("TELEMETRY|gnmi", "port") {
         Some(p) => p.parse::<u16>().unwrap_or_else(|_| {
@@ -381,6 +402,41 @@ fn main() {
                             let sec_cfg = get_security_config();
                             let timeout = read_timeout();
                             let target_name = get_target_name();
+
+                            // Certificate probes on reboot-cause/history API
+                            // 1) BAD cert: expect failure
+                            // 2) GOOD cert: expect success
+                            if is_cert_probe_enabled() {
+                                let xpath_rc = "reboot-cause/history";
+
+                                let bad_sec = TelemetrySecurityConfig {
+                                    use_client_auth: true,
+                                    ca_crt: DEFAULT_BAD_CA.to_string(),
+                                    server_crt: DEFAULT_BAD_CERT.to_string(),
+                                    server_key: DEFAULT_BAD_KEY.to_string(),
+                                };
+                                let mut res_bad = run_gnmi_for_xpath(&xpath_rc, port, &bad_sec, DEFAULT_BAD_TNAME, timeout, "SHOW");
+                                if res_bad.success {
+                                    res_bad.success = false;
+                                    let msg = "Expected FAILURE with BAD cert but command SUCCEEDED".to_string();
+                                    res_bad.error = Some(match res_bad.error.take() {
+                                        Some(existing) => format!("{existing}; {msg}"),
+                                        None => msg,
+                                    });
+                                    http_status = "HTTP/1.1 500 Internal Server Error";
+                                }
+                                cmd_results.push(res_bad);
+
+                                let good_sec = TelemetrySecurityConfig {
+                                    use_client_auth: true,
+                                    ca_crt: DEFAULT_GOOD_CA.to_string(),
+                                    server_crt: DEFAULT_GOOD_CERT.to_string(),
+                                    server_key: DEFAULT_GOOD_KEY.to_string(),
+                                };
+                                let res_good = run_gnmi_for_xpath(&xpath_rc, port, &good_sec, DEFAULT_GOOD_TNAME, timeout, "SHOW");
+                                if !res_good.success { http_status = "HTTP/1.1 500 Internal Server Error"; }
+                                cmd_results.push(res_good);
+                            }
 
                             // Check Serial Number
                             if is_serialnumber_probe_enabled() {
