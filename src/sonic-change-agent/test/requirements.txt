@@ -1,0 +1,3 @@
+# sonic-change-agent Integration Test Requirements
+pytest>=7.0.0
+PyYAML>=6.0
