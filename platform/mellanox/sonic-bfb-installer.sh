@@ -121,6 +121,7 @@ usage(){
     echo "-b|--bfb		Provide custom path for bfb tar archive"
     echo "-r|--rshim		Install only on DPUs connected to rshim interfaces provided, mention all if installation is required on all connected DPUs"
     echo "-d|--dpu		Install on specified DPUs, mention all if installation is required on all connected DPUs"
+    echo "-s|--skip-extract	Skip extracting the bfb image"
     echo "-v|--verbose		Verbose installation result output"
     echo "-c|--config		Config file"
     echo "-h|--help		Help"
@@ -488,7 +489,7 @@ main() {
     validate_platform
 
     # Parse command line arguments
-    local config= bfb= rshim_dev= dpus= verbose=false
+    local config= bfb= rshim_dev= dpus= skip_extract= verbose=false
     parse_arguments "$@"
 
     # Validate BFB image
@@ -499,9 +500,12 @@ main() {
     fi
     is_url "$bfb"
     
-    extract_bfb "$bfb"
-
-    validate_bfb_sha256
+    if [ "$skip_extract" = true ]; then
+        EXTRACTED_BFB_PATH="$bfb"
+    else
+        extract_bfb "$bfb"
+        validate_bfb_sha256
+    fi
 
     trap "file_cleanup" EXIT
 
@@ -590,6 +594,9 @@ parse_arguments() {
             --dpu|-d)
                 shift
                 dpus=$1
+                ;;
+            --skip-extract|-s)
+                skip_extract=true
                 ;;
             --config|-c)
                 shift
