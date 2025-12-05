@@ -1410,7 +1410,8 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            #enable port queue drop stats + enable egress queue drop flex counter
+            # bit 2: enable egress queue drop flex counter
+            # bit 11: enable port queue drop stats
             sai_stats_support_mask: 0x804
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
