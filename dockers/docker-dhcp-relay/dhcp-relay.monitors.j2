@@ -49,6 +49,10 @@ stdout_syslog=true
 stderr_logfile=NONE
 stderr_syslog=true
 dependent_startup=true
+{% if 'has_sonic_dhcpv4_relay' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['has_sonic_dhcpv4_relay'] == 'True' %}
+dependent_startup_wait_for=dhcp4relay:running
+{% else %}
 dependent_startup_wait_for=isc-dhcpv4-relay-{{ vlan_name }}:running
+{% endif %}
 
 {% endfor %}
