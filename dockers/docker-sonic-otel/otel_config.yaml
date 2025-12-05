@@ -1,6 +1,3 @@
-{%- set device_metadata = DEVICE_METADATA | default({}) -%}
-{%- set hostname = device_metadata.localhost.hostname | default('sonic-switch') -%}
-
 receivers:
   otlp:
     protocols:
@@ -17,16 +14,6 @@ processors:
 exporters:
   debug:
     verbosity: detailed
-
-  # Template for InfluxDB exporters - can be configured externally
-  # Examples of what could be configured:
-  #
-  # influxdb:
-  #   endpoint: ${INFLUXDB_PORTS_ENDPOINT:-http://localhost:8086}
-  #   org: ${INFLUXDB_ORG:-default}
-  #   bucket: ${INFLUXDB_PORTS_BUCKET:-home}
-  #   token: ${INFLUXDB_PORTS_TOKEN}
-  #   timeout: 10s
   
 service:
   telemetry:

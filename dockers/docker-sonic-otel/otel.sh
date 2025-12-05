@@ -1,51 +1,29 @@
 #!/usr/bin/env bash
 
-EXIT_OTEL_VARS_FILE_NOT_FOUND=1
-OTEL_VARS_FILE=/usr/share/sonic/templates/otel_vars.j2
+EXIT_OTEL_CONFIG_FILE_NOT_FOUND=1
+OTEL_CONFIG_FILE=/etc/otel-collector/otel_config.yaml
 CONFIG_FILE=/etc/otel-collector/config.yaml
 
 echo "Starting otel.sh script"
-echo "Checking for template file: $OTEL_VARS_FILE"
+echo "Checking for config file: $OTEL_CONFIG_FILE"
 
-if [ ! -f "$OTEL_VARS_FILE" ]; then
-    echo "ERROR: OTEL vars template file not found at $OTEL_VARS_FILE"
-    ls -la /usr/share/sonic/templates/
-    exit $EXIT_OTEL_VARS_FILE_NOT_FOUND
+if [ ! -f "$OTEL_CONFIG_FILE" ]; then
+    echo "ERROR: OTEL config file not found at $OTEL_CONFIG_FILE"
+    ls -la /etc/otel-collector/
+    exit $EXIT_OTEL_CONFIG_FILE_NOT_FOUND
 fi
 
-echo "Template file found, generating OTEL config from template..."
-OTEL_CONFIG=$(sonic-cfggen -d -t $OTEL_VARS_FILE 2>&1)
-CFGGEN_EXIT_CODE=$?
-
-echo "sonic-cfggen exit code: $CFGGEN_EXIT_CODE"
-echo "Generated config length: ${#OTEL_CONFIG}"
-
-if [ $CFGGEN_EXIT_CODE -ne 0 ]; then
-    echo "ERROR: sonic-cfggen failed with exit code $CFGGEN_EXIT_CODE"
-    echo "Output: $OTEL_CONFIG"
-    exit 1
-fi
-
-if [ -z "$OTEL_CONFIG" ]; then
-    echo "ERROR: Generated config is empty"
-    exit 1
-fi
-
-# Ensure config directory exists
-echo "Creating config directory"
-mkdir -p /etc/otel-collector
-
-echo "Writing config to $CONFIG_FILE"
-echo "$OTEL_CONFIG" > $CONFIG_FILE
+echo "Config file found, copying to runtime location..."
+cp "$OTEL_CONFIG_FILE" "$CONFIG_FILE"
 
 echo "Config file contents:"
 cat $CONFIG_FILE
 
-# Validate the generated YAML
+# Validate the YAML configuration
 echo "Validating YAML configuration..."
 python3 -c "import yaml; yaml.safe_load(open('$CONFIG_FILE'))" 2>&1
 if [ $? -ne 0 ]; then
-    echo "ERROR: Generated YAML is invalid"
+    echo "ERROR: YAML configuration is invalid"
     exit 1
 fi
 
