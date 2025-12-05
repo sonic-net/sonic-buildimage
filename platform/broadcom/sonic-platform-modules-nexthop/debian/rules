@@ -16,6 +16,9 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4220
+MODULE_DIRS += nh-4220-r0
+MODULE_DIRS += nh-5010
 
 SERVICE_DIR := service
 SYSTEM_DIR := etc/systemd/system
@@ -39,6 +42,7 @@ override_dh_auto_build:
 		set -e; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/modules ]; then \
 			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules; \
+			./sign-modules.sh $(MOD_SRC_DIR)/$${mod}/modules; \
 		fi; \
 	done)
 	python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
@@ -102,6 +106,30 @@ override_dh_auto_install:
 	python3 setup.py install \
 		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
 		--install-layout=deb
+
+override_dh_install:
+	set -e
+	# Get all package names from debian/control
+	(for pkg_name in $$(dh_listpackages); do \
+		set -e; \
+		case "$${pkg_name}" in \
+			*-r[0-9]*) \
+				if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
+					platform_suffix="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
+					sku="$${platform_suffix%-r[0-9]*}"; \
+					revision="$${platform_suffix#$$sku}"; \
+					fixed_sku=$$(echo "$$sku" | sed 's/-/_/g'); \
+					device_name="x86_64-nexthop_$${fixed_sku}$${revision}"; \
+					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
+						usr/share/sonic/device/$${device_name}/pddf/; \
+				fi; \
+				if [ -f common/utils/nh_powercycle ]; then \
+					dh_install -p$${pkg_name} common/utils/nh_powercycle \
+						usr/lib/systemd/system-shutdown/; \
+				fi; \
+				;; \
+		esac; \
+	done)
 
 override_dh_clean:
 	set -e

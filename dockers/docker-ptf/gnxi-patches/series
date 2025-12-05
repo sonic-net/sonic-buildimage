@@ -5,3 +5,4 @@
 0005-Enhance-gnmi_cli_py-4.patch
 0006-Add-support-for-extensive-configurations.patch
 0007-Fix-py_gnmicli.py-POLL-mode.patch
+0008-Fix-ipv6-addr-port-format-for-grpc.patch

@@ -40,12 +40,19 @@ class TestThermal:
     @mock.patch('os.path.exists', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_gearbox_count', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_cpu_thermal_count', mock.MagicMock(return_value=2))
-    @mock.patch('sonic_platform.thermal.glob.iglob', mock.MagicMock(
-        return_value=['/run/hw-management/thermal/sodimm1_temp_input',
-                      '/run/hw-management/thermal/sodimm2_temp_input']))
+    @mock.patch('sonic_platform.thermal.glob.iglob')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_name', mock.MagicMock(return_value='x86_64-mlnx_msn2700-r0'))
-    def test_chassis_thermal(self):
+    def test_chassis_thermal(self, mock_glob):
         from sonic_platform.thermal import THERMAL_NAMING_RULE
+
+        def mocked_glob(pattern):
+            if 'sodimm' in pattern:
+                return ['/run/hw-management/thermal/sodimm1_temp_input',
+                        '/run/hw-management/thermal/sodimm2_temp_input']
+            elif 'voltmon' in pattern:
+                return ['/run/hw-management/thermal/voltmon1_temp1_input',
+                        '/run/hw-management/thermal/voltmon2_temp1_input']
+        mock_glob.side_effect = mocked_glob
         chassis = Chassis()
         thermal_list = chassis.get_all_thermals()
         assert thermal_list

@@ -46,6 +46,7 @@ module sonic-buffer-port-ingress-profile-list {
                     type leafref {
                         path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
                     }
+                    ordered-by user;
                     description "a list of references to BUFFER_PROFILE_TABLE object for a port";
                 }
 

@@ -1,0 +1,43 @@
+From 0319995eb5ff84a326cb348271e590ef0c361ed1 Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <cscarpit@cisco.com>
+Date: Thu, 14 Aug 2025 08:54:35 +0000
+Subject: zebra: Explicitly print "exit" at the end of srv6 encap node config
+
+Explicitly print 'exit' at the end of srv6 encapsulation node
+configuration. This ensures consistency with other VTY nodes and
+prevents issues similar to those fixed in https://github.com/FRRouting/frr/pull/9331.
+
+```
+segment-routing
+ srv6
+  encapsulation
+   source-address fcbb:bbbb:1::1
+  exit                <<<<<<<<<< Add this "exit" statement
+  locators
+   locator MAIN
+    prefix fcbb:bbbb::/48
+    format usid-f3216
+   exit
+...
+```
+
+Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
+---
+ zebra/zebra_srv6_vty.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/zebra/zebra_srv6_vty.c b/zebra/zebra_srv6_vty.c
+index 324bd6a360..c570eb5457 100644
+--- a/zebra/zebra_srv6_vty.c
++++ b/zebra/zebra_srv6_vty.c
+@@ -1459,6 +1459,7 @@ static int zebra_sr_config(struct vty *vty)
+ 			vty_out(vty, "  encapsulation\n");
+ 			vty_out(vty, "   source-address %pI6\n",
+ 				&srv6->encap_src_addr);
++			vty_out(vty, "  exit\n");
+ 		}
+ 	}
+ 	if (srv6 && zebra_srv6_is_enable()) {
+-- 
+2.48.1
+
