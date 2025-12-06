@@ -1,0 +1,11 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+	"psu.temperature",
+	"psu.voltage",
+	"psu.power_threshold",
+	"psu"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60
+}
