@@ -64,6 +64,10 @@
 #  * ENABLE_MULTIDB: Enable multiple redis database instances.
 #  *                 Default: unset
 #  *                 Values: y
+#  * DEVELOPER_MODE: Preserve source tree across builds.
+#  *                 Patches are applied once and kept, allowing direct source modifications.
+#  *                 Default: unset
+#  *                 Values: y
 ###############################################################################
 
 SHELL = /bin/bash
@@ -582,6 +586,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
+                           DEVELOPER_MODE=$(DEVELOPER_MODE) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
