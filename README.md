@@ -80,9 +80,24 @@ Any server can be a build image server as long as it has:
 > options to expose the full KVM interface to the VM
 > (e.g. [the KVM paravirtualization support on VirtualBox](https://www.virtualbox.org/manual/ch10.html#gimproviders)).
 
-A good choice of OS for building SONiC is currently Ubuntu 20.04.
+A good choice of OS for building SONiC is currently Ubuntu 22.04.
 
-## Prerequisites
+## Automated prerequisites installation and repository cloning
+
+For convenience, you can use the automated prerequisites script to handle both prerequisites installation and repository cloning:
+
+```shell
+curl -sSL https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/scripts/prerequisites.sh | bash
+```
+
+This script will automatically:
+* Install required packages (pip, jinja, Docker)
+* Configure Docker for non-root usage
+* Clone the repository with all submodules
+
+After completing this step, proceed to the [Usage](#usage) section below.
+
+## Manual prerequisites installation
 
 * Install pip and jinja in host build machine, execute below commands
    if j2/jinjanator is not available:
@@ -91,6 +106,9 @@ A good choice of OS for building SONiC is currently Ubuntu 20.04.
 sudo apt install -y python3-pip
 pip3 install --user jinjanator
 ```
+
+> **Note:** If you cannot run the `j2` command after installation, this is likely because the `~/.local/bin` directory was just created and is not yet included in your `$PATH`. Please log out and log back in to refresh your environment, then test the command again.
+
 
 * Install [Docker](https://docs.docker.com/engine/install/) and configure your
   system to allow running the 'docker' command without 'sudo':
@@ -103,7 +121,7 @@ pip3 install --user jinjanator
 > This will avoid [known bugs that falsely report read-only filesystems issues](https://stackoverflow.com/questions/52526219/docker-mkdir-read-only-file-system)
 > during the build process.
 
-## Clone the repository with all the git submodules
+## Manual clone the repository with all the git submodules
 
 To clone the code repository recursively:
 

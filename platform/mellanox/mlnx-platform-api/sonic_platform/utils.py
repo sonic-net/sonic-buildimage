@@ -263,7 +263,13 @@ def _extract_ports_index_by_type(port_type, num_of_asics=1):
     hwsku_jsons = get_path_list_to_asic_hwsku_dir(num_of_asics)
     hwsku_dict = {}
     for hwsku_json in hwsku_jsons:
+        if not os.path.exists(hwsku_json):
+            continue
         hwsku_dict.update(load_json_file(hwsku_json)['interfaces'])
+
+    # Check platform has no hwsku.json(s)
+    if not hwsku_dict:
+        return None
 
     # Check if "port_type" matches, if yes, add the port index to the list.
     for i, (key, value) in enumerate(hwsku_dict.items()):
