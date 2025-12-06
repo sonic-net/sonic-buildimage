@@ -2,11 +2,21 @@
 
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=master&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=master)
 [![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=master&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=master)
-[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=master&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=master&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=2432&branchName=master)
 [![Marvell-Prestera(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-armhf?branchName=master&label=Marvell-Prestera-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
 [![Marvell-Prestera(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-arm64?branchName=master&label=Marvell-Prestera-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
 [![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=master&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=master)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
+
+*202511 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202511&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202511)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202511&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202511)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.marvell-teralynx?branchName=202511&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=2432&branchName=202511)
+[![Marvell-Prestera(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-armhf?branchName=202511&label=Marvell-Prestera-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202511)
+[![Marvell-Prestera(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-prestera-arm64?branchName=202511&label=Marvell-Prestera-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202511)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202511&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202511)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202511&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202511)
 
 *202505 builds*:
 
@@ -38,16 +48,6 @@
 [![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=202405&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202405)
 [![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202405&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202405)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202405&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202405)
-
-*202311 builds*:
-
-[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202311&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202311)
-[![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=202311&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=202311)
-[![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=202311&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=202311)
-[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202311&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202311)
-[![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=202311&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202311)
-[![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=202311&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202311)
-[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202311&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202311)
 
 ## SONiC Image Azure Pipelines
 
