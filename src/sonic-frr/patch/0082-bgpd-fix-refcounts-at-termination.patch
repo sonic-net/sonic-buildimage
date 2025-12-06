@@ -1,0 +1,77 @@
+From d4b7888b430203ec459d075aee8ff01c52231cfd Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Mon, 15 Sep 2025 16:09:30 -0400
+Subject: bgpd: fix refcounts at termination
+
+Clean up an issue with refcounts in bgpd. Ensure that a
+bgp instance that's being deleted unrefs if its "clearing"
+event was scheduled: that event holds an extra ref.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ bgpd/bgpd.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
+index 42f0914f26..d65c49fb14 100644
+--- a/bgpd/bgpd.c
++++ b/bgpd/bgpd.c
+@@ -4182,6 +4182,15 @@ int bgp_delete(struct bgp *bgp)
+ 	event_cancel(&bgp->t_maxmed_onstartup);
+ 	event_cancel(&bgp->t_update_delay);
+ 	event_cancel(&bgp->t_establish_wait);
++
++	/* If the clearing event is scheduled, there's an extra ref to
++	 * this 'bgp' - ensure we unlock.
++	 */
++	if (event_is_scheduled(bgp->clearing_end)) {
++		assert(bgp->lock > 1);
++		bgp_unlock(bgp);
++	}
++
+ 	event_cancel(&bgp->clearing_end);
+ 
+ 	/* Set flag indicating bgp instance delete in progress */
+-- 
+2.48.1
+
+
+From f63287170452aaedcc2603575cd705d8c95bbf87 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Tue, 16 Sep 2025 12:58:06 -0400
+Subject: bgpd: fix weird formatting in a function
+
+bgp table function had ... eccentric formatting, fix it
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ bgpd/bgp_table.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/bgpd/bgp_table.c b/bgpd/bgp_table.c
+index 781909b65d..3029e683d2 100644
+--- a/bgpd/bgp_table.c
++++ b/bgpd/bgp_table.c
+@@ -101,7 +101,7 @@ inline struct bgp_dest *bgp_dest_unlock_node(struct bgp_dest *dest)
+  * bgp_node_destroy
+  */
+ static void bgp_node_destroy(route_table_delegate_t *delegate,
+-							struct route_table *table, struct route_node *node)
++			     struct route_table *table, struct route_node *node)
+ {
+ 	struct bgp_dest *dest;
+ 	struct bgp_table *rt;
+@@ -110,8 +110,8 @@ static void bgp_node_destroy(route_table_delegate_t *delegate,
+ 	if (dest) {
+ 		if (rt->bgp) {
+ 			bgp_addpath_free_node_data(&rt->bgp->tx_addpath,
+-										&dest->tx_addpath,
+-										rt->afi, rt->safi);
++						   &dest->tx_addpath,
++						   rt->afi, rt->safi);
+ 		}
+ 		XFREE(MTYPE_BGP_NODE, dest);
+ 		node->info = NULL;
+-- 
+2.48.1
+
