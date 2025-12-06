@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -197,7 +198,7 @@ bcmcnet_pdma_dev_resume(struct pdma_dev *dev)
 {
     struct dev_ctrl *ctrl = &dev->ctrl;
     uint32_t qi;
-    int rv;
+    int rv, retry;
 
     if (!dev->attached) {
         return SHR_E_UNAVAIL;
@@ -206,23 +207,52 @@ bcmcnet_pdma_dev_resume(struct pdma_dev *dev)
     dev->suspended = false;
 
     if (dev->flags & PDMA_ABORT) {
+        /* Release all the Rx queues */
+        for (qi = 0; qi < ctrl->nb_rxq; qi++) {
+            retry = 0;
+            while (at_test_set_bit(qi, &ctrl->bm_rxq_busy, ctrl->lock)) {
+                sal_usleep(100);
+                if (++retry > 1000) {
+                    CNET_ERROR(dev->unit, "Resume timeout on Rx queue %d\n", qi);
+                    return SHR_E_TIMEOUT;
+                }
+            }
+            dev->ops->rx_queue_release(dev, qi);
+        }
+
+        /* Release all the Tx queues */
+        for (qi = 0; qi < ctrl->nb_txq; qi++) {
+            retry = 0;
+            while (at_test_set_bit(qi, &ctrl->bm_txq_busy, ctrl->lock)) {
+                sal_usleep(100);
+                if (++retry > 1000) {
+                    CNET_ERROR(dev->unit, "Resume timeout on Tx queue %d\n", qi);
+                    return SHR_E_TIMEOUT;
+                }
+            }
+            dev->ops->tx_queue_release(dev, qi);
+        }
+
         /*
          * H/W configuration of Packet DMA is gone in the FFB apply phase,
          * so we need to program it again.
          */
         dev->ops->dev_config(dev, ctrl->bm_rxq, ctrl->bm_txq);
 
+        dev->flags &= ~PDMA_ABORT;
+
         /* Restart all the Rx queues */
         for (qi = 0; qi < ctrl->nb_rxq; qi++) {
-            dev->ops->rx_queue_release(dev, qi);
             dev->ops->rx_queue_setup(dev, qi);
+            at_clear_bit(qi, &ctrl->bm_rxq_busy, ctrl->lock);
             dev->ops->rx_queue_intr_enable(dev, qi);
             dev->ops->rx_queue_start(dev, qi);
         }
+
         /* Restart all the Tx queues */
         for (qi = 0; qi < ctrl->nb_txq; qi++) {
-            dev->ops->tx_queue_release(dev, qi);
             dev->ops->tx_queue_setup(dev, qi);
+            at_clear_bit(qi, &ctrl->bm_txq_busy, ctrl->lock);
             dev->ops->tx_queue_intr_enable(dev, qi);
             dev->ops->tx_queue_start(dev, qi);
         }
@@ -231,10 +261,6 @@ bcmcnet_pdma_dev_resume(struct pdma_dev *dev)
     rv = dev->ops->dev_resume(dev);
     if (SHR_FAILURE(rv)) {
         return rv;
-    }
-
-    if (dev->flags & PDMA_ABORT) {
-        dev->flags &= ~PDMA_ABORT;
     }
 
     return rv;

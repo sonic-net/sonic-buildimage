@@ -1,6 +1,7 @@
 /*
  * $Id: gmodule.c,v 1.20 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -307,6 +308,7 @@ _gmodule_mmap(struct file *filp, struct vm_area_struct *vma)
 /* FILE OPERATIONS */
 
 struct file_operations _gmodule_fops = {
+    .owner = THIS_MODULE,
     .unlocked_ioctl = _gmodule_unlocked_ioctl,
     .open =       _gmodule_open,
     .release =    _gmodule_release,
@@ -320,18 +322,18 @@ cleanup_module(void)
 {
     if(!_gmodule) return;
 
-    /* Specific Cleanup */
-    if(_gmodule->cleanup) {
-	_gmodule->cleanup();
-    }
+    /* Remove ourselves from user-mode access */
+    unregister_chrdev(_gmodule->major, _gmodule->name);
 
     /* Remove any proc entries */
     if(_gmodule->pprint) {
 	_gmodule_remove_proc();
     }
 
-    /* Finally, remove ourselves from the universe */
-    unregister_chrdev(_gmodule->major, _gmodule->name);
+    /* Module-specific cleanup */
+    if(_gmodule->cleanup) {
+	_gmodule->cleanup();
+    }
 }
 
 int __init
