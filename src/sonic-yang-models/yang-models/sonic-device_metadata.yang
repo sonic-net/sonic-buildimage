@@ -257,6 +257,7 @@ module sonic-device_metadata {
 
                 leaf-list supporting_bulk_counter_groups {
                     type string;
+                    ordered-by user;
                     description "This field contains a list of counter groups that support bulk operation.";
                 }
 
@@ -327,6 +328,12 @@ module sonic-device_metadata {
                     type boolean;
                     description "Enable syslog counter feature.";
                     default "false";
+                }
+
+                leaf has_sonic_dhcpv4_relay {
+                     description "This configuration controls the dhcpv4 relay process";
+                     type stypes:boolean_type;
+                     default "false";
                 }
             }
             /* end of container localhost */
