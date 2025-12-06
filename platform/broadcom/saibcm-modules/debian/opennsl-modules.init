@@ -46,6 +46,7 @@ function load_kernel_modules()
 {
     if [[ $is_ltsw_chip -eq 1 ]]; then
         modprobe psample
+        modprobe linux_bcmgenl
         modprobe linux_ngbde
         modprobe linux_ngknet rx_buffer_size=$rx_buffer_size
         modprobe linux_ngknetcb
@@ -53,6 +54,7 @@ function load_kernel_modules()
         modprobe linux-kernel-bde dmasize=$dmasize maxpayload=128 debug=4 dma_debug=1 usemsi=$usemsi
         modprobe linux-user-bde
         modprobe psample
+        modprobe linux-bcm-genl
 
         modprobe linux-bcm-knet use_rx_skb=1 rx_buffer_size=9238 debug=0x5020 default_mtu=9100
         modprobe linux-knet-cb
@@ -66,9 +68,11 @@ function remove_kernel_modules()
         rmmod linux_ngknetcb
         rmmod linux_ngknet
         rmmod linux_ngbde
+        rmmod linux_bcmgenl
         rmmod psample
     else
         rmmod psample
+        rmmod linux-bcm-genl
         rmmod linux-knet-cb
         rmmod linux-bcm-knet
         rmmod linux-user-bde
