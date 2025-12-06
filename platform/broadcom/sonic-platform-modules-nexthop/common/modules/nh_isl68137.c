@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
+#include <linux/version.h>
 
 #include "nh_pmbus.h"
 
@@ -334,7 +335,11 @@ static struct i2c_driver isl68137_driver = {
 	.driver = {
 		   .name = "nh_isl68137",
 		   },
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 	.probe_new = isl68137_probe,
+#else
+	.probe = isl68137_probe,
+#endif
 	.id_table = raa_dmpvr_id,
 };
 
