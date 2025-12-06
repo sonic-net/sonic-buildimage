@@ -5,7 +5,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -994,6 +995,8 @@ const bcmpkt_rxpmd_fget_t bcm78900_b0_rxpmd_fget = {
         NULL,
         NULL,
         NULL,
+        NULL,
+        NULL,
         NULL
     }
 };
@@ -1099,6 +1102,8 @@ const bcmpkt_rxpmd_fset_t bcm78900_b0_rxpmd_fset = {
         NULL,
         NULL,
         NULL,
+        NULL,
+        NULL,
         NULL
     }
 };
@@ -1125,7 +1130,7 @@ static int bcm78900_b0_rxpmd_view_infos[BCMPKT_RXPMD_FID_COUNT] = {
      -1, -1, -1, -1, -1, -1, -1, -2, -1, -1, -1, -1, -1, -2, -2, -2,
      -2, -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -2, -2, -2,
      -1, -1, -2, -2, -1, -2, -2, -2, -2, -1, -2, -2, -2, -2, -2, -2,
-     -2, -2, -2,
+     -2, -2, -2, -2, -2,
 };
 
 

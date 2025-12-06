@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.13 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -35,6 +36,13 @@ override-target=linux-$(platform)
 endif
 
 include $(SDK)/make/Make.config
+
+ifeq (1,$(THREAD_SANITIZER_IS_ACTIVE))
+# {
+  $(warning ./systems/bde/linux/user/kernel/Makefile. Do not apply THREAD SANITIZER to kernel objects)
+  CFLAGS := $(subst -fsanitize=thread, ,$(CFLAGS))
+# }
+endif
 
 LIBS = $(LIBDIR)/libkern.a
 
