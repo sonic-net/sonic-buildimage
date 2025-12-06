@@ -133,6 +133,9 @@ if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
+# Set 120 sec flex counter delay
+ORCHAGENT_ARGS+=" -D 120"
+
 # Enable SAI MACSec POST when:
 # - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
 # - MACSec is enabled on platform.
