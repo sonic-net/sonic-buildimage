@@ -245,6 +245,8 @@ struct fpm_nl_ctx {
 	} counters;
 } *gfnc;
 
+struct in6_addr configured_srv6_encap_srcaddr;
+
 struct seg6_iptunnel_encap_pri {
 	int mode;
 	char segment_name[SEG6_SEGMENT_NAME_LEN];
@@ -1115,6 +1117,11 @@ static void fpm_srv6_route_reset(struct event *t)
 	struct route_table *rt;
 	struct nexthop *nexthop;
 	rib_tables_iter_t rt_iter;
+	bool has_srv6_nexthop;
+	int reset_count = 0;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: starting SRv6 route reset due to encap srcaddr change", __func__);
 
 	rt_iter.state = RIB_TABLES_ITER_S_INIT;
 	while ((rt = rib_tables_iter_next(&rt_iter))) {
@@ -1128,16 +1135,27 @@ static void fpm_srv6_route_reset(struct event *t)
 			if (re == NULL)
 				continue;
 
-			nexthop = re->nhe->nhg.nexthop;
-			if (nexthop && nexthop->nh_srv6 &&
-					!sid_zero((const struct seg6_seg_stack *)nexthop->nh_srv6->seg6_segs))
-				/* Unset FPM installation flag so it gets installed again. */
-				UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
+			/* Check if any nexthop is SRv6. */
+			has_srv6_nexthop = false;
+			for (ALL_NEXTHOPS_PTR(&re->nhe->nhg, nexthop))
+				if (nexthop->nh_srv6 && nexthop->nh_srv6->seg6_segs &&
+					!sid_zero(nexthop->nh_srv6->seg6_segs))
+					has_srv6_nexthop = true;
+
+			if (!has_srv6_nexthop)
+				continue;
+
+			UNSET_FLAG(dest->flags, RIB_DEST_UPDATE_FPM);
+			reset_count++;
 		}
 	}
 
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: reset %d SRv6 routes, scheduling RIB walk", __func__, reset_count);
+
 	/* Schedule next step: send RIB routes. */
-	event_add_event(zrouter.master, fpm_rib_send, fnc, 0, &fnc->t_ribwalk);
+	if (reset_count > 0)
+		event_add_event(zrouter.master, fpm_rib_send, fnc, 0, &fnc->t_ribwalk);
 }
 
 /*
@@ -1549,25 +1567,26 @@ static bool netlink_srv6_vpn_route_msg_encode_multipath(int cmd, struct zebra_dp
 	if (!nest)
 		return false;
 
-	/*
-     * by default, we use the loopback address as encap source address,
-     * if it is valid
-     */
-	ifp = if_lookup_by_name("lo", VRF_DEFAULT);
+	/* Use manually configured SRv6 encap source address, or fallback to loopback address. */
+	if (!IPV6_ADDR_SAME(&configured_srv6_encap_srcaddr, &in6addr_any))
+		encap_src_addr = configured_srv6_encap_srcaddr;
+	else {
+		ifp = if_lookup_by_name("lo", VRF_DEFAULT);
 
-	if (ifp) {
-		vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
-		if (!vrf)
-			return false;
+		if (ifp) {
+			vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
+			if (!vrf)
+				return false;
 
-		FOR_ALL_INTERFACES (vrf, ifp) {
-			frr_each (if_connected, ifp->connected, connected) {
-				cp = connected->address;
-				if (cp->family == AF_INET6 &&
-				    !IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
-				    !IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
-					encap_src_addr = cp->u.prefix6;
-					break;
+			FOR_ALL_INTERFACES (vrf, ifp) {
+				frr_each (if_connected, ifp->connected, connected) {
+					cp = connected->address;
+					if (cp->family == AF_INET6 &&
+						!IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
+						!IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
+						encap_src_addr = cp->u.prefix6;
+						break;
+					}
 				}
 			}
 		}
@@ -1763,27 +1782,31 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	if (!nest)
 		return false;
 
-	/*
-	 * by default, we use the loopback address as encap source address,
-	 * if it is valid
-	 */
-	ifp = if_lookup_by_name("lo", VRF_DEFAULT);
-	vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
-	if (!vrf)
-		return false;
-	if (ifp) {
-		FOR_ALL_INTERFACES (vrf, ifp) {
-			frr_each (if_connected, ifp->connected, connected) {
-				cp = connected->address;
-				if (cp->family == AF_INET6 &&
-						!IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
-						!IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
-					encap_src_addr = cp->u.prefix6;
-					break;
+	/* Use manually configured SRv6 encap source address, or fallback to loopback address. */
+	if (!IPV6_ADDR_SAME(&configured_srv6_encap_srcaddr, &in6addr_any))
+		encap_src_addr = configured_srv6_encap_srcaddr;
+	else {
+		ifp = if_lookup_by_name("lo", VRF_DEFAULT);
+		vrf = vrf_lookup_by_name(VRF_DEFAULT_NAME);
+		if (!vrf)
+			return false;
+		if (ifp) {
+			FOR_ALL_INTERFACES (vrf, ifp) {
+				frr_each (if_connected, ifp->connected, connected) {
+					cp = connected->address;
+					if (cp->family == AF_INET6 &&
+							!IN6_IS_ADDR_LOOPBACK(&cp->u.prefix6) &&
+							!IN6_IS_ADDR_LINKLOCAL(&cp->u.prefix6)) {
+						encap_src_addr = cp->u.prefix6;
+						break;
+					}
 				}
 			}
 		}
 	}
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("Using src address %pI6", &encap_src_addr);
 
 	if (!nl_attr_put(
 			&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR,
@@ -2444,6 +2467,37 @@ static ssize_t netlink_sidlist_msg_encode(int cmd,
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
+static void set_srv6_encap_srcaddr(struct in6_addr *encap_src_addr)
+{
+	char old_addr_str[INET6_ADDRSTRLEN];
+	char new_addr_str[INET6_ADDRSTRLEN];
+
+	inet_ntop(AF_INET6, &configured_srv6_encap_srcaddr, old_addr_str, sizeof(old_addr_str));
+	inet_ntop(AF_INET6, encap_src_addr, new_addr_str, sizeof(new_addr_str));
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: current encap srcaddr=%s, new encap srcaddr=%s",
+			__func__, old_addr_str, new_addr_str);
+
+	if (IPV6_ADDR_SAME(&configured_srv6_encap_srcaddr, encap_src_addr)) {
+		/* Encap source address has not changed, nothing to do */
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: encap srcaddr unchanged, skipping update", __func__);
+		return;
+	}
+
+	/*
+	 * Update encap source address and re-install SRv6 routes 
+	 * with the new source address.
+	 */
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: updating SRv6 encap srcaddr from %s to %s, triggering route reset",
+			  __func__, old_addr_str, new_addr_str);
+	configured_srv6_encap_srcaddr = *encap_src_addr;
+	event_add_timer(gfnc->fthread->master, fpm_srv6_route_reset,
+			gfnc, 0, &gfnc->t_ribreset);
+}
+
 #define DPLANE_FPM_NL_BUF_SIZE 65536
 /**
  * Encode data plane operation context into netlink and enqueue it in the FPM
@@ -2534,6 +2588,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 		/* FALL THROUGH */
 	case DPLANE_OP_ROUTE_INSTALL:
 		if (has_srv6_nexthop(ctx)) {
+			char dest_str[PREFIX_STRLEN];
+			prefix2str(dplane_ctx_get_dest(ctx), dest_str, sizeof(dest_str));
 			rv = netlink_srv6_msg_encode(
 				RTM_NEWROUTE, ctx, &nl_buf[nl_buf_len],
 				sizeof(nl_buf) - nl_buf_len, true, fnc->use_nhg);
@@ -2667,10 +2723,19 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	case DPLANE_OP_ADDR_INSTALL:
 	case DPLANE_OP_ADDR_UNINSTALL:
-		if (strmatch(dplane_ctx_get_ifname(ctx), "lo"))
+		if (strmatch(dplane_ctx_get_ifname(ctx), "lo") &&
+			IPV6_ADDR_SAME(&configured_srv6_encap_srcaddr, &in6addr_any))
 			event_add_timer(fnc->fthread->master, fpm_srv6_route_reset,
 				 fnc, 0, &fnc->t_ribreset);
 		break;
+
+	case DPLANE_OP_SRV6_ENCAP_SRCADDR_SET: {
+		struct in6_addr *src_addr = dplane_ctx_get_srv6_encap_srcaddr(ctx);
+		char addr_str[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, src_addr, addr_str, sizeof(addr_str));
+		set_srv6_encap_srcaddr(src_addr);
+		break;
+	}
 
 	/* Un-handled by FPM at this time. */
 	case DPLANE_OP_PW_INSTALL:
@@ -2901,6 +2966,10 @@ static void fpm_rib_send(struct event *t)
 	struct route_table *rt;
 	struct zebra_dplane_ctx *ctx;
 	rib_tables_iter_t rt_iter;
+	uint32_t route_count = 0;
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: Starting RIB walk to send routes to FPM", __func__);
 
 	/* Allocate temporary context for all transactions. */
 	ctx = dplane_ctx_alloc();
@@ -2921,6 +2990,7 @@ static void fpm_rib_send(struct event *t)
 			dplane_ctx_reset(ctx);
 			dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_INSTALL, rn,
 					      dest->selected_fib);
+			route_count++;
 			if (fpm_nl_enqueue(fnc, ctx) == -1) {
 				/* Free the temporary allocated context. */
 				dplane_ctx_fini(&ctx);
@@ -2937,6 +3007,9 @@ static void fpm_rib_send(struct event *t)
 
 	/* Free the temporary allocated context. */
 	dplane_ctx_fini(&ctx);
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug("%s: Completed RIB walk, sent %u routes to FPM", __func__, route_count);
 
 	/* All RIB routes sent! */
 	WALK_FINISH(fnc, FNE_RIB_FINISHED);
