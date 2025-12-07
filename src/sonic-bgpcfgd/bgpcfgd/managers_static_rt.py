@@ -45,6 +45,10 @@ class StaticRouteMgr(Manager):
         bfd_enable  = arg_list(data['bfd']) if 'bfd' in data else None
         route_tag   = self.ROUTE_ADVERTISE_DISABLE_TAG if 'advertise' in data and data['advertise'] == "false" else self.ROUTE_ADVERTISE_ENABLE_TAG
 
+        # SRv6 segment lists use | as separator
+        arg_list    = lambda v: v.split('|') if len(v.strip()) != 0 else None
+        sidlist_list    = arg_list(data['sidlist']) if 'sidlist' in data else None
+
         # bfd enabled route would be handled in staticroutebfd, skip here
         if bfd_enable and bfd_enable[0].lower() == "true":
             log_debug("{} static route {} bfd flag is true".format(self.db_name, key))
@@ -55,7 +59,7 @@ class StaticRouteMgr(Manager):
             return True
 
         try:
-            ip_nh_set = IpNextHopSet(is_ipv6, bkh_list, nh_list, intf_list, dist_list, nh_vrf_list)
+            ip_nh_set = IpNextHopSet(is_ipv6, bkh_list, nh_list, intf_list, dist_list, nh_vrf_list, sidlist_list)
             cur_nh_set, cur_route_tag = self.static_routes.get(vrf, {}).get(ip_prefix, (IpNextHopSet(is_ipv6), route_tag))
             cmd_list = self.static_route_commands(ip_nh_set, cur_nh_set, ip_prefix, vrf, route_tag, cur_route_tag)
         except Exception as exc:
@@ -258,7 +262,7 @@ class StaticRouteMgr(Manager):
             self.vrf_pending_redistribution.clear()
 
 class IpNextHop:
-    def __init__(self, af_id, blackhole, dst_ip, if_name, dist, vrf):
+    def __init__(self, af_id, blackhole, dst_ip, if_name, dist, vrf, sidlist):
         zero_ip = lambda af: '0.0.0.0' if af == socket.AF_INET else '::'
         self.af = af_id
         self.blackhole = 'false' if blackhole is None or blackhole == '' else blackhole
@@ -273,16 +277,19 @@ class IpNextHop:
         if self.blackhole != 'true' and self.is_zero_ip() and not self.is_portchannel() and len(self.interface.strip()) == 0:
             log_err('Mandatory attribute not found for nexthop')
             raise ValueError
+        self.sidlist = '' if sidlist is None else sidlist
     def __eq__(self, other):
         return (self.af == other.af and self.blackhole == other.blackhole and
                 self.ip == other.ip and self.interface == other.interface and
-                self.distance == other.distance and self.nh_vrf == other.nh_vrf)
+                self.distance == other.distance and self.nh_vrf == other.nh_vrf and
+                self.sidlist == other.sidlist)
     def __ne__(self, other):
         return (self.af != other.af or self.blackhole != other.blackhole or
                 self.ip != other.ip or self.interface != other.interface or
-                self.distance != other.distance or self.nh_vrf != other.nh_vrf)
+                self.distance != other.distance or self.nh_vrf != other.nh_vrf or
+                self.sidlist != other.sidlist)
     def __hash__(self):
-        return hash((self.af, self.blackhole, self.ip, self.interface, self.distance, self.nh_vrf))
+        return hash((self.af, self.blackhole, self.ip, self.interface, self.distance, self.nh_vrf, self.sidlist))
     def is_ip_valid(self):
         socket.inet_pton(self.af, self.ip)
     def is_zero_ip(self):
@@ -304,19 +311,21 @@ class IpNextHop:
             ret_val += ' %d' % self.distance
         if not (self.nh_vrf is None or self.nh_vrf == ''):
             ret_val += ' nexthop-vrf %s' % self.nh_vrf
+        if not (self.sidlist is None or self.sidlist == ''):
+            ret_val += ' segments %s' % self.sidlist.replace(',', '/')
         return ret_val
 
 class IpNextHopSet(set):
-    def __init__(self, is_ipv6, bkh_list = None, ip_list = None, intf_list = None, dist_list = None, vrf_list = None):
+    def __init__(self, is_ipv6, bkh_list = None, ip_list = None, intf_list = None, dist_list = None, vrf_list = None, sidlist_list = None):
         super(IpNextHopSet, self).__init__()
         af = socket.AF_INET6 if is_ipv6 else socket.AF_INET
         if bkh_list is None and ip_list is None and intf_list is None:
             # empty set, for delete case
             return
-        nums = {len(x) for x in [bkh_list, ip_list, intf_list, dist_list, vrf_list] if x is not None}
+        nums = {len(x) for x in [bkh_list, ip_list, intf_list, dist_list, vrf_list, sidlist_list] if x is not None}
         if len(nums) != 1:
             log_err("Lists of next-hop attribute have different sizes: %s" % nums)
-            for x in [bkh_list, ip_list, intf_list, dist_list, vrf_list]:
+            for x in [bkh_list, ip_list, intf_list, dist_list, vrf_list, sidlist_list]:
                 log_debug("List: %s" % x)
             raise ValueError
         nh_cnt = nums.pop()
@@ -324,6 +333,6 @@ class IpNextHopSet(set):
         for idx in range(nh_cnt):
             try:
                 self.add(IpNextHop(af, item(bkh_list, idx), item(ip_list, idx), item(intf_list, idx),
-                                   item(dist_list, idx), item(vrf_list, idx), ))
+                                   item(dist_list, idx), item(vrf_list, idx), item(sidlist_list, idx)))
             except ValueError:
                 continue
