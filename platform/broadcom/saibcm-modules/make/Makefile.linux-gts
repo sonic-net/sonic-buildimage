@@ -1,5 +1,6 @@
 # $Id: Makefile.linux-xlr-4_19,v 0.1 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -43,7 +44,7 @@
 #endif
 
 # some basic path variables for tools and kernel source, etc #
-XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-66
+XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-612
 TOOLCHAIN_DIR = $(XLR_TOOLS_BASE)/buildroot/host/usr
 ifeq (1,$(USE_CLANG))
 KERNDIR = $(XLR_TOOLS_BASE)/kernel/linux-clang
@@ -75,8 +76,8 @@ CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_DIR)/bin/$(CROSS_COMPILE)gcc -dumpversion)
 CROSS_GCC_VER_MAJOR := $(shell echo $(CROSS_GCC_VER) | cut -f1 -d.)
 export SYSINC := $(TOOLCHAIN_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
-# Glibc 2.27 or later version doesn't support SVID libm error handling.
-# Building tcl 8.3.3 with the new toolchain will occur errors.
+# Upgrade TCL version from default 8.3 to 8.4
+# Because the incompatible-pointer-types warnings will be treated as errors in new toolchain.
 export TCL840  := 1
 
 # Common CFLAGS
@@ -122,11 +123,13 @@ CFGFLAGS += -fgnu89-inline
 
 # set up KFLAGS appropriately. #
 ifeq (,$(KFLAGS))
-KFLAGS := -I$(KERNDIR) -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm
-ifneq (1,$(USE_CLANG))
-KFLAGS += -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -lc -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
-else
+KFLAGS := -I$(KERNDIR) -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h
+ifeq (1,$(USE_CLANG))
+KFLAGS += -D__KERNEL__ --target=x86_64-linux-gnu -fintegrated-as -Werror=unknown-warning-option -Werror=ignored-optimization-argument -Werror=option-ignored -Werror=unused-command-line-argument -fmacro-prefix-map=./= -std=gnu11 -fshort-wchar -funsigned-char -fno-common -fno-PIE -fno-strict-aliasing -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -fcf-protection=none -m64 -falign-loops=1 -mno-80387 -mno-fp-ret-in-387 -mstack-alignment=8 -mskip-rax-setup -mtune=generic -mno-red-zone -mcmodel=kernel -Wno-sign-compare -fno-asynchronous-unwind-tables -mretpoline-external-thunk -mindirect-branch-cs-prefix -mfunction-return=thunk-extern -fpatchable-function-entry=16,16 -fno-delete-null-pointer-checks -O2 -fstack-protector-strong -fomit-frame-pointer -fno-stack-clash-protection -falign-functions=16 -fstrict-flex-arrays=3 -fno-strict-overflow -fno-stack-check -Wall -Wundef -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Werror=strict-prototypes -Wno-format-security -Wno-trigraphs -Wno-frame-address -Wno-address-of-packed-member -Wframe-larger-than=2048 -Wno-gnu -Wno-unused-but-set-variable -Wno-unused-const-variable -Wvla -Wno-pointer-sign -Wcast-function-type -Wimplicit-fallthrough -Werror=date-time -Werror=incompatible-pointer-types -Wenum-conversion -Wno-unused-but-set-variable -Wno-unused-const-variable -Wno-pointer-to-enum-cast -Wno-tautological-constant-out-of-range-compare -Wno-unaligned-access -Wno-cast-function-type-strict -Wno-missing-field-initializers -Wno-type-limits -Wno-shift-negative-value -Wno-initializer-overrides -Wno-sign-compare
 KFLAGS += -fno-pie
+else
+KFLAGS += -D__KERNEL__ -fmacro-prefix-map=./= -std=gnu11 -fshort-wchar -funsigned-char -fno-common -fno-PIE -fno-strict-aliasing -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -fcf-protection=none -m64 -falign-jumps=1 -falign-loops=1 -mno-80387 -mno-fp-ret-in-387 -mpreferred-stack-boundary=3 -mskip-rax-setup -mtune=generic -mno-red-zone -mcmodel=kernel -Wno-sign-compare -fno-asynchronous-unwind-tables -mindirect-branch=thunk-extern -mindirect-branch-register -mindirect-branch-cs-prefix -mfunction-return=thunk-extern -fno-jump-tables -fpatchable-function-entry=16,16 -fno-delete-null-pointer-checks -O2 -fno-allow-store-data-races -fstack-protector-strong -fomit-frame-pointer -fno-stack-clash-protection -falign-functions=16 -fstrict-flex-arrays=3 -fno-strict-overflow -fno-stack-check -fconserve-stack -Wall -Wundef -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Werror=strict-prototypes -Wno-format-security -Wno-trigraphs -Wno-frame-address -Wno-address-of-packed-member -Wframe-larger-than=2048 -Wno-main -Wno-unused-but-set-variable -Wno-unused-const-variable -Wno-dangling-pointer -Wvla -Wno-pointer-sign -Wcast-function-type -Wno-array-bounds -Wno-alloc-size-larger-than -Wimplicit-fallthrough=5 -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init -Wenum-conversion -Wno-unused-but-set-variable -Wno-unused-const-variable -Wno-restrict -Wno-packed-not-aligned -Wno-format-overflow -Wno-format-truncation -Wno-stringop-overflow -Wno-stringop-truncation -Wno-missing-field-initializers -Wno-type-limits -Wno-shift-negative-value -Wno-maybe-uninitialized -Wno-sign-compare
+KFLAGS += -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -lc -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
 endif
 endif
 
@@ -149,8 +152,9 @@ CFGFLAGS += -D$(ENDIAN)
 CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
 CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
 
+HASH := \#
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 comma = ,
 basetarget = $(basename $(notdir $@))
@@ -161,38 +165,8 @@ basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
 modname_flags  = $(if $(filter 1,$(words $(modname))),\
 -D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
 
-ifdef LTSW_CHIPS
-# Ensure we do not use an out-of-date libelf.so
-ELFUTILS_MIN = 158
-ELFUTILS_DIR ?= /projects/ntsw-tools/lib
-
 # Default open source target build
 OPENSRC_BUILD ?= fed21-x86_64
-
-# Hardware interface (see $SDKLT/bcma/sys/probe directory)
-SYSTEM_INTERFACE ?= ngbde
-
-# Support BCMSIM in the same build
-ifeq (1,$(BCM_SIM_PATH_SUPPORT))
-EXTRA_SYSTEM_INTERFACES = plisim
-endif
-
-# Turn on direct register access if running on real hardware.
-ifeq (ngbde,$(SYSTEM_INTERFACE))
-# Except if using multiple probe interfaces
-ifeq (,$(EXTRA_SYSTEM_INTERFACES))
-LTSW_ADD_CPPFLAGS += -DBCMDRD_CONFIG_MEMMAP_DIRECT=1
-endif
-endif
-
-export SYSTEM_INTERFACE
-export EXTRA_SYSTEM_INTERFACES
-endif
-
-ifneq (, $(EDKHOST))
-# Default open source target build
-OPENSRC_BUILD ?= fed21-x86_64
-endif
 
 ifneq ($(targetplat),user)
 # By default we exclude -Werror from x86 kernel builds

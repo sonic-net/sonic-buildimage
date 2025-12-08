@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -330,7 +331,7 @@ ngbde_intr_alloc(int kdev, unsigned int num_irq)
     }
 
     /* Use new API if available (Linux 4.8 and newer) */
-    irq_types = PCI_IRQ_LEGACY;
+    irq_types = PCI_IRQ_INTX;
     if (sd->use_msi) {
         irq_types |= PCI_IRQ_MSI;
         if (sd->use_msi == NGBDE_MSI_T_MSIX) {

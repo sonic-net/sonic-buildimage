@@ -7,7 +7,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -305,8 +306,10 @@
 #define BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE       127
 /*! Start of frame indicator. */
 #define BCMPKT_TXPMD_AUX_SOBMH_START             128
+/*! INCA uplink port. */
+#define BCMPKT_TXPMD_CPU_TX_INCA_UPLINK_PORT     129
 /*! TXPMD FIELD ID NUMBER */
-#define BCMPKT_TXPMD_FID_COUNT                   129
+#define BCMPKT_TXPMD_FID_COUNT                   130
 /*! \} */
 
 /*! TXPMD field name strings for debugging. */
@@ -440,6 +443,7 @@
     {"AUX_SOBMH::CELL_ERROR", BCMPKT_TXPMD_AUX_SOBMH_CELL_ERROR},\
     {"AUX_SOBMH::HEADER_TYPE", BCMPKT_TXPMD_AUX_SOBMH_HEADER_TYPE},\
     {"AUX_SOBMH::START", BCMPKT_TXPMD_AUX_SOBMH_START},\
+    {"CPU_TX::INCA_UPLINK_PORT", BCMPKT_TXPMD_CPU_TX_INCA_UPLINK_PORT},\
     {"fid count", BCMPKT_TXPMD_FID_COUNT}
 
 /*!
@@ -563,20 +567,12 @@
 /*! \{ */
 /*! Egress Port */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_EGRESS_PORT 0
-/*! Destination is Invalid */
-#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL   0
-/*! Egress Port */
-#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT 1
 /*! Next Hop Index */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NHI    1
 /*! ECMP Group */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_ECMP   2
-/*! Trunk ID */
-#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID   2
 /*! ECMP member id */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_ECMP_MEMBER 3
-/*! Next Hop Index */
-#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP 3
 /*! IP Multicast Group */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_IPMC   4
 /*! L2MC group */
@@ -587,6 +583,14 @@
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_L2_PBM 7
 /*! LAG ID */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_LAG_ID 8
+/*! Destination is Invalid */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL   9
+/*! Egress Port */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT 10
+/*! Trunk ID */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID   11
+/*! Next Hop Index */
+#define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP 12
 /*! Forward and derive destination normally */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_T_FORWARD 15
 /*! Destination is Invalid */
@@ -596,18 +600,18 @@
 /*! BCMPKT_TXPMD_CPU_TX_DESTINATION_TYPE encoding name strings for debugging. */
 #define BCMPKT_TXPMD_CPU_TX_DESTINATION_TYPE_NAME_MAP_INIT \
     {"EGRESS_PORT", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_EGRESS_PORT},\
-    {"NULL", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL},\
-    {"DEST_PORT", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT},\
     {"NHI", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NHI},\
     {"ECMP", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_ECMP},\
-    {"TGID", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID},\
     {"ECMP_MEMBER", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_ECMP_MEMBER},\
-    {"NEXT_HOP", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP},\
     {"IPMC", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_IPMC},\
     {"L2MC", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_L2MC},\
     {"VLAN_FLOOD", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_VLAN_FLOOD},\
     {"L2_PBM", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_L2_PBM},\
     {"LAG_ID", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_LAG_ID},\
+    {"NULL", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NULL},\
+    {"DEST_PORT", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_DEST_PORT},\
+    {"TGID", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_TGID},\
+    {"NEXT_HOP", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_NEXT_HOP},\
     {"RESERVED_COUNTER", 13},\
     {"RESERVED_COUNTER", 14},\
     {"FORWARD", BCMPKT_TXPMD_CPU_TX_DESTINATION_T_FORWARD},\

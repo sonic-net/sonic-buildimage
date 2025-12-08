@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -438,7 +439,7 @@ typedef struct bcmdrd_symbol_s {
 /*! Extract block types from symbol device-specific information. */
 #define BCMDRD_SYM_INFO_BLKTYPES(_w) ((_w) & BCMDRD_SYM_INFO_BLKTYPES_MASK)
 
-/*! Bit number of the encoded access type. */
+/*! Bit position of the encoded access type. */
 #define BCMDRD_SYM_INFO_ACCTYPE_SHIFT \
     (BCMDRD_SYM_INFO_MAX_BLKTYPES * BCMDRD_SYM_INFO_BLKTYPE_BITS)
 
@@ -452,6 +453,10 @@ typedef struct bcmdrd_symbol_s {
 #define BCMDRD_SYM_INFO_ACCTYPE(_w) \
     (((_w) >> BCMDRD_SYM_INFO_ACCTYPE_SHIFT) & BCMDRD_SYM_INFO_ACCTYPE_MASK)
 
+/*! Bit postion of the encoded sub-pipe instance. */
+#define BCMDRD_SYM_INFO_SUBPIPE_INST_SHIFT \
+    (BCMDRD_SYM_INFO_ACCTYPE_SHIFT + BCMDRD_SYM_INFO_ACCTYPE_BITS)
+
 /*! Bit number of the encoded sub-pipe instance. */
 #define BCMDRD_SYM_INFO_SUBPIPE_INST_BITS 3
 
@@ -461,7 +466,8 @@ typedef struct bcmdrd_symbol_s {
 
 /*! Extract sub-pipe instance from symbol device-specific information. */
 #define BCMDRD_SYM_INFO_SUBPIPE_INST(_w) \
-    (((_w) >> 21) & BCMDRD_SYM_INFO_SUBPIPE_INST_MASK)
+    (((_w) >> BCMDRD_SYM_INFO_SUBPIPE_INST_SHIFT) & \
+     BCMDRD_SYM_INFO_SUBPIPE_INST_MASK)
 
 /*! Extract block type by index from symbol device-specific information. */
 #define BCMDRD_SYM_INFO_BLKTYPE(_w, _i) \

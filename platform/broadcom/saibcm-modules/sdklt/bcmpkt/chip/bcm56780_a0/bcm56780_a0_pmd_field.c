@@ -5,7 +5,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -999,29 +1000,29 @@ field_fmt_9_9_3_3_get(uint32_t *pmd, uint32_t *val)
 }
 
 static bcmpkt_pmd_field_t bcm56780_a0_rxpmd_fields[BCM56780_A0_RXPMD_COUNT] = {
-    {14, field_fmt_0_447_17_4_info, field_fmt_0_447_17_4_set, field_fmt_0_447_17_4_get, NULL, 0},
-    {1, field_fmt_448_454_3_3_info, field_fmt_448_454_3_3_set, field_fmt_448_454_3_3_get, NULL, 0},
-    {1, field_fmt_455_455_3_3_info, field_fmt_455_455_3_3_set, field_fmt_455_455_3_3_get, NULL, 0},
-    {1, field_fmt_456_459_3_3_info, field_fmt_456_459_3_3_set, field_fmt_456_459_3_3_get, NULL, 0},
-    {1, field_fmt_460_463_3_3_info, field_fmt_460_463_3_3_set, field_fmt_460_463_3_3_get, NULL, 0},
-    {1, field_fmt_464_465_3_3_info, field_fmt_464_465_3_3_set, field_fmt_464_465_3_3_get, NULL, 0},
-    {1, field_fmt_466_467_3_3_info, field_fmt_466_467_3_3_set, field_fmt_466_467_3_3_get, NULL, 0},
-    {1, field_fmt_468_468_3_3_info, field_fmt_468_468_3_3_set, field_fmt_468_468_3_3_get, NULL, 0},
-    {1, field_fmt_469_469_3_3_info, field_fmt_469_469_3_3_set, field_fmt_469_469_3_3_get, NULL, 0},
-    {1, field_fmt_470_470_3_3_info, field_fmt_470_470_3_3_set, field_fmt_470_470_3_3_get, NULL, 0},
-    {1, field_fmt_471_471_3_3_info, field_fmt_471_471_3_3_set, field_fmt_471_471_3_3_get, NULL, 0},
-    {1, field_fmt_472_475_3_3_info, field_fmt_472_475_3_3_set, field_fmt_472_475_3_3_get, NULL, 0},
-    {1, field_fmt_476_476_3_3_info, field_fmt_476_476_3_3_set, field_fmt_476_476_3_3_get, NULL, 0},
-    {1, field_fmt_477_477_3_3_info, field_fmt_477_477_3_3_set, field_fmt_477_477_3_3_get, NULL, 0},
-    {1, field_fmt_478_478_3_3_info, field_fmt_478_478_3_3_set, field_fmt_478_478_3_3_get, NULL, 0},
-    {1, field_fmt_479_479_3_3_info, field_fmt_479_479_3_3_set, field_fmt_479_479_3_3_get, NULL, 0},
-    {1, field_fmt_480_511_2_2_info, field_fmt_480_511_2_2_set, field_fmt_480_511_2_2_get, NULL, 0},
-    {1, field_fmt_512_527_1_1_info, field_fmt_512_527_1_1_set, field_fmt_512_527_1_1_get, NULL, 0},
-    {1, field_fmt_528_543_1_1_info, field_fmt_528_543_1_1_set, field_fmt_528_543_1_1_get, NULL, 0},
-    {1, field_fmt_544_545_0_0_info, field_fmt_544_545_0_0_set, field_fmt_544_545_0_0_get, NULL, 0},
-    {1, field_fmt_546_551_0_0_info, field_fmt_546_551_0_0_set, field_fmt_546_551_0_0_get, NULL, 0},
-    {1, field_fmt_552_559_0_0_info, field_fmt_552_559_0_0_set, field_fmt_552_559_0_0_get, NULL, 0},
-    {1, field_fmt_560_575_0_0_info, field_fmt_560_575_0_0_set, field_fmt_560_575_0_0_get, NULL, 0},
+    {"FLEX_DATA",14, field_fmt_0_447_17_4_info, field_fmt_0_447_17_4_set, field_fmt_0_447_17_4_get, NULL, 0},
+    {"MPB_FLEX_DATA_TYPE",1, field_fmt_448_454_3_3_info, field_fmt_448_454_3_3_set, field_fmt_448_454_3_3_get, NULL, 0},
+    {"DOP_TRIGGER",1, field_fmt_455_455_3_3_info, field_fmt_455_455_3_3_set, field_fmt_455_455_3_3_get, NULL, 0},
+    {"EPARSE_EXTRACT_OFFSETS_3_0_OR_MIRROR_ENCAP_INDEX",1, field_fmt_456_459_3_3_info, field_fmt_456_459_3_3_set, field_fmt_456_459_3_3_get, NULL, 0},
+    {"EPARSE_EXTRACT_OFFSETS_7_4",1, field_fmt_460_463_3_3_info, field_fmt_460_463_3_3_set, field_fmt_460_463_3_3_get, NULL, 0},
+    {"INT_CN",1, field_fmt_464_465_3_3_info, field_fmt_464_465_3_3_set, field_fmt_464_465_3_3_get, NULL, 0},
+    {"CNG",1, field_fmt_466_467_3_3_info, field_fmt_466_467_3_3_set, field_fmt_466_467_3_3_get, NULL, 0},
+    {"MULTICAST",1, field_fmt_468_468_3_3_info, field_fmt_468_468_3_3_set, field_fmt_468_468_3_3_get, NULL, 0},
+    {"IP_ROUTED",1, field_fmt_469_469_3_3_info, field_fmt_469_469_3_3_set, field_fmt_469_469_3_3_get, NULL, 0},
+    {"COPY_TO_CPU",1, field_fmt_470_470_3_3_info, field_fmt_470_470_3_3_set, field_fmt_470_470_3_3_get, NULL, 0},
+    {"TRUNCATE_CPU_COPY",1, field_fmt_471_471_3_3_info, field_fmt_471_471_3_3_set, field_fmt_471_471_3_3_get, NULL, 0},
+    {"EGR_ZONE_REMAP_CTRL",1, field_fmt_472_475_3_3_info, field_fmt_472_475_3_3_set, field_fmt_472_475_3_3_get, NULL, 0},
+    {"SWITCH",1, field_fmt_476_476_3_3_info, field_fmt_476_476_3_3_set, field_fmt_476_476_3_3_get, NULL, 0},
+    {"L3ONLY",1, field_fmt_477_477_3_3_info, field_fmt_477_477_3_3_set, field_fmt_477_477_3_3_get, NULL, 0},
+    {"UC_SW_COPY_DROPPED",1, field_fmt_478_478_3_3_info, field_fmt_478_478_3_3_set, field_fmt_478_478_3_3_get, NULL, 0},
+    {"UNICAST_QUEUE",1, field_fmt_479_479_3_3_info, field_fmt_479_479_3_3_set, field_fmt_479_479_3_3_get, NULL, 0},
+    {"MATCH_ID_LO",1, field_fmt_480_511_2_2_info, field_fmt_480_511_2_2_set, field_fmt_480_511_2_2_get, NULL, 0},
+    {"MATCH_ID_HI",1, field_fmt_512_527_1_1_info, field_fmt_512_527_1_1_set, field_fmt_512_527_1_1_get, NULL, 0},
+    {"REPLICATION_OR_NHOP_INDEX",1, field_fmt_528_543_1_1_info, field_fmt_528_543_1_1_set, field_fmt_528_543_1_1_get, NULL, 0},
+    {"DMA_HEADER_VERSION",1, field_fmt_544_545_0_0_info, field_fmt_544_545_0_0_set, field_fmt_544_545_0_0_get, NULL, 0},
+    {"QUEUE_NUM",1, field_fmt_546_551_0_0_info, field_fmt_546_551_0_0_set, field_fmt_546_551_0_0_get, NULL, 0},
+    {"SRC_PORT_NUM",1, field_fmt_552_559_0_0_info, field_fmt_552_559_0_0_set, field_fmt_552_559_0_0_get, NULL, 0},
+    {"PKT_LENGTH",1, field_fmt_560_575_0_0_info, field_fmt_560_575_0_0_set, field_fmt_560_575_0_0_get, NULL, 0},
 
 };
 
@@ -1059,28 +1060,28 @@ static const shr_enum_map_t bcm56780_a0_txpmd_start_names[] =
 };
 
 static bcmpkt_pmd_field_t bcm56780_a0_txpmd_fields[BCM56780_A0_TXPMD_COUNT] = {
-    {1, field_fmt_0_8_3_3_info, field_fmt_0_8_3_3_set, field_fmt_0_8_3_3_get, NULL, 0},
-    {1, field_fmt_9_9_3_3_info, field_fmt_9_9_3_3_set, field_fmt_9_9_3_3_get, NULL, 0},
-    {1, field_fmt_10_10_3_3_info, field_fmt_10_10_3_3_set, field_fmt_10_10_3_3_get, NULL, 0},
-    {1, field_fmt_11_24_3_3_info, field_fmt_11_24_3_3_set, field_fmt_11_24_3_3_get, NULL, 0},
-    {1, field_fmt_39_44_2_2_info, field_fmt_39_44_2_2_set, field_fmt_39_44_2_2_get, NULL, 0},
-    {1, field_fmt_45_45_2_2_info, field_fmt_45_45_2_2_set, field_fmt_45_45_2_2_get, NULL, 0},
-    {1, field_fmt_46_46_2_2_info, field_fmt_46_46_2_2_set, field_fmt_46_46_2_2_get, NULL, 0},
-    {1, field_fmt_47_47_2_2_info, field_fmt_47_47_2_2_set, field_fmt_47_47_2_2_get, NULL, 0},
-    {1, field_fmt_48_51_2_2_info, field_fmt_48_51_2_2_set, field_fmt_48_51_2_2_get, NULL, 0},
-    {1, field_fmt_52_53_2_2_info, field_fmt_52_53_2_2_set, field_fmt_52_53_2_2_get, NULL, 0},
-    {1, field_fmt_54_55_2_2_info, field_fmt_54_55_2_2_set, field_fmt_54_55_2_2_get, NULL, 0},
-    {1, field_fmt_56_56_2_2_info, field_fmt_56_56_2_2_set, field_fmt_56_56_2_2_get, NULL, 0},
-    {1, field_fmt_57_60_2_2_info, field_fmt_57_60_2_2_set, field_fmt_57_60_2_2_get, NULL, 0},
-    {1, field_fmt_64_71_1_1_info, field_fmt_64_71_1_1_set, field_fmt_64_71_1_1_get, NULL, 0},
-    {1, field_fmt_72_79_1_1_info, field_fmt_72_79_1_1_set, field_fmt_72_79_1_1_get, NULL, 0},
-    {1, field_fmt_80_80_1_1_info, field_fmt_80_80_1_1_set, field_fmt_80_80_1_1_get, NULL, 0},
-    {1, field_fmt_81_81_1_1_info, field_fmt_81_81_1_1_set, field_fmt_81_81_1_1_get, NULL, 0},
-    {1, field_fmt_82_82_1_1_info, field_fmt_82_82_1_1_set, field_fmt_82_82_1_1_get, NULL, 0},
-    {1, field_fmt_83_83_1_1_info, field_fmt_83_83_1_1_set, field_fmt_83_83_1_1_get, NULL, 0},
-    {1, field_fmt_84_84_1_1_info, field_fmt_84_84_1_1_set, field_fmt_84_84_1_1_get, NULL, 0},
-    {1, field_fmt_120_125_0_0_info, field_fmt_120_125_0_0_set, field_fmt_120_125_0_0_get, bcm56780_a0_txpmd_header_type_names, 0},
-    {1, field_fmt_126_127_0_0_info, field_fmt_126_127_0_0_set, field_fmt_126_127_0_0_get, bcm56780_a0_txpmd_start_names, 0},
+    {"CELL_LENGTH",1, field_fmt_0_8_3_3_info, field_fmt_0_8_3_3_set, field_fmt_0_8_3_3_get, NULL, 0},
+    {"EOP",1, field_fmt_9_9_3_3_info, field_fmt_9_9_3_3_set, field_fmt_9_9_3_3_get, NULL, 0},
+    {"SOP",1, field_fmt_10_10_3_3_info, field_fmt_10_10_3_3_set, field_fmt_10_10_3_3_get, NULL, 0},
+    {"PKT_LENGTH",1, field_fmt_11_24_3_3_info, field_fmt_11_24_3_3_set, field_fmt_11_24_3_3_get, NULL, 0},
+    {"COS",1, field_fmt_39_44_2_2_info, field_fmt_39_44_2_2_set, field_fmt_39_44_2_2_get, NULL, 0},
+    {"UNICAST_PKT",1, field_fmt_45_45_2_2_info, field_fmt_45_45_2_2_set, field_fmt_45_45_2_2_get, NULL, 0},
+    {"UNICAST",1, field_fmt_46_46_2_2_info, field_fmt_46_46_2_2_set, field_fmt_46_46_2_2_get, NULL, 0},
+    {"SET_L2BM",1, field_fmt_47_47_2_2_info, field_fmt_47_47_2_2_set, field_fmt_47_47_2_2_get, NULL, 0},
+    {"RQE_Q_NUM",1, field_fmt_48_51_2_2_info, field_fmt_48_51_2_2_set, field_fmt_48_51_2_2_get, NULL, 0},
+    {"SPAP",1, field_fmt_52_53_2_2_info, field_fmt_52_53_2_2_set, field_fmt_52_53_2_2_get, NULL, 0},
+    {"SPID",1, field_fmt_54_55_2_2_info, field_fmt_54_55_2_2_set, field_fmt_54_55_2_2_get, NULL, 0},
+    {"SPID_OVERRIDE",1, field_fmt_56_56_2_2_info, field_fmt_56_56_2_2_set, field_fmt_56_56_2_2_get, NULL, 0},
+    {"INPUT_PRI",1, field_fmt_57_60_2_2_info, field_fmt_57_60_2_2_set, field_fmt_57_60_2_2_get, NULL, 0},
+    {"LOCAL_DEST_PORT",1, field_fmt_64_71_1_1_info, field_fmt_64_71_1_1_set, field_fmt_64_71_1_1_get, NULL, 0},
+    {"IEEE1588_TIMESTAMP_HDR_OFFSET",1, field_fmt_72_79_1_1_info, field_fmt_72_79_1_1_set, field_fmt_72_79_1_1_get, NULL, 0},
+    {"TX_TS",1, field_fmt_80_80_1_1_info, field_fmt_80_80_1_1_set, field_fmt_80_80_1_1_get, NULL, 0},
+    {"IEEE1588_INGRESS_TIMESTAMP_SIGN",1, field_fmt_81_81_1_1_info, field_fmt_81_81_1_1_set, field_fmt_81_81_1_1_get, NULL, 0},
+    {"IEEE1588_REGEN_UDP_CHECKSUM",1, field_fmt_82_82_1_1_info, field_fmt_82_82_1_1_set, field_fmt_82_82_1_1_get, NULL, 0},
+    {"IEEE1588_ONE_STEP_ENABLE",1, field_fmt_83_83_1_1_info, field_fmt_83_83_1_1_set, field_fmt_83_83_1_1_get, NULL, 0},
+    {"CELL_ERROR",1, field_fmt_84_84_1_1_info, field_fmt_84_84_1_1_set, field_fmt_84_84_1_1_get, NULL, 0},
+    {"HEADER_TYPE",1, field_fmt_120_125_0_0_info, field_fmt_120_125_0_0_set, field_fmt_120_125_0_0_get, bcm56780_a0_txpmd_header_type_names, 0},
+    {"START",1, field_fmt_126_127_0_0_info, field_fmt_126_127_0_0_set, field_fmt_126_127_0_0_get, bcm56780_a0_txpmd_start_names, 0},
 
 };
 

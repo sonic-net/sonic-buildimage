@@ -8,7 +8,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -115,10 +116,10 @@ iproc_cmicd_probe(struct platform_device *pldev)
  *
  * \retval 0 No errors
  */
-static int
+static PLATFORM_DRIVER_REMOVE_RETURN_TYPE
 iproc_cmicd_remove(struct platform_device *pldev)
 {
-    return 0;
+    PLATFORM_DRIVER_REMOVE_RETURN_VALUE(0);
 }
 
 /*! Matching compatible property with device tree. */

@@ -9,7 +9,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -451,6 +452,8 @@ struct ngknet_rcpu_hdr {
 #define RCPU_FLAG_BIND_QUE      (1 << 3)
 /*! RCPU no pad flag */
 #define RCPU_FLAG_NO_PAD        (1 << 4)
+/*! RCPU keep FCS flag */
+#define RCPU_FLAG_KEEP_FCS      (1 << 5)
 
 #endif /* NGKNET_DEV_H */
 

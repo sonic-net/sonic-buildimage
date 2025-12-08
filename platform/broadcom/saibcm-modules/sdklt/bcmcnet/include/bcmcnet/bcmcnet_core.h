@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -70,6 +71,12 @@ struct pkt_hdr {
 #define PDMA_TX_NO_PAD      (1 << 5)
     /*! Tx to HNET */
 #define PDMA_TX_TO_HNET     (1 << 6)
+    /*! Tx XDP frame */
+#define PDMA_TX_XDP_FRM     (1 << 7)
+    /*! Tx XDP action */
+#define PDMA_TX_XDP_ACT     (1 << 8)
+    /*! Tx XSK ZC frame */
+#define PDMA_TX_XSK_ZC      (1 << 9)
     /*! Rx to VNET */
 #define PDMA_RX_TO_VNET     (1 << 10)
     /*! Rx strip vlan tag */
@@ -265,6 +272,15 @@ struct dev_ctrl {
 
     /*! Tx descriptor size */
     uint32_t tx_desc_size;
+
+    /*! Bitmap of Rx queues in busy state */
+    uint64_t bm_rxq_busy;
+
+    /*! Bitmap of Tx queues in busy state */
+    uint64_t bm_txq_busy;
+
+    /*! Device resource lock */
+    sal_spinlock_t lock;
 };
 
 /*!
