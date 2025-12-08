@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -36,8 +37,7 @@ MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("PTP Clock Driver for Broadcom XGS Switch");
 MODULE_LICENSE("GPL");
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) && \
-            (LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0))
 #define NGPTPCLOCK_SUPPORT
 #endif
 
@@ -169,6 +169,12 @@ static u32 hostcmd_regs[5] = { 0 };
 #define NGPTPCLOCK_MAX_NUM_PORTS       256     /* Max ever NUM_PORTS in the system. */
 #define NGPTPCLOCK_MAX_MTP_IDX         8       /* Max number of mtps in the system. */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
+#define FREQ_CORR       adjfine
+#else
+#define FREQ_CORR       adjfreq
+#endif
+
 /* Service request commands to Firmware. */
 enum {
     NGPTPCLOCK_DONE                     = 0x0,
@@ -201,10 +207,12 @@ enum {
 };
 
 enum {
-    NGPTPCLOCK_BROADSYNC_BS0_CONFIG      = 0x1,
-    NGPTPCLOCK_BROADSYNC_BS1_CONFIG      = 0x2,
-    NGPTPCLOCK_BROADSYNC_BS0_STATUS_GET  = 0x3,
-    NGPTPCLOCK_BROADSYNC_BS1_STATUS_GET  = 0x4,
+    NGPTPCLOCK_BROADSYNC_BS0_CONFIG             = 0x1,
+    NGPTPCLOCK_BROADSYNC_BS1_CONFIG             = 0x2,
+    NGPTPCLOCK_BROADSYNC_BS0_STATUS_GET         = 0x3,
+    NGPTPCLOCK_BROADSYNC_BS1_STATUS_GET         = 0x4,
+    NGPTPCLOCK_BROADSYNC_BS0_PHASE_OFFSET_SET   = 0x5,
+    NGPTPCLOCK_BROADSYNC_BS1_PHASE_OFFSET_SET   = 0x6,
 };
 
 enum {
@@ -348,10 +356,24 @@ typedef struct ngptpclock_extts_log_s {
     u32                     overflow;
 } __attribute__ ((packed)) ngptpclock_fw_extts_log_t;
 
-struct ngptpclock_extts_event {
+typedef struct ngptpclock_fw_comm_s {
+    u32 cmd;
+    u32 dw1[2];
+    u32 dw2[2];
+    u32 head;   /* Read pointer - Updated by HOST */
+    u32 tail;   /* Write pointer - Updated by FW */
+} __attribute__ ((packed)) ngptpclock_fw_comm_t;
+
+typedef struct ngptpclock_extts_event_s {
     int enable[NUM_EXT_TS];
     int head;
-};
+} ngptpclock_extts_event_t;
+
+typedef struct ngptpclock_time_spec_s {
+    int sign; /* 0: positive, 1:negative */
+    uint64_t sec; /* 47bit of secs */
+    uint32_t nsec; /* 30bit of nsecs */
+} ngptpclock_time_spec_t;
 
 typedef struct ngptpclock_port_stats_s {
     u32 pkt_rxctr;             /* All ingress packets */
@@ -375,6 +397,7 @@ typedef struct ngptpclock_init_info_s {
     u32 host_cpu_port;
     u32 host_cpu_sysport;
     u32 udh_len;
+    u8  application_v2;
 } ngptpclock_init_info_t;
 
 typedef struct ngptpclock_bs_info_s {
@@ -382,6 +405,7 @@ typedef struct ngptpclock_bs_info_s {
     u32 mode;
     u32 bc;
     u32 hb;
+    ngptpclock_time_spec_t offset;
 } ngptpclock_bs_info_t;
 
 typedef struct ngptpclock_gpio_info_s {
@@ -419,9 +443,10 @@ struct ngptpclock_ptp_priv {
     ngptpclock_gpio_info_t ngptpclock_gpio_info[6];
     ngptpclock_evlog_info_t ngptpclock_evlog_info[NUM_TS_EVENTS];
     volatile ngptpclock_fw_extts_log_t *extts_log;
-    struct ngptpclock_extts_event extts_event;
+    ngptpclock_extts_event_t extts_event;
     struct delayed_work extts_logging;
     struct kobject *kobj;
+    volatile ngptpclock_fw_comm_t *fw_comm;
 };
 
 static struct ngptpclock_ptp_priv *ptp_priv;
@@ -487,6 +512,45 @@ ptp_sleep(int jiffies)
 }
 
 /**
+ * ngptpclock_fw_core_valid
+ *
+ * @dev_info: device info from knet.
+ * @fw_core: core number to be validated.
+ *
+ * Description: This function is used to validate the
+ * firmware core number.
+ * Returns "1" if the core number is valid and "0" otherwise.
+ */
+static int ngptpclock_fw_core_valid(ngknet_dev_info_t *dev_info, int fw_core)
+{
+    int num_cores = 0;
+    uint32_t dev_id = ((dev_info->dev_id >> 4) << 4);
+
+    switch (dev_id) {
+        case 0xf900:
+            num_cores = 6;
+            break;
+
+        case 0xb990:
+        case 0xb780:
+        case 0xb880:
+        case 0xb890:
+            num_cores = 4;
+            break;
+
+        default:
+            num_cores = 2;
+            break;
+    }
+
+    if ((fw_core < 0) || (fw_core >= num_cores)) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+/**
  * ngptpclock_hostcmd_data_op
  *
  * @setget: If valid then set and get the data.
@@ -496,8 +560,7 @@ ptp_sleep(int jiffies)
  * Description: This function is used send and receive the
  * data from the FW.
  */
-static void
-ngptpclock_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
+static void ngptpclock_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
 {
     u32 w0, w1;
     u64 data;
@@ -509,32 +572,54 @@ ngptpclock_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
     if (setget) {
         if (d1) {
             data = *d1;
-            w0 = (data & 0xFFFFFFFF);
-            w1 = (data >> 32);
-            DEV_WRITE32(ptp_priv, hostcmd_regs[1], w0);
-            DEV_WRITE32(ptp_priv, hostcmd_regs[2], w1);
+            if (ptp_priv->fw_comm) {
+                ptp_priv->fw_comm->dw1[0] = (data & 0xFFFFFFFF);
+                ptp_priv->fw_comm->dw1[1] = (data >> 32);
+            } else {
+                w0 = (data & 0xFFFFFFFF);
+                w1 = (data >> 32);
+                DEV_WRITE32(ptp_priv, hostcmd_regs[1], w0);
+                DEV_WRITE32(ptp_priv, hostcmd_regs[2], w1);
+            }
         }
 
         if (d2) {
             data = *d2;
-
-            w0 = (data & 0xFFFFFFFF);
-            w1 = (data >> 32);
-            DEV_WRITE32(ptp_priv, hostcmd_regs[3], w0);
-            DEV_WRITE32(ptp_priv, hostcmd_regs[4], w1);
+            if (ptp_priv->fw_comm) {
+                ptp_priv->fw_comm->dw2[0] = (data & 0xFFFFFFFF);
+                ptp_priv->fw_comm->dw2[1] = (data >> 32);
+            } else {
+                w0 = (data & 0xFFFFFFFF);
+                w1 = (data >> 32);
+                DEV_WRITE32(ptp_priv, hostcmd_regs[3], w0);
+                DEV_WRITE32(ptp_priv, hostcmd_regs[4], w1);
+            }
         }
+
     } else {
         if (d1) {
-            DEV_READ32(ptp_priv, hostcmd_regs[1], &w0);
-            DEV_READ32(ptp_priv, hostcmd_regs[2], &w1);
-            data = (((u64)w1 << 32) | (w0));
+            if (ptp_priv->fw_comm) {
+                w0 = ptp_priv->fw_comm->dw1[0];
+                w1 = ptp_priv->fw_comm->dw1[1];
+                data = (((u64)w1 << 32) | (w0));
+            } else {
+                DEV_READ32(ptp_priv, hostcmd_regs[1], &w0);
+                DEV_READ32(ptp_priv, hostcmd_regs[2], &w1);
+                data = (((u64)w1 << 32) | (w0));
+            }
             *d1 = data;
         }
 
         if (d2) {
-            DEV_READ32(ptp_priv, hostcmd_regs[3], &w0);
-            DEV_READ32(ptp_priv, hostcmd_regs[4], &w1);
-            data = (((u64)w1 << 32) | (w0));
+            if (ptp_priv->fw_comm) {
+                w0 = ptp_priv->fw_comm->dw2[0];
+                w1 = ptp_priv->fw_comm->dw2[1];
+                data = (((u64)w1 << 32) | (w0));
+            } else {
+                DEV_READ32(ptp_priv, hostcmd_regs[3], &w0);
+                DEV_READ32(ptp_priv, hostcmd_regs[4], &w1);
+                data = (((u64)w1 << 32) | (w0));
+            }
             *d2 = data;
         }
     }
@@ -567,10 +652,17 @@ ngptpclock_cmd_go(u32 cmd, void *data0, void *data1)
     ptp_priv->shared_addr->ksyncinit = cmd;
 
     /* init data */
-    DEV_WRITE32(ptp_priv, hostcmd_regs[1], 0x0);
-    DEV_WRITE32(ptp_priv, hostcmd_regs[2], 0x0);
-    DEV_WRITE32(ptp_priv, hostcmd_regs[3], 0x0);
-    DEV_WRITE32(ptp_priv, hostcmd_regs[4], 0x0);
+    if (ptp_priv->fw_comm) {
+        ptp_priv->fw_comm->dw1[0] = 0;
+        ptp_priv->fw_comm->dw1[1] = 0;
+        ptp_priv->fw_comm->dw2[0] = 0;
+        ptp_priv->fw_comm->dw2[1] = 0;
+    } else {
+        DEV_WRITE32(ptp_priv, hostcmd_regs[1], 0x0);
+        DEV_WRITE32(ptp_priv, hostcmd_regs[2], 0x0);
+        DEV_WRITE32(ptp_priv, hostcmd_regs[3], 0x0);
+        DEV_WRITE32(ptp_priv, hostcmd_regs[4], 0x0);
+    }
 
     switch (cmd) {
         case NGPTPCLOCK_INIT:
@@ -664,11 +756,19 @@ ngptpclock_cmd_go(u32 cmd, void *data0, void *data1)
             break;
     }
 
-    DEV_WRITE32(ptp_priv, hostcmd_regs[0], ptp_priv->shared_addr->ksyncinit);
+    if (ptp_priv->fw_comm) {
+        ptp_priv->fw_comm->cmd = cmd;
+    } else {
+        DEV_WRITE32(ptp_priv, hostcmd_regs[0], ptp_priv->shared_addr->ksyncinit);
+    }
 
     do {
-        DEV_READ32(ptp_priv, hostcmd_regs[0], &cmd_status);
-        ptp_priv->shared_addr->ksyncinit = cmd_status;
+        if (ptp_priv->fw_comm) {
+            cmd_status = ptp_priv->fw_comm->cmd;
+        } else {
+            DEV_READ32(ptp_priv, hostcmd_regs[0], &cmd_status);
+            ptp_priv->shared_addr->ksyncinit = cmd_status;
+        }
 
         if (cmd_status == NGPTPCLOCK_DONE) {
             ret = 0;
@@ -718,24 +818,47 @@ ngptpclock_cmd_go(u32 cmd, void *data0, void *data1)
     return ret;
 }
 
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0))
 /**
- * ngptpclock_ptp_adjfreq
+ * ngptpclock_ptp_freqcorr
  *
  * @ptp: pointer to ptp_clock_info structure
- * @ppb: frequency correction value
+ * @ppm: frequency correction value in ppm with 16bit binary
+ *       fractional field.
  *
  * Description: this function will set the frequency correction
  */
-static int ngptpclock_ptp_adjfreq(struct ptp_clock_info *ptp, s32 ppb)
+static int ngptpclock_ptp_freqcorr(struct ptp_clock_info *ptp, long ppm)
+{
+    int ret = -1;
+    int64_t ppb = 0;
+
+    ppb = scaled_ppm_to_ppb(ppm);
+
+    ret = ngptpclock_cmd_go(NGPTPCLOCK_FREQCOR, &ppb, NULL);
+    DBG_VERB(("ptp_freqcorr: applying freq correction: ppm:0x%llx ppb:0x%llx; rv:%d\n", (int64_t)ppm, ppb, ret));
+
+    return ret;
+}
+#else
+/**
+ * ngptpclock_ptp_freqcorr
+ *
+ * @ptp: pointer to ptp_clock_info structure
+ * @ppb: frequency correction value in ppb
+ *
+ * Description: this function will set the frequency correction
+ */
+static int ngptpclock_ptp_freqcorr(struct ptp_clock_info *ptp, s32 ppb)
 {
     int ret = -1;
 
     ret = ngptpclock_cmd_go(NGPTPCLOCK_FREQCOR, &ppb, NULL);
-    DBG_VERB(("ptp_adjfreq: applying freq correction: %x; rv:%d\n", ppb, ret));
+    DBG_VERB(("ptp_freqcorr: applying freq correction: %x; rv:%d\n", ppb, ret));
 
     return ret;
 }
+#endif
 
 /**
  * ngptpclock_ptp_adjtime
@@ -839,7 +962,7 @@ static int ngptpclock_exttslog_cmd(int event, int enable)
                    subcmd_data:0x%llx\n", subcmd_data));
 
         ptp_priv->extts_log =
-            (ngptpclock_fw_extts_log_t *)ngedk_dmamem_map_p2v(subcmd_data);
+            (ngptpclock_fw_extts_log_t *)ngbde_kapi_dma_bus_to_virt(0, subcmd_data);
         if (NULL == ptp_priv->extts_log) {
             DBG_ERR(("Failed to get virtual addr for the physical address\n"));
         }
@@ -954,7 +1077,7 @@ static struct ptp_clock_info ngptpclock_ptp_caps = {
     .n_per_out = 0, /* will be overwritten in ngptpclock_ptp_register */
     .n_pins = 0,
     .pps = 0,
-    .adjfreq = ngptpclock_ptp_adjfreq,
+    .FREQ_CORR = ngptpclock_ptp_freqcorr,
     .adjtime = ngptpclock_ptp_adjtime,
     .gettime64 = ngptpclock_ptp_gettime,
     .settime64 = ngptpclock_ptp_settime,
@@ -971,7 +1094,7 @@ static struct ptp_clock_info ngptpclock_ptp_caps = {
  * Description: This is a callback function to enable/disable the TX timestamping port
  * based.
  */
-int ngptpclock_ptp_hw_tx_tstamp_config(ngknet_dev_info_t *dinfo,
+static int ngptpclock_ptp_hw_tx_tstamp_config(ngknet_dev_info_t *dinfo,
         ngknet_netif_t *netif,
         int *hwts_tx_type)
 {
@@ -1042,7 +1165,7 @@ exit:
  * Description: This is a callback function to enable/disable the RX timestamping port
  * based.
  */
-int ngptpclock_ptp_hw_rx_tstamp_config(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif,
+static int ngptpclock_ptp_hw_rx_tstamp_config(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif,
         int *hwts_rx_filter)
 {
 #if defined(TWO_STEP_SUPPORT)
@@ -1089,7 +1212,7 @@ int ngptpclock_ptp_hw_rx_tstamp_config(ngknet_dev_info_t *dinfo, ngknet_netif_t 
     return SHR_E_NONE;
 }
 
-int ngptpclock_ptp_transport_get(uint8_t *pkt)
+static int ngptpclock_ptp_transport_get(uint8_t *pkt)
 {
     int         transport = 0;
     uint16_t    ethertype;
@@ -1173,7 +1296,7 @@ ngptpclock_txpkt_tsts_tsamp_get(int port, uint32_t pkt_seq_id, uint32_t *ts_vali
  * NOTE:
  * Two-step related - fetching the timestamp from portmacro, not needed for one-step
  */
-int ngptpclock_ptp_hw_tstamp_tx_time_get(struct sk_buff *skb, uint64_t *ts)
+static int ngptpclock_ptp_hw_tstamp_tx_time_get(struct sk_buff *skb, uint64_t *ts)
 {
 #if defined(TWO_STEP_SUPPORT)
     /* Get Timestamp from R5 or CLMAC */
@@ -1435,8 +1558,8 @@ ngptpclock_pkt_custom_encap_ptprx_get(uint8_t *pkt, uint64_t *ing_ptptime)
     DBG_RX_DUMP(("custom_encap_ptprx_get: Custom Encap header:\n"));
     if (debug & DBG_LVL_RX_DUMP) dbg_dump_pkt(pkt, tot_len);
 
-    DBG_RX(("custom_encap_ptprx_get: ver=%d opcode=%d tot_len=%d seq_id=0x%x\n",
-                ver, opc, tot_len, seq_id));
+    DBG_RX(("custom_encap_ptprx_get: ver=%d opcode=%d tot_len=%d seq_id=0x%x u64_ptp_rx_time=%llu(0x%016llx)\n",
+                ver, opc, tot_len, seq_id, u64_ptp_rx_time,u64_ptp_rx_time));
 
     return (tot_len);
 }
@@ -1449,7 +1572,7 @@ ngptpclock_pkt_custom_encap_ptprx_get(uint8_t *pkt, uint64_t *ing_ptptime)
  *
  * Description: Parse the packet to check if customer is present and return the header length.
  */
-int ngptpclock_ptp_hw_rx_pre_process(struct sk_buff *skb, uint32_t *cust_hdr_len)
+static int ngptpclock_ptp_hw_rx_pre_process(struct sk_buff *skb, uint32_t *cust_hdr_len)
 {
     uint64_t ts;
     int custom_encap_len = 0;
@@ -1478,7 +1601,7 @@ int ngptpclock_ptp_hw_rx_pre_process(struct sk_buff *skb, uint32_t *cust_hdr_len
  * Description: This is a callback function to retrieve 64b equivalent of
  *   rx timestamp
  */
-int ngptpclock_ptp_hw_tstamp_rx_time_upscale(struct sk_buff *skb, uint64_t *ts)
+static int ngptpclock_ptp_hw_tstamp_rx_time_upscale(struct sk_buff *skb, uint64_t *ts)
 {
     int ret = SHR_E_NONE;
     int custom_encap_len = 0;
@@ -1543,9 +1666,9 @@ int ngptpclock_ptp_hw_tstamp_rx_time_upscale(struct sk_buff *skb, uint64_t *ts)
         ptp_message_len = SKB_U16_GET(skb, (ptp_hdr_offset + 2));
 
         DBG_RX(("rxtime_upscale: custom_encap_len %d tpid 0x%x transport %d skb->len %d "
-                    "ptp message type %d, ptp_message_len %d\n",
+                    "ptp message type %d, ptp_message_len %d ts:0x%016llx\n",
                     custom_encap_len, tpid, transport, skb->len,
-                    skb->data[msgtype_offset] & 0x0F, ptp_message_len));
+                    skb->data[ptp_hdr_offset] & 0x0F, ptp_message_len, *ts));
     }
 
     if ((port > 0) && (port < NGPTPCLOCK_MAX_NUM_PORTS)) {
@@ -1556,7 +1679,7 @@ int ngptpclock_ptp_hw_tstamp_rx_time_upscale(struct sk_buff *skb, uint64_t *ts)
     return ret;
 }
 
-void ngptpclock_hton64(u8 *buf, const uint64_t *data)
+static void ngptpclock_hton64(u8 *buf, const uint64_t *data)
 {
 #ifdef __LITTLE_ENDIAN
   /* LITTLE ENDIAN */
@@ -1573,7 +1696,7 @@ void ngptpclock_hton64(u8 *buf, const uint64_t *data)
 #endif
 }
 
-int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
+static int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
 {
     uint16_t tpid = 0;
     int md_offset = 0;
@@ -1636,6 +1759,9 @@ int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
     }
 
     memcpy(md, cbd->pmd, sizeof(md));
+    DBG_TX(("hw_tstamp_tx_meta_get: 1.md[0x%08x %08x %08x %08x] md_offset:%d transport:%d\n",
+           md[0], md[1], md[2], md[3], md_offset, transport));
+
     switch (transport)
     {
         case 2: /* IEEE 802.3 */
@@ -1680,6 +1806,11 @@ int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
     DBG_TX(("hw_tstamp_tx_meta_get: ptptime: 0x%llx ptpcounter: 0x%llx\n", ptptime, ptpcounter));
     DBG_TX(("hw_tstamp_tx_meta_get: ptpmessage offset:%u type: 0x%x hwts_tx_type: %d\n",
                 ptp_hdr_offset, skb->data[ptp_hdr_offset] & 0x0f, hwts_tx_type));
+    DBG_TX(("hw_tstamp_tx_meta_get: l2pkt_md[0x%08x %08x %08x %08x] ptp_hdr_offset:%d\n", ieee1588_l2pkt_md[md_offset],
+        ieee1588_l2pkt_md[md_offset+1], ieee1588_l2pkt_md[md_offset+2], ieee1588_l2pkt_md[md_offset+3], ptp_hdr_offset));
+    DBG_TX(("hw_tstamp_tx_meta_get: md[0x%08x %08x %08x %08x] md_offset:%d transport:%d\n",
+           md[0], md[1], md[2], md[3], md_offset, transport));
+
 
     if ((hwts_tx_type == HWTSTAMP_TX_ONESTEP_SYNC) &&
             (NGPTPCLOCK_PTP_EVENT_MSG((skb->data[ptp_hdr_offset] & 0x0F)))) {
@@ -1777,7 +1908,7 @@ int ngptpclock_ptp_hw_tstamp_tx_meta_set(struct sk_buff *skb)
     return 0;
 }
 
-int ngptpclock_ptp_hw_tstamp_ptp_clock_index_get(ngknet_dev_info_t *dinfo,
+static int ngptpclock_ptp_hw_tstamp_ptp_clock_index_get(ngknet_dev_info_t *dinfo,
         ngknet_netif_t *netif, int *index)
 {
     if (!module_initialized || !ptp_priv) {
@@ -1974,6 +2105,34 @@ ngptpclock_broadsync_status_cmd(int bs_id, u64 *status)
     ret = ngptpclock_cmd_go(NGPTPCLOCK_BROADSYNC, &subcmd, status);
     DBG_VERB(("ngptpclock_broadsync_status_cmd: subcmd: 0x%llx subcmd_data: 0x%llx; rv:%d\n",
                 subcmd, *status, ret));
+
+    return ret;
+}
+
+static int
+ngptpclock_broadsync_phase_offset_cmd(int bs_id, ngptpclock_time_spec_t offset)
+{
+    int ret = -1;
+    u64 data0, data1;
+    int64_t phase_offset = 0;
+
+    /* Only in input mode */
+    if (ptp_priv->ngptpclock_bs_info[bs_id].mode == 0) {
+        ptp_priv->ngptpclock_bs_info[bs_id].offset = offset;
+    } else {
+        memset(&ptp_priv->ngptpclock_bs_info[bs_id].offset, 0, sizeof(ngptpclock_time_spec_t));
+    }
+
+    data0 = (bs_id == 0) ? NGPTPCLOCK_BROADSYNC_BS0_PHASE_OFFSET_SET : NGPTPCLOCK_BROADSYNC_BS1_PHASE_OFFSET_SET;
+
+    phase_offset = ptp_priv->ngptpclock_bs_info[bs_id].offset.sec * 1000000000 +
+        ptp_priv->ngptpclock_bs_info[bs_id].offset.nsec;
+    phase_offset *= (ptp_priv->ngptpclock_bs_info[bs_id].offset.sign) ? -1 : 1;
+
+    data1 = (uint64_t)phase_offset;
+
+    ret = ngptpclock_cmd_go(NGPTPCLOCK_BROADSYNC, &data0, &data1);
+    DBG_VERB(("ngptpclock_broadsync_phase_offset_cmd: subcmd: 0x%llx subcmd_data: 0x%llx; rv:%d\n", data0, data1, ret));
 
     return ret;
 }
@@ -2306,29 +2465,36 @@ bs_attr_store(struct kobject *kobj, struct kobj_attribute *attr,
     ssize_t ret;
     u32 enable, mode;
     u32 bc, hb;
+    ngptpclock_time_spec_t offset = {0};
 
     if (ATTRCMP(bs0)) {
-        ret = sscanf(buf, "enable:%d mode:%d bc:%u hb:%u",
-                     &enable, &mode, &bc, &hb);
-        DBG_VERB(("rd:%d bs0: enable:%d mode:%d bc:%d hb:%d\n",
-                  rd_iter++, enable, mode, bc, hb));
+        ret = sscanf(buf, "enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u",
+                     &enable, &mode, &bc, &hb,
+                     &offset.sign, &offset.sec, &offset.nsec);
+        DBG_VERB(("rd:%d bs0: enable:%d mode:%d bc:%d hb:%d sign:%d offset:%llu.%u\n",
+                  rd_iter++, enable, mode, bc, hb,
+                  offset.sign, offset.sec, offset.nsec));
         ptp_priv->ngptpclock_bs_info[0].enable = enable;
         ptp_priv->ngptpclock_bs_info[0].mode = mode;
         ptp_priv->ngptpclock_bs_info[0].bc   = bc;
         ptp_priv->ngptpclock_bs_info[0].hb   = hb;
 
         (void)ngptpclock_broadsync_cmd(0);
+        (void)ngptpclock_broadsync_phase_offset_cmd(0, offset);
     } else if (ATTRCMP(bs1)) {
-        ret = sscanf(buf, "enable:%d mode:%d bc:%u hb:%u",
-                     &enable, &mode, &bc, &hb);
-        DBG_VERB(("rd:%d bs1: enable:%d mode:%d bc:%d hb:%d\n",
-                   rd_iter++, enable, mode, bc, hb));
+        ret = sscanf(buf, "enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u",
+                     &enable, &mode, &bc, &hb,
+                     &offset.sign, &offset.sec, &offset.nsec);
+        DBG_VERB(("rd:%d bs0: enable:%d mode:%d bc:%d hb:%d sign:%d offset:%llu.%u\n",
+                  rd_iter++, enable, mode, bc, hb,
+                  offset.sign, offset.sec, offset.nsec));
         ptp_priv->ngptpclock_bs_info[1].enable = enable;
         ptp_priv->ngptpclock_bs_info[1].mode = mode;
         ptp_priv->ngptpclock_bs_info[1].bc   = bc;
         ptp_priv->ngptpclock_bs_info[1].hb   = hb;
 
         (void)ngptpclock_broadsync_cmd(1);
+        (void)ngptpclock_broadsync_phase_offset_cmd(1, offset);
     } else {
         ret = -ENOENT;
     }
@@ -2352,19 +2518,25 @@ bs_attr_show(struct kobject *kobj, struct kobj_attribute *attr,
 
         variance = (status >> 32);
         status = (status & 0xFFFFFFFF);
-        bytes = sprintf(buf, "enable:%d mode:%d bc:%u hb:%u status:%u(%u)\n",
+        bytes = sprintf(buf, "enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u status:%u(%u)\n",
                         ptp_priv->ngptpclock_bs_info[0].enable,
                         ptp_priv->ngptpclock_bs_info[0].mode,
                         ptp_priv->ngptpclock_bs_info[0].bc,
                         ptp_priv->ngptpclock_bs_info[0].hb,
+                        ptp_priv->ngptpclock_bs_info[0].offset.sign,
+                        ptp_priv->ngptpclock_bs_info[0].offset.sec,
+                        ptp_priv->ngptpclock_bs_info[0].offset.nsec,
                         (u32)status,
                         variance);
-        DBG_VERB(("wr:%d bs0: enable:%d mode:%d bc:%u hb:%u status:%u(%u)\n",
+        DBG_VERB(("wr:%d bs0: enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u status:%u(%u)\n",
                         wr_iter++,
                         ptp_priv->ngptpclock_bs_info[0].enable,
                         ptp_priv->ngptpclock_bs_info[0].mode,
                         ptp_priv->ngptpclock_bs_info[0].bc,
                         ptp_priv->ngptpclock_bs_info[0].hb,
+                        ptp_priv->ngptpclock_bs_info[0].offset.sign,
+                        ptp_priv->ngptpclock_bs_info[0].offset.sec,
+                        ptp_priv->ngptpclock_bs_info[0].offset.nsec,
                         (u32)status,
                         variance));
     } else if (ATTRCMP(bs1)) {
@@ -2375,19 +2547,25 @@ bs_attr_show(struct kobject *kobj, struct kobj_attribute *attr,
 
         variance = (status >> 32);
         status = (status & 0xFFFFFFFF);
-        bytes = sprintf(buf, "enable:%d mode:%d bc:%u hb:%u status:%u(%u)\n",
+        bytes = sprintf(buf, "enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u status:%u(%u)\n",
                         ptp_priv->ngptpclock_bs_info[1].enable,
                         ptp_priv->ngptpclock_bs_info[1].mode,
                         ptp_priv->ngptpclock_bs_info[1].bc,
                         ptp_priv->ngptpclock_bs_info[1].hb,
+                        ptp_priv->ngptpclock_bs_info[1].offset.sign,
+                        ptp_priv->ngptpclock_bs_info[1].offset.sec,
+                        ptp_priv->ngptpclock_bs_info[1].offset.nsec,
                         (u32)status,
                         variance);
-        DBG_VERB(("wr:%d bs1: enable:%d mode:%d bc:%u hb:%u status:%u(%u)\n",
+        DBG_VERB(("wr:%d bs1: enable:%d mode:%d bc:%u hb:%u sign:%d offset:%llu.%u status:%u(%u)\n",
                         wr_iter++,
                         ptp_priv->ngptpclock_bs_info[1].enable,
                         ptp_priv->ngptpclock_bs_info[1].mode,
                         ptp_priv->ngptpclock_bs_info[1].bc,
                         ptp_priv->ngptpclock_bs_info[1].hb,
+                        ptp_priv->ngptpclock_bs_info[1].offset.sign,
+                        ptp_priv->ngptpclock_bs_info[1].offset.sec,
+                        ptp_priv->ngptpclock_bs_info[1].offset.nsec,
                         (u32)status,
                         variance));
     } else {
@@ -2760,12 +2938,17 @@ ngptpclock_ptp_dma_init(int dcb_type, int dev_no)
 #else
         endianess = 1;
 #endif
-        DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_14r(CMIC_CMC_BASE),
-                ((pci_cos << 16) | endianess));
 
-        DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 1);
-        DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 1);
+        if (ptp_priv->fw_comm) {
+            /* Do nothing */
+            (void)endianess;
+        } else {
+            DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_14r(CMIC_CMC_BASE),
+                    ((pci_cos << 16) | endianess));
 
+            DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 1);
+            DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 1);
+        }
     }
 
     DBG_VERB(("%s %p:%p, dcb_type: %d\n", __FUNCTION__, ptp_priv->base_addr,
@@ -2773,11 +2956,13 @@ ngptpclock_ptp_dma_init(int dcb_type, int dev_no)
 
     ptp_priv->mirror_encap_bmp = 0x0;
 
-    hostcmd_regs[0] = CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE);
-    hostcmd_regs[1] = CMIC_CMC_SCHAN_MESSAGE_20r(CMIC_CMC_BASE);
-    hostcmd_regs[2] = CMIC_CMC_SCHAN_MESSAGE_19r(CMIC_CMC_BASE);
-    hostcmd_regs[3] = CMIC_CMC_SCHAN_MESSAGE_18r(CMIC_CMC_BASE);
-    hostcmd_regs[4] = CMIC_CMC_SCHAN_MESSAGE_17r(CMIC_CMC_BASE);
+    if (ptp_priv->fw_comm == NULL) {
+        hostcmd_regs[0] = CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE);
+        hostcmd_regs[1] = CMIC_CMC_SCHAN_MESSAGE_20r(CMIC_CMC_BASE);
+        hostcmd_regs[2] = CMIC_CMC_SCHAN_MESSAGE_19r(CMIC_CMC_BASE);
+        hostcmd_regs[3] = CMIC_CMC_SCHAN_MESSAGE_18r(CMIC_CMC_BASE);
+        hostcmd_regs[4] = CMIC_CMC_SCHAN_MESSAGE_17r(CMIC_CMC_BASE);
+    }
 
     return;
 }
@@ -2796,6 +2981,7 @@ ngptpclock_ioctl_cmd_handler(ngknet_dev_info_t *dev_info, int cmd, char *data, i
 {
     u32 fw_status;
     int32_t *cfg_data  = (int32_t *)data;
+    uint64_t paddr = 0ULL;
 
     if (!module_initialized && cmd != NGPTPCLOCK_HW_INIT) {
         return SHR_E_CONFIG;
@@ -2804,56 +2990,81 @@ ngptpclock_ioctl_cmd_handler(ngknet_dev_info_t *dev_info, int cmd, char *data, i
     switch (cmd) {
         case NGPTPCLOCK_HW_INIT:
             pci_cos = cfg_data[0];
+
+            if (!ngptpclock_fw_core_valid(dev_info, cfg_data[1])) {
+                DBG_ERR(("Invalid param: fw_core(%d) \n", cfg_data[1]));
+                return SHR_E_PARAM;
+            }
+
             fw_core = cfg_data[1];
-            DBG_VERB(("Configuring pci_cosq:%d dev_no:%d fw_core:%d\n",
-                        pci_cos, dev_info->dev_no, fw_core));
-            if ((CMICX_DEV_TYPE && (fw_core >= 0 && fw_core <= 3)) ||
-                (fw_core == 0 || fw_core == 1)) {
-                memcpy(ieee1588_l2pkt_md, &cfg_data[12], sizeof(ieee1588_l2pkt_md));
-                memcpy(ieee1588_ipv4pkt_md, &cfg_data[36], sizeof(ieee1588_ipv4pkt_md));
-                memcpy(ieee1588_ipv6pkt_md, &cfg_data[60], sizeof(ieee1588_ipv6pkt_md));
+            paddr = ((((long long unsigned)cfg_data[7]) << 32) | (unsigned)cfg_data[8]);
 
+            DBG_VERB(("hw_init: pci_cosq:%d dev_no:%d fw_core:%d paddr:0x%016llx\n",
+                        pci_cos, dev_info->dev_no, fw_core, paddr));
 
-
-
-                ngptpclock_ptp_dma_init(1, dev_info->dev_no);
-
-                fw_status = 0;
-                DEV_READ32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE), &fw_status);
-
-                /* Return success if the app is already initialized. */
-                if (module_initialized) {
-                    return SHR_E_NONE;
-                }
-
-                /* Return error if the app is not ready yet. */
-                if (fw_status != 0xBADC0DE1) {
+            if (paddr) {
+                ptp_priv->fw_comm = ngbde_kapi_dma_bus_to_virt(dev_info->dev_no, paddr);
+                if (ptp_priv->fw_comm == NULL) {
+                    DBG_ERR(("Hostram address conversion to get virtual address failed\n"));
                     return SHR_E_RESOURCE;
+                } else {
+                    DBG_VERB(("laddr:0x%016llx", (long long unsigned int)ptp_priv->fw_comm));
                 }
+            }
 
-                (ptp_priv->ngptpclock_init_info).uc_port_num = cfg_data[2];
-                (ptp_priv->ngptpclock_init_info).uc_port_sysport = cfg_data[3];
-                (ptp_priv->ngptpclock_init_info).host_cpu_port = cfg_data[4];
-                (ptp_priv->ngptpclock_init_info).host_cpu_sysport = cfg_data[5];
-                (ptp_priv->ngptpclock_init_info).udh_len = cfg_data[6];
+            memcpy(ieee1588_l2pkt_md, &cfg_data[12], sizeof(ieee1588_l2pkt_md));
+            memcpy(ieee1588_ipv4pkt_md, &cfg_data[36], sizeof(ieee1588_ipv4pkt_md));
+            memcpy(ieee1588_ipv6pkt_md, &cfg_data[60], sizeof(ieee1588_ipv6pkt_md));
 
-                DBG_VERB(("fw_core:%d uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d\n",
+
+
+
+            ngptpclock_ptp_dma_init(1, dev_info->dev_no);
+
+            fw_status = 0;
+            if (ptp_priv->fw_comm) {
+                fw_status = ptp_priv->fw_comm->cmd;
+            } else {
+                DEV_READ32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE), &fw_status);
+            }
+
+            /* Return success if the app is already initialized. */
+            if (module_initialized) {
+                return SHR_E_NONE;
+            }
+
+            /* Return error if the app is not ready yet. */
+            if (fw_status != 0xBADC0DE1) {
+                DBG_VERB(("fw_status:0x%08x", fw_status));
+                return SHR_E_RESOURCE;
+            }
+
+            (ptp_priv->ngptpclock_init_info).uc_port_num = cfg_data[2];
+            (ptp_priv->ngptpclock_init_info).uc_port_sysport = cfg_data[3];
+            (ptp_priv->ngptpclock_init_info).host_cpu_port = cfg_data[4];
+            (ptp_priv->ngptpclock_init_info).host_cpu_sysport = cfg_data[5];
+            (ptp_priv->ngptpclock_init_info).udh_len = cfg_data[6];
+
+            DBG_VERB(("fw_core:%d uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d\n",
                         fw_core,
                         (ptp_priv->ngptpclock_init_info).uc_port_num,
                         (ptp_priv->ngptpclock_init_info).uc_port_sysport,
                         (ptp_priv->ngptpclock_init_info).host_cpu_port,
                         (ptp_priv->ngptpclock_init_info).host_cpu_sysport));
 
-                if (ngptpclock_ptp_init(&(ptp_priv->ptp_caps)) >= 0) {
-                    module_initialized = 1;
-                }
+            if (ngptpclock_ptp_init(&(ptp_priv->ptp_caps)) >= 0) {
+                module_initialized = 1;
             }
             break;
         case NGPTPCLOCK_HW_CLEANUP:
             module_initialized = 0;
 
-            DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 0);
-            DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 0);
+            if (ptp_priv->fw_comm) {
+                /* Do nothing */
+            } else {
+                DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 0);
+                DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 0);
+            }
 
             ngptpclock_ptp_cleanup(&(ptp_priv->ptp_caps));
             break;
@@ -2887,15 +3098,6 @@ static int
 ngptpclock_ptp_register(void)
 {
     int err = -ENODEV;
-
-    if (CMICX_DEV_TYPE) {
-        if (fw_core < 0 || fw_core > 3) {
-            goto exit;
-        }
-    } else if (fw_core < 0 || fw_core > 1) {
-        /* Support on core-0 or core-1 */
-        goto exit;
-    }
 
     /* default transport is raw, ieee 802.3 */
     switch (network_transport) {
@@ -2947,6 +3149,7 @@ ngptpclock_ptp_register(void)
      ngptpclock_sysfs_init();
      ptp_priv->shared_addr = NULL;
      ptp_priv->port_stats = NULL;
+     ptp_priv->fw_comm = NULL;
 
      ngptpclock_ptp_extts_logging_init();
 exit:
@@ -2993,6 +3196,10 @@ ngptpclock_ptp_remove(void)
         ptp_priv->shared_addr = NULL;
         DBG_ERR(("Free R5 memory\n"));
     }
+
+    /* This is just a reference to host-ram memory.
+       Do not attempt to free.*/
+    ptp_priv->fw_comm = NULL;
 
     /* Unregister the bcm ptp clock driver */
     ptp_clock_unregister(ptp_priv->ptp_clock);

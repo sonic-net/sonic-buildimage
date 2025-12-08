@@ -6,7 +6,7 @@
 # builds of the NGBDE kernel module, for example, using a different
 # default DMA pool size or turning off MSI interrupts.
 #
-# Copyright 2018-2024 Broadcom. All rights reserved.
+# Copyright 2018-2025 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
