@@ -546,6 +546,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
+                           INCLUDE_STP=$(INCLUDE_STP) \
                            INCLUDE_ICCPD=$(INCLUDE_ICCPD) \
                            SONIC_INCLUDE_RESTAPI=$(INCLUDE_RESTAPI) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
