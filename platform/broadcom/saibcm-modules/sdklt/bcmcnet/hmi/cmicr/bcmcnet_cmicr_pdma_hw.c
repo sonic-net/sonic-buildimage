@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -320,7 +321,6 @@ static int
 cmicr_pdma_chan_stop(struct pdma_hw *hw, int chan)
 {
     CMIC_CMC_PKTDMA_CTRLr_t pktdma_ctrl;
-    CMIC_CMC_PKTDMA_INTR_ENABLEr_t pktdma_intr_enable;
     CMIC_CMC_PKTDMA_INTR_CLRr_t pktdma_intr_clr;
     CMIC_CMC_PKTDMA_STATr_t pktdma_stat;
     int grp, que;
@@ -329,17 +329,21 @@ cmicr_pdma_chan_stop(struct pdma_hw *hw, int chan)
     grp = chan / CMICR_PDMA_CMC_CHAN;
     que = chan % CMICR_PDMA_CMC_CHAN;
 
-    hw->hdls.reg_rd32(hw, CMICR_PDMA_STAT(grp, que),
-                      &CMIC_CMC_PKTDMA_STATr_GET(pktdma_stat));
-
-    if (CMIC_CMC_PKTDMA_STATr_CHAIN_DONEf_GET(pktdma_stat)) {
-        hw->hdls.reg_rd32(hw, CMICR_PDMA_CTRL(grp, que),
-                          &CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
-        CMIC_CMC_PKTDMA_CTRLr_DMA_ENf_SET(pktdma_ctrl, 0);
-        hw->hdls.reg_wr32(hw, CMICR_PDMA_CTRL(grp, que),
-                          CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
-        return SHR_E_NONE;
-    }
+    do {
+        hw->hdls.reg_rd32(hw, CMICR_PDMA_STAT(grp, que),
+                          &CMIC_CMC_PKTDMA_STATr_GET(pktdma_stat));
+        if (CMIC_CMC_PKTDMA_STATr_CHAIN_DONEf_GET(pktdma_stat)) {
+            hw->hdls.reg_rd32(hw, CMICR_PDMA_CTRL(grp, que),
+                              &CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
+            CMIC_CMC_PKTDMA_CTRLr_DMA_ENf_SET(pktdma_ctrl, 0);
+            hw->hdls.reg_wr32(hw, CMICR_PDMA_CTRL(grp, que),
+                              CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
+            return SHR_E_NONE;
+        }
+        if (!(hw->dev->flags & PDMA_CHAIN_MODE)) {
+            break;
+        }
+    } while (retry--);
 
     /* if chain done is 0, abort */
     hw->hdls.reg_rd32(hw, CMICR_PDMA_CTRL(grp, que),
@@ -351,10 +355,17 @@ cmicr_pdma_chan_stop(struct pdma_hw *hw, int chan)
 
     MEMORY_BARRIER;
 
+    retry = CMICR_HW_RETRY_TIMES;
     do {
         hw->hdls.reg_rd32(hw, CMICR_PDMA_STAT(grp, que),
                           &CMIC_CMC_PKTDMA_STATr_GET(pktdma_stat));
-    } while (!CMIC_CMC_PKTDMA_STATr_CHAIN_DONEf_GET(pktdma_stat) && (--retry > 0));
+        if (CMIC_CMC_PKTDMA_STATr_CHAIN_DONEf_GET(pktdma_stat)) {
+            break;
+        }
+        if (!retry) {
+            CNET_ERROR(hw->unit, "Timeout to wait abort done\n");
+        }
+    } while (retry--);
 
     hw->hdls.reg_rd32(hw, CMICR_PDMA_CTRL(grp, que),
                       &CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
@@ -362,12 +373,6 @@ cmicr_pdma_chan_stop(struct pdma_hw *hw, int chan)
     CMIC_CMC_PKTDMA_CTRLr_ABORT_DMAf_SET(pktdma_ctrl, 0);
     hw->hdls.reg_wr32(hw, CMICR_PDMA_CTRL(grp, que),
                       CMIC_CMC_PKTDMA_CTRLr_GET(pktdma_ctrl));
-
-    MEMORY_BARRIER;
-
-    CMIC_CMC_PKTDMA_INTR_ENABLEr_CLR(pktdma_intr_enable);
-    hw->hdls.reg_wr32(hw, CMICR_PDMA_INTR_ENAB(grp, que),
-                      CMIC_CMC_PKTDMA_INTR_ENABLEr_GET(pktdma_intr_enable));
 
     MEMORY_BARRIER;
 
