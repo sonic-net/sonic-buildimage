@@ -7,11 +7,12 @@ fw_uboot_env_cfg()
     PLATFORM=`sed -n 's/onie_platform=\(.*\)/\1/p' $MACH_FILE`
 }
 
-es2227_54ts_profile()
+es1227_54ts_p2_profile()
 {
     MAC_ADDR=$(fw_printenv -n ethaddr)
-    find /usr/share/sonic/device/*es2227_54ts* -name profile.ini | xargs sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g"
-    echo "es2227_54ts: Updating switch mac address ${MAC_ADDR}"
+        
+    find /usr/share/sonic/device/arm64-wistron_es1227_54ts_p2-r0 -name profile.ini | xargs sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g"
+    echo "es1227_54ts_p2: Updating switch mac address ${MAC_ADDR}"
 }
 
 update_modulelist()
@@ -26,7 +27,7 @@ update_modulelist()
 main()
 {
     fw_uboot_env_cfg
-    es2227_54ts_profile
+    es1227_54ts_p2_profile
     update_modulelist
 }
 

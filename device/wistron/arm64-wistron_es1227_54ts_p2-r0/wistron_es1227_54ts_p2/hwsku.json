@@ -193,98 +193,98 @@
             "port_type": "RJ45"
         },
         "Ethernet32": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet33": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet34": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet35": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet36": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet37": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet38": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet39": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet40": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet41": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet42": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet43": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet44": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet45": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet46": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },
         "Ethernet47": {
-            "default_brkout_mode": "1x2500[1000,100]",
-            "fec" : "rs",
+            "default_brkout_mode": "1x1000[100,10]",
+            "fec" : "none",
             "autoneg" : "on",
             "port_type": "RJ45"
         },

@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "wistron_es2227_54ts_p": {
+        "wistron_es1227_54ts_p2": {
             "component": {
                 "U-Boot": { },
                 "ONIE-VERSION": { },

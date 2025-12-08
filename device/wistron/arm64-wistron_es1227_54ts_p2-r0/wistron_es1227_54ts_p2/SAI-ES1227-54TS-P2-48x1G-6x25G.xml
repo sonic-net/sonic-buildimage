@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="SAI" sid="1ed4cd3c-ea04-44f4-8a20-4d1336284709">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2025-02-25-1.11" profile="SAI" sid="e29ba6fe-f08d-4673-ac2d-2961846d0e1c">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -189,7 +189,7 @@
       </SAIplt:typedef>
     </SAIplt:typedefs>
     <SAIplt:ASIC_Type SAIplt:type="asic-type">ASIC_AC5X</SAIplt:ASIC_Type>
-    <SAIplt:ASK-BOARD-Profile-Name SAIplt:type="string">ASK-Board-ES1227-54TS-32x1G-16x2_5G-6x25G.xml</SAIplt:ASK-BOARD-Profile-Name>
+    <SAIplt:ASK-BOARD-Profile-Name SAIplt:type="string">ASK-Board-ES1227-54TS-P2-48x1G-6x25G.xml</SAIplt:ASK-BOARD-Profile-Name>
     <SAIplt:Ports>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">0</SAIplt:sai_port_id>
