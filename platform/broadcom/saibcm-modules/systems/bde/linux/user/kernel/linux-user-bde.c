@@ -1,5 +1,6 @@
 /*
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -250,6 +251,13 @@ LKM_MOD_PARAM(force_mask_irq, "i", int, (S_IRUGO | S_IWUSR));
 MODULE_PARM_DESC(force_mask_irq, "Force mask interrupts when pcie remove (default 0)");
 #endif
 
+/* Periodically check for pending interrupts when interrupt handler is idle */
+static int intr_pending_check = 1;
+LKM_MOD_PARAM(intr_pending_check, "i", int, (S_IRUGO | S_IWUSR));
+MODULE_PARM_DESC(intr_pending_check,
+"Check for pending interrupts periodically (default 1).");
+
+
 static ibde_t *user_bde = NULL;
 
 typedef void (*isr_f)(void *);
@@ -275,7 +283,7 @@ typedef struct _intr_regs_s {
 typedef struct bde_ctrl_s {
     uint32 dev_type;
     int irq;
-    int enabled;
+    atomic_t enabled;
     int devid;
     isr_f isr;
     uint32 *ba;
@@ -371,8 +379,9 @@ static _dma_pool_t _dma_pool;
  *    Nothing
  */
 static void
-_cmic_interrupt(bde_ctrl_t *ctrl)
+_cmic_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     int d;
     uint32_t mask = 0, stat, imask = 0, fmask = 0;
     bde_inst_resource_t *res;
@@ -407,7 +416,7 @@ _cmic_interrupt(bde_ctrl_t *ctrl)
 #endif
 }
 
-void
+static void
 dump_interrupt_regs(bde_ctrl_t *ctrl , int dev)
 {
     int ind;
@@ -643,8 +652,9 @@ _cmicx_interrupt_pending(void *data)
 }
 
 static void
-_cmicx_interrupt(bde_ctrl_t *ctrl)
+_cmicx_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     bde_inst_resource_t *res;
     int ret;
 
@@ -675,8 +685,9 @@ _cmicx_interrupt(bde_ctrl_t *ctrl)
 
 #ifdef NEED_CMICX_GEN2_INTERRUPT
 static void
-_cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
+_cmicx_gen2_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     int d, ind ;
     uint32 stat, iena, mask, fmask;
     int active_interrupts = 0;
@@ -783,8 +794,9 @@ _cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
 #endif /* NEED_CMICX_GEN2_INTERRUPT */
 
 static void
-_cmicm_interrupt(bde_ctrl_t *ctrl)
+_cmicm_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     int d;
     int cmc = BDE_CMICM_PCIE_CMC;
     uint32 stat, mask = 0, fmask = 0, imask = 0;
@@ -868,8 +880,9 @@ _cmicm_interrupt(bde_ctrl_t *ctrl)
 
 /* some device has cmc0 only */
 static void
-_cmicd_cmc0_interrupt(bde_ctrl_t *ctrl)
+_cmicd_cmc0_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     int d;
     int cmc = 0;
     uint32 stat, mask = 0, fmask = 0, imask = 0;
@@ -968,8 +981,9 @@ _cmicd_cmc0_interrupt(bde_ctrl_t *ctrl)
 }
 
 static void
-_cmicd_interrupt(bde_ctrl_t *ctrl)
+_cmicd_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
     int d;
     int cmc = BDE_CMICD_PCIE_CMC;
     uint32 stat, mask = 0, fmask = 0, imask = 0;
@@ -1086,8 +1100,10 @@ _cmicd_interrupt(bde_ctrl_t *ctrl)
 
 /* The actual interrupt handler of ethernet devices */
 static void
-_ether_interrupt(bde_ctrl_t *ctrl)
+_ether_interrupt(void *arg)
 {
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)arg;
+
     SSOC_WRITEL(0, ctrl->ba + 0x024/4);
 
     atomic_set(&_ether_interrupt_has_taken_place, 1);
@@ -1103,13 +1119,13 @@ static struct _intr_mode_s {
     isr_f isr;
     const char *name;
 } _intr_mode[] = {
-    { (isr_f)_cmic_interrupt,       "CMIC/CMICe" },
-    { (isr_f)_cmicm_interrupt,      "CMICm" },
-    { (isr_f)_cmicd_interrupt,      "CMICd" },
-    { (isr_f)_cmicd_cmc0_interrupt, "CMICd CMC0" },
-    { (isr_f)_cmicx_interrupt,      "CMICx" },
+    { _cmic_interrupt,              "CMIC/CMICe" },
+    { _cmicm_interrupt,             "CMICm" },
+    { _cmicd_interrupt,             "CMICd" },
+    { _cmicd_cmc0_interrupt,        "CMICd CMC0" },
+    { _cmicx_interrupt,             "CMICx" },
 #ifdef NEED_CMICX_GEN2_INTERRUPT
-    { (isr_f)_cmicx_gen2_interrupt,	"CMICx Gen2" },
+    { _cmicx_gen2_interrupt,        "CMICx Gen2" },
 #endif
     { NULL, NULL }
 };
@@ -1153,6 +1169,9 @@ _intr_regs_init(bde_ctrl_t *ctrl, int flag)
                 case BCM53652_DEVICE_ID:
                 case BCM53653_DEVICE_ID:
                 case BCM53654_DEVICE_ID:
+                case BCM56390_DEVICE_ID:
+                case BCM56391_DEVICE_ID:
+                case BCM56392_DEVICE_ID:
                     ihost_sw_prog_intr_num = P19_SW_PROG_INTR_IRQ;
                     break;
                 default:
@@ -1213,7 +1232,7 @@ _devices_init(int d)
     ctrl->inst = 0;
 
     if (BDE_DEV_MEM_MAPPED(ctrl->dev_type)) {
-        ctrl->enabled = 0;
+        atomic_set(&ctrl->enabled, 0);
         ctrl->ba = lkbde_get_dev_virt(d);
     }
     if (ctrl->dev_type & BDE_SWITCH_DEV_TYPE) {
@@ -1222,7 +1241,7 @@ _devices_init(int d)
         case BCM53547_DEVICE_ID:
         case BCM53548_DEVICE_ID:
         case BCM53549_DEVICE_ID:
-            ctrl->isr = (isr_f)_cmicd_cmc0_interrupt;
+            ctrl->isr = _cmicd_cmc0_interrupt;
             break;
         case BCM88670_DEVICE_ID:
         case BCM88671_DEVICE_ID:
@@ -1283,7 +1302,7 @@ _devices_init(int d)
         case BCM88956_DEVICE_ID:
         case BCM88772_DEVICE_ID:
         case BCM88952_DEVICE_ID:
-            ctrl->isr = (isr_f)_cmicd_interrupt;
+            ctrl->isr = _cmicd_interrupt;
             break;
         case BCM56370_DEVICE_ID:
         case BCM56371_DEVICE_ID:
@@ -1311,7 +1330,10 @@ _devices_init(int d)
         case BCM53652_DEVICE_ID:
         case BCM53653_DEVICE_ID:
         case BCM53654_DEVICE_ID:
-            ctrl->isr = (isr_f)_cmicx_interrupt;
+        case BCM56390_DEVICE_ID:
+        case BCM56391_DEVICE_ID:
+        case BCM56392_DEVICE_ID:
+            ctrl->isr = _cmicx_interrupt;
             if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
                 if (!ihost_intr_enable_base) {
                     ihost_intr_enable_base = (uint32_t *)ioremap(HX5_IHOST_GICD_ISENABLERN_1,
@@ -1334,20 +1356,20 @@ _devices_init(int d)
             if (BCM56960_DEVICE_ID == device_id ||
                 BCM56930_DEVICE_ID == device_id ||
                 BCM56970_DEVICE_ID == device_id) {
-                ctrl->isr = (isr_f)_cmicd_interrupt;
+                ctrl->isr = _cmicd_interrupt;
             }
             /* check if version is CMICX */
             else if (ver == 0x04) {
-                ctrl->isr = (isr_f)_cmicx_interrupt;
+                ctrl->isr = _cmicx_interrupt;
                 _intr_regs_init(ctrl, 0);
             } else {
-                ctrl->isr = (isr_f)_cmic_interrupt;
+                ctrl->isr = _cmic_interrupt;
                 if ((ctrl->dev_type & BDE_256K_REG_SPACE) &&
 #ifdef BCM_PETRA_SUPPORT 
                     ctrl->devid != 0x1234 &&
 #endif
                     readl(ctrl->ba + CMICE_DEV_REV_ID) == 0) {
-                    ctrl->isr = (isr_f)_cmicm_interrupt;
+                    ctrl->isr = _cmicm_interrupt;
                 }
             }
             break;
@@ -1369,7 +1391,7 @@ _devices_init(int d)
 #ifdef BCM_DNXF_SUPPORT
           case  BCM88790_DEVICE_ID:
 #endif
-            ctrl->isr = (isr_f)_cmicx_interrupt;
+            ctrl->isr = _cmicx_interrupt;
             _intr_regs_init(ctrl, 0);
             break;
 
@@ -1382,13 +1404,28 @@ _devices_init(int d)
           case Q3A_DEVICE_ID:
           case Q3U_DEVICE_ID:
 #endif
+#ifdef BCM_JERICHO_4_SUPPORT
+          case JERICHO4_DEVICE_ID:
+          case Q4_DEVICE_ID:
+#endif
+#ifdef BCM_Q4D_SUPPORT
+          case Q4D_DEVICE_ID:
+#endif
+#ifdef BCM_J4L_SUPPORT
+          case J4L_DEVICE_ID:
+#endif
 #endif
 #ifdef BCM_DNXF3_SUPPORT
           case  RAMON2_DEVICE_ID:
           case  RAMON3_DEVICE_ID:
 #endif
+#ifdef BCM_DNXFE_SUPPORT
+#ifdef BCM_RAMON_4_SUPPORT
+          case RAMON4_DEVICE_ID:
+#endif
+#endif
 #if defined(BCM_DNX3_SUPPORT) || defined(BCM_DNXF3_SUPPORT)
-            ctrl->isr = (isr_f)_cmicx_gen2_interrupt;
+            ctrl->isr = _cmicx_gen2_interrupt;
             _intr_regs_init(ctrl, 2);
             break;
 #endif
@@ -1487,7 +1524,7 @@ _cleanup(void)
 
     if (user_bde) {
         for (i = 0; i < user_bde->num_devices(BDE_ALL_DEVICES); i++) {
-            if (_devices[i].enabled &&
+            if (atomic_read(&_devices[i].enabled) &&
                 BDE_DEV_MEM_MAPPED(_devices[i].dev_type)) {
 
 #if defined(BCM_DNX3_SUPPORT) || defined(BCM_DNXF3_SUPPORT)
@@ -1924,8 +1961,9 @@ _ioctl(unsigned int cmd, unsigned long arg)
                 /* Get the total DMA size */
                 lkbde_get_dma_info(&cpu_pbase, &dma_pbase, &total_size);
                 /* Decrease the total size for each allocated SDK instance */
-                for (inst_i = 0; inst_i < LINUX_BDE_MAX_DEVICES; inst_i++)
+                for (inst_i = user_bde->num_devices(BDE_ALL_DEVICES); inst_i > 0;)
                 {
+                    --inst_i;
                     if (_bde_inst_resource[inst_i].is_active && (_dma_resource_get(inst_i, &cpu_pbase, &dma_pbase, &size) == 0)) {
                         total_size -= size;
                     }
@@ -1982,18 +2020,19 @@ _ioctl(unsigned int cmd, unsigned long arg)
          * This is to handle the use case where userspace
          * application gets killed abruptly.
          */
-        if (_devices[io.dev].enabled) {
+        if (atomic_read(&_devices[io.dev].enabled)) {
             if (debug >= 1) {
                 gprintk("Interrupts already enabled, disable to cleanup\n");
             }
             user_bde->interrupt_disconnect(io.dev);
-            _devices[io.dev].enabled = 0;
+            atomic_set(&_devices[io.dev].enabled, 0);
         }
         if (_devices[io.dev].dev_type & BDE_SWITCH_DEV_TYPE) {
-            if (_devices[io.dev].isr && !_devices[io.dev].enabled) {
+            if (_devices[io.dev].isr && !atomic_read(&_devices[io.dev].enabled)) {
                 /* PCI/CMICX Devices */
                 if ((_devices[io.dev].dev_type & BDE_PCI_DEV_TYPE) &&
-                    (_devices[io.dev].isr == (isr_f)_cmicx_interrupt)) {
+                    (_devices[io.dev].isr == _cmicx_interrupt) &&
+                    intr_pending_check) {
                     lkbde_intr_cb_register(io.dev,
                                            _cmicx_interrupt_pending,
                                            _devices+io.dev);
@@ -2002,16 +2041,16 @@ _ioctl(unsigned int cmd, unsigned long arg)
                 user_bde->interrupt_connect(io.dev,
                                             _devices[io.dev].isr,
                                             _devices+io.dev);
-                _devices[io.dev].enabled = 1;
+                atomic_set(&_devices[io.dev].enabled, 1);
             }
         } else {
             /* Process ethernet device interrupt */
 
-            if (!_devices[io.dev].enabled) {
+            if (!atomic_read(&_devices[io.dev].enabled)) {
                 user_bde->interrupt_connect(io.dev,
-                                            (void(*)(void *))_ether_interrupt,
+                                            _ether_interrupt,
                                             _devices+io.dev);
-                _devices[io.dev].enabled = 1;
+                atomic_set(&_devices[io.dev].enabled, 1);
             }
         }
         break;
@@ -2019,9 +2058,9 @@ _ioctl(unsigned int cmd, unsigned long arg)
         if (!VALID_DEVICE(io.dev)) {
             return -EINVAL;
         }
-        if (_devices[io.dev].enabled) {
+        if (atomic_read(&_devices[io.dev].enabled)) {
             user_bde->interrupt_disconnect(io.dev);
-            _devices[io.dev].enabled = 0;
+            atomic_set(&_devices[io.dev].enabled, 0);
         }
         break;
     case LUBDE_SET_EDK_INTERRUPTS:
@@ -2063,7 +2102,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
 #else
             /* CMICX Devices */
             if ((_devices[io.dev].dev_type & BDE_PCI_DEV_TYPE) &&
-                (_devices[io.dev].isr == (isr_f)_cmicx_interrupt)  &&
+                (_devices[io.dev].isr == _cmicx_interrupt)  &&
                 (intr_timeout > 0)) {
                 unsigned long t_jiffies;
                 int err=0;
@@ -2124,7 +2163,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
 #else
         /* CMICX Devices */
         if ((_devices[io.dev].dev_type & BDE_PCI_DEV_TYPE) &&
-            (_devices[io.dev].isr == (isr_f)_cmicx_interrupt) &&
+            (_devices[io.dev].isr == _cmicx_interrupt) &&
             (intr_timeout > 0)) {
             unsigned long t_jiffies;
             int err = 0;
@@ -2159,11 +2198,11 @@ _ioctl(unsigned int cmd, unsigned long arg)
         return -EINVAL;
     case LUBDE_WRITE_IRQ_MASK:
         /* CMICx device */
-        if (_devices[io.dev].isr == (isr_f)_cmicx_interrupt) {
+        if (_devices[io.dev].isr == _cmicx_interrupt) {
             io.rc = lkbde_irq_mask_set(io.dev + LKBDE_IPROC_REG, io.d0, io.d1, 0);
         }
 #ifdef NEED_CMICX_GEN2_INTERRUPT
-        else if (_devices[io.dev].isr == (isr_f)_cmicx_gen2_interrupt)
+        else if (_devices[io.dev].isr == _cmicx_gen2_interrupt)
         {
             io.rc = lkbde_irq_mask_set(io.dev | LKBDE_IPROC_REG, io.d0, io.d1, 0);
         }
