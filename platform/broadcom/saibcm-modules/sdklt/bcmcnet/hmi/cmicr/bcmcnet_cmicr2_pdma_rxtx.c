@@ -5,7 +5,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -221,9 +222,8 @@ cmicr2_pdma_pkt_xmit(struct pdma_hw *hw, struct pdma_tx_queue *txq, void *buf)
         }
         txq->state |= PDMA_TX_QUEUE_BUSY;
     } else {
-        pbuf->adj = 1;
-        pkh = bm->tx_buf_get(dev, txq, pbuf, buf);
-        if (!pkh) {
+        rv = bm->tx_buf_get(dev, txq, pbuf, buf);
+        if (SHR_FAILURE(rv)) {
             txq->stats.dropped++;
             if (dev->tx_suspend) {
                 sal_spinlock_unlock(txq->mutex);
@@ -233,6 +233,7 @@ cmicr2_pdma_pkt_xmit(struct pdma_hw *hw, struct pdma_tx_queue *txq, void *buf)
             return SHR_E_RESOURCE;
         }
         bm->tx_buf_dma(dev, txq, pbuf, &addr);
+        pkh = &pbuf->pkb->pkh;
         cmicr2_tx_desc_config(&ring[curr], addr, pbuf->len, pkh->hdr_prof, pkh->attrs);
     }
 
