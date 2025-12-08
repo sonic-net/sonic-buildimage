@@ -240,10 +240,17 @@ function clean_up_chassis_db_tables()
 {
 
     switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
+    platform=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'platform'`
 
     # Run clean up only in swss running for voq switches
     if is_chassis_supervisor || [[ $switch_type != 'voq' ]]; then
         return
+    fi
+
+    chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
+    if [ ! -e $chassis_config ]; then
+       debug "No chassis config found"
+       return
     fi
 
     until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
@@ -577,15 +584,12 @@ function check_ports_present()
     return 1
 }
 
-function check_service_exists()
+function check_service_enabled()
 {
-    systemctl list-units --full -all 2>/dev/null | grep -Fq $1
-    if [[ $? -eq 0 ]]; then
+    if systemctl is-enabled "$1" >/dev/null 2>&1; then
         echo true
-        return
     else
         echo false
-        return
     fi
 }
 
@@ -594,7 +598,7 @@ function check_service_exists()
 DEPENDENT=""
 MULTI_INST_DEPENDENT=""
 
-if [[ $(check_service_exists radv) == "true" ]]; then
+if [[ $(check_service_enabled radv) == "true" ]]; then
     DEPENDENT="$DEPENDENT radv"
 fi
 
@@ -615,7 +619,7 @@ check_add_bgp_dependency
 check_ports_present
 PORTS_PRESENT=$?
 
-if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_exists teamd) == "true" ]]; then
+if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_enabled teamd) == "true" ]]; then
     MULTI_INST_DEPENDENT="teamd"
 fi
 
