@@ -9,50 +9,59 @@ This script sets up the necessary mocks and imports to test the CLI tool.
 """
 
 import base64
-import importlib
+import importlib.util
 import json
 import os
-import pytest
 import sys
 import tempfile
-
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 # Prevent Python from writing .pyc files during test imports
 # This avoids __pycache__ directories in common/utils/ that interfere with builds
 sys.dont_write_bytecode = True
 
+def setup_test_environment():
+    """Set up mocks and load modules using the fixture pattern."""
 
-class MockChassisBase:
-    REBOOT_CAUSE_HARDWARE_OTHER = "Unknown"
-    REBOOT_CAUSE_POWER_LOSS = "Power Loss"
-    REBOOT_CAUSE_THERMAL_OVERLOAD_CPU = "Thermal Overload"
-    REBOOT_CAUSE_WATCHDOG = "Watchdog"
+    # Mock sonic_platform_base.chassis_base that adm1266.py imports
+    chassis_base_mock = Mock()
+    chassis_base_mock.ChassisBase = Mock()
+    chassis_base_mock.ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER = "Unknown"
+    chassis_base_mock.ChassisBase.REBOOT_CAUSE_POWER_LOSS = "Power Loss"
+    chassis_base_mock.ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU = "Thermal Overload"
+    chassis_base_mock.ChassisBase.REBOOT_CAUSE_WATCHDOG = "Watchdog"
+    sys.modules["sonic_platform_base"] = Mock()
+    sys.modules["sonic_platform_base.chassis_base"] = chassis_base_mock
 
-    def __init__(self, *args, **kwargs):
-        pass
+    # Get the test directory (we're in test/unit/sonic_platform/)
+    test_dir = os.path.dirname(os.path.realpath(__file__))
 
-@pytest.fixture
-def mock_chassis_base():
-    """Injects and returns a mock ChassisBase for testing."""
-    chassis_base = Mock()
-    chassis_base.ChassisBase = MockChassisBase
-    with patch.dict(sys.modules, {"sonic_platform_base.chassis_base": chassis_base}):
-        yield chassis_base.ChassisBase
+    # Load dpm module directly from file path
+    dpm_path = os.path.join(test_dir, "../../../common/sonic_platform/dpm.py")
+    spec = importlib.util.spec_from_file_location("sonic_platform.dpm", dpm_path)
+    dpm_module = importlib.util.module_from_spec(spec)
+    sys.modules["sonic_platform.dpm"] = dpm_module
+    spec.loader.exec_module(dpm_module)
 
+    # Load adm1266 module directly from file path
+    adm1266_path = os.path.join(test_dir, "../../../common/sonic_platform/adm1266.py")
+    spec = importlib.util.spec_from_file_location("sonic_platform.adm1266", adm1266_path)
+    adm1266_module = importlib.util.module_from_spec(spec)
+    sys.modules["sonic_platform.adm1266"] = adm1266_module
+    spec.loader.exec_module(adm1266_module)
 
-@pytest.fixture
-def nh_reboot_cause_module(mock_chassis_base):
-    """Loads the module before each test. This is to let conftest.py inject deps first."""
+    # Now load the nh_reboot_cause utility (file has no .py extension)
+    nh_reboot_cause_path = os.path.join(test_dir, "../../../common/utils/nh_reboot_cause")
+
     # For files without .py extension, we need to use SourceFileLoader explicitly
-    TEST_DIR = os.path.dirname(os.path.realpath(__file__))
-    nh_reboot_cause_path = os.path.join(TEST_DIR, "../../../common/utils/nh_reboot_cause")
-    loader = importlib.machinery.SourceFileLoader("nh_reboot_cause", nh_reboot_cause_path)
+    from importlib.machinery import SourceFileLoader
+    loader = SourceFileLoader("nh_reboot_cause", nh_reboot_cause_path)
     spec = importlib.util.spec_from_loader(loader.name, loader)
     nh_reboot_cause_module = importlib.util.module_from_spec(spec)
+    sys.modules["nh_reboot_cause"] = nh_reboot_cause_module
     spec.loader.exec_module(nh_reboot_cause_module)
 
-    yield nh_reboot_cause_module
+    return nh_reboot_cause_module, dpm_module
 
 
 def create_test_data():
@@ -92,11 +101,13 @@ def create_test_data():
     }
 
 
-def test_show_current(nh_reboot_cause_module, capsys):
+def test_show_current(capsys):
     """Test showing current reboot-cause."""
+    nh_reboot_cause_module, dpm_module = setup_test_environment()
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
+        original_history_dir = dpm_module.SystemDPMLogHistory.HISTORY_DIR
+        dpm_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
 
         try:
             # Create test data file
@@ -121,14 +132,16 @@ def test_show_current(nh_reboot_cause_module, capsys):
             assert "Unsupported DPM type" not in captured.out, "Should not show DPM type error"
 
         finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
+            dpm_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
 
 
-def test_show_history(nh_reboot_cause_module, capsys):
+def test_show_history(capsys):
     """Test showing reboot-cause history."""
+    nh_reboot_cause_module, dpm_module = setup_test_environment()
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
+        original_history_dir = dpm_module.SystemDPMLogHistory.HISTORY_DIR
+        dpm_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
 
         try:
             # Create multiple test data files
@@ -154,11 +167,13 @@ def test_show_history(nh_reboot_cause_module, capsys):
             assert "test-dpm-1" in captured.out, "Expected DPM name in history output"
 
         finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
+            dpm_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
 
 
-def test_cli_help(nh_reboot_cause_module):
+def test_cli_help():
     """Test that the CLI command is properly configured with click."""
+    nh_reboot_cause_module, _ = setup_test_environment()
+
     cli = nh_reboot_cause_module.reboot_cause
 
     # Verify the command has help text
@@ -170,11 +185,13 @@ def test_cli_help(nh_reboot_cause_module):
     assert has_history_option, "CLI should have --history option"
 
 
-def test_unsupported_dpm_type(nh_reboot_cause_module, capsys):
+def test_unsupported_dpm_type(capsys):
     """Test that unsupported DPM types are rejected."""
+    nh_reboot_cause_module, dpm_module = setup_test_environment()
+
     with tempfile.TemporaryDirectory() as tmpdir:
-        original_history_dir = nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR
-        nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
+        original_history_dir = dpm_module.SystemDPMLogHistory.HISTORY_DIR
+        dpm_module.SystemDPMLogHistory.HISTORY_DIR = tmpdir
 
         try:
             # Create test data with wrong DPM type
@@ -197,5 +214,5 @@ def test_unsupported_dpm_type(nh_reboot_cause_module, capsys):
             assert "unknown_dpm" in captured.out, "Should mention the unsupported DPM type"
 
         finally:
-            nh_reboot_cause_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
+            dpm_module.SystemDPMLogHistory.HISTORY_DIR = original_history_dir
 

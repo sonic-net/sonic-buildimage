@@ -12,14 +12,12 @@ import os
 import json
 import pytest
 from unittest.mock import MagicMock
-
-
-@pytest.fixture(scope="function", autouse=True)
-def pddf_config_parser_module():
-    """Loads the module before each test. This is to let conftest.py inject deps first."""
-    from nexthop import pddf_config_parser
-
-    yield pddf_config_parser
+from nexthop.pddf_config_parser import (
+    extract_xcvr_list,
+    extract_fpga_attrs,
+    FpgaDeviceName,
+    FpgaDevAttrs,
+)
 
 # Mock sonic_py_common if not available
 try:
@@ -50,7 +48,7 @@ def find_pddf_device_json(platform_variant):
 class TestExtractXcvrList:
     """Test class for 'extract_xcvr_list' function."""
 
-    def test_extract_xcvr_list(self, pddf_config_parser_module):
+    def test_extract_xcvr_list(self):
         """Test extract_xcvr_list with a sample configuration."""
         # Sample PDDF config
         config = {
@@ -97,7 +95,7 @@ class TestExtractXcvrList:
         }
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then
         expected = [
@@ -110,7 +108,7 @@ class TestExtractXcvrList:
         for expected_xcvr in expected:
             assert expected_xcvr in xcvr_list
 
-    def test_extract_xcvr_list_missing_required_attrs(self, pddf_config_parser_module):
+    def test_extract_xcvr_list_missing_required_attrs(self):
         """Test that devices without both xcvr_reset and xcvr_lpmode are filtered out."""
         config = {
             "PORT1-CTRL": {
@@ -143,13 +141,13 @@ class TestExtractXcvrList:
         }
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then - only PORT3-CTRL should be included
         assert len(xcvr_list) == 1
         assert xcvr_list[0]["name"] == "PORT3-CTRL"
 
-    def test_extract_xcvr_list_non_port_ctrl_devices(self, pddf_config_parser_module):
+    def test_extract_xcvr_list_non_port_ctrl_devices(self):
         """Test that non-PORT*-CTRL devices are filtered out."""
         config = {
             "PORT1-CTRL": {
@@ -182,13 +180,13 @@ class TestExtractXcvrList:
         }
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then - only PORT1-CTRL should be included
         assert len(xcvr_list) == 1
         assert xcvr_list[0]["name"] == "PORT1-CTRL"
 
-    def test_extract_xcvr_list_missing_i2c_section(self, pddf_config_parser_module):
+    def test_extract_xcvr_list_missing_i2c_section(self):
         """Test that devices without i2c section are filtered out."""
         config = {
             "PORT1-CTRL": {
@@ -207,25 +205,25 @@ class TestExtractXcvrList:
         }
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then - only PORT2-CTRL should be included
         assert len(xcvr_list) == 1
         assert xcvr_list[0]["name"] == "PORT2-CTRL"
 
-    def test_extract_xcvr_list_empty_config(self, pddf_config_parser_module):
+    def test_extract_xcvr_list_empty_config(self):
         """Test extract_xcvr_list with empty configuration."""
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list({})
+        xcvr_list = extract_xcvr_list({})
 
         # Then
         assert xcvr_list == []
 
     @pytest.mark.parametrize(
         "platform_variant",
-        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1", "x86_64-nexthop_4020-r0"],
+        ["x86_64-nexthop_4010-r0", "x86_64-nexthop_4010-r1"],
     )
-    def test_extract_xcvr_list_real_40x0_config(self, pddf_config_parser_module, platform_variant):
+    def test_extract_xcvr_list_real_40x0_config(self, platform_variant):
         """Test extract_xcvr_list with real NH-40x0 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
         config_path = find_pddf_device_json(platform_variant)
@@ -235,7 +233,7 @@ class TestExtractXcvrList:
             config = json.load(f)
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then - validate the results
         assert isinstance(xcvr_list, list)
@@ -254,7 +252,7 @@ class TestExtractXcvrList:
         assert len(names) == len(set(names)), "All transceiver names should be unique"
         assert len(buses) == len(set(buses)), "All bus numbers should be unique"
 
-    def test_extract_xcvr_list_real_5010_config(self, pddf_config_parser_module):
+    def test_extract_xcvr_list_real_5010_config(self):
         """Test extract_xcvr_list with real NH-5010 pddf-device.json configuration."""
         # Path to the real pddf-device.json file
         config_path = find_pddf_device_json("x86_64-nexthop_5010-r0")
@@ -264,7 +262,7 @@ class TestExtractXcvrList:
             config = json.load(f)
 
         # When
-        xcvr_list = pddf_config_parser_module.extract_xcvr_list(config)
+        xcvr_list = extract_xcvr_list(config)
 
         # Then - validate the results
         assert isinstance(xcvr_list, list)
@@ -289,15 +287,9 @@ class TestExtractXcvrList:
 
 
 class TestExtractFpgaDevAttrs:
+    FPGA_TYPES = (FpgaDeviceName.CPU_CARD.value, FpgaDeviceName.SWITCHCARD.value)
 
-    @pytest.fixture(autouse=True)
-    def setup(self, pddf_config_parser_module):
-        self.FPGA_TYPES = (
-            pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value,
-            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value,
-        )
-
-    def test_extract_fpga_attrs_malformed_config(self, pddf_config_parser_module):
+    def test_extract_fpga_attrs_malformed_config(self):
         bad_configs = []
         no_dev_attr_config = {
             "MULTIFPGAPCIE0": {
@@ -324,18 +316,17 @@ class TestExtractFpgaDevAttrs:
 
         for config in bad_configs:
             with pytest.raises(Exception):
-                pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)
+                extract_fpga_attrs(config, self.FPGA_TYPES)
 
     @pytest.mark.parametrize(
         "platform_variant",
         [
             "x86_64-nexthop_4010-r0",
             "x86_64-nexthop_4010-r1",
-            "x86_64-nexthop_4020-r0",
             "x86_64-nexthop_5010-r0",
         ],
     )
-    def test_extract_fpga_attrs(self, pddf_config_parser_module, platform_variant):
+    def test_extract_fpga_attrs(self, platform_variant):
         """Test extract_fpga_attrs with real NH pddf-device.json configuration."""
         # Path to the real pddf-device.json file
         config_path = find_pddf_device_json(platform_variant)
@@ -345,15 +336,15 @@ class TestExtractFpgaDevAttrs:
             config = json.load(f)
 
         # When
-        fpga_attrs = pddf_config_parser_module.extract_fpga_attrs(config, self.FPGA_TYPES)
+        fpga_attrs = extract_fpga_attrs(config, self.FPGA_TYPES)
 
         # Then
         assert fpga_attrs == {
-            pddf_config_parser_module.FpgaDeviceName.CPU_CARD.value: pddf_config_parser_module.FpgaDevAttrs(
+            FpgaDeviceName.CPU_CARD.value: FpgaDevAttrs(
                 pwr_cycle_reg_offset=0x8,
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),
-            pddf_config_parser_module.FpgaDeviceName.SWITCHCARD.value: pddf_config_parser_module.FpgaDevAttrs(
+            FpgaDeviceName.SWITCHCARD.value: FpgaDevAttrs(
                 pwr_cycle_reg_offset=0x4,
                 pwr_cycle_enable_word=0xDEADBEEF,
             ),

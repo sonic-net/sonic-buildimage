@@ -13,7 +13,8 @@ before any test modules are imported.
 import os
 import sys
 
-# Adds the '../common' directory to the Python path, to allow tests to import
-# python modules from the common directory, such as nexthop and sonic_platform.
-common_path = os.path.join(os.path.dirname(__file__), "../common")
+# Add the paths for nexthop modules imports by tests (relative imports)
+common_path = os.path.join(os.path.dirname(__file__), '../common')
+sys.path.insert(0, common_path)
+common_path = os.path.join(os.path.dirname(__file__), '../common/sonic_platform')
 sys.path.insert(0, common_path)

@@ -11,6 +11,8 @@ for EEPROM functionality. It helps avoid code duplication between test files.
 """
 
 import os
+import tempfile
+from typing import Dict
 
 
 # Constants
@@ -35,7 +37,7 @@ class EepromTestHelpers:
             f.write(bytearray([0xFF] * size))
 
     @staticmethod
-    def create_fake_i2c_device(device_name: str, file_to_content: dict[str, str], root: str) -> None:
+    def create_fake_i2c_device(device_name: str, file_to_content: Dict[str, str], root: str) -> None:
         """
         Create a fake I2C device directory structure for testing.
         
@@ -110,7 +112,6 @@ class EepromTestHelpers:
             "device_version": "0",
             "label_revision": "P0",
             "platform_name": "x86_64-nexthop_4010-r0",
-            "onie_version": "x86_64-nexthop_cf1",
             "manufacturer_name": "Nexthop",
             "vendor_name": "Nexthop",
             "service_tag": "www.nexthop.ai",
@@ -130,7 +131,7 @@ class EepromTestHelpers:
 TlvInfo Header:
    Id String:    TlvInfo
    Version:      1
-   Total Length: 142
+   Total Length: 122
 TLV Name                  Code Len Value
 ------------------------- ---- --- -----
 Product Name              0x21   7 NH-4010
@@ -140,13 +141,12 @@ Base MAC Address          0x24   6 00:E1:4C:68:00:C4
 Device Version            0x26   1 0
 Label Revision            0x27   2 P0
 Platform Name             0x28  22 x86_64-nexthop_4010-r0
-ONIE Version              0x29  18 x86_64-nexthop_cf1
 Manufacturer              0x2B   7 Nexthop
 Vendor Name               0x2D   7 Nexthop
 Service Tag               0x2F  14 www.nexthop.ai
 Custom Serial Number      0xFD   8 123
 Regulatory Model Number   0xFD  12 NH99-99
-CRC-32                    0xFE   4 0xAB67033D
+CRC-32                    0xFE   4 0x368C1825
 """
 
 
@@ -162,7 +162,7 @@ class EepromTestMixin:
         """Create a fake EEPROM file for testing."""
         return EepromTestHelpers.create_fake_eeprom(path_to_file, size)
 
-    def create_fake_i2c_device(self, device_name: str, file_to_content: dict[str, str], root: str) -> None:
+    def create_fake_i2c_device(self, device_name: str, file_to_content: Dict[str, str], root: str) -> None:
         """Create a fake I2C device directory structure for testing."""
         return EepromTestHelpers.create_fake_i2c_device(device_name, file_to_content, root)
 

@@ -11,16 +11,10 @@ import pytest
 
 from click.testing import CliRunner
 
-
-@pytest.fixture(scope="function", autouse=True)
-def gen_cli_module():
-    """Loads the module before each test. This is to let conftest.py inject deps first."""
-    from nexthop import gen_cli
-
-    yield gen_cli
+from nexthop import gen_cli
 
 
-def test_generate_pddf_device_json_success(gen_cli_module):
+def test_generate_pddf_device_json_success():
     INPUT_PDDF_DEVICE_TEMPLATE = textwrap.dedent(
         """
         {
@@ -54,15 +48,6 @@ def test_generate_pddf_device_json_success(gen_cli_module):
           lookup_command: "echo 04 | xargs printf '0000:%s:00.0'"
         """
     )
-    INPUT_PLATFORM_JSON = textwrap.dedent(
-        """
-        {
-          "chassis": {
-            "name": "NH-4010-F"
-            }
-        }
-        """
-    )
     EXPECTED_PDDF_DEVICE_JSON = textwrap.dedent(
         """
         {
@@ -92,7 +77,6 @@ def test_generate_pddf_device_json_success(gen_cli_module):
     with tempfile.TemporaryDirectory() as temp_dir:
         vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
         template_path = os.path.join(temp_dir, "pddf-device.json.j2")
-        platform_json_path = os.path.join(temp_dir, "platform.json")
         output_path = os.path.join(temp_dir, "pddf-device.json")
 
         # Given
@@ -100,16 +84,13 @@ def test_generate_pddf_device_json_success(gen_cli_module):
             f.write(INPUT_PCIE_VARIABLES)
         with open(template_path, "w") as f:
             f.write(INPUT_PDDF_DEVICE_TEMPLATE)
-        with open(platform_json_path, "w") as f:
-            f.write(INPUT_PLATFORM_JSON)
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli.pddf_device_json,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
-                f"--platform_json_filepath={platform_json_path}",
                 f"--output_filepath={output_path}",
             ],
         )
@@ -122,7 +103,7 @@ def test_generate_pddf_device_json_success(gen_cli_module):
         assert generated_content == EXPECTED_PDDF_DEVICE_JSON
 
 
-def test_generate_pcie_yaml_success(gen_cli_module):
+def test_generate_pcie_yaml_success():
     INPUT_PCIE_TEMPLATE = textwrap.dedent(
         """
         - bus: '00'
@@ -211,15 +192,6 @@ def test_generate_pcie_yaml_success(gen_cli_module):
           lookup_command: "echo false"
         """
     )
-    INPUT_PLATFORM_JSON = textwrap.dedent(
-        """
-        {
-          "chassis": {
-            "name": "NH-4010-F"
-            }
-        }
-        """
-    )
     EXPECTED_PCIE_YAML = textwrap.dedent(
         """
         - bus: '00'
@@ -274,7 +246,6 @@ def test_generate_pcie_yaml_success(gen_cli_module):
     with tempfile.TemporaryDirectory() as temp_dir:
         vars_path = os.path.join(temp_dir, "pcie-variables.yaml")
         template_path = os.path.join(temp_dir, "pcie.yaml.j2")
-        platform_json_path = os.path.join(temp_dir, "platform.json")
         output_path = os.path.join(temp_dir, "pcie.yaml")
 
         # Given
@@ -282,16 +253,13 @@ def test_generate_pcie_yaml_success(gen_cli_module):
             f.write(INPUT_PCIE_VARIABLES)
         with open(template_path, "w") as f:
             f.write(INPUT_PCIE_TEMPLATE)
-        with open(platform_json_path, "w") as f:
-            f.write(INPUT_PLATFORM_JSON)
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli.pddf_device_json,
             [
                 f"--template_filepath={template_path}",
                 f"--vars_filepath={vars_path}",
-                f"--platform_json_filepath={platform_json_path}",
                 f"--output_filepath={output_path}",
             ],
         )
@@ -304,43 +272,35 @@ def test_generate_pcie_yaml_success(gen_cli_module):
         assert generated_content == EXPECTED_PCIE_YAML
 
 
-def test_generate_pddf_device_json_skipped_when_default_paths_not_found(gen_cli_module):
+def test_generate_pddf_device_json_skipped_when_default_template_or_vars_not_found():
     if os.path.exists(
-        gen_cli_module.DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH
-    ) or os.path.exists(
-        gen_cli_module.DEFAULT_PCIE_VARS_FILEPATH
-    ) or os.path.exists(
-        gen_cli_module.DEFAULT_PLATFORM_JSON_FILEPATH
-    ):
-        pytest.skip("Default template, vars, or platform.json file exists. Skipping test.")
+        gen_cli.DEFAULT_PDDF_DEVICE_JSON_TEMPLATE_FILEPATH
+    ) or os.path.exists(gen_cli.DEFAULT_PCIE_VARS_FILEPATH):
+        pytest.skip("Default template or vars file exists. Skipping test.")
     runner = CliRunner()
 
     # Given
-    result = runner.invoke(gen_cli_module.pddf_device_json)
+    result = runner.invoke(gen_cli.pddf_device_json)
 
     # Then
     assert result.exit_code == 0
 
 
-def test_generate_pcie_yaml_skipped_when_default_files_not_found(gen_cli_module):
-    if os.path.exists(
-        gen_cli_module.DEFAULT_PCIE_YAML_TEMPLATE_FILEPATH
-    ) or os.path.exists(
-        gen_cli_module.DEFAULT_PCIE_VARS_FILEPATH
-    ) or os.path.exists(
-        gen_cli_module.DEFAULT_PLATFORM_JSON_FILEPATH
+def test_generate_pcie_yaml_skipped_when_default_template_or_vars_not_found():
+    if os.path.exists(gen_cli.DEFAULT_PCIE_YAML_TEMPLATE_FILEPATH) or os.path.exists(
+        gen_cli.DEFAULT_PCIE_VARS_FILEPATH
     ):
-        pytest.skip("Default template, vars, or platform.json file exists. Skipping test.")
+        pytest.skip("Default template or vars file exists. Skipping test.")
     runner = CliRunner()
 
     # Given
-    result = runner.invoke(gen_cli_module.pcie_yaml)
+    result = runner.invoke(gen_cli.pcie_yaml)
 
     # Then
     assert result.exit_code == 0
 
 
-def test_generate_pddf_device_json_raises_when_user_input_template_not_found(gen_cli_module):
+def test_generate_pddf_device_json_raises_when_user_input_template_not_found():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as temp_dir:
         template_path = os.path.join(temp_dir, "non-existent-pddf-device.json.j2")
@@ -348,7 +308,7 @@ def test_generate_pddf_device_json_raises_when_user_input_template_not_found(gen
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli.pddf_device_json,
             [
                 f"--template_filepath={template_path}",
                 f"--output_filepath={output_path}",
@@ -360,7 +320,7 @@ def test_generate_pddf_device_json_raises_when_user_input_template_not_found(gen
         assert not os.path.exists(output_path)
 
 
-def test_generate_pddf_device_json_raises_when_user_input_vars_not_found(gen_cli_module):
+def test_generate_pddf_device_json_raises_when_user_input_vars_not_found():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as temp_dir:
         vars_path = os.path.join(temp_dir, "non-existent-pcie-variables.yaml")
@@ -368,7 +328,7 @@ def test_generate_pddf_device_json_raises_when_user_input_vars_not_found(gen_cli
 
         # When
         result = runner.invoke(
-            gen_cli_module.pddf_device_json,
+            gen_cli.pddf_device_json,
             [
                 f"--vars_filepath={vars_path}",
                 f"--output_filepath={output_path}",
@@ -380,27 +340,7 @@ def test_generate_pddf_device_json_raises_when_user_input_vars_not_found(gen_cli
         assert not os.path.exists(output_path)
 
 
-def test_generate_pddf_device_json_raises_when_user_input_platform_json_not_found(gen_cli_module):
-    runner = CliRunner()
-    with tempfile.TemporaryDirectory() as temp_dir:
-        platform_json_path = os.path.join(temp_dir, "non-existent-platform.json")
-        output_path = os.path.join(temp_dir, "pddf-device.json")
-
-        # When
-        result = runner.invoke(
-            gen_cli_module.pddf_device_json,
-            [
-                f"--platform_json_filepath={platform_json_path}",
-                f"--output_filepath={output_path}",
-            ],
-        )
-
-        # Then
-        assert result.exit_code == click.BadParameter.exit_code
-        assert not os.path.exists(output_path)
-
-
-def test_generate_pcie_yaml_raises_when_user_input_template_not_found(gen_cli_module):
+def test_generate_pcie_yaml_raises_when_user_input_template_not_found():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as temp_dir:
         template_path = os.path.join(temp_dir, "non-existent-pcie.yaml.j2")
@@ -408,7 +348,7 @@ def test_generate_pcie_yaml_raises_when_user_input_template_not_found(gen_cli_mo
 
         # When
         result = runner.invoke(
-            gen_cli_module.pcie_yaml,
+            gen_cli.pcie_yaml,
             [
                 f"--template_filepath={template_path}",
                 f"--output_filepath={output_path}",
@@ -420,7 +360,7 @@ def test_generate_pcie_yaml_raises_when_user_input_template_not_found(gen_cli_mo
         assert not os.path.exists(output_path)
 
 
-def test_generate_pcie_yaml_raises_when_user_input_vars_not_found(gen_cli_module):
+def test_generate_pcie_yaml_raises_when_user_input_vars_not_found():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as temp_dir:
         vars_path = os.path.join(temp_dir, "non-existent-pcie-variables.yaml")
@@ -428,7 +368,7 @@ def test_generate_pcie_yaml_raises_when_user_input_vars_not_found(gen_cli_module
 
         # When
         result = runner.invoke(
-            gen_cli_module.pcie_yaml,
+            gen_cli.pcie_yaml,
             [
                 f"--vars_filepath={vars_path}",
                 f"--output_filepath={output_path}",
