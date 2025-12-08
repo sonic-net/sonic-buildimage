@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -43,6 +44,12 @@ struct filt_ctrl {
 
     /*! Filter callback */
     ngknet_filter_cb_f filter_cb;
+
+    /*! Filter create callback */
+    ngknet_filter_create_cb_f create_cb;
+
+    /*! Filter destroy callback */
+    ngknet_filter_destroy_cb_f destroy_cb;
 };
 
 /*!
@@ -116,6 +123,20 @@ ngknet_filter_get_next(struct ngknet_dev *dev, ngknet_filter_t *filter);
  */
 extern int
 ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb);
+
+/*!
+ * \brief Filter frame.
+ *
+ * \param [in] dev Device structure point.
+ * \param [in] frame Data frame.
+ * \param [out] ndev Network interface.
+ *
+ * \retval Matched network interface.
+ * \retval NULL No matched network interface.
+ */
+extern int
+ngknet_rx_xdp_filter(struct ngknet_dev *dev, void *frame,
+                     struct net_device **ndev);
 
 /*!
  * \brief Rx rate limit control.
@@ -214,7 +235,25 @@ ngknet_rx_rate_limit(struct ngknet_dev *dev, int limit);
  * \param [in] queue Tx queue number.
  */
 extern void
-ngknet_tx_queue_schedule(struct ngknet_dev *dev, struct sk_buff *skb, int *queue);
+ngknet_tx_queue_schedule(struct ngknet_dev *dev, struct pkt_buf *pkb, int *queue);
+
+/*!
+ * \brief Dump packet content.
+ *
+ * \param [in] data Packet data.
+ * \param [in] len Data length.
+ */
+extern void
+ngknet_pkt_dump(uint8_t *data, int len);
+
+/*!
+ * \brief Packet statistics.
+ *
+ * \param [in] pdev Packet device data structure.
+ * \param [in] dir Packet direction.
+ */
+extern void
+ngknet_pkt_stats(struct pdma_dev *pdev, int dir);
 
 #endif /* NGKNET_EXTRA_H */
 

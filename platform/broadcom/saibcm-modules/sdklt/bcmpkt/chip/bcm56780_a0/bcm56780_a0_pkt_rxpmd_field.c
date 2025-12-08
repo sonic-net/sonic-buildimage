@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -52,6 +53,11 @@ int bcm56780_a0_rxpmd_flex_fget(uint32_t *data,
         return SHR_E_PARAM;
     }
 
+    /* Skip fields with minbit >= 448.*/
+    if (minbit >= 448) {
+        return SHR_E_PARAM;
+    }
+
     if (diff == 31) {
         *val = data[index];
     } else if (diff < 31) {
@@ -80,6 +86,11 @@ int bcm56780_a0_rxpmd_flex_fset(uint32_t *data,
     /* Profile not valid for this field. */
     if ((minbit == 0xFFFFFFFF) ||
         (prof >= fld_info->profile_cnt)) {
+        return SHR_E_PARAM;
+    }
+
+    /* Skip fields with minbit >= 448.*/
+    if (minbit >= 448) {
         return SHR_E_PARAM;
     }
 
