@@ -1,5 +1,6 @@
 /*
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -656,7 +657,12 @@ int bcmgenl_packet_cleanup(void)
 int
 bcmgenl_packet_init(char *procfs_path)
 {
-    bkn_filter_cb_register_by_name(genl_filter_cb, GENL_PACKET_NAME);
+    bkn_filter_cb_attr_t fcb_attr;
+
+    memset(&fcb_attr, 0, sizeof(fcb_attr));
+    fcb_attr.name = GENL_PACKET_NAME;
+
+    bkn_filter_cb_attr_register(genl_filter_cb, &fcb_attr);
     genl_cb_proc_init(procfs_path);
     return genl_cb_init();
 }
