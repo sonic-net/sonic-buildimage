@@ -40,6 +40,7 @@ include $(PLATFORM_PATH)/rshim.mk
 include $(PLATFORM_PATH)/component-versions.mk
 include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 include $(PLATFORM_PATH)/fw-manager/fw-manager.mk
+include $(PLATFORM_PATH)/sedutil.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(DOCKER_FPM)

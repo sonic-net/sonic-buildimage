@@ -1,0 +1,9 @@
+[Unit]
+Description=SED password recovery and validation
+After=config-setup.service
+
+[Service]
+ExecStart=/usr/local/bin/sed_pw_recovery_service.sh
+
+[Install]
+WantedBy=sonic.target

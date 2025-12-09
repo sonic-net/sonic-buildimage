@@ -1162,6 +1162,19 @@ sudo install -m 755 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-mana
 sudo install -m 644 platform/mellanox/smartswitch/dpu-udev-manager/dpu-udev-manager.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu-udev-manager
 
+# SED password mgmt scripts
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_change.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_pw_change.sh
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_recovery_service.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp platform/mellanox/sed-password-mgmt/sed-pw-recovery.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl enable sed-pw-recovery.service
+sudo cp platform/mellanox/sed-password-mgmt/sed_pw_util.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo cp platform/mellanox/sed-password-mgmt/sed_reset_factory.sh $FILESYSTEM_ROOT/usr/local/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/local/bin/sed_reset_factory.sh
+
+# Install sedutil
+install_deb_package $debs_path/sedutil_*.deb
+
 {% endif %}
 
 {% if sonic_asic_platform == "nvidia-bluefield" %}
