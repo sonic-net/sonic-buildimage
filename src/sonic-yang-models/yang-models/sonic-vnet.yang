@@ -140,7 +140,7 @@ module sonic-vnet {
                 }
 
                 leaf consistent_hashing_buckets {
-                    description "Number of bucket entries received by each nexthop";
+                    description "Number of consistent hashing buckets to use, if consistent hashing is desired";
                     type uint16;
                 }
             }
