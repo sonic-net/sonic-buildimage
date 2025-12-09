@@ -1,5 +1,6 @@
 /*
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -86,7 +87,15 @@ LKM_MOD_PARAM(psample_qlen, "i", int, 0);
 MODULE_PARM_DESC(psample_qlen,
 "psample queue length (default 1024 buffers)");
 
+#ifndef BCMGENL_PSAMPLE_METADATA
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0))
+#define BCMGENL_PSAMPLE_METADATA 1
+#else
+#define BCMGENL_PSAMPLE_METADATA 0
+#endif
+#endif
+
+#if BCMGENL_PSAMPLE_METADATA
 static inline void
 bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
                       u32 trunc_size, int in_ifindex, int out_ifindex,
@@ -101,7 +110,7 @@ bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
 }
 #else
 #define bcmgenl_sample_packet psample_sample_packet
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) */
+#endif /* BCMGENL_PSAMPLE_METADATA */
 
 /* driver proc entry root */
 static struct proc_dir_entry *psample_proc_root = NULL;
@@ -110,7 +119,8 @@ static char psample_procfs_path[80];
 /* psample general info */
 typedef struct psample_info_s {
     struct net *netns;
-    struct list_head group_list;
+    struct list_head filter_group_list;
+    spinlock_t fltgrp_lock;
     uint64_t rx_reason_sample_source[LINUX_BDE_MAX_DEVICES];
     uint64_t rx_reason_sample_source_mask[LINUX_BDE_MAX_DEVICES];
     uint64_t rx_reason_sample_dest[LINUX_BDE_MAX_DEVICES];
@@ -118,11 +128,11 @@ typedef struct psample_info_s {
 } psample_info_t;
 static psample_info_t g_psample_info;
 
-typedef struct psample_group_data_s {
+typedef struct psample_filter_group_s {
     struct list_head list;
+    int filter_id;
     struct psample_group *group;
-    uint32_t group_num;
-} psample_group_data_t;
+} psample_filter_group_t;
 
 /* Maintain sampled pkt statistics */
 typedef struct psample_stats_s {
@@ -176,31 +186,76 @@ typedef struct psample_work_s {
 } psample_work_t;
 static psample_work_t g_psample_work;
 
-static struct psample_group *
-psample_group_get_from_list(uint32_t grp_num)
+static int
+psample_add_filter_group_to_list(int filter_id, struct psample_group *group)
 {
     struct list_head *list_ptr;
-    psample_group_data_t *grp;
+    psample_filter_group_t *fltgrp;
+    unsigned long flags;
 
-    list_for_each(list_ptr, &g_psample_info.group_list) {
-        grp = list_entry(list_ptr, psample_group_data_t, list);
-        if (grp->group_num == grp_num) {
-            return grp->group;
+    /* Sanity check */
+    spin_lock_irqsave(&g_psample_info.fltgrp_lock, flags);
+    list_for_each(list_ptr, &g_psample_info.filter_group_list) {
+        fltgrp = list_entry(list_ptr, psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
+            return -1;
         }
     }
+    spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
 
-    if ((grp = kmalloc(sizeof(psample_group_data_t), GFP_ATOMIC)) == NULL) {
-        return NULL;
+    if ((fltgrp = kmalloc(sizeof(*fltgrp), GFP_ATOMIC)) == NULL) {
+        return -1;
     }
-    grp->group = psample_group_get(g_psample_info.netns, grp_num);
-    if (grp->group == NULL) {
-        kfree(grp);
-        return NULL;
-    }
-    grp->group_num = grp_num;
-    list_add_tail(&grp->list, &g_psample_info.group_list);
+    memset(fltgrp, 0, sizeof(*fltgrp));
+    fltgrp->filter_id = filter_id;
+    fltgrp->group = group;
+    spin_lock_irqsave(&g_psample_info.fltgrp_lock, flags);
+    list_add_tail(&fltgrp->list, &g_psample_info.filter_group_list);
+    spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
 
-    return grp->group;
+    return 0;
+}
+
+static struct psample_group *
+psample_del_filter_group_from_list(int filter_id)
+{
+    struct list_head *list_ptr, *list_ptr2;
+    psample_filter_group_t *fltgrp;
+    struct psample_group *group = NULL;
+    unsigned long flags;
+
+    spin_lock_irqsave(&g_psample_info.fltgrp_lock, flags);
+    list_for_each_safe(list_ptr, list_ptr2, &g_psample_info.filter_group_list) {
+        fltgrp = list_entry(list_ptr, psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            list_del(&fltgrp->list);
+            group = fltgrp->group;
+            kfree(fltgrp);
+            break;
+        }
+    }
+    spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
+    return group;
+}
+
+static struct psample_group *
+psample_get_filter_group_from_list(int filter_id)
+{
+    struct list_head *list_ptr;
+    psample_filter_group_t *fltgrp;
+    unsigned long flags;
+
+    spin_lock_irqsave(&g_psample_info.fltgrp_lock, flags);
+    list_for_each(list_ptr, &g_psample_info.filter_group_list) {
+        fltgrp = list_entry(list_ptr, psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
+            return fltgrp->group;
+        }
+    }
+    spin_unlock_irqrestore(&g_psample_info.fltgrp_lock, flags);
+    return NULL;
 }
 
 static int
@@ -383,6 +438,35 @@ psample_task(struct work_struct *work)
 }
 
 static int
+psample_filter_create_cb(kcom_filter_t *kf)
+{
+    struct psample_group *group;
+
+    /* get psample group info. psample genetlink group ID passed in kf->dest_id */
+    group = psample_group_get(g_psample_info.netns, kf->dest_id);
+    if (group == NULL) {
+        return -1;
+    }
+    return psample_add_filter_group_to_list(kf->id, group);
+}
+
+static int
+psample_filter_destroy_cb(kcom_filter_t *kf)
+{
+    struct psample_group *group;
+
+    /* Ensure all packets in queue are sent. */
+    flush_work(&g_psample_work.wq);
+
+    group = psample_del_filter_group_from_list(kf->id);
+    if (group == NULL) {
+        return -1;
+    }
+    psample_group_put(group);
+    return 0;
+}
+
+static int
 psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
                   int chan, kcom_filter_t *kf)
 {
@@ -397,8 +481,8 @@ psample_filter_cb(uint8_t *pkt, int size, int dev_no, void *pkt_meta,
             __func__, size, kf->dest_id, kf->cb_user_data);
     g_psample_stats.pkts_f_psample_cb++;
 
-    /* get psample group info. psample genetlink group ID passed in kf->dest_id */
-    group = psample_group_get_from_list(kf->dest_id);
+    /* get psample group info. */
+    group = psample_get_filter_group_from_list(kf->id);
     if (!group) {
         gprintk("%s: Could not find psample genetlink group %d\n", __func__, kf->cb_user_data);
         g_psample_stats.pkts_d_no_group++;
@@ -876,7 +960,7 @@ static int
 psample_cleanup(void)
 {
     psample_pkt_t *pkt;
-    psample_group_data_t *grp;
+    psample_filter_group_t *fltgrp;
 
     cancel_work_sync(&g_psample_work.wq);
 
@@ -887,12 +971,12 @@ psample_cleanup(void)
         kfree(pkt);
     }
 
-    while (!list_empty(&g_psample_info.group_list)) {
-        grp = list_entry(g_psample_info.group_list.next,
-                         psample_group_data_t, list);
-        list_del(&grp->list);
-        psample_group_put(grp->group);
-        kfree(grp);
+    while (!list_empty(&g_psample_info.filter_group_list)) {
+        fltgrp = list_entry(g_psample_info.filter_group_list.next,
+                            psample_filter_group_t, list);
+        list_del(&fltgrp->list);
+        psample_group_put(fltgrp->group);
+        kfree(fltgrp);
     }
 
     return 0;
@@ -907,7 +991,8 @@ psample_init(void)
     memset(&g_psample_work, 0, sizeof(psample_work_t));
 
     /* setup psample_info struct */
-    INIT_LIST_HEAD(&g_psample_info.group_list);
+    INIT_LIST_HEAD(&g_psample_info.filter_group_list);
+    spin_lock_init(&g_psample_info.fltgrp_lock);
 
     /* setup psample work queue */
     spin_lock_init(&g_psample_work.lock);
@@ -930,16 +1015,23 @@ psample_init(void)
 
 int bcmgenl_psample_cleanup(void)
 {
+    bkn_filter_cb_unregister(psample_filter_cb);
     psample_cleanup();
     psample_proc_cleanup();
-    bkn_filter_cb_unregister(psample_filter_cb);
     return 0;
 }
 
 int
 bcmgenl_psample_init(char *procfs_path)
 {
-    bkn_filter_cb_register_by_name(psample_filter_cb, PSAMPLE_GENL_NAME);
+    bkn_filter_cb_attr_t fcb_attr;
+
+    memset(&fcb_attr, 0, sizeof(fcb_attr));
+    fcb_attr.name = PSAMPLE_GENL_NAME;
+    fcb_attr.create_cb = psample_filter_create_cb;
+    fcb_attr.destroy_cb = psample_filter_destroy_cb;
+
+    bkn_filter_cb_attr_register(psample_filter_cb, &fcb_attr);
     bcmgenl_netif_default_sample_set(PSAMPLE_RATE_DFLT, PSAMPLE_SIZE_DFLT);
     psample_proc_init(procfs_path);
     return psample_init();

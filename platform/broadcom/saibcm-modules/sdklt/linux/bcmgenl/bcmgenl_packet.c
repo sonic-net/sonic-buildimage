@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -809,10 +810,13 @@ int bcmgenl_packet_cleanup(void)
 
 int bcmgenl_packet_init(void)
 {
+    ngknet_filter_cb_attr_t fcb_attr;
+
     ngknet_netif_create_cb_register(bcmgenl_packet_netif_create_cb);
     ngknet_netif_destroy_cb_register(bcmgenl_packet_netif_destroy_cb);
-    ngknet_filter_cb_register_by_name
-        (bcmgenl_packet_filter_cb, BCMGENL_PACKET_NAME);
+    memset(&fcb_attr, 0, sizeof(fcb_attr));
+    fcb_attr.name = BCMGENL_PACKET_NAME;
+    ngknet_filter_cb_attr_register(bcmgenl_packet_filter_cb, &fcb_attr);
 
     genl_cb_proc_init();
     return genl_cb_init();
