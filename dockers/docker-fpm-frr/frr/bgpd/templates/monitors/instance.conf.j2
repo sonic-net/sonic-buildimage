@@ -4,6 +4,15 @@
   neighbor {{ neighbor_addr }} remote-as {{ bgp_asn }}
   neighbor {{ neighbor_addr }} peer-group BGPMON
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
+!
+{% if 'bfd' in bgp_session and bgp_session['bfd'] == 'true' %}
+{%   if 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
+  neighbor {{ neighbor_addr }} bfd {{ bgp_session['bfd_detect_multiplier'] }} {{ bgp_session['bfd_min_rx'] }} {{ bgp_session['bfd_min_tx'] }}
+{%   else %}
+  neighbor {{ neighbor_addr }} bfd
+{%   endif %}
+{% endif %}
+!
   neighbor {{ neighbor_addr }} activate
   address-family ipv6
     neighbor {{ neighbor_addr }} activate

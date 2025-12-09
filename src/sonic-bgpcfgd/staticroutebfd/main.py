@@ -98,7 +98,7 @@ def check_ip(ip):
 class StaticRouteBfd(object):
 
     SELECT_TIMEOUT = 1000
-    BFD_DEFAULT_CFG = {"multihop": "false", "rx_interval": "50", "tx_interval": "50"}
+    BFD_DEFAULT_CFG = {"multihop": "false", "rx_interval": "50", "tx_interval": "50", "multiplier": "3"}
 
     def __init__(self):
         self.local_db = defaultdict(dict)
@@ -220,18 +220,31 @@ class StaticRouteBfd(object):
     def update_bfd_pending(self, if_name):
         del_list=[]
         for k, v in self.local_db[LOCAL_BFD_PENDING_TABLE].items():
-            if len(v) == 3 and v[0] == if_name:
+            # Support both old format (3 elements) and new format (6 elements with timer params)
+            if len(v) >= 3 and v[0] == if_name:
                 intf, nh_ip, bfd_key = v[0], v[1], v[2]
+                # Extract timer parameters if available (new format)
+                bfd_multiplier_val = v[3] if len(v) > 3 else None
+                bfd_rx_interval_val = v[4] if len(v) > 4 else None
+                bfd_tx_interval_val = v[5] if len(v) > 5 else None
+
                 valid, local_addr = self.find_interface_ip(intf, nh_ip)
                 if not valid: #IP address might not be available for this type of nh_ip (IPv4 or IPv6) yet
                     continue
                 log_notice("bfd_pending: get ip for interface: %s, create bfd session for %s"%(intf, bfd_key))
                 bfd_entry_cfg = self.BFD_DEFAULT_CFG.copy()
+                # Override hardcoded defaults with values from vars.py
                 if all([bfd_rx_interval, bfd_tx_interval, bfd_multiplier, bfd_multihop]):
                     bfd_entry_cfg["multihop"] = bfd_multihop
                     bfd_entry_cfg["rx_interval"] = bfd_rx_interval
                     bfd_entry_cfg["tx_interval"] = bfd_tx_interval
                     bfd_entry_cfg["multiplier"] = bfd_multiplier
+
+                # Override with custom timer parameters from CONFIG_DB if provided
+                if bfd_multiplier_val and bfd_rx_interval_val and bfd_tx_interval_val:
+                    bfd_entry_cfg["rx_interval"] = bfd_rx_interval_val
+                    bfd_entry_cfg["tx_interval"] = bfd_tx_interval_val
+                    bfd_entry_cfg["multiplier"] = bfd_multiplier_val
 
                 bfd_entry_cfg["local_addr"] = local_addr
                 self.set_bfd_session_into_appl_db(bfd_key, bfd_entry_cfg)
@@ -351,10 +364,17 @@ class StaticRouteBfd(object):
         key = vrf + ":" + ip_prefix
         log_debug("SRT_BFD: handle_bfd_change. key %s, data %s, to_bfd_enable %s"%(key, str(data), str(to_bfd_enable)))
         if to_bfd_enable:
-            #write route with full_nh_list to appl_db, let StaticRouteMgr(appl_db) install this route to update its cache
-            data['bfd'] = "false"
-            data['expiry'] = "false"
-            self.set_static_route_into_appl_db(key, data)
+            # Filter out custom BFD timer parameters before writing the static route to APPL_DB
+            filtered_data = {}
+            for k, v in data.items():
+                if k in ["bfd_detect_multiplier", "bfd_min_rx", "bfd_min_tx"]:
+                    # Skip custom BFD timer parameters
+                    continue
+                filtered_data[k] = v
+
+            filtered_data['bfd'] = "false"
+            filtered_data['expiry'] = "false"
+            self.set_static_route_into_appl_db(key, filtered_data)
             log_debug("SRT_BFD: bfd toggle to true. write the route to appl_db, update StaticRouteMgr(appl_db), key %s"%(key))
         else:
             self.del_static_route_from_appl_db(key)
@@ -423,6 +443,12 @@ class StaticRouteBfd(object):
         bkh_list    = arg_list(data['blackhole']) if 'blackhole' in data else None
         intf_list   = arg_list(data['ifname']) if 'ifname' in data else None
         dist_list   = arg_list(data['distance']) if 'distance' in data else None
+
+        # Extract BFD custom timer parameters (per-nexthop lists)
+        bfd_multiplier_list = arg_list(data['bfd_detect_multiplier']) if 'bfd_detect_multiplier' in data else None
+        bfd_rx_interval_list = arg_list(data['bfd_min_rx']) if 'bfd_min_rx' in data else None
+        bfd_tx_interval_list = arg_list(data['bfd_min_tx']) if 'bfd_min_tx' in data else None
+
         if bkh_list is not None and 'true' in bkh_list:
             log_info("Blackholing static route encountered, skipping it")
             return True
@@ -468,6 +494,11 @@ class StaticRouteBfd(object):
             nh_vrf = nh_vrf_list[index]
             nh_key = nh_vrf + "|" + nh_ip
 
+            # Get per-nexthop BFD timer parameters if available
+            bfd_multiplier_val = bfd_multiplier_list[index] if bfd_multiplier_list and index < len(bfd_multiplier_list) else None
+            bfd_rx_interval_val = bfd_rx_interval_list[index] if bfd_rx_interval_list and index < len(bfd_rx_interval_list) else None
+            bfd_tx_interval_val = bfd_tx_interval_list[index] if bfd_tx_interval_list and index < len(bfd_tx_interval_list) else None
+
             #check if the bfd session is already created
             bfd_key = nh_vrf  + ":default:" + nh_ip
             bfd_session = self.get_local_db(LOCAL_BFD_TABLE, bfd_key)
@@ -477,18 +508,26 @@ class StaticRouteBfd(object):
             if len(self.get_local_db(LOCAL_NEXTHOP_TABLE, nh_key)) == 0 and len(bfd_session) == 0:
                 valid, local_addr = self.find_interface_ip(intf, nh_ip)
                 if not valid:
-                    #interface IP is not available yet, put this request to cache
-                    self.set_local_db(LOCAL_BFD_PENDING_TABLE, intf+"_"+bfd_key, [intf, nh_ip, bfd_key])
+                    #interface IP is not available yet, put this request to cache with timer parameters
+                    pending_entry = [intf, nh_ip, bfd_key, bfd_multiplier_val, bfd_rx_interval_val, bfd_tx_interval_val]
+                    self.set_local_db(LOCAL_BFD_PENDING_TABLE, intf+"_"+bfd_key, pending_entry)
                     self.append_to_nh_table_entry(nh_key, vrf + "|" + ip_prefix)
                     log_warn("bfd_pending: cannot find ip for interface: %s, postpone bfd session creation" %intf)
                     continue
 
                 bfd_entry_cfg = self.BFD_DEFAULT_CFG.copy()
+                # Override with values from vars.py only if all are set
                 if all([bfd_rx_interval, bfd_tx_interval, bfd_multiplier, bfd_multihop]):
                     bfd_entry_cfg["multihop"] = bfd_multihop
                     bfd_entry_cfg["rx_interval"] = bfd_rx_interval
                     bfd_entry_cfg["tx_interval"] = bfd_tx_interval
                     bfd_entry_cfg["multiplier"] = bfd_multiplier
+
+                # Override with custom timer parameters from CONFIG_DB if provided
+                if bfd_multiplier_val and bfd_rx_interval_val and bfd_tx_interval_val:
+                    bfd_entry_cfg["rx_interval"] = bfd_rx_interval_val
+                    bfd_entry_cfg["tx_interval"] = bfd_tx_interval_val
+                    bfd_entry_cfg["multiplier"] = bfd_multiplier_val
 
                 bfd_entry_cfg["local_addr"] = local_addr
                 self.set_bfd_session_into_appl_db(bfd_key, bfd_entry_cfg)
@@ -620,6 +659,8 @@ class StaticRouteBfd(object):
             if key == "bfd":
                 continue
             if key == "bfd_nh_hold":
+                continue
+            if key in ["bfd_detect_multiplier", "bfd_min_rx", "bfd_min_tx"]:
                 continue
             if key == "blackhole":
                 new_config[key] = bkh_candidate[1:]

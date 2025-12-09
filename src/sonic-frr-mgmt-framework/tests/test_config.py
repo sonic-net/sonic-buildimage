@@ -307,3 +307,50 @@ def test_bgp_neighbor_description_injection(run_cmd):
         if any('description' in arg for arg in cmd):
             assert any(injection_payload in arg for arg in cmd), \
                 "injection payload not found as literal arg: {}".format(cmd)
+
+
+# BGP neighbor BFD with custom timer parameters test data
+bgp_neighbor_bfd_timers_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  True, None, None, None, None),  # no_del=True, rest=None
+    # BGP neighbor with BFD and custom timer parameters
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.1',
+                  {'bfd': 'true', 'bfd_detect_multiplier': '5', 'bfd_min_rx': '500', 'bfd_min_tx': '500'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 bfd 5 500 500'],
+                  False,
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 bfd']),
+    # BGP neighbor with BFD but no custom timers (should use default command)
+    CmdMapTestInfo('BGP_NEIGHBOR', 'default|10.1.1.2',
+                  {'bfd': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.2 bfd']),
+]
+
+# BGP peer group BFD with custom timer parameters test data
+bgp_peer_group_bfd_timers_data = [
+    # Set up BGP globals first
+    CmdMapTestInfo('BGP_GLOBALS', 'default',
+                  {'local_asn': '100'},
+                  conf_bgp_dft_cmd('default', 100),
+                  True, None, None, None, None),  # no_del=True, rest=None
+    # BGP peer group with BFD and custom timer parameters
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|TEST_PG',
+                  {'bfd': 'true', 'bfd_detect_multiplier': '10', 'bfd_min_rx': '1000', 'bfd_min_tx': '1000'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor TEST_PG bfd 10 1000 1000'],
+                  False,
+                  conf_bgp_cmd('default', 100) + ['{}neighbor TEST_PG bfd']),
+    # BGP peer group with BFD but no custom timers
+    CmdMapTestInfo('BGP_PEER_GROUP', 'default|TEST_PG2',
+                  {'bfd': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor TEST_PG2 bfd']),
+]
+
+def test_bgp_neighbor_bfd_custom_timers():
+    """Test BGP neighbor with BFD custom timer parameters (SET and DELETE)"""
+    data_set_del_test(bgp_neighbor_bfd_timers_data)
+
+def test_bgp_peer_group_bfd_custom_timers():
+    """Test BGP peer group with BFD custom timer parameters (SET and DELETE)"""
+    data_set_del_test(bgp_peer_group_bfd_timers_data)
