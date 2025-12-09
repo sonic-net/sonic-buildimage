@@ -7,7 +7,8 @@
  *
  * Edits to this file will be lost when it is regenerated.
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -44,16 +45,22 @@
 #include "../../entry/generated/bcm78900_b0/bcm78900_b0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm78905_a0/bcm78905_a0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm78907_a0/bcm78907_a0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78910_a0/bcm78910_a0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78914_b0/bcm78914_b0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78914_b1/bcm78914_b1_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78920_a0/bcm78920_a0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56690_a0/cna_6_5_34_2_0/bcm56690_a0_cna_6_5_34_2_0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm56690_a0/dna_6_5_32_5_0/bcm56690_a0_dna_6_5_32_5_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56780_a0/cna_6_5_32_3_0/bcm56780_a0_cna_6_5_32_3_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56780_a0/cna_6_5_34_2_0/bcm56780_a0_cna_6_5_34_2_0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm56780_a0/dna_6_5_31_7_0/bcm56780_a0_dna_6_5_31_7_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56780_a0/hna_6_5_32_2_0/bcm56780_a0_hna_6_5_32_2_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56780_a0/hna_6_5_34_2_0/bcm56780_a0_hna_6_5_34_2_0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm56880_a0/dna_6_5_31_6_0/bcm56880_a0_dna_6_5_31_6_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56880_a0/hna_6_5_32_2_0/bcm56880_a0_hna_6_5_32_2_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56880_a0/nfa_6_5_32_1_0/bcm56880_a0_nfa_6_5_32_1_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56890_a0/cna_6_5_32_3_0/bcm56890_a0_cna_6_5_32_3_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm56890_a0/dna_6_5_32_4_0/bcm56890_a0_dna_6_5_32_4_0_ltd_variant_entry.h"
-#include "../../entry/generated/bcm78800_a0/cna_6_5_32_3_0/bcm78800_a0_cna_6_5_32_3_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56880_a0/hna_6_5_34_2_0/bcm56880_a0_hna_6_5_34_2_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56880_a0/nfa_6_5_34_3_0/bcm56880_a0_nfa_6_5_34_3_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56890_a0/cna_6_5_34_2_0/bcm56890_a0_cna_6_5_34_2_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm56890_a0/dna_6_5_34_8_0/bcm56890_a0_dna_6_5_34_8_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78800_a0/cna_6_5_34_2_0/bcm78800_a0_cna_6_5_34_2_0_ltd_variant_entry.h"
 #include "../../entry/generated/bcm78800_a0/dna_6_5_32_3_0/bcm78800_a0_dna_6_5_32_3_0_ltd_variant_entry.h"
+#include "../../entry/generated/bcm78920_a0/vna_4_6_1_0/bcm78920_a0_vna_4_6_1_0_ltd_variant_entry.h"
 /*-replace*/
 #endif /* DOXYGEN_IGNORE_AUTOGEN */

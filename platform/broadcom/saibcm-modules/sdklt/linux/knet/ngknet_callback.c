@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -279,16 +280,22 @@ ngknet_netif_destroy_cb_unregister(ngknet_netif_cb_f netif_cb)
 int
 ngknet_filter_cb_register(ngknet_filter_cb_f filter_cb)
 {
-    if (callback_ctrl.filter_cb != NULL) {
-        return -1;
-    }
-    callback_ctrl.filter_cb = filter_cb;
-
-    return 0;
+    return ngknet_filter_cb_attr_register(filter_cb, NULL);
 }
 
 int
-ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc)
+ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb,
+                                  const char *desc)
+{
+    ngknet_filter_cb_attr_t filter_cb_attr;
+
+    memset(&filter_cb_attr, 0, sizeof(filter_cb_attr));
+    filter_cb_attr.name = desc;
+    return ngknet_filter_cb_attr_register(filter_cb, &filter_cb_attr);
+}
+
+int ngknet_filter_cb_attr_register(ngknet_filter_cb_f filter_cb,
+                                   ngknet_filter_cb_attr_t *filter_cb_attr)
 {
     struct ngknet_dev *dev;
     struct list_head *list;
@@ -296,10 +303,17 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
     filter_cb_t *fcb;
     unsigned long flags;
     int idx;
+    const char *desc;
 
-    if (filter_cb == NULL || desc == NULL) {
-        return -1;
+    if (filter_cb_attr == NULL || filter_cb_attr->name == NULL) {
+        if (callback_ctrl.filter_cb != NULL) {
+            return -1;
+        }
+        callback_ctrl.filter_cb = filter_cb;
+        return 0;
     }
+
+    desc = filter_cb_attr->name;
     if (desc[0] == '\0' || strlen(desc) >= NGKNET_FILTER_DESC_MAX) {
         return -1;
     }
@@ -315,7 +329,9 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
         return -1;
     }
     fcb->cb = filter_cb;
-    strlcpy(fcb->desc, desc, sizeof(fcb->desc));
+    fcb->create_cb = filter_cb_attr->create_cb;
+    fcb->destroy_cb = filter_cb_attr->destroy_cb;
+    strscpy(fcb->desc, desc, sizeof(fcb->desc));
     list_add_tail(&fcb->list, &callback_ctrl.filter_cb_list);
 
     /* Check if any existing filter matches the registered name */
@@ -332,7 +348,9 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
                 fc->filt.dest_type == NGKNET_FILTER_DEST_T_CB &&
                 fc->filt.desc[0] != '\0') {
                 if (strcmp(fc->filt.desc, desc) == 0) {
-                    fc->filter_cb = filter_cb;
+                    fc->filter_cb = fcb->cb;
+                    fc->create_cb = fcb->create_cb;
+                    fc->destroy_cb = fcb->destroy_cb;
                 }
             }
         }
@@ -382,6 +400,8 @@ ngknet_filter_cb_unregister(ngknet_filter_cb_f filter_cb)
                     fc->filt.dest_type == NGKNET_FILTER_DEST_T_CB &&
                     fc->filter_cb == filter_cb) {
                     fc->filter_cb = NULL;
+                    fc->create_cb = NULL;
+                    fc->destroy_cb = NULL;
                 }
             }
             spin_unlock_irqrestore(&dev->lock, flags);
@@ -593,6 +613,7 @@ EXPORT_SYMBOL(ngknet_netif_destroy_cb_register);
 EXPORT_SYMBOL(ngknet_netif_destroy_cb_unregister);
 EXPORT_SYMBOL(ngknet_filter_cb_register);
 EXPORT_SYMBOL(ngknet_filter_cb_register_by_name);
+EXPORT_SYMBOL(ngknet_filter_cb_attr_register);
 EXPORT_SYMBOL(ngknet_filter_cb_unregister);
 EXPORT_SYMBOL(ngknet_ptp_rx_config_set_cb_register);
 EXPORT_SYMBOL(ngknet_ptp_rx_config_set_cb_unregister);

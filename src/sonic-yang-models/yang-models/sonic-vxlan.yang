@@ -59,6 +59,13 @@ module sonic-vxlan {
                 leaf dst_ip {
                     type inet:ip-address;
                 }
+
+                leaf ttl_mode {
+                    description "Decap TTL mode";
+                    type string {
+                        pattern "uniform|pipe";
+                    }
+                }
             }
         }
 
