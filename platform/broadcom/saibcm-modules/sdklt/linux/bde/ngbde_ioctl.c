@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -58,6 +59,18 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         if (!swdev) {
             ioc.rc = NGBDE_IOC_FAIL;
             break;
+        }
+        ioc.op.dev_info.device_type = 0;
+        ioc.op.dev_info.bus_type = NGBDE_DEV_BT_AXI;
+        if (swdev->pci_dev) {
+            ioc.op.dev_info.bus_type = NGBDE_DEV_BT_PCI;
+        }
+        ioc.op.dev_info.flags = 0;
+        if (swdev->use_msi) {
+            ioc.op.dev_info.flags |= NGBDE_DEV_F_MSI;
+        }
+        if (swdev->inactive) {
+            ioc.op.dev_info.flags |= NGBDE_DEV_F_INACTIVE;
         }
         ioc.op.dev_info.vendor_id = swdev->vendor_id;
         ioc.op.dev_info.device_id = swdev->device_id;
@@ -257,6 +270,17 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         if (ngbde_paxb_map(swdev, addr, size) == NULL) {
             ioc.rc = NGBDE_IOC_FAIL;
         }
+        break;
+    case NGBDE_IOC_SLOT_INFO:
+        swdev = ngbde_swdev_get(ioc.devid);
+        if (!swdev) {
+            ioc.rc = NGBDE_IOC_FAIL;
+            break;
+        }
+        ioc.op.slot_info.domain_no = swdev->domain_no;
+        ioc.op.slot_info.bus_no = swdev->bus_no;
+        ioc.op.slot_info.slot_no = swdev->slot_no;
+        ioc.op.slot_info.func_no = 0; /* unused */
         break;
     default:
         printk(KERN_ERR "ngbde: invalid ioctl (%08x)\n", cmd);
