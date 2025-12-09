@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -169,8 +170,17 @@ bcn_rx_poll(struct pdma_rx_queue *rxq, int budget)
 {
     struct dev_ctrl *ctrl = rxq->ctrl;
     struct pdma_hw *hw = (struct pdma_hw *)ctrl->hw;
+    int rv;
 
-    return hw->dops.rx_ring_clean(hw, rxq, budget);
+    if (at_test_set_bit(rxq->queue_id, &ctrl->bm_rxq_busy, ctrl->lock)) {
+        return 0;
+    }
+
+    rv = hw->dops.rx_ring_clean(hw, rxq, budget);
+
+    at_clear_bit(rxq->queue_id, &ctrl->bm_rxq_busy, ctrl->lock);
+
+    return rv;
 }
 
 /*!
@@ -181,8 +191,17 @@ bcn_tx_poll(struct pdma_tx_queue *txq, int budget)
 {
     struct dev_ctrl *ctrl = txq->ctrl;
     struct pdma_hw *hw = (struct pdma_hw *)ctrl->hw;
+    int rv;
 
-    return hw->dops.tx_ring_clean(hw, txq, budget);
+    if (at_test_set_bit(txq->queue_id, &ctrl->bm_txq_busy, ctrl->lock)) {
+        return 0;
+    }
+
+    rv = hw->dops.tx_ring_clean(hw, txq, budget);
+
+    at_clear_bit(txq->queue_id, &ctrl->bm_txq_busy, ctrl->lock);
+
+    return rv;
 }
 
 /*!

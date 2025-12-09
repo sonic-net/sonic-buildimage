@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 HWSKU_DIR=/usr/share/sonic/hwsku
+PLATFORM_ENV_CONF=/usr/share/sonic/platform/platform_env.conf
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -23,17 +24,19 @@ if [[ x"${LOCALHOST_SWITCHTYPE}" == x"chassis-packet" ]]; then
     # Set orchagent pop batch size to 128 for faster link notification handling 
     # during route-churn
     ORCHAGENT_ARGS+="-b 128 "
+elif [[ x"$LOCALHOST_SWITCHTYPE" == x"dpu" ]]; then
+    # To handle high volume of objects in DPU
+    ORCHAGENT_ARGS+="-b 65536 "
 else
     # Set orchagent pop batch size to 1024
     ORCHAGENT_ARGS+="-b 1024 "
 fi
 
-# Set zmq mode by default for smartswitch DPU
+# Set zmq mode by default for smartswitch DPU and increase the max bulk limit
 # Otherwise, set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-SWITCH_TYPE=$(echo $SWSS_VARS | jq -r '.switch_type')
-if [ "$SWITCH_TYPE" == "dpu" ]; then
-    ORCHAGENT_ARGS+="-z zmq_sync "
+if [ "$LOCALHOST_SWITCHTYPE" == "dpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync -k 65536 "
 elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
@@ -128,6 +131,16 @@ fi
 HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
 if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
+# Enable SAI MACSec POST when:
+# - FIPS is enabled in SONiC (either in /proc/cmdline or /etc/fips/fips_enable); AND
+# - MACSec is enabled on platform.
+if grep -q "sonic_fips=1" /proc/cmdline || grep -q "1" /etc/fips/fips_enable ; then
+    [ -f $PLATFORM_ENV_CONF ] && . $PLATFORM_ENV_CONF
+    if [[ $macsec_enabled -eq 1 ]]; then
+        ORCHAGENT_ARGS+=" -M"
+    fi
 fi
 
 # Mask SIGHUP signal to avoid orchagent termination by logrotate before orchagent registers its handler.

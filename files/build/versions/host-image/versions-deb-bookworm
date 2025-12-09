@@ -7,7 +7,7 @@ auditd==1:3.0.9-1
 bash==5.1-2
 bash-completion==1:2.11-6
 bash-tacplus==1.0.0
-bfscripts==4.11.0-13611
+bfscripts==4.12.0-13720
 binutils==2.40-2
 binutils-aarch64-linux-gnu==2.40-2
 binutils-common==2.40-2
@@ -269,8 +269,8 @@ libxentoolcore1==4.17.5+23-ga4e5191dc0-1+deb12u1
 libxentoollog1==4.17.5+23-ga4e5191dc0-1+deb12u1
 libxml2==2.9.14+dfsg-1.3~deb12u4
 libxml2-dev==2.9.14+dfsg-1.3~deb12u4
-libxslt1-dev==1.1.35-1+deb12u2
-libxslt1.1==1.1.35-1+deb12u2
+libxslt1-dev==1.1.35-1+deb12u3
+libxslt1.1==1.1.35-1+deb12u3
 libxtables12==1.8.9-2
 libyajl2==2.1.0-3+deb12u2
 libyaml-0-2==0.2.5-1
@@ -280,8 +280,8 @@ libzmq5==4.3.4-6
 linux-base==4.9
 linux-image-6.1.0-29-2-amd64-unsigned==6.1.123-1
 linux-image-6.1.0-29-2-arm64-unsigned==6.1.123-1
-linux-libc-dev==6.1.148-1
-linux-perf==6.1.148-1
+linux-libc-dev==6.1.153-1
+linux-perf==6.1.153-1
 locales==2.36-9+deb12u13
 logrotate==3.21.0-1
 lsof==4.95.0-1
@@ -297,7 +297,7 @@ mlnx-ofed-kernel-modules-6.1.0-29-2-arm64==25.07.OFED.25.07.0.9.0.1
 mlnx-ofed-kernel-utils==25.07.OFED.25.07.0.9.0.1-1
 mlnx-tools==25.07-0.2507090
 mlxbf-bootctl==2.1
-mlxbf-bootimages==4.11.0-13611
+mlxbf-bootimages==4.12.0-13720
 mokutil==0.6.0-2
 monit==1:5.20.0-6
 mtd-utils==1:2.1.5-1
@@ -374,7 +374,7 @@ sqlite3==3.40.1-2+deb12u2
 squashfs-tools==1:4.5.1-1
 ssh==1:9.2p1-2+deb12u5+fips
 sudo==1.9.13p3-1+deb12u2
-sx-kernel==1.mlnx.4.8.1036
+sx-kernel==1.mlnx.4.8.1086
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-4
 syslog-counter==1.0.0

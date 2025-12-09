@@ -28,7 +28,7 @@
                 ]
             },
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 10,
                         "value": "bHVtb3M="
@@ -422,7 +422,7 @@
     "NTP_KEY_VALID": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 20,
                         "type": "md5",
@@ -448,7 +448,7 @@
     "NTP_KEY_ID_INVALID": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 100000
                     }
@@ -459,7 +459,7 @@
     "NTP_KEY_TRUSTED_INVALID": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 20,
                         "trusted": "nope"
@@ -471,7 +471,7 @@
     "NTP_KEY_TYPE_INVALID": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 20,
                         "type": "md6"
@@ -483,7 +483,7 @@
     "NTP_KEY_VALUE_INVALID": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP_KEY": {
-                "NTP_KEYS_LIST": [
+                "NTP_KEY_LIST": [
                     {
                         "id": 20,
                         "value": ""

@@ -63,7 +63,8 @@ expected_kea_config = {
                     },
                     {
                         "name": "dhcp-server-identifier",
-                        "data": "169.254.200.254"
+                        "data": "169.254.200.254",
+                        "always-send": True
                     }
                 ],
                 "valid-lifetime": 900,
@@ -152,6 +153,8 @@ def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_
                                                   kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
         kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table = \
             dhcp_cfg_generator.generate()
+        print(json.loads(kea_dhcp4_config))
+        print(expected_kea_config)
         assert json.loads(kea_dhcp4_config) == expected_kea_config
         assert used_ranges == set()
         assert enabled_dhcp_interfaces == set(["bridge-midplane"])

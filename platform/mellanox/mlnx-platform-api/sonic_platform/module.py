@@ -262,6 +262,8 @@ class DpuModule(ModuleBase):
         self.dpu_id = dpu_id
         self._name = f"DPU{self.dpu_id}"
         self.dpuctl_obj = DpuCtlPlat(self._name.lower())
+        self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
@@ -334,13 +336,11 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
-        # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
-        if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
-            return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
-        elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
-            # Do not wait for result if we are rebooting NPU + DPUs
-            return self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
-        raise RuntimeError(f"Invalid Reboot Type provided for {self._name}: {reboot_type}")
+        logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
+        # no_wait=True is not supported at this point, because of race conditions with other drivers
+        return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
 
     def set_admin_state(self, up):
         """
@@ -357,12 +357,16 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Setting the admin state for {self._name} to {up}")
         if up:
             if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
+                logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        return_value = self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+        return return_value
 
     def get_type(self):
         """
