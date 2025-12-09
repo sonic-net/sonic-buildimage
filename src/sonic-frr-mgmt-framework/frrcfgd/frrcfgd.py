@@ -1503,6 +1503,44 @@ def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
 
     return cmd_list
 
+def hdl_bfd_timers(daemon, cmd_str, op, st_idx, args, data):
+    """
+    Handler for BGP neighbor/peer-group BFD with optional custom timer parameters.
+    Generates 'neighbor X bfd' if no timers are present, or
+    'neighbor X bfd <multiplier> <rx> <tx>' if all three timer parameters are present.
+    """
+    if op == CachedDataWithOp.OP_DELETE:
+        # For delete, just use 'no neighbor X bfd'
+        cmd_args = [CommandArgument(daemon, False, args[0]), CommandArgument(daemon, False, 'bfd')]
+        simple_cmd = '{no:no-prefix}neighbor {} {}'
+        return [simple_cmd.format(*cmd_args, no=CommandArgument(daemon, False))]
+
+    # Check if BFD is enabled
+    if args[st_idx] != 'true':
+        return None
+
+    # Check if all three timer parameters are present and non-empty
+    if (len(args) > st_idx + 3 and
+        args[st_idx + 1] and args[st_idx + 2] and args[st_idx + 3]):
+        # All timer parameters present - include them in the command
+        cmd_args = [
+            CommandArgument(daemon, True, args[0]),  # neighbor IP/name
+            CommandArgument(daemon, True, 'bfd'),
+            CommandArgument(daemon, True, args[st_idx + 1]),  # multiplier
+            CommandArgument(daemon, True, args[st_idx + 2]),  # rx_interval
+            CommandArgument(daemon, True, args[st_idx + 3])   # tx_interval
+        ]
+        full_cmd = '{no:no-prefix}neighbor {} {} {} {} {}'
+        return [full_cmd.format(*cmd_args, no=CommandArgument(daemon, True))]
+    else:
+        # No timer parameters - just use 'neighbor X bfd'
+        cmd_args = [
+            CommandArgument(daemon, True, args[0]),  # neighbor IP/name
+            CommandArgument(daemon, True, 'bfd')
+        ]
+        simple_cmd = '{no:no-prefix}neighbor {} {}'
+        return [simple_cmd.format(*cmd_args, no=CommandArgument(daemon, True))]
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -1880,7 +1918,7 @@ class BGPConfigDaemon:
                    ('enforce_first_as',                     '{no:no-prefix}neighbor {} enforce-first-as', ['true', 'false']),
                    ('solo_peer',                            '{no:no-prefix}neighbor {} solo', ['true', 'false']),
                    ('ttl_security_hops',                    '{no:no-prefix}neighbor {} ttl-security hops {}'),
-                   ('bfd',                                  '{no:no-prefix}neighbor {} bfd', ['true', 'false']),
+                   (['bfd', '+bfd_detect_multiplier', '+bfd_min_rx', '+bfd_min_tx'], '{no:no-prefix}neighbor {} bfd {} {} {}', hdl_bfd_timers),
                    ('bfd_check_ctrl_plane_failure',         '{no:no-prefix}neighbor {} bfd check-control-plane-failure', ['true', 'false']),
                    ('capability_dynamic',                   '{no:no-prefix}neighbor {} capability dynamic', ['true', 'false']),
                    ('dont_negotiate_capability',            '{no:no-prefix}neighbor {} dont-capability-negotiate', ['true', 'false']),

@@ -10,6 +10,14 @@
   bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
 {% endfor %}
 !
+{% if 'bfd' in bgp_session and bgp_session['bfd'] == 'true' %}
+{%   if 'bfd_detect_multiplier' in bgp_session and 'bfd_min_rx' in bgp_session and 'bfd_min_tx' in bgp_session %}
+  neighbor {{ bgp_session['name'] }} bfd {{ bgp_session['bfd_detect_multiplier'] }} {{ bgp_session['bfd_min_rx'] }} {{ bgp_session['bfd_min_tx'] }}
+{%   else %}
+  neighbor {{ bgp_session['name'] }} bfd
+{%   endif %}
+{% endif %}
+!
   address-family ipv4
     neighbor {{ bgp_session['name'] }} activate
     neighbor {{ bgp_session['name'] }} addpath-tx-all-paths

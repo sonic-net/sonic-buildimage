@@ -49,6 +49,11 @@ module sonic-bgp-common {
     description
         "SONIC BGP common YANG attributes for Neighbors and Peer group";
 
+    revision 2025-12-09 {
+        description
+            "Add BFD custom timer parameters: bfd_detect_multiplier, bfd_min_rx, bfd_min_tx";
+    }
+
     revision 2021-02-26 {
         description
             "Initial revision.";
@@ -272,6 +277,27 @@ module sonic-bgp-common {
         leaf bfd {
             type boolean;
             description "Enable Bidirectional Forwarding Detection (BFD) for rapid link failure detection on this peer.";
+        }
+
+        leaf bfd_detect_multiplier {
+            type uint8 {
+                range 2..255;
+            }
+            description "BFD detection multiplier";
+        }
+
+        leaf bfd_min_rx {
+            type uint32 {
+                range 50..60000;
+            }
+            description "BFD minimum receive interval in milliseconds";
+        }
+
+        leaf bfd_min_tx {
+            type uint32 {
+                range 50..60000;
+            }
+            description "BFD minimum transmit interval in milliseconds";
         }
 
         leaf bfd_check_ctrl_plane_failure {

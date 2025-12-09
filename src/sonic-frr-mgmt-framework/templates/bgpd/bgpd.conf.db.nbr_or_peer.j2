@@ -38,7 +38,11 @@
 {% endif %}
 {% endif %}
 {% if 'bfd' in nbr_or_peer and nbr_or_peer['bfd'] == 'true' %}
+{% if 'bfd_detect_multiplier' in nbr_or_peer and 'bfd_min_rx' in nbr_or_peer and 'bfd_min_tx' in nbr_or_peer %}
+ neighbor {{name_or_ip}} bfd {{nbr_or_peer['bfd_detect_multiplier']}} {{nbr_or_peer['bfd_min_rx']}} {{nbr_or_peer['bfd_min_tx']}}
+{% else %}
  neighbor {{name_or_ip}} bfd
+{% endif %}
 {% endif %}
 {% if 'ttl_security_hops' in nbr_or_peer %}
  neighbor {{name_or_ip}} ttl-security hops {{nbr_or_peer['ttl_security_hops']}}
