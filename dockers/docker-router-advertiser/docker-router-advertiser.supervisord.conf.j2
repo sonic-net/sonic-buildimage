@@ -44,7 +44,7 @@ dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 
 {# Router advertiser should only run on ToR (T0) devices which have #}
-{# at least one VLAN interface which has an IPv6 address asigned #}
+{# at least one VLAN interface which has an IPv6 address assigned #}
 {# But not for specific deployment_id #}
 {%- set vlan_v6 = namespace(count=0) -%}
 {%- if DEVICE_METADATA.localhost.type -%}
