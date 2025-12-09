@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -50,7 +51,7 @@ static int debug;
 #define FCS_SZ 4
 
 #define PSAMPLE_PKT_HANDLED (1)
-/* These below need to match incoming enum values */
+
 #define PSAMPLE_FILTER_TAG_STRIP 0
 #define PSAMPLE_FILTER_TAG_KEEP  1
 #define PSAMPLE_FILTER_TAG_ORIGINAL 2
@@ -67,7 +68,15 @@ static int bcmgenl_psample_qlen = BCMGENL_PSAMPLE_QLEN_DFLT;
 MODULE_PARAM(bcmgenl_psample_qlen, int, 0);
 MODULE_PARM_DESC(bcmgenl_psample_qlen, "psample queue length (default 1024 buffers)");
 
+#ifndef BCMGENL_PSAMPLE_METADATA
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0))
+#define BCMGENL_PSAMPLE_METADATA 1
+#else
+#define BCMGENL_PSAMPLE_METADATA 0
+#endif
+#endif
+
+#if BCMGENL_PSAMPLE_METADATA
 static inline void
 bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
                       u32 trunc_size, int in_ifindex, int out_ifindex,
@@ -82,7 +91,7 @@ bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
 }
 #else
 #define bcmgenl_sample_packet psample_sample_packet
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) */
+#endif /* BCMGENL_PSAMPLE_METADATA */
 
 static bcmgenl_info_t g_bcmgenl_psample_info = {{0}};
 
@@ -135,6 +144,18 @@ typedef struct bcmgenl_psample_work_s {
 } bcmgenl_psample_work_t;
 static bcmgenl_psample_work_t g_bcmgenl_psample_work = {{0}};
 
+typedef struct bcmgenl_psample_filter_group_s {
+    struct list_head list;
+    int filter_id;
+    struct psample_group *group;
+} bcmgenl_psample_filter_group_t;
+
+typedef struct bcmgenl_psample_filter_group_data_s {
+    struct list_head list;
+    spinlock_t lock;
+} bcmgenl_psample_filter_group_data_t;
+static bcmgenl_psample_filter_group_data_t g_bcmgenl_psample_fltgrp_data;
+
 /* driver proc entry root */
 static struct proc_dir_entry *psample_proc_root = NULL;
 
@@ -178,6 +199,78 @@ psample_netif_lookup_by_port(int port)
     }
     spin_unlock_irqrestore(&g_bcmgenl_psample_info.lock, flags);
     return (NULL);
+}
+
+static int
+psample_add_filter_group_to_list(int filter_id, struct psample_group *group)
+{
+    struct list_head *list_ptr;
+    bcmgenl_psample_filter_group_t *fltgrp;
+    unsigned long flags;
+
+    /* Sanity check */
+    spin_lock_irqsave(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    list_for_each(list_ptr, &g_bcmgenl_psample_fltgrp_data.list) {
+        fltgrp = list_entry(list_ptr, bcmgenl_psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+            return -1;
+        }
+    }
+    spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+
+    if ((fltgrp = kmalloc(sizeof(*fltgrp), GFP_ATOMIC)) == NULL) {
+        return -1;
+    }
+    memset(fltgrp, 0, sizeof(*fltgrp));
+    fltgrp->filter_id = filter_id;
+    fltgrp->group = group;
+    spin_lock_irqsave(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    list_add_tail(&fltgrp->list, &g_bcmgenl_psample_fltgrp_data.list);
+    spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+
+    return 0;
+}
+
+static struct psample_group *
+psample_del_filter_group_from_list(int filter_id)
+{
+    struct list_head *list_ptr, *list_ptr2;
+    bcmgenl_psample_filter_group_t *fltgrp;
+    struct psample_group *group = NULL;
+    unsigned long flags;
+
+    spin_lock_irqsave(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    list_for_each_safe(list_ptr, list_ptr2, &g_bcmgenl_psample_fltgrp_data.list) {
+        fltgrp = list_entry(list_ptr, bcmgenl_psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            list_del(&fltgrp->list);
+            group = fltgrp->group;
+            kfree(fltgrp);
+            break;
+        }
+    }
+    spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    return group;
+}
+
+static struct psample_group *
+psample_get_filter_group_from_list(int filter_id)
+{
+    struct list_head *list_ptr;
+    bcmgenl_psample_filter_group_t *fltgrp;
+    unsigned long flags;
+
+    spin_lock_irqsave(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    list_for_each(list_ptr, &g_bcmgenl_psample_fltgrp_data.list) {
+        fltgrp = list_entry(list_ptr, bcmgenl_psample_filter_group_t, list);
+        if (fltgrp->filter_id == filter_id) {
+            spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+            return fltgrp->group;
+        }
+    }
+    spin_unlock_irqrestore(&g_bcmgenl_psample_fltgrp_data.lock, flags);
+    return NULL;
 }
 
 static int
@@ -244,7 +337,9 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
         ("Sample type %s",
          (bcmgenl_pkt->meta.sample_type == SAMPLE_TYPE_NONE ? "Not sampled" :
           bcmgenl_pkt->meta.sample_type == SAMPLE_TYPE_INGRESS ?
-          "Ingress sampled" : "Egress sampled"));
+          "Ingress sampled" :
+          bcmgenl_pkt->meta.sample_type == SAMPLE_TYPE_EGRESS ?
+          "Egress sampled" : "Ingress or egress sampled"));
     GENL_DBG_VERB
         ("%s: srcport %d, dstport %d, src_ifindex %d, dst_ifindex %d\n",
          __func__, srcport, dstport, src_ifindex, dst_ifindex);
@@ -256,6 +351,35 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
     sflow_meta->sample_rate = sample_rate;
     sflow_meta->sample_type = bcmgenl_pkt->meta.sample_type;
     return (0);
+}
+
+static int
+bcmgenl_psample_filter_create_cb(ngknet_filter_t *filt)
+{
+    struct psample_group *group;
+
+    /* get psample group info. psample genetlink group ID passed in match_filt->dest_id */
+    group = psample_group_get(g_bcmgenl_psample_info.netns, filt->dest_id);
+    if (group == NULL) {
+        return -1;
+    }
+    return psample_add_filter_group_to_list(filt->id, group);
+}
+
+static int
+bcmgenl_psample_filter_destroy_cb(ngknet_filter_t *filt)
+{
+    struct psample_group *group;
+
+    /* Ensure all packets in queue are sent. */
+    flush_work(&g_bcmgenl_psample_work.wq);
+
+    group = psample_del_filter_group_from_list(filt->id);
+    if (group == NULL) {
+        return -1;
+    }
+    psample_group_put(group);
+    return 0;
 }
 
 static struct sk_buff *
@@ -315,7 +439,7 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
     /* get psample group info. psample genetlink group ID passed in match_filt->dest_id */
-    group = psample_group_get(g_bcmgenl_psample_info.netns, match_filt->dest_id);
+    group = psample_get_filter_group_from_list(match_filt->id);
     if (!group) {
         printk("%s: Could not find psample genetlink group %d\n", __func__, match_filt->dest_id);
         g_bcmgenl_psample_stats.pkts_d_no_group++;
@@ -1043,6 +1167,7 @@ static int
 psample_cb_cleanup(void)
 {
     psample_pkt_t *pkt;
+    bcmgenl_psample_filter_group_t *fltgrp;
 
     cancel_work_sync(&g_bcmgenl_psample_work.wq);
 
@@ -1052,6 +1177,14 @@ psample_cb_cleanup(void)
         list_del(&pkt->list);
         dev_kfree_skb_any(pkt->skb);
         kfree(pkt);
+    }
+
+    while (!list_empty(&g_bcmgenl_psample_fltgrp_data.list)) {
+        fltgrp = list_entry(g_bcmgenl_psample_fltgrp_data.list.next,
+                            bcmgenl_psample_filter_group_t, list);
+        list_del(&fltgrp->list);
+        psample_group_put(fltgrp->group);
+        kfree(fltgrp);
     }
 
     return 0;
@@ -1073,6 +1206,10 @@ psample_cb_init(void)
     spin_lock_init(&g_bcmgenl_psample_work.lock);
     INIT_LIST_HEAD(&g_bcmgenl_psample_work.pkt_list);
     INIT_WORK(&g_bcmgenl_psample_work.wq, bcmgenl_psample_task);
+
+    /* setup psample filter group */
+    INIT_LIST_HEAD(&g_bcmgenl_psample_fltgrp_data.list);
+    spin_lock_init(&g_bcmgenl_psample_fltgrp_data.lock);
 
     /* get net namespace */
     g_bcmgenl_psample_info.netns = get_net_ns_by_pid(current->pid);
@@ -1100,10 +1237,15 @@ int bcmgenl_psample_cleanup(void)
 
 int bcmgenl_psample_init(void)
 {
+    ngknet_filter_cb_attr_t fcb_attr;
+
     ngknet_netif_create_cb_register(bcmgenl_psample_netif_create_cb);
     ngknet_netif_destroy_cb_register(bcmgenl_psample_netif_destroy_cb);
-    ngknet_filter_cb_register_by_name
-        (bcmgenl_psample_filter_cb, BCMGENL_PSAMPLE_NAME);
+    memset(&fcb_attr, 0, sizeof(fcb_attr));
+    fcb_attr.name = BCMGENL_PSAMPLE_NAME;
+    fcb_attr.create_cb = bcmgenl_psample_filter_create_cb;
+    fcb_attr.destroy_cb = bcmgenl_psample_filter_destroy_cb;
+    ngknet_filter_cb_attr_register(bcmgenl_psample_filter_cb, &fcb_attr);
     psample_cb_proc_init();
     return psample_cb_init();
 }
