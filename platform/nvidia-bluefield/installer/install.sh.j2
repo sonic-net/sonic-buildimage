@@ -102,6 +102,10 @@ fi
 if [ -n "$NPU_TIME" ]; then
 	log "Setting system time from NPU: $NPU_TIME"
 	date -s "@$NPU_TIME"
+	log "System time set to: $(date)"
+	if [ -e /dev/rtc0 ]; then
+		hwclock --systohc --utc
+		log "Hardware clock synced from system time"
 fi
 
 # Flags that can be overwritten by the bf.cfg
