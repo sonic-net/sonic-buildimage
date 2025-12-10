@@ -4,7 +4,7 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -129,7 +129,7 @@ static const struct {
 /*
   Change this structure to reflect the match_ids of interest.
   This is an example of how it can be used.
-*/
+ */
 typedef struct cb_match_id_s {
     int egress_pkt_fwd_l2_hdr_etag;
     int egress_pkt_fwd_l2_hdr_l2;
@@ -282,7 +282,7 @@ get_tag_status(uint32_t dev_type, uint32_t variant, void *rxpmd)
         /* Trident4 family. */
         uint32_t match_id_data[2];
         bool itag = false, otag = false;
-        
+
         bcmpkt_rxpmd_field_get(dev_type, rxpmd, BCMPKT_RXPMD_MATCH_ID_LO,
                                &match_id_data[0]);
         bcmpkt_rxpmd_field_get(dev_type, rxpmd, BCMPKT_RXPMD_MATCH_ID_HI,
@@ -372,7 +372,7 @@ dump_buffer(uint8_t * data, int size)
             buffer_ptr = buffer;
             printk(KERN_INFO "%04X  %s\n", addr, buffer);
             addr = i + 1;
-    }
+        }
     }
 }
 
@@ -404,7 +404,7 @@ strip_tag_rx_cb(struct sk_buff *skb)
     uint32_t dev_type = 0;
     bcmlrd_variant_t var_type;
     uint32_t *rxpmd = NULL;
-   
+
     unit = cbd->dinfo->dev_no;
     rxpmd = (uint32_t *)cbd->pmd;
     rcpu_mode = (cbd->netif->flags & NGKNET_NETIF_F_RCPU_ENCAP)? 1 : 0;
@@ -594,7 +594,7 @@ static struct proc_ops ngknetcb_proc_ops = {
 #ifdef KPMD
 /*
   Initialize the desired match_ids for use later in the code.
-*/
+ */
 static void
 init_match_ids(int unit)
 {
