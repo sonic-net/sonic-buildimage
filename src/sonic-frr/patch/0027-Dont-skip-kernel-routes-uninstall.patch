@@ -1,8 +1,8 @@
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index 699156c4c..1a19bd62c 100644
+index da49dc7e2..edc348d21 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
-@@ -1433,7 +1433,7 @@ static void rib_process(struct route_node *rn)
+@@ -1509,7 +1509,7 @@ static void rib_process(struct route_node *rn)
  		rib_process_update_fib(zvrf, rn, old_fib, new_fib);
  	else if (new_fib)
  		rib_process_add_fib(zvrf, rn, new_fib);
