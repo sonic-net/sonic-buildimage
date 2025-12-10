@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.3 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -44,6 +45,11 @@ LIBS += $(LIBDIR)/libdcb.a
 CFLAGS += -DDCBLIB_SUPPORT -I$(DCBDIR)/include
 ifeq (1,$(BUILD_GENL_PACKET))
 CFLAGS += -I${SDK}/systems/linux/kernel/modules/include/kernel
+endif
+
+ifdef LTSW_CHIPS
+# bcmdrd_config.h is required for enum_max.h when LTSW devices are included
+CFLAGS += -I${SDKLT}/bcmdrd/include
 endif
 
 KERNEL_MODULE_DIR = kernel_module

@@ -329,6 +329,12 @@ module sonic-device_metadata {
                     description "Enable syslog counter feature.";
                     default "false";
                 }
+
+                leaf has_sonic_dhcpv4_relay {
+                     description "This configuration controls the dhcpv4 relay process";
+                     type stypes:boolean_type;
+                     default "false";
+                }
             }
             /* end of container localhost */
         }
