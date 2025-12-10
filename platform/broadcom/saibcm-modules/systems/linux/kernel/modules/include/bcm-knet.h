@@ -1,6 +1,7 @@
 /*
  * $Id: bcm-knet.h,v 1.4 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -50,12 +51,14 @@ typedef struct  {
 #include <linux/skbuff.h>
 
 typedef struct {
-    uint32 netif_user_data;
-    uint32 filter_user_data;
-    uint16 dcb_type;
+    uint32_t netif_user_data;
+    uint32_t filter_user_data;
+    uint16_t dcb_type;
+    uint8_t meta_len;
+    uint8_t reserved;
     int port;
     uint64_t ts;
-    uint32 hwts;
+    uint32_t hwts;
 } knet_skb_cb_t;
 
 #define KNET_SKB_CB(_skb) ((knet_skb_cb_t *)_skb->cb)
@@ -71,6 +74,18 @@ typedef int
                     int chan, kcom_filter_t *filter);
 
 typedef int
+(*knet_filter_create_cb_f)(kcom_filter_t *filter);
+
+typedef int
+(*knet_filter_destroy_cb_f)(kcom_filter_t *filter);
+
+typedef struct {
+    const char *name;
+    knet_filter_create_cb_f create_cb;
+    knet_filter_destroy_cb_f destroy_cb;
+} bkn_filter_cb_attr_t;
+
+typedef int
 (*knet_hw_tstamp_enable_cb_f)(int dev_no, int phys_port, int tx_type);
 
 typedef int
@@ -83,13 +98,13 @@ typedef int
 (*knet_hw_tstamp_ptp_clock_index_cb_f)(int dev_no);
 
 typedef int
-(*knet_hw_tstamp_rx_pre_process_cb_f)(int dev_no, uint8_t *pkt, uint32_t sspa, int *pkt_offset);
+(*knet_hw_tstamp_rx_pre_process_cb_f)(int dev_no, uint8_t *pkt, uint32_t sspa, uint8_t *pkt_offset);
 
 typedef int
 (*knet_hw_tstamp_rx_time_upscale_cb_f)(int dev_no, int phys_port, struct sk_buff *skb, uint32_t *meta, uint64_t *ts);
 
 typedef int
-(*knet_hw_tstamp_ioctl_cmd_cb_f)(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type);
+(*knet_hw_tstamp_ioctl_cmd_cb_f)(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type, int dev_no);
 
 typedef int
 (*knet_hw_tstamp_ptp_transport_get_cb_f)(uint8_t *pkt);
@@ -123,6 +138,10 @@ bkn_filter_cb_register(knet_filter_cb_f filter_cb);
 
 extern int
 bkn_filter_cb_register_by_name(knet_filter_cb_f filter_cb, char *filter_name);
+
+extern int
+bkn_filter_cb_attr_register(knet_filter_cb_f filter_cb,
+                            bkn_filter_cb_attr_t *filter_cb_attr);
 
 extern int
 bkn_filter_cb_unregister(knet_filter_cb_f filter_cb);
