@@ -21,13 +21,3 @@ index a2db894e..7484110a 100644
  
  # Development dependencies
  tempfile = "3.12"
-@@ -75,4 +75,4 @@ pretty_assertions = "1"
- 
- # Build dependencies
- tonic-build = "0.12"
--vergen = { version = "8.2", features = ["build", "git", "gitoxide", "cargo", "rustc", "si"] }
-\ No newline at end of file
-+vergen = { version = "8.2", features = ["build", "git", "gitoxide", "cargo", "rustc", "si"] }
--- 
-2.33.0.windows.2
-
