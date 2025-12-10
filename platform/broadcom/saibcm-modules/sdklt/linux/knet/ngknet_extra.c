@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -126,6 +127,7 @@ static inline int
 ngknet_filter_callback(struct ngknet_dev *dev, struct filt_ctrl *fc,
                        struct sk_buff **skb, ngknet_filter_t **filt)
 {
+    struct pdma_dev *pdev = &dev->pdma_dev;
     struct ngknet_callback_desc *cbd = NGKNET_SKB_CB((*skb));
     struct pkt_hdr *pkh = (struct pkt_hdr *)(*skb)->data;
     ngknet_filter_cb_f filter_cb;
@@ -139,21 +141,29 @@ ngknet_filter_callback(struct ngknet_dev *dev, struct filt_ctrl *fc,
     cbd->pmd = (*skb)->data + PKT_HDR_SIZE;
     cbd->pmd_len = pkh->meta_len;
     cbd->pkt_len = pkh->data_len;
+    if (pdev->flags & PDMA_NO_FCS) {
+        /*
+         * Add dummy FCS size to packet length in callback descriptor
+         * when FCS is not included in packet. This can ensure callback
+         * functions always get packet length with FCS size included.
+         */
+        cbd->pkt_len += ETH_FCS_LEN;
+    }
     cbd->filt = *filt;
     *skb = filter_cb(*skb, filt);
     return SHR_E_NONE;
 }
 
 static inline bool
-ngknet_filter_match(struct ngknet_dev *dev, int chan_id,
-                    struct sk_buff *skb, ngknet_filter_t *filt)
+ngknet_filter_match(struct ngknet_dev *dev, int chan_id, void *frame,
+                    ngknet_filter_t *filt)
 {
     struct pkt_buf *pkb;
     ngknet_filter_t scratch;
     uint8_t *oob;
     int idx, wsize;
 
-    if (!dev || !skb || !filt) {
+    if (!dev || !frame || !filt) {
         return false;
     }
     if (filt->flags & NGKNET_FILTER_F_ANY_DATA) {
@@ -163,7 +173,7 @@ ngknet_filter_match(struct ngknet_dev *dev, int chan_id,
         return false;
     }
 
-    pkb = (struct pkt_buf *)skb->data;
+    pkb = (struct pkt_buf *)frame;
     oob = &pkb->data;
 
     memcpy(&scratch.data.b[0],
@@ -361,9 +371,14 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
             if (strncmp(filter->desc, filter_cb->desc,
                         strlen(filter_cb->desc)) == 0) {
                 fc->filter_cb = filter_cb->cb;
+                fc->create_cb = filter_cb->create_cb;
+                fc->destroy_cb = filter_cb->destroy_cb;
                 break;
             }
         }
+    }
+    if (fc->create_cb) {
+        fc->create_cb(&fc->filt);
     }
 
     list_for_each(list, &dev->filt_list) {
@@ -419,6 +434,9 @@ ngknet_filter_destroy(struct ngknet_dev *dev, int id)
     }
 
     list_del(&fc->list);
+    if (fc->destroy_cb) {
+        fc->destroy_cb(&fc->filt);
+    }
     kfree(fc);
 
     dev->fc[id] = NULL;
@@ -547,7 +565,7 @@ ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb)
     list_for_each(list, &dev->filt_list) {
         fc = (struct filt_ctrl *)list;
         filt = &fc->filt;
-        if (next_filter_match || ngknet_filter_match(dev, chan_id, skb, filt)) {
+        if (next_filter_match || ngknet_filter_match(dev, chan_id, skb->data, filt)) {
             if (next_filter_match && --next_filter_match > 0) {
                 /* Same priority, but not matching */
                 continue;
@@ -563,7 +581,7 @@ ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb)
                     break;
                 }
                 same_pri_idx++;
-                if (ngknet_filter_match(dev, chan_id, skb, next_filt)) {
+                if (ngknet_filter_match(dev, chan_id, skb->data, next_filt)) {
                     /* Found another matching filter with same priority */
                     fskb = skb_replicate(skb, GFP_ATOMIC);
                     next_filter_match = same_pri_idx;
@@ -589,6 +607,71 @@ ngknet_rx_pkt_filter(struct ngknet_dev *dev, struct sk_buff *skb)
                 break;
             }
         }
+    }
+
+    spin_unlock_irqrestore(&dev->lock, flags);
+
+    return rv;
+}
+
+int
+ngknet_rx_xdp_filter(struct ngknet_dev *dev, void *frame,
+                     struct net_device **ndev)
+{
+    struct net_device *dest_ndev = NULL;
+    struct ngknet_private *priv = NULL;
+    struct filt_ctrl *fc = NULL;
+    struct list_head *list = NULL;
+    ngknet_filter_t *filt = NULL;
+    struct pkt_buf *pkb = (struct pkt_buf *)frame;
+    unsigned long flags;
+    int rv, chan_id;
+
+    rv = bcmcnet_pdma_dev_queue_to_chan(&dev->pdma_dev, pkb->pkh.queue_id,
+                                        PDMA_Q_RX, &chan_id);
+    if (SHR_FAILURE(rv)) {
+        return rv;
+    }
+
+    spin_lock_irqsave(&dev->lock, flags);
+
+    dest_ndev = dev->bdev[chan_id];
+    if (dest_ndev) {
+        priv = netdev_priv(dest_ndev);
+        priv->users++;
+        spin_unlock_irqrestore(&dev->lock, flags);
+        *ndev = dest_ndev;
+        return SHR_E_NONE;
+    }
+
+    if (list_empty(&dev->filt_list)) {
+        spin_unlock_irqrestore(&dev->lock, flags);
+        return SHR_E_NO_HANDLER;
+    }
+
+    rv = SHR_E_NOT_FOUND;
+    list_for_each(list, &dev->filt_list) {
+        fc = (struct filt_ctrl *)list;
+        filt = &fc->filt;
+        if (!ngknet_filter_match(dev, chan_id, frame, filt)) {
+            continue;
+        }
+        if (filt->dest_type == NGKNET_FILTER_DEST_T_NETIF) {
+            if (filt->dest_id == 0) {
+                dest_ndev = dev->net_dev;
+            } else {
+                dest_ndev = dev->vdev[filt->dest_id];
+            }
+            if (dest_ndev) {
+                priv = netdev_priv(dest_ndev);
+                priv->users++;
+                spin_unlock_irqrestore(&dev->lock, flags);
+                *ndev = dest_ndev;
+                return SHR_E_NONE;
+            }
+        }
+        rv = SHR_E_NO_HANDLER;
+        break;
     }
 
     spin_unlock_irqrestore(&dev->lock, flags);
@@ -694,12 +777,84 @@ ngknet_rx_rate_limit(struct ngknet_dev *dev, int limit)
 }
 
 void
-ngknet_tx_queue_schedule(struct ngknet_dev *dev, struct sk_buff *skb, int *queue)
+ngknet_tx_queue_schedule(struct ngknet_dev *dev, struct pkt_buf *pkb, int *queue)
 {
-    struct pkt_buf *pkb = (struct pkt_buf *)skb->data;
-
     if (pkb->pkh.attrs & PDMA_TX_BIND_QUE) {
         *queue = pkb->pkh.queue_id;
+    }
+}
+
+void
+ngknet_pkt_dump(uint8_t *data, int len)
+{
+    char str[128];
+    int i;
+
+    for (i = 0; i < len; i++) {
+        if ((i & 0x1f) == 0) {
+            sprintf(str, "%04x: ", i);
+        }
+        sprintf(&str[strlen(str)], "%02x", data[i]);
+        if ((i & 0x1f) == 0x1f) {
+            sprintf(&str[strlen(str)], "\n");
+            printk(str);
+            continue;
+        }
+        if ((i & 0x3) == 0x3) {
+            sprintf(&str[strlen(str)], " ");
+        }
+    }
+    if ((i & 0x1f) != 0) {
+        sprintf(&str[strlen(str)], "\n");
+        printk(str);
+    }
+    printk("\n");
+}
+
+void
+ngknet_pkt_stats(struct pdma_dev *pdev, int dir)
+{
+    static s64 ts0[2], ts1[2];
+    static uint32_t pkts[2] = {0}, prts[2] = {0};
+    static uint64_t intrs = 0;
+    uint32_t iv_time;
+    uint32_t pps;
+    uint32_t boudary;
+    int rx_rate_limit = ngknet_rx_rate_limit_get();
+
+    if (rx_rate_limit == -1 || rx_rate_limit >= 100000) {
+        /* Dump every 100K packets */
+        boudary = 100000;
+    } else if (rx_rate_limit >= 10000) {
+        /* Dump every 10K packets */
+        boudary = 10000;
+    } else {
+        /* Dump every 1K packets */
+        boudary = 1000;
+    }
+
+    if (pkts[dir] == 0) {
+        ts0[dir] = kal_time_usecs();
+        intrs = pdev->stats.intrs;
+    }
+    if (++pkts[dir] >= boudary) {
+        ts1[dir] = kal_time_usecs();
+        iv_time = ts1[dir] - ts0[dir];
+        pps = boudary * 1000 / (iv_time / 1000);
+        prts[dir]++;
+        /* pdev->stats.intrs is reset and re-count from 0. */
+        if (intrs > pdev->stats.intrs) {
+            intrs = 0;
+        }
+        if (pps <= boudary || prts[dir] * boudary >= pps) {
+            printk(KERN_CRIT "%s - limit: %d pps, %dK pkts time: %d usec, "
+                             "rate: %d pps, intrs: %llu\n",
+                   dir == PDMA_Q_RX ? "Rx" : "Tx",
+                   dir == PDMA_Q_RX ? rx_rate_limit : -1, (boudary / 1000),
+                   iv_time, pps, pdev->stats.intrs - intrs);
+            prts[dir] = 0;
+        }
+        pkts[dir] = 0;
     }
 }
 
