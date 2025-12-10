@@ -58,11 +58,14 @@ struct cpr_4011_4mxx_data {
     u8   fan_fault;     /* Register value */
     u16  fan_duty_cycle[2];  /* Register value */
     u16  fan_speed[2];  /* Register value */
+    u8   revision[6];    /* Register value*/
+    u16  mfr_p_out_max;
 };
 
 static ssize_t show_linear(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_fan_fault(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t show_vout(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t show_revision(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_fan_duty_cycle(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 static int cpr_4011_4mxx_write_word(struct i2c_client *client, u8 reg, u16 value);
 static struct cpr_4011_4mxx_data *cpr_4011_4mxx_update_device(struct device *dev);
@@ -78,6 +81,8 @@ enum cpr_4011_4mxx_sysfs_attributes {
     PSU_FAN1_FAULT,
     PSU_FAN1_DUTY_CYCLE,
     PSU_FAN1_SPEED,
+    PSU_REVISION,
+    PSU_MFR_P_OUT_MAX
 };
 
 /* sysfs attributes for hwmon 
@@ -92,6 +97,8 @@ static SENSOR_DEVICE_ATTR(psu_temp1_input, S_IRUGO, show_linear,      NULL, PSU_
 static SENSOR_DEVICE_ATTR(psu_fan1_fault,  S_IRUGO, show_fan_fault,   NULL, PSU_FAN1_FAULT);
 static SENSOR_DEVICE_ATTR(psu_fan1_duty_cycle_percentage, S_IWUSR | S_IRUGO, show_linear, set_fan_duty_cycle, PSU_FAN1_DUTY_CYCLE);
 static SENSOR_DEVICE_ATTR(psu_fan1_speed_rpm, S_IRUGO, show_linear,   NULL, PSU_FAN1_SPEED);
+static SENSOR_DEVICE_ATTR(psu_revision,    S_IRUGO, show_revision,    NULL, PSU_REVISION);
+static SENSOR_DEVICE_ATTR(psu_mfr_p_out_max,       S_IRUGO, show_linear,      NULL, PSU_MFR_P_OUT_MAX);
 
 static struct attribute *cpr_4011_4mxx_attributes[] = {
     &sensor_dev_attr_psu_v_in.dev_attr.attr,
@@ -104,6 +111,8 @@ static struct attribute *cpr_4011_4mxx_attributes[] = {
     &sensor_dev_attr_psu_fan1_fault.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_duty_cycle_percentage.dev_attr.attr,
     &sensor_dev_attr_psu_fan1_speed_rpm.dev_attr.attr,
+    &sensor_dev_attr_psu_revision.dev_attr.attr,
+    &sensor_dev_attr_psu_mfr_p_out_max.dev_attr.attr,
     NULL
 };
 
@@ -177,6 +186,9 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
         multiplier = 1;
         value = data->fan_speed[0];
         break;
+    case PSU_MFR_P_OUT_MAX:
+        value = data->mfr_p_out_max;
+        break;
     default:
         break;
     }
@@ -212,6 +224,15 @@ static ssize_t show_vout(struct device *dev, struct device_attribute *da,
     return (exponent > 0) ? sprintf(buf, "%d\n", (mantissa << exponent) * multiplier) :
                             sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
 }
+
+static ssize_t show_revision(struct device *dev, struct device_attribute *da,
+             char *buf)
+{
+    struct cpr_4011_4mxx_data *data = cpr_4011_4mxx_update_device(dev);
+
+    return sprintf(buf, "%s\n", data->revision);
+}
+
 
 static const struct attribute_group cpr_4011_4mxx_group = {
     .attrs = cpr_4011_4mxx_attributes,
@@ -342,7 +363,8 @@ static struct cpr_4011_4mxx_data *cpr_4011_4mxx_update_device(struct device *dev
                                              {0x3b, &(data->fan_duty_cycle[0])},
                                              {0x3c, &(data->fan_duty_cycle[1])},
                                              {0x90, &(data->fan_speed[0])},
-                                             {0x91, &(data->fan_speed[1])}};
+                                             {0x91, &(data->fan_speed[1])},
+                                             {0xa7, &data->mfr_p_out_max}};
 
         dev_dbg(&client->dev, "Starting cpr_4011_4mxx update\n");
 
@@ -372,6 +394,19 @@ static struct cpr_4011_4mxx_data *cpr_4011_4mxx_update_device(struct device *dev
             }
         }
         
+        /* Read revision (0xf0~0xf5)*/
+        for (i=0; i< 5; i++) {
+            status = cpr_4011_4mxx_read_byte(client, 0xf0+i);
+            if (status < 0) {
+                dev_dbg(&client->dev, "reg %d, err %d\n",
+                    0xf0+i, status);
+            }
+        else {
+                data->revision[i] = status;
+            }
+        }
+        data->revision[5]='\0';
+
         data->last_updated = jiffies;
         data->valid = 1;
     }
