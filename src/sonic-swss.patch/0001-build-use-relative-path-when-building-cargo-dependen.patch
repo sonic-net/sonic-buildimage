@@ -17,7 +17,7 @@ index a2db894e..7484110a 100644
  
  # SONiC specific dependencies
 -swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
-+swss-common = { path = "../sonic-swss-common" }
++swss-common = { path = "../sonic-swss-common/crates/swss-common" }
  
  # Development dependencies
  tempfile = "3.12"

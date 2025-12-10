@@ -18,8 +18,8 @@ index 3fc3f23..1bbfe4d 100644
  sonic-dash-api-proto = { version = "0.1.0", path = "crates/sonic-dash-api-proto" }
 -swss-common = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
 -swss-common-testing = { git = "https://github.com/sonic-net/sonic-swss-common.git", branch = "master" }
-+swss-common = { path = "../sonic-swss-common" }
-+swss-common-testing = { path = "../sonic-swss-common" }
++swss-common = { path = "../sonic-swss-common/crates/swss-common" }
++swss-common-testing = { path = "../sonic-swss-common/crates/swss-common-testing" }
  
  # Dev dependencies
  criterion = "0.5"
