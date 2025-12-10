@@ -6,8 +6,8 @@
  * for device bcm78800_a0 and variant dna_6_5_32_3_0.
  * Edits to this file will be lost when it is regenerated.
  *
- * $Id: $
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
  * be found in the LICENSES folder.
- * All Rights Reserved.$
  *
  * Tool Path: $SDK/INTERNAL/fltg/xfc_map_parser
  *
@@ -165,7 +164,7 @@ static void bcm78800_a0_dna_6_5_32_3_0_rxpmd_flex_reason_decode(uint32_t *data, 
         BCMPKT_RXPMD_FLEX_REASON_SET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_MATCHED_RULE_BIT_7);
     }
     if (reason[12] & (0x1 << 8)) {
-        BCMPKT_RXPMD_FLEX_REASON_SET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_IDEV_CONFIG_TO_CPU);
+        BCMPKT_RXPMD_FLEX_REASON_SET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_DEFAULT_OR_IDEV_CONFIG_TO_CPU);
     }
     if (reason[12] & (0x1 << 9)) {
         BCMPKT_RXPMD_FLEX_REASON_SET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_DLB_ECMP_PKT_SAMPLED);
@@ -313,7 +312,7 @@ static void bcm78800_a0_dna_6_5_32_3_0_rxpmd_flex_reason_encode(bcmpkt_bitmap_t 
     if (BCMPKT_RXPMD_FLEX_REASON_GET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_MATCHED_RULE_BIT_7)) {
         reason[12] |= (0x1 << 7);
     }
-    if (BCMPKT_RXPMD_FLEX_REASON_GET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_IDEV_CONFIG_TO_CPU)) {
+    if (BCMPKT_RXPMD_FLEX_REASON_GET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_DEFAULT_OR_IDEV_CONFIG_TO_CPU)) {
         reason[12] |= (0x1 << 8);
     }
     if (BCMPKT_RXPMD_FLEX_REASON_GET(*reasons, BCM78800_A0_DNA_6_5_32_3_0_BCMPKT_RXPMD_FLEX_REASON_DLB_ECMP_PKT_SAMPLED)) {
