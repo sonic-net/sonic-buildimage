@@ -1,0 +1,116 @@
+From 9213626c28f39d526a154a61ebaf73dbcfaa51f3 Mon Sep 17 00:00:00 2001
+From: Christian Hopps <chopps@labn.net>
+Date: Fri, 12 Sep 2025 04:07:03 +0000
+Subject: lib: allow attaching notify handler to covering NP containers
+
+Previously attaching a notify handler to a covering container that was
+non-presence would not be noticed due to an apparent optimization in the nb_node
+parent chain which skips over NP container nodes in branches. Use the libyang
+parent pointer chain to avoid this problem.
+
+Signed-off-by: Christian Hopps <chopps@labn.net>
+---
+ lib/mgmt_be_client.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/lib/mgmt_be_client.c b/lib/mgmt_be_client.c
+index 72867987b2..69e768cdcb 100644
+--- a/lib/mgmt_be_client.c
++++ b/lib/mgmt_be_client.c
+@@ -909,8 +909,9 @@ static void be_client_handle_notify(struct mgmt_be_client *client, void *msgbuf,
+ 				    size_t msg_len)
+ {
+ 	struct mgmt_msg_notify_data *notif_msg = msgbuf;
+-	struct nb_node *nb_node, *nb_parent;
+ 	struct lyd_node *dnode = NULL;
++	const struct lysc_node *snode;
++	struct nb_node *nb_node;
+ 	const char *data = NULL;
+ 	const char *notif;
+ 	bool is_yang_notify;
+@@ -946,15 +947,16 @@ static void be_client_handle_notify(struct mgmt_be_client *client, void *msgbuf,
+ 		 * See if a parent has a callback, this is so backend's can
+ 		 * listen for changes on an entire datastore sub-tree.
+ 		 */
+-		for (nb_parent = nb_node->parent; nb_parent; nb_parent = nb_node->parent)
+-			if (nb_parent->cbs.notify)
++		snode = nb_node->snode;
++		for (snode = snode->parent; snode; snode = snode->parent)
++			if (((struct nb_node *)snode->priv)->cbs.notify)
+ 				break;
+-		if (!nb_parent) {
++		if (!snode) {
+ 			debug_be_client("Including parents, no DS notification callback for: %s",
+ 					notif);
+ 			return;
+ 		}
+-		nb_node = nb_parent;
++		nb_node = (struct nb_node *)snode->priv;
+ 	}
+ 
+ 	if (data && is_yang_notify) {
+-- 
+2.48.1
+
+
+From a9ad2c60d94cecde41b24079495adee5417a091d Mon Sep 17 00:00:00 2001
+From: Christian Hopps <chopps@labn.net>
+Date: Fri, 12 Sep 2025 04:08:55 +0000
+Subject: tests: test for notify callback on NP container bug
+
+Have client attach it's notify handler to the topmost container which is
+non-presence. This is presumed to be a very common use case, it also exposes the
+bug we are fixing.
+
+Also we don't rely on protobuf anymore so get rid of that test in the topotest
+while we are here.
+
+Signed-off-by: Christian Hopps <chopps@labn.net>
+---
+ mgmtd/mgmt_testc.c                           | 2 +-
+ tests/topotests/mgmt_notif/test_ds_notify.py | 9 ---------
+ 2 files changed, 1 insertion(+), 10 deletions(-)
+
+diff --git a/mgmtd/mgmt_testc.c b/mgmtd/mgmt_testc.c
+index 7a446486e5..18a1786044 100644
+--- a/mgmtd/mgmt_testc.c
++++ b/mgmtd/mgmt_testc.c
+@@ -86,7 +86,7 @@ static const struct frr_yang_module_info frr_if_info = {
+ 	.ignore_cfg_cbs = true,
+ 	.nodes = {
+ 		{
+-			.xpath = "/frr-interface:lib/interface",
++			.xpath = "/frr-interface:lib",
+ 			.cbs.notify = async_notification,
+ 		},
+ 		{
+diff --git a/tests/topotests/mgmt_notif/test_ds_notify.py b/tests/topotests/mgmt_notif/test_ds_notify.py
+index 596a671b05..2a3092b63f 100644
+--- a/tests/topotests/mgmt_notif/test_ds_notify.py
++++ b/tests/topotests/mgmt_notif/test_ds_notify.py
+@@ -79,11 +79,6 @@ def test_frontend_datastore_notification(tgen):
+ 
+     check_kernel_32(r1, "11.11.11.11", 1, "")
+ 
+-    rc, _, _ = r1.cmd_status(FE_CLIENT + " --help")
+-
+-    if rc:
+-        pytest.skip("No protoc or present cannot run test")
+-
+     # Start our FE client in the background
+     p = r1.popen(
+         [
+@@ -226,10 +221,6 @@ def test_datastore_backend_filters(tgen):
+ 
+     check_kernel_32(r1, "11.11.11.11", 1, "")
+ 
+-    rc, _, _ = r1.cmd_status(FE_CLIENT + " --help")
+-    if rc:
+-        pytest.skip("No protoc or present cannot run test")
+-
+     # Start our FE client in the background
+     p = r1.popen(
+         [FE_CLIENT, "--datastore", "--listen=/frr-interface:lib/interface/state"]
+-- 
+2.48.1
+
