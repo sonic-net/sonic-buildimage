@@ -1,5 +1,6 @@
 # $Id: Makefile.linux-gts,v 0.1 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -45,16 +46,21 @@
 # some basic path variables for tools and kernel source, etc #
 
 export BINUTILSVER := 2.41
+RHEL_VERSION=$(shell sed -n 's/.*release *\([0-9]\+\)\..*/\1/p' /etc/redhat-release)
 
 #
 # For ESW compilation, suppress 'stringop-overflow'
 #
 ifeq (1,$(GCC_12_1_0))
     export GCCVER := 12.1.0
-    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
 else ifeq (1,$(GCC_13_1_0))
     export GCCVER := 13.1.0
-    TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/13.1.0
+    ifeq "$(shell expr $(RHEL_VERSION) \>= 8)" "1"
+        TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
+    else
+        TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/$(GCCVER)
+    endif
     ifneq ($(DEBUG_OPTIMIZE),FALSE)
     # {
       # These flags are required for -O2 'optimized' compilation
@@ -67,7 +73,12 @@ else ifeq (1,$(GCC_13_1_0))
     endif
 else ifeq (1,$(GCC_14_1_0))
     export GCCVER := 14.1.0
-    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
+    #
+    # We do cast 'int' to pointers in include/sal/types.h. This is
+    # intentional and OK
+    #
+    OPT_CFLAGS += -Wno-error=pointer-to-int-cast
     ifneq ($(DEBUG_OPTIMIZE),FALSE)
     # {
       # These flags are required for -O2 'optimized' compilation
@@ -79,12 +90,7 @@ else ifeq (1,$(GCC_14_1_0))
     endif
 else
     export GCCVER := 11.2.0
-    TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/11.2.0-x86_64
-endif
-
-#The LCOV tool is not compatible with GCC version 9.x and newer, thus we are forced to compile with older one.
-ifeq (1,$(GCOV))
-  use_gcc_8_1_0 = 1
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
 endif
 
 #Valgrind does not have symbolic traceback on newer gcc versions
@@ -97,13 +103,15 @@ ifeq (1,$(use_gcc_8_1_0))
     # GCC 8.1 does not work with binutils 2.41 and newer
     export BINUTILSVER := 2.38
     export GCCVER := 8.1.0
-    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/gcc/$(GCCVER)
   endif
 endif
 
-BINUTILS_DIR = /tools/oss/packages/x86_64-rhel7/binutils/$(BINUTILSVER)/bin
+BINUTILS_DIR = /tools/oss/packages/x86_64-rhel$(RHEL_VERSION)/binutils/$(BINUTILSVER)/bin
 export TCL860 := 1
-$(info INFO from make/Makefile.linux-x86-5_10. GCCVER is $(GCCVER). BINUTILSVER is $(BINUTILSVER))
+$(info INFO from make/Makefile.linux-x86-5_10. GCCVER is $(GCCVER). BINUTILSVER is $(BINUTILSVER). TOOLCHAIN_DIR is $(TOOLCHAIN_DIR))
+
+export LIBNSL_DEPRECATED := 1
 
 # For GCC versions >= 4.7
 USE_GCC_TOOLS := 1
@@ -229,7 +237,8 @@ CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
 CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=192
 
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+HASH := \#
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 comma = ,
 basetarget = $(basename $(notdir $@))
@@ -240,10 +249,8 @@ basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
 modname_flags  = $(if $(filter 1,$(words $(modname))),\
 -D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
 
-ifneq (, $(EDKHOST))
 # Default open source target build
 OPENSRC_BUILD ?= fed21-x86_64
-endif
 
 ifneq ($(targetplat),user)
 # By default we exclude -Werror from x86 kernel builds

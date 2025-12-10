@@ -5,8 +5,8 @@
  * from the NPL output file(s) header.yml.
  * Edits to this file will be lost when it is regenerated.
  *
- * $Id: $
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,6 @@
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
  * be found in the LICENSES folder.
- * All Rights Reserved.$
  *
  * Tool Path: $SDK/INTERNAL/fltg/xfc_map_parser
  *
