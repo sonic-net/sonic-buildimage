@@ -18,7 +18,7 @@ cat $OTEL_CONFIG_FILE
 
 # Validate the YAML configuration
 echo "Validating YAML configuration..."
-python3 -c "import yaml; yaml.safe_load(open('$OTEL_CONFIG_FILE'))" 2>&1
+python3 -c "import yaml; yaml.safe_load(open(\"$OTEL_CONFIG_FILE\"))" 2>&1
 if [ $? -ne 0 ]; then
     echo "ERROR: YAML configuration is invalid"
     exit 1
