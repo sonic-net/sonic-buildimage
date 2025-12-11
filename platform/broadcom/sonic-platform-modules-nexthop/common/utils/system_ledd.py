@@ -5,11 +5,10 @@ System LED control daemon
 """
 
 import sonic_platform
-import sys
-import time
+from nexthop.graceful_exitter import GracefulExitter
 from sonic_py_common import daemon_base
 
-SYSLOG_IDENTIFIER = "system_ledd"
+SYSLOG_IDENTIFIER = "system-ledd"
 UPDATE_INTERVAL_SEC = 5
 
 FANS_OK = "green"
@@ -87,10 +86,12 @@ class SystemLedd(daemon_base.DaemonBase):
 
 
 def main():
+    exitter = GracefulExitter(SYSLOG_IDENTIFIER)
     system_ledd = SystemLedd()
-    while True:
+
+    while not exitter.should_exit():
         system_ledd.run()
-        time.sleep(UPDATE_INTERVAL_SEC)
+        exitter.sleep_respect_exit(UPDATE_INTERVAL_SEC)
 
 
 if __name__ == "__main__":

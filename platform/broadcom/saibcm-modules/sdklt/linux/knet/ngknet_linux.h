@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -33,6 +34,10 @@
  */
 
 #define MODULE_PARAM(n, t, p)   module_param(n, t, p)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0))
+#define NGKNET_XDP_NATIVE
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
 #define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
@@ -223,6 +228,34 @@ kal_copy_to_user(void __user *to, const void *from,
     }
 
     return copy_to_user(to, from, len);
+}
+
+/*!
+ * Atomic bit operations
+ */
+
+static inline void
+at_set_bit(int nr, void *addr, void *lock)
+{
+    set_bit(nr, addr);
+}
+
+static inline void
+at_clear_bit(int nr, void *addr, void *lock)
+{
+    clear_bit(nr, addr);
+}
+
+static inline int
+at_test_set_bit(int nr, void *addr, void *lock)
+{
+    return test_and_set_bit(nr, addr);
+}
+
+static inline int
+at_test_clear_bit(int nr, void *addr, void *lock)
+{
+    return test_and_clear_bit(nr, addr);
 }
 
 /*!

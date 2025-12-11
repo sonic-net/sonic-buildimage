@@ -1,0 +1,29 @@
+From 4d407d5c5d0d417bf4fb61679ef567dc4e6c5993 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Tue, 9 Sep 2025 08:16:16 -0400
+Subject: bgpd: add NULL-check in evpn-mh code
+
+Add a NULL check before dereferencing the result of
+bgp_get_evpn().
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ bgpd/bgp_evpn_mh.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index 69d94a76ba..a08edb0440 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -2129,6 +2129,8 @@ static void bgp_evpn_mac_update_on_es_oper_chg(struct bgp_evpn_es *es)
+ 			   es->esi_str);
+ 
+ 	bgp = bgp_get_evpn();
++	assert(bgp != NULL);
++
+ 	for (ALL_LIST_ELEMENTS_RO(es->macip_evi_path_list, node, es_info)) {
+ 		pi = es_info->pi;
+ 
+-- 
+2.48.1
+

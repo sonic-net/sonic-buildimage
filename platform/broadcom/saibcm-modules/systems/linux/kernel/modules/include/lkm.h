@@ -1,6 +1,7 @@
 /*
  * $Id: lkm.h,v 1.22 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -67,6 +68,7 @@
 #include <linux/interrupt.h>
 #include <linux/stat.h>
 #include <linux/sched.h>
+#include <linux/cpumask.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
 #include <linux/sched/signal.h>
 #endif
@@ -187,6 +189,14 @@
     } while (0)
 
 #define PROC_PDE_DATA(_node) PROC_I(_node)->pde->data
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
+#define strscpy strlcpy
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
+#define kernel_ethtool_ts_info ethtool_ts_info
 #endif
 
 #endif /* __COMMON_LINUX_KRN_LKM_H__ */

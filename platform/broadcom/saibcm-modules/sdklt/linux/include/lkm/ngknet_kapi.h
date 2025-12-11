@@ -6,7 +6,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -29,28 +30,34 @@
 #include <lkm/ngknet_dev.h>
 
 /*!
- * \brief NGKNET callback description.
+ * \brief NGKNET callback descriptor.
+ *
+ * The NGKNET module provides several callback functions registration for
+ * advanced features support. For callback function that carries packet
+ * data (normally with SKB as callback function paramenter), the NGKNET
+ * callback descriptor can be passed to callback function via SKB and
+ * be accessed via the macro \ref NGKNET_SKB_CB.
  */
 struct ngknet_callback_desc {
-    /* Device information */
+    /* Device information. */
     ngknet_dev_info_t *dinfo;
 
-    /*! Network interface */
+    /*! Network interface. */
     ngknet_netif_t *netif;
 
-    /*! Matched filter */
+    /*! Matched filter. */
     ngknet_filter_t *filt;
 
-    /*! Packet meta data */
+    /*! Packet meta data. */
     uint8_t *pmd;
 
-    /*! Packet meta data length */
+    /*! Packet meta data length. */
     int pmd_len;
 
-    /*! Packet data length */
+    /*! Packet data length. */
     int pkt_len;
 
-    /*! Network device */
+    /*! Network device. */
     struct net_device *net_dev;
 };
 
@@ -58,45 +65,65 @@ struct ngknet_callback_desc {
 #define NGKNET_SKB_CB(_skb) ((struct ngknet_callback_desc *)_skb->cb)
 
 /*!
- * PHC specific private data
+ * PHC specific private data.
  */
 struct ngknet_ptp_data {
-    /*! Physical port */
+    /*! Physical port. */
     int phy_port;
 
-    /*! HW timestamp Tx type */
+    /*! HW timestamp Tx type. */
     int hwts_tx_type;
 };
 
-/*! TX/RX callback init */
+/*! TX/RX callback init. */
 typedef void
 (*ngknet_dev_init_cb_f)(ngknet_dev_info_t *dinfo);
 
-/*! Handle Rx packet */
+/*! Handle Rx packet. */
 typedef struct sk_buff *
 (*ngknet_rx_cb_f)(struct sk_buff *skb);
 
-/*! Handle Tx packet */
+/*! Handle Tx packet. */
 typedef struct sk_buff *
 (*ngknet_tx_cb_f)(struct sk_buff *skb);
 
-/*! Handle Netif callback */
+/*! Handle Netif callback. */
 typedef int
 (*ngknet_netif_cb_f)(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif);
 
-/*! Handle Filter callback */
+/*! Handle Filter callback. */
 typedef struct sk_buff *
 (*ngknet_filter_cb_f)(struct sk_buff *skb, ngknet_filter_t **filt);
 
-/*! PTP Rx/Tx config set */
+/*! Handle Filter create callback. */
+typedef int
+(*ngknet_filter_create_cb_f)(ngknet_filter_t *filt);
+
+/*! Handle Filter destroy callback. */
+typedef int
+(*ngknet_filter_destroy_cb_f)(ngknet_filter_t *filt);
+
+/*! Additional attribute associated with the filter callback. */
+typedef struct {
+    /*! Filter description to be matched. */
+    const char *name;
+
+    /*! Callback when the matched filter is created. */
+    ngknet_filter_create_cb_f create_cb;
+
+    /*! Callback when the matched filter is destroyed. */
+    ngknet_filter_destroy_cb_f destroy_cb;
+} ngknet_filter_cb_attr_t;
+
+/*! PTP Rx/Tx config set. */
 typedef int
 (*ngknet_ptp_config_set_cb_f)(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif, int *value);
 
-/*! PTP Rx/Tx HW timestamp get */
+/*! PTP Rx/Tx HW timestamp get. */
 typedef int
 (*ngknet_ptp_hwts_get_cb_f)(struct sk_buff *skb, uint64_t *ts);
 
-/*! PTP Tx meta set */
+/*! PTP Tx meta set. */
 typedef int
 (*ngknet_ptp_meta_set_cb_f)(struct sk_buff *skb);
 
@@ -108,7 +135,7 @@ typedef int
 typedef int
 (*ngknet_ptp_dev_ctrl_cb_f)(ngknet_dev_info_t *dinfo, int cmd, char *data, int len);
 
-/*! PTP RX Preprocessing */
+/*! PTP RX Preprocessing. */
 typedef int
 (*ngknet_ptp_rx_pre_process_cb_f)(struct sk_buff *skb, uint32_t *cust_hdr_len);
 
@@ -248,6 +275,30 @@ ngknet_filter_cb_register(ngknet_filter_cb_f filter_cb);
  */
 extern int
 ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc);
+
+/*!
+ * \brief Register filter callback with additional attribute description.
+ *
+ * If \c filter_cb_attr is not NULL, this function can register filter-specific
+ * callback for filter description matches \c name of \c filter_cb_attr. If
+ * \c create_cb or \c destroy_cb of \c filter_cb_attr is not NULL,
+ * corresponding callback will be performed when that matched filter is
+ * created or destoryed.
+ *
+ * This function is equivalent to \ref ngknet_filter_cb_register if
+ * \c filter_cb_attr is NULL or \c name of \c filter_cb_attr is NULL.
+ * This function is equivalent to \ref ngknet_filter_cb_register_by_name if
+ * \c name of \c filter_cb_attr is set with NULL values for \c create_cb and
+ * \c destroy_cb for \c filter_cb_attr.
+ *
+ * \param [in] filter_cb Filter callback function.
+ * \param [in] filter_cb_attr Additional attribute associated with \c filter_cb.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+extern int
+ngknet_filter_cb_attr_register(ngknet_filter_cb_f filter_cb,
+                               ngknet_filter_cb_attr_t *filter_cb_attr);
 
 /*!
  * \brief Unregister filter callback.

@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
+sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
 
 class TestChassis:
     """Test class to test chassis.py. The test cases covers:
@@ -87,10 +88,12 @@ class TestChassis:
         chassis._psu_list = []
         assert chassis.get_num_psus() == 3
 
-    def test_fan(self):
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_fan_drawer_sysfs_count')
+    def test_fan(self, mock_sysfs_count):
         from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
 
         # Test creating fixed fan
+        mock_sysfs_count.return_value = 4
         DeviceDataManager.is_fan_hotswapable = mock.MagicMock(return_value=False)
         assert DeviceDataManager.get_fan_drawer_count() == 1
         DeviceDataManager.get_fan_count = mock.MagicMock(return_value=4)
@@ -178,6 +181,13 @@ class TestChassis:
         chassis = Chassis()
         assert chassis.get_num_sfps() == 6
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
+
+        # Get all SFPs, with CPO ports
+        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[3, 4])
+        DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
+        chassis = Chassis()
+        assert chassis.get_num_sfps() == 5
+        sonic_platform.chassis.extract_cpo_ports_index = mock.MagicMock(return_value=[])
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     def test_create_sfp_in_multi_thread(self):

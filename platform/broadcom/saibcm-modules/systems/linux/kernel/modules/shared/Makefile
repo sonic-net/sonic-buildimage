@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.2 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -30,6 +31,13 @@
 LOCALDIR = systems/linux/kernel/modules/shared
 
 include ${SDK}/make/Make.config
+
+ifeq (1,$(THREAD_SANITIZER_IS_ACTIVE))
+# {
+  $(warning ./systems/linux/kernel/modules/shared/Makefile. Do not apply THREAD SANITIZER to kernel objects)
+  override CFLAGS := $(subst -fsanitize=thread, ,$(CFLAGS))
+# }
+endif
 
 lib = libkern
 
