@@ -1,0 +1,242 @@
+From 67e1a24d2d950428620add0b8b75846a0a424d4c Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 22:35:45 -0700
+Subject: bgpd: fix memory leak in evpn mh esi del
+
+==361051== 96 bytes in 1 blocks are possibly lost in loss record 256 of
+442
+==361051==    at 0x48465EF: calloc (in
+/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==361051==    by 0x492A42F: qcalloc (memory.c:105)
+==361051==    by 0x2245A0: bgp_evpn_es_vrf_create (bgp_evpn_mh.c:3047)
+==361051==    by 0x2245A0: bgp_evpn_es_vrf_ref (bgp_evpn_mh.c:3156)
+==361051==    by 0x2246CD: bgp_evpn_es_evi_new (bgp_evpn_mh.c:3615)
+==361051==    by 0x22667A: bgp_evpn_local_es_evi_add
+(bgp_evpn_mh.c:3823)
+==361051==    by 0x2EA653: bgp_zebra_process_local_es_evi
+(bgp_zebra.c:3175)
+==361051==    by 0x4989F19: zclient_read (zclient.c:4668)
+==361051==    by 0x4974210: event_call (event.c:2034)
+==361051==    by 0x491DC0F: frr_run (libfrr.c:1242)
+==361051==    by 0x1F02E5: main (bgp_main.c:562)
+
+Ticket: #4564820
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ bgpd/bgp_evpn_mh.c | 24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index 5089f81fec..d2dc7e7731 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -69,6 +69,7 @@ esi_t zero_esi_buf, *zero_esi = &zero_esi_buf;
+ static void bgp_evpn_run_consistency_checks(struct event *t);
+ static void bgp_evpn_path_nh_info_free(struct bgp_path_evpn_nh_info *nh_info);
+ static void bgp_evpn_path_nh_unlink(struct bgp_path_evpn_nh_info *nh_info);
++static void bgp_evpn_es_vrf_delete(struct bgp_evpn_es_vrf *es_vrf);
+ 
+ /******************************************************************************
+  * per-ES (Ethernet Segment) routing table
+@@ -1970,9 +1971,22 @@ static void bgp_evpn_es_free(struct bgp_evpn_es *es, const char *caller)
+ 	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
+ 		zlog_debug("%s: es %s free", caller, es->esi_str);
+ 
++	/* Clean up any remaining ES-VRFs */
++	if (es->es_vrf_list) {
++		struct listnode *node, *next;
++		struct bgp_evpn_es_vrf *es_vrf;
++
++		for (ALL_LIST_ELEMENTS(es->es_vrf_list, node, next, es_vrf)) {
++			if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++				zlog_debug("es %s vrf %u cleanup with evi ref_cnt %d", es->esi_str,
++					   es_vrf->bgp_vrf->vrf_id, es_vrf->ref_cnt);
++			bgp_evpn_es_vrf_delete(es_vrf);
++		}
++		list_delete(&es->es_vrf_list);
++	}
++
+ 	/* cleanup resources maintained against the ES */
+ 	list_delete(&es->es_evi_list);
+-	list_delete(&es->es_vrf_list);
+ 	list_delete(&es->es_vtep_list);
+ 	list_delete(&es->macip_evi_path_list);
+ 	list_delete(&es->macip_global_path_list);
+@@ -3021,6 +3035,8 @@ static struct bgp_evpn_es_vrf *bgp_evpn_es_vrf_create(struct bgp_evpn_es *es,
+ 
+ 	es_vrf->es = es;
+ 	es_vrf->bgp_vrf = bgp_vrf;
++	es_vrf->ref_cnt = 0;
++	es_vrf->flags = 0;
+ 
+ 	/* insert into the VRF-ESI rb tree */
+ 	RB_INSERT(bgp_es_vrf_rb_head, &bgp_vrf->es_vrf_rb_tree, es_vrf);
+@@ -3093,7 +3109,7 @@ void bgp_evpn_es_vrf_deref(struct bgp_evpn_es_evi *es_evi)
+ 			   es_vrf->bgp_vrf->vrf_id);
+ 
+ 	es_evi->es_vrf = NULL;
+-	if (es_vrf->ref_cnt)
++	if (es_vrf->ref_cnt > 0)
+ 		--es_vrf->ref_cnt;
+ 
+ 	if (!es_vrf->ref_cnt)
+@@ -3130,6 +3146,10 @@ void bgp_evpn_es_vrf_ref(struct bgp_evpn_es_evi *es_evi, struct bgp *bgp_vrf)
+ 
+ 	es_evi->es_vrf = es_vrf;
+ 	++es_vrf->ref_cnt;
++
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++		zlog_debug("es-vrf %s vrf %u evi ref_cnt incremented to %d", es_vrf->es->esi_str,
++			   es_vrf->bgp_vrf->vrf_id, es_vrf->ref_cnt);
+ }
+ 
+ /* When the L2-VNI is associated with a L3-VNI/VRF update all the
+-- 
+2.48.1
+
+
+From 024b22905089a68945b376c4a2b8599b96e4c194 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 4 Aug 2025 22:55:33 -0700
+Subject: bgpd: fix memory leak in evpn mh es-evi del
+
+==361051== 152 bytes in 1 blocks are possibly lost in loss record 316 of
+442
+==361051==    at 0x48465EF: calloc (in
+/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==361051==    by 0x492A42F: qcalloc (memory.c:105)
+==361051==    by 0x224673: bgp_evpn_es_evi_new (bgp_evpn_mh.c:3598)
+==361051==    by 0x22667A: bgp_evpn_local_es_evi_add
+(bgp_evpn_mh.c:3823)
+==361051==    by 0x2EA653: bgp_zebra_process_local_es_evi
+(bgp_zebra.c:3175)
+==361051==    by 0x4989F19: zclient_read (zclient.c:4668)
+==361051==    by 0x4974210: event_call (event.c:2034)
+==361051==    by 0x491DC0F: frr_run (libfrr.c:1242)
+==361051==    by 0x1F02E5: main (bgp_main.c:562)
+
+Ticket: #4564820
+
+Cursor
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ bgpd/bgp_evpn_mh.c | 46 ++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/bgpd/bgp_evpn_mh.c b/bgpd/bgp_evpn_mh.c
+index d2dc7e7731..69d94a76ba 100644
+--- a/bgpd/bgp_evpn_mh.c
++++ b/bgpd/bgp_evpn_mh.c
+@@ -70,6 +70,7 @@ static void bgp_evpn_run_consistency_checks(struct event *t);
+ static void bgp_evpn_path_nh_info_free(struct bgp_path_evpn_nh_info *nh_info);
+ static void bgp_evpn_path_nh_unlink(struct bgp_path_evpn_nh_info *nh_info);
+ static void bgp_evpn_es_vrf_delete(struct bgp_evpn_es_vrf *es_vrf);
++static struct bgp_evpn_es_evi *bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi);
+ 
+ /******************************************************************************
+  * per-ES (Ethernet Segment) routing table
+@@ -1985,8 +1986,19 @@ static void bgp_evpn_es_free(struct bgp_evpn_es *es, const char *caller)
+ 		list_delete(&es->es_vrf_list);
+ 	}
+ 
+-	/* cleanup resources maintained against the ES */
+-	list_delete(&es->es_evi_list);
++	/* Clean up any remaining ES-EVIs */
++	if (es->es_evi_list) {
++		struct listnode *node, *next;
++		struct bgp_evpn_es_evi *es_evi;
++
++		for (ALL_LIST_ELEMENTS(es->es_evi_list, node, next, es_evi)) {
++			if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++				zlog_debug("es %s cleanup ES-EVI VNI %u flags 0x%x", es->esi_str,
++					   es_evi->vpn->vni, es_evi->flags);
++			bgp_evpn_es_evi_free(es_evi);
++		}
++		list_delete(&es->es_evi_list);
++	}
+ 	list_delete(&es->es_vtep_list);
+ 	list_delete(&es->macip_evi_path_list);
+ 	list_delete(&es->macip_global_path_list);
+@@ -3589,12 +3601,18 @@ static struct bgp_evpn_es_evi *bgp_evpn_es_evi_new(struct bgp_evpn_es *es,
+ 	struct bgp_evpn_es_evi *es_evi;
+ 
+ 	es_evi = XCALLOC(MTYPE_BGP_EVPN_ES_EVI, sizeof(*es_evi));
+-
+ 	es_evi->es = es;
+ 	es_evi->vpn = vpn;
++	es_evi->flags = 0;
+ 
+ 	/* Initialise the VTEP list */
+ 	es_evi->es_evi_vtep_list = list_new();
++	if (!es_evi->es_evi_vtep_list) {
++		flog_err(EC_BGP_ES_CREATE, "Failed to create VTEP list for ES-EVI ES %s VNI %u",
++			 es->esi_str, vpn->vni);
++		XFREE(MTYPE_BGP_EVPN_ES_EVI, es_evi);
++		return NULL;
++	}
+ 	listset_app_node_mem(es_evi->es_evi_vtep_list);
+ 	es_evi->es_evi_vtep_list->cmp = bgp_evpn_es_evi_vtep_cmp;
+ 
+@@ -3607,6 +3625,9 @@ static struct bgp_evpn_es_evi *bgp_evpn_es_evi_new(struct bgp_evpn_es *es,
+ 
+ 	bgp_evpn_es_vrf_ref(es_evi, vpn->bgp_vrf);
+ 
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++		zlog_debug("Created ES-EVI for ES %s VNI %u", es->esi_str, vpn->vni);
++
+ 	return es_evi;
+ }
+ 
+@@ -3619,6 +3640,10 @@ bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi)
+ 	struct bgp_evpn_es *es = es_evi->es;
+ 	struct bgpevpn *vpn = es_evi->vpn;
+ 
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++		zlog_debug("Freeing ES-EVI for ES %s VNI %u flags 0x%x", es->esi_str, vpn->vni,
++			   es_evi->flags);
++
+ 	/* cannot free the element as long as there is a local or remote
+ 	 * reference
+ 	 */
+@@ -3637,6 +3662,9 @@ bgp_evpn_es_evi_free(struct bgp_evpn_es_evi *es_evi)
+ 	/* free the VTEP list */
+ 	list_delete(&es_evi->es_evi_vtep_list);
+ 
++	/* Set flags max value */
++	es_evi->flags = 0xFFFF;
++
+ 	/* remove from the VNI-ESI rb tree */
+ 	XFREE(MTYPE_BGP_EVPN_ES_EVI, es_evi);
+ 
+@@ -3651,6 +3679,10 @@ static void bgp_evpn_es_evi_local_info_set(struct bgp_evpn_es_evi *es_evi)
+ 	if (CHECK_FLAG(es_evi->flags, BGP_EVPNES_EVI_LOCAL))
+ 		return;
+ 
++	if (BGP_DEBUG(evpn_mh, EVPN_MH_ES))
++		zlog_debug("Setting local info for ES-EVI ES %s VNI %u", es_evi->es->esi_str,
++			   vpn->vni);
++
+ 	SET_FLAG(es_evi->flags, BGP_EVPNES_EVI_LOCAL);
+ 	listnode_init(&es_evi->l2vni_listnode, es_evi);
+ 	listnode_add(vpn->local_es_evi_list, &es_evi->l2vni_listnode);
+@@ -3813,8 +3845,14 @@ int bgp_evpn_local_es_evi_add(struct bgp *bgp, esi_t *esi, vni_t vni)
+ 		if (CHECK_FLAG(es_evi->flags, BGP_EVPNES_EVI_LOCAL))
+ 			/* dup */
+ 			return 0;
+-	} else
++	} else {
+ 		es_evi = bgp_evpn_es_evi_new(es, vpn);
++		if (!es_evi) {
++			flog_err(EC_BGP_ES_CREATE, "%u: Failed to create ES-EVI for ES %s VNI %u",
++				 bgp->vrf_id, es->esi_str, vni);
++			return -1;
++		}
++	}
+ 
+ 	bgp_evpn_es_evi_local_info_set(es_evi);
+ 
+-- 
+2.48.1
+

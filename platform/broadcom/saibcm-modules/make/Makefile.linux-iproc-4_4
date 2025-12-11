@@ -1,5 +1,6 @@
 # $Id: Makefile.linux-iproc Exp $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -81,8 +82,9 @@ comma = ,
 basetarget = $(basename $(notdir $@))
 modname = $(basetarget)
 
+HASH := \#
 # Extra variables.
-EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=$(HASH)s" $(basename_flags) $(modname_flags)
 
 name-fix = $(subst $(comma),_,$(subst -,_,$1))
 basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"

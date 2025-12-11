@@ -24,6 +24,7 @@ import subprocess
 from contextlib import contextmanager
 from select import poll, POLLPRI, POLLIN
 from enum import Enum
+import signal
 
 try:
     from .inotify_helper import InotifyHelper
@@ -107,7 +108,7 @@ class DpuCtlPlat():
         self.pci_dev_path = []
         self.verbosity = False
 
-    def setup_logger(self, use_print=False):
+    def setup_logger(self, use_print=False, use_notice_level=False):
         def print_with_time(msg):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{timestamp}] {msg}")
@@ -118,8 +119,12 @@ class DpuCtlPlat():
             self.logger_warning = print_with_time
             self.logger_debug = print_with_time
             return
-        self.logger_debug = logger.log_debug
-        self.logger_info = logger.log_info
+        if use_notice_level:
+            self.logger_debug = logger.log_notice
+            self.logger_info = logger.log_notice
+        else:
+            self.logger_debug = logger.log_debug
+            self.logger_info = logger.log_info
         self.logger_error = logger.log_error
         self.logger_warning = logger.log_warning
 
@@ -414,20 +419,32 @@ class DpuCtlPlat():
         read_value = self.read_boot_prog()
         if read_value != self.boot_prog_state:
             self.dpu_boot_prog_update(read_value)
-            self.log_error(f"The boot_progress status is changed to = {self.boot_prog_indication}")
+            self.log_info(f"The boot_progress status is changed to = {self.boot_prog_indication}")
 
     def watch_boot_prog(self):
         """Read boot_progress and update the value in an infinite loop"""
+        def signal_handler(signum, frame):
+            self.log_info("Received termination signal, shutting down...")
+            raise SystemExit("Terminated by signal")
+        
+        # Register signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        file = None
+        file = open(self.boot_prog_path, "r")
+        p = poll()
+        p.register(file.fileno(), POLLPRI)
         try:
-            self.dpu_boot_prog_update()
-            self.log_info(f"The initial boot_progress status is = {self.boot_prog_indication}")
-            file = open(self.boot_prog_path, "r")
-            p = poll()
-            p.register(file.fileno(), POLLPRI)
             while True:
-                self.update_boot_prog_once(p)
-        except Exception:
-            self.log_error(f"Exception occured during watch_boot_progress!")
+                try:
+                    self.update_boot_prog_once(p)
+                except SystemExit:
+                    break  # Exit on termination signal
+        except Exception as e:
+            self.log_error(f"Error during watch_boot_progress: {e}")
+        finally:
+            if file:
+                file.close()
 
     @contextmanager
     def boot_prog_context(self):
@@ -444,6 +461,8 @@ class DpuCtlPlat():
             finally:
                 if self.boot_prog_proc and self.boot_prog_proc.is_alive():
                     self.boot_prog_proc.terminate()
+                    self.boot_prog_proc.join(timeout=3)
+                    self.boot_prog_proc.kill()
                     self.boot_prog_proc.join()
         else:
             yield

@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -62,6 +63,7 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
     int cmic_bar = 0;
     uint8_t rev;
     struct ngbde_dev_s *nd = NULL;
+    int domain_no = pci_dev->bus ? pci_domain_nr(pci_dev->bus) : 0;
     int bus_no = pci_dev->bus ? pci_dev->bus->number : 0;
     int slot_no = PCI_SLOT(pci_dev->devfn);
 
@@ -70,8 +72,8 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
     }
 
     if (pci_debug) {
-        printk("PCI: pci_probe: bus %d slot %d: %04x:%04x\n",
-               bus_no, slot_no,
+        printk("PCI: pci_probe: slot=%04d:%02d:%02d dev=%04x:%04x\n",
+               domain_no, bus_no, slot_no,
                pci_dev->vendor, pci_dev->device);
     }
 
@@ -84,10 +86,11 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
     nd->dma_dev = &pci_dev->dev;
     nd->vendor_id = pci_dev->vendor;
     nd->device_id = pci_dev->device;
+    nd->domain_no = domain_no;
     nd->bus_no = bus_no;
     nd->slot_no = slot_no;
 
-    /* PCI revision must extracted "manually */
+    /* PCI revision must extracted "manually" */
     pci_read_config_byte(pci_dev, PCI_REVISION_ID, &rev);
     nd->revision = rev;
 
@@ -158,12 +161,13 @@ pci_remove(struct pci_dev* pci_dev)
 {
     struct ngbde_dev_s *swdev;
     unsigned int num_swdev, idx;
+    int domain_no = pci_dev->bus ? pci_domain_nr(pci_dev->bus) : 0;
     int bus_no = pci_dev->bus ? pci_dev->bus->number : 0;
     int slot_no = PCI_SLOT(pci_dev->devfn);
 
     if (pci_debug) {
-        printk("PCI: pci_remove: bus %d slot %d: %04x:%04x\n",
-               bus_no, slot_no,
+        printk("PCI: pci_remove: slot=%04d:%02d:%02d dev=%04x:%04x\n",
+               domain_no, bus_no, slot_no,
                pci_dev->vendor, pci_dev->device);
     }
 
@@ -179,7 +183,7 @@ pci_remove(struct pci_dev* pci_dev)
                 printk(KERN_WARNING "%s: Device already removed\n",
                        MOD_NAME);
             }
-            /* Active device in this slot already? */
+            /* Mark device as inactive (not present) */
             swdev[idx].inactive = 1;
         }
     }

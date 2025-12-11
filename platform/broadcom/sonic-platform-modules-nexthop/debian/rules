@@ -5,8 +5,8 @@ include /usr/share/dpkg/pkg-info.mk
 export INSTALL_MOD_DIR := extra
 
 export KVERSION   ?= $(shell uname -r)
-KERNEL_SRC ?= /lib/modules/$(KVERSION)
-KERNEL_BUILD ?= $(shell if [ -d "/lib/modules/$(KVERSION)/build" ]; then echo "/lib/modules/$(KVERSION)/build"; else echo "/usr/src/linux-headers-$(KVERSION)"; fi)
+export KERNEL_SRC := /lib/modules/$(KVERSION)
+KERNEL_BUILD := $(KERNEL_SRC)/build
 MOD_SRC_DIR := $(shell pwd)
 MODULE_DIRS :=
 
@@ -16,6 +16,8 @@ MODULE_DIRS += common
 MODULE_DIRS += komodo
 # SKU
 MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4220
+MODULE_DIRS += nh-4220-r0
 MODULE_DIRS += nh-5010
 
 SERVICE_DIR := service
@@ -39,7 +41,7 @@ override_dh_auto_build:
 	(for mod in $(MODULE_DIRS); do \
 		set -e; \
 		if [ -d $(MOD_SRC_DIR)/$${mod}/modules ]; then \
-			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules; \
+			$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
 			./sign-modules.sh $(MOD_SRC_DIR)/$${mod}/modules; \
 		fi; \
 	done)

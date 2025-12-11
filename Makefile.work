@@ -160,10 +160,6 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
-ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
-	override LEGACY_SONIC_MGMT_DOCKER = y
-endif
-
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -584,7 +580,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
-                           LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
 						   ENABLE_MULTIDB=$(ENABLE_MULTIDB) \
                            $(SONIC_OVERRIDE_BUILD_VARS)

@@ -18,7 +18,8 @@ from sonic_platform.syslog import SYSLOG_IDENTIFIER_THERMAL
 
 # Nexthop FPGA thermal sensor value to Celsius conversion
 TYPE_TO_CELSIUS_LAMBDA_DICT = {
-  'nh1': lambda field_val:  0.158851 * (3000 - field_val),
+  'th5': lambda field_val:  0.158851 * (3000 - field_val),
+  'th6': lambda field_val:  -0.25968 * (field_val/2 - 1) + 378.85
 }
 
 thermal_syslogger = syslogger.SysLogger(SYSLOG_IDENTIFIER_THERMAL)
@@ -98,17 +99,26 @@ class PidThermalMixin(abc.ABC):
     DEFAULT_PID_SETPOINT_MARGIN = 10.0
 
     """Mixin class for thermal objects that support PID control"""
-    def __init__(self, pddf_device_data):
-        pid_setpoint_margin = pddf_device_data.get('nexthop_thermal_setpoint_margin')
-        if not pid_setpoint_margin:
-            pid_setpoint_margin = pddf_device_data.get('nexthop_thermal_xcvr_setpoint_margin')
-        self._pid_setpoint_margin = pid_setpoint_margin or self.DEFAULT_PID_SETPOINT_MARGIN
+    def __init__(self, pddf_device_data, margin_override=None, setpoint_override=None, pid_domain=None):
 
-        self._pid_domain = pddf_device_data.get('nexthop_thermal_pid_domain')
-        if not self._pid_domain:
-            self._pid_domain = pddf_device_data.get('nexthop_thermal_xcvr_pid_domain')
-        if self._pid_domain and self._pid_domain.lower() == 'none':
-            self._pid_domain = None
+        # Setpoint margin
+        if margin_override is None:
+            self._pid_setpoint_margin = pddf_device_data.get('nexthop_thermal_setpoint_margin',
+                                                             self.DEFAULT_PID_SETPOINT_MARGIN)
+        else:
+            self._pid_setpoint_margin = margin_override
+
+        # Setpoint override
+        if setpoint_override is None:
+            self._pid_setpoint_override = pddf_device_data.get('nexthop_thermal_setpoint_override')
+        else:
+            self._pid_setpoint_override = setpoint_override
+
+        # PID domain
+        if pid_domain is None:
+            self._pid_domain = pddf_device_data.get('nexthop_thermal_pid_domain')
+        else:
+            self._pid_domain = pid_domain
 
     def is_controlled_by_pid(self):
         return self._pid_domain is not None
@@ -122,6 +132,10 @@ class PidThermalMixin(abc.ABC):
         raise NotImplementedError
 
     def get_pid_setpoint(self):
+        if self._pid_setpoint_override is not None:
+            return self._pid_setpoint_override
+        # Threshold may change during the lifecycle of the thermal object. For example, a transceiver may be hotswapped.
+        # Therefore, we need to query the threshold every time.
         val = self.get_high_threshold()
         if val is None:
             return None
@@ -199,6 +213,7 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
     def __init__(
         self,
         index,
+        position_offset,
         pddf_data
     ):
         ThermalBase().__init__()
@@ -221,7 +236,7 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._field_range_end, self._field_range_start = map(int, dev_attr['field_range'].split(':'))
         self._temp1_high_threshold = dev_attr['temp1_high_threshold']
         self._temp1_high_crit_threshold = dev_attr['temp1_high_crit_threshold']
-        self._thermal_index = index + 1
+        self._thermal_position_in_parent = index + position_offset + 1
 
         self._supported = self._check_sensor_supported()
 
@@ -258,7 +273,7 @@ class NexthopFpgaAsicThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         return True
 
     def get_position_in_parent(self):
-        return self._thermal_index
+        return self._thermal_position_in_parent
 
     def is_replaceable(self):
         return False
@@ -323,7 +338,10 @@ class SfpThermal(ThermalBase, MinMaxTempMixin, PidThermalMixin):
         self._state_db = None
         ThermalBase.__init__(self)
         MinMaxTempMixin.__init__(self)
-        PidThermalMixin.__init__(self, pddf_data.data["PLATFORM"])
+        PidThermalMixin.__init__(self, pddf_data.data["PLATFORM"],
+                                 pddf_data.data["PLATFORM"].get('nexthop_thermal_xcvr_setpoint_margin'),
+                                 pddf_data.data["PLATFORM"].get('nexthop_thermal_xcvr_setpoint_override'),
+                                 pddf_data.data["PLATFORM"].get('nexthop_thermal_xcvr_pid_domain'))
 
     def __del__(self):
         """Cleanup database connection when object is destroyed"""
