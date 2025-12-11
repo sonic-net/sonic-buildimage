@@ -360,6 +360,9 @@ install_deb_package {{deb}}
 {% endfor %}
 {% endif %}
 
+# Install SONiC host services Rust deb package
+install_deb_package $debs_path/sonic-host-services-rs_*.deb
+
 # Install sonic-db-cli
 install_deb_package $debs_path/sonic-db-cli_*.deb
 
