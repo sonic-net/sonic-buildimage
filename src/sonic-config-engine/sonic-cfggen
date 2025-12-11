@@ -331,10 +331,11 @@ def main():
     parser.add_argument("-y", "--yaml", help="yaml file that contains additional variables", action='append', default=[])
     parser.add_argument("-j", "--json", help="json file that contains additional variables", action='append', default=[])
     parser.add_argument("-a", "--additional-data", help="addition data, in json string")
-    parser.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-d", "--from-db", help="read config from configdb", action='store_true')
+    group.add_argument("-D", "--from-db-table", help="read only specified ConfigDB table(s); repeatable", action='append', default=[])
     parser.add_argument("-H", "--platform-info", help="read platform and hardware info", action='store_true')
     parser.add_argument("-s", "--redis-unix-sock-file", help="unix sock file for redis connection")
-    parser.add_argument("-D", "--from-db-table", help="read only specified ConfigDB table(s); repeatable", action='append', default=[])
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-t", "--template", help="render the data with the template file", action="append", default=[],
                        type=lambda opt_value: tuple(opt_value.split(',')) if ',' in opt_value else (opt_value, sys.stdout))
