@@ -196,4 +196,5 @@ stages:
   - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
     parameters:
       CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
-      PTF_MODIFIED: $(PTF_MODIFIED)
+      GLOBAL_PARAMS:
+        PTF_MODIFIED: $(PTF_MODIFIED)
