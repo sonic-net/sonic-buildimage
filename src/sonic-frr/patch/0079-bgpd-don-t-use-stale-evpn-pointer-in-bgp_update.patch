@@ -1,0 +1,31 @@
+From fef14a1e6d7d815dc65dc82e276220579ddb38c7 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Thu, 11 Sep 2025 13:23:57 -0400
+Subject: bgpd: don't use stale 'evpn' pointer in bgp_update()
+
+The pointer 'evpn' in bgp_update() can be stale after creating/
+interning attrs into attr_new; use the value from the new attr
+object.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ bgpd/bgp_route.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index d928588e20..d733d0df83 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -5322,6 +5322,9 @@ void bgp_update(struct peer *peer, const struct prefix *p, uint32_t addpath_id,
+ 
+ 	attr_new = bgp_attr_intern(&new_attr);
+ 
++	/* Use new evpn overlay pointer */
++	evpn = bgp_attr_get_evpn_overlay(attr_new);
++
+ 	/* If the update is implicit withdraw. */
+ 	if (pi) {
+ 		pi->uptime = monotime(NULL);
+-- 
+2.48.1
+
