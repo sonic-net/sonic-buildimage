@@ -443,7 +443,7 @@ def main():
                 if table_data:
                     deep_update(data, {table_name: table_data})
                 else:
-                    print("Warning: ConfigDB table '{}' not found or empty".format(table_name), file=sys.stderr)
+                    print("Error: ConfigDB table '{}' not found or empty".format(table_name), file=sys.stderr)
                     sys.exit(1)
 
     # the minigraph file must be provided to get the mac address for backend asics
