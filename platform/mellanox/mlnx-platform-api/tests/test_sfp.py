@@ -244,10 +244,12 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read, mock_read_int):
+    def test_sfp_get_presence(self, mock_read, mock_read_int, mock_is_sw_control):
         sfp = SFP(0)
+        mock_is_sw_control.return_value = False
 
         mock_read_int.return_value = 1
         mock_read.return_value = None
@@ -389,10 +391,14 @@ class TestSfp:
         mock_api.xcvr_eeprom = mock.MagicMock()
         from sonic_platform_base.sonic_xcvr.fields import consts
         def mock_read(field):
-            if field == consts.TEMP_HIGH_ALARM_FIELD:
+            if field == consts.VENDOR_SERIAL_NO_FIELD:
+                return 'some serial'  # Prevent reinit
+            elif field == consts.TEMP_HIGH_ALARM_FIELD:
                 return 85.0
             elif field == consts.TEMP_HIGH_WARNING_FIELD:
                 return 75.0
+        # Reset retry counter for threshold reading
+        sfp.retry_read_threshold = 5
         mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read)
         assert sfp.get_temperature_warning_threshold() == 75.0
         assert sfp.get_temperature_critical_threshold() == 85.0
@@ -400,6 +406,14 @@ class TestSfp:
 
         # No serial number, expect None and retry_read_threshold = 0
         sfp.get_serial.return_value = None
+        def mock_read_no_serial(field):
+            if field == consts.VENDOR_SERIAL_NO_FIELD:
+                return None  # No serial triggers reinit
+            elif field == consts.TEMP_HIGH_ALARM_FIELD:
+                return 85.0
+            elif field == consts.TEMP_HIGH_WARNING_FIELD:
+                return 75.0
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read_no_serial)
         assert sfp.get_temperature_warning_threshold() == None
         assert sfp.get_temperature_critical_threshold() == None
         assert sfp.retry_read_threshold == 0
@@ -407,6 +421,10 @@ class TestSfp:
         # Firmware control, expect threshold values from sysfs
         sfp.is_sw_control.return_value = False
         sfp.get_serial.return_value = "some serial"
+        def mock_read_firmware(field):
+            if field == consts.VENDOR_SERIAL_NO_FIELD:
+                return "some serial"
+        mock_api.xcvr_eeprom.read = mock.MagicMock(side_effect=mock_read_firmware)
         def mock_read_int_side_effect(file_path, *args, **kwargs):
             if 'threshold_hi' in file_path:
                 return 448  # 56.0 * 8.0
