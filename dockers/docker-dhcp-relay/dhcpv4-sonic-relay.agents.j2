@@ -1,0 +1,15 @@
+{# Append DHCPv4 sonic agent #}
+[program:dhcp4relay]
+command=/usr/sbin/dhcp4relay{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0{% endif %}
+
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+dependent_startup=true
+dependent_startup_wait_for=start:exited
+
+

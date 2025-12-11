@@ -1,0 +1,72 @@
+From 87d826fc8acd623a0a3e927d77fa3cefe973ee68 Mon Sep 17 00:00:00 2001
+From: Chirag Shah <chirag@nvidia.com>
+Date: Mon, 20 Oct 2025 15:47:44 -0700
+Subject: zebra: EVPN fix alignment of access-vlan cli output
+
+Added a buffer vlan_str[22] to combine bridge name, '.', and VLAN ID
+Used snprintf() to create the "bridge.vid" string as a single value
+Changed format from %-5s.%-5u to %-21s for proper alignment
+
+Testing:
+
+Before:
+show evpn access-vlan
+tor-21# show evpn access-vlan
+VLAN         SVI             L2-VNI   VXLAN-IF        # Members
+br_default.4001  vlan4001        0        vxlan48         0
+br_default.112   vlan112         1000112  vxlan48         0
+br_default.111   vlan111         1000111  vxlan48         0
+br_default.4002  vlan4002        0        vxlan48         0
+tor-21#
+
+After:
+
+tor-21# show evpn access-vlan
+VLAN                  SVI             L2-VNI   VXLAN-IF        # Members
+br_default.4001       vlan4001        0        vxlan48         0
+br_default.112        vlan112         1000112  vxlan48         0
+br_default.111        vlan111         1000111  vxlan48         0
+br_default.4002       vlan4002        0        vxlan48         0
+
+Cursor
+
+Signed-off-by: Chirag Shah <chirag@nvidia.com>
+---
+ zebra/zebra_evpn_mh.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/zebra/zebra_evpn_mh.c b/zebra/zebra_evpn_mh.c
+index 5a40ed8a7e..8ff7871150 100644
+--- a/zebra/zebra_evpn_mh.c
++++ b/zebra/zebra_evpn_mh.c
+@@ -1054,11 +1054,14 @@ static void zebra_evpn_acc_vl_show_entry_detail(struct vty *vty,
+ static void zebra_evpn_acc_vl_show_entry(struct vty *vty,
+ 		struct zebra_evpn_access_bd *acc_bd, json_object *json)
+ {
++	char vlan_str[22]; /* 15 for bridge name + 1 for dot + 4 for VLAN ID */
++
+ 	if (json) {
+ 		zebra_evpn_acc_vl_json_fill(acc_bd, json, false);
+ 	} else {
+-		vty_out(vty, "%-5s.%-5u %-15s %-8d %-15s %u\n",
+-			acc_bd->bridge_zif->ifp->name, acc_bd->vid,
++		snprintf(vlan_str, sizeof(vlan_str), "%s.%u", acc_bd->bridge_zif->ifp->name,
++			 acc_bd->vid);
++		vty_out(vty, "%-21s %-15s %-8d %-15s %u\n", vlan_str,
+ 			acc_bd->vlan_zif ? acc_bd->vlan_zif->ifp->name : "-",
+ 			acc_bd->zevpn ? acc_bd->zevpn->vni : 0,
+ 			acc_bd->vxlan_zif ? acc_bd->vxlan_zif->ifp->name : "-",
+@@ -1096,8 +1099,8 @@ void zebra_evpn_acc_vl_show(struct vty *vty, bool uj)
+ 	wctx.detail = false;
+ 
+ 	if (!uj)
+-		vty_out(vty, "%-12s %-15s %-8s %-15s %s\n", "VLAN", "SVI",
+-			"L2-VNI", "VXLAN-IF", "# Members");
++		vty_out(vty, "%-21s %-15s %-8s %-15s %s\n", "VLAN", "SVI", "L2-VNI", "VXLAN-IF",
++			"# Members");
+ 
+ 	hash_iterate(zmh_info->evpn_vlan_table, zebra_evpn_acc_vl_show_hash,
+ 			&wctx);
+-- 
+2.48.1
+

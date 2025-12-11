@@ -18,13 +18,13 @@ libipt2==2.0.5-1
 libmpfr6==4.2.0-1
 libsource-highlight-common==3.1.9-4.2
 libsource-highlight4v5==3.1.9-4.2+b3
-libssl-dev==3.0.17-1~deb12u2
-libssl3==3.0.17-1~deb12u2
+libssl-dev==3.0.17-1~deb12u3
+libssl3==3.0.17-1~deb12u3
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
 libyang-cpp-dbgsym==1.0.73
 openssh-client==1:9.2p1-2+deb12u7
-openssl==3.0.17-1~deb12u2
+openssl==3.0.17-1~deb12u3
 python3-swsscommon-dbgsym==1.0.0
 python3-yang-dbgsym==1.0.73
 sensible-utils==0.0.17+nmu1
