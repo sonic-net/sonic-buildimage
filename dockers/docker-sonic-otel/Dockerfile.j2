@@ -1,9 +1,6 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
-# Get OTEL Collector from official image
-FROM otel/opentelemetry-collector-contrib:latest AS otelcol
-
 FROM $BASE AS base
 
 ARG docker_container_name
@@ -25,17 +22,30 @@ RUN apt-get update
 {{ install_debian_packages(docker_sonic_otel_debs.split(' ')) }}
 {%- endif %}
 
-# Install dependencies and copy OTEL Collector binary
-RUN apt-get install -y ca-certificates
+# Install dependencies
+RUN apt-get install -y \
+    ca-certificates \
+    curl \
+    wget
 
-# Copy OTEL Collector binary from official image
-COPY --from=otelcol /otelcol-contrib /usr/local/bin/otelcol-contrib
-RUN chmod +x /usr/local/bin/otelcol-contrib
+# Install OpenTelemetry Collector from official .deb package
+ARG OTEL_VERSION=0.141.0
+ARG TARGETARCH=amd64
 
-RUN mkdir -p /etc/otel-collector
+# Download and install official .deb package with verification
+RUN wget -q -O /tmp/otelcol-contrib.deb \
+    "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${TARGETARCH}.deb" && \
+    # Verify it's a valid deb package
+    dpkg --info /tmp/otelcol-contrib.deb && \
+    # Install the package
+    dpkg -i /tmp/otelcol-contrib.deb && \
+	# Create symlink
+	ln -s /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
+    # Clean up
+    rm /tmp/otelcol-contrib.deb
 
 COPY ["start.sh", "otel.sh", "/usr/bin/"]
-COPY ["otel_config.yaml", "/etc/otel-collector/"]
+COPY ["otel_config.yaml", "/etc/sonic/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
 
