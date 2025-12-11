@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -361,6 +362,9 @@ struct ngbde_dev_s {
 
     /*! Additional device identification when primary ID is not unique. */
     uint16_t model;
+
+    /*! Domain number (typically PCI domain number). */
+    int domain_no;
 
     /*! Bus number (typically PCI bus number). */
     int bus_no;
