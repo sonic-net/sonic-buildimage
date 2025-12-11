@@ -362,3 +362,6 @@ fabric_num_pipes
 fabric_pipe_map_uc
 fabric_pipe_map_mc
 system_contains_multiple_pipe_device
+appl_param_rcy_mirror_ports_range
+rcy_mirror_to_forward_port_map
+port_priorities_sch

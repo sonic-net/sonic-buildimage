@@ -4,7 +4,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/drd/instpkgs.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -260,6 +261,37 @@
 #define BCM78907_VENDOR_ID                0x14e4
 #define BCM78907_DEVICE_ID                0xf907
 #define BCM78907_REV_A0                     0x01
+
+/* BCM78910 */
+#define BCM78910_VENDOR_ID                0x14e4
+#define BCM78910_DEVICE_ID                0xf910
+#define BCM78910_REV_A0                     0x01
+
+/* BCM78914 */
+#define BCM78914_VENDOR_ID                0x14e4
+#define BCM78914_DEVICE_ID                0xf914
+#define BCM78914_REV_B0                     0x11
+#define BCM78914_REV_B1                     0x12
+
+/* BCM78920 */
+#define BCM78920_VENDOR_ID                0x14e4
+#define BCM78920_DEVICE_ID                0xf920
+#define BCM78920_REV_A0                     0x01
+
+/* BCM78923 */
+#define BCM78923_VENDOR_ID                0x14e4
+#define BCM78923_DEVICE_ID                0xf923
+#define BCM78923_REV_A0                     0x01
+
+/* BCM78924 */
+#define BCM78924_VENDOR_ID                0x14e4
+#define BCM78924_DEVICE_ID                0xf924
+#define BCM78924_REV_A0                     0x01
+
+/* BCM78928 */
+#define BCM78928_VENDOR_ID                0x14e4
+#define BCM78928_DEVICE_ID                0xf928
+#define BCM78928_REV_A0                     0x01
 
 /*
  * End of Supported Devices and Revisions
@@ -862,6 +894,68 @@ BCMDRD_DEVLIST_ENTRY(BCM78907, BCM78907_VENDOR_ID, BCM78907_DEVICE_ID, BCM78907_
                      bcm78907_a0, bcm78907_a0, bcm78907_a0, \
                      "Tomahawk5-512", "BCM78907", \
                      "51.2 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78910_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78910, BCM78910_VENDOR_ID, BCM78910_DEVICE_ID, BCM78910_REV_A0, \
+                     0, 0, \
+                     bcm78910_a0, bcm78910_a0, bcm78910_a0, \
+                     "Tomahawk6P", "BCM78910", \
+                     "102.4 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78914_B0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78914, BCM78914_VENDOR_ID, BCM78914_DEVICE_ID, BCM78914_REV_B0, \
+                     0, 0, \
+                     bcm78914_b0, bcm78914_b0, bcm78914_b0, \
+                     "Tomahawk6C", "BCM78914", \
+                     "102.4 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78914_B1 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78914, BCM78914_VENDOR_ID, BCM78914_DEVICE_ID, BCM78914_REV_B1, \
+                     0, 0, \
+                     bcm78914_b1, bcm78914_b1, bcm78914_b1, \
+                     "Tomahawk6C", "BCM78914", \
+                     "102.4 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78920_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+BCMDRD_DEVLIST_ENTRY(BCM78920, BCM78920_VENDOR_ID, BCM78920_DEVICE_ID, BCM78920_REV_A0, \
+                     0, 0, \
+                     bcm78920_a0, bcm78920_a0, bcm78920_a0, \
+                     "Tomahawk Ultra", "BCM78920", \
+                     "51.2 Tbps Multilayer Switch", 0, 0)
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78923_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78923, BCM78923_VENDOR_ID, BCM78923_DEVICE_ID, BCM78923_REV_A0, \
+                     0, 0, \
+                     bcm78920_a0, bcm78923_a0, bcm78923_a0, \
+                     "Tomahawk Ultra", "BCM78920", \
+                     "25.6 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78924_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78924, BCM78924_VENDOR_ID, BCM78924_DEVICE_ID, BCM78924_REV_A0, \
+                     0, 0, \
+                     bcm78920_a0, bcm78924_a0, bcm78924_a0, \
+                     "Tomahawk Ultra", "BCM78920", \
+                     "25.6 Tbps Multilayer Switch", 0, 0)
+#endif
+#endif
+
+#if BCMDRD_CONFIG_INCLUDE_BCM78928_A0 == 1 || defined(BCMDRD_DEVLIST_OVERRIDE)
+#ifdef BCMDRD_DEVLIST_INCLUDE_ALL
+BCMDRD_DEVLIST_ENTRY(BCM78928, BCM78928_VENDOR_ID, BCM78928_DEVICE_ID, BCM78928_REV_A0, \
+                     0, 0, \
+                     bcm78920_a0, bcm78928_a0, bcm78928_a0, \
+                     "Tomahawk Ultra", "BCM78920", \
+                     "51.2 Tbps Multilayer Switch", 0, 0)
+#endif
 #endif
 
 /* End BCMDRD_DEVLIST_ENTRY Macros */

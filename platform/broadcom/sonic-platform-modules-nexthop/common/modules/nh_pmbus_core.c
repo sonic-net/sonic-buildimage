@@ -1307,7 +1307,11 @@ static int pmbus_thermal_get_temp(void *data, int *temp)
 #else
 static int pmbus_thermal_get_temp(struct thermal_zone_device *tz, int *temp)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
 	struct pmbus_thermal_data *tdata = tz->devdata;
+#else
+	struct pmbus_thermal_data *tdata = thermal_zone_device_priv(tz);
+#endif
 #endif
 	struct pmbus_sensor *sensor = tdata->sensor;
 	struct pmbus_data *pmbus_data = tdata->pmbus_data;

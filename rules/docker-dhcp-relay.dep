@@ -1,6 +1,6 @@
 
 DPATH       := $($(DOCKER_DHCP_RELAY)_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-dhcp-relay.mk rules/docker-dhcp-relay.dep   
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-dhcp-relay.mk rules/docker-dhcp-relay.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(DPATH))
 
