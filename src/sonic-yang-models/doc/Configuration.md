@@ -2791,13 +2791,20 @@ monitoring sessions for the vnet routes and is optional.
 ### VNET_ROUTE_TUNNEL
 
 VNET_ROUTE_TUNNEL table has vnet_name|prefix as the object key, where vnet_name is the name of the VNet and prefix is the ip4 prefix associated with the route tunnel. The table includes the following attributes:
-- ENDPOINT: The endpoint/nexthop tunnel IP (mandatory). It is used to identify the endpoint of the tunnel.
-- MAC_ADDRESS: The inner destination MAC address in the encapsulated packet (optional).  It should be a 12-hexadeimal digit value.
-- VNI: The VNI value in the encapsulated packet (optional). It should be a numeric value.
+- ENDPOINT: Comma-separated endpoint/nexthop tunnel IPs (mandatory). They are used to identify the endpoints of the tunnel.
+- MAC_ADDRESS: Comma-separated inner destination MAC addresses in the encapsulated packet (optional).  They should be 12-hexadecimal digit values.
+- VNI: Comma-separated VNI values in the encapsulated packet (optional). They should be numeric values.
+- CONSISTENT_HASHING_BUCKETS: Number of consistent hashing buckets to use, if consistent hashing is desired (optional). It should be a numeric value.
 
 ```
 {
   "VNET_ROUTE_TUNNEL": {
+        "Vnet_1000|100.200.1.1/32": {
+        "endpoint": "192.174.1.1,192.174.1.2",
+        "mac_address": "f8:25:84:98:22:a1,f8:25:84:98:22:a2",
+        "vni": "10010,10011",
+        "consistent_hashing_buckets": "10"
+    },
     "Vnet_2000|100.100.1.1/32": {
         "endpoint": "192.168.1.1",
         "mac_address": "f9:22:83:99:22:a2"
