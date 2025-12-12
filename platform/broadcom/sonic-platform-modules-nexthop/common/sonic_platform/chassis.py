@@ -44,12 +44,15 @@ class Chassis(PddfChassis):
         self._watchdog: Watchdog | None = None
         self._pddf_data = pddf_data
 
+        # Calculate thermal position offset for FPGA sensors
+        position_offset = len(self._thermal_list)
+
         if self._pddf_data:
             num_asic_thermals = self._pddf_data.data.get("PLATFORM", {}).get("num_nexthop_fpga_asic_temp_sensors", 0)
         else:
             num_asic_thermals = 0
         for index in range(num_asic_thermals):
-            thermal = NexthopFpgaAsicThermal(index, pddf_data)
+            thermal = NexthopFpgaAsicThermal(index, position_offset, pddf_data)
             self._thermal_list.append(thermal)
 
     # Provide the functions/variables below for which implementation is to be overwritten
@@ -206,8 +209,6 @@ class Chassis(PddfChassis):
             return (hw_cause, all_hw_fault_events)
         else:
             return ("Unknown", "Unknown")
-
-        return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
 
     def get_watchdog(self) -> Watchdog | None:
         """
