@@ -128,8 +128,8 @@ dependent_startup_wait_for=rsyslogd:running
     {%- set options = options + " --enable_sff_mgr" %}
 {% endif -%}
 
-{% if dom_temperature_poll_interval %}
-    {%- set options = options + " --dom_temperature_poll_interval " + dom_temperature_poll_interval|string %}
+{% if xcvrd and xcvrd.dom_temperature_poll_interval %}
+    {%- set options = options + " --dom_temperature_poll_interval " + xcvrd.dom_temperature_poll_interval|string %}
 {% endif -%}
 
 {% if delay_xcvrd %}
