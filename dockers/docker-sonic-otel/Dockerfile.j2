@@ -30,7 +30,8 @@ RUN apt-get install -y \
 
 # Install OpenTelemetry Collector from official .deb package
 ARG OTEL_VERSION=0.141.0
-ARG TARGETARCH=amd64
+# Docker buildx automatically provides TARGETARCH for cross-platform builds
+ARG TARGETARCH
 
 # Download and install official .deb package with verification
 RUN wget -q -O /tmp/otelcol-contrib.deb \
