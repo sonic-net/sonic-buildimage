@@ -320,6 +320,26 @@ PIP_HTTP_TIMEOUT ?= 60
 # BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
 BUILD_REDUCE_IMAGE_SIZE = n
 
+# SONIC_IMAGE_COMPRESSION_MODE - compression mode for docker images and installer payload
+# Supported values: fast, best
+#   fast - gzip compression, no squashing
+#   best - xz compression, docker squashing
+SONIC_IMAGE_COMPRESSION_MODE ?= best
+
+# SONIC_FAST_BUILD - Enable fast build mode. Overrides SONIC_IMAGE_COMPRESSION_MODE to fast.
+ifeq ($(SONIC_FAST_BUILD),y)
+SONIC_IMAGE_COMPRESSION_MODE = fast
+endif
+
+# Set compression type and squash flag based on mode
+ifeq ($(SONIC_IMAGE_COMPRESSION_MODE),fast)
+SONIC_COMPRESSION_TYPE = gzip
+SONIC_DOCKER_SQUASH = n
+else
+SONIC_COMPRESSION_TYPE = xz
+SONIC_DOCKER_SQUASH = y
+endif
+
 # SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the 
 # image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
 SONIC_PTF_ENV_PY_VER = py3

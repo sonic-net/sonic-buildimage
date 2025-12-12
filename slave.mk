@@ -556,6 +556,12 @@ define docker-get-tag
 $(shell [ ! -z $(filter $(1).gz,$(SONIC_PACKAGES_LOCAL)) ] && [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ] && echo $(SONIC_IMAGE_VERSION) || echo latest)
 endef
 
+ifeq ($(SONIC_COMPRESSION_TYPE),xz)
+DOCKER_SAVE_COMPRESS_CMD = xz -T0 -c
+else
+DOCKER_SAVE_COMPRESS_CMD = pigz -c
+endif
+
 # $(call docker-image-save,from,to)
 # Sonic docker images are always created with username as extension. During the save operation,
 # it removes the username extension from docker image and saved them as compressed tar file for SONiC image generation.
@@ -570,8 +576,12 @@ define docker-image-save
     @echo "Obtained docker image lock for $(1) save" $(LOG)
     @echo "Tagging docker image $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) as $(1):$(call docker-get-tag,$(1))" $(LOG)
     docker tag $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(1):$(call docker-get-tag,$(1)) $(LOG)
+    if [ "$(SONIC_DOCKER_SQUASH)" = "y" ]; then \
+        echo "Squashing docker image $(1):$(call docker-get-tag,$(1))" $(LOG); \
+        docker-squash -t $(1):$(call docker-get-tag,$(1)) $(1):$(call docker-get-tag,$(1)) $(LOG); \
+    fi
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
-        docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
+        docker save $(1):$(call docker-get-tag,$(1)) | $(DOCKER_SAVE_COMPRESS_CMD) > $(2)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
