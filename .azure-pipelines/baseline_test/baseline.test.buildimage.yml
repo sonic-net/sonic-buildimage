@@ -65,16 +65,10 @@ stages:
 
 - ${{ each round in parameters.TEST_ROUNDS }}:
   - stage: Test_round_${{ round }}
-    dependsOn: 
-      ${{ if eq(round, 1) }}:
-        BuildVS
-      ${{ else }}:
-        Test_round_$((round - 1))
-    condition:
-      ${{ if eq(round, 1) }}:
-        and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
-      ${{ else }}:
-        succeededOrFailed('Test_round_$((round - 1))')
+    dependsOn: ${{ if eq(round, 1) }} BuildVS ${{ else }} Test_round_$((round - 1))
+    condition: >-
+      ${{ if eq(round, 1) }} and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+      ${{ else }} succeededOrFailed('Test_round_$((round - 1))')
 
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
