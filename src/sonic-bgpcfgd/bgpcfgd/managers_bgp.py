@@ -66,9 +66,9 @@ class BGPPeerGroupMgr(object):
             return False
 
         if kwargs['vrf'] == 'default':
-            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm + "\nexit"
+            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + "\nexit" + idf_isolation_rm 
         else:
-            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm + "\nexit"
+            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + "\nexit" + idf_isolation_rm
         self.update_entity(cmd, "Peer-group for peer '%s'" % name)
         return True
 
