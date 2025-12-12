@@ -22,13 +22,21 @@ resources:
     ref: master
 
 parameters:
-  - name: GLOBAL_PARAMS
-    type: object
-    default:
-      BUILD_REASON: "BaselineTest"
-      RETRY_TIMES: "0"
-      STOP_ON_FAILURE: "False"
-      TEST_PLAN_NUM: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
+  - name: BUILD_REASON
+    type: string
+    default: "BaselineTest"
+
+  - name: TEST_PLAN_NUM
+    type: string
+    default: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
+
+  - name: RETRY_TIMES
+    type: string
+    default: "0"
+
+  - name: TEST_PLAN_STOP_ON_FAILURE
+    type: string
+    default: "False"
 
   - name: CHECKOUT_SONIC_MGMT
     type: boolean
@@ -65,8 +73,11 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        ${{ each param in parameters.GLOBAL_PARAMS }}:
-          ${{ param.key }}: ${{ param.value }}
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_2
@@ -76,8 +87,11 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        ${{ each param in parameters.GLOBAL_PARAMS }}:
-          ${{ param.key }}: ${{ param.value }}
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_3
@@ -87,8 +101,11 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        ${{ each param in parameters.GLOBAL_PARAMS }}:
-          ${{ param.key }}: ${{ param.value }}
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
   - stage: Test_round_4
@@ -98,6 +115,9 @@ stages:
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
-        ${{ each param in parameters.GLOBAL_PARAMS }}:
-          ${{ param.key }}: ${{ param.value }}
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
         CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
