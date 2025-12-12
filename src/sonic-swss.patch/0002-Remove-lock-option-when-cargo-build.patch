@@ -1,0 +1,22 @@
+From ce4922401e30fa0cf54c5ab239850b7ec22e4f38 Mon Sep 17 00:00:00 2001
+From: Liu Shilong <shilongliu@microsoft.com>
+Date: Wed, 10 Dec 2025 17:56:29 +0800
+Subject: [PATCH] Remove --lock option when cargo build.
+
+---
+ debian/rules | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/debian/rules b/debian/rules
+index aa94a614..88cc1cd9 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -42,7 +42,7 @@ override_dh_auto_configure:
+ override_dh_auto_build:
+ 	dh_auto_build
+ 	# Build and test countersyncd Rust project
+-	cargo build --release --locked
++	cargo build --release
+ 
+ override_dh_auto_install:
+ 	dh_auto_install --destdir=debian/swss
