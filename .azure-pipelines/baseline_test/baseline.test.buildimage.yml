@@ -26,9 +26,9 @@ parameters:
     type: object
     default:
       BUILD_REASON: "BaselineTest"
-      TEST_PLAN_NUM: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
       RETRY_TIMES: "0"
-      TEST_PLAN_STOP_ON_FAILURE: "False"
+      STOP_ON_FAILURE: "False"
+      TEST_PLAN_NUM: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
 
   - name: CHECKOUT_SONIC_MGMT
     type: boolean
