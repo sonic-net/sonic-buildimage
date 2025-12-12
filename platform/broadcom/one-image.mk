@@ -93,8 +93,10 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64O_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_32D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H6_64_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X1B_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250X3B_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7250X4_PLATFORM_MODULE) \
                                $(TENCENT_TCS8400_PLATFORM_MODULE) \
                                $(TENCENT_TCS9400_PLATFORM_MODULE) \
                                $(UFISPACE_S9311_64D_PLATFORM_MODULE) \
