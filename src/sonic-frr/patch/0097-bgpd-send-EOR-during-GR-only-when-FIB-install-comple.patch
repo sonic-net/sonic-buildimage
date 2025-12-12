@@ -1,0 +1,330 @@
+From e623b92190e926c4ab797c6707c22ba15fa93eef Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Wed, 3 Dec 2025 15:43:18 +0000
+Subject: [PATCH] bgpd: send EOR during GR only when FIB install complete for
+ suppress-fib enabled
+
+Currently during GR, EOR is sent to neighbor prematurely for suppress fib enabled
+case. below fix has be implemented.
+  keep a counter to track the routes installed in FIB.Increamnet
+   counter when bgp send route install to zebra, decreamnet counter when
+   fib install ack to received from zebra in bgp.when this count reaches
+   zero and route deferred count is 0 ad gr route syn pending is set, then
+   do further processing of sending EOR and zebra gr update complete.
+   This will send EOR as soon as last route fib install ack is received.
+
+Testing:
+before:
+2020:2025/08/19 21:23:53.786402 BGP: [ZP3RE-J4Q8C] send End-of-RIB for IPv4 Unicast to swp1s1.3
+2021:2025/08/19 21:23:53.786412 BGP: [ZP3RE-J4Q8C] send End-of-RIB for IPv6 Unicast to swp1s0.3
+2022:2025/08/19 21:23:53.786415 BGP: [ZP3RE-J4Q8C] send End-of-RIB for IPv4 Unicast to swp1s0.3
+2511:2025/08/19 21:23:54.162310 BGP: [TN0HX-6G1RR] u1:s5 send UPDATE w/ attr: , origin ?, mp_nexthop ::(::), path 64900 56000
+2512:2025/08/19 21:23:54.162314 BGP: [H06SA-0JAPR] u1:s5 send MP_REACH for afi/safi IPv4/unicast
+2513:2025/08/19 21:23:54.162316 BGP: [HVRWP-5R9NQ] u1:s5 send UPDATE 91.0.0.49/32 IPv4 unicast
+
+after:
+4270:2025/08/22 17:41:41.631993 BGP: [HVRWP-5R9NQ] u2:s2 send UPDATE 2003:1::/125 IPv6 unicast
+4271:2025/08/22 17:41:41.631998 BGP: [HVRWP-5R9NQ] u2:s2 send UPDATE 2003:7:2::/125 IPv6 unicast
+4272:2025/08/22 17:41:41.632003 BGP: [WEV7K-2GAQ5] u2:s2 send UPDATE len 116 (max message len: 65535) numpfx 2
+4273:2025/08/22 17:41:41.632008 BGP: [JJ5V1-EZ0XX] u2:s2 swp1s1 send UPDATE w/ mp_nexthops 2003:0:1::1, fe80::1e34:daff:febe:4169
+4274:2025/08/22 17:41:41.632041 BGP: [ZP3RE-J4Q8C] send End-of-RIB for IPv4 Unicast to swp1s1
+4275:2025/08/22 17:41:41.632054 BGP: [ZP3RE-J4Q8C] send End-of-RIB for IPv6 Unicast to swp1s1
+
+Signed-off-by: Vijayalaxmi Basavaraj <vbasavaraj@nvidia.com>
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ bgpd/bgp_fsm.c    |  13 +++++
+ bgpd/bgp_packet.c |  12 +++--
+ bgpd/bgp_route.c  | 123 +++++++++++++++++++++++++++++++++++++++-------
+ bgpd/bgp_route.h  |   3 ++
+ bgpd/bgp_zebra.c  |   8 ++-
+ bgpd/bgpd.h       |  11 +++--
+ 6 files changed, 141 insertions(+), 29 deletions(-)
+
+diff --git a/bgpd/bgp_fsm.c b/bgpd/bgp_fsm.c
+index 540086c5e..eb8361e41 100644
+--- a/bgpd/bgp_fsm.c
++++ b/bgpd/bgp_fsm.c
+@@ -847,6 +847,19 @@ static void bgp_graceful_deferral_timer_expire(struct event *thread)
+ 	safi = info->safi;
+ 	bgp = info->bgp;
+ 
++	/* Check if graceful restart deferral completion is needed */
++	if (BGP_SUPPRESS_FIB_ENABLED(bgp) && (bgp->gr_info[afi][safi].eor_required == bgp->gr_info[afi][safi].eor_received) &&
++		!bgp->gr_info[afi][safi].gr_deferred && bgp->gr_route_sync_pending) {
++			if (BGP_DEBUG(graceful_restart, GRACEFUL_RESTART))
++					zlog_debug("%s: Triggering GR deferral completion from timer expiry for %s",
++							bgp->name_pretty, get_afi_safi_str(afi, safi, false));
++			bgp->gr_info[afi][safi].eor_required = 0;
++			bgp->gr_info[afi][safi].eor_received = 0;
++			XFREE(MTYPE_TMP, info);
++			bgp_process_gr_deferral_complete(bgp, afi, safi);
++			return;
++	}
++
+ 	if (BGP_DEBUG(update, UPDATE_OUT))
+ 		zlog_debug(
+ 			"afi %d, safi %d : graceful restart deferral timer expired",
+diff --git a/bgpd/bgp_packet.c b/bgpd/bgp_packet.c
+index 13d610e1b..886adeffb 100644
+--- a/bgpd/bgp_packet.c
++++ b/bgpd/bgp_packet.c
+@@ -2545,12 +2545,14 @@ static int bgp_update_receive(struct peer_connection *connection,
+ 							gr_info->eor_required,
+ 							"EOR RCV",
+ 							gr_info->eor_received);
+-					if (gr_info->t_select_deferral) {
+-						void *info = EVENT_ARG(
+-							gr_info->t_select_deferral);
+-						XFREE(MTYPE_TMP, info);
++					if (!BGP_SUPPRESS_FIB_ENABLED(peer->bgp)) {
++						if (gr_info->t_select_deferral) {
++							void *info = EVENT_ARG(
++								gr_info->t_select_deferral);
++							XFREE(MTYPE_TMP, info);
++						}
++						event_cancel(&gr_info->t_select_deferral);
+ 					}
+-					event_cancel(&gr_info->t_select_deferral);
+ 					gr_info->eor_required = 0;
+ 					gr_info->eor_received = 0;
+ 					/* Best path selection */
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index 6de269ea9..c743f56f1 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -3930,6 +3930,7 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
+ 		 * Ensure that on uninstall that the INSTALL_PENDING
+ 		 * is no longer set
+ 		 */
++		bgp_dest_decrement_gr_fib_install_pending_count(dest);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 	}
+ 
+@@ -4043,25 +4044,11 @@ void bgp_best_path_select_defer(struct bgp *bgp, afi_t afi, safi_t safi)
+ 
+ 	/* Send EOR message when all routes are processed */
+ 	if (!bgp->gr_info[afi][safi].gr_deferred) {
+-		bgp_send_delayed_eor(bgp);
+-		/* Send route processing complete message to RIB */
+-		bgp_zebra_update(bgp, afi, safi,
+-				 ZEBRA_CLIENT_ROUTE_UPDATE_COMPLETE);
+-		bgp->gr_info[afi][safi].route_sync = true;
+-
+-		/* If this instance is all done, check for GR completion overall */
+-		FOREACH_AFI_SAFI_NSF (afi, safi) {
+-			if (bgp->gr_info[afi][safi].af_enabled &&
+-			    !bgp->gr_info[afi][safi].route_sync) {
+-				route_sync_pending = true;
+-				break;
+-			}
+-		}
+-
+-		if (!route_sync_pending) {
+-			bgp->gr_route_sync_pending = false;
+-			bgp_update_gr_completion();
+-		}
++		/* t_select_deferral will be NULL when either gr_route_fib_install_pending_cnt is 0
++		 * or deferral timer for fib install expires
++		 */
++		if (!BGP_SUPPRESS_FIB_ENABLED(bgp) || !bgp->gr_info[afi][safi].t_select_deferral)
++			bgp_process_gr_deferral_complete(bgp, afi, safi);
+ 		return;
+ 	}
+ 
+@@ -4079,6 +4066,104 @@ void bgp_best_path_select_defer(struct bgp *bgp, afi_t afi, safi_t safi)
+ 			&bgp->gr_info[afi][safi].t_route_select);
+ }
+ 
++void bgp_process_gr_deferral_complete(struct bgp *bgp, afi_t afi, safi_t safi)
++{
++	bool route_sync_pending = false;
++
++	bgp_send_delayed_eor(bgp);
++	/* Send route processing complete message to RIB */
++	bgp_zebra_update(bgp, afi, safi, ZEBRA_CLIENT_ROUTE_UPDATE_COMPLETE);
++	bgp->gr_info[afi][safi].route_sync = true;
++
++	/* If this instance is all done, check for GR completion overall */
++	FOREACH_AFI_SAFI_NSF (afi, safi) {
++		if (bgp->gr_info[afi][safi].af_enabled && !bgp->gr_info[afi][safi].route_sync) {
++			route_sync_pending = true;
++			break;
++		}
++	}
++
++	if (!route_sync_pending) {
++		bgp->gr_route_sync_pending = false;
++		bgp_update_gr_completion();
++	}
++}
++
++/* This function increments gr_route_fib_install_pending_cnt if needed based on BGP_NODE_FIB_INSTALL_PENDING flag */
++void bgp_dest_increment_gr_fib_install_pending_count(struct bgp_dest *dest)
++{
++	struct bgp_table *table = NULL;
++	struct bgp *bgp = NULL;
++	afi_t afi = AFI_UNSPEC;
++	safi_t safi = SAFI_UNSPEC;
++
++	table = bgp_dest_table(dest);
++	if (!table)
++		return;
++
++	bgp = table->bgp;
++	afi = table->afi;
++	safi = table->safi;
++
++	if (BGP_SUPPRESS_FIB_ENABLED(bgp) && bgp->gr_route_sync_pending &&
++	    !CHECK_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING)) {
++		bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt++;
++		if (BGP_DEBUG(graceful_restart, GRACEFUL_RESTART))
++			zlog_debug("%s: GR route FIB install count incremented to %u for %s (prefix: %pBD)",
++				   bgp->name_pretty,
++				   bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt,
++				   get_afi_safi_str(afi, safi, false), dest);
++	}
++}
++
++/* This function decrements gr_route_fib_install_pending_cnt if needed based on BGP_NODE_FIB_INSTALL_PENDING flag */
++void bgp_dest_decrement_gr_fib_install_pending_count(struct bgp_dest *dest)
++{
++	struct bgp_table *table = NULL;
++	struct bgp *bgp = NULL;
++	afi_t afi = 0;
++	safi_t safi = 0;
++
++	table = bgp_dest_table(dest);
++	if (!table)
++		return;
++
++	bgp = table->bgp;
++	afi = table->afi;
++	safi = table->safi;
++
++	if (BGP_SUPPRESS_FIB_ENABLED(bgp) && bgp->gr_route_sync_pending &&
++	    CHECK_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING) &&
++	    bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt > 0) {
++		bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt--;
++		if (BGP_DEBUG(graceful_restart, GRACEFUL_RESTART))
++			zlog_debug("%s: GR route FIB install count decremented to %u for %s (prefix: %pBD)",
++				   bgp->name_pretty,
++				   bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt,
++				   get_afi_safi_str(afi, safi, false), dest);
++	}
++
++	/* Check if graceful restart deferral completion is needed */
++	if (!bgp->gr_info[afi][safi].gr_deferred &&
++	    !bgp->gr_info[afi][safi].gr_route_fib_install_pending_cnt &&
++	    bgp->gr_route_sync_pending) {
++		struct graceful_restart_info *gr_info = &(bgp->gr_info[afi][safi]);
++
++		if (gr_info->t_select_deferral) {
++			void *info = EVENT_ARG(gr_info->t_select_deferral);
++
++			XFREE(MTYPE_TMP, info);
++		}
++		event_cancel(&gr_info->t_select_deferral);
++		if (BGP_DEBUG(graceful_restart, GRACEFUL_RESTART))
++			zlog_debug("%s: Triggering GR deferral completion from FIB notification for %s",
++				   bgp->name_pretty, get_afi_safi_str(afi, safi, false));
++		bgp_process_gr_deferral_complete(bgp, afi, safi);
++	}
++}
++
++ 
++
+ static const char *subqueue2str(enum meta_queue_indexes index)
+ {
+ 	switch (index) {
+diff --git a/bgpd/bgp_route.h b/bgpd/bgp_route.h
+index f3323b86a..fe486f12f 100644
+--- a/bgpd/bgp_route.h
++++ b/bgpd/bgp_route.h
+@@ -975,6 +975,9 @@ extern int bgp_show_table_rd(struct vty *vty, struct bgp *bgp, afi_t afi, safi_t
+ 			     enum bgp_show_type type, void *output_arg,
+ 			     uint16_t show_flags);
+ extern void bgp_best_path_select_defer(struct bgp *bgp, afi_t afi, safi_t safi);
++extern void bgp_dest_increment_gr_fib_install_pending_count(struct bgp_dest *dest);
++extern void bgp_dest_decrement_gr_fib_install_pending_count(struct bgp_dest *dest);
++extern void bgp_process_gr_deferral_complete(struct bgp *bgp, afi_t afi, safi_t safi);
+ extern bool bgp_update_martian_nexthop(struct bgp *bgp, afi_t afi, safi_t safi,
+ 				       uint8_t type, uint8_t stype,
+ 				       struct attr *attr, struct bgp_dest *dest);
+diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
+index c7773a676..045d0acf6 100644
+--- a/bgpd/bgp_zebra.c
++++ b/bgpd/bgp_zebra.c
+@@ -1906,12 +1906,15 @@ void bgp_zebra_route_install(struct bgp_dest *dest, struct bgp_path_info *info,
+ 	 * let's set the fact that we expect this route to be installed
+ 	 */
+ 	if (install) {
+-		if (BGP_SUPPRESS_FIB_ENABLED(bgp))
++		if (BGP_SUPPRESS_FIB_ENABLED(bgp)) {
++			bgp_dest_increment_gr_fib_install_pending_count(dest);
+ 			SET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
++		}
+ 
+ 		if (bgp->main_zebra_update_hold && !is_evpn)
+ 			return;
+ 	} else {
++		bgp_dest_decrement_gr_fib_install_pending_count(dest);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 	}
+ 
+@@ -2888,6 +2891,7 @@ static int bgp_zebra_route_notify_owner(int command, struct zclient *zclient,
+ 	case ZAPI_ROUTE_INSTALLED:
+ 		new_select = NULL;
+ 		/* Clear the flags so that route can be processed */
++		bgp_dest_decrement_gr_fib_install_pending_count(dest);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 		SET_FLAG(dest->flags, BGP_NODE_FIB_INSTALLED);
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+@@ -2924,6 +2928,7 @@ static int bgp_zebra_route_notify_owner(int command, struct zclient *zclient,
+ 		if (BGP_DEBUG(zebra, ZEBRA))
+ 			zlog_debug("route: %pBD Failed to Install into Fib",
+ 				   dest);
++		bgp_dest_decrement_gr_fib_install_pending_count(dest);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALLED);
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); pi; pi = pi->next) {
+@@ -2939,6 +2944,7 @@ static int bgp_zebra_route_notify_owner(int command, struct zclient *zclient,
+ 			zlog_debug("route: %pBD removed due to better admin won",
+ 				   dest);
+ 		new_select = NULL;
++		bgp_dest_decrement_gr_fib_install_pending_count(dest);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
+ 		UNSET_FLAG(dest->flags, BGP_NODE_FIB_INSTALLED);
+ 		for (pi = bgp_dest_get_bgp_path_info(dest); pi; pi = pi->next) {
+diff --git a/bgpd/bgpd.h b/bgpd/bgpd.h
+index 5c674b1ee..f1669a340 100644
+--- a/bgpd/bgpd.h
++++ b/bgpd/bgpd.h
+@@ -326,10 +326,11 @@ enum bgp_instance_type {
+ };
+ 
+ #define BGP_SEND_EOR(bgp, afi, safi)                                           \
+-	(!CHECK_FLAG(bgp->flags, BGP_FLAG_GR_DISABLE_EOR)                      \
+-	 && ((bgp->gr_info[afi][safi].t_select_deferral == NULL)               \
+-	     || (bgp->gr_info[afi][safi].eor_required                          \
+-		 == bgp->gr_info[afi][safi].eor_received)))
++	(!CHECK_FLAG(bgp->flags, BGP_FLAG_GR_DISABLE_EOR)                          \
++	 && ((bgp->gr_info[afi][safi].t_select_deferral == NULL)                   \
++	     || (bgp->gr_info[afi][safi].eor_required                              \
++		 == bgp->gr_info[afi][safi].eor_received))                             \
++	 && (!BGP_SUPPRESS_FIB_ENABLED(bgp) || !bgp->gr_info[afi][safi].t_select_deferral))
+ 
+ /* BGP GR Global ds */
+ 
+@@ -346,6 +347,8 @@ struct graceful_restart_info {
+ 	struct event *t_select_deferral;
+ 	/* Routes Deferred */
+ 	uint32_t gr_deferred;
++	/* Routes waiting for FIB install */
++	uint32_t gr_route_fib_install_pending_cnt;
+ 	/* Best route select */
+ 	struct event *t_route_select;
+ 	/* AFI, SAFI enabled */
+-- 
+2.39.5
+
