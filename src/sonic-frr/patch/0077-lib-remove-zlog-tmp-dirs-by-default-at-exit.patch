@@ -1,0 +1,63 @@
+From 049e7ec2c0b44f511d38e755b17446e64ff0c099 Mon Sep 17 00:00:00 2001
+From: Mark Stapp <mjs@cisco.com>
+Date: Mon, 18 Aug 2025 11:55:33 -0400
+Subject: lib: remove zlog tmp dirs by default at exit
+
+Remove zlog temp dirs for each process by default,
+unconditionally. Split the tmp dir removal into its own
+function so it can be called very very late during exit.
+
+Signed-off-by: Mark Stapp <mjs@cisco.com>
+---
+ lib/libfrr.c | 1 +
+ lib/zlog.c   | 6 ++++++
+ lib/zlog.h   | 3 +++
+ 3 files changed, 10 insertions(+)
+
+diff --git a/lib/libfrr.c b/lib/libfrr.c
+index 8743bab598..a505b1080f 100644
+--- a/lib/libfrr.c
++++ b/lib/libfrr.c
+@@ -1298,6 +1298,7 @@ void frr_fini(void)
+ 	frrmod_terminate();
+ 
+ 	log_memstats(di->name, debug_memstats_at_exit);
++	zlog_tmpdir_fini();
+ }
+ 
+ struct json_object *frr_daemon_state_load(void)
+diff --git a/lib/zlog.c b/lib/zlog.c
+index ffca572609..157f3323cb 100644
+--- a/lib/zlog.c
++++ b/lib/zlog.c
+@@ -1151,7 +1151,13 @@ out_warn:
+ void zlog_fini(void)
+ {
+ 	hook_call(zlog_fini);
++}
+ 
++/*
++ * Remove the process's temp log dir, at shutdown
++ */
++void zlog_tmpdir_fini(void)
++{
+ 	if (zlog_tmpdirfd >= 0) {
+ 		close(zlog_tmpdirfd);
+ 		zlog_tmpdirfd = -1;
+diff --git a/lib/zlog.h b/lib/zlog.h
+index 9d93979957..f5d12bab7a 100644
+--- a/lib/zlog.h
++++ b/lib/zlog.h
+@@ -283,6 +283,9 @@ bool zlog_get_immediate_mode(void);
+ 
+ extern const char *zlog_priority_str(int priority);
+ 
++/* Remove temp dirs at shutdown */
++void zlog_tmpdir_fini(void);
++
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+2.48.1
+
