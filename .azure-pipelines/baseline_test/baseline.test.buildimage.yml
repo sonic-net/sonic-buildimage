@@ -34,10 +34,6 @@ parameters:
     type: boolean
     default: true
 
-  - name: TEST_ROUNDS
-    type: object
-    default: [1, 2, 3, 4]
-
 variables:
 - template: ../azure-pipelines-repd-build-variables.yml
 - template: ../template-variables.yml
@@ -54,22 +50,51 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
-- stage: BuildVS
-  pool: sonicso1ES-amd64
-  jobs:
-  - template: ../azure-pipelines-build.yml
-    parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      jobGroups:
-      - name: vs
+  - stage: BuildVS
+    pool: sonicso1ES-amd64
+    jobs:
+    - template: ../azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vs
 
-- ${{ each round in parameters.TEST_ROUNDS }}:
-  - stage: Test_round_${{ round }}
-    dependsOn: ${{ if eq(round, 1) }} BuildVS ${{ else }} Test_round_$((round - 1))
-    condition: >-
-      ${{ if eq(round, 1) }} and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
-      ${{ else }} succeededOrFailed('Test_round_$((round - 1))')
+  - stage: Test_round_1
+    dependsOn: BuildVS
+    condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        ${{ each param in parameters.GLOBAL_PARAMS }}:
+          ${{ param.key }}: ${{ param.value }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
 
+  - stage: Test_round_2
+    dependsOn:
+    - Test_round_1
+    condition: succeededOrFailed('Test_round_1')
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        ${{ each param in parameters.GLOBAL_PARAMS }}:
+          ${{ param.key }}: ${{ param.value }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+
+  - stage: Test_round_3
+    dependsOn:
+    - Test_round_2
+    condition: succeededOrFailed('Test_round_2')
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        ${{ each param in parameters.GLOBAL_PARAMS }}:
+          ${{ param.key }}: ${{ param.value }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+
+  - stage: Test_round_4
+    dependsOn:
+    - Test_round_3
+    condition: succeededOrFailed('Test_round_3')
     jobs:
     - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
       parameters:
