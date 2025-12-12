@@ -360,6 +360,8 @@ bfb_install_call() {
         cat "$result_file"
     fi
 
+    rm -f "$config_file"
+
     # Stop rshim application and reset DPU
     stop_rshim_daemon "$rid"
     log_info "$rid: Resetting DPU $dpu"
