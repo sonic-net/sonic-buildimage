@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "CCS-720DT-48S-MGX-2F": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {}
+            }
+        }
+    }
+}
