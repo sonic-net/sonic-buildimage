@@ -1,0 +1,66 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
+
+ARG docker_container_name
+ARG image_version
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+RUN apt-get update
+
+{% if docker_sonic_otel_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sonic_otel_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_otel_debs.split(' ')) }}
+{%- endif %}
+
+# Install dependencies
+RUN apt-get install -y \
+    ca-certificates \
+    curl \
+    wget
+
+# Install OpenTelemetry Collector from official .deb package
+ARG OTEL_VERSION=0.141.0
+# Docker buildx automatically provides TARGETARCH for cross-platform builds
+ARG TARGETARCH
+
+# Download and install official .deb package with verification
+RUN OTEL_ARCH=${TARGETARCH} && \
+    if [ "${TARGETARCH}" = "armhf" ]; then OTEL_ARCH="armv7"; fi && \
+    # Download and install official .deb package with verification
+    wget -q -O /tmp/otelcol-contrib.deb \
+        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${OTEL_ARCH}.deb" && \
+    # Verify it's a valid deb package
+    dpkg --info /tmp/otelcol-contrib.deb && \
+    # Install the package
+    dpkg -i /tmp/otelcol-contrib.deb && \
+    # Create symlink
+    ln -s /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
+    # Clean up
+    rm /tmp/otelcol-contrib.deb
+
+COPY ["start.sh", "otel.sh", "/usr/bin/"]
+COPY ["otel_config.yaml", "/etc/sonic/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
