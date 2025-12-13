@@ -30,7 +30,7 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/sonic-net/sonic-utilities
+	url = https://github.com/yxieca/sonic-utilities
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
