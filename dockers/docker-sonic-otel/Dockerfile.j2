@@ -34,14 +34,17 @@ ARG OTEL_VERSION=0.141.0
 ARG TARGETARCH
 
 # Download and install official .deb package with verification
-RUN wget -q -O /tmp/otelcol-contrib.deb \
-    "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${TARGETARCH}.deb" && \
+RUN OTEL_ARCH=${TARGETARCH} && \
+    if [ "${TARGETARCH}" = "armhf" ]; then OTEL_ARCH="armv7"; fi && \
+    # Download and install official .deb package with verification
+    wget -q -O /tmp/otelcol-contrib.deb \
+        "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${OTEL_ARCH}.deb" && \
     # Verify it's a valid deb package
     dpkg --info /tmp/otelcol-contrib.deb && \
     # Install the package
     dpkg -i /tmp/otelcol-contrib.deb && \
-	# Create symlink
-	ln -s /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
+    # Create symlink
+    ln -s /usr/bin/otelcol-contrib /usr/local/bin/otelcol-contrib && \
     # Clean up
     rm /tmp/otelcol-contrib.deb
 
