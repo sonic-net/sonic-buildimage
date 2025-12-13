@@ -2,6 +2,7 @@ sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 os=unix
 dpp_clock_ratio=2:3
 oversubscribe_mode=1
+oversubscribe_mixed_sister_25_50_enable=1
 core_clock_frequency=1525
 l2xmsg_mode=1
 pbmp_oversubscribe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
@@ -34,6 +35,22 @@ l3_mem_entries=40960
 l3_max_ecmp_mode=1
 
 stable_size=0x5500000
+mem_cache_enable=0
+lpm_scaling_enable=0
+bcm_num_cos=10
+default_cpu_tx_queue=9
+host_as_route_disable=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+sai_fast_convergence_support=1
+flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
+use_all_splithorizon_groups=1
+riot_enable=1
+sai_tunnel_support=1
+riot_overlay_l3_intf_mem_size=8192
+riot_overlay_l3_egress_mem_size=32768
+riot_overlay_ecmp_resilient_hash_size=16384
+
 
 portmap_1.0=1:100
 portmap_5.0=5:100

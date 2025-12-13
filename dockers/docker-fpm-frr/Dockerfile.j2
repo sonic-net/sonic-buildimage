@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG frr_user_uid
@@ -13,10 +15,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install required packages
 RUN apt-get update   && \
     apt-get install -y  \
-        libc-ares2      \
         iproute2        \
-        logrotate       \
-        libunwind8
+        logrotate
 
 RUN groupadd -g ${frr_user_gid} frr
 RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
@@ -39,12 +39,6 @@ RUN useradd -u ${frr_user_uid} -g ${frr_user_gid} -M -s /bin/false frr
 
 RUN chown -R ${frr_user_uid}:${frr_user_gid} /etc/frr/
 
-# Clean up
-RUN apt-get clean -y      && \
-    apt-get autoclean -y  && \
-    apt-get autoremove -y && \
-    rm -rf /debs ~/.cache /python-wheels
-
 COPY ["frr", "/usr/share/sonic/templates"]
 COPY ["docker_init.sh", "/usr/bin/"]
 COPY ["snmp.conf", "/etc/snmp/frr.conf"]
@@ -52,11 +46,16 @@ COPY ["TSA", "/usr/bin/TSA"]
 COPY ["TSB", "/usr/bin/TSB"]
 COPY ["TSC", "/usr/bin/TSC"]
 COPY ["TS", "/usr/bin/TS"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["zsocket.sh", "/usr/bin/"]
 RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSB && \
     chmod a+x /usr/bin/TSC && \
     chmod a+x /usr/bin/zsocket.sh
+
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

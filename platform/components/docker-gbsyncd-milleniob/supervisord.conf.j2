@@ -1,0 +1,43 @@
+[supervisord]
+logfile_maxbytes=1MB
+logfile_backups=2
+nodaemon=true
+
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+
+[program:rsyslogd]
+command=/usr/sbin/rsyslogd -n -iNONE
+priority=1
+autostart=false
+autorestart=unexpected
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+
+[program:start]
+command=/usr/bin/start.sh
+priority=2
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+
+[program:syncd]
+environment=MILLENIO_DEVICE_PATH=/usr/lib,MILLENIOB_DEVICE_PATH=/usr/lib
+command=/usr/bin/dsserve -f /var/run/sswsyncd/sswgbsyncd.socket /usr/bin/syncd --diag -s -p /etc/sai.d/psai.profile -x /usr/share/sonic/hwsku/context_config.json -g 1
+priority=3
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=start:exited

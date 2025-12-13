@@ -37,6 +37,7 @@ NPU_NAME_PREFIX = "asic"
 NAMESPACE_PATH_GLOB = "/run/netns/*"
 ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
+CHASSIS_DB_CONF_FILENAME = "chassisdb.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
 VS_PLATFORM = "x86_64-kvm_x86_64-r0"
@@ -239,6 +240,29 @@ def get_platform_env_conf_file_path():
     for platform_env_conf_file_path in platform_env_conf_path_candidates:
         if os.path.isfile(platform_env_conf_file_path):
             return platform_env_conf_file_path
+
+    return None
+
+
+def get_chassis_db_conf_file_path():
+    """
+    Retrieves the path to the Chassis DB configuration file on the device
+
+    Returns:
+        A string containing the path to the Chassis DB configuration file on success,
+        None on failure
+    """
+    chassis_db_conf_path_candidates = []
+
+    chassis_db_conf_path_candidates.append(os.path.join(CONTAINER_PLATFORM_PATH, CHASSIS_DB_CONF_FILENAME))
+
+    platform = get_platform()
+    if platform:
+        chassis_db_conf_path_candidates.append(os.path.join(HOST_DEVICE_PATH, platform, CHASSIS_DB_CONF_FILENAME))
+
+    for chassis_db_conf_file_path in chassis_db_conf_path_candidates:
+        if os.path.isfile(chassis_db_conf_file_path):
+            return chassis_db_conf_file_path
 
     return None
 
@@ -590,9 +614,19 @@ def is_multi_npu():
     return (num_npus > 1)
 
 
+def is_chassis_config_absent():
+    chassis_db_conf_file_path = get_chassis_db_conf_file_path()
+    if chassis_db_conf_file_path is None:
+        return True
+
+    return False
+
+
 def is_voq_chassis():
     switch_type = get_platform_info().get('switch_type')
-    return True if switch_type and (switch_type == 'voq' or switch_type == 'fabric') else False
+    single_voq = is_chassis_config_absent()
+
+    return bool(switch_type and (switch_type == 'voq' or switch_type == 'fabric') and not single_voq)
 
 
 def is_packet_chassis():
@@ -600,8 +634,33 @@ def is_packet_chassis():
     return True if switch_type and switch_type == 'chassis-packet' else False
 
 
+def is_disaggregated_chassis():
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    if platform_env_conf_file_path is None:
+        return False
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0] == 'disaggregated_chassis':
+                val = tokens[1].strip()
+                if val == '1':
+                    return True
+        return False
+
+
+def is_virtual_chassis():
+    switch_type = get_platform_info().get('switch_type')
+    asic_type = get_platform_info().get('asic_type')
+    if asic_type == "vs" and switch_type in ["dummy-sup", "voq", "chassis-packet"]:
+        return True
+    else:
+        return False
+
+
 def is_chassis():
-    return is_voq_chassis() or is_packet_chassis()
+    return (is_voq_chassis() and not is_disaggregated_chassis()) or is_packet_chassis() or is_virtual_chassis()
 
 
 def is_smartswitch():
@@ -800,7 +859,7 @@ def get_system_mac(namespace=None, hostname=None):
 
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-    elif (version_info['asic_type'] == 'marvell'):
+    elif (version_info['asic_type'] == 'marvell-prestera'):
         # Try valid mac in eeprom, else fetch it from eth0
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
@@ -832,8 +891,23 @@ def get_system_mac(namespace=None, hostname=None):
             profile_cmd = ["false"]
             (mac, err) = run_command(profile_cmd)
         hw_mac_entry_outputs.append((mac, err))
-        (mac, err) = run_command(syseeprom_cmd)
+        (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
+        mac_found = False
+        for (mac, err) in hw_mac_entry_outputs:
+            if err:
+                continue
+            mac = mac.strip()
+            if _valid_mac_address(mac):
+                mac_found = True
+                break
+        # If mac not found, fetch from syseeprom
+        if not mac_found:
+            hw_mac_entry_outputs = []
+            (mac, err) = run_command(syseeprom_cmd)
+            hw_mac_entry_outputs.append((mac, err))
+    elif (version_info['asic_type'] == 'pensando'):
+        iplink_cmd0 = ["ip", 'link', 'show', 'eth0-midplane']
         (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
         hw_mac_entry_outputs.append((mac, err))
     else:

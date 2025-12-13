@@ -20,8 +20,11 @@ HOST_CHK_CMD = "docker > /dev/null 2>&1"
 QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 DPU_DOCKER_IMAGE_NAME_FILE="/host/dpu-docker-info/image"
 DPU_DOCKER_CONTAINER_NAME_FILE = "/host/dpu-docker-info/name"
+DOCKER_HWSKU_PATH = '/usr/share/sonic/platform'
 
 class APIHelper():
+
+    mtfuji_board_id = 130
 
     def __init__(self):
         pass
@@ -118,10 +121,18 @@ class APIHelper():
 
     def get_board_id(self):
         try:
-            board_id_hex = self.runCMD("cpldapp -r 0x80")
-            if board_id_hex:
-                board_id = int(board_id_hex, 16)
-                return board_id
+            if self.is_host():
+                board_id_hex = self.run_docker_cmd("cpldapp -r 0x80")
+                if board_id_hex:
+                    board_id = int(board_id_hex, 16)
+                    return board_id
+            else:
+                board_id_file = DOCKER_HWSKU_PATH + "/dpu_board_id"
+                board_id_hex = open(board_id_file, "r").read()
+                if board_id_hex:
+                    board_id = int(board_id_hex, 16)
+                    return board_id
+            return 0
         except Exception as e:
             print(f"Failed to get board id due to {e}")
             return 0
@@ -134,12 +145,4 @@ class APIHelper():
         except Exception:
             pass
         return ''
-
-    def setup_cpldapp(self):
-        cmd = "cp /usr/share/sonic/platform/cpldapp /usr/local/bin"
-        self.runCMD(cmd)
-        cmd = "cp /usr/share/sonic/platform/libpal.so /lib/libpal.so"
-        self.runCMD(cmd)
-        cmd = "cp /usr/share/sonic/platform/liblogger.so /lib/liblogger.so"
-        self.runCMD(cmd)
 

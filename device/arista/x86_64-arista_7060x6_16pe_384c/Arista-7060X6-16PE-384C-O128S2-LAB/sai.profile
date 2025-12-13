@@ -1,1 +1,1 @@
-SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/th5-a7060x6-16pe-384c.config.bcm
+../Arista-7060X6-16PE-384C-O128S2/sai.profile

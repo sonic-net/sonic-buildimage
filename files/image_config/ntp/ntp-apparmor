@@ -1,9 +1,0 @@
-# Apparmor configuration
-# /etc/apparmor.d/local/usr.sbin.ntpd
-
-  # Allow read access to "rw" mount path of fs.squashfs
-  # Eg: /host/image-HEAD-sonic.../rw/usr/sbin 
-  /**/{,s}bin/      r,
-  /**/usr/{,s}bin/  r,
-  /**/usr/local/{,s}bin/  r,
-

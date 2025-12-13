@@ -33,7 +33,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:24.0.2-1~debian.12~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.6.21-1
-LINUX_KERNEL_VERSION=6.1.0-22-2
+LINUX_KERNEL_VERSION=6.1.0-29-2
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot
@@ -85,7 +85,7 @@ sudo mount proc /proc -t proc || true
 
 ## Build the host debian base system
 echo '[INFO] Build host debian base system...'
-TARGET_PATH=$TARGET_PATH scripts/build_debian_base_system.sh $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT
+TARGET_PATH=$TARGET_PATH scripts/build_debian_base_system.sh $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT $http_proxy
 
 # Prepare buildinfo
 sudo SONIC_VERSION_CACHE=${SONIC_VERSION_CACHE} \
@@ -161,12 +161,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install pigz
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install busybox linux-base
 echo '[INFO] Install SONiC linux kernel image'
 ## Note: duplicate apt-get command to ensure every line return zero
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/initramfs-tools-core_*.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/initramfs-tools_*.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+sudo cp $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb $FILESYSTEM_ROOT
+basename_deb_packages=$(basename -a $debs_path/initramfs-tools-core_*.deb $debs_path/initramfs-tools_*.deb $debs_path/linux-image-${LINUX_KERNEL_VERSION}-*_${CONFIGURED_ARCH}.deb | sed 's,^,./,')
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y install $basename_deb_packages
+( cd $FILESYSTEM_ROOT; sudo rm -f $basename_deb_packages )
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install acl
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install hdparm
@@ -233,7 +231,6 @@ echo '[INFO] Install docker'
 ## Install apparmor utils since they're missing and apparmor is enabled in the kernel
 ## Otherwise Docker will fail to start
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install apparmor
-sudo cp files/image_config/ntp/ntp-apparmor $FILESYSTEM_ROOT/etc/apparmor.d/local/usr.sbin.ntpd
 sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install apt-transport-https \
                                                        ca-certificates \
                                                        curl
@@ -252,7 +249,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install docker-ce=${DOCKER_VERSIO
 install_kubernetes () {
     local ver="$1"
     ## Install k8s package from storage
-    local storage_prefix="https://sonicstorage.blob.core.windows.net/public/kubernetes"
+    local storage_prefix="https://packages.trafficmanager.net/public/kubernetes"
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-tools.deb -fsSL \
         ${storage_prefix}/cri-tools_${KUBERNETES_CRI_TOOLS_VERSION}_${CONFIGURED_ARCH}.deb
     sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubernetes-cni.deb -fsSL \
@@ -333,7 +330,6 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     vim                     \
     tcpdump                 \
     dbus                    \
-    ntpstat                 \
     openssh-server          \
     python3-apt             \
     traceroute              \
@@ -421,6 +417,20 @@ sudo LANG=c chroot $FILESYSTEM_ROOT chmod 644 /etc/group
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "mkdir -p /etc/initramfs-tools/conf.d"
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 'MODULES=most' >> /etc/initramfs-tools/conf.d/driver-policy"
 
+# Ensure the relevant directories exist
+sudo mkdir -p /etc/initramfs-tools/scripts/init-premount
+sudo mkdir -p /etc/initramfs-tools/hooks
+
+# Copy the network setup scriptgit
+sudo cp files/scripts/network_setup.sh /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+
+# Copy the hook file
+sudo cp files/scripts/network_setup /etc/initramfs-tools/hooks/network_setup
+
+# Make the scripts executable
+sudo chmod +x /etc/initramfs-tools/scripts/init-premount/network_setup.sh
+sudo chmod +x /etc/initramfs-tools/hooks/network_setup
+
 # Copy vmcore-sysctl.conf to add more vmcore dump flags to kernel
 sudo cp files/image_config/kdump/vmcore-sysctl.conf $FILESYSTEM_ROOT/etc/sysctl.d/
 
@@ -434,7 +444,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     picocom \
     systemd \
     systemd-sysv \
-    ntp
+    chrony
 
 if [[ $TARGET_BOOTLOADER == grub ]]; then
     if [[ $CONFIGURED_ARCH == amd64 ]]; then
@@ -531,9 +541,6 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'docke
 
 # Install scapy
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'scapy==2.4.4'
-
-# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install 'PyYAML==5.4.1' --no-build-isolation
 
 ## Note: keep pip installed for maintainance purpose
 
@@ -730,12 +737,11 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
         # verifying all EFI files and kernel modules in $OUTPUT_SEC_BOOT_DIR
         sudo ./scripts/secure_boot_signature_verification.sh -e $OUTPUT_SEC_BOOT_DIR \
                                                              -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+                                                             -k ${FILESYSTEM_ROOT}/usr/lib/modules
 
         # verifying vmlinuz file.
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH} \
-                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
-                                                             -k $FILESYSTEM_ROOT
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT
     fi
     echo "Secure Boot support build stage: END."
 fi

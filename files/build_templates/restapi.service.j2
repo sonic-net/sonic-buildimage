@@ -4,7 +4,6 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
-Before=ntp-config.service
 
 [Service]
 User={{ sonicadmin_user }}

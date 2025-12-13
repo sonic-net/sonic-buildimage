@@ -281,7 +281,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         debhelper \
         autotools-dev \
         libbsd-dev \
-        pkg-config \
+        pkgconf \
         check \
 # For bmp
         librdkafka-dev \
@@ -370,6 +370,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libevent-dev \
 # For libyang
         swig \
+        pkgconf \
+        tcl-expect \
+        libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
 # For build dtb
         device-tree-compiler \
 # For sonic-mgmt-framework
@@ -424,12 +429,13 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libdbus-1-dev \
         libgirepository1.0-dev \
         libsystemd-dev \
-        pkg-config \
 # For sonic-utilities build
         python3-cryptography \
 # For audisp-tacplus
         libauparse-dev \
         auditd \
+# For sysmgr container build
+        libdbus-c++-dev \
 # For protobuf
         protobuf-compiler \
         libprotobuf-dev \
@@ -528,8 +534,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.19 /usr/local/go \
  && rm golang-go.deb golang-src.deb
@@ -555,7 +561,8 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng pyyaml-include
+RUN pip3 install jsonpath_ng
+RUN pip3 install pyyaml-include
 
 # For building sonic_ycabled
 # Note: Match version in bookworm
@@ -572,6 +579,9 @@ RUN pip3 install pillow==10.0.0
 RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
+
+# For nvidia-bluefield sdk
+RUN pip3 install ctypeslib2 clang==14
 
 # For sonic config engine testing
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -714,7 +724,7 @@ RUN eatmydata apt-get install -y \
         libxtables12:$arch \
         libatm1-dev:$arch \
         libbpf-dev:$arch \
-        libdb-dev:$arch pkg-config:$arch \
+        libdb-dev:$arch pkgconf:$arch \
         libnghttp2-14:$arch \
         librtmp1:$arch \
         libssh2-1:$arch \
@@ -759,7 +769,7 @@ RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/b
 
 # Install Rust
 ARG RUST_ROOT=/usr/.cargo
-RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.86.0 -y'
 {% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
 RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
 {% endif -%}
@@ -768,3 +778,11 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 {% endif -%}
 ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
+
+# Install cargo-tarpaulin for code coverage
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='bookworm' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

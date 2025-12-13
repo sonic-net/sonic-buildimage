@@ -14,6 +14,9 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
+{% if syslog_counter and syslog_counter == "true" %}
+$ModLoad omprog
+{% endif %}
 
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
@@ -55,10 +58,17 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
-$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCForwardFormatWithOsVersion,"<%PRI%>%TIMESTAMP:::date-rfc3339% {{ hostname }}  {{os_version}} %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+
+{% if forward_with_osversion and forward_with_osversion == "true" %}
+$ActionForwardDefaultTemplate SONiCForwardFormatWithOsVersion
+{% else%}
 $ActionForwardDefaultTemplate SONiCForwardFormat
+{% endif%}
+
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
 :::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
@@ -86,7 +96,15 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 
 {% set fmodifier = '!' if filter == 'exclude' else '' %}
 {% set device = vrf if vrf != '' and vrf != 'default' -%}
-{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
+
+{% if format == 'welf' %}
+{% set template = 'WelfRemoteFormat'%}
+{% elif forward_with_osversion and forward_with_osversion == "true"%}
+{% set template = 'SONiCForwardFormatWithOsVersion'%}
+{% else%}
+{% set template = 'SONiCForwardFormat'%}
+{% endif%}
+
 
 {# Server extra options -#}
 {% set options = '' -%}
@@ -106,6 +124,11 @@ template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall t
 *.{{ severity }}
 action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
+
+{% if syslog_counter and syslog_counter == "true" %}
+# update rsyslog counter
+action(type="omprog" binary="/usr/bin/syslog-counter" output="/var/log/syslog_counter.log" confirmMessages="on" signalOnClose="on")
+{% endif%}
 
 #
 # Set the default permissions for all log files.

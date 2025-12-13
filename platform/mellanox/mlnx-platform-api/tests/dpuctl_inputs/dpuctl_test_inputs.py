@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,31 +114,31 @@ testData = {
                      },
 }
 
-status_output = ["""DPU    dpu ready    dpu shutdown ready    boot progress
------  -----------  --------------------  -----------------
-dpu0   True         False                 5 - OS is running
-dpu1   True         False                 5 - OS is running
-dpu2   True         False                 5 - OS is running
-dpu3   True         False                 5 - OS is running
+status_output = ["""DPU    dpu ready    dpu shutdown ready    boot progress      Force Power Required
+-----  -----------  --------------------  -----------------  ----------------------
+dpu0   True         False                 5 - OS is running  False
+dpu1   True         False                 5 - OS is running  False
+dpu2   True         False                 5 - OS is running  False
+dpu3   True         False                 5 - OS is running  False
 """,
-                 """DPU    dpu ready    dpu shutdown ready    boot progress
------  -----------  --------------------  -----------------
-dpu1   True         False                 5 - OS is running
+                 """DPU    dpu ready    dpu shutdown ready    boot progress      Force Power Required
+-----  -----------  --------------------  -----------------  ----------------------
+dpu1   True         False                 5 - OS is running  False
 """,
-                 """DPU    dpu ready    dpu shutdown ready    boot progress
------  -----------  --------------------  -----------------
-dpu0   True         False                 5 - OS is running
+                 """DPU    dpu ready    dpu shutdown ready    boot progress      Force Power Required
+-----  -----------  --------------------  -----------------  ----------------------
+dpu0   True         False                 5 - OS is running  False
 """,
                  """An error occurred: AssertionError - Invalid Arguments provided!dpu5 does not exist!
 """,
                  """An error occurred: AssertionError - Invalid Arguments provided!dpu10 does not exist!
 """,
-                 """DPU    dpu ready    dpu shutdown ready    boot progress
------  -----------  --------------------  ------------------
-dpu0   False        True                  0 - Reset/Boot-ROM
-dpu1   False        True                  0 - Reset/Boot-ROM
-dpu2   False        True                  0 - Reset/Boot-ROM
-dpu3   False        True                  0 - Reset/Boot-ROM
+                 """DPU    dpu ready    dpu shutdown ready    boot progress       Force Power Required
+-----  -----------  --------------------  ------------------  ----------------------
+dpu0   False        True                  0 - Reset/Boot-ROM  False
+dpu1   False        True                  0 - Reset/Boot-ROM  False
+dpu2   False        True                  0 - Reset/Boot-ROM  False
+dpu3   False        True                  0 - Reset/Boot-ROM  False
 """,
-                 ["dpu1", "True", "False"],
+                 ["dpu1", "True", "False", "False"],
                  ]

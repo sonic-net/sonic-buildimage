@@ -1,5 +1,5 @@
-bluefield-platform-modules (1.0) unstable; urgency=low
+bluefield-platform-modules (2.0) unstable; urgency=low
 
-  * Initial Release
+  * Update the drivers to use DKMS
 
- -- Oleksandr Ivantsiv <oivantsiv@nvidia.com>  Fri, 23 Feb 2024 15:57:40 -0800
+ -- Vivek Reddy Karri <vkarri@nvidia.com>  Mon, 10 Jun 2025 12:01:40 -0800

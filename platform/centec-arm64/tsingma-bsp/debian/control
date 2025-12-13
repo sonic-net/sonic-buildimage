@@ -7,5 +7,5 @@ Standards-Version: 3.9.3
 
 Package: tsingma-bsp
 Architecture: arm64
-Depends: linux-image-6.1.0-22-2-arm64-unsigned
+Depends: linux-image-6.1.0-29-2-arm64-unsigned
 Description: kernel modules for tsingma bsp

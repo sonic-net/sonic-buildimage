@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -92,27 +93,23 @@
 #include "ngknet_procfs.h"
 #include "ngknet_callback.h"
 #include "ngknet_ptp.h"
+#include "ngknet_xdp.h"
+#include "ngknet_xsk.h"
 
-/* FIXME: SAI_FIXUP */
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX  /* SONIC-76482 */
 #define NGKNET_IOC_SVTAG_SET            (SIOCDEVPRIVATE + 0)
 #define NGKNET_IOC_SVTAG_MAGIC          0x53565447 /* "SVTG" */
 #define NGKNET_NETIF_F_DEL_SVTAG        (1U << 15) /* Remove SVTAG from the RX packets */
 #define NGKNET_NETIF_F_ADD_SVTAG        (1U << 14) /* Insert SVTAG into the TX packets */
-
-/* Enum to define SVTAG packet type */
 #define NGKNET_SVTAG_PKTYPE_NONMACSEC   0  /* Unsecure data packet (Untag Control Port packet) */
 #define NGKNET_SVTAG_PKTYPE_MACSEC      1  /* Secure data packet (Tag Controlled Port packet) */
 #define NGKNET_SVTAG_PKTYPE_KAY         2  /* KaY Frame (KaY Uncontrolled Port packet) */
-
-/* Struct for SVTAG ioctl */
 struct ifru_svtag {
     uint32_t magic;
     uint32_t flags;
     uint8_t svtag[4];
 };
 #endif
-
 /*! \cond */
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Network Device Driver Module");
@@ -182,6 +179,13 @@ MODULE_PARM_DESC(page_buffer_mode,
 "Enable SKB page buffer mode (default 0 for legacy SKB mode)");
 /*! \endcond */
 
+/*! \cond */
+int xsk_napi_tx = 0;
+MODULE_PARAM(xsk_napi_tx, int, 0);
+MODULE_PARM_DESC(xsk_napi_tx,
+"Use NAPI to transmit XSK packet (default 0 to use kernel thread)");
+/*! \endcond */
+
 typedef int (*drv_ops_attach)(struct pdma_dev *dev);
 
 struct bcmcnet_drv_ops {
@@ -223,93 +227,12 @@ struct ngknet_intr_handle {
 static struct ngknet_intr_handle priv_hdl[NUM_PDMA_DEV_MAX][NUM_Q_MAX];
 
 /*!
- * Dump packet content for debug
- */
-static void
-ngknet_pkt_dump(uint8_t *data, int len)
-{
-    char str[128];
-    int i;
-
-    len = len > 256 ? 256 : len;
-
-    for (i = 0; i < len; i++) {
-        if ((i & 0x1f) == 0) {
-            sprintf(str, "%04x: ", i);
-        }
-        sprintf(&str[strlen(str)], "%02x", data[i]);
-        if ((i & 0x1f) == 0x1f) {
-            sprintf(&str[strlen(str)], "\n");
-            printk(str);
-            continue;
-        }
-        if ((i & 0x3) == 0x3) {
-            sprintf(&str[strlen(str)], " ");
-        }
-    }
-    if ((i & 0x1f) != 0) {
-        sprintf(&str[strlen(str)], "\n");
-        printk(str);
-    }
-    printk("\n");
-}
-
-/*!
- * Rx packets rate test for debug
- */
-static void
-ngknet_pkt_stats(struct pdma_dev *pdev, int dir)
-{
-    s64 ts0[2], ts1[2];
-    static uint32_t pkts[2] = {0}, prts[2] = {0};
-    static uint64_t intrs = 0;
-    uint32_t iv_time;
-    uint32_t pps;
-    uint32_t boudary;
-
-    if (rx_rate_limit == -1 || rx_rate_limit >= 100000) {
-        /* Dump every 100K packets */
-        boudary = 100000;
-    } else if (rx_rate_limit >= 10000) {
-        /* Dump every 10K packets */
-        boudary = 10000;
-    } else {
-        /* Dump every 1K packets */
-        boudary = 1000;
-    }
-
-    if (pkts[dir] == 0) {
-        ts0[dir] = kal_time_usecs();
-        intrs = pdev->stats.intrs;
-    }
-    if (++pkts[dir] >= boudary) {
-        ts1[dir] = kal_time_usecs();
-        iv_time = ts1[dir] - ts0[dir];
-        pps = boudary * 1000 / (iv_time / 1000);
-        prts[dir]++;
-        /* pdev->stats.intrs is reset and re-count from 0. */
-        if (intrs > pdev->stats.intrs) {
-            intrs = 0;
-        }
-        if (pps <= boudary || prts[dir] * boudary >= pps) {
-            printk(KERN_CRIT "%s - limit: %d pps, %dK pkts time: %d usec, "
-                             "rate: %d pps, intrs: %llu\n",
-                   dir == PDMA_Q_RX ? "Rx" : "Tx",
-                   dir == PDMA_Q_RX ? rx_rate_limit : -1, (boudary / 1000),
-                   iv_time, pps, pdev->stats.intrs - intrs);
-            prts[dir] = 0;
-        }
-        pkts[dir] = 0;
-    }
-}
-
-/*!
  * Read 32-bit register callback
  */
 static int
-ngknet_dev_read32(struct pdma_dev *dev, uint32_t addr, uint32_t *data)
+ngknet_dev_read32(struct pdma_dev *pdev, uint32_t addr, uint32_t *data)
 {
-    *data = ngbde_kapi_pio_read32(dev->unit, addr);
+    *data = ngbde_kapi_pio_read32(pdev->unit, addr);
 
     return 0;
 }
@@ -318,9 +241,9 @@ ngknet_dev_read32(struct pdma_dev *dev, uint32_t addr, uint32_t *data)
  * Write 32-bit register callback
  */
 static int
-ngknet_dev_write32(struct pdma_dev *dev, uint32_t addr, uint32_t data)
+ngknet_dev_write32(struct pdma_dev *pdev, uint32_t addr, uint32_t data)
 {
-    ngbde_kapi_pio_write32(dev->unit, addr, data);
+    ngbde_kapi_pio_write32(pdev->unit, addr, data);
 
     return 0;
 }
@@ -404,13 +327,9 @@ ngknet_rx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
     if (priv->hwts_rx_filter) {
         ngknet_ptp_rx_hwts_set(ndev, skb);
     }
-
-    /* Check to ensure ngknet_callback_desc struct fits in sk_buff->cb */
     BUILD_BUG_ON(sizeof(struct ngknet_callback_desc) > sizeof(skb->cb));
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
-    /* Strip SVTAG from the packets injected by the MACSEC block */
     if (priv->netif.flags & NGKNET_NETIF_F_DEL_SVTAG) {
-        /* Strip SVTAG (4 bytes) */
         if (priv->netif.flags & NGKNET_NETIF_F_RCPU_ENCAP) {
             offset = PKT_HDR_SIZE + meta_len + 2*ETH_ALEN;
             memmove(skb->data + offset, skb->data + offset + 4, skb->len - offset - 4);
@@ -456,6 +375,15 @@ ngknet_rx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
     *oskb = skb;
 
     return SHR_E_NONE;
+}
+
+/*!
+ * Get network interface status.
+ */
+static bool
+ngknet_netif_ok(struct net_device *ndev)
+{
+    return (netif_carrier_ok(ndev) && netif_running(ndev));
 }
 
 /*!
@@ -529,48 +457,22 @@ ngknet_netif_recv(struct net_device *ndev, struct sk_buff *skb)
 }
 
 /*!
- * \brief Driver Rx callback.
+ * \brief Packet Rx callback.
  *
- * After processing the packet, send it up to network stack.
+ * Take over the control of SKB and send packet to network interface.
  *
- * \param [in] pdev Packet DMA device structure point.
- * \param [in] buf Raw Rx buffer.
- *
- * \retval SHR_E_NONE No errors.
- * \retval SHR_E_XXXX Operation failed.
+ * \param [in] ndev Network device structure point.
+ * \param [in] skb Rx packet SKB.
  */
-static int
-ngknet_frame_recv(struct pdma_dev *pdev, int queue, void *buf)
+static void
+ngknet_pkt_recv(struct net_device *ndev, struct sk_buff *skb)
 {
-    struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
-    struct sk_buff *skb = (struct sk_buff *)buf, *mskb = NULL;
-    struct net_device *ndev = NULL, *mndev = NULL;
-    struct ngknet_private *priv = NULL;
+    struct ngknet_private *priv = netdev_priv(ndev);
+    struct ngknet_dev *dev = priv->bkn_dev;
     unsigned long flags;
-    int rv;
 
-    DBG_VERB(("Rx packet (%d bytes).\n", skb->len));
-    if (debug & DBG_LVL_PDMP) {
-        ngknet_pkt_dump(skb->data, skb->len);
-    }
-
-    DBG_NDEV(("Valid virtual network devices: %ld.\n", (long)dev->vdev[0]));
-
-    /* Go through the filters */
-    rv = ngknet_rx_pkt_filter(dev, &skb, &ndev, &mskb, &mndev);
-    if (!skb) {
-        return SHR_E_NONE;
-    }
-    if (SHR_FAILURE(rv)) {
-        dev_kfree_skb_any(skb);
-        return SHR_E_NONE;
-    } else if (!ndev) {
-        return SHR_E_NO_HANDLER;
-    }
-
-    /* Populate header, checksum status, VLAN, and protocol */
-    priv = netdev_priv(ndev);
-    if (netif_carrier_ok(ndev)) {
+    /* Send the packet to network interface */
+    if (ngknet_netif_ok(ndev)) {
         if (SHR_FAILURE(ngknet_netif_recv(ndev, skb))) {
             dev_kfree_skb_any(skb);
             if (!netif_queue_stopped(ndev)) {
@@ -587,26 +489,37 @@ ngknet_frame_recv(struct pdma_dev *pdev, int queue, void *buf)
         wake_up(&dev->wq);
     }
     spin_unlock_irqrestore(&dev->lock, flags);
+}
 
-    /* Handle mirrored packet */
-    if (mndev && mskb) {
-        priv = netdev_priv(mndev);
-        if (netif_carrier_ok(mndev)) {
-            if (SHR_FAILURE(ngknet_netif_recv(mndev, mskb))) {
-                dev_kfree_skb_any(mskb);
-                if (!netif_queue_stopped(mndev)) {
-                    priv->stats.rx_dropped++;
-                }
-            }
-        } else {
-            dev_kfree_skb_any(mskb);
-        }
-        spin_lock_irqsave(&dev->lock, flags);
-        priv->users--;
-        if (!priv->users && priv->wait) {
-            wake_up(&dev->wq);
-        }
-        spin_unlock_irqrestore(&dev->lock, flags);
+/*!
+ * \brief Driver Rx callback.
+ *
+ * After processing the packet, send it up to network stack.
+ *
+ * \param [in] pdev Packet DMA device structure point.
+ * \param [in] buf Raw Rx buffer.
+ *
+ * \retval SHR_E_NONE No errors.
+ * \retval SHR_E_XXXX Operation failed.
+ */
+static int
+ngknet_frame_recv(struct pdma_dev *pdev, int queue, void *buf)
+{
+    struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
+    struct sk_buff *skb = (struct sk_buff *)buf;
+    int rv;
+
+    DBG_VERB(("Rx packet (%d bytes).\n", skb->len));
+    if (debug & DBG_LVL_PDMP) {
+        ngknet_pkt_dump(skb->data, skb->len);
+    }
+
+    DBG_NDEV(("Valid virtual network devices: %ld.\n", (long)dev->vdev[0]));
+
+    /* Go through the filters and process it. */
+    rv = ngknet_rx_pkt_filter(dev, skb);
+    if (SHR_FAILURE(rv)) {
+        return rv;
     }
 
     /* Measure speed */
@@ -670,7 +583,8 @@ ngknet_ptp_tx_config(struct net_device *ndev, struct sk_buff *skb)
     uint64_t *tx_ts = (uint64_t *)skb->cb;
     int rv;
 
-    if (priv->netif.type == NGKNET_NETIF_T_PORT) {
+    if (priv->netif.type == NGKNET_NETIF_T_PORT ||
+        priv->netif.type == NGKNET_NETIF_T_META) {
         rv = ngknet_ptp_tx_meta_set(ndev, skb);
         if (SHR_FAILURE(rv)) {
             return rv;
@@ -728,6 +642,9 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
 
     /* Set up packet header */
     if (priv->netif.flags & NGKNET_NETIF_F_RCPU_ENCAP) {
+        if (rch->flags & RCPU_FLAG_KEEP_FCS) {
+            fcs_len = 0;
+        }
         /* RCPU encapsulation packet */
         data_len = pkh->attrs & PDMA_TX_HDR_COOKED ?
                    pkh->data_len - fcs_len : ntohs(rch->data_len);
@@ -772,7 +689,8 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
             return SHR_E_NONE;
         }
         meta_len = 0;
-        if (priv->netif.type == NGKNET_NETIF_T_PORT) {
+        if (priv->netif.type == NGKNET_NETIF_T_PORT ||
+            priv->netif.type == NGKNET_NETIF_T_META) {
             meta_len = priv->netif.meta_len;
             if (!meta_len) {
                 printk("Tx abort: no metadata\n");
@@ -797,7 +715,8 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
         pkh->data_len = skb->len - PKT_HDR_SIZE - meta_len + fcs_len;
         pkh->meta_len = meta_len;
         pkh->attrs = 0;
-        if (priv->netif.type == NGKNET_NETIF_T_PORT) {
+        if (priv->netif.type == NGKNET_NETIF_T_PORT ||
+            priv->netif.type == NGKNET_NETIF_T_META) {
             /* Send to physical port using netif metadata */
             if (priv->netif.meta_off) {
                 memmove(skb->data + PKT_HDR_SIZE,
@@ -844,7 +763,6 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
         tag_len = VLAN_HLEN;
     }
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
-    /* XGS MACSEC: Add SVTAG (Secure Vlan TAG) */
     if (priv->netif.flags & NGKNET_NETIF_F_ADD_SVTAG) {
         uint16_t ether_type = 0;
         static const uint16_t mgmt_et = 0x888e;
@@ -926,6 +844,7 @@ static void
 ngknet_ndev_detach(struct pdma_dev *pdev)
 {
     struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
+    struct net_device *ndev;
     int vdi;
 
     netif_tx_lock(dev->net_dev);
@@ -933,12 +852,13 @@ ngknet_ndev_detach(struct pdma_dev *pdev)
     netif_tx_unlock(dev->net_dev);
 
     for (vdi = 1; vdi <= NUM_VDEV_MAX; vdi++) {
-        if (!dev->vdev[vdi]) {
+        ndev = dev->vdev[vdi];
+        if (!ndev) {
             continue;
         }
-        netif_tx_lock(dev->vdev[vdi]);
-        netif_device_detach(dev->vdev[vdi]);
-        netif_tx_unlock(dev->vdev[vdi]);
+        netif_tx_lock(ndev);
+        netif_device_detach(ndev);
+        netif_tx_unlock(ndev);
     }
 }
 
@@ -949,6 +869,7 @@ static void
 ngknet_ndev_attach(struct pdma_dev *pdev)
 {
     struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
+    struct net_device *ndev;
     int vdi;
 
     netif_tx_lock(dev->net_dev);
@@ -956,12 +877,21 @@ ngknet_ndev_attach(struct pdma_dev *pdev)
     netif_tx_unlock(dev->net_dev);
 
     for (vdi = 1; vdi <= NUM_VDEV_MAX; vdi++) {
-        if (!dev->vdev[vdi]) {
+        ndev = dev->vdev[vdi];
+        if (!ndev) {
             continue;
         }
-        netif_tx_lock(dev->vdev[vdi]);
-        netif_device_attach(dev->vdev[vdi]);
-        netif_tx_unlock(dev->vdev[vdi]);
+        netif_tx_lock(ndev);
+        netif_device_attach(ndev);
+        netif_tx_unlock(ndev);
+#ifdef NGKNET_XDP_NATIVE
+        if (((struct ngknet_private *)netdev_priv(ndev))->xsk_zc) {
+            int qi;
+            for (qi = 0; qi < pdev->ctrl.nb_txq; qi++) {
+                ngknet_xsk_wakeup(ndev, qi, XDP_WAKEUP_TX);
+            }
+        }
+#endif
     }
 }
 
@@ -972,6 +902,7 @@ static void
 ngknet_tx_suspend(struct pdma_dev *pdev, int queue)
 {
     struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
+    struct net_device *ndev;
     unsigned long flags;
     int vdi;
 
@@ -979,10 +910,11 @@ ngknet_tx_suspend(struct pdma_dev *pdev, int queue)
 
     spin_lock_irqsave(&dev->lock, flags);
     for (vdi = 1; vdi <= NUM_VDEV_MAX; vdi++) {
-        if (!dev->vdev[vdi]) {
+        ndev = dev->vdev[vdi];
+        if (!ndev) {
             continue;
         }
-        netif_stop_subqueue(dev->vdev[vdi], queue);
+        netif_stop_subqueue(ndev, queue);
     }
     spin_unlock_irqrestore(&dev->lock, flags);
 }
@@ -994,21 +926,42 @@ static void
 ngknet_tx_resume(struct pdma_dev *pdev, int queue)
 {
     struct ngknet_dev *dev = (struct ngknet_dev *)pdev->priv;
+    struct net_device *ndev;
     unsigned long flags;
-    int vdi;
+    static int start_index[NUM_PDMA_DEV_MAX];
+    int vdi = start_index[pdev->unit];
+    int vdn = 0;
 
     if (__netif_subqueue_stopped(dev->net_dev, queue)) {
         netif_wake_subqueue(dev->net_dev, queue);
     }
 
     spin_lock_irqsave(&dev->lock, flags);
-    for (vdi = 1; vdi <= NUM_VDEV_MAX; vdi++) {
-        if (!dev->vdev[vdi]) {
-            continue;
+    vdi = vdi > 0 ? vdi : NUM_VDEV_MAX;
+    while (1) {
+        ndev = dev->vdev[vdi];
+        if (ndev) {
+            if (__netif_subqueue_stopped(ndev, queue)) {
+                netif_wake_subqueue(ndev, queue);
+            }
+#ifdef NGKNET_XDP_NATIVE
+            if (((struct ngknet_private *)netdev_priv(ndev))->xsk_zc) {
+                ngknet_xsk_wakeup(ndev, queue, XDP_WAKEUP_TX);
+            }
+#endif
+            start_index[pdev->unit] = vdi;
         }
-        if (__netif_subqueue_stopped(dev->vdev[vdi], queue)) {
-            netif_wake_subqueue(dev->vdev[vdi], queue);
+
+        /*
+         * Exits if all devices are done and vdi indexes the last resumed device.
+         * As such, every device has the same chance of being waken up first.
+         */
+        if (++vdn == NUM_VDEV_MAX) {
+            break;
         }
+
+        /* Increases vdi by 1 in a circular manner within the specified range */
+        vdi = ++vdi > NUM_VDEV_MAX ? 1 : vdi;
     }
     spin_unlock_irqrestore(&dev->lock, flags);
 
@@ -1071,6 +1024,12 @@ ngknet_poll(struct napi_struct *napi, int budget)
         }
         work_done = bcmcnet_queue_poll(pdev, hdl, budget);
     }
+
+#ifdef NGKNET_XDP_NATIVE
+    if (dev->xsk_pool && xsk_napi_tx) {
+        work_done = max(ngknet_xsk_napi_tx(dev, hdl, budget), work_done);
+    }
+#endif
 
     if (work_done < budget) {
         kih->napi_resched = 0;
@@ -1362,7 +1321,6 @@ ngknet_enet_open(struct net_device *ndev)
     /* Prevent tx timeout */
     kal_netif_trans_update(ndev);
 
-    netif_carrier_on(ndev);
     netif_tx_wake_all_queues(ndev);
 
     return 0;
@@ -1382,7 +1340,6 @@ ngknet_enet_stop(struct net_device *ndev)
     int gi, qi;
 
     netif_tx_stop_all_queues(ndev);
-    netif_carrier_off(ndev);
 
     if (priv->netif.id <= 0) {
         /* Stop rate limit */
@@ -1461,7 +1418,7 @@ ngknet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     }
 
     /* Schedule Tx queue */
-    ngknet_tx_queue_schedule(dev, skb, &queue);
+    ngknet_tx_queue_schedule(dev, (struct pkt_buf *)skb->data, &queue);
     skb->queue_mapping = queue;
 
     DBG_VERB(("Tx packet (%d bytes).\n", skb->len));
@@ -1476,7 +1433,7 @@ ngknet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
     skb_tx_timestamp(skb);
 
-    rv = pdev->pkt_xmit(pdev, queue, skb);
+    rv = pdev->pkt_xmit(pdev, queue, &skb->data);
 
     if (rv == SHR_E_BUSY) {
         DBG_WARN(("Tx suspend: DMA device is busy and temporarily "
@@ -1574,7 +1531,6 @@ ngknet_do_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
     if (cmd == NGKNET_IOC_SVTAG_SET) {
         struct ifru_svtag req;
-
         if (copy_from_user(&req, ifr->ifr_data, sizeof(req)))
             return -EFAULT;
         if (ntohl(req.magic) != NGKNET_IOC_SVTAG_MAGIC)
@@ -1590,7 +1546,8 @@ ngknet_do_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
             return -EFAULT;
         }
 
-        if (priv->netif.type != NGKNET_NETIF_T_PORT) {
+        if (priv->netif.type != NGKNET_NETIF_T_PORT &&
+            priv->netif.type != NGKNET_NETIF_T_META) {
             return -ENOSYS;
         }
 
@@ -1683,20 +1640,25 @@ static const struct net_device_ops ngknet_netdev_ops = {
 #ifdef CONFIG_NET_POLL_CONTROLLER
     .ndo_poll_controller = ngknet_poll_controller,
 #endif
+#ifdef NGKNET_XDP_NATIVE
+    .ndo_bpf             = ngknet_xdp_setup,
+    .ndo_xdp_xmit        = ngknet_xdp_xmit,
+    .ndo_xsk_wakeup      = ngknet_xsk_wakeup,
+#endif
 };
 
 static void
 ngknet_get_drvinfo(struct net_device *ndev, struct ethtool_drvinfo *drvinfo)
 {
-    strlcpy(drvinfo->driver, "linux_ngknet", sizeof(drvinfo->driver));
+    strscpy(drvinfo->driver, "linux_ngknet", sizeof(drvinfo->driver));
     snprintf(drvinfo->version, sizeof(drvinfo->version), "%d", NGKNET_IOC_VERSION);
-    strlcpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
-    strlcpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
+    strscpy(drvinfo->fw_version, "N/A", sizeof(drvinfo->fw_version));
+    strscpy(drvinfo->bus_info, "N/A", sizeof(drvinfo->bus_info));
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
 static int
-ngknet_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
+ngknet_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
 {
     int rv;
 
@@ -1706,8 +1668,13 @@ ngknet_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
                             SOF_TIMESTAMPING_RX_SOFTWARE |
                             SOF_TIMESTAMPING_SOFTWARE |
                             SOF_TIMESTAMPING_RAW_HARDWARE;
-    info->tx_types = 1 << HWTSTAMP_TX_OFF | 1 << HWTSTAMP_TX_ON | 1 << HWTSTAMP_TX_ONESTEP_SYNC;
-    info->rx_filters = 1 << HWTSTAMP_FILTER_NONE | 1 << HWTSTAMP_FILTER_ALL;
+    info->tx_types =
+        (1 << HWTSTAMP_TX_OFF) |
+        (1 << HWTSTAMP_TX_ON) |
+        (1 << HWTSTAMP_TX_ONESTEP_SYNC);
+    info->rx_filters =
+        (1 << HWTSTAMP_FILTER_NONE) |
+        (1 << HWTSTAMP_FILTER_ALL);
     rv = ngknet_ptp_phc_index_get(ndev, &info->phc_index);
     if (SHR_FAILURE(rv)) {
         info->phc_index = -1;
@@ -1822,6 +1789,9 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
     ma = netif->macaddr;
     if ((ma[0] | ma[1] | ma[2] | ma[3] | ma[4] | ma[5]) == 0) {
         ngknet_dev_mac[5]++;
+        if (ngknet_dev_mac[5] == 0) {
+            ngknet_dev_mac[4]++;
+        }
         ma = ngknet_dev_mac;
     }
     eth_hw_addr_set(ndev, ma);
@@ -1833,6 +1803,15 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
     ndev->features = NETIF_F_RXCSUM |
                      NETIF_F_HIGHDMA |
                      NETIF_F_HW_VLAN_CTAG_RX;
+
+#ifdef NGKNET_XDP_NATIVE
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0))
+    ndev->xdp_features = NETDEV_XDP_ACT_BASIC |
+                         NETDEV_XDP_ACT_REDIRECT |
+                         NETDEV_XDP_ACT_NDO_XMIT |
+                         NETDEV_XDP_ACT_XSK_ZEROCOPY;
+#endif
+#endif
 
     /* Register the kernel network device */
     rv = register_netdev(ndev);
@@ -1948,7 +1927,7 @@ ngknet_dev_info_get(int dn)
     }
 
     dev->dev_info.dev_no = dn;
-    strlcpy(dev->dev_info.type_str, drv_ops[dev->pdma_dev.dev_type]->drv_desc,
+    strscpy(dev->dev_info.type_str, drv_ops[dev->pdma_dev.dev_type]->drv_desc,
             sizeof(dev->dev_info.type_str));
     dev->dev_info.vdev = dev->vdev;
     return SHR_E_NONE;
@@ -2018,6 +1997,7 @@ ngknet_dev_probe(int dn, ngknet_netif_t *netif)
     priv = netdev_priv(ndev);
     priv->net_dev = ndev;
     priv->bkn_dev = dev;
+    priv->pkt_recv = ngknet_pkt_recv;
 
     netif->id = 0;
     memcpy(netif->macaddr, ndev->dev_addr, ETH_ALEN);
@@ -2071,6 +2051,11 @@ ngknet_dev_probe(int dn, ngknet_netif_t *netif)
     skb_queue_head_init(&dev->ptp_tx_queue);
     INIT_WORK(&dev->ptp_tx_work, ngknet_ptp_tx_work);
 
+    dev->link_wq = create_workqueue("ngknet");
+    if (!dev->link_wq) {
+        return SHR_E_INTERNAL;
+    }
+
     dev->flags |= NGKNET_DEV_ACTIVE;
 
     DBG_NDEV(("Broadcom NGKNET Attached\n"));
@@ -2113,6 +2098,11 @@ ngknet_dev_remove(int dn)
 
     dev->flags &= ~NGKNET_DEV_ACTIVE;
 
+    if (dev->link_wq) {
+        flush_workqueue(dev->link_wq);
+        destroy_workqueue(dev->link_wq);
+    }
+
     skb_queue_purge(&dev->ptp_tx_queue);
 
     if (pdev->mode == DEV_MODE_HNET && dev->hnet_task) {
@@ -2129,7 +2119,6 @@ ngknet_dev_remove(int dn)
     for (di = 1; di <= NUM_VDEV_MAX; di++) {
         ndev = dev->vdev[di];
         if (ndev) {
-            netif_carrier_off(ndev);
             unregister_netdev(ndev);
             free_netdev(ndev);
             dev->vdev[di] = NULL;
@@ -2173,6 +2162,22 @@ ngknet_dev_remove(int dn)
     ngbde_kapi_knet_disconnect(dn);
 
     return rv;
+}
+
+static void
+ngknet_netif_link_process(struct work_struct *work)
+{
+    struct ngknet_private *priv = container_of(work, struct ngknet_private,
+                                               link_work);
+    struct net_device *ndev = priv->net_dev;
+
+    if (netif_carrier_ok(ndev)) {
+        netif_carrier_off(ndev);
+        netif_tx_stop_all_queues(ndev);
+    } else {
+        netif_carrier_on(ndev);
+        netif_tx_wake_all_queues(ndev);
+    }
 }
 
 /*!
@@ -2265,6 +2270,7 @@ ngknet_netif_create(struct ngknet_dev *dev, ngknet_netif_t *netif)
     priv = netdev_priv(ndev);
     priv->net_dev = ndev;
     priv->bkn_dev = dev;
+    priv->pkt_recv = ngknet_pkt_recv;
 
     netif->id = id;
     memcpy(netif->macaddr, ndev->dev_addr, ETH_ALEN);
@@ -2284,6 +2290,8 @@ ngknet_netif_create(struct ngknet_dev *dev, ngknet_netif_t *netif)
                       ndev->name));
         }
     }
+
+    INIT_WORK(&priv->link_work, ngknet_netif_link_process);
 
     DBG_VERB(("Created virtual network device %s (%d).\n",
               ndev->name, priv->netif.id));
@@ -2356,7 +2364,6 @@ ngknet_netif_destroy(struct ngknet_dev *dev, int id)
     DBG_VERB(("Removing virtual network device %s (%d).\n",
               ndev->name, priv->netif.id));
 
-    netif_carrier_off(ndev);
     unregister_netdev(ndev);
     free_netdev(ndev);
 
@@ -2464,6 +2471,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     struct ngknet_ioctl ioc;
     struct ngknet_dev *dev = NULL;
     struct net_device *ndev = NULL;
+    struct ngknet_private *priv = NULL;
     struct pdma_dev *pdev = NULL;
     union {
         ngknet_dev_cfg_t dev_cfg;
@@ -2490,6 +2498,14 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     }
 
     ioc.rc = SHR_E_NONE;
+
+    if (ioc.unit >= NUM_PDMA_DEV_MAX) {
+        ioc.rc = SHR_E_PARAM;
+        if (copy_to_user((void *)arg, &ioc, sizeof(ioc))) {
+            return -EFAULT;
+        }
+        return 0;
+    }
 
     dev = &ngknet_devices[ioc.unit];
     pdev = &dev->pdma_dev;
@@ -2524,7 +2540,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         DBG_CMD(("NGKNET_DEV_INIT\n"));
         if (dev->flags & NGKNET_DEV_ACTIVE) {
             DBG_CMD(("NGKNET_DEV_INIT, retrieve device configurations.\n"));
-            strlcpy(dev_cfg->name, pdev->name, sizeof(dev_cfg->name));
+            strscpy(dev_cfg->name, pdev->name, sizeof(dev_cfg->name));
             dev_cfg->dev_id = pdev->dev_id;
             dev_cfg->nb_grp = pdev->ctrl.nb_grp;
             dev_cfg->bm_grp = pdev->ctrl.bm_grp;
@@ -2550,7 +2566,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             break;
         }
         memset(pdev, 0, sizeof(*pdev));
-        strlcpy(pdev->name, dev_cfg->name, sizeof(pdev->name));
+        strscpy(pdev->name, dev_cfg->name, sizeof(pdev->name));
         pdev->dev_id = dev_cfg->dev_id;
         for (dt = 0; dt < drv_num; dt++) {
             if (!drv_ops[dt]) {
@@ -2558,7 +2574,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             }
             if (!strcasecmp(dev_cfg->type_str, drv_ops[dt]->drv_desc)) {
                 pdev->dev_type = dt;
-                strlcpy(dev->dev_info.var_str, dev_cfg->var_str,
+                strscpy(dev->dev_info.var_str, dev_cfg->var_str,
                         sizeof(dev->dev_info.var_str));
                 break;
             }
@@ -2778,7 +2794,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         break;
     case NGKNET_STATS_RESET:
         DBG_CMD(("NGKNET_STATS_RESET\n"));
-        bcmcnet_pdma_dev_stats_reset(pdev);
+        bcmcnet_pdma_dev_stats_reset(pdev, ioc.iarg[0]);
         break;
     case NGKNET_NETIF_CREATE:
         DBG_CMD(("NGKNET_NETIF_CREATE\n"));
@@ -2832,16 +2848,17 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             break;
         }
         ndev = dev->vdev[netif->id];
+        priv = netdev_priv(ndev);
         if (ioc.iarg[1]) {
             if (!netif_carrier_ok(ndev)) {
-                netif_carrier_on(ndev);
-                netif_tx_wake_all_queues(ndev);
+                queue_work(dev->link_wq, &priv->link_work);
+                flush_work(&priv->link_work);
                 DBG_LINK(("%s: link up\n", netif->name));
             }
         } else {
             if (netif_carrier_ok(ndev)) {
-                netif_carrier_off(ndev);
-                netif_tx_stop_all_queues(ndev);
+                queue_work(dev->link_wq, &priv->link_work);
+                flush_work(&priv->link_work);
                 DBG_LINK(("%s: link down\n", netif->name));
             }
         }

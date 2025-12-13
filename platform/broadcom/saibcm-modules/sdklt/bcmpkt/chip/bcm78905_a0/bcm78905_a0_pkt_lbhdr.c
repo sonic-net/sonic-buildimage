@@ -5,7 +5,8 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -251,22 +252,6 @@ const bcmpkt_lbhdr_fget_t bcm78905_a0_lbhdr_fget = {
         bcmpkt_lbhdr_cng_eth_get,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL
     }
 };
@@ -313,22 +298,6 @@ const bcmpkt_lbhdr_fset_t bcm78905_a0_lbhdr_fset = {
         bcmpkt_lbhdr_cng_eth_set,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
         NULL
     }
 };
@@ -348,8 +317,7 @@ static shr_enum_map_t bcm78905_a0_lbhdr_view_types[] = {
 static int bcm78905_a0_lbhdr_view_infos[BCMPKT_LBHDR_FID_COUNT] = {
      -1, -1, -2, -1, -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1,
-     -1, -1, -1, -1, -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-     -2, -2, -2, -2, -2, -2, -2, -2,
+     -1, -1, -1, -1, -1, -2, -2, -2,
 };
 
 

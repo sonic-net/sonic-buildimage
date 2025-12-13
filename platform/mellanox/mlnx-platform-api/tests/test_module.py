@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -253,9 +253,7 @@ class TestModule:
             mock_obj.assert_called_once_with(skip_pre_post=True)
             mock_obj.reset_mock()
             m.reboot(reboot_type=ModuleBase.MODULE_REBOOT_SMARTSWITCH)
-            mock_obj.assert_called_once_with(no_wait=True, skip_pre_post=True)
-            with pytest.raises(RuntimeError):
-                m.reboot("None")
+            mock_obj.assert_called_once_with(skip_pre_post=True)
         with patch('sonic_py_common.syslogger.SysLogger.log_error') as mock_method:
             m.dpuctl_obj.dpu_power_on = mock.MagicMock(return_value=True)
             assert m.set_admin_state(True)
@@ -265,41 +263,14 @@ class TestModule:
             mock_method.assert_called_once_with("Failed to set the admin state for DPU3")
         m.dpuctl_obj.dpu_power_off = mock.MagicMock(return_value=True)
         assert m.set_admin_state(False)
-        midplane_ips = {
-            "dpu0": "169.254.200.1",
-            "dpu1": "169.254.200.2",
-            "dpu2": "169.254.200.3",
-            "dpu3": "169.254.200.4"
-        }
-        def get_midplane_ip(DB_NAME, _hash, key):
-            dpu_name = _hash.split("|")[-1]
-            return midplane_ips.get(dpu_name)
-        mock_get.side_effect = get_midplane_ip
-        assert m.get_midplane_ip() == "169.254.200.4"
-        assert m.midplane_ip == "169.254.200.4"
-        mock_get.assert_called_with('CONFIG_DB', 'DHCP_SERVER_IPV4_PORT|bridge-midplane|dpu3', 'ips@')
         m1 = DpuModule(2)
-        assert m1.get_midplane_ip() == "169.254.200.3"
-        assert m1.midplane_ip == "169.254.200.3"
-        mock_get.assert_called_with('CONFIG_DB', 'DHCP_SERVER_IPV4_PORT|bridge-midplane|dpu2', 'ips@')
-        mock_get.reset_mock()
-        mock_get.return_value = None
-        mock_get.side_effect = None
-        # We check for the IP only once in CONFIG_DB after initialization
         assert m.get_midplane_ip() == "169.254.200.4"
-        mock_get.assert_not_called()
-        m.midplane_ip = None
-        m1.midplane_ip = None
-        assert not m.get_midplane_ip()
-        assert not m1.get_midplane_ip()
-        mock_get.side_effect = get_midplane_ip
+        assert m1.get_midplane_ip() == "169.254.200.3"
         with patch.object(m, '_is_midplane_up', ) as mock_midplane_m, \
              patch.object(m1, '_is_midplane_up',) as mock_midplane_m1:
             mock_midplane_m.return_value = True
             mock_midplane_m1.return_value = True
-            m.midplane_ip = None
-            midplane_ips["dpu3"] = "169.254.200.244"
-            command = ['ping', '-c', '1', '-W', '1', "169.254.200.244"]
+            command = ['ping', '-c', '1', '-W', '1', "169.254.200.4"]
             mock_call.return_value = 0
             assert m.is_midplane_reachable()
             mock_call.assert_called_with(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -343,12 +314,13 @@ class TestModule:
                 return 1
             else:
                 return 0
-        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'None']
+        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
         reboot_cause_list = [
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
         ]
         with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
@@ -369,9 +341,24 @@ class TestModule:
             assert m1._is_midplane_up()
             assert m2._is_midplane_up()
             assert m3._is_midplane_up()
-            assert m1.get_pci_bus_info() == pl_data["dpu0"]['bus_info']
-            assert m2.get_pci_bus_info() == pl_data["dpu1"]['bus_info']
-            assert m3.get_pci_bus_info() == pl_data["dpu2"]['bus_info']
+            
+            # Test get_pci_bus_info function
+            with patch.object(m1.dpuctl_obj, "get_pci_dev_path") as mock_get_pci_dev_path:
+                mock_get_pci_dev_path.return_value = ["0000:08:00.0", "0000:09:00.0"]
+                # First call should get the bus info from dpuctl_obj
+                assert m1.get_pci_bus_info() == ["0000:08:00.0", "0000:09:00.0"]
+                mock_get_pci_dev_path.assert_called_once()
+                # Second call should use cached value
+                assert m1.get_pci_bus_info() == ["0000:08:00.0", "0000:09:00.0"]
+                # Should not call get_pci_dev_path again
+                mock_get_pci_dev_path.assert_called_once()
+
+                # Test with a different module
+                with patch.object(m2.dpuctl_obj, "get_pci_dev_path") as mock_get_pci_dev_path2:
+                    mock_get_pci_dev_path2.return_value = ["0000:09:00.0", "0000:0A:00.0"]
+                    assert m2.get_pci_bus_info() == ["0000:09:00.0", "0000:0A:00.0"]
+                    mock_get_pci_dev_path2.assert_called_once()
+
             with pytest.raises(RuntimeError):
                 m4._is_midplane_up()
                 m4.get_pci_bus_info()

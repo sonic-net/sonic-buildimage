@@ -15,7 +15,7 @@ image_dir=image-$image_version
 
 INSTALLER_PAYLOAD=fs.zip
 DOCKERFS_DIR=docker
-{% if BUILD_REDUCE_IMAGE_SIZE == "y" -%}
+{% if BUILD_REDUCE_IMAGE_SIZE | default("n") == "y" -%}
 FILESYSTEM_DOCKERFS=dockerfs.tar.zstd
 {%- else -%}
 FILESYSTEM_DOCKERFS=dockerfs.tar.gz
@@ -248,8 +248,8 @@ cat <<EOF >> $root_mnt/$BL_CONF
 default main
 
 label main
-    kernel /$image_dir/boot/vmlinuz-6.1.0-22-2-arm64
-    initrd /$image_dir/boot/initrd.img-6.1.0-22-2-arm64
+    kernel /$image_dir/boot/vmlinuz-6.1.0-29-2-arm64
+    initrd /$image_dir/boot/initrd.img-6.1.0-29-2-arm64
     devicetree /$image_dir/boot/elba-asic-psci.dtb
     append softdog.soft_panic=1 FW_NAME=mainfwa root=/dev/mmcblk0p10 rw rootwait rootfstype=ext4 loopfstype=squashfs loop=/$image_dir/fs.squashfs
 }

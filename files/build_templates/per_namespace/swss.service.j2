@@ -13,7 +13,6 @@ Requires=config-setup.service
 After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
-Before=ntp-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 

@@ -114,7 +114,7 @@ def intf_setup(dut):
         ),
         {},
         {}
-    )    
+    )
 
 def test_set_del_ipv6():
     dut = constructor()
@@ -127,7 +127,7 @@ def test_set_del_ipv6():
             "ifname": "if1, if2, if3",
             "nexthop": "2603:10E2:400:1::2,2603:10E2:400:2::2,2603:10e2:400:3::2"
         }),
-        { 
+        {
             "set_default:default:2603:10e2:400:1::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:1::1'},
             "set_default:default:2603:10e2:400:2::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:2::1'},
             "set_default:default:2603:10e2:400:3::2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '2603:10E2:400:3::1'}
@@ -200,7 +200,7 @@ def test_set_del():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -241,7 +241,7 @@ def test_set_del():
             "nexthop": "192.168.1.2 , 192.168.2.2",
             "ifname": "if1, if2",
         }),
-        { 
+        {
             "del_default:default:192.168.3.2" : {}
         },
         {'set_default:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2 ', 'ifname': 'if2,if1', 'nexthop-vrf': 'default,default', 'expiry': 'false'}}
@@ -255,7 +255,7 @@ def test_set_del():
             "nexthop": "192.168.1.2 , 192.168.2.2",
             "ifname": "if1, if2",
         }),
-        { 
+        {
             "del_default:default:192.168.1.2" : {},
             "del_default:default:192.168.2.2" : {}
         },
@@ -293,7 +293,7 @@ def test_set_del_vrf():
             "ifname": "if1, if2, if3",
             "nexthop-vrf": "testvrf1, , default",
         }),
-        { 
+        {
             "set_testvrf1:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_vrfred:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -334,7 +334,7 @@ def test_set_del_vrf():
             "ifname": "if1, if2",
             "nexthop-vrf": "testvrf1,",
         }),
-        { 
+        {
             "del_default:default:192.168.3.2" : {}
         },
         {'set_vrfred:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2 ', 'ifname': 'if2,if1', 'nexthop-vrf': 'vrfred, testvrf1', 'expiry': 'false'}}
@@ -343,7 +343,7 @@ def test_set_del_vrf():
     set_del_test(dut, "srt",
         "DEL",
         ("vrfred|2.2.2.0/24", { }),
-        { 
+        {
             "del_testvrf1:default:192.168.1.2" : {},
             "del_vrfred:default:192.168.2.2" : {}
         },
@@ -361,7 +361,7 @@ def test_bfd_del():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -414,7 +414,7 @@ def test_set_2routes():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -491,7 +491,7 @@ def test_set_bfd_change_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -531,7 +531,7 @@ def test_set_bfd_change_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "del_default:default:192.168.1.2" : {},
             "del_default:default:192.168.2.2" : {},
             "del_default:default:192.168.3.2" : {}
@@ -550,7 +550,7 @@ def test_set_bfd_change_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -596,7 +596,7 @@ def test_set_bfd_change_no_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.2.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
@@ -645,7 +645,7 @@ def test_set_bfd_change_no_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "del_default:default:192.168.1.2" : {},
             "del_default:default:192.168.3.2" : {}
         },
@@ -654,7 +654,7 @@ def test_set_bfd_change_no_hold():
         }
     )
 
-    #test #10 change 'bfd': false to true, because the bfd session "default:default:192.168.2.2" is up, so add that nexthop right after "bfd" change to "true" 
+    #test #10 change 'bfd': false to true, because the bfd session "default:default:192.168.2.2" is up, so add that nexthop right after "bfd" change to "true"
     set_del_test(dut, "srt",
         "SET",
         ("2.2.2.0/24", {
@@ -662,7 +662,7 @@ def test_set_bfd_change_no_hold():
             "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
             "ifname": "if1, if2, if3",
         }),
-        { 
+        {
             "set_default:default:192.168.1.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
             "set_default:default:192.168.3.2" : {'multihop': 'false', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
         },
@@ -695,4 +695,58 @@ def test_set_bfd_change_no_hold():
     )
 
 
+def test_set_del_blackhole_route():
+    dut = constructor()
+    intf_setup(dut)
 
+    test_set_del_blackhole_route.logs = []
+
+    with patch('staticroutebfd.main.log_info', new=lambda msg: test_set_del_blackhole_route.logs.append(msg)):
+        set_del_test(dut, "srt",
+            "SET",
+            ("2.2.2.0/24", {
+                "blackhole": "true",
+            }),
+            {},
+            {}
+        )
+
+        set_del_test(dut, "srt",
+            "DEL",
+            ("2.2.2.0/24", {
+                "blackhole": "true",
+            }),
+            {},
+            {}
+        )
+
+    assert "Blackholing static route encountered, skipping it" in test_set_del_blackhole_route.logs
+
+
+def test_set_del_ifname_only_route():
+    dut = constructor()
+    intf_setup(dut)
+
+    test_set_del_ifname_only_route.logs = []
+
+    with patch('staticroutebfd.main.log_warn', new=lambda msg: test_set_del_ifname_only_route.logs.append(msg)):
+        set_del_test(dut, "srt",
+            "SET",
+            ("2.2.2.0/24", {
+                "ifname": "if1,if2",
+            }),
+            {},
+            {}
+        )
+
+        set_del_test(dut, "srt",
+            "DEL",
+            ("2.2.2.0/24", {
+                "ifname": "if1,if2",
+            }),
+            {},
+            {}
+        )
+
+    assert "Static route bfd set Failed, nexthop, interface and vrf lists do not match or some of them is empty."\
+        in test_set_del_ifname_only_route.logs

@@ -1,1 +1,1 @@
-SUBSYSTEM=="net", ACTION=="add", DEVPATH=="/devices/platform/MLNXBF01:00/virtio1/net/eth*", NAME="eth0-midplane", RUN+="/usr/bin/bfnet.sh configure-pci-iface"
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="/devices/platform/MLNXBF01:00/virtio1/net/eth*", NAME="tmfifo0"

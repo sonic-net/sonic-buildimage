@@ -569,5 +569,215 @@
                 ]
             }
         }
+    },
+    "VLAN_SUB_INTERFACE_WITH_VALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "vnet_name": "Vnet1"
+                    }
+                ],
+                "VLAN_SUB_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "ip-prefix": "10.0.0.1/30"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_SUB_INTERFACE_WITH_INVALID_VNET_NAME": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "vnet_name": "NonExistentVnet"
+                    }
+                ],
+                "VLAN_SUB_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "ip-prefix": "10.0.0.1/30"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_SUB_INTERFACE_WITH_VNET_PORTCHANNEL": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "PortChannel01.8",
+                        "vnet_name": "Vnet1"
+                    }
+                ],
+                "VLAN_SUB_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "PortChannel01.8",
+                        "ip-prefix": "10.0.0.1/30"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "tpid": "0x8100",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "tpid": "0x8100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel01"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_SUB_INTERFACE_WITH_MISSING_VNET": {
+        "sonic-vlan-sub-interface:sonic-vlan-sub-interface": {
+            "sonic-vlan-sub-interface:VLAN_SUB_INTERFACE": {
+                "VLAN_SUB_INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "vnet_name": "Vnet1"
+                    }
+                ],
+                "VLAN_SUB_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Ethernet8.10",
+                        "ip-prefix": "10.0.0.1/30"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "admin_status": "up",
+                        "alias": "Ethernet8/1",
+                        "description": "Ethernet8",
+                        "lanes": "45,46,47,48",
+                        "mtu": 9000,
+                        "speed": 100000
+                    }
+                ]
+            }
+        }
     }
 }

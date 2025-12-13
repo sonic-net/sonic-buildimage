@@ -11,7 +11,7 @@ STARTMODULE = {
     "reboot_cause": 1,
     "pmon_syslog": 1,
     "sff_temp_polling": 1,
-    "generate_airflow": 0,
+    "generate_airflow": 1,
 }
 
 DEV_MONITOR_PARAM = {
@@ -386,7 +386,7 @@ MANUINFO_CONF = {
         "parent": "cpld4",
         "i2c": {
             "bus": "2",
-            "loc": "0x2d",
+            "loc": "0x1d",
             "offset": 0,
             "size": 4
         },
@@ -1018,7 +1018,7 @@ REBOOT_CAUSE_PARA = {
             "record": [
                 {"record_type": "file", "mode": "cover", "log": "Watchdog, ",
                     "path": "/etc/sonic/.reboot/.previous-reboot-cause.txt"},
-                {"record_type": "file", "mode": "add", "log": "Watchdog, ",
+                {"record_type": "file", "mode": "add", "log": "Watchdog, ", 
                     "path": "/etc/sonic/.reboot/.history-reboot-cause.txt", "file_max_size":1*1024*1024}
             ],
             "finish_operation": [
@@ -1076,4 +1076,54 @@ PLATFORM_E2_CONF = {
     "syseeprom": [
         {"name": "syseeprom", "e2_type": "onie_tlv", "e2_path": "/sys/bus/i2c/devices/1-0056/eeprom"},
     ],
+}
+
+AIR_FLOW_CONF = {
+    "psu_fan_airflow": {
+        "intake": ['DPS-1300AB-6 S', 'GW-CRPS1300D'],
+        "exhaust": ['CRPS1300D3R', 'DPS-1300AB-11 C']
+    },
+
+    "fanairflow": {
+        "intake": ['M1HFAN II-F'],
+        "exhaust": ['M1HFAN IV-R']
+    },
+
+    "fans": [
+        {
+            "name": "FAN1", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-75/75-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+        {
+            "name": "FAN2", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-74/74-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+        {
+            "name": "FAN3", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-73/73-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+        {
+            "name": "FAN4", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-72/72-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+        {
+            "name": "FAN5", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-71/71-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+        {
+            "name": "FAN6", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/i2c-70/70-0050/eeprom",
+            "area": "productInfoArea", "field": "productName", "decode": "fanairflow"
+        },
+    ],
+
+    "psus": [
+        {
+            "name": "PSU1", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/81-0050/eeprom",
+            "area": "productInfoArea", "field": "productPartModelName", "decode": "psu_fan_airflow"
+        },
+        {
+            "name": "PSU2", "e2_type": "fru", "e2_path": "/sys/bus/i2c/devices/82-0050/eeprom",
+            "area": "productInfoArea", "field": "productPartModelName", "decode": "psu_fan_airflow"
+        }
+    ]
 }

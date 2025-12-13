@@ -22,7 +22,6 @@ function startplatform() {
         fi
 
         debug "Starting Firmware update procedure"
-        /usr/bin/mst start --with_i2cdev
 
         /usr/bin/mlnx-fw-upgrade.sh -c -v
         if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
@@ -43,7 +42,7 @@ function startplatform() {
             else
                 platform="unknown"
             fi
-            if [[ x"$platform" == x"x86_64-arista_720dt_48s" ]]; then
+            if [[ x"$platform" =~ x"x86_64-arista_720dt_48s" ]]; then
                 is_bcm0=$(ls /sys/class/net | grep bcm0)
                 if [[ "$is_bcm0" == "bcm0" ]]; then
                     debug "stop SDK opennsl-modules ..."
@@ -97,6 +96,10 @@ function stopplatform1() {
         debug "Stopped pmon service"
     fi
 
+    if [[ x$sonic_asic_platform == x"mellanox" ]]; then
+        echo "health_check_trigger del_dev 1" > /proc/mlx_sx/sx_core
+    fi
+
     if [[ x$sonic_asic_platform != x"mellanox" ]] || [[ x$TYPE != x"cold" ]]; then
         # Invoke platform specific pre shutdown routine.
         PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
@@ -133,7 +136,6 @@ function stopplatform2() {
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         if [ x$sonic_asic_platform == x'mellanox' ]; then
             /etc/init.d/sxdkernel stop
-            /usr/bin/mst stop
         elif [ x"$sonic_asic_platform" == x"nvidia-bluefield" ]; then
             /usr/bin/bfnet.sh stop
         fi

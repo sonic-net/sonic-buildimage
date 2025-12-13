@@ -1,0 +1,40 @@
+{
+    "DHCPv4_RELAY_VALID_FORMAT_BASE": {
+        "desc": "Add dhcpv4 relay with minimum config."
+    },
+    "DHCPv4_RELAY_WITH_MULTIPLE_SERVERS": {
+        "desc": "Add dhcpv4 relay with multiple servers."
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF": {
+        "desc": "Add dhcpv4 relay with server VRF and required options."
+    },
+    "DHCPv4_RELAY_WITH_LINK_SELECT": {
+        "desc": "Add dhcpv4 relay with link-select option enabled."
+    },
+    "DHCPv4_RELAY_WITH_AGENT_RELAY_MODE_DISCARD": {
+        "desc": "Add dhcpv4 relay with minimum config."
+    },
+    "DHCPv4_RELAY_WITH_VALID_MAX_HOP_CNT": {
+        "desc": "Add dhcpv4 relay with valid max_hop_cnt."
+    },
+    "DHCPv4_RELAY_WITH_MISSING_SERVER_IP": {
+        "desc": "Add dhcpv4 relay with missing server_ip.",
+        "eStrKey": "MinElements"
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_LINK_SELECT_OPTION": {
+        "desc": "Add dhcpv4 relay with server_vrf and missing link-selection option.",
+        "eStrKey": "Must"
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_VRF_SELECT_OPTION": {
+        "desc": "Add dhcpv4 relay with server_vrf and missing vrf-selection option.",
+        "eStrKey": "Must"
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SERVER_OVERRIDE_OPTION": {
+        "desc": "Add dhcpv4 relay with server_vrf and missing lserver-override option.",
+        "eStrKey": "Must"
+    },
+    "DHCPv4_RELAY_WITH_SERVER_VRF_AND_MISSING_SOURCE_INTERFACE_OPTION": {
+        "desc": "Add dhcpv4 relay with server_vrf and missing source-interface option.",
+        "eStrKey": "Must"
+    }
+}

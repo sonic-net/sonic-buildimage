@@ -1,0 +1,95 @@
+name: Report a regression
+description: Report a regression issue
+title: "Regression:"
+labels: ['regression', 'Bug :bug:']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this report!
+
+        If you are reporting a new issue, make sure that we do not have any duplicates already open. You can ensure this by searching the issue list for this repository. If there is a duplicate, please close your issue and add a comment to the existing issue instead.
+
+        If you suspect your issue is a bug, please edit your issue description to include the BUG REPORT INFORMATION shown below. If you fail to provide this information within 7 days, we cannot debug your issue and will close it. We will however, reopen it if you later provide the information.
+
+        For more information about reporting issues, see [SONiC Issue Reporting Page](https://github.com/sonic-net/SONiC/wiki#report-issues)
+
+  - type: dropdown
+    id: tc-reg-platform
+    attributes:
+      label: Is it platform specific
+      description: Platform name
+      options:
+        - generic
+        - barefoot
+        - broadcom
+        - cavium
+        - centec
+        - innovium
+        - marvell
+        - mellanox
+        - nephos
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tc-reg-severity
+    attributes:
+      label: Importance or Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: input
+    id: tc-reg-previous-working-version
+    attributes:
+      label: Previous Working Version
+      description: Specify the last known version where the functionality worked as expected
+      placeholder: e.g., 202311 or Git SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-reg-str
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to Reproduce
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-reg-impact
+    attributes:
+      label: Impact of this regression
+      description: Impact of this regression
+    validations:
+      required: true
+
+  - type: textarea
+    id: tc-reg-logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+
+  - type: textarea
+    id: tc-reg-output
+    attributes:
+      label: Output of `show version`, `show techsupport`
+      description: Please copy and paste output of `show version`. This will be automatically formatted into code, so no need for backticks
+      render: shell
+
+  - type: markdown
+    id: tc-reg-attach-logs
+    attributes:
+      value: |
+        Attach debug file (if any) from: `sudo generate_dump` or other logs.
+  - type: textarea
+    id: tc-reg-attachments
+    attributes:
+      label: Attach files (if any)

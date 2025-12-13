@@ -4,7 +4,7 @@
     },
     "SFLOW_COLLECTOR_WRONG_NAME_TEST": {
         "desc": "Configure a collector with incorrect name in SFLOW_COLLECTOR table.",
-        "eStr" : ["not", "satisfy", "the", "constraint", "1..64"]
+        "eStrKey" : "Length"
     },
     "SFLOW_TEST_WITHOUT_COLLECTOR_IP": {
         "desc": "Configure a collector without collector IP attribute in SFLOW_COLLECTOR table.",
@@ -12,7 +12,7 @@
     },
     "SFLOW_TEST_EXCEEDING_MAX_ELEMENTS": {
         "desc": "Configure collectors above the specified limit in SFLOW_COLLECTOR table.",
-        "eStr":	["Too many \"SFLOW_COLLECTOR_LIST\" elements"]
+        "eStrKey": "MaxElements"
     },
     "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
         "desc": "Configure a collector in SFLOW_COLLECTOR table with default VRF."

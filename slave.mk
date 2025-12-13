@@ -2,7 +2,7 @@
 ## Presettings
 ###############################################################################
 
-# Select bash for commands 
+# Select bash for commands
 .ONESHELL:
 SHELL = /bin/bash
 .SHELLFLAGS += -e
@@ -229,6 +229,10 @@ ifeq ($(SONIC_INCLUDE_MACSEC),y)
 INCLUDE_MACSEC = y
 endif
 
+ifeq ($(SONIC_INCLUDE_STP),y)
+INCLUDE_STP = y
+endif
+
 ifneq ($(SONIC_INCLUDE_TEAMD),)
 override INCLUDE_TEAMD = $(SONIC_INCLUDE_TEAMD)
 endif
@@ -363,7 +367,8 @@ CROSS_LIBPERL_VERSION = $(shell dpkg -s libperl-dev:$(CONFIGURED_ARCH)|grep Vers
 CROSS_PERL_CORE_PATH = $(CROSS_PKGS_LIB_PATH)/perl/$(CROSS_LIBPERL_VERSION)/CORE/
 
 CROSS_COMPILE_FLAGS := CGO_ENABLED=1 GOOS=linux GOARCH=$(GOARCH) CROSS_COMPILE=$(CROSS_COMPILE) OVERRIDE_HOST_TYPE=$(CROSS_HOST_TYPE) CROSS_LIB_PATH=$(CROSS_LIB_PATH) CROSS_BIN_PATH=$(CROSS_BIN_PATH) CROSS_HOST_TYPE=$(CROSS_HOST_TYPE) CROSS_PKGS_LIB_PATH=$(CROSS_PKGS_LIB_PATH) CROSS_PERL_CORE_PATH=$(CROSS_PERL_CORE_PATH) CC=$(CC) CXX=$(CXX) AR=$(AR) LD=$(LD)
-
+else ifeq ($(BUILD_SKIP_TEST),y)
+DEB_BUILD_OPTIONS_GENERIC += nocheck
 endif
 
 ifeq ($(CROSS_BUILD_ENVIRON),y)
@@ -411,6 +416,7 @@ $(info "CHANGE_DEFAULT_PASSWORD"         : "$(CHANGE_DEFAULT_PASSWORD)")
 $(info "SECURE_UPGRADE_MODE"             : "$(SECURE_UPGRADE_MODE)")
 $(info "SECURE_UPGRADE_DEV_SIGNING_KEY"  : "$(SECURE_UPGRADE_DEV_SIGNING_KEY)")
 $(info "SECURE_UPGRADE_SIGNING_CERT"     : "$(SECURE_UPGRADE_SIGNING_CERT)")
+$(info "SECURE_UPGRADE_KERNEL_CAFILE"    : "$(SECURE_UPGRADE_KERNEL_CAFILE)")
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 $(info "SECURE_UPGRADE_PROD_TOOL_ARGS"   : "$(SECURE_UPGRADE_PROD_TOOL_ARGS)")
 $(info "ONIE_IMAGE_PART_SIZE"            : "$(ONIE_IMAGE_PART_SIZE)")
@@ -453,11 +459,13 @@ $(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
 $(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
 $(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
 $(info "INCLUDE_P4RT"                    : "$(INCLUDE_P4RT)")
+$(info "INCLUDE_VS_DASH_SAI"             : "$(INCLUDE_VS_DASH_SAI)")
 $(info "INCLUDE_KUBERNETES"              : "$(INCLUDE_KUBERNETES)")
 $(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
 $(info "INCLUDE_MACSEC"                  : "$(INCLUDE_MACSEC)")
 $(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
 $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
+$(info "INCLUDE_DASH_HA"                 : "$(INCLUDE_DASH_HA)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
@@ -475,7 +483,6 @@ ifeq ($(CONFIGURED_PLATFORM),vs)
 $(info "BUILD_MULTIASIC_KVM"             : "$(BUILD_MULTIASIC_KVM)")
 endif
 $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
-$(info "LEGACY_SONIC_MGMT_DOCKER"        : "$(LEGACY_SONIC_MGMT_DOCKER)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
 $(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
@@ -517,13 +524,6 @@ ifeq ($(filter clean,$(MAKECMDGOALS)),)
 $(shell DBGOPT='$(DBGOPT)' scripts/prepare_slave_container_buildinfo.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
 endif
 include Makefile.cache
-
-ifeq ($(SONIC_USE_DOCKER_BUILDKIT),y)
-$(warning "Using SONIC_USE_DOCKER_BUILDKIT will produce larger installable SONiC image because of a docker bug (more details: https://github.com/moby/moby/issues/38903)")
-export DOCKER_BUILDKIT=1
-else
-export DOCKER_BUILDKIT=0
-endif
 
 
 ###############################################################################
@@ -784,7 +784,7 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS))
 #     $(SOME_NEW_DEB)_SRC_PATH = $(SRC_PATH)/project_name
 #     $(SOME_NEW_DEB)_DEPENDS = $(SOME_OTHER_DEB1) $(SOME_OTHER_DEB2) ...
 #     SONIC_DPKG_DEBS += $(SOME_NEW_DEB)
-$(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
+$(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
 			$$(addprefix $(FILES_PATH)/,$$($$*_AFTER_FILES)) \
 			$(call dpkg_depend,$(DEBS_PATH)/%.dep )
@@ -867,7 +867,7 @@ SONIC_INSTALL_DEBS = $(addsuffix -install,$(addprefix $(DEBS_PATH)/, \
 $(SONIC_INSTALL_DEBS) : $(DEBS_PATH)/%-install : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) $(DEBS_PATH)/$$*
 	$(HEADER)
 	[ -f $(DEBS_PATH)/$* ] || { echo $(DEBS_PATH)/$* does not exist $(LOG) && false $(LOG) }
-	while true; do
+	for i in {1..360}; do
 		# wait for conflicted packages to be uninstalled
 		$(foreach deb, $($*_CONFLICT_DEBS), \
 			{ while dpkg -s $(firstword $(subst _, ,$(basename $(deb)))) | grep "^Version: $(word 2, $(subst _, ,$(basename $(deb))))" &> /dev/null; do echo "waiting for $(deb) to be uninstalled" $(LOG); sleep 1; done } )
@@ -958,22 +958,22 @@ ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
 		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
 ifeq ($(BLDENV),bookworm)
-		if [ ! "$($*_TEST)" = "n" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; fi $(LOG)
+		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; fi $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
-		if [ ! "$($*_TEST)" = "n" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
+		if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
 		python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 endif
 else
 		{
 			export PATH=$(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION)):${PATH}
 			python$($*_PYTHON_VERSION) setup.py build $(LOG)
-			if [ ! "$($*_TEST)" = "n" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
+			if [ ! "$($*_TEST)" = "n" ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
 			python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 		}
 endif
 		# clean up
-		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi
+		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then quilt pop -a -f; [ -d .pc ] && rm -rf .pc; fi $(LOG)
 		popd $(LOG_SIMPLE)
 		mv -f $($*_SRC_PATH)/dist/$* $(PYTHON_WHEELS_PATH) $(LOG)
 
@@ -1032,7 +1032,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(TARGET_DOCKERFILE)/Dockerfile.buildinfo $(LOG)
 	docker info $(LOG)
-	docker build --squash --no-cache \
+	docker build --no-cache \
 		--build-arg http_proxy=$(HTTP_PROXY) \
 		--build-arg https_proxy=$(HTTPS_PROXY) \
 		--build-arg no_proxy=$(NO_PROXY) \
@@ -1122,6 +1122,16 @@ $(addprefix $(TARGET_PATH)/,$(DOWNLOADED_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz :
 
 	$(FOOTER)
 
+# Targets for copy docker images
+$(addprefix $(TARGET_PATH)/,$(COPY_DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform \
+		$$(%.gz_DEP_FILES)
+	$(HEADER)
+
+	rm -rf $@ $@.log
+	cp "$($*.gz_PATH)/$*.gz" target/$(COPY_DOCKER_IMAGES) $(LOG)
+
+	$(FOOTER)
+
 # Targets for building docker images
 $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform docker-start \
 		$$(addprefix $$($$*.gz_DEBS_PATH)/,$$($$*.gz_DEPENDS)) \
@@ -1162,7 +1172,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_whls=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_PYTHON_WHEELS)))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_PACKAGES)))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_pkgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_APT_PACKAGES)))\n" | awk '!a[$$0]++'))
-		if [ -d $($*.gz_PATH)/cli-plugin-tests/ ]; then pushd $($*.gz_PATH)/cli-plugin-tests; PATH=$(VIRTENV_BIN_CROSS_PYTHON$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION)):${PATH} pytest-$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION) -v $(LOG); popd; fi
+		if [ -d $($*.gz_PATH)/cli-plugin-tests/ ] && [ ! "$(BUILD_SKIP_TEST)" = "y" ]; then pushd $($*.gz_PATH)/cli-plugin-tests; PATH=$(VIRTENV_BIN_CROSS_PYTHON$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION)):${PATH} pytest-$($(SONIC_UTILITIES_PY3)_PYTHON_VERSION) -v $(LOG); popd; fi
 		# Label docker image with componenets versions
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_labels=$(foreach component,\
 			$(call expand,$($*.gz_DEPENDS),RDEPENDS) \
@@ -1180,7 +1190,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		DBGOPT='$(DBGOPT)' \
 		scripts/prepare_docker_buildinfo.sh $* $($*.gz_PATH)/Dockerfile $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
-		docker build --no-cache $$( [[ "$($*.gz_SQUASH)" != n ]] && echo --squash)\
+		docker build --no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1250,7 +1260,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 		scripts/prepare_docker_buildinfo.sh $*-dbg $($*.gz_PATH)/Dockerfile-dbg $(CONFIGURED_ARCH) $(LOG)
 		docker info $(LOG)
 		docker build \
-			$(if $($*.gz_DBG_DEPENDS), --squash --no-cache, --no-cache) \
+			--no-cache \
 			--build-arg http_proxy=$(HTTP_PROXY) \
 			--build-arg https_proxy=$(HTTPS_PROXY) \
 			--build-arg no_proxy=$(NO_PROXY) \
@@ -1285,6 +1295,7 @@ SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES))
 DOCKER_LOAD_TARGETS = $(addsuffix -load,$(addprefix $(TARGET_PATH)/, \
 		      $(SONIC_SIMPLE_DOCKER_IMAGES) \
 		      $(DOWNLOADED_DOCKER_IMAGES) \
+		      $(COPY_DOCKER_IMAGES) \
 		      $(DOCKER_IMAGES) \
 		      $(DOCKER_DBG_IMAGES)))
 
@@ -1369,6 +1380,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_INSTALLS)) \
         $$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$$($$*_LAZY_BUILD_INSTALLS)) \
+		$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_PYTHON_WHEELS)) \
         $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) \
                 $(LINUX_KERNEL) \
                 $(SONIC_DEVICE_DATA) \
@@ -1386,10 +1398,13 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(SONIC_NETTOOLS) \
                 $(SONIC_RSYSLOG_PLUGIN) \
                 $(SONIC_UTILITIES_DATA) \
+                $(SONIC_CTRMGRD_RS) \
+                $(SONIC_HOST_SERVICES_RS) \
                 $(SONIC_HOST_SERVICES_DATA) \
                 $(BASH) \
                 $(BASH_TACPLUS) \
-                $(AUDISP_TACPLUS)) \
+                $(AUDISP_TACPLUS) \
+                $(SYSLOG_COUNTER)) \
         $$(addprefix $(TARGET_PATH)/,$$($$*_DOCKERS)) \
         $$(addprefix $(TARGET_PATH)/,$$(SONIC_PACKAGES_LOCAL)) \
         $$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
@@ -1435,6 +1450,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
+	export sonic_su_kernel_cafile="$(SECURE_UPGRADE_KERNEL_CAFILE)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
@@ -1452,7 +1468,8 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
 	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
 	export include_iccpd="$(INCLUDE_ICCPD)"
-	export include_stpd="$(INCLUDE_STP)"
+	export include_dash_ha="$(INCLUDE_DASH_HA)"
+	export include_stp="$(INCLUDE_STP)"
 	export pddf_support="$(PDDF_SUPPORT)"
 	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
@@ -1465,6 +1482,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export installer_python_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(FIPS_BASEIMAGE_PYTHON_INSTALLERS))"
 	export lazy_installer_debs="$(foreach deb, $($*_LAZY_INSTALLS),$(foreach device, $($(deb)_PLATFORM),$(addprefix $(device)@, $(IMAGE_DISTRO_DEBS_PATH)/$(deb))))"
 	export lazy_build_installer_debs="$(foreach deb, $($*_LAZY_BUILD_INSTALLS), $(addprefix $($(deb)_MACHINE)|,$(deb)))"
+	export installer_python_wheels="$(addprefix $(PYTHON_WHEELS_PATH)/,$($*_PYTHON_WHEELS))"
 	export installer_images="$(foreach docker, $($*_DOCKERS),\
 				$(addprefix $($(docker:-dbg.gz=.gz)_PACKAGE_NAME)|,\
 				$(addprefix $($(docker:-dbg.gz=.gz)_PATH)|,\
@@ -1626,6 +1644,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		SECURE_UPGRADE_MODE="$(SECURE_UPGRADE_MODE)" \
 		SECURE_UPGRADE_DEV_SIGNING_KEY="$(SECURE_UPGRADE_DEV_SIGNING_KEY)" \
 		SECURE_UPGRADE_SIGNING_CERT="$(SECURE_UPGRADE_SIGNING_CERT)" \
+		SECURE_UPGRADE_KERNEL_CAFILE="$(SECURE_UPGRADE_KERNEL_CAFILE)" \
 		SECURE_UPGRADE_PROD_SIGNING_TOOL="$(SECURE_UPGRADE_PROD_SIGNING_TOOL)" \
 		SECURE_UPGRADE_PROD_TOOL_ARGS="$(SECURE_UPGRADE_PROD_TOOL_ARGS)" \
 		SIGNING_KEY="$(SIGNING_KEY)" \
@@ -1724,7 +1743,7 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
          $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DBG_DOCKER_IMAGES))
 
 ###############################################################################
-## Standard targets  
+## Standard targets
 ###############################################################################
 
 .PHONY : $(SONIC_CLEAN_DEBS) $(SONIC_CLEAN_FILES) $(SONIC_CLEAN_TARGETS) $(SONIC_CLEAN_STDEB_DEBS) $(SONIC_CLEAN_WHEELS) $(SONIC_PHONY_TARGETS) clean distclean configure
@@ -1733,4 +1752,4 @@ jessie : $$(addprefix $(TARGET_PATH)/,$$(JESSIE_DOCKER_IMAGES)) \
 
 ## To build some commonly used libs. Some submodules depend on these libs.
 ## It is used in component pipelines. For example: swss needs libnl, libyang
-lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG) $(PROTOBUF) $(LIB_SONIC_DASH_API))
+lib-packages: $(addprefix $(DEBS_PATH)/,$(LIBNL3) $(LIBYANG) $(LIBYANG3) $(PROTOBUF) $(LIB_SONIC_DASH_API))

@@ -5,6 +5,7 @@
         "num_fans_pertray": 2,
         "num_ports": 34,
         "num_temps": 7,
+        "num_components":6,
         "pddf_dev_types": {
             "description": "PDDF supported devices",
             "CPLD": [
@@ -51,6 +52,54 @@
             "x86-64-ufispace-s9301-32d-lpc",
             "x86-64-ufispace-s9301-32d-sys-eeprom",
             "pddf_custom_sysstatus_module"
+        ]
+    },
+    "COMPONENT1":
+    {
+        "comp_attr":{ "name": "CPU_CPLD", "type": "cpld", "description": "CPU CPLD"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "major_minor=$(xxd -s 0x600 -p -l 1 /dev/port);major=$(((16#$major_minor & 2#11000000) >> 6));minor=$((16#$major_minor & 2#00111111));build=$((16#$(xxd -s 0x6E0 -p -l 1 /dev/port)));printf '%d.%02d.%03d' $major $minor $build" }
+        ]
+    },    
+    "COMPONENT2":
+    {
+        "comp_attr":{ "name": "CPLD1", "type": "cpld", "description": "CPLD 1"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld1_build)" }
+        ]
+    },
+    "COMPONENT3":
+    {
+        "comp_attr":{ "name": "CPLD2", "type": "cpld", "description":"CPLD 2"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_build)" }
+        ]
+    },
+    "COMPONENT4":
+    {
+        "comp_attr":{ "name": "CPLD3", "type": "cpld", "description":"CPLD 3"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "printf '%d.%02d.%03d' $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld3_major_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld2_minor_ver) $(cat /sys/kernel/pddf/devices/sysstatus/sysstatus_data/cpld3_build)" }
+        ]
+    },
+    "COMPONENT5":
+    {
+        "comp_attr":{ "name": "BIOS", "type": "bios", "description": "Basic Input/Output System"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "cat /sys/class/dmi/id/bios_version" }
+        ]
+    },
+    "COMPONENT6":
+    {
+        "comp_attr":{ "name": "BMC", "type": "bmc", "description":"BMC"},
+        "attr_list":
+        [
+            { "attr_name":"version", "get_cmd": "r=(`ipmitool raw 0x6 0x1 | cut -d ' ' -f 4,5,16,15,14`) && echo ${r[0]}.${r[1]}.${r[4]}.${r[3]}${r[2]}" }
         ]
     },
     "SYSTEM": {
@@ -148,7 +197,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_PECI",
                         "field_pos": "18"
-                    }              
+                    }
                 ]
             }
         }
@@ -185,7 +234,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_ENV",
                         "field_pos": "18"
-                    }               
+                    }
                 ]
             }
         }
@@ -222,7 +271,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_ENV_2",
                         "field_pos": "18"
-                    }              
+                    }
                 ]
             }
         }
@@ -259,7 +308,7 @@
                         "raw": "0",
                         "field_name": "TEMP_MAC_ENV",
                         "field_pos": "18"
-                    }               
+                    }
                 ]
             }
         }
@@ -296,7 +345,7 @@
                         "raw": "0",
                         "field_name": "TEMP_MAC_DIE",
                         "field_pos": "18"
-                    }              
+                    }
                 ]
             }
         }
@@ -333,7 +382,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CAGE",
                         "field_pos": "18"
-                    }              
+                    }
                 ]
             }
         }
@@ -370,7 +419,7 @@
                         "raw": "0",
                         "field_name": "TEMP_PSU_CONN",
                         "field_pos": "18"
-                    }              
+                    }
                 ]
             }
         }
@@ -407,6 +456,14 @@
                 {
                     "chn": "4",
                     "dev": "GPIO2"
+                },
+                {
+                    "chn": "1",
+                    "dev": "PSU1"
+                },
+                {
+                    "chn": "1",
+                    "dev": "PSU2"
                 }
             ]
         }
@@ -1060,34 +1117,20 @@
         "dev_info": {
             "device_type": "PSU",
             "device_name": "PSU1",
-            "device_parent": "SMBUS0"
+            "device_parent": "MUX1"
         },
         "dev_attr": {
             "dev_idx": "1",
             "num_psu_fans": "1"
         },
         "i2c": {
-            "interface": []
+            "interface": [
+                { "itf":"eeprom", "dev":"PSU1-EEPROM" }
+            ]
         },
         "bmc": {
             "ipmitool": {
                 "attr_list": [
-                    {
-                        "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU0_PRSNT_L",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU0_PWROK_H",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
                     {
                         "attr_name": "psu_v_out",
                         "bmc_cmd": "ipmitool sdr -c get PSU0_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
@@ -1175,38 +1218,59 @@
             }
         }
     },
+    "PSU1-EEPROM": {
+        "dev_info": {
+            "device_type": "PSU-EEPROM",
+            "device_name": "PSU1-EEPROM",
+            "device_parent": "MUX1",
+            "virt_parent": "PSU1"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x2",
+                "dev_addr": "0x5a",
+                "dev_type": "psu_eeprom"
+            },
+            "attr_list": [
+                {
+                    "attr_name":"psu_present",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x4",
+                    "attr_cmpval":"0x0",
+                    "attr_len":"1"
+                },
+                {
+                    "attr_name":"psu_power_good",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x1",
+                    "attr_cmpval":"0x1",
+                    "attr_len":"1"
+                }
+            ]
+        }
+    },
     "PSU2": {
         "dev_info": {
             "device_type": "PSU",
             "device_name": "PSU2",
-            "device_parent": "SMBUS0"
+            "device_parent": "MUX1"
         },
         "dev_attr": {
             "dev_idx": "2",
             "num_psu_fans": "1"
         },
         "i2c": {
-            "interface": []
+            "interface": [
+                { "itf":"eeprom", "dev":"PSU2-EEPROM" }
+            ]
         },
         "bmc": {
             "ipmitool": {
                 "attr_list": [
-                    {
-                        "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU1_PRSNT_L",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
-                        "raw": "0",
-                        "field_name": "PSU1_PWROK_H",
-                        "field_pos": "5",
-                        "separator": ","
-                    },
                     {
                         "attr_name": "psu_v_out",
                         "bmc_cmd": "ipmitool sdr -c get PSU1_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
@@ -1292,6 +1356,41 @@
                     }
                 ]
             }
+        }
+    },
+    "PSU2-EEPROM": {
+        "dev_info": {
+            "device_type": "PSU-EEPROM",
+            "device_name": "PSU2-EEPROM",
+            "device_parent": "MUX1",
+            "virt_parent": "PSU2"
+        },
+        "i2c": {
+            "topo_info": {
+                "parent_bus": "0x2",
+                "dev_addr": "0x5b",
+                "dev_type": "psu_eeprom"
+            },
+            "attr_list": [
+                {
+                    "attr_name":"psu_present",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x8",
+                    "attr_cmpval":"0x0",
+                    "attr_len":"1"
+                },
+                {
+                    "attr_name":"psu_power_good",
+                    "attr_devaddr":"0x30",
+                    "attr_devtype":"cpld",
+                    "attr_offset":"0x51",
+                    "attr_mask":"0x2",
+                    "attr_cmpval":"0x2",
+                    "attr_len":"1"
+                }
+            ]
         }
     },
     "FAN-CTRL": {
@@ -1722,7 +1821,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT1": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2019,7 +2118,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT4": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2118,7 +2217,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT5": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2217,7 +2316,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT6": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2316,7 +2415,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT7": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2415,7 +2514,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT8": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2514,7 +2613,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT9": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2613,7 +2712,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT10": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2811,7 +2910,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT12": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -2910,7 +3009,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT13": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3009,7 +3108,7 @@
                 }
             ]
         }
-    },        
+    },
     "PORT14": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3207,7 +3306,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT16": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3306,7 +3405,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT17": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3504,7 +3603,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT19": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3603,7 +3702,7 @@
                 }
             ]
         }
-    },            
+    },
     "PORT20": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -3999,7 +4098,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT24": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4098,7 +4197,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT25": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4296,7 +4395,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT27": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4395,7 +4494,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT28": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4494,7 +4593,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT29": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4593,7 +4692,7 @@
                 }
             ]
         }
-    },        
+    },
     "PORT30": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4692,7 +4791,7 @@
                 }
             ]
         }
-    },        
+    },
     "PORT31": {
         "dev_info": {
             "device_type": "QSFP-DD",
@@ -4890,7 +4989,7 @@
                 }
             ]
         }
-    },    
+    },
     "PORT33": {
         "dev_info": {
             "device_type": "SFP",
@@ -5088,5 +5187,5 @@
                 }
             ]
         }
-    }    
+    }
 }

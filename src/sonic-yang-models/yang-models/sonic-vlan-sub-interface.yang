@@ -22,8 +22,16 @@ module sonic-vlan-sub-interface {
         prefix vrf;
     }
 
+    import sonic-vnet {
+        prefix svnet;
+    }
+
     description "VLAN sub interface for SONiC OS";
 
+	revision 2025-03-06 {
+		description "Add leaf vnet_name";
+	}
+    
     revision 2021-11-11 {
         description "Initial version";
     }
@@ -72,6 +80,13 @@ module sonic-vlan-sub-interface {
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
                     }
+                }
+
+                leaf vnet_name {
+                    description "Reference to the name of a VNET in sonic-vnet model";
+                    type leafref {
+                        path "/svnet:sonic-vnet/svnet:VNET/svnet:VNET_LIST/svnet:name";
+                    }   
                 }
 
                 leaf loopback_action {

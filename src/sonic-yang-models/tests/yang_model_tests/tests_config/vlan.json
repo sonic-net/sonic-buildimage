@@ -1113,5 +1113,120 @@
                 ]
             }
         }
+    },
+    "VLAN_INTERFACE_WITH_VNET_AND_IP_PREFIXES": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "Vnet1"
+                    }
+                ],
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "192.168.1.1/24",
+                        "family": "IPv4",
+                        "scope": "global"
+                    },
+                    {
+                        "name": "Vlan100",
+                        "ip-prefix": "2001:db8::1/64",
+                        "family": "IPv6",
+                        "scope": "global"
+                    }
+                ]
+            }
+        }
+    },
+
+    "VLAN_INTERFACE_WITH_INVALID_VNET_NAME_REFERENCE": {
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "1.2.3.4"
+                    }
+                ]
+            }
+        },
+        "sonic-vnet:sonic-vnet": {
+            "sonic-vnet:VNET": {
+                "VNET_LIST": [
+                    {
+                        "name": "Vnet1",
+                        "vxlan_tunnel": "vtep1",
+                        "vni": "10011"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "NonExistentVnet"
+                    }
+                ]
+            }
+        }
+    },
+    
+    "VLAN_INTERFACE_WITH_MISSING_VNET": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100",
+                        "vnet_name": "Vnet1"
+                    }
+                ]
+            }
+        }
     }
 }

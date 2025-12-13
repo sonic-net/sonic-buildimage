@@ -1399,3 +1399,4 @@ serdes_qrtt_active_46.0=1
 serdes_qrtt_active_47.0=1
 
 dpp_db_path=/usr/share/bcm/db
+sai_instru_stat_accum_enable=1

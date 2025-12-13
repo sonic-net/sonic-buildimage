@@ -1,0 +1,76 @@
+From d01b36e471f387007680e0f07d8bfe32db8e0269 Mon Sep 17 00:00:00 2001
+From: Guohan Lu <lguohan@gmail.com>
+Date: Fri, 3 Jul 2020 09:17:32 +0000
+Subject: [PATCH 1/5] add xpath_target option
+
+Signed-off-by: Guohan Lu <lguohan@gmail.com>
+---
+ gnmi_cli_py/py_gnmicli.py | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/gnmi_cli_py/py_gnmicli.py b/gnmi_cli_py/py_gnmicli.py
+index 7c9e92b..062dee7 100644
+--- a/gnmi_cli_py/py_gnmicli.py
++++ b/gnmi_cli_py/py_gnmicli.py
+@@ -126,6 +126,9 @@ def _create_parser():
+                       required=False, action='store_true')
+   parser.add_argument('-x', '--xpath', type=str, help='The gNMI path utilized'
+                       'in the GetRequest or Subscirbe', required=True)
++  parser.add_argument('-xt', '--xpath_target', type=str, help='The gNMI prefix'
++                      'target in the GetRequest or Subscirbe', default=None,
++                      required=False)
+   parser.add_argument('-o', '--host_override', type=str, help='Use this as '
+                       'Targets hostname/peername when checking it\'s'
+                       'certificate CN. You can check the cert with:\nopenssl '
+@@ -258,7 +261,7 @@ def _get_val(json_value):
+   return val
+ 
+ 
+-def _get(stub, paths, username, password):
++def _get(stub, paths, username, password, prefix):
+   """Create a gNMI GetRequest.
+ 
+   Args:
+@@ -266,16 +269,17 @@ def _get(stub, paths, username, password):
+     paths: gNMI Path
+     username: (str) Username used when building the channel.
+     password: (str) Password used when building the channel.
++    prefix: gNMI Path
+ 
+   Returns:
+     a gnmi_pb2.GetResponse object representing a gNMI GetResponse.
+   """
++  kwargs = {}
+   if username:  # User/pass supplied for Authentication.
+-    return stub.Get(
+-        gnmi_pb2.GetRequest(path=[paths], encoding='JSON_IETF'),
+-        metadata=[('username', username), ('password', password)])
+-  return stub.Get(gnmi_pb2.GetRequest(path=[paths], encoding='JSON_IETF'))
+-
++    kwargs = {'metadata': [('username', username), ('password', password)]}
++  return stub.Get(
++      gnmi_pb2.GetRequest(prefix=prefix, path=[paths], encoding='JSON_IETF'),
++                  **kwargs)
+ 
+ def _set(stub, paths, set_type, username, password, json_value):
+   """Create a gNMI SetRequest.
+@@ -368,6 +372,7 @@ def main():
+   json_value = args['value']
+   private_key = args['private_key']
+   xpath = args['xpath']
++  prefix = gnmi_pb2.Path(target=args['xpath_target'])
+   host_override = args['host_override']
+   user = args['username']
+   password = args['password']
+@@ -381,7 +386,7 @@ def main():
+   if mode == 'get':
+     print('Performing GetRequest, encoding=JSON_IETF', 'to', target,
+           ' with the following gNMI Path\n', '-'*25, '\n', paths)
+-    response = _get(stub, paths, user, password)
++    response = _get(stub, paths, user, password, prefix)
+     print('The GetResponse is below\n' + '-'*25 + '\n')
+     if form == 'protobuff':
+       print(response)
+-- 
+2.48.1.windows.1
+
