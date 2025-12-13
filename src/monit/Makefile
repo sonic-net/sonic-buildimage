@@ -10,7 +10,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf ./monit
 
 	# Clone monit repo
-	git clone https://salsa.debian.org/sk-guest/monit.git
+	git clone https://salsa.debian.org/debian/monit.git
 	pushd ./monit
 
 	# Reset HEAD to the commit of the proper tag

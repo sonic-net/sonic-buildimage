@@ -438,11 +438,11 @@ static const struct attribute_group ym2651y_group = {
     .attrs = ym2651y_attributes,
 };
 
-static int ym2651y_probe(struct i2c_client *client,
-                         const struct i2c_device_id *dev_id)
+static int ym2651y_probe(struct i2c_client *client)
 {
     struct ym2651y_data *data;
     int status;
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
 
     if (!i2c_check_functionality(client->adapter,
                                  I2C_FUNC_SMBUS_BYTE_DATA |

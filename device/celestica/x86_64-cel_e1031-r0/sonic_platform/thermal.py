@@ -87,14 +87,14 @@ THERMAL_INFO = {
     }
 }
 NULL_VAL = "N/A"
-I2C_ADAPTER_PATH = "/sys/class/i2c-adapter"
+I2C_ADAPTER_PATH = "/sys/bus/i2c/devices"
 
 
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
 
-    MAINBOARD_SS_PATH = "/sys/class/i2c-adapter/i2c-11/11-001a/hwmon/hwmon2"
-    CPUBOARD_SS_PATH = "/sys/class/i2c-adapter/i2c-3/3-001a/hwmon/hwmon1"
+    MAINBOARD_SS_PATH = "/sys/bus/i2c/devices/i2c-11/11-001a/hwmon/hwmon2"
+    CPUBOARD_SS_PATH = "/sys/bus/i2c/devices/i2c-3/3-001a/hwmon/hwmon1"
     SS_CONFIG_PATH = "/usr/share/sonic/device/x86_64-cel_e1031-r0/sensors.conf"
 
     def __init__(self, thermal_index, airflow):

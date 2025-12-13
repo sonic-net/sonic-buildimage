@@ -14,7 +14,7 @@ FPGA_VERSION_PATH = "/sys/bus/platform/devices/fpga_sysfs/version"
 Bios_Version_Cmd = "dmidecode -t bios | grep Version"
 ONIE_Version_Cmd = "cat /host/machine.conf"
 SSD_Version_Cmd = "smartctl -i /dev/sda"
-ASIC_PCIE_VERSION_CMD = "bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
+ASIC_PCIE_VERSION_CMD = "bcmcmd 'echo' >/dev/null 2>&1 && bcmcmd 'pciephy fw version' | grep 'PCIe FW version' | cut -d ' ' -f 4"
 
 if BMC_EXIST:
     Check_Bios_Boot = "ipmitool raw 0x3a 0x25 0x02"
@@ -68,7 +68,7 @@ class Component(ComponentBase):
 
     DEVICE_TYPE = "component"
 
-    def __init__(self, component_index):
+    def __init__(self, component_index, pddf_data=None, pddf_plugin_data=None):
         ComponentBase.__init__(self)
         self.index = component_index
         self.helper = helper.APIHelper()

@@ -2,13 +2,17 @@ Source: sonic-wistron-platform-modules
 Section: main
 Priority: extra
 Maintainer: Wistron <haowei_chung@wistron.com>
-Build-Depends: debhelper (>= 8.0.0), bzip2
+Build-Depends: debhelper-compat (= 13), python3
+Rules-Requires-Root: no
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Standards-Version: 3.9.3
 
 Package: sonic-platform-wistron-sw-to3200k
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-wistron-6512-32r
 Architecture: amd64
+Depends: linux-image-6.12.41+deb13-sonic-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
