@@ -5,6 +5,7 @@ FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
+ARG CONFIGURED_ARCH
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,12 +31,10 @@ RUN apt-get install -y \
 
 # Install OpenTelemetry Collector from official .deb package
 ARG OTEL_VERSION=0.141.0
-# Docker buildx automatically provides TARGETARCH for cross-platform builds
-ARG TARGETARCH
 
 # Download and install official .deb package with verification
-RUN OTEL_ARCH=${TARGETARCH} && \
-    if [ "${TARGETARCH}" = "armhf" ]; then OTEL_ARCH="armv7"; fi && \
+RUN OTEL_ARCH=${CONFIGURED_ARCH} && \
+    if [ "${CONFIGURED_ARCH}" = "armhf" ]; then OTEL_ARCH="armv7"; fi && \
     # Download and install official .deb package with verification
     wget -q -O /tmp/otelcol-contrib.deb \
         "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${OTEL_ARCH}.deb" && \
