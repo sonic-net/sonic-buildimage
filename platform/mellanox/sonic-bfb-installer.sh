@@ -649,3 +649,4 @@ kill_ch_procs(){
 appendix=
 verbose=false
 main "$@"
+
