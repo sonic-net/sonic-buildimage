@@ -121,9 +121,12 @@ class Chassis(ChassisBase):
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
 
+
         # Build the CPO port list from platform.json and hwsku.json
         self._cpo_port_inited = False
         self._cpo_port_list = None
+
+        self.liquid_cooling = None
 
         Chassis.chassis_instance = self
 
@@ -1117,6 +1120,20 @@ class Chassis(ChassisBase):
             bool: True if it is replaceable.
         """
         return False
+
+    
+    ##############################################
+    # LiquidCooling methods
+    ##############################################
+
+    def initialize_liquid_cooling(self):
+        if not self.liquid_cooling:
+            from .liquid_cooling import LiquidCooling
+            self.liquid_cooling = LiquidCooling()
+
+    def get_liquid_cooling(self):
+        self.initialize_liquid_cooling()
+        return self.liquid_cooling
 
 
 class ModularChassis(Chassis):
