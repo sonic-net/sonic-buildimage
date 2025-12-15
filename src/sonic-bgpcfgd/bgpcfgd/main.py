@@ -26,7 +26,7 @@ from .managers_device_global import DeviceGlobalCfgMgr
 from .managers_chassis_app_db import ChassisAppDbMgr
 from .managers_bfd import BfdMgr
 from .managers_srv6 import SRv6Mgr
-from .managers_srv6_global import SRv6GlobalMgr
+from .managers_srv6_global import SRv6GlobalCfgMgr
 from .managers_prefix_list import PrefixListMgr
 from .managers_as_path import AsPathMgr
 from .static_rt_timer import StaticRouteTimer
@@ -89,7 +89,7 @@ def do_work():
         # SRv6 Manager
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
         SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
-        SRv6GlobalMgr(common_objs, "CONFIG_DB", "SRV6_GLOBAL"),
+        SRv6GlobalCfgMgr(common_objs, "CONFIG_DB", "SRV6_GLOBAL"),
     ]
 
     if device_info.is_chassis():
