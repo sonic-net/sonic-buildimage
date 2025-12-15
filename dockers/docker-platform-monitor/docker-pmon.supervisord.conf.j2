@@ -218,6 +218,14 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
     {% if thermalctld.thermal_monitor_update_elapsed_threshold is defined and thermalctld.thermal_monitor_update_elapsed_threshold is not none %}
         {%- set options = options + " --thermal-monitor-update-elapsed-threshold " + thermalctld.thermal_monitor_update_elapsed_threshold|string %}
     {% endif -%}
+
+    {% if thermalctld.enable_liquid_cooling %}
+    {%- set options = options + " --enable_liquid_cooling" %}
+    {% endif -%}
+
+    {% if thermalctld.liquid_cooling_update_interval %}
+    {%- set options = options ~ " --liquid_cooling_update_interval " ~ thermalctld.liquid_cooling_update_interval %}
+    {% endif -%}
 {% endif -%}
 
 {%- set command = base_command ~ options %}
