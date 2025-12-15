@@ -42,7 +42,7 @@ logger = Logger()
 #
 EEPROM_SYMLINK = "/var/run/hw-management/eeprom/vpd_info"
 platform_name = DeviceDataManager.get_platform_name()
-platform_supporting_simx = ['x86_64-nvidia_sn4280_simx-r0', 'x86_64-mlnx_msn4700_simx-r0', 'x86_64-mlnx_msn5640_simx-r0']
+platform_supporting_simx = ['x86_64-nvidia_sn4280_simx-r0', 'x86_64-mlnx_msn4700_simx-r0', 'x86_64-nvidia_sn5640_simx-r0']
 if platform_name and 'simx' in platform_name and not platform_name in platform_supporting_simx:
     if not os.path.exists(EEPROM_SYMLINK):
         if is_host():
