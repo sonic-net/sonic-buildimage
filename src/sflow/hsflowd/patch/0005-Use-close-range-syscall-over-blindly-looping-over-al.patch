@@ -1,0 +1,45 @@
+From 5adeafc4249af9bc6a8841cff8ebbc75fcf4b8e1 Mon Sep 17 00:00:00 2001
+From: vkarri <vkarri@contoso.com>
+Date: Tue, 21 Oct 2025 01:23:08 +0000
+Subject: [PATCH] From dfc83d5cf6cbfa9056c4892d5ad0c3d3ac667d4f Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH]  Use close range syscall over blindly looping
+ over all FD
+
+getdtablesize is deprecated in Kernel 6.12 and Docker is returning a really large default number.
+So, hsflowd takes a lot of time to close all file descriptors and is blocking the service restart of hsflowd
+from sflowmgrd.
+---
+ src/Linux/hsflowd.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/Linux/hsflowd.c b/src/Linux/hsflowd.c
+index f7bd9a0..6170dc6 100644
+--- a/src/Linux/hsflowd.c
++++ b/src/Linux/hsflowd.c
+@@ -6,6 +6,8 @@
+ extern "C" {
+ #endif
+
++#define _GNU_SOURCE
++#include <unistd.h>
+ #include "hsflowd.h"
+ #include "cpu_utils.h"
+ #include "cJSON.h"
+@@ -1922,9 +1924,12 @@ extern "C" {
+ 	  exit(EXIT_FAILURE);
+ 	}
+ 
+-	// close all file descriptors
++	// close all file descriptors using close_range() (Kernel 5.9+)
+ 	int i;
+-	for(i=getdtablesize(); i >= 0; --i) close(i);
++	if(close_range(0, ~0U, 0) < 0) {
++	  myLog(LOG_ERR,"close_range failed: %s", strerror(errno));
++	  exit(EXIT_FAILURE);
++	}
+ 	// create stdin/out/err
+ 	// stdin
+ 	if((i = open("/dev/null",O_RDWR)) == -1) {
+-- 
+2.50.1
+
