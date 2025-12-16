@@ -6,7 +6,7 @@ n3248te/scripts//ports_xcvrd_notify.py usr/local/bin
 n3248te/systemd/platform-modules-n3248te.service etc/systemd/system
 n3248te/cfg/n3248te-modules.conf etc/modules-load.d
 common/dell_i2c_utils.sh usr/local/bin
-n3248te/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_n3248te_c3338-r0
+build-n3248te/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_n3248te_c3338-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_n3248te_c3338-r0
 common/fw-updater /usr/local/bin
 common/onie_mode_set usr/local/bin

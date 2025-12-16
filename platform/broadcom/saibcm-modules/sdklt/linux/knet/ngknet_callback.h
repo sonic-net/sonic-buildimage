@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -45,10 +46,17 @@ typedef struct filter_cb_s {
     /*! List head */
     struct list_head list;
 
+    /*! Filter description */
     char desc[NGKNET_FILTER_DESC_MAX];
 
     /*! Handle Filter callback */
     ngknet_filter_cb_f cb;
+
+    /*! Handle Filter create callback */
+    ngknet_filter_create_cb_f create_cb;
+
+    /*! Handle Filter destroy callback */
+    ngknet_filter_destroy_cb_f destroy_cb;
 } filter_cb_t;
 
 /*!

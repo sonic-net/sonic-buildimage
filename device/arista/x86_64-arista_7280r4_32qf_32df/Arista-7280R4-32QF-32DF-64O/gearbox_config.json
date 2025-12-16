@@ -1,0 +1,902 @@
+{
+  "phys": [
+    {
+      "phy_id": 1,
+      "name": "phy1",
+      "address": "1",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy1_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio0_0_0/0"
+    },
+    {
+      "phy_id": 2,
+      "name": "phy2",
+      "address": "2",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy2_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio1_0_0/0"
+    },
+    {
+      "phy_id": 3,
+      "name": "phy3",
+      "address": "3",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy3_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio2_0_0/0"
+    },
+    {
+      "phy_id": 4,
+      "name": "phy4",
+      "address": "4",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy4_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio3_0_0/0"
+    },
+    {
+      "phy_id": 5,
+      "name": "phy5",
+      "address": "5",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy5_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio4_0_0/0"
+    },
+    {
+      "phy_id": 6,
+      "name": "phy6",
+      "address": "6",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy6_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio5_0_0/0"
+    },
+    {
+      "phy_id": 7,
+      "name": "phy7",
+      "address": "7",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy7_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio6_0_0/0"
+    },
+    {
+      "phy_id": 8,
+      "name": "phy8",
+      "address": "8",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy8_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio7_0_0/0"
+    },
+    {
+      "phy_id": 9,
+      "name": "phy9",
+      "address": "9",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy9_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio8_0_0/0"
+    },
+    {
+      "phy_id": 10,
+      "name": "phy10",
+      "address": "10",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy10_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio9_0_0/0"
+    },
+    {
+      "phy_id": 11,
+      "name": "phy11",
+      "address": "11",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy11_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio10_0_0/0"
+    },
+    {
+      "phy_id": 12,
+      "name": "phy12",
+      "address": "12",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy12_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio11_0_0/0"
+    },
+    {
+      "phy_id": 13,
+      "name": "phy13",
+      "address": "13",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy13_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio12_0_0/0"
+    },
+    {
+      "phy_id": 14,
+      "name": "phy14",
+      "address": "14",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy14_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio13_0_0/0"
+    },
+    {
+      "phy_id": 15,
+      "name": "phy15",
+      "address": "15",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy15_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio14_0_0/0"
+    },
+    {
+      "phy_id": 16,
+      "name": "phy16",
+      "address": "16",
+      "lib_name": "",
+      "firmware_path": "/usr/etc/credo/firmware/SE_LR.lz4.fw.1.4.5.bin",
+      "config_file": "/usr/share/sonic/hwsku/phy16_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "macsec_ipg": 352,
+      "hwinfo": "mdio15_0_0/0"
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "Ethernet0",
+      "index": 1,
+      "phy_id": 1,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet8",
+      "index": 2,
+      "phy_id": 1,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet16",
+      "index": 3,
+      "phy_id": 2,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet24",
+      "index": 4,
+      "phy_id": 2,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet32",
+      "index": 5,
+      "phy_id": 3,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet40",
+      "index": 6,
+      "phy_id": 3,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet48",
+      "index": 7,
+      "phy_id": 4,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet56",
+      "index": 8,
+      "phy_id": 4,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet64",
+      "index": 9,
+      "phy_id": 5,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet72",
+      "index": 10,
+      "phy_id": 5,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet80",
+      "index": 11,
+      "phy_id": 7,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet88",
+      "index": 12,
+      "phy_id": 7,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet96",
+      "index": 13,
+      "phy_id": 6,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet104",
+      "index": 14,
+      "phy_id": 6,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet112",
+      "index": 15,
+      "phy_id": 8,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet120",
+      "index": 16,
+      "phy_id": 8,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet256",
+      "index": 49,
+      "phy_id": 9,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet264",
+      "index": 50,
+      "phy_id": 9,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet272",
+      "index": 51,
+      "phy_id": 11,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet280",
+      "index": 52,
+      "phy_id": 11,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet288",
+      "index": 53,
+      "phy_id": 14,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet296",
+      "index": 54,
+      "phy_id": 14,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet304",
+      "index": 55,
+      "phy_id": 10,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet312",
+      "index": 56,
+      "phy_id": 10,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet320",
+      "index": 57,
+      "phy_id": 12,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet328",
+      "index": 58,
+      "phy_id": 12,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet336",
+      "index": 59,
+      "phy_id": 13,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet344",
+      "index": 60,
+      "phy_id": 13,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet352",
+      "index": 61,
+      "phy_id": 15,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "name": "Ethernet360",
+      "index": 62,
+      "phy_id": 15,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet368",
+      "index": 63,
+      "phy_id": 16,
+      "system_lanes": [
+        0,
+        2,
+        12,
+        14
+      ],
+      "line_lanes": [
+        16,
+        17,
+        18,
+        19,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "name": "Ethernet376",
+      "index": 64,
+      "phy_id": 16,
+      "system_lanes": [
+        4,
+        6,
+        8,
+        10
+      ],
+      "line_lanes": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ]
+    }
+  ]
+}

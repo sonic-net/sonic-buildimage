@@ -21,7 +21,7 @@ sonic_logger = logger.Logger('eeprom')
 class Eeprom(TlvInfoDecoder):
     """Nokia platform-specific EEPROM class"""
 
-    I2C_DIR = "/sys/class/i2c-adapter/"
+    I2C_DIR = "/sys/bus/i2c/devices/"
 
     def __init__(self, is_psu=False, psu_index=0, is_fan=False, fan_index=0):
         self.is_psu_eeprom = is_psu
@@ -30,7 +30,7 @@ class Eeprom(TlvInfoDecoder):
         
         if self.is_sys_eeprom:
             self.start_offset = 0
-            self.eeprom_path = self.I2C_DIR + "i2c-0/0-0053/eeprom"
+            self.eeprom_path = self.I2C_DIR + "0-0053/eeprom"
             # System EEPROM is in ONIE TlvInfo EEPROM format
             super(Eeprom, self).__init__(self.eeprom_path,
                                          self.start_offset, '', True)
