@@ -20,8 +20,8 @@ SONIC_ONLINE_DEBS += $(BRCM_XGS_SAI)
 $(BRCM_XGS_SAI_DEV)_DEPENDS += $(BRCM_XGS_SAI)
 
 # Version handling
-$(BRCM_XGS_SAI)_SKIP_VERSION = y
-$(BRCM_XGS_SAI_DEV)_SKIP_VERSION = y
+$(BRCM_XGS_SAI)_SKIP_VERSION=y
+$(BRCM_XGS_SAI_DEV)_SKIP_VERSION=y
 
 # Conflicts
 $(eval $(call add_conflict_package,$(BRCM_XGS_SAI_DEV),$(LIBSAIVS_DEV)))
