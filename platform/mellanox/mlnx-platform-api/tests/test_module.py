@@ -316,13 +316,21 @@ class TestModule:
                 return 0
         # Test watchdog reboot cause
         with patch("sonic_platform.device_data.DeviceDataManager.get_dpu_interface", return_value="0000:0a:00.0"), \
-             patch("subprocess.check_output") as mock_check_output:
+             patch("subprocess.check_output") as mock_check_output, \
+             patch("os.path.exists") as mock_path_exists:
+            # Mock PCI path exists for watchdog check
+            mock_path_exists.return_value = True
+
             # Test watchdog reboot (reset_reason = 0x2)
             mock_check_output.return_value = b"reset_reason | 0x00000002"
             assert m.get_reboot_cause() == (ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot')
             
             # Test non-watchdog case (reset_reason != 0x2)
             mock_check_output.return_value = b"reset_reason | 0x00000001"
+            mock_path_exists.return_value = False
+            m.get_reboot_cause()
+            mock_check_output.assert_not_called()
+            mock_path_exists.assert_called_once_with(os.path.join(PCI_DEV_BASE, "0000:08:00.0"))
             file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'reset_pwr_off', 'None']
             reboot_cause_list = [
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
