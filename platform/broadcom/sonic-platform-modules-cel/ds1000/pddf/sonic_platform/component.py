@@ -32,7 +32,7 @@ class Component(ComponentBase):
 
     DEVICE_TYPE = "component"
 
-    def __init__(self, component_index):
+    def __init__(self, component_index, pddf_data=None, pddf_plugin_data=None):
         self.component_list = [["BIOS", "Basic Input/Output System", BIOS_VERSION_CMD, self.__get_cmd_output],\
                                ["ONIE", "Open Network Install Environment", ONIE_VERSION_CMD, self.__get_onie_version],\
                                ["CPLD SW", "CPLD for board functions, watchdog and port control SFP(49-56)", SWCPLD_VERSION_CMD, self.__get_cpld_version],\
