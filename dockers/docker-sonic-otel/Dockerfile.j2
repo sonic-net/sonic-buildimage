@@ -56,7 +56,7 @@ RUN wget -v -O /tmp/otelcol-contrib.deb \
 {% endif %}
 
 COPY ["start.sh", "otel.sh", "/usr/bin/"]
-COPY ["otel_config.yaml", "/etc/sonic/"]
+RUN chmod +x /usr/bin/start.sh /usr/bin/otel.sh
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["critical_processes", "/etc/supervisor"]
 

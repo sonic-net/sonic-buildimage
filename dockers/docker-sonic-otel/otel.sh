@@ -8,13 +8,10 @@ echo "Checking for config file: $OTEL_CONFIG_FILE"
 
 if [ ! -f "$OTEL_CONFIG_FILE" ]; then
     echo "ERROR: OTEL config file not found at $OTEL_CONFIG_FILE"
-    ls -la /etc/sonic/
     exit $EXIT_OTEL_CONFIG_FILE_NOT_FOUND
 fi
 
 echo "Config file found at: $OTEL_CONFIG_FILE"
-echo "Config file contents:"
-cat $OTEL_CONFIG_FILE
 
 # Validate the YAML configuration
 echo "Validating YAML configuration..."
