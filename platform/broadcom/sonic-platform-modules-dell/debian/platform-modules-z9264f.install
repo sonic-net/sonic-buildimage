@@ -5,7 +5,7 @@ z9264f/scripts/sensors usr/bin
 z9264f/scripts/port_irq_enable.py usr/bin
 z9264f/cfg/z9264f-modules.conf etc/modules-load.d
 z9264f/systemd/platform-modules-z9264f.service etc/systemd/system
-z9264f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_z9264f_c3538-r0
+build-z9264f/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_z9264f_c3538-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_z9264f_c3538-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin

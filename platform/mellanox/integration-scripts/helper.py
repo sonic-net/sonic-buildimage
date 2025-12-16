@@ -25,9 +25,11 @@ MLNX_NOARCH_MARKER = "mellanox_common"
 MLNX_ARM_KFG_SECTION = "mellanox-arm64"
 SDK_MARKER = "mellanox_sdk"
 HW_MGMT_MARKER = "mellanox_hw_mgmt"
-SLK_PATCH_LOC = "src/sonic-linux-kernel/patch/"
-SLK_KCONFIG = SLK_PATCH_LOC + "kconfig-inclusions"
-SLK_KCONFIG_EXCLUDE = SLK_PATCH_LOC + "kconfig-exclusions"
+SLK_PATCH_LOC = "src/sonic-linux-kernel/patches-sonic/"
+SLK_KCONFIG_DIR = "src/sonic-linux-kernel/config.local/"
+SLK_KCONFIG = SLK_KCONFIG_DIR+"featureset-sonic/config"
+SLK_KCONFIG_AMD64 = SLK_KCONFIG_DIR+"amd64/config.sonic"
+SLK_KCONFIG_ARM64 = SLK_KCONFIG_DIR+"arm64/config.sonic-mellanox" 
 SLK_SERIES = SLK_PATCH_LOC + "series"
 NON_UP_PATCH_DIR = "platform/mellanox/non-upstream-patches/"
 NON_UP_PATCH_LOC = NON_UP_PATCH_DIR + "patches"
@@ -124,12 +126,6 @@ class FileHandler:
     def insert_kcfg_data(lines: list, start: int, end: int, new_data: OrderedDict) -> dict:
         # inserts data into the lines, escape every lines
         new_data_lines = ["{}={}\n".format(cfg, val) for (cfg, val) in new_data.items()]
-        return FileHandler.insert_lines(lines, start, end, new_data_lines)
-    
-    @staticmethod
-    def insert_kcfg_excl_data(lines: list, start: int, end: int, new_data: OrderedDict) -> dict:
-        # inserts data into the lines, escape every lines
-        new_data_lines = ["{}\n".format(cfg) for (cfg, val) in new_data.items()]
         return FileHandler.insert_lines(lines, start, end, new_data_lines)
 
 
