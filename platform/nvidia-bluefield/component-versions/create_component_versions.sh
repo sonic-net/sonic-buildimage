@@ -20,7 +20,7 @@ echo "SDK $SDK_VERSION" > temp_versions_file
 echo "FW $BF3_FW_VERSION" >> temp_versions_file
 echo "SAI $DPU_SAI_VERSION" >> temp_versions_file
 
-SAI_API_VERSION_PATH="../../../src/sonic-sairedis/SAI/inc/saiversion.h"
+SAI_API_VERSION_PATH="/sonic/src/sonic-sairedis/SAI/inc/saiversion.h"
 if [ -f "$SAI_API_VERSION_PATH" ]; then
     SAI_MAJOR=$(grep "SAI_MAJOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
     SAI_MINOR=$(grep "SAI_MINOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
