@@ -903,7 +903,7 @@ probe_err:
 	return ret;
 }
 
-static int slx_ich_remove(struct platform_device *pdev)
+static void slx_ich_remove(struct platform_device *pdev)
 {
   struct device *dev = &pdev->dev;
   struct slx_ich_data *ich_data = dev_get_platdata(dev);
@@ -923,12 +923,10 @@ static int slx_ich_remove(struct platform_device *pdev)
     ret = acpi_remove_sci_handler(slx_ich_sci_handler);
     if(ret) {
         pr_info("slx_ich acpi_remove_sci_handler failed %d\n",ret);
-        return ret;
+        return;
     }
 
     pr_info("slx_ich : slx_ich_remove done.\n");
-
-    return 0;
 }
 
 static struct platform_driver slx_ich_driver= {
