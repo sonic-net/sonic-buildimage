@@ -1,6 +1,6 @@
-src/drivers/linux/build/mdev.ko lib/modules/6.1.0-29-2-arm64/extra
-src/drivers/linux/build/mnet_uio_pdrv_genirq.ko lib/modules/6.1.0-29-2-arm64/extra
-src/drivers/linux/build/ionic_mnic.ko lib/modules/6.1.0-29-2-arm64/extra
-src/drivers/linux/pciesvc/6.1.0-29-2-arm64/pciesvc.ko lib/modules/6.1.0-29-2-arm64/extra
-src/drivers/linux/pciesvc/6.1.0-29-2-arm64/pciesvc_upg.ko lib/modules/6.1.0-29-2-arm64/extra
+src/drivers/linux/build/mdev.ko lib/modules/6.12.41+deb13-sonic-arm64/extra
+src/drivers/linux/build/mnet_uio_pdrv_genirq.ko lib/modules/6.12.41+deb13-sonic-arm64/extra
+src/drivers/linux/build/ionic_mnic.ko lib/modules/6.12.41+deb13-sonic-arm64/extra
+src/drivers/linux/pciesvc/6.12.41+deb13-sonic-arm64/pciesvc.ko lib/modules/6.12.41+deb13-sonic-arm64/extra
+src/drivers/linux/pciesvc/6.12.41+deb13-sonic-arm64/pciesvc_upg.ko lib/modules/6.12.41+deb13-sonic-arm64/extra
 systemd/ionic-modules.service lib/systemd/system
