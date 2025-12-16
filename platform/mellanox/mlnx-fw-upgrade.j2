@@ -91,9 +91,9 @@ function PrintHelp() {
     echo "Examples:"
     echo "  ./${SCRIPT_NAME} --verbose"
     echo "  ./${SCRIPT_NAME} --upgrade"
-    echo "  ./${SCRIPT_NAME} --no-mst"
 {% if sonic_asic_platform == "nvidia-bluefield" %}
     echo "  ./${SCRIPT_NAME} --reset"
+    echo "  ./${SCRIPT_NAME} --no-mst"
 {% endif %}
     echo "  ./${SCRIPT_NAME} --help"
     echo
@@ -240,10 +240,6 @@ function WaitForDevice() {
     if [[ "${NO_MST}" != "${YES_PARAM}" ]]; then
         LogInfo "Restarting MST device"
         /usr/bin/mst restart --with_i2cdev
-        ERROR_CODE="$?"
-        if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
-            ExitFailure "MST device restart failed with error: ${ERROR_CODE}"
-        fi
     fi
 
     while : ; do
@@ -267,15 +263,11 @@ function WaitForDevice() {
 }
 
 function GetSPCMstDevice() {
-    local _DEVICE_TYPE=$(GetMstDeviceType)
-    local _MST_DEVICE=$(${QUERY_XML} | xmlstarlet sel -t -m "//Device[contains(@type,'${_DEVICE_TYPE}')]" -v @pciName | head -n 1)
-
-    if [[ ! -c "${_MST_DEVICE}" ]]; then
-        echo "${UNKN_MST}"
-    else
-        echo "${_MST_DEVICE}"
+    local -r _ASIC_PCI_ID="$(/usr/bin/asic_detect/asic_detect.sh -p)"
+    if [[ "${_ASIC_PCI_ID}" = "${UNKN_PCI_ID}" ]]; then
+        ExitFailure "failed to detect ASIC PCI ID"
     fi
-
+    echo "${_ASIC_PCI_ID}"
     exit "${EXIT_SUCCESS}"
 }
 

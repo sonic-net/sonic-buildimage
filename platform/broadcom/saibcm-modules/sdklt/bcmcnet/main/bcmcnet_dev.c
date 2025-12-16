@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -190,7 +191,6 @@ bcn_rx_queue_group_parse(struct pdma_dev *dev, uint32_t qbm)
     int gi, qi, qn;
 
     ctrl->nb_rxq = 0;
-    sal_memset(ctrl->rx_queue, 0, sizeof(ctrl->rx_queue));
 
     /* Figure out available groups and Rx queues */
     for (gi = 0; gi < dev->num_groups; gi++) {
@@ -277,7 +277,6 @@ bcn_tx_queue_group_parse(struct pdma_dev *dev, uint32_t qbm)
     int gi, qi, qn;
 
     ctrl->nb_txq = 0;
-    sal_memset(ctrl->tx_queue, 0, sizeof(ctrl->tx_queue));
 
     /* Figure out available groups and Tx queues */
     for (gi = 0; gi < dev->num_groups; gi++) {
@@ -403,6 +402,11 @@ bcmcnet_pdma_close(struct pdma_dev *dev)
 
     bcn_rx_queues_free(dev);
     bcn_tx_queues_free(dev);
+
+    if (ctrl->lock) {
+        sal_spinlock_destroy(ctrl->lock);
+        ctrl->lock = NULL;
+    }
 
     return SHR_E_NONE;
 }
@@ -1024,6 +1028,11 @@ bcmcnet_pdma_open(struct pdma_dev *dev)
         if (hdl->inum < 0) {
             return SHR_E_INTERNAL;
         }
+    }
+
+    dev->ctrl.lock = sal_spinlock_create("bcmcnetDevCtrlLock");
+    if (!dev->ctrl.lock) {
+        return SHR_E_MEMORY;
     }
 
     /* Initialize buffer manager */
