@@ -15,3 +15,5 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 $(DOCKER_SYNCD_BASE)_MACHINE = marvell-teralynx
 
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /var/run/docker-syncd:/var/run/syncd
+$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /usr/share/sonic/device/x86_64-marvell_common:/usr/share/sonic/device/x86_64-marvell_common:ro
