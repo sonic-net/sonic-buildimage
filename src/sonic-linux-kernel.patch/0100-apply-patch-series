@@ -1,8 +1,8 @@
-Index: sonic-linux-kernel/patch/series
+Index: sonic-linux-kernel/patches-sonic/series
 ===================================================================
---- sonic-linux-kernel.orig/patch/series
-+++ sonic-linux-kernel/patch/series
-@@ -196,3 +196,10 @@ cisco-npu-disable-other-bars.patch
+--- sonic-linux-kernel.orig/patches-sonic/series
++++ sonic-linux-kernel/patches-sonic/series
+@@ -213,3 +213,10 @@ cisco-npu-disable-other-bars.patch
  # Do not add any public patch below this marker
  #
  ############################################################
