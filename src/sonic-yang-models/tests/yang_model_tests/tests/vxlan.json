@@ -41,5 +41,12 @@
     },
     "VXLAN_TUNNEL_NAME_STRING_VALID_TEST": {
         "desc": "Tunnel name as arbitrary string is valid"
+    },
+    "VXLAN_TUNNEL_VALID_TTL_MODE_TEST": {
+        "desc": "Valid config with 'pipe' and 'uniform' TTL modes"
+    },
+    "VXLAN_TUNNEL_INVALID_TTL_MODE_TEST": {
+        "desc": "Invalid config with an unsupported TTL mode",
+        "eStrKey": "Pattern"
     }
 }
