@@ -20,7 +20,7 @@ SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sonic-bluefield-packages/bin
 
 # Place here URL where SDK sources exist
 SDK_SOURCE_BASE_URL =
-SDK_VERSION = 25.7-RC11
+SDK_VERSION = 25.10-RC3
 
 SDK_COLLECTX_URL = https://linux.mellanox.com/public/repo/doca/1.5.2/debian12/aarch64/
 
@@ -71,11 +71,11 @@ SDK_ONLINE_TARGETS =
 
 # OFED and derived packages
 
-OFED_VER_SHORT = $(call get_sdk_package_version_short,"ofed")
-OFED_VER_FULL = $(call get_sdk_package_version_full,"ofed")
-OFED_KERNEL_VER_SHORT = $(call get_sdk_package_version_short,"mlnx-ofed-kernel")
-OFED_KERNEL_VER_FULL = $(call get_sdk_package_version_full,"mlnx-ofed-kernel")
-MLNX_TOOLS_VER = $(call get_sdk_package_version_full,"mlnx-tools")
+OFED_VER_SHORT := $(call get_sdk_package_version_short,"ofed")
+OFED_VER_FULL := $(call get_sdk_package_version_full,"ofed")
+OFED_KERNEL_VER_SHORT := $(call get_sdk_package_version_short,"mlnx-ofed-kernel")
+OFED_KERNEL_VER_FULL := $(call get_sdk_package_version_full,"mlnx-ofed-kernel")
+MLNX_TOOLS_VER := $(call get_sdk_package_version_full,"mlnx-tools")
 
 MLNX_TOOLS = mlnx-tools_$(MLNX_TOOLS_VER)_arm64.deb
 $(MLNX_TOOLS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
@@ -83,11 +83,13 @@ $(MLNX_TOOLS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
 OFED_KERNEL_UTILS = mlnx-ofed-kernel-utils_$(OFED_KERNEL_VER_FULL)-1_arm64.deb
 $(OFED_KERNEL_UTILS)_DEPENDS = $(MLNX_TOOLS)
 OFED_KERNEL_DKMS = mlnx-ofed-kernel-dkms_$(OFED_KERNEL_VER_SHORT)-1_all.deb
-$(OFED_KERNEL_DKMS)_DEPENDS = $(OFED_KERNEL_UTILS)
+$(OFED_KERNEL_DKMS)_DEPENDS = $(OFED_KERNEL_UTILS) $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON)
+# Note: Restrict the DKMS package to compile the driver only against the target kernel headers
+$(OFED_KERNEL_DKMS)_DEB_INSTALL_OPTS = "KVERSION=$(KVERSION)"
 
 OFED_KERNEL = mlnx-ofed-kernel-modules-$(KVERSION)_$(OFED_KERNEL_VER_SHORT)_$(BUILD_ARCH).deb
 $(OFED_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ofed
-$(OFED_KERNEL)_DEPENDS = $(LINUX_HEADERS) $(LINUX_HEADERS_COMMON) $(OFED_KERNEL_DKMS)
+$(OFED_KERNEL)_DEPENDS = $(OFED_KERNEL_DKMS)
 
 ifeq ($(SDK_FROM_SRC), y)
 $(eval $(call add_derived_package,$(MLNX_TOOLS),$(OFED_KERNEL_UTILS)))
@@ -102,7 +104,7 @@ SDK_DEBS += $(MLNX_TOOLS) $(OFED_KERNEL_UTILS)
 SDK_SRC_TARGETS += $(MLNX_TOOLS)
 
 # MLNX iproute2
-MLNX_IPROUTE2_VER = $(call get_sdk_package_version_full,"mlnx-iproute2")
+MLNX_IPROUTE2_VER := $(call get_sdk_package_version_full,"mlnx-iproute2")
 
 MLNX_IPROUTE2 = mlnx-iproute2_$(MLNX_IPROUTE2_VER)_arm64.deb
 $(MLNX_IPROUTE2)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/mlnx-iproute2
@@ -118,7 +120,7 @@ SDK_SRC_TARGETS += $(MLNX_IPROUTE2)
 
 # RDMA and derived packages
 
-RDMA_CORE_VER = $(call get_sdk_package_version_full,"rdma-core")
+RDMA_CORE_VER := $(call get_sdk_package_version_full,"rdma-core")
 RDMA_CORE = rdma-core_${RDMA_CORE_VER}_${CONFIGURED_ARCH}.deb
 $(RDMA_CORE)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/rdma
 $(RDMA_CORE)_RDEPENDS = $(LIBNL3)
@@ -173,7 +175,7 @@ endif
 
 # DPDK and derived packages
 
-DPDK_VER = $(call get_sdk_package_version_full,"dpdk")
+DPDK_VER := $(call get_sdk_package_version_full,"dpdk")
 
 DPDK = mlnx-dpdk_${DPDK_VER}_${CONFIGURED_ARCH}.deb
 $(DPDK)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/dpdk
@@ -195,7 +197,7 @@ SDK_SRC_TARGETS += $(DPDK)
 
 # RXP compiler and derived packages
 
-RXPCOMPILER_VER = $(call get_sdk_package_version_full,"rxp-tools")
+RXPCOMPILER_VER := $(call get_sdk_package_version_full,"rxp-tools")
 
 RXPCOMPILER = rxp-compiler_$(RXPCOMPILER_VER)_arm64.deb
 $(RXPCOMPILER)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/rxp-compiler
@@ -213,7 +215,7 @@ SDK_SRC_TARGETS += $(RXPCOMPILER)
 
 # GRPC and derived packages
 
-LIBGRPC_VER = $(call get_sdk_package_version_full,"grpc")
+LIBGRPC_VER := $(call get_sdk_package_version_full,"grpc")
 
 LIBGRPC_DEV = libgrpc-dev_$(LIBGRPC_VER)_arm64.deb
 $(LIBGRPC_DEV)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/grpc
@@ -225,8 +227,8 @@ SDK_SRC_TARGETS += $(LIBGRPC_DEV)
 
 # DOCA and derived packages
 
-DOCA_VERSION = $(call get_sdk_package_version_full,"doca")
-DOCA_DEB_VERSION = $(DOCA_VERSION)-1
+DOCA_VERSION := $(call get_sdk_package_version_full,"doca")
+DOCA_DEB_VERSION := $(DOCA_VERSION)-1
 
 DOCA_COMMON = doca-sdk-common_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_COMMON)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/doca
@@ -284,7 +286,7 @@ SONIC_ONLINE_DEBS += $(DOCA_DEBS) $(DOCA_DEV_DEBS)
 endif
 
 # hw-steering packages, needed for doca-flow runtime
-NV_HWS_VERSION = $(call get_sdk_package_version_full,"nv_hws")
+NV_HWS_VERSION := $(call get_sdk_package_version_full,"nv_hws")
 
 LIB_NV_HWS = libnvhws1_${NV_HWS_VERSION}_${CONFIGURED_ARCH}.deb
 $(LIB_NV_HWS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/nv_hws
@@ -306,7 +308,7 @@ export LIB_NV_HWS LIB_NV_HWS_DEV
 
 # SDN Appliance
 
-SDN_APPL_VER=$(call get_sdk_package_version_full,"nasa")
+SDN_APPL_VER:=$(call get_sdk_package_version_full,"nasa")
 SDN_APPL = sdn-appliance_${SDN_APPL_VER}_${CONFIGURED_ARCH}.deb
 $(SDN_APPL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sdn
 $(SDN_APPL)_RDEPENDS = $(DOCA_COMMON) $(DOCA_DEBS) $(MLNX_TOOLS) $(OFED_KERNEL_UTILS) $(MLNX_IPROUTE2)

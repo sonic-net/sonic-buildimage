@@ -1,7 +1,7 @@
 /*
  * A i2c cpld driver for the ufispace_s7801_54xs
  *
- * Copyright (C) 2017-2022 UfiSpace Technology Corporation.
+ * Copyright (C) 2025 UfiSpace Technology Corporation.
  * Jason Tsai <jason.cy.tsai@ufispace.com>
  *
  * Based on ad7414.c
@@ -922,6 +922,8 @@ static struct attribute *cpld2_attributes[] = {
     NULL
 };
 
+int s7801_54xs_cpld_psu_mux_sel(u8) ;
+
 /* cpld 1 attributes group */
 static const struct attribute_group cpld1_group = {
     .attrs = cpld1_attributes,
@@ -1244,9 +1246,15 @@ static void cpld_remove_client(struct i2c_client *client)
 }
 
 /* cpld drvier probe */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 static int cpld_probe(struct i2c_client *client,
                     const struct i2c_device_id *dev_id)
 {
+#else
+static int cpld_probe(struct i2c_client *client)
+{
+    const struct i2c_device_id *dev_id = i2c_client_get_device_id(client);
+#endif
     int status;
     struct cpld_data *data = NULL;
     int ret = -EPERM;
@@ -1334,11 +1342,10 @@ exit:
 
 /* cpld drvier remove */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-static int
+static int cpld_remove(struct i2c_client *client)
 #else
-static void
+static void cpld_remove(struct i2c_client *client)
 #endif
-cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
 
@@ -1514,6 +1521,7 @@ static void __exit cpld_exit(void)
 
 MODULE_AUTHOR("Jason Tsai <jason.cy.tsai@ufispace.com>");
 MODULE_DESCRIPTION("x86_64_ufispace_s7801_54xs_cpld driver");
+MODULE_VERSION("1.0.1");
 MODULE_LICENSE("GPL");
 
 module_init(cpld_init);

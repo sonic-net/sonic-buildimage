@@ -4,5 +4,5 @@ ds1000/scripts/pddf_pre_driver_install.sh usr/local/bin
 ds1000/scripts/pddf_post_device_create.sh usr/local/bin
 ds1000/scripts/ds1000_platform_shutdown.sh usr/local/bin
 ds1000/utils/ds1000_fanctld.py usr/local/bin
-ds1000/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds1000-r0/pddf
+build-ds1000/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds1000-r0/pddf
 services/platform_api/platform_api_mgnt.sh usr/local/bin
