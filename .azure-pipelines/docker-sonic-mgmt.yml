@@ -96,6 +96,7 @@ stages:
       parameters:
         CHECKOUT_SONIC_MGMT: true
         OVERRIDE_PARAMS:
+          REPO_NAME: "sonic-mgmt"
           SETUP_CONTAINER_PARAMS: "-i ${{ parameters.registry_url }}/docker-sonic-mgmt:lastbuild"
 
 - stage: Publish
