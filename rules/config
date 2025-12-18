@@ -315,7 +315,7 @@ ENABLE_FIPS ?= n
 SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
-SONIC_OS_VERSION ?= 12
+SONIC_OS_VERSION ?= 13
 
 # PIP timeout for http connection
 PIP_HTTP_TIMEOUT ?= 60
@@ -329,3 +329,6 @@ SONIC_PTF_ENV_PY_VER = py3
 
 # Add timeout on some process which may hangs
 BUILD_PROCESS_TIMEOUT ?= 0
+
+# BUILD_SKIP_TEST - skip all tests when building to reduce build time
+BUILD_SKIP_TEST ?= n
