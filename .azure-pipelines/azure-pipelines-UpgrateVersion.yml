@@ -90,6 +90,7 @@ stages:
         displayName: 'Set snapshot versions'
 
 - stage: UpgradeVersions
+  condition: false
   jobs:
   - job: UpgradeVersions
     pool:
