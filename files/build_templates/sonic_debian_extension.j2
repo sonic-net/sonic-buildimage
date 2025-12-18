@@ -122,6 +122,9 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Install tpm-tools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
 
+sudo cp src/sonic-platform-common/sonic_platform_base/bmc-fw-update.py $FILESYSTEM_ROOT/usr/bin/bmc-fw-update.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bmc-fw-update.py
+
 # Apply environtment configuration files
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/
@@ -1115,9 +1118,6 @@ done
 j2 platform/mellanox/get_component_versions/get_component_versions.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 sudo sed -i '1d' $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
-
-sudo cp platform/mellanox/mlnx-bmc-fw-update.py $FILESYSTEM_ROOT/usr/bin/mlnx-bmc-fw-update.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-bmc-fw-update.py
 
 sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py

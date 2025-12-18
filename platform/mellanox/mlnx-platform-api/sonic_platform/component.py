@@ -918,7 +918,7 @@ class ComponentBMC(Component):
     COMPONENT_NAME = 'BMC'
     COMPONENT_DESCRIPTION = 'BMC - Baseboard Management Controller'
     COMPONENT_FIRMWARE_EXTENSION = ['.fwpkg']
-    BMC_FW_UPDATE_CMD = ["/usr/bin/mlnx-bmc-fw-update.py", ""]
+    BMC_FW_UPDATE_CMD = ["/usr/bin/bmc-fw-update.py", ""]
 
     def __init__(self):
         super(ComponentBMC, self).__init__()

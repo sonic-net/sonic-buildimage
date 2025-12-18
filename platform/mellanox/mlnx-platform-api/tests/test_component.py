@@ -575,7 +575,7 @@ class TestComponent:
         component = ComponentBMC()
         ret = component.install_firmware('fake_image.fwpkg')
         mock_check_call.assert_called_once_with(
-            ["/usr/bin/mlnx-bmc-fw-update.py", 'fake_image.fwpkg'],
+            ["/usr/bin/bmc-fw-update.py", 'fake_image.fwpkg'],
             universal_newlines=True,
             start_new_session=True
         )
