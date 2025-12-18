@@ -475,10 +475,7 @@ RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN eatmydata apt-get install -y golang
-
-RUN eatmydata apt-get install -y golang-go \
- && ln -sf /usr/lib/go-1.19 /usr/local/go
+RUN eatmydata apt-get install -y golang golang-go
 
 RUN pip3 install --upgrade pip
 RUN pip2 install --upgrade 'pip<21'
