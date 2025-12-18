@@ -7,6 +7,7 @@ import sys
 import json
 import binascii
 import subprocess
+import ast
 
 from ipaddress import ip_address as IP
 
@@ -22,7 +23,7 @@ from dash_api.types_pb2 import IpVersion, Range, ValueOrRange, IpPrefix, IpAddre
 from dash_api.ha_scope_config_pb2 import DesiredHaState
 
 from google.protobuf.descriptor import FieldDescriptor
-from google.protobuf.json_format import ParseDict
+from google.protobuf.json_format import ParseDict, MessageToDict
 from google.protobuf.internal.enum_type_wrapper import EnumTypeWrapper
 
 ENABLE_PROTO = True
@@ -237,6 +238,67 @@ def from_pb(tbl_name, byte_array):
     obj.ParseFromString(byte_array)
     return obj
 
+def decode_pb_hex(tbl_name, hex_string):
+    """
+    Decode a hex-encoded protobuf payload into a python dict with proto field names.
+    """
+    byte_array = binascii.unhexlify(hex_string)
+    obj = from_pb(tbl_name, byte_array)
+    decoded = MessageToDict(obj, preserving_proto_field_name=True)
+    return _normalize_ip_fields(decoded)
+
+def _normalize_ip_fields(val):
+    """
+    Recursively convert protobuf IpAddress dicts into human-readable strings.
+    """
+    if isinstance(val, dict):
+        if "ipv4" in val:
+            ipv4_raw = val["ipv4"]
+            try:
+                val["ipv4"] = str(ipaddress.IPv4Address(int(ipv4_raw)))
+            except Exception:
+                pass
+        if "ipv6" in val:
+            ipv6_raw = val["ipv6"]
+            try:
+                ipv6_bytes = base64.b64decode(ipv6_raw)
+                val["ipv6"] = str(ipaddress.IPv6Address(ipv6_bytes))
+            except Exception:
+                pass
+        for k, v in val.items():
+            val[k] = _normalize_ip_fields(v)
+        return val
+    if isinstance(val, list):
+        return [_normalize_ip_fields(item) for item in val]
+    return val
+
+def parse_hgetall_output(raw_output):
+    """
+    Accept both dict-like one-line output (e.g. "{'field': 'val'}")
+    and alternating-line output from sonic-db-cli hgetall.
+    """
+    lines = [line for line in raw_output.splitlines() if line.strip()]
+    if not lines:
+        return {}
+
+    if len(lines) == 1 and lines[0].lstrip().startswith("{") and lines[0].rstrip().endswith("}"):
+        try:
+            obj = ast.literal_eval(lines[0])
+            if isinstance(obj, dict):
+                return {str(k): str(v) for k, v in obj.items()}
+        except Exception:
+            pass
+
+    if len(lines) % 2 == 0:
+        kv = {}
+        for i in range(0, len(lines), 2):
+            field = lines[i].strip()
+            value = lines[i+1].strip()
+            kv[field] = value
+        return kv
+
+    raise ValueError("Unexpected hgetall output format")
+
 def parse_value(value_str):
     """
     Parse the value string. If it looks like a JSON array, parse it as a list.
@@ -258,17 +320,50 @@ def parse_value(value_str):
         return value_str
 
 def main():
-    if len(sys.argv) < 5:
-        print("Usage: python script.py hset key name1 value1 [name2 value2 ...]")
+    if len(sys.argv) < 3:
+        print("Usage: python script.py hset key name1 value1 [name2 value2 ...] | hgetall key")
         sys.exit(1)
 
     action = sys.argv[1]
-    if action != "hset":
-        print("Error: action must be 'hset'")
+    if action not in ["hset", "hgetall"]:
+        print("Error: action must be 'hset' or 'hgetall'")
+        sys.exit(1)
+
+    if action == "hset" and len(sys.argv) < 5:
+        print("Usage: python script.py hset key name1 value1 [name2 value2 ...]")
+        sys.exit(1)
+    if action == "hgetall" and len(sys.argv) != 3:
+        print("Usage: python script.py hgetall key")
         sys.exit(1)
 
     key = sys.argv[2]
     table_name = key.split(':')[0]
+
+    if action == "hgetall":
+        res = subprocess.run(["/usr/bin/sonic-db-cli", "APPL_DB", "hgetall", key], capture_output=True, text=True)
+        if res.returncode != 0:
+            print(f"Error executing hgetall: {res.stderr.strip()}")
+            sys.exit(res.returncode)
+
+        try:
+            kv = parse_hgetall_output(res.stdout)
+        except Exception as e:
+            print(f"Unexpected hgetall output format. Raw output:\n{res.stdout}")
+            print(f"Error: {e}")
+            sys.exit(1)
+
+        print(f"raw: {kv}")
+
+        if "pb" in kv:
+            try:
+                decoded = decode_pb_hex(table_name, kv["pb"])
+                print("decoded:")
+                print(json.dumps(decoded, indent=2))
+            except Exception as e:
+                print(f"Failed to decode protobuf: {e}")
+        else:
+            print("No 'pb' field found to decode.")
+        return
 
     args = sys.argv[3:]
     if len(args) % 2 != 0:
