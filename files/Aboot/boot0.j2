@@ -584,6 +584,10 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_720dt_48s
         varlog_size=2048
     fi
+    if [ "$sid" = "PikeIslandZ-MGX-2F" ]; then
+        aboot_machine=arista_720dt_48s_mgx
+        varlog_size=2048
+    fi
     if [ "$sid" = "BlackhawkT4O" ]; then
         aboot_machine=arista_7050px4_32s
     fi
@@ -779,9 +783,6 @@ write_image_specific_cmdline() {
 
     # disable deterministic interface naming
     cmdline_add net.ifnames=0
-
-    # disable unified cgroup hierarchy to workaround dockerd limitation
-    cmdline_add systemd.unified_cgroup_hierarchy=0
 
     # increase kernel log buffer size
     cmdline_add log_buf_len=1M
