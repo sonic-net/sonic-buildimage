@@ -35,6 +35,9 @@ LEAF_LIST_WITH_STRING_VALUE_DICT = {
     ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'): ',',
     ('PORT', 'adv_speeds'): ',',
     ('PORT', 'adv_interface_types'): ',',
+    ('VNET_ROUTE_TUNNEL', 'endpoint'): ',',
+    ('VNET_ROUTE_TUNNEL', 'mac_address'): ',',
+    ('VNET_ROUTE_TUNNEL', 'vni'): ',',
 }
 
 """
