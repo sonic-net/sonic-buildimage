@@ -1,0 +1,137 @@
+# ------------------------------------------------------------------------------
+# Global Maintainers
+# ------------------------------------------------------------------------------
+* @sonic-net/sonic-buildimage-maintainer
+
+# ------------------------------------------------------------------------------
+# Build System Core
+# ------------------------------------------------------------------------------
+Makefile                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+slave.mk                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/config                    @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/functions                 @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+scripts/                        @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+files/                          @sonic-net/sonic-build-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# ------------------------------------------------------------------------------
+# Rules (Build Recipes for Components)
+# ------------------------------------------------------------------------------
+# Mapping specific .mk files in rules/ to component maintainers
+
+rules/swss*.mk                  @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sairedis*.mk              @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/frr*.mk                   @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/quagga*.mk                @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/snmp*.mk                  @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-utilities*.mk       @sonic-net/sonic-utilities-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-management*.mk      @sonic-net/sonic-mgmt-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-platform-common*.mk @sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/sonic-host-services*.mk   @sonic-net/sonic-host-services-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/linux-kernel.mk           @sonic-net/sonic-linux-kernel-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/wpa_supplicant.mk         @sonic-net/sonic-wpa-supplicant-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/dhcp-relay.mk             @sonic-net/sonic-dhcp-relay-maintainer @sonic-net/sonic-buildimage-maintainer
+rules/radvd.mk                  @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# ------------------------------------------------------------------------------
+# Dockers (Docker Images)
+# ------------------------------------------------------------------------------
+# Mapping docker definitions in dockers/ to component maintainers
+
+dockers/docker-orchagent/       @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-swss*/           @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-syncd*/          @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-database/        @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-fpm-frr/         @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-router-advertiser/ @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-snmp/            @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-dhcp-relay/      @sonic-net/sonic-dhcp-relay-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-platform-monitor/@sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-sflow/           @sonic-net/sonic-mgmt-common-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-teamd/           @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+dockers/docker-nat/             @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# ------------------------------------------------------------------------------
+# Vendor Platforms & Devices
+# ------------------------------------------------------------------------------
+
+# Arista
+device/arista/                  @sonic-net/sonic-arista-pizzabox-issue-access @sonic-net/sonic-buildimage-maintainer
+platform/arista/                @sonic-net/sonic-arista-pizzabox-issue-access @sonic-net/sonic-buildimage-maintainer
+
+# Broadcom
+device/broadcom/                @sonic-net/sonic-broadcom-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/broadcom/              @sonic-net/sonic-broadcom-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Mellanox / Nvidia
+device/mellanox/                @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/mellanox/              @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/nvidia-bluefield/      @sonic-net/sonic-mellanox-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Marvell
+device/marvell/                 @sonic-net/sonic-marvell-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/marvell*/              @sonic-net/sonic-marvell-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Barefoot / Intel
+device/barefoot/                @sonic-net/sonic-barefoot-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/barefoot/              @sonic-net/sonic-barefoot-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Centec
+device/centec/                  @sonic-net/sonic-centec-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/centec/                @sonic-net/sonic-centec-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Nephos
+device/nephos/                  @sonic-net/sonic-nephos-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/nephos/                @sonic-net/sonic-nephos-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Cisco / 8000
+device/cisco/                   @sonic-net/sonic-cisco-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/cisco/                 @sonic-net/sonic-cisco-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# VS (Virtual Switch)
+device/vs/                      @sonic-net/sonic-vs-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/vs/                    @sonic-net/sonic-vs-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# ------------------------------------------------------------------------------
+# Submodules / Components (src/)
+# ------------------------------------------------------------------------------
+
+# SWSS & Common
+src/sonic-swss/                 @sonic-net/sonic-swss-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-swss-common/          @sonic-net/sonic-swss-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-sairedis/             @sonic-net/sonic-sairedis-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# System Services & Utilities
+src/sonic-utilities/            @sonic-net/sonic-utilities-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-host-services/        @sonic-net/sonic-host-services-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-dbsyncd/              @sonic-net/sonic-dbsyncd-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-snmpagent/            @sonic-net/sonic-snmpagent-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-wpa-supplicant/       @sonic-net/sonic-wpa-supplicant-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-linkmgrd/             @sonic-net/sonic-linkmgrd-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Routing & Kernel
+src/sonic-frr/                  @sonic-net/sonic-frr-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-linux-kernel/         @sonic-net/sonic-linux-kernel-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-genl-packet/          @sonic-net/sonic-genl-packet-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Management Framework
+src/sonic-mgmt-common/          @sonic-net/sonic-mgmt-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-mgmt-framework/       @sonic-net/sonic-mgmt-framework-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-gnmi/                 @sonic-net/sonic-gnmi-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-restapi/              @sonic-net/sonic-restapi-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-netconf-server/       @sonic-net/sonic-netconf-server-maintainers @sonic-net/sonic-buildimage-maintainer
+
+# Platform & ZTP
+src/sonic-platform-common/      @sonic-net/sonic-platform-common-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-platform-daemons/     @sonic-net/sonic-platform-daemons-maintainer @sonic-net/sonic-buildimage-maintainer
+src/sonic-ztp/                  @sonic-net/sonic-ztp-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# PINS / P4
+src/sonic-pins/                 @sonic-net/sonic-pins-maintainer @sonic-net/sonic-buildimage-maintainer
+platform/p4/                    @sonic-net/sonic-pins-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# DASH
+src/dash-api/                   @sonic-net/sonic-dash-api-maintainer @sonic-net/sonic-buildimage-maintainer
+src/dash/                       @sonic-net/DASH-maintainer @sonic-net/sonic-buildimage-maintainer
+
+# Security / FIPS
+src/sonic-fips/                 @sonic-net/sonic-fips-maintainer @sonic-net/sonic-buildimage-maintainer
