@@ -25,7 +25,7 @@ index 0000000..8e04b38
 --- /dev/null
 +++ b/patches-sonic/driver-hwmon-adt7462-fix-alarm-mask.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-hwmon-adt7462-fix-alarm-mask.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-hwmon-adt7462-fix-alarm-mask.patch
 \ No newline at end of file
 diff --git a/patches-sonic/driver-hwmon-pmbus-cisco-solvan.patch b/patches-sonic/driver-hwmon-pmbus-cisco-solvan.patch
 new file mode 120000
@@ -33,7 +33,7 @@ index 0000000..085337d
 --- /dev/null
 +++ b/patches-sonic/driver-hwmon-pmbus-cisco-solvan.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco-solvan.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco-solvan.patch
 \ No newline at end of file
 diff --git a/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update.patch b/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update.patch
 new file mode 120000
@@ -41,7 +41,7 @@ index 0000000..c6612e4
 --- /dev/null
 +++ b/patches-sonic/driver-hwmon-pmbus-cisco_n2200-update.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200-update.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200-update.patch
 \ No newline at end of file
 diff --git a/patches-sonic/driver-hwmon-pmbus-cisco_n2200.patch b/patches-sonic/driver-hwmon-pmbus-cisco_n2200.patch
 new file mode 120000
@@ -49,7 +49,7 @@ index 0000000..1fa3258
 --- /dev/null
 +++ b/patches-sonic/driver-hwmon-pmbus-cisco_n2200.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200.patch
 \ No newline at end of file
 diff --git a/patches-sonic/driver-rtc-cmos-address-space-256.patch b/patches-sonic/driver-rtc-cmos-address-space-256.patch
 new file mode 120000
@@ -57,7 +57,7 @@ index 0000000..8565fe5
 --- /dev/null
 +++ b/patches-sonic/driver-rtc-cmos-address-space-256.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-rtc-cmos-address-space-256.patch
++/sonic/src/sonic-linux-kernel.patch/patch/driver-rtc-cmos-address-space-256.patch
 \ No newline at end of file
 diff --git a/patches-sonic/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch b/patches-sonic/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch
 new file mode 120000
@@ -65,5 +65,5 @@ index 0000000..1739840
 --- /dev/null
 +++ b/patches-sonic/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch
 @@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch
++/sonic/src/sonic-linux-kernel.patch/patch/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch
 \ No newline at end of file
