@@ -6,19 +6,22 @@ Subject: [PATCH 2/2] Increase ARCH_NR_GPIOs to 1024
 
 Signed-off-by: Jiahua Wang <jiahwang@cisco.com>
 ---
- include/asm-generic/gpio.h |    2 +-
+ include/linux/gpio.h |    2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/include/asm-generic/gpio.h b/include/asm-generic/gpio.h
+diff --git a/include/linux/gpio.h b/include/linux/gpio.h
 index 8ca627d..43ad6d7 100644
---- a/include/asm-generic/gpio.h
-+++ b/include/asm-generic/gpio.h
-@@ -29,7 +29,7 @@
- #if defined(CONFIG_ARCH_NR_GPIO) && CONFIG_ARCH_NR_GPIO > 0
- #define ARCH_NR_GPIOS CONFIG_ARCH_NR_GPIO
- #else
--#define ARCH_NR_GPIOS		512
-+#define ARCH_NR_GPIOS		1024
- #endif
- #endif
- 
+--- a/include/linux/gpio.h
++++ b/include/linux/gpio.h
+@@ -63,9 +63,9 @@
+ /*
+  * At the end we want all GPIOs to be dynamically allocated from 0.
+  * However, some legacy drivers still perform fixed allocation.
+- * Until they are all fixed, leave 0-512 space for them.
++ * Until they are all fixed, leave 0-1024 space for them.
+  */
+-#define GPIO_DYNAMIC_BASE	512
++#define GPIO_DYNAMIC_BASE	1024
+ /*
+  * Define the maximum of the possible GPIO in the global numberspace.
+  * While the GPIO base and numbers are positive, we limit it with signed
