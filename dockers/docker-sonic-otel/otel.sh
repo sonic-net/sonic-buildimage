@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 EXIT_OTEL_CONFIG_FILE_NOT_FOUND=1
-OTEL_CONFIG_FILE=/etc/sonic/otel_config.yaml
+OTEL_CONFIG_FILE=/etc/sonic/otel_config.yml
 
 echo "Starting otel.sh script"
 echo "Checking for config file: $OTEL_CONFIG_FILE"

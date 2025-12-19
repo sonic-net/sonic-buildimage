@@ -649,7 +649,7 @@ j2 files/build_templates/otel.service.j2 | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYS
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable otel
 {%- endif %}
 # Copy OTEL configuration files
-sudo cp $IMAGE_CONFIGS/otel/otel_config.yaml $FILESYSTEM_ROOT/etc/sonic/
+sudo cp $IMAGE_CONFIGS/otel/otel_config.yml $FILESYSTEM_ROOT/etc/sonic/
 
 # Copy platform topology configuration scripts
 sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
