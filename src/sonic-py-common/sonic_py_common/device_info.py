@@ -726,6 +726,25 @@ def is_macsec_supported():
                 break
     return int(supported)
 
+# Get the chassis_db_address from the file /etc/sonic/chassisdb_address
+def get_chassis_db_address():
+    chassis_db_address_file_path = "/etc/sonic/chassisdb_address"
+    chassis_db_address = None
+
+    # platform_env.conf file not present for platform
+    if not os.path.isfile(chassis_db_address_file_path):
+        return chassis_db_address
+
+    with open(chassis_db_address_file_path) as chassis_db_addr_conf:
+        for line in chassis_db_addr_conf:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            if tokens[0].lower() == 'chassis_db_address':
+                chassis_db_address = tokens[1].strip()
+                break
+
+    return chassis_db_address
 
 def get_device_runtime_metadata():
     chassis_metadata = {}
