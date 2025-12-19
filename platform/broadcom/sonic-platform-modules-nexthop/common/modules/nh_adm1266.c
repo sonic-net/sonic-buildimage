@@ -49,6 +49,7 @@
 #include "nh_pmbus.h"
 #include <linux/slab.h>
 #include <linux/timekeeping.h>
+#include <linux/version.h>
 
 #define ADM1266_BLACKBOX_CONFIG	0xD3
 #define ADM1266_PDIO_CONFIG	0xD4
@@ -573,8 +574,7 @@ static int nh_adm1266_set_rtc(struct nh_adm1266_data *data)
 					  write_buf);
 }
 
-static int nh_adm1266_probe(struct i2c_client *client,
-			    const struct i2c_device_id *id)
+static int nh_adm1266_probe(struct i2c_client *client)
 {
 	struct nh_adm1266_data *data;
 	int ret;
@@ -631,7 +631,11 @@ static struct i2c_driver nh_adm1266_driver = {
 		   .name = "nh_adm1266",
 		   .of_match_table = nh_adm1266_of_match,
 		  },
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+	.probe_new = nh_adm1266_probe,
+#else
 	.probe = nh_adm1266_probe,
+#endif
 	.id_table = nh_adm1266_id,
 };
 
