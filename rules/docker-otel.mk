@@ -6,15 +6,12 @@ DOCKER_OTEL_DBG = $(DOCKER_OTEL_STEM)-$(DBG_IMAGE_MARK).gz
 
 $(DOCKER_OTEL)_PATH = $(DOCKERS_PATH)/$(DOCKER_OTEL_STEM)
 
-# OTEL should depend directly on DOCKER_CONFIG_ENGINE_BOOKWORM for debug requirements
 $(DOCKER_OTEL)_DBG_DEPENDS = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_DEPENDS)
-# Load the config engine bookworm container as base dependency
 $(DOCKER_OTEL)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_BOOKWORM)
 $(DOCKER_OTEL)_VERSION = 1.0.0
 $(DOCKER_OTEL)_PACKAGE_NAME = otel
 $(DOCKER_OTEL)_DBG_IMAGE_PACKAGES = $($(DOCKER_CONFIG_ENGINE_BOOKWORM)_DBG_IMAGE_PACKAGES)
 
-# Add to build system
 SONIC_DOCKER_IMAGES += $(DOCKER_OTEL)
 SONIC_BOOKWORM_DOCKERS += $(DOCKER_OTEL)
 ifeq ($(INCLUDE_SYSTEM_OTEL), y)
@@ -27,13 +24,16 @@ ifeq ($(INCLUDE_SYSTEM_OTEL), y)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_OTEL_DBG)
 endif
 
-# Runtime configuration
 $(DOCKER_OTEL)_CONTAINER_NAME = otel
 $(DOCKER_OTEL)_RUN_OPT += -t
 $(DOCKER_OTEL)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_OTEL)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
-# Expose OTEL collector ports
-$(DOCKER_OTEL)_RUN_OPT += -p 4317:4317 -p 4318:4318
+$(DOCKER_OTEL)_RUN_OPT += -v /:/mnt/host:ro
+$(DOCKER_OTEL)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
+$(DOCKER_OTEL)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
+$(DOCKER_OTEL)_RUN_OPT += --pid=host
+$(DOCKER_OTEL)_RUN_OPT += --privileged
+$(DOCKER_OTEL)_RUN_OPT += --userns=host
 
-# Include monit configuration
 $(DOCKER_OTEL)_BASE_IMAGE_FILES += monit_otel:/etc/monit/conf.d
+

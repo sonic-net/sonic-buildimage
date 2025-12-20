@@ -48,7 +48,7 @@ if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
 }
 
 ## otel rules
-if $msg startswith "otel" then {
+if $msg startswith " otel" then {
     /var/log/otel.log
     stop
 }
