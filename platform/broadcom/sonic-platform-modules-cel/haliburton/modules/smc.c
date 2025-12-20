@@ -998,7 +998,7 @@ static int cpld_drv_probe(struct platform_device *pdev)
         return err;
     }
 
-    celplatform = class_create(THIS_MODULE, "celplatform");
+    celplatform = class_create("celplatform");
     if (IS_ERR(celplatform)) {
         printk(KERN_ERR "Failed to register device class\n");
         sysfs_remove_group(&pdev->dev.kobj, &cpld_group);
@@ -1027,13 +1027,12 @@ static int cpld_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int cpld_drv_remove(struct platform_device *pdev)
+static void cpld_drv_remove(struct platform_device *pdev)
 {
     device_unregister(cpld_data->fpp_node);
     put_device(cpld_data->fpp_node);
     sysfs_remove_group(&pdev->dev.kobj, &cpld_group);
     class_destroy(celplatform);
-    return 0;
 }
 
 static struct platform_driver cpld_drv = {

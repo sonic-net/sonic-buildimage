@@ -1,19 +1,55 @@
 #include <stdio.h>
+#include <string_view>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-// #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <linux/limits.h>
 #include <json-c/json.h>
 #include <string>
 #include <sstream>
+#include <filesystem>
+#include <format>
 #include <unordered_set>
 #include <fstream>
 #include <unordered_map>
 #include <regex>
+#include <fcntl.h>
+#include <stdarg.h>
+
+// Utility function for logging to /dev/kmsg
+void log_to_kmsg(const char* format, ...) {
+    static int kmsg_fd = -1;
+    
+    // Open /dev/kmsg if not already opened
+    if (kmsg_fd == -1) {
+        kmsg_fd = open("/dev/kmsg", O_WRONLY);
+        if (kmsg_fd == -1) {
+            // Fallback to stderr if /dev/kmsg is not available
+            va_list args;
+            va_start(args, format);
+            vfprintf(stderr, format, args);
+            va_end(args);
+            return;
+        }
+    }
+    
+    va_list args;
+    va_start(args, format);
+    
+    // Format the message
+    char kmsg_buffer[1024];
+    char *buffer_p;
+    buffer_p = stpncpy(kmsg_buffer, "<6>systemd-sonic-generator: ", sizeof(kmsg_buffer));
+    vsnprintf(buffer_p, sizeof(kmsg_buffer) - (buffer_p - kmsg_buffer), format, args);
+    va_end(args);
+    kmsg_buffer[1023] = '\0';
+    
+    // Write to /dev/kmsg
+    write(kmsg_fd, kmsg_buffer, strlen(kmsg_buffer));
+}
 
 #define MAX_NUM_TARGETS 48
 #define MAX_NUM_INSTALL_LINES 48
@@ -102,7 +138,7 @@ void clean_up_cache() {
  *
  * @param pointer A pointer to a pointer variable.
  */
-void set_invalid_pointer(void **pointer) {
+static void set_invalid_pointer(void **pointer) {
     *pointer = (void *)-1;
 }
 
@@ -115,7 +151,7 @@ void set_invalid_pointer(void **pointer) {
  * @param pointer The pointer to be checked.
  * @return true if the pointer is valid, false otherwise.
  */
-bool is_valid_pointer(void *pointer) {
+static bool is_valid_pointer(void *pointer) {
     return pointer != NULL && pointer != (void *)-1;
 }
 
@@ -126,11 +162,11 @@ bool is_valid_pointer(void *pointer) {
  * @param pointer The pointer to check.
  * @return true if the pointer is not NULL, false otherwise.
  */
-bool is_initialized_pointer(void *pointer) {
+static bool is_initialized_pointer(void *pointer) {
     return pointer != NULL;
 }
 
-void strip_trailing_newline(char* str) {
+static void strip_trailing_newline(char* str) {
     /***
     Strips trailing newline from a string if it exists
     ***/
@@ -143,7 +179,7 @@ void strip_trailing_newline(char* str) {
         str[l-1] = '\0';
 }
 
-void strip_trailing_newline(std::string& str) {
+static void strip_trailing_newline(std::string& str) {
     /***
     Strips trailing newline from a string if it exists
     ***/
@@ -186,7 +222,7 @@ static int get_target_lines(const char* unit_file, char* target_lines[]) {
     fp = fopen(unit_file, "r");
 
     if (fp == NULL) {
-        fprintf(stderr, "Failed to open file %s\n", unit_file);
+        log_to_kmsg("Failed to open file %s\n", unit_file);
         return -1;
     }
 
@@ -200,8 +236,8 @@ static int get_target_lines(const char* unit_file, char* target_lines[]) {
         }
         else if (found_install) {
             if (num_target_lines >= MAX_NUM_INSTALL_LINES) {
-                fprintf(stderr, "Number of lines in [Install] section of %s exceeds MAX_NUM_INSTALL_LINES\n", unit_file);
-                fputs("Extra [Install] lines will be ignored\n", stderr);
+                log_to_kmsg("Number of lines in [Install] section of %s exceeds MAX_NUM_INSTALL_LINES\n", unit_file);
+                log_to_kmsg("Extra [Install] lines will be ignored\n");
                 break;
             }
             target_lines[num_target_lines] = strdup(line);
@@ -277,7 +313,7 @@ static int get_install_targets_from_line(std::string target_string, std::string 
     int num_targets = 0;
 
     if (target_string.empty() || install_type.empty()) {
-        fprintf(stderr, "Invalid target string or install type\n");
+        log_to_kmsg("Invalid target string or install type\n");
         exit(EXIT_FAILURE);
     }
 
@@ -285,8 +321,8 @@ static int get_install_targets_from_line(std::string target_string, std::string 
 
     while (ss >> target) {
         if (num_targets + existing_targets >= MAX_NUM_TARGETS) {
-            fprintf(stderr, "Number of targets exceeds MAX_NUM_TARGETS\n");
-            fputs("Additional targets will be ignored\n", stderr);
+            log_to_kmsg("Number of targets exceeds MAX_NUM_TARGETS\n");
+            log_to_kmsg("Additional targets will be ignored\n");
             break;
         }
         // handle install targets using the '%i' systemd specifier
@@ -302,23 +338,12 @@ static int get_install_targets_from_line(std::string target_string, std::string 
     return num_targets;
 }
 
-static void replace_multi_inst_dep(const char *src) {
-    FILE *fp_src;
-    FILE *fp_tmp;
-    char buf[MAX_BUF_SIZE];
-    char* line = NULL;
+static void replace_multi_inst_dep(const std::filesystem::path& install_dir, const std::string& unit_file) {
+    std::ifstream fp_src;
+    std::ofstream fp_tmp;
+    std::string line;
     int i;
-    size_t len;
-    char *token;
-    char *word;
-    char *line_copy;
-    char *service_name;
-    char *type;
-    char *save_ptr1 = NULL;
-    char *save_ptr2 = NULL;
-    ssize_t nread;
     bool section_done = false;
-    char tmp_file_path[PATH_MAX];
 
     /* Assumes that the service files has 3 sections,
      * in the order: Unit, Service and Install.
@@ -328,114 +353,119 @@ static void replace_multi_inst_dep(const char *src) {
      * sections, replace if dependent on multi instance
      * service.
      */
-    fp_src = fopen(src, "r");
-    snprintf(tmp_file_path, PATH_MAX, "%s.tmp", src);
-    fp_tmp = fopen(tmp_file_path, "w");
+    {
+        fp_src = std::ifstream(get_unit_file_prefix() + unit_file);
+        fp_tmp = std::ofstream(install_dir / unit_file);
 
-    while ((nread = getline(&line, &len, fp_src)) != -1 ) {
-        if ((strstr(line, "[Service]") != NULL) ||
-            (strstr(line, "[Timer]") != NULL)) {
-            section_done = true;
-            fputs(line,fp_tmp);
-        } else if (strstr(line, "[Install]") != NULL) {
-            section_done = false;
-            fputs(line,fp_tmp);
-        } else if ((strstr(line, "[Unit]") != NULL) ||
-           (strstr(line, "Description") != NULL) ||
-           (section_done == true)) {
-            fputs(line,fp_tmp);
-        } else {
-            line_copy = strdup(line);
-            token = strtok_r(line_copy, "=", &save_ptr1);
-            while ((word = strtok_r(NULL, " ", &save_ptr1))) {
-                if((strchr(word, '.') == NULL) ||
-                   (strchr(word, '@') != NULL)) {
-                    snprintf(buf, MAX_BUF_SIZE,"%s=%s\n",token, word);
-                    fputs(buf,fp_tmp);
-                } else {
-                    service_name = strdup(word);
-                    service_name = strtok_r(service_name, ".", &save_ptr2);
-                    type = strtok_r(NULL, "\n", &save_ptr2);
-                    if (num_asics > 1 &&  is_multi_instance_service(word)) {
-                        for(i = 0; i < num_asics; i++) {
-                            snprintf(buf, MAX_BUF_SIZE, "%s=%s@%d.%s\n",
-                                    token, service_name, i, type);
-                            fputs(buf,fp_tmp);
-                        }
-                    } else if (smart_switch_npu && is_multi_instance_service_for_dpu(word)) {
-                        for(i = 0; i < num_dpus; i++) {
-                            snprintf(buf, MAX_BUF_SIZE, "%s=%s@%s%d.%s\n",
-                                    token, service_name, DPU_PREFIX, i, type);
-                            fputs(buf,fp_tmp);
-                        }
-                    } else {
-                        snprintf(buf, MAX_BUF_SIZE,"%s=%s.%s\n",token, service_name, type);
-                        fputs(buf, fp_tmp);
-                    }
-                    free(service_name);
-                }
+        while (std::getline(fp_src, line)) {
+            const auto kv_split = line.find("=");
+            std::string_view line_view = line;
+            auto key = line_view.substr(0, kv_split);
+            // Ignore all dependency-related keys for later handling
+            if (key != "After" && key != "Before"
+                    && key != "Requires" && key != "Wants"
+                    && key != "Requisite" && key != "WantedBy") {
+                fp_tmp << line << "\n";
             }
-            free(line_copy);
         }
     }
-    fclose(fp_src);
-    fclose(fp_tmp);
-    free(line);
-    /* remove the .service file, rename the .service.tmp file
-     * as .service.
-     */
-    remove(src);
-    rename(tmp_file_path, src);
+
+    std::filesystem::create_directory(install_dir / (unit_file + ".d"));
+
+    {
+        fp_src = std::ifstream(get_unit_file_prefix() + unit_file);
+        fp_tmp = std::ofstream(install_dir / (unit_file + ".d") / "multi-asic-dependencies.conf");
+        fp_tmp << "[Unit]\n";
+
+        while (std::getline(fp_src, line)) {
+            if (line.find("[Service]") != std::string::npos ||
+                    line.find("[Timer]") != std::string::npos) {
+                section_done = true;
+            } else if (line.find("[Install]") != std::string::npos) {
+                section_done = false;
+                fp_tmp << "[Install]\n";
+                fp_tmp << "WantedBy=\n";
+            } else if (line.find("[Unit]") != std::string::npos ||
+                    line.find("Description") != std::string::npos ||
+                    (section_done == true)) {
+            } else {
+                const auto kv_split = line.find("=");
+                std::string_view line_view = line;
+                auto key = line_view.substr(0, kv_split);
+                if (key != "After" && key != "Before"
+                        && key != "Requires" && key != "Wants"
+                        && key != "Requisite" && key != "WantedBy") {
+                    // Ignore keys that aren't going to need special handling for multi-instance
+                    // services.
+                    continue;
+                }
+                auto values = line_view.substr(kv_split + 1);
+                std::string_view value;
+                std::string_view::size_type value_idx = values.find(" ");
+                std::string_view::size_type old_value_idx = 0;
+                value = values.substr(0, value_idx);
+                do {
+                    if (value.length() == 0) {
+                        old_value_idx = value_idx;
+                        value_idx = values.find(" ", old_value_idx + 1);
+                        value = values.substr(old_value_idx + 1, value_idx - old_value_idx - 1);
+                        continue;
+                    }
+                    if((value.find('.') == std::string_view::npos) ||
+                            (value.find('@') != std::string_view::npos)) {
+                        // If the value doesn't have a suffix, or it is already an instantiation
+                        // of a unit, ignore it
+                        fp_tmp << key << "=" << value << "\n";
+                    } else {
+                        auto extension_idx = value.find(".");
+                        auto service_name = value.substr(0, extension_idx);
+                        auto type = value.substr(extension_idx + 1);
+                        if (num_asics > 1 && is_multi_instance_service(std::string(value))) {
+                            for(i = 0; i < num_asics; i++) {
+                                fp_tmp << key << "=" << service_name << "@" << i << "." << type << "\n";
+                            }
+                        } else if (smart_switch_npu && is_multi_instance_service_for_dpu(std::string(value))) {
+                            for(i = 0; i < num_dpus; i++) {
+                                fp_tmp << key << "=" << service_name << "@" << DPU_PREFIX << i << "." << type << "\n";
+                            }
+                        } else {
+                            fp_tmp << key << "=" << service_name << "." << type << "\n";
+                        }
+                    }
+                    old_value_idx = value_idx;
+                    if (value_idx != std::string_view::npos) {
+                        value_idx = values.find(" ", old_value_idx + 1);
+                        value = values.substr(old_value_idx + 1, value_idx - old_value_idx - 1);
+                    }
+                } while (old_value_idx != std::string_view::npos);
+            }
+        }
+    }
 }
 
-static void update_environment(const std::string &src)
+static void update_environment(const std::filesystem::path& install_dir, const std::string &unit_file_name)
 {
-    std::ifstream src_file(src);
-    std::ofstream tmp_file(src + ".tmp");
-    bool has_service_section = false;
-    std::string line;
-
-    // locate the [Service] section
-    while (std::getline(src_file, line)) {
-        tmp_file << line << std::endl;
-        if (line.find("[Service]") != std::string::npos) {
-            has_service_section = true;
-            break;
-        }
+    if (!unit_file_name.ends_with(".service")) {
+        return;
     }
 
-    if (!has_service_section) {
-        tmp_file << "[Service]" << std::endl;
-    }
+    auto unit_override_dir = install_dir / (unit_file_name + ".d");
+    std::filesystem::create_directory(unit_override_dir);
+
+    auto unit_environment_file_path = unit_override_dir / "environment.conf";
+    std::ofstream unit_environment_file(unit_environment_file_path);
 
     std::unordered_map<std::string, std::string> env_vars;
     env_vars["IS_DPU_DEVICE"] = (smart_switch_dpu ? "true" : "false");
     env_vars["NUM_DPU"] = std::to_string(num_dpus);
 
+    unit_environment_file << "[Service]\n";
+
     for (const auto& [key, value] : env_vars) {
-        tmp_file << "Environment=\"" << key << "=" << value << "\"" << std::endl;
+        unit_environment_file << "Environment=\"" << key << "=" << value << "\"" << std::endl;
     }
 
-    // copy the rest of the file
-    if (has_service_section) {
-        const static std::regex env_var_regex("Environment=\"?(\\w+)");
-        while (std::getline(src_file, line)) {
-            // skip the existing environment variables
-            std::smatch match;
-            if (std::regex_search(line, match, env_var_regex)) {
-                if (env_vars.find(match[1]) != env_vars.end()) {
-                    continue;
-                }
-            }
-            tmp_file << line << std::endl;
-        }
-    }
-
-    src_file.close();
-    tmp_file.close();
-    // remove the original file and rename the temporary file
-    remove(src.c_str());
-    rename((src + ".tmp").c_str(), src.c_str());
+    unit_environment_file.close();
 }
 
 int get_install_targets(std::string unit_file, char* targets[]) {
@@ -460,14 +490,9 @@ int get_install_targets(std::string unit_file, char* targets[]) {
 
     instance_name = unit_file.substr(0, unit_file.find('.'));
 
-    if(((num_asics > 1) && (!is_multi_instance_service(instance_name)))
-        || ((num_dpus > 0) && (!is_multi_instance_service_for_dpu(instance_name)))) {
-        replace_multi_inst_dep(file_path.c_str());
-    }
-
     num_target_lines = get_target_lines(file_path.c_str(), target_lines);
     if (num_target_lines < 0) {
-        fprintf(stderr, "Error parsing targets for %s\n", unit_file.c_str());
+        log_to_kmsg("Error parsing targets for %s\n", unit_file.c_str());
         return -1;
     }
 
@@ -514,7 +539,7 @@ int get_unit_files(const char* config_file, char* unit_files[], int unit_files_s
     fp = fopen(config_file, "r");
 
     if (fp == NULL) {
-        fprintf(stderr, "Failed to open %s\n", config_file);
+        log_to_kmsg("Failed to open %s\n", config_file);
         exit(EXIT_FAILURE);
     }
 
@@ -527,7 +552,7 @@ int get_unit_files(const char* config_file, char* unit_files[], int unit_files_s
 
     while ((read = getline(&line, &len, fp)) != -1) {
         if (num_unit_files >= unit_files_size) {
-            fprintf(stderr, "Maximum number of units exceeded, ignoring extras\n");
+            log_to_kmsg("Maximum number of units exceeded, ignoring extras\n");
             break;
         }
         strip_trailing_newline(line);
@@ -543,12 +568,6 @@ int get_unit_files(const char* config_file, char* unit_files[], int unit_files_s
         /* topology service to be started only for multiasic VS platform */
         if ((strcmp(line, "topology.service") == 0) &&
                         (num_asics == 1)) {
-            continue;
-        } else if ((strcmp(line, "midplane-network-dpu.service") == 0) &&
-                        !smart_switch_dpu) {
-            continue;
-        } else if ((strcmp(line, "midplane-network-npu.service") == 0) &&
-                        !smart_switch_npu) {
             continue;
         }
 
@@ -590,7 +609,7 @@ std::string insert_instance_number(const std::string& unit_file, int instance, c
     ***/
     size_t at_pos = unit_file.find("@");
     if (at_pos == std::string::npos) {
-        fprintf(stderr, "Invalid unit file %s for instance %d\n", unit_file.c_str(), instance);
+        log_to_kmsg("Invalid unit file %s for instance %d\n", unit_file.c_str(), instance);
         return "";
     }
 
@@ -622,7 +641,7 @@ static int create_symlink(const std::string& unit, const std::string& target, co
         // If doesn't exist, create
         r = mkdir(final_install_dir.c_str(), 0755);
         if (r == -1) {
-            fprintf(stderr, "Unable to create target directory %s\n", final_install_dir.c_str());
+            log_to_kmsg("Unable to create target directory %s\n", final_install_dir.c_str());
             return -1;
         }
     }
@@ -630,13 +649,13 @@ static int create_symlink(const std::string& unit, const std::string& target, co
         // If is regular file, remove and create
         r = remove(final_install_dir.c_str());
         if (r == -1) {
-            fprintf(stderr, "Unable to remove file with same name as target directory %s\n", final_install_dir.c_str());
+            log_to_kmsg("Unable to remove file with same name as target directory %s\n", final_install_dir.c_str());
             return -1;
         }
 
         r = mkdir(final_install_dir.c_str(), 0755);
         if (r == -1) {
-            fprintf(stderr, "Unable to create target directory %s\n", final_install_dir.c_str());
+            log_to_kmsg("Unable to create target directory %s\n", final_install_dir.c_str());
             return -1;
         }
     }
@@ -644,14 +663,14 @@ static int create_symlink(const std::string& unit, const std::string& target, co
         // If directory, verify correct permissions
         r = chmod(final_install_dir.c_str(), 0755);
         if (r == -1) {
-            fprintf(stderr, "Unable to change permissions of existing target directory %s\n", final_install_dir.c_str());
+            log_to_kmsg("Unable to change permissions of existing target directory %s\n", final_install_dir.c_str());
             return -1;
         }
     }
 
     if (is_devnull(dest_path.c_str())) {
         if (remove(dest_path.c_str()) != 0) {
-            fprintf(stderr, "Unable to remove existing symlink %s\n", dest_path.c_str());
+            log_to_kmsg("Unable to remove existing symlink %s\n", dest_path.c_str());
             return -1;
         }
     }
@@ -661,7 +680,7 @@ static int create_symlink(const std::string& unit, const std::string& target, co
     if (r < 0) {
         if (errno == EEXIST)
             return 0;
-        fprintf(stderr, "Error creating symlink %s from source %s\n", dest_path.c_str(), src_path.c_str());
+        log_to_kmsg("Error creating symlink %s from source %s\n", dest_path.c_str(), src_path.c_str());
         return -1;
     }
 
@@ -685,7 +704,7 @@ static int install_unit_file(std::string unit_file, std::string target, std::str
     int r;
 
     if (unit_file.empty() || target.empty() || install_dir.empty()){
-        fprintf(stderr, "Invalid unit file, target or install directory\n");
+        log_to_kmsg("Invalid unit file, target or install directory\n");
         exit(EXIT_FAILURE);
     }
 
@@ -702,7 +721,7 @@ static int install_unit_file(std::string unit_file, std::string target, std::str
 
             r = create_symlink(unit_file, target_instance, install_dir, i, "");
             if (r < 0)
-                fprintf(stderr, "Error installing %s for target %s\n", unit_file.c_str(), target_instance.c_str());
+                log_to_kmsg("Error installing %s for target %s\n", unit_file.c_str(), target_instance.c_str());
         }
     } else if (num_dpus > 0 && unit_file.find("@") != std::string::npos) {
         // If multi-instance service for DPU
@@ -712,12 +731,12 @@ static int install_unit_file(std::string unit_file, std::string target, std::str
         for (int i = 0; i < num_dpus; i++) {
             r = create_symlink(unit_file, target, install_dir, i, DPU_PREFIX);
             if (r < 0)
-                fprintf(stderr, "Error installing %s for target %s\n", unit_file.c_str(), target.c_str());
+                log_to_kmsg("Error installing %s for target %s\n", unit_file.c_str(), target.c_str());
         }
     } else {
         r = create_symlink(unit_file, target, install_dir, -1, "");
         if (r < 0)
-            fprintf(stderr, "Error installing %s for target %s\n", unit_file.c_str(), target.c_str());
+            log_to_kmsg("Error installing %s for target %s\n", unit_file.c_str(), target.c_str());
     }
 
     return 0;
@@ -750,7 +769,7 @@ const char* get_platform() {
     const char* machine_config_file = get_machine_config_file();
     fp = fopen(machine_config_file, "r");
     if (fp == NULL) {
-        fprintf(stderr, "Failed to open %s\n", machine_config_file);
+        log_to_kmsg("Failed to open %s\n", machine_config_file);
         exit(EXIT_FAILURE);
     }
 
@@ -845,29 +864,29 @@ const struct json_object* get_platform_info() {
 
     FILE *fp = fopen(platform_file_path, "r");
     if (fp == NULL) {
-        fprintf(stdout, "Failed to open %s\n", platform_file_path);
+        log_to_kmsg("Failed to open %s\n", platform_file_path);
         set_invalid_pointer((void **)&platform_info);
         return NULL;
     }
     if (fseek(fp, 0, SEEK_END) != 0) {
-        fprintf(stdout, "Failed to seek to end of %s\n", platform_file_path);
+        log_to_kmsg("Failed to seek to end of %s\n", platform_file_path);
         fclose(fp);
         exit(EXIT_FAILURE);
     }
     size_t fsize = ftell(fp);
     if (fseek(fp, 0, SEEK_SET) != 0) {
-        fprintf(stdout, "Failed to seek to beginning of %s\n", platform_file_path);
+        log_to_kmsg("Failed to seek to beginning of %s\n", platform_file_path);
         fclose(fp);
         exit(EXIT_FAILURE);
     }
     char *platform_json = (char*) malloc(fsize + 1);
     if (platform_json == NULL) {
-        fprintf(stdout, "Failed to allocate memory for %s\n", platform_file_path);
+        log_to_kmsg("Failed to allocate memory for %s\n", platform_file_path);
         fclose(fp);
         exit(EXIT_FAILURE);
     }
     if (fread(platform_json, fsize, 1, fp) != 1) {
-        fprintf(stdout, "Failed to read %s\n", platform_file_path);
+        log_to_kmsg("Failed to read %s\n", platform_file_path);
         free(platform_json);
         fclose(fp);
         exit(EXIT_FAILURE);
@@ -877,7 +896,7 @@ const struct json_object* get_platform_info() {
 
     platform_info = json_tokener_parse(platform_json);
     if (platform_info == NULL) {
-        fprintf(stderr, "Failed to parse %s\n", platform_file_path);
+        log_to_kmsg("Failed to parse %s\n", platform_file_path);
         free(platform_json);
         return NULL;
     }
@@ -942,200 +961,23 @@ static int get_num_of_dpu() {
 }
 
 
-/**
- * Installs the network service.
- * 
- * This function installs the network service by creating a symlink
- * to the network service file in the appropriate directory.
- * 
- * @param unit_name The name of the network unit to install.
- * @return 0 if the network unit is installed successfully, or -1 if an error occurs.
- */
-static int install_network_unit(std::string unit_name) {
-    if (unit_name.empty()) {
-        fprintf(stderr, "Invalid network unit\n");
-        exit(EXIT_FAILURE);
-    }
-
-    std::string unit_type = unit_name.substr(unit_name.find(".") + 1);
-    if (unit_type.empty()) {
-        fprintf(stderr, "Invalid network unit %s\n", unit_name.c_str());
-        return -1;
-    }
-
-    std::string install_path;
-    std::string original_path;
-    std::string subdir = "/network/";
-    if (unit_type != "netdev" && unit_type != "network") {
-        fprintf(stderr, "Invalid network unit %s\n", unit_type.c_str());
-        return -1;
-    }
-
-    install_path = get_etc_systemd() + subdir + unit_name;
-    original_path = get_lib_systemd() + subdir + unit_name;
-
-    struct stat st;
-
-    if (stat(install_path.c_str(), &st) == 0) {
-        // If the file already exists, remove it
-        if (S_ISDIR(st.st_mode)) {
-            fprintf(stderr, "Error: %s is a directory\n", install_path.c_str());
-            return -1;
-        }
-        if (remove(install_path.c_str()) != 0) {
-            fprintf(stderr, "Error removing existing file %s\n", install_path.c_str());
-            return -1;
-        }
-    }
-
-    if (is_devnull(install_path.c_str())) {
-        if (remove(install_path.c_str()) != 0) {
-            fprintf(stderr, "Unable to remove existing symlink %s\n", install_path.c_str());
-            return -1;
-        }
-    }
-
-    if (symlink(original_path.c_str(), install_path.c_str()) != 0) {
-        if (errno == EEXIST)
-            return 0;
-        fprintf(stderr, "Error creating symlink %s -> %s (%s)\n", install_path.c_str(), original_path.c_str(), strerror(errno));
-        return -1;
-    }
-
-    return 0;
-}
-
-
-static int render_network_service_for_smart_switch() {
+static int render_network_service_for_smart_switch(const std::filesystem::path& install_dir) {
     if (!smart_switch_npu) {
         return 0;
     }
 
     // Render Before instruction for midplane network with database service
-    if (num_dpus == 0) {
-        return 0;
-    }
-
-    std::stringstream ss;
-    ss << "\nBefore=";
     for (int i = 0; i < num_dpus; i++) {
-        ss << "database@dpu" << i << ".service";
-        if (i != num_dpus - 1) {
-            ss << " ";
-        }
-    }
-    std::string buffer_instruction = ss.str();
-    std::string unit_path = std::string(get_unit_file_prefix()) + "/midplane-network-npu.service";
+        auto unit_override_dir = install_dir / std::format("database@dpu{}.service.d", i);
+        std::filesystem::create_directory(unit_override_dir);
 
-    FILE *fp = fopen(unit_path.c_str(), "r");
-    if (fp == NULL) {
-        fprintf(stderr, "Failed to open %s\n", unit_path.c_str());
-        return -1;
-    }
-    fseek(fp, 0, SEEK_END);
-    size_t file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    size_t len = file_size + buffer_instruction.length() + 1;
-    char *unit_content = (char*) calloc(len, sizeof(unit_content));
-    if (unit_content == NULL) {
-        fprintf(stderr, "Failed to allocate memory for %s\n", unit_path.c_str());
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    if (fread(unit_content, file_size, 1, fp) != 1) {
-        fprintf(stderr, "Failed to read %s\n", unit_path.c_str());
-        free(unit_content);
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    fclose(fp);
+        auto unit_ordering_file_path = unit_override_dir / "ordering.conf";
 
-    // Find insert point for Before instruction
-    char *insert_point = strstr(unit_content, "[Unit]");
-    insert_point += strlen("[Unit]");
-    // Move the rest of the file to make room for the Before instruction
-    memmove(insert_point + buffer_instruction.length(), insert_point, file_size - (insert_point - unit_content));
-    // Insert the Before instruction
-    memcpy(insert_point, buffer_instruction.c_str(), buffer_instruction.length());
-    // Remove original Before instruction
-    insert_point += buffer_instruction.length();
-    char *before_start = strstr(insert_point, "Before=");
-    while (before_start != NULL) {
-        char *before_end = strchr(before_start, '\n');
-        if (before_end == NULL) {
-            before_end = before_start + strlen(before_start);
-        } else {
-            // Include newline character
-            before_end += 1;
-        }
-        const char *target_service = strstr(before_start, "database@dpu");
-        if (target_service != NULL && target_service < before_end) {
-            memmove(before_start, before_end, strlen(before_end) + 1);
-        } else {
-            before_start = before_end;
-        }
-        before_start = strstr(before_start, "Before=");
-    }
-    // Write the modified unit file
-    fp = fopen(unit_path.c_str(), "w");
-    if (fp == NULL) {
-        fprintf(stderr, "Failed to open %s\n", unit_path.c_str());
-        free(unit_content);
-        exit(EXIT_FAILURE);
-    }
-    if (fwrite(unit_content, strlen(unit_content), 1, fp) != 1) {
-        fprintf(stderr, "Failed to write %s\n", unit_path.c_str());
-        free(unit_content);
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    fclose(fp);
-    free(unit_content);
-
-    return 0;
-}
-
-
-static int install_network_service_for_smart_switch() {
-    const char** network_units = NULL;
-    if (smart_switch_npu) {
-        static const char* npu_network_units[] = {
-            "bridge-midplane.netdev",
-            "bridge-midplane.network",
-            "dummy-midplane.netdev",
-            "dummy-midplane.network",
-            "midplane-network-npu.network",
-            NULL
-        };
-        network_units = npu_network_units;
-    } else if (smart_switch_dpu) {
-        static const char* dpu_network_units[] = {
-            "midplane-network-dpu.network",
-            NULL
-        };
-        network_units = dpu_network_units;
-    } else {
-        return -1;
-    }
-
-    if (network_units == NULL) {
-        return 0;
-    }
-
-    while(*network_units) {
-        if (install_network_unit(*network_units) != 0) {
-            return -1;
-        }
-        network_units++;
-    }
-
-    // If the systemd-networkd is masked, unmask it
-    std::string systemd_networkd = get_etc_systemd() + std::string("/system/systemd-networkd.service");
-    if (is_devnull(systemd_networkd.c_str())) {
-        if (remove(systemd_networkd.c_str()) != 0) {
-            fprintf(stderr, "Unable to remove existing symlink %s\n", systemd_networkd.c_str());
-            return -1;
-        }
+        std::ofstream unit_ordering_file;
+        unit_ordering_file.open(unit_ordering_file_path);
+        unit_ordering_file << "[Unit]\n";
+        unit_ordering_file << "Requires=systemd-networkd-wait-online@bridge-midplane.service\n";
+        unit_ordering_file << "After=systemd-networkd-wait-online@bridge-midplane.service\n";
     }
 
     return 0;
@@ -1157,7 +999,7 @@ int ssg_main(int argc, char **argv) {
 #endif
 
     if (argc <= 1) {
-        fputs("Installation directory required as argument\n", stderr);
+        log_to_kmsg("Installation directory required as argument\n");
         return 1;
     }
 
@@ -1174,10 +1016,7 @@ int ssg_main(int argc, char **argv) {
 
     // Install and render midplane network service for smart switch
     if (smart_switch) {
-        if (render_network_service_for_smart_switch() != 0) {
-            return -1;
-        }
-        if (install_network_service_for_smart_switch() != 0) {
+        if (render_network_service_for_smart_switch(install_dir) != 0) {
             return -1;
         }
     }
@@ -1194,21 +1033,28 @@ int ssg_main(int argc, char **argv) {
             unit_instance = prefix + suffix;
         }
 
+        auto instance_name = unit_instance.substr(0, unit_instance.find('.'));
+
+        if(((num_asics > 1) && (!is_multi_instance_service(instance_name)))
+            || ((num_dpus > 0) && (!is_multi_instance_service_for_dpu(instance_name)))) {
+            replace_multi_inst_dep(install_dir, unit_instance);
+        }
+
         num_targets = get_install_targets(unit_instance, targets);
         if (num_targets < 0) {
-            fprintf(stderr, "Error parsing %s\n", unit_instance.c_str());
+            log_to_kmsg("Error parsing %s\n", unit_instance.c_str());
             free(unit_files[i]);
             continue;
         }
 
         for (int j = 0; j < num_targets; j++) {
             if (install_unit_file(unit_instance, targets[j], install_dir) != 0)
-                fprintf(stderr, "Error installing %s to target directory %s\n", unit_instance.c_str(), targets[j]);
+                log_to_kmsg("Error installing %s to target directory %s\n", unit_instance.c_str(), targets[j]);
 
             free(targets[j]);
         }
 
-        update_environment(get_unit_file_prefix() + unit_instance);
+        update_environment(install_dir, unit_instance);
 
         free(unit_files[i]);
     }

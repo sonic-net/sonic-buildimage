@@ -38,7 +38,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -213,6 +214,7 @@ cmicx_pdma_rx_desc_init(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     struct pdma_dev *dev = hw->dev;
     struct pdma_buf_mngr *bm = (struct pdma_buf_mngr *)dev->ctrl.buf_mngr;
     struct cmicx_rx_desc *ring = (struct cmicx_rx_desc *)rxq->ring;
+    bool refill = false;
     dma_addr_t addr;
     uint32_t di, rm;
     int rv;
@@ -222,7 +224,11 @@ cmicx_pdma_rx_desc_init(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
             /* Allocate pktbuf for ring entry */
             rv = bm->rx_buf_alloc(dev, rxq, &rxq->pbuf[di]);
             if (SHR_FAILURE(rv)) {
-                goto cleanup;
+                if (rxq->state & PDMA_RX_BATCH_REFILL) {
+                    refill = true;
+                } else {
+                    goto cleanup;
+                }
             }
         }
         /* Config receive descriptor ring */
@@ -239,7 +245,9 @@ cmicx_pdma_rx_desc_init(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     cmicx_rx_rldesc_config(&ring[di], rxq->ring_addr);
 
     rxq->curr = 0;
-    rxq->halt = rxq->nb_desc - 1;
+    if (!refill) {
+        rxq->halt = rxq->nb_desc - 1;
+    }
 
     rxq->halt_addr = rxq->ring_addr + sizeof(struct cmicx_rx_desc) * rxq->halt;
     hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
@@ -406,7 +414,7 @@ cmicx_pdma_rx_ring_refill(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     int unused = cmicx_pdma_rx_ring_unused(rxq);
     dma_addr_t addr;
     uint32_t halt;
-    int rv;
+    int rv = SHR_E_NONE;
 
     for (halt = rxq->halt; halt < rxq->halt + unused; halt++) {
         if (ring[halt % rxq->nb_desc].addr_lo) {
@@ -419,8 +427,8 @@ cmicx_pdma_rx_ring_refill(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
             if (SHR_FAILURE(rv)) {
                 rxq->stats.nomems++;
                 rxq->halt = halt % rxq->nb_desc;
-                CNET_ERROR(hw->unit, "Can not alloc RX buffer, %d DCBs not filled\n",
-                           cmicx_pdma_rx_ring_unused(rxq));
+                CNET_INFO(hw->unit, "%d DCBs not filled, will retry late\n",
+                          cmicx_pdma_rx_ring_unused(rxq));
                 break;
             }
         }
@@ -442,7 +450,7 @@ cmicx_pdma_rx_ring_refill(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     }
     sal_spinlock_unlock(rxq->lock);
 
-    return SHR_E_NONE;
+    return rv;
 }
 
 /*!
@@ -464,14 +472,25 @@ cmicx_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
     struct pdma_rx_buf *pbuf = NULL;
     struct pkt_hdr *pkh = NULL;
     dma_addr_t addr;
-    uint32_t stat, curr;
+    uint32_t stat, curr = rxq->curr;
     int len, done = 0;
-    int retry;
+    int retry, fill = SHR_E_NONE;
     int rv;
 
-    curr = rxq->curr;
-    while (CMICX_DESC_STAT_DONE(ring[curr].status)) {
-        if (done == budget) {
+    while (done < budget && !(dev->flags & PDMA_ABORT)) {
+        /* Replenish all the unused descriptors in batch mode */
+        if (rxq->state & PDMA_RX_BATCH_REFILL &&
+            cmicx_pdma_rx_ring_unused(rxq) >= (int)rxq->free_thresh) {
+            fill = cmicx_pdma_rx_ring_refill(hw, rxq);
+            /* If no one filled, return budget and keep polling */
+            if (cmicx_pdma_rx_ring_unused(rxq) == (int)(rxq->nb_desc - 1)) {
+                rxq->state |= PDMA_RX_QUEUE_BUSY;
+                return budget;
+            }
+        }
+
+        /* Check new packet */
+        if (!CMICX_DESC_STAT_DONE(ring[curr].status)) {
             break;
         }
 
@@ -487,45 +506,8 @@ cmicx_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
             sal_spinlock_unlock(rxq->lock);
         }
 
-        /* Get the current pktbuf to process */
-        pbuf = &rxq->pbuf[curr];
+        /* Check the status */
         stat = ring[curr].status;
-        len = CMICX_DESC_STAT_LEN(stat);
-        pkh = bm->rx_buf_get(dev, rxq, pbuf, len);
-        if (!pkh) {
-            CNET_ERROR(hw->unit, "RX buffer build failed, retry ...\n");
-            rxq->stats.nomems++;
-            /* Set busy state to retry */
-            rxq->state |= PDMA_RX_QUEUE_BUSY;
-            return budget;
-        }
-
-        /* Setup packet header */
-        pkh->data_len = len - hw->info.rx_ph_size;
-        pkh->meta_len = hw->info.rx_ph_size;
-        pkh->queue_id = rxq->queue_id;
-        pkh->attrs = CMICX_DESC_STAT_FLAGS(stat);
-
-        /* Send up the packet */
-        rv = dev->pkt_recv(dev, rxq->queue_id, (void *)pbuf->skb);
-        if (SHR_FAILURE(rv)) {
-            if (dev->mode == DEV_MODE_HNET && pkh->attrs & PDMA_RX_TO_VNET) {
-                rv = cmicx_pdma_rx_vring_process(hw, rxq, pbuf);
-                if (SHR_FAILURE(rv) && rv == SHR_E_BUSY) {
-                    rxq->state |= PDMA_RX_QUEUE_BUSY;
-                    return done;
-                }
-            } else {
-                rxq->stats.dropped++;
-            }
-            bm->rx_buf_put(dev, rxq, pbuf, len);
-        }
-
-        /* Count the packets/bytes */
-        rxq->stats.packets++;
-        rxq->stats.bytes += len;
-
-        /* Count the errors if any */
         if (stat & CMICX_DESC_STAT_ERR_MASK) {
             rxq->stats.errors++;
             if (stat & CMICX_DESC_STAT_DATA_ERR) {
@@ -534,7 +516,54 @@ cmicx_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
             if (stat & CMICX_DESC_STAT_CELL_ERR) {
                 rxq->stats.cell_errors++;
             }
+
+            CNET_ERROR(hw->unit, "Packet data corrupted, ignore it ...\n");
+
+            /* Update the indicators (no lock required) */
+            ring[curr].status = 0;
+            curr = (curr + 1) % rxq->nb_desc;
+            rxq->curr = curr;
+            done++;
+            continue;
         }
+
+        /* Get the current pktbuf to process */
+        pbuf = &rxq->pbuf[curr];
+        len = CMICX_DESC_STAT_LEN(stat);
+        rv = bm->rx_buf_get(dev, rxq, pbuf, len);
+        if (SHR_SUCCESS(rv)) {
+            /* Setup packet header */
+            pkh = &pbuf->pkb->pkh;
+            pkh->data_len = len - hw->info.rx_ph_size;
+            pkh->meta_len = hw->info.rx_ph_size;
+            pkh->queue_id = rxq->queue_id;
+            pkh->attrs = CMICX_DESC_STAT_FLAGS(stat);
+
+            /* Send up the packet */
+            rv = dev->pkt_recv(dev, rxq->queue_id, (void *)pbuf->skb);
+            if (SHR_FAILURE(rv)) {
+                if (dev->mode == DEV_MODE_HNET && pkh->attrs & PDMA_RX_TO_VNET) {
+                    rv = cmicx_pdma_rx_vring_process(hw, rxq, pbuf);
+                    if (SHR_FAILURE(rv) && rv == SHR_E_BUSY) {
+                        rxq->state |= PDMA_RX_QUEUE_BUSY;
+                        return done;
+                    }
+                } else {
+                    rxq->stats.dropped++;
+                }
+                bm->rx_buf_put(dev, rxq, pbuf, len);
+            }
+        } else if (rv != SHR_E_UNAVAIL) {
+            CNET_INFO(hw->unit, "RX buffer not enough, retry ...\n");
+            rxq->stats.nomems++;
+            /* Set busy state to retry */
+            rxq->state |= PDMA_RX_QUEUE_BUSY;
+            return budget;
+        }
+
+        /* Count the packets/bytes */
+        rxq->stats.packets++;
+        rxq->stats.bytes += len;
 
         /* Setup the new descriptor */
         if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
@@ -573,27 +602,15 @@ cmicx_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
 
         /* Notify HNET to process if needed */
         if (dev->mode == DEV_MODE_VNET) {
-            if (ring[(curr + rxq->nb_desc - 1) % rxq->nb_desc].status) {
+            if (ring[(curr + rxq->nb_desc - 1) % rxq->nb_desc].status == 0 &&
+                ring[(curr + rxq->nb_desc - 2) % rxq->nb_desc].status != 0) {
                 dev->xnet_wake(dev);
             }
         }
 
         /* Update the indicators */
-        if (!(rxq->state & PDMA_RX_BATCH_REFILL)) {
-            sal_spinlock_lock(rxq->lock);
-            if (!(rxq->status & PDMA_RX_QUEUE_XOFF) && (rxq->halt != curr)) {
-                /* Descriptor cherry pick */
-                rxq->halt_addr = rxq->ring_addr + sizeof(struct cmicx_rx_desc) * curr;
-                hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
-                rxq->halt = curr;
-            }
-            curr = (curr + 1) % rxq->nb_desc;
-            rxq->curr = curr;
-            sal_spinlock_unlock(rxq->lock);
-        } else {
-            curr = (curr + 1) % rxq->nb_desc;
-            rxq->curr = curr;
-        }
+        curr = (curr + 1) % rxq->nb_desc;
+        rxq->curr = curr;
         done++;
 
         /* Restart DMA if in chain mode */
@@ -614,18 +631,7 @@ cmicx_pdma_rx_ring_clean(struct pdma_hw *hw, struct pdma_rx_queue *rxq, int budg
         }
     }
 
-    /* In batching mode, replenish all the unused descriptors */
-    if (rxq->state & PDMA_RX_BATCH_REFILL &&
-        cmicx_pdma_rx_ring_unused(rxq) >= (int)rxq->free_thresh) {
-        cmicx_pdma_rx_ring_refill(hw, rxq);
-        /* If no one filled, return budget and keep polling */
-        if (cmicx_pdma_rx_ring_unused(rxq) == (int)(rxq->nb_desc - 1)) {
-            rxq->state |= PDMA_RX_QUEUE_BUSY;
-            return budget;
-        }
-    }
-
-    return done;
+    return SHR_FAILURE(fill) ? budget : done;
 }
 
 /*!
@@ -677,15 +683,11 @@ cmicx_pdma_tx_ring_clean(struct pdma_hw *hw, struct pdma_tx_queue *txq, int budg
     struct pdma_dev *dev = hw->dev;
     struct pdma_buf_mngr *bm = (struct pdma_buf_mngr *)dev->ctrl.buf_mngr;
     struct cmicx_tx_desc *ring = (struct cmicx_tx_desc *)txq->ring;
-    uint32_t dirt, curr;
+    uint32_t curr, dirt = txq->dirt;
     int done = 0;
 
-    dirt = txq->dirt;
-    while (txq->pbuf[dirt].dma) {
-        if (!CMICX_DESC_STAT_DONE(ring[dirt].status)) {
-            break;
-        }
-        if (done == budget) {
+    while (done < budget) {
+        if (!txq->pbuf[dirt].dma || !CMICX_DESC_STAT_DONE(ring[dirt].status)) {
             break;
         }
 
@@ -716,6 +718,10 @@ cmicx_pdma_tx_ring_clean(struct pdma_hw *hw, struct pdma_tx_queue *txq, int budg
                 txq->halt = curr;
             }
             sal_spinlock_unlock(txq->lock);
+        }
+
+        if (dev->flags & PDMA_ABORT) {
+            break;
         }
     }
 
@@ -934,9 +940,8 @@ cmicx_pdma_pkt_xmit(struct pdma_hw *hw, struct pdma_tx_queue *txq, void *buf)
         }
         txq->state |= PDMA_TX_QUEUE_BUSY;
     } else {
-        pbuf->adj = 1;
-        pkh = bm->tx_buf_get(dev, txq, pbuf, buf);
-        if (!pkh) {
+        rv = bm->tx_buf_get(dev, txq, pbuf, buf);
+        if (SHR_FAILURE(rv)) {
             txq->stats.dropped++;
             if (dev->tx_suspend) {
                 sal_spinlock_unlock(txq->mutex);
@@ -946,6 +951,7 @@ cmicx_pdma_pkt_xmit(struct pdma_hw *hw, struct pdma_tx_queue *txq, void *buf)
             return SHR_E_RESOURCE;
         }
         bm->tx_buf_dma(dev, txq, pbuf, &addr);
+        pkh = &pbuf->pkb->pkh;
         flags |= pkh->attrs & PDMA_TX_HIGIG_PKT ? CMICX_DESC_TX_HIGIG_PKT : 0;
         flags |= pkh->attrs & PDMA_TX_PURGE_PKT ? CMICX_DESC_TX_PURGE_PKT : 0;
         cmicx_tx_desc_config(&ring[curr], addr, pbuf->len, flags);
@@ -1075,8 +1081,7 @@ cmicx_pdma_rx_resume(struct pdma_hw *hw, struct pdma_rx_queue *rxq)
     if (rxq->state & PDMA_RX_BATCH_REFILL) {
         rxq->halt_addr = rxq->ring_addr + sizeof(struct cmicx_rx_desc) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);
-    } else if ((rxq->halt == rxq->curr) &&
-               (ring[(rxq->curr + 1) % rxq->nb_desc].status == 0)) {
+    } else if (!ring[(rxq->curr + 1) % rxq->nb_desc].status) {
         rxq->halt = (rxq->curr + rxq->nb_desc - 1) % rxq->nb_desc;
         rxq->halt_addr = rxq->ring_addr + sizeof(struct cmicx_rx_desc) * rxq->halt;
         hw->hdls.chan_goto(hw, rxq->chan_id, rxq->halt_addr);

@@ -1,0 +1,36 @@
+From 21fb7c457208205af55cfa63d86c5f89315febda Mon Sep 17 00:00:00 2001
+From: Petr Vaganov <petrvaganoff@gmail.com>
+Date: Mon, 4 Aug 2025 11:33:10 +0500
+Subject: bgpd: fix overflow when decoding zapi nexthop for srv6 max segments
+
+Found by the static analyzer Svace (ISP RAS).
+
+Expression is used as an index for accessing an array's element
+in function 'stream_get2' at zclient.c:1577. This expression can
+have value 256, which is out of range, as indicated by a preceding
+conditional expression at zclient.c:1577.
+
+Through memcpy, 256 bytes can be written to a 128 byte array of
+structures, it seems that SRV6_MAX_SIDS should be SRV6_MAX_SEGS instead.
+
+Signed-off-by: Petr Vaganov <petrvaganoff@gmail.com>
+---
+ lib/zclient.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/zclient.c b/lib/zclient.c
+index 3ab7bc040e..fe5a931c10 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -1574,7 +1574,7 @@ int zapi_nexthop_decode(struct stream *s, struct zapi_nexthop *api_nh,
+ 
+ 	if (CHECK_FLAG(api_nh->flags, ZAPI_NEXTHOP_FLAG_SEG6)) {
+ 		STREAM_GETC(s, api_nh->seg_num);
+-		if (api_nh->seg_num > SRV6_MAX_SIDS) {
++		if (api_nh->seg_num > SRV6_MAX_SEGS) {
+ 			flog_err(EC_LIB_ZAPI_ENCODE,
+ 				 "%s: invalid number of SRv6 Segs (%u)",
+ 				 __func__, api_nh->seg_num);
+-- 
+2.48.1
+

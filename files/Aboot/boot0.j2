@@ -488,6 +488,7 @@ get_eeprom_value() {
 write_kdump_cmdline() {
     local sid="$(cmdline_get sid | sed 's/Ssd$//')"
     case "$sid" in
+        Lodoga*|*Quicksilver*|*Moby|Shearwater*|Moranda*|Gardena*|PikeIsland*|\
         Wolverine*|Clearwater2*|OtterLake*|QuartzDd*|Redstart8Mk2Quartz4*|CitrineDd*)
             if ! cmdline_has crashkernel; then
                 cmdline_add crashkernel=0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-16G:448M,16G-32G:768M,32G-:1G
@@ -581,6 +582,10 @@ write_platform_specific_cmdline() {
     fi
     if in_array "$sid" "PikeIslandZ" "PikeIslandZ-F" "PikeIslandZ-2F" "PikeIslandZ-R" "PikeIslandZ-2R"; then
         aboot_machine=arista_720dt_48s
+        varlog_size=2048
+    fi
+    if [ "$sid" = "PikeIslandZ-MGX-2F" ]; then
+        aboot_machine=arista_720dt_48s_mgx
         varlog_size=2048
     fi
     if [ "$sid" = "BlackhawkT4O" ]; then
@@ -717,8 +722,13 @@ write_platform_specific_cmdline() {
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         read_system_eeprom
     fi
-    if in_array "$platform" "lorikeet" "hedgehog"; then
+    if in_array "$platform" "lorikeet"; then
         cmdline_add reassign_prefmem
+        read_system_eeprom
+    fi
+    if in_array "$platform" "hedgehog"; then
+        cmdline_add reassign_prefmem
+        cmdline_add nohz=off
         read_system_eeprom
     fi
     if in_array "$platform" "prairieisland"; then
@@ -773,9 +783,6 @@ write_image_specific_cmdline() {
 
     # disable deterministic interface naming
     cmdline_add net.ifnames=0
-
-    # disable unified cgroup hierarchy to workaround dockerd limitation
-    cmdline_add systemd.unified_cgroup_hierarchy=0
 
     # increase kernel log buffer size
     cmdline_add log_buf_len=1M
@@ -888,7 +895,6 @@ write_regular_configs() {
     cmdline_add "loop=$image_name/fs.squashfs"
     cmdline_add loopfstype=squashfs
     write_cmdline
-    write_kdump_cmdline
 }
 
 run_kexec() {
@@ -935,6 +941,7 @@ regular_install() {
 
     info "Generating boot-config, machine.conf and cmdline"
     write_regular_configs "$image_path"
+    write_kdump_cmdline
 
     info "Installing image under $image_path"
     extract_image
