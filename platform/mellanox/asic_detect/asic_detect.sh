@@ -48,6 +48,7 @@ declare -A DEVICE_DICT=(
     ["cf70"]="spc3"
     ["cf80"]="spc4"
     ["cf82"]="spc5"
+    ["cf84"]="spc6"
     ["a2dc"]="bf3"
 )
 TYPE_UNKNOWN="unknown"
@@ -56,7 +57,7 @@ DEVICE_TYPE=$TYPE_UNKNOWN
 DEVICE_PCI_ID=""
 
 # bf3 should be the last device in the list
-DEVICE_ORDER=("cb84" "cf6c" "cf70" "cf80" "cf82" "a2dc")
+DEVICE_ORDER=("cb84" "cf6c" "cf70" "cf80" "cf82" "cf84" "a2dc")
 
 lspci_output=$(lspci -n 2>/dev/null)
 if [[ -n "$lspci_output" ]]; then
