@@ -58,13 +58,6 @@ jobs:
       image_latest_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest-${{ parameters.arch }})
       image_branch=$(echo $(echo $image_latest | awk -F: '{print$1}'):$(Build.SourceBranchName))
       image_branch_arch=$(echo $(echo $image_latest_arch | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
-      echo "==============================="
-      echo "image tag: $image_tag"
-      echo "image latest: $image_latest"
-      echo "image latest arch: $image_latest_arch"
-      echo "image branch: $image_branch"
-      echo "image branch arch: $image_branch_arch"
-      echo "==============================="
       docker rmi $image_tag || true
 
       if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
