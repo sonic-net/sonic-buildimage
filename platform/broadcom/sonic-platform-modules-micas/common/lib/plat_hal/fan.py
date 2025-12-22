@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# fan.py
-# Python implementation of the Class fan
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from eepromutil.fru import ipmifru
 from eepromutil.fantlv import fan_tlv
+from eepromutil.wedge_v5 import WedgeV5
 from plat_hal.devicebase import devicebase
 from plat_hal.rotor import rotor
 
@@ -50,6 +61,7 @@ class fan(devicebase):
             self.EnableWatchdogConf = conf.get('EnableWatchdogConf', None)
             self.led_attrs_config = conf.get('led_attrs', None)
             self.led_config = conf.get('led', None)
+            self.led_map = conf.get('led_map', None)
             self.Rotor_config = conf.get('Rotor', None)
             self.fan_display_name_conifg = conf.get("fan_display_name", None)
             rotor_tmp = []
@@ -228,6 +240,12 @@ class fan(devicebase):
         if ret is False or value is None:
             return False, 'N/A'
         ledval = int(value) & mask
+        if self.led_map is not None:
+            led_color = self.led_map.get(ledval, None)
+            if led_color is None:
+                return False, 'N/A'
+            return True, led_color
+
         for key, val in self.led_attrs_config.items():
             if (ledval == val) and (key != "mask"):
                 return True, key
@@ -256,7 +274,7 @@ class fan(devicebase):
 
     def get_presence(self):
         ret, val = self.get_value(self.present)
-        if ret is False or val is None or val == "no_support":
+        if ret is False or val is None or val == "no_support" or val == "NA" or val == "ACCESS FAILED":
             return False
         if isinstance(val, str):
             value = int(val, 16)
@@ -273,9 +291,10 @@ class fan(devicebase):
         rotor_item = self.get_rotor_index(rotor_index)
         if rotor_item is None:
             return False
-        if rotor_item.i2c_speed is None:
+        speed_pwm = rotor_item.i2c_speed
+        if speed_pwm is None:
             return False
-        val = round(rotor_item.i2c_speed * 100 / 255)
+        val = round(speed_pwm * 100 / 255)
         return val
 
     def feed_watchdog(self):
@@ -286,16 +305,39 @@ class fan(devicebase):
                 return ret
         return ret
 
-    def get_fru_info(self):
+    def get_wedge_v5_info(self, eeprom):
         try:
-            if self.get_presence() is False:
-                raise Exception("%s: not present" % self.name)
-            eeprom = self.get_eeprom_info(self.e2loc)
-            if eeprom is None:
-                raise Exception("%s: value is none" % self.name)
+            product_version = None
+            product_sub_version = None
+            wegdev5 = WedgeV5()
+            rets = wegdev5.decode(eeprom)
+            for item in rets:
+                if item["code"] == wegdev5.FBWV5_PRODUCT_NAME:
+                    self.productName = item["value"].replace("\x00", "").strip()
+                elif item["code"] == wegdev5.FBWV5_PRODUCT_SERIAL_NUMBER:
+                    self.productSerialNumber = item["value"].replace("\x00", "").strip()
+                elif item["code"] == wegdev5.FBWV5_PRODUCT_VERSION:
+                    product_version = "%d" % item["value"]
+                elif item["code"] == wegdev5.FBWV5_PRODUCT_SUB_VERSION:
+                    product_sub_version = "%02d" % item["value"]
+            if product_version is not None and product_sub_version is not None:
+                self.hw_version = product_version + "." + product_sub_version
+            elif product_version is not None:
+                self.hw_version = product_version
+            elif product_sub_version is not None:
+                self.hw_version = product_sub_version
+            else:
+                self.hw_version = None
+        except Exception:
+            self.productName = None
+            self.productSerialNumber = None
+            self.hw_version = None
+            return False
+        return True
+
+    def get_fru_info(self, eeprom):
+        try:
             fru = ipmifru()
-            if isinstance(eeprom, bytes):
-                eeprom = self.byteTostr(eeprom)
             fru.decodeBin(eeprom)
             self.productName = fru.productInfoArea.productName.strip()  # PN
             self.productSerialNumber = fru.productInfoArea.productSerialNumber.strip()  # SN
@@ -307,13 +349,8 @@ class fan(devicebase):
             return False
         return True
 
-    def get_tlv_info(self):
+    def get_tlv_info(self, eeprom):
         try:
-            if self.get_presence() is False:
-                raise Exception("%s: not present" % self.name)
-            eeprom = self.get_eeprom_info(self.e2loc)
-            if eeprom is None:
-                raise Exception("%s: value is none" % self.name)
             tlv = fan_tlv()
             rets = tlv.decode(eeprom)
             for item in rets:
@@ -330,14 +367,53 @@ class fan(devicebase):
             return False
         return True
 
+    def decode_eeprom_by_type(self, e2_type, eeprom):
+        if e2_type == "fru":
+            return self.get_fru_info(eeprom)
+
+        if e2_type == "fantlv":
+            return self.get_tlv_info(eeprom)
+
+        if e2_type == "wedge_v5":
+            return self.get_wedge_v5_info(eeprom)
+        return False
+
+    def decode_eeprom_by_traverse(self, eeprom):
+        support_e2_type = ("fru", "fantlv", "wedge_v5")
+        for e2_type in support_e2_type:
+            status = self.decode_eeprom_by_type(e2_type, eeprom)
+            if status is True:
+                return True
+        return False
+
     def decode_eeprom_info(self):
         '''get fan name, hw version, sn'''
-        if self.e2_type == "fru":
-            return self.get_fru_info()
+        try:
+            if self.get_presence() is False:
+                raise Exception("%s: not present" % self.name)
 
-        if self.e2_type == "fantlv":
-            return self.get_tlv_info()
+            eeprom = self.get_eeprom_info(self.e2loc)
+            if eeprom is None:
+                raise Exception("%s: value is none" % self.name)
 
+            if isinstance(eeprom, bytes):
+                eeprom = self.byteTostr(eeprom)
+
+            if self.e2_type is None:
+                return self.decode_eeprom_by_traverse(eeprom)
+
+            if isinstance(self.e2_type, str):
+                return self.decode_eeprom_by_type(self.e2_type, eeprom)
+
+            if isinstance(self.e2_type, list):
+                for e2_type in self.e2_type:
+                    status = self.decode_eeprom_by_type(e2_type, eeprom)
+                    if status is True:
+                        return True
+        except Exception:
+            self.productName = None
+            self.productSerialNumber = None
+            self.hw_version = None
         return False
 
     def get_AirFlow(self):

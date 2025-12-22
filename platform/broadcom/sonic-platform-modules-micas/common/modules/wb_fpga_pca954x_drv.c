@@ -1,3 +1,23 @@
+/*
+ * An wb_fpga_pca954x_drv driver for create fpga pca954x adapter function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -17,6 +37,7 @@ extern int i2c_device_func_write(const char *path, uint32_t pos, uint8_t *val, s
 extern int pcie_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_t count);
 extern int io_device_func_write(const char *path, uint32_t pos, uint8_t *val, size_t size);
 extern int spi_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_t count);
+extern int indirect_device_func_write(const char *path, uint32_t pos, uint8_t *val, size_t size);
 
 #define PCA954X_MAX_NCHANS           (8)
 #define FPGA_INTERNAL_PCA9548        (1)
@@ -29,6 +50,7 @@ extern int spi_device_func_write(const char *path, uint32_t offset, uint8_t *buf
 #define SYMBOL_PCIE_DEV_MODE         (3)
 #define SYMBOL_IO_DEV_MODE           (4)
 #define SYMBOL_SPI_DEV_MODE          (5)
+#define SYMBOL_INDIRECT_DEV_MODE     (6)
 
 int g_fpga_pca954x_debug = 0;
 int g_fpga_pca954x_error = 0;
@@ -188,6 +210,9 @@ static int fpga_device_write(fpga_i2c_dev_t *fpga_i2c, int pos, unsigned char *v
         break;
     case SYMBOL_SPI_DEV_MODE:
         ret = spi_device_func_write(fpga_i2c->dev_name, pos, val, size);
+        break;
+    case SYMBOL_INDIRECT_DEV_MODE:
+        ret = indirect_device_func_write(fpga_i2c->dev_name, pos, val, size);
         break;
     default:
         FPGA_PCA954X_ERROR("err func_mode %d, write failed.\n", fpga_i2c->i2c_func_mode);
@@ -416,7 +441,6 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
         data->type = id->driver_data;
         /* BUS ID */
         ret = of_property_read_u32(dev->of_node, "fpga_9548_flag", &data->fpga_9548_flag);
-        ret += of_property_read_u32(dev->of_node, "fpga_9548_reset_flag", &data->fpga_9548_reset_flag);
         if (ret != 0) {
             dev_err(&client->dev, "Failed to get 954x dts config, ret:%d.\n", ret);
             ret = -EINVAL;
@@ -431,7 +455,8 @@ static int fpga_i2c_pca954x_probe(struct i2c_client *client, const struct i2c_de
             FPGA_PCA954X_VERBOSE("pca9548_base_nr:%u.\n", data->pca9548_base_nr);
         }
     }
-
+    data->fpga_9548_reset_flag = 1;
+    dev_info(&client->dev, "pca9548_reset_mode is forcibly set to the hardware automatic reset mode.\n");
     if (data->fpga_9548_flag != FPGA_EXTERNAL_PCA9548 && data->fpga_9548_flag != FPGA_INTERNAL_PCA9548) {
         dev_err(&client->dev, "Error: fpga 954x flag config error, value:0x%x.\n", data->fpga_9548_flag);
         ret = -EINVAL;
