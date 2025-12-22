@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
+#include <linux/version.h>
 
 #include "nh_pmbus.h"
 
@@ -66,6 +67,8 @@ enum chips {
 	raa228004,
 	raa228006,
 	raa228228,
+	raa228234,
+	raa228236,
 	raa229001,
 	raa229004,
 };
@@ -318,6 +321,8 @@ static const struct i2c_device_id raa_dmpvr_id[] = {
 	{"nh_raa228004", raa_dmpvr2_hv},
 	{"nh_raa228006", raa_dmpvr2_hv},
 	{"nh_raa228228", raa_dmpvr2_2rail_nontc},
+	{"nh_raa228234", raa_dmpvr2_2rail_nontc},
+	{"nh_raa228236", raa_dmpvr2_2rail_nontc},
 	{"nh_raa229001", raa_dmpvr2_2rail},
 	{"nh_raa229004", raa_dmpvr2_2rail},
 	{}
@@ -330,7 +335,11 @@ static struct i2c_driver isl68137_driver = {
 	.driver = {
 		   .name = "nh_isl68137",
 		   },
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 	.probe_new = isl68137_probe,
+#else
+	.probe = isl68137_probe,
+#endif
 	.id_table = raa_dmpvr_id,
 };
 

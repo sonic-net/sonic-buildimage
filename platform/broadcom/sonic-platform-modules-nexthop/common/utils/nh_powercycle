@@ -1,0 +1,89 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import time
+
+from nexthop.pddf_config_parser import (
+    load_pddf_device_config,
+    extract_fpga_attrs,
+    FpgaDeviceName,
+)
+from nexthop.fpga_lib import write_32
+from nexthop.pcie_lib import get_cpu_card_fpga_bdf, get_switchcard_fpga_bdf
+from sonic_py_common import logger
+
+REBOOT_DELAY_MS = 1000
+
+sonic_logger = logger.Logger(os.path.basename(__file__))
+sonic_logger.set_min_log_priority_info()
+
+
+def log_error(msg: str):
+    sonic_logger.log_error(msg)
+
+
+def main():
+    try:
+        config = load_pddf_device_config()
+    except Exception as e:
+        log_error(f"Failed to load PDDF configuration: {str(e)}")
+        return 1
+
+    fpga_types = (FpgaDeviceName.CPU_CARD.value, FpgaDeviceName.SWITCHCARD.value)
+    try:
+        fpga_attrs = extract_fpga_attrs(config, fpga_types)
+    except Exception as e:
+        log_error(
+            f"Failed to extract FPGA attributes from PDDF configuration: {str(e)}"
+        )
+        return 1
+
+    if not fpga_attrs:
+        log_error("No FPGA attributes found in PDDF configuration")
+        return 1
+
+    try:
+        sonic_logger.log_info(
+            "Writing to CPU card FPGA power cycle control register to initiate reboot"
+        )
+        bdf = None
+        attrs = fpga_attrs[FpgaDeviceName.CPU_CARD.value]
+        bdf = get_cpu_card_fpga_bdf()
+        write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
+    except Exception as e:
+        log_error(
+            "Error attempting power cycle via control register on CPU FPGA"
+            f" {bdf if bdf else ''}: {str(e)}, trying switchcard FPGA"
+        )
+    time.sleep(REBOOT_DELAY_MS / 1000)
+
+    try:
+        bdf = None
+        attrs = fpga_attrs[FpgaDeviceName.SWITCHCARD.value]
+        bdf = get_switchcard_fpga_bdf()
+        write_32(bdf, attrs.pwr_cycle_reg_offset, attrs.pwr_cycle_enable_word)
+    except Exception as e:
+        log_error(
+            "Error attempting power cycle via control register on switchcard FPGA"
+            f" {bdf if bdf else ''}: {str(e)}"
+        )
+
+    time.sleep(REBOOT_DELAY_MS / 1000)
+
+    # If we reach here, we silently failed to reboot the dataplane!
+    log_error(
+        "Failed to initiate reboot, the control plane will reboot and"
+        " leave the dataplane in an undefined state"
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    # Systemd calls this script with one of 4 arguments. "poweroff" and "halt" we don't expect.
+    # A cold reboot will pass "reboot". In the first 3 cases, we continue with the powercycle.
+    # Warm reboots will use kexec and will pass "kexec" as the first argument, therefore we
+    # must skip the powercycle in that case.
+    if len(sys.argv) > 1 and sys.argv[1] == "kexec":
+        sys.exit(0)
+    sys.exit(main())

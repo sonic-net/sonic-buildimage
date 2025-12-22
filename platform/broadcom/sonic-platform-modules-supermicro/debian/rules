@@ -1,0 +1,68 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+include /usr/share/dpkg/pkg-info.mk
+#--------------------------------------------------------
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_PRE_NAME := platform-modules
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= sse-t8164 sse-t8196
+UTILS_DIR := utils
+SERVICE_DIR := service
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_clean:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
+		fi; \
+	done)
+	dh_clean
+
+override_dh_auto_configure:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
+		fi; \
+	done)
+
+override_dh_auto_build:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --build -d $${mod}; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+			if [ -f sonic_platform_setup.py ]; then \
+				python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+				echo "Finished making pddf whl package for $$mod"; \
+			fi; \
+			cd $(MOD_SRC_DIR); \
+		fi; \
+	done)
+
+override_dh_auto_test:
+	# No tests to run
+
+override_dh_usrlocal:
+
+override_dh_auto_install:
+	(set -e; for mod in $(MODULE_DIRS); do \
+		$(MAKE) -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR) INSTALL_MOD_PATH=$(MOD_SRC_DIR)/debian/platform-modules-$${mod} modules_install; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
+			PYBUILD_NAME=$${mod} pybuild --install -d $${mod} --dest-dir debian/$(PACKAGE_PRE_NAME)-$${mod}; \
+		fi; \
+	done)

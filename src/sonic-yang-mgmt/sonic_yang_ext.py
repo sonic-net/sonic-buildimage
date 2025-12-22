@@ -35,6 +35,9 @@ LEAF_LIST_WITH_STRING_VALUE_DICT = {
     ('BUFFER_PORT_INGRESS_PROFILE_LIST', 'profile_list'): ',',
     ('PORT', 'adv_speeds'): ',',
     ('PORT', 'adv_interface_types'): ',',
+    ('VNET_ROUTE_TUNNEL', 'endpoint'): ',',
+    ('VNET_ROUTE_TUNNEL', 'mac_address'): ',',
+    ('VNET_ROUTE_TUNNEL', 'vni'): ',',
 }
 
 """
@@ -442,7 +445,7 @@ class SonicYangExtMixin(SonicYangPathMixin):
                 table (str): config DB table, this table is being translated.
 
             Returns:
-                 leafDict (dict): dict with leaf(s) information for List\Container
+                 leafDict (dict): dict with leaf(s) information for List/Container
                     corresponding to config DB table.
         '''
         leafDict = dict()

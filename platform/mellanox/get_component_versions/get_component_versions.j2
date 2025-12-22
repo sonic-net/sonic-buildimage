@@ -32,6 +32,7 @@ from tabulate import tabulate
 
 COMPONENT_VERSIONS_FILE = "/etc/mlnx/component-versions"
 HEADERS = ["COMPONENT", "COMPILATION", "ACTUAL"]
+SAI_API_TABLE_HEADERS = ["COMPONENT", "SONIC_SAI", "VENDOR_SAI"]
 
 {% if sonic_asic_platform == "mellanox" %}
 
@@ -40,14 +41,16 @@ COMMANDS_FOR_ACTUAL = {
     "HW_MANAGEMENT": [["dpkg", "-l"], ["grep", "hw"], ".*1\\.mlnx\\.([0-9.]*)"],
     "SDK": [["docker", "exec", "-it", "syncd", "bash", "-c", 'dpkg -l | grep sdk'], ".*1\\.mlnx\\.([0-9.]*)"],
     "SAI": [["docker", "exec", "-it", "syncd", "bash", "-c", 'dpkg -l | grep mlnx-sai'], ".*1\\.mlnx\\.([A-Za-z0-9.]*)"],
+    "SAI_API_HEADERS": [["docker", "exec", "syncd", "dpkg", "-s", "mlnx-sai"], "X-Sai-Headers-Version: ([0-9.]+)"],
     "FW": [["mlxfwmanager", "--query"], "FW * [0-9]{2}\\.([0-9.]*)"],
-    "KERNEL": [["uname", "-r"], "([0-9][0-9.-]*)-.*"]
+    "KERNEL": [["uname", "-r"], "(.*)-[a-z0-9]+$"]
 }
 
 UNAVAILABLE_COMPILED_VERSIONS = {
     "SDK": "N/A",
     "FW": "N/A",
     "SAI": "N/A",
+    "SAI_API_HEADERS": "N/A",
     "HW_MANAGEMENT": "N/A",
     "MFT": "N/A",
     "KERNEL": "N/A",
@@ -61,7 +64,7 @@ COMMANDS_FOR_ACTUAL = {
     "SDK": [["docker", "exec", "syncd", "bash", "-c", 'dpkg -l | grep sdn'], "sdn-appliance *([0-9.-]*mlnx1)"],
     "SAI": [["docker", "exec", "syncd", "bash", "-c", 'dpkg -l | grep mlnx-sai'], ".*1\\.mlnx\\.([A-Za-z0-9.]*)"],
     "FW": [["mlxfwmanager", "--query"], "FW * [0-9]{2}\\.([0-9.]*)"],
-    "KERNEL": [["uname", "-r"], "([0-9][0-9.-]*)-.*"],
+    "KERNEL": [["uname", "-r"], "(.*)-[a-z0-9]+$"],
     "BFSOC": [["dpkg", "-l"], ["grep", "mlxbf-bootimages"], "mlxbf-bootimages *([0-9.-]*)"]
 }
 
@@ -146,8 +149,8 @@ def get_current_version(comp):
         return "N/A"
 
 
-def format_output_table(table):
-    return tabulate(table, HEADERS)
+def format_output_table(table, headers=HEADERS):
+    return tabulate(table, headers)
 
 
 def main():
@@ -158,6 +161,14 @@ def main():
 
     compiled_versions = parse_compiled_components_file()
     simx_compiled_ver = compiled_versions.pop("SIMX")
+
+    # Handle SAI_API_HEADERS versions
+    sai_api_headers_table = []
+    if "SAI_API_HEADERS" in compiled_versions:
+        sai_api_version_in_sai = get_current_version("SAI_API_HEADERS")
+        sai_api_version_in_sonic = compiled_versions["SAI_API_HEADERS"]
+        sai_api_headers_table.append(["SAI_API_HEADERS", sai_api_version_in_sonic, sai_api_version_in_sai])
+        compiled_versions.pop("SAI_API_HEADERS")
 
     # Add compiled versions to table
     output_table = []
@@ -178,6 +189,10 @@ def main():
         output_table.append([comp, "-", platform_versions[comp]])
 
     print(format_output_table(output_table))
+
+    if sai_api_headers_table:
+        print("\n")
+        print(format_output_table(sai_api_headers_table, SAI_API_TABLE_HEADERS))
 
 
 if __name__ == "__main__":
