@@ -118,7 +118,7 @@ class Pcie(PcieUtil):
             #   2 hex digit of id
             #   dot '.'
             #   1 digit of fn
-            pattern_for_device_folder = re.search('....:(..):..\..', folder)
+            pattern_for_device_folder = re.search(r'....:(..):..\..', folder)
             if pattern_for_device_folder:
                 bus = pattern_for_device_folder.group(1)
                 with open(os.path.join('/sys/bus/pci/devices', folder, 'device'), 'r') as device_file:
