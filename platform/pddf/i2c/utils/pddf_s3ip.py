@@ -148,7 +148,7 @@ def create_s3ip_temp_sysfs():
         # max i.e. Alarm high threshold in mill degree celsius
         try:
             max_val = 'NA'
-            bmc_attr = pddf_api.check_bmc_based_attr(dev_name, 'temp1_high_threshold')
+            bmc_attr = pddf_api.check_bmc_based_attr(dev_name, 'temp1_high_crit_threshold')
             if bmc_attr is not None and bmc_attr!={}:
                 output = pddf_api.bmc_get_cmd(bmc_attr)
                 if output.replace('.','',1).isdigit():
@@ -156,7 +156,7 @@ def create_s3ip_temp_sysfs():
                 cmd = 'sudo echo "{}" > /sys_switch/temp_sensor/temp{}/max'.format(max_val, t)
             else:
                 # I2C based attribute
-                node = pddf_api.get_path(dev_name, 'temp1_high_threshold')
+                node = pddf_api.get_path(dev_name, 'temp1_high_crit_threshold')
                 if node:
                     cmd = 'sudo ln -s {} /sys_switch/temp_sensor/temp{}/max'.format(node, t)
                 else:
@@ -169,7 +169,7 @@ def create_s3ip_temp_sysfs():
         # min i.e Alarm recovery threhsold in milli degree celsius
         try:
             min_val = 'NA'
-            bmc_attr = pddf_api.check_bmc_based_attr(dev_name, 'temp1_low_threshold')
+            bmc_attr = pddf_api.check_bmc_based_attr(dev_name, 'temp1_high_threshold')
             if bmc_attr is not None and bmc_attr!={}:
                 output = pddf_api.bmc_get_cmd(bmc_attr)
                 if output.replace('.','',1).isdigit():
@@ -177,7 +177,7 @@ def create_s3ip_temp_sysfs():
                 cmd = 'sudo echo "{}" > /sys_switch/temp_sensor/temp{}/min'.format(min_val, t)
             else:
                 # I2C based attribute
-                node = pddf_api.get_path(dev_name, 'temp1_low_threshold')
+                node = pddf_api.get_path(dev_name, 'temp1_high_threshold')
                 if node:
                     cmd = 'sudo ln -s {} /sys_switch/temp_sensor/temp{}/min'.format(node, t)
                 else:
