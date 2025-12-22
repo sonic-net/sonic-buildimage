@@ -55,8 +55,8 @@ jobs:
       build_options="$(VERSION_CONTROL_OPTIONS)"
       image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
-      image_branch=$(echo $(echo $image_latest | awk -F: '{print$1}'):$(Build.SourceBranchName))
-      image_branch_arch=$(echo $(echo $image_latest_arch | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
+      image_branch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      image_branch_arch=$(echo $(echo $image_tag | awk -F: '{print$1}'):$(Build.SourceBranchName)-${{ parameters.arch }})
       docker rmi $image_tag || true
 
       if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
