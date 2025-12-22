@@ -35,3 +35,4 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [debug]
+

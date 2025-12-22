@@ -35,3 +35,4 @@ echo "otel collector args: $OTEL_ARGS"
 echo "Starting OTEL Collector with config file: $OTEL_CONFIG_FILE"
 
 exec /usr/local/bin/otelcol-contrib ${OTEL_ARGS}
+

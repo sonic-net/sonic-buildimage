@@ -37,3 +37,4 @@ $(DOCKER_OTEL)_RUN_OPT += --userns=host
 
 $(DOCKER_OTEL)_BASE_IMAGE_FILES += monit_otel:/etc/monit/conf.d
 
+

@@ -109,7 +109,7 @@ class ServiceChecker(HealthChecker):
                     else:
                         container_list.append("gnmi")
                     continue
-            # some platforms may not include the OTEL container; skip expecting it when image absent
+            # Some platforms may not include the OTEL container; skip expecting it when image absent
             if container_name == "otel":
                 if not check_docker_image("docker-sonic-otel"):
                     logger.log_debug("Ignoring otel container check on image which has no corresponding docker image")
