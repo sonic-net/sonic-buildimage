@@ -868,13 +868,13 @@ class SFP(NvidiaSFPCommon):
         sn = self._get_serial()
         if sn != self.sn:
             self.reinit()
+            self.temp_high_threshold = None
+            self.temp_critical_threshold = None
             self.sn = self._get_serial()
             if self.sn is not None:
                 self.retry_read_threshold = 5
             else:
                 self.retry_read_threshold = 0
-                self.temp_high_threshold = None
-                self.temp_critical_threshold = None
             return True
         return False
             
