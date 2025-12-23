@@ -343,8 +343,24 @@ create_bfb_image() {
            --boot-args-v2 "$boot_args2" \
            --boot-path "$boot_path" \
            --boot-desc "$boot_desc" \
-            ${BFB} ${DDIR}/${OUTPUT_BFB_IMAGE}
+            ${BFB} ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate
+            
 
+    echo "Generating SHA256 hash for BFB file..."
+    sha256sum ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate | awk '{print $1}' > ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate.sha256
+    echo "SHA256 hash saved to: ${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate.sha256"
+
+    echo "Creating tar package with BFB and SHA256 hash..."
+    local bfb_fullpath="${DDIR}/${OUTPUT_BFB_IMAGE}"
+    local bfb_dir=$(dirname "$bfb_fullpath")
+    local bfb_intermediate_fullpath="${DDIR}/${OUTPUT_BFB_IMAGE}-intermediate"
+    local bfb_basename=$(basename "$bfb_fullpath")
+    local bfb_intermediate_basename=$(basename "$bfb_intermediate_fullpath")
+    
+    pushd "$bfb_dir"
+    tar -cf "$bfb_basename" "$bfb_intermediate_basename" "${bfb_intermediate_basename}.sha256"
+    popd
+    
     echo "BFB is ready: $(readlink -f  ${DDIR}/${OUTPUT_BFB_IMAGE})"
 
     popd
