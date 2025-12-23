@@ -1,21 +1,5 @@
 #!/bin/bash
 ###########################################################################
-# Copyright 2020 Arista. The term "Arista" refers to Arista Inc.          #
-# and/or its subsidiaries.                                                #
-#                                                                         #
-# Licensed under the Apache License, Version 2.0 (the "License");         #
-# you may not use this file except in compliance with the License.        #
-# You may obtain a copy of the License at                                 #
-#                                                                         #
-#   http://www.apache.org/licenses/LICENSE-2.0                            #
-#                                                                         #
-# Unless required by applicable law or agreed to in writing, software     #
-# distributed under the License is distributed on an "AS IS" BASIS,       #
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.#
-# See the License for the specific language governing permissions and     #
-# limitations under the License.                                          #
-#                                                                         #
-###########################################################################
 # SONiC chassis_db configuration                                          #
 #                                                                         #
 # This script is used to add chassis_db address in local hosts and        #
@@ -26,6 +10,7 @@
 
 config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
+    chassisdb_address_file="/etc/sonic/chassisdb_address"
     [ ! -e $startdb_file ] || rm $startdb_file
     platform=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     # database-chassis services will start when $chassis_config file exists
@@ -34,12 +19,53 @@ config_chassis_db() {
        echo "no chassisdb.conf found, bypass config-chassisdb service"
        exit 0
     fi
+
+    # Read the various device attributes
+    read -r is_chassis is_supervisor is_smartswitch is_dpu is_disagg <<<"$(python3 -c 'from sonic_py_common.device_info import is_chassis, is_supervisor, is_smartswitch, is_dpu, is_disaggregated_chassis;print("{} {} {} {} {}".format((is_chassis()),(is_supervisor()),(is_smartswitch()),(is_dpu()),(is_disaggregated_chassis())))' 2>/dev/null)"
+
+    #Generate the chassisdb_address_file based on the flags
+    disagg_chassis=is_disagg j2 /usr/share/sonic/templates/chassisdb_address.j2 > "$chassisdb_address_file"
+
     start_chassis_db=0
     chassis_db_address=""
+    chassis_db_subnet=""
+
+    # source the chassisdb config file
     source $chassis_config
+    # source the chassisdb_address_file, if the file exists
+    [ -f $chassisdb_address_file ] && source $chassisdb_address_file
     if [[ "$start_chassis_db" == "1" ]]; then
        cp $chassis_config $startdb_file
        echo "start chassisdb"
+       # This  is supervisor, or smartswitch/NPU, configure the eth-chassisdb as the chassis db address
+       if [[ "$is_supervisor" == True || ( "$is_smartswitch" == True && "$is_dpu" == False ) ]]; then
+           ip link add eth-chassisdb type dummy
+           ip link set eth-chassisdb up
+           # Get the chassis db subnet prefix
+           chassis_db_prefix=`echo $chassis_db_subnet | cut -d '/' -f2`
+           if [[ -n "$chassis_db_prefix" ]]; then
+               ip addr add $chassis_db_address/$chassis_db_prefix dev eth-chassisdb
+           fi
+       fi
+    else
+       if [[ "$is_chassis" == True ]]; then
+           # In Linecard, add route to chassis_db subnet via supervisor midplane ip
+           # Get the supervisor midplane ip address
+           supervisor_midplane_ip=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); sup_slot=platform_chassis.get_supervisor_slot(); print([m.get_midplane_ip() for m in platform_chassis.get_all_modules() if m.get_slot() == sup_slot][0])' 2>/dev/null)
+           # Add a route to the chassis db address with supervisor midplane ip as next hop
+           if [[ -n "$supervisor_midplane_ip" ]]; then
+               ip route add $chassis_db_subnet via $supervisor_midplane_ip
+           fi
+       fi
+       if [[ "$is_smartswitch" == True && "$is_dpu" == True ]]; then
+           # In DPU get the NPU IP address, from the gateway configured on midplane interface.
+           npu_midplane_ip=`ip route show default dev eth0-midplane | awk '/default/ {print $3}'`
+
+           # Add a route to the chassis db address with npu midplane ip as next hop
+           if [[ -n "$npu_midplane_ip" ]]; then
+               ip route add $chassis_db_subnet via $npu_midplane_ip
+           fi
+       fi
     fi
     if [[ "$start_chassis_db" == "1" ]] || [[ -n "$chassis_db_address" ]]; then
        if [ -z "$chassis_db_address" ]; then
