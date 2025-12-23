@@ -79,6 +79,9 @@ declare -A rshim2dpu
 declare -r bfsoc_dev_id="15b3:c2d5"
 declare -r cx7_dev_id="15b3:a2dc"
 
+EXTRACTED_BFB_PATH=""
+EXTRACTED_CHECKSUM_PATH=""
+
 # Local functions to replace dpumap.sh
 rshim2dpu_map() {
     local rshim=$1
@@ -115,9 +118,10 @@ list_dpus_map() {
 usage(){
     echo "Syntax: $(basename "$0") -b|--bfb <BFB_Image_Path> --rshim|-r <rshim1,..rshimN> --dpu|-d <dpu1,..dpuN> --verbose|-v --config|-c <Options> --help|-h"
     echo "Arguments:"
-    echo "-b|--bfb		Provide custom path for bfb image"
+    echo "-b|--bfb		Provide custom path for bfb tar archive"
     echo "-r|--rshim		Install only on DPUs connected to rshim interfaces provided, mention all if installation is required on all connected DPUs"
     echo "-d|--dpu		Install on specified DPUs, mention all if installation is required on all connected DPUs"
+    echo "-s|--skip-extract	Skip extracting the bfb image"
     echo "-v|--verbose		Verbose installation result output"
     echo "-c|--config		Config file"
     echo "-h|--help		Help"
@@ -338,6 +342,71 @@ is_url() {
     fi
 }
 
+extract_bfb() {
+    local bfb_file=$1
+    
+    if [ ! -f "$bfb_file" ]; then
+        log_error "BFB file not found: $bfb_file"
+        exit 1
+    fi
+    
+    local file_type=$(file -b "$bfb_file")
+    if [[ $file_type == *"tar archive"* ]]; then
+        log_info "Detected tar archive extracting BFB and SHA256 hash..."
+        
+        if ! tar -xf "$bfb_file" -C "${WORK_DIR}" 2>/dev/null; then
+            log_error "Failed to extract tar archive: $bfb_file"
+            exit 1
+        fi
+        
+        local extracted_bfb=$(find "${WORK_DIR}" -maxdepth 1 -name "*bfb-intermediate"  | grep "$(basename "$bfb_file")" | head -n 1)
+        if [ -z "$extracted_bfb" ]; then
+            log_error "No BFB file found in tar archive"
+            exit 1
+        fi
+        
+        log_info "Extracted BFB file: $extracted_bfb"
+        
+        EXTRACTED_BFB_PATH="$extracted_bfb"
+        
+        chmod +x "$extracted_bfb"
+        
+        local extracted_sha256="${extracted_bfb}.sha256"
+        if [ -f "$extracted_sha256" ]; then
+            log_info "Found SHA256 hash file: $extracted_sha256"
+        else
+            log_warning "SHA256 hash file not found in tar archive"
+        fi
+
+        EXTRACTED_CHECKSUM_PATH="$extracted_sha256"
+    else
+        log_error "File is not a tar archive: $bfb_file! Please provide a tar archive with .bfb extension containing BFB and SHA256 hash."
+        exit 1
+    fi
+}
+
+validate_bfb_sha256() {
+    if [ -f "$EXTRACTED_CHECKSUM_PATH" ]; then
+        local expected_hash=$(cat "$EXTRACTED_CHECKSUM_PATH")
+
+        log_info "Verifying SHA256 checksum..."
+        local actual_hash=$(sha256sum "$EXTRACTED_BFB_PATH" | awk '{print $1}')
+        
+        if [ "$expected_hash" != "$actual_hash" ]; then
+            log_error "SHA256 checksum mismatch!"
+            log_error "Expected: $expected_hash"
+            log_error "Actual:   $actual_hash"
+            log_error "BFB file may be corrupted or tampered with."
+            exit 1
+        fi
+        
+        log_info "SHA256 checksum verification successful"
+    else
+        log_error "SHA256 hash file not found: $EXTRACTED_CHECKSUM_PATH"
+        exit 1
+    fi
+}
+
 validate_rshim(){
     local provided_list=("$@")
     for item1 in "${provided_list[@]}"; do
@@ -420,7 +489,7 @@ main() {
     validate_platform
 
     # Parse command line arguments
-    local config= bfb= rshim_dev= dpus= verbose=false
+    local config= bfb= rshim_dev= dpus= skip_extract= verbose=false
     parse_arguments "$@"
 
     # Validate BFB image
@@ -430,6 +499,13 @@ main() {
         exit 1
     fi
     is_url "$bfb"
+    
+    if [ "$skip_extract" = true ]; then
+        EXTRACTED_BFB_PATH="$bfb"
+    else
+        extract_bfb "$bfb"
+        validate_bfb_sha256
+    fi
 
     trap "file_cleanup" EXIT
 
@@ -494,7 +570,7 @@ main() {
     for i in "${!sorted_devs[@]}"; do
         rshim_name=${sorted_devs[$i]}
         dpu_name=${rshim2dpu[$rshim_name]}
-        bfb_install_call "$rshim_name" "$dpu_name" "$bfb" "${arr[$i]}" &
+        bfb_install_call "$rshim_name" "$dpu_name" "$EXTRACTED_BFB_PATH" "${arr[$i]}" &
     done
     wait
 }
@@ -518,6 +594,9 @@ parse_arguments() {
             --dpu|-d)
                 shift
                 dpus=$1
+                ;;
+            --skip-extract|-s)
+                skip_extract=true
                 ;;
             --config|-c)
                 shift
