@@ -13,6 +13,10 @@ module sonic-acl {
 	import ietf-inet-types {
 		prefix inet;
 	}
+	
+	import ietf-yang-types {
+		prefix yang;
+	}
 
 	import sonic-types {
 		prefix stypes;
@@ -84,6 +88,11 @@ module sonic-acl {
 					}
 				}
 
+				leaf INNER_SRC_MAC_REWRITE_ACTION {
+					description "Inner Source Mac-adress rewrite action mapped to mac address";
+					type yang:mac-address;
+				}
+
 				leaf IP_TYPE {
 					type stypes:ip_type;
 				}
@@ -112,6 +121,11 @@ module sonic-acl {
 						}
 
 						leaf DST_IP {
+							type inet:ipv4-prefix;
+						}
+
+						leaf INNER_SRC_IP {
+							description "Source IP prefix for inner packet";
 							type inet:ipv4-prefix;
 						}
 					}
@@ -255,6 +269,11 @@ module sonic-acl {
 					}
 				}
 
+				leaf TUNNEL_VNI {
+					description "VXLAN Network Identifier";
+					type stypes:vnid_type;
+				}
+
 				leaf PCP {
 					when "(/acl:sonic-acl/acl:ACL_TABLE/acl:ACL_TABLE_LIST[ACL_TABLE_NAME=current()/../acl:ACL_TABLE_NAME]/acl:type = 'L2')";
 					type string {
@@ -302,11 +321,13 @@ module sonic-acl {
 
 				leaf-list MATCHES {
 					type string;
+					ordered-by user;
 					min-elements 1;
 				}
 
 				leaf-list ACTIONS {
 					type string;
+					ordered-by user;
 					default "";
 				}
 
@@ -315,6 +336,7 @@ module sonic-acl {
 						enum PORT;
 						enum PORTCHANNEL;
 					}
+					ordered-by user;
 					min-elements 1;
 				}
 			}
@@ -357,6 +379,7 @@ module sonic-acl {
 
 				leaf-list services {
 					type string;
+					ordered-by user;
 				}
 
 				/* Validating 'services' exist if ACL type is 'CTRLPLANE' */
@@ -375,6 +398,7 @@ module sonic-acl {
 							pattern "";
 						}
 					}
+					ordered-by user;
 					/* Today in SONiC, we do not delete the list once
 					 * created, instead we set to empty list. Due to that
 					 * below default values are needed.

@@ -1,7 +1,8 @@
 /***********************************************************************
  *
  * $Id: linux-bde.h,v 1.24 Broadcom SDK $
- * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+ *
+ * $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -203,8 +204,9 @@ extern uint32 lkbde_get_dev_phys_hi(int d);
 #ifdef BDE_EDK_SUPPORT
 extern int lkbde_edk_get_dma_info(int dev_id, phys_addr_t* cpu_pbase,
                                   phys_addr_t* dma_pbase, ssize_t* size);
-extern void * lkbde_edk_dmamem_map_p2v(phys_addr_t paddr);
+extern void * lkbde_edk_dmamem_map_p2v(int dev_no, phys_addr_t paddr);
 #endif
+extern int lkbde_get_phys_to_virt(int d, phys_addr_t paddr, sal_vaddr_t *vaddr);
 
 /*
  * Virtual device address needed by kernel space
@@ -284,6 +286,11 @@ extern int lkbde_intr_cb_register(int d,
  */
 extern int lkbde_get_dev_pci_info(int d, uint32_t *bus,
                                   uint32_t *slot, uint32_t *func);
+
+/*
+ * Get the iproc version number for a device.
+ */
+extern int lkbde_iproc_version_get(int d, uint32 *iproc_ver);
 
 #ifdef INCLUDE_SRAM_DMA
 #ifdef SRAM_DMA_NEEDS_KERNEL_APIS

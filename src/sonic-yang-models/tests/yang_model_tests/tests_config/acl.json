@@ -1748,5 +1748,428 @@
                 ]
             }
         }
+    },
+    "ACL_TABLE_INNERSRCMACREWRITE_TABLE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
+                        "PRIORITY": "999960",
+                        "RULE_NAME": "Rule_10",
+                        "INNER_SRC_IP": "10.176.0.0/15",
+                        "TUNNEL_VNI": "45"
+                    },
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
+                        "PRIORITY": "999960",
+                        "RULE_NAME": "Rule_9",
+                        "INNER_SRC_IP": "10.166.0.0/15",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:46:BD:08:19:68",
+                        "TUNNEL_VNI": "47"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE",
+                        "policy_desc":"Replace src MAC with ENI MAC",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "TUNNEL_VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_INNER_SRC_MAC_REWRITE_ACTION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-REWRITE-ACTION",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "",
+                        "PRIORITY": "999963",
+                        "RULE_NAME": "Rule_13",
+                        "INNER_SRC_IP": "10.176.0.0/15",
+                        "TUNNEL_VNI": "45"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-REWRITE-ACTION",
+                        "policy_desc":"Replace src MAC with ENI MAC",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "TUNNEL_VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_INNER_SRC_MAC_REWRITE_ACTION_INVALID_MAC": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-MAC",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60.45.BD.08:19:68",
+                        "PRIORITY": "999964",
+                        "RULE_NAME": "Rule_14",
+                        "INNER_SRC_IP": "10.176.0.0/15",
+                        "TUNNEL_VNI": "45"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-MAC",
+                        "policy_desc":"Replace src MAC with ENI MAC",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "TUNNEL_VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_INNERSRCMACREWRITE_INVALID_TUNNEL_VNI": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-TUNNEL_VNI",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
+                        "PRIORITY": "999960",
+                        "RULE_NAME": "Rule_15",
+                        "INNER_SRC_IP": "10.176.0.0/15",
+                        "TUNNEL_VNI": "16777216"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-INVALID-TUNNEL_VNI",
+                        "policy_desc":"Replace src MAC with ENI MAC",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "TUNNEL_VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_TUNNEL_VNI": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "EVERFLOW",
+                        "DST_IP": "10.186.72.0/26",
+                        "IP_TYPE": "IPv4ANY",
+                        "RULE_NAME": "Rule_20",
+                        "INNER_SRC_IP": "10.176.0.0/15",
+                        "PRIORITY": "1222",
+                        "TUNNEL_VNI": "16777213",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "EVERFLOW",
+                        "policy_desc": "Filter IPv4",
+                        "services": [
+                            "SNMP"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "MIRROR"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_INNERSRCMACREWRITE_NO_INNERSRCIP": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-NO-SRCIP",
+                        "INNER_SRC_MAC_REWRITE_ACTION": "60:45:BD:08:19:68",
+                        "PRIORITY": "999960",
+                        "RULE_NAME": "Rule_16",
+                        "TUNNEL_VNI": "16777213"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "SRC-MAC-REWRITE-TABLE-NO-SRCIP",
+                        "policy_desc":"Replace src MAC with ENI MAC",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "INNER_SRC_MAC_REWRITE_TABLE_TYPE"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "INNER_SRC_MAC_REWRITE_TABLE_TYPE",
+                        "ACTIONS": [
+                            "INNER_SRC_MAC_REWRITE_ACTION"
+                        ],
+                        "MATCHES": [
+                            "INNER_SRC_IP",
+                            "TUNNEL_VNI"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT",
+                            "PORTCHANNEL"
+                        ]
+                    }
+                ]
+            }
+            
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
     }
 }

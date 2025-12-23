@@ -2,7 +2,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
@@ -25,7 +25,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
@@ -88,7 +88,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
@@ -97,7 +97,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },

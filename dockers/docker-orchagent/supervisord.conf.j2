@@ -13,7 +13,7 @@ events=PROCESS_STATE
 buffer_size=1024
 
 [eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener --container-name swss
+command=/usr/bin/supervisor-proc-exit-listener-rs --container-name swss
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING,PROCESS_COMMUNICATION_STDOUT
 autostart=true
 autorestart=unexpected

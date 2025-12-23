@@ -1,0 +1,13 @@
+[Unit]
+Description=Transceiver initialization service
+After=pddf-platform-init.service
+Before=pmon.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/transceiver_init.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

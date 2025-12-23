@@ -1,9 +1,8 @@
 j2cli==0.3.10
-jinja2==3.1.5
-markupsafe==3.0.2
-pip==25.0
+jinja2==3.1.6
+markupsafe==3.0.3
+pip==25.3
 setuptools==66.1.1
-supervisor==4.2.5
 supervisord-dependent-startup==1.4.0
 toposort==1.10
 wheel==0.38.4

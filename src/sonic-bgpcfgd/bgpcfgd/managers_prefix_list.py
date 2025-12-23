@@ -46,8 +46,8 @@ class PrefixListMgr(Manager):
         if data["prefix_list_name"] != "ANCHOR_PREFIX":
             log_warn("PrefixListMgr:: Prefix list %s is not supported" % data["prefix_list_name"])
             return False
-        if localhost_type != "SpineRouter" or subtype != "UpstreamLC":
-            log_warn("PrefixListMgr:: Prefix list %s is only supported on UpstreamLC of SpineRouter" % data["prefix_list_name"])
+        if localhost_type not in ["UpperSpineRouter", "SpineRouter"] or (localhost_type == "SpineRouter" and subtype != "UpstreamLC"):
+            log_warn("PrefixListMgr:: Prefix list %s is only supported on Upstream SpineRouter" % data["prefix_list_name"])
             return False
 
         # Add the anchor prefix to the radian configuration
@@ -75,6 +75,7 @@ class PrefixListMgr(Manager):
                 return True
             data["prefix_list_name"] = prefix_list_name
             data["prefix"] = str(prefix.cidr)
+            data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
             # Generate the prefix list configuration
             if self.generate_prefix_list_config(data, add=True):
@@ -96,6 +97,7 @@ class PrefixListMgr(Manager):
             data = {}
             data["prefix_list_name"] = prefix_list_name
             data["prefix"] = str(prefix.cidr)
+            data["prefixlen"] = prefix.prefixlen
             data["ipv"] = self.get_ip_type(prefix)
             # remove the prefix list configuration
             if self.generate_prefix_list_config(data, add=False):

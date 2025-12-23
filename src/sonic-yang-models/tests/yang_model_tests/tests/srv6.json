@@ -19,10 +19,6 @@
         "desc": "A SID configured with invalid IPv6 address",
         "eStrKey" : "Pattern"
     },
-    "SRV6_MY_SID_UNMATCHED_IP_PREFIX": {
-        "desc": "A SID configured with an IPv6 Address that does not match with the prefix of the locator",
-        "eStrKey" : "Must"
-    },
     "SRV6_MY_SID_INVALID_ACTION": {
         "desc": "A SID configured with invalid action",
         "eStrKey" : "InvalidValue",

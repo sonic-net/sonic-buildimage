@@ -88,7 +88,7 @@ module sonic-gnmi {
 
                 leaf user_auth {
                     type string {
-                        pattern 'password|jwt|cert';
+                        pattern 'password|jwt|cert|none';
                     }
                     description "GNMI service user authorization type.";
                 }
@@ -107,9 +107,9 @@ module sonic-gnmi {
                         "client cert common name";
                 }
 
-                leaf role {
+                leaf-list role {
                     type string;
-                    mandatory true;
+                    min-elements 1;
                     description
                         "role of client cert common name";
                 }

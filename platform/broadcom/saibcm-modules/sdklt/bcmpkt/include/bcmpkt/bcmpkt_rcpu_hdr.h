@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -62,6 +63,8 @@
 #define BCMPKT_RCPU_F_MODHDR        (1 << 2)
 /*! Do not pad runt TX packet. */
 #define BCMPKT_RCPU_F_TX_NO_PAD     (1 << 4)
+/*! Valid CRC is included. */
+#define BCMPKT_RCPU_F_KEEP_CRC      (1 << 5)
 /*! \} */
 
 /*! RCPU default VLAN ID with pri and cfi.   */

@@ -4,6 +4,8 @@ SHELL = /bin/bash
 
 MAIN_TARGET = libpam-tacplus_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = libtac2_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
+		  libtac2-dbgsym_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
+		  libpam-tacplus-dbgsym_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb \
 		  libtac-dev_$(PAM_TACPLUS_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :

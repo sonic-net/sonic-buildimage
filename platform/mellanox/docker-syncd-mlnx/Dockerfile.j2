@@ -1,7 +1,7 @@
 ##
 ## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-## Apache-2.0
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 ##
 
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 
@@ -35,7 +37,8 @@ RUN apt-get update && \
         python3-pip \
         python3-dev \
         python3-jsonschema \
-        python-is-python3
+        python-is-python3 \
+        pciutils
 
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python-pip
@@ -59,19 +62,17 @@ RUN apt-get purge -y python-pip
 ## Clean up
 RUN apt-get purge -y         \
         python3-dev          \
-        python3-pip       && \
-    apt-get clean -y      && \
-    apt-get autoclean -y  && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+        python3-pip
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["platform_syncd_dump.sh", "/usr/bin/"]
 
+COPY ["files/rdb-cli", "/usr/bin/"]
+RUN chmod +x /usr/bin/rdb-cli
+
 RUN mkdir -p /etc/mlnx/
-COPY ["sai-common.profile", "/etc/mlnx/"]
+COPY sai-*.profile /etc/mlnx/
 
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
@@ -83,4 +84,9 @@ COPY ["ecmp_calculator/ecmp_calc_sdk.py", "/usr/lib/ecmp_calc"]
 COPY ["ecmp_calculator/packet_scheme.py", "/usr/lib/ecmp_calc"]
 COPY ["lib/port_utils.py", "/usr/lib"]
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

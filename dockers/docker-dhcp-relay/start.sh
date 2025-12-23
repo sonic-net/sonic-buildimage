@@ -10,7 +10,7 @@ then
     ${CTR_SCRIPT} -f dhcp_relay -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
 fi
 
-keys=$(sonic-db-cli COUNTERS_DB keys "DHCPV4_COUNTER_TABLE|*")
+keys=$(sonic-db-cli COUNTERS_DB keys "DHCPV4_COUNTER_TABLE:*")
 for key in $keys; do
     sonic-db-cli COUNTERS_DB del "$key"
 done

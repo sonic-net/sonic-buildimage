@@ -12,7 +12,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA) \
-                              $(FRAMEWORK)
+                              $(SYSMGR)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
@@ -26,7 +26,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
                               $(LIBSAIREDIS_DBG) \
                               $(LIBSAIVS_DBG) \
                               $(SYNCD_VS_DBG) \
-                              $(FRAMEWORK_DBG)
+                              $(SYSMGR_DBG)
 endif
 
 ifeq ($(SONIC_ROUTING_STACK), frr)

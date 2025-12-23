@@ -46,10 +46,8 @@ class Eeprom(FruTlvInfoEncoder):
     def _setup_files(self):
         if self._api_helper.is_host():
             docker_image_id = self._api_helper.get_dpu_docker_imageID()
-            cmd = "docker cp {}:/tmp/fru.json /home/admin".format(docker_image_id)
+            cmd = "sudo docker cp {}:/tmp/fru.json /usr/share/sonic/device/{}/fru.json".format(docker_image_id, self.fru_path)
             self._api_helper.runCMD(cmd)
-            time.sleep(0.5)
-            self._api_helper.runCMD("cp /home/admin/fru.json {}".format(self.fru_path))
 
     def _load_system_eeprom(self):
         """

@@ -1,0 +1,15 @@
+_fpga_completion() {
+    local cur prev words cword
+
+    _get_comp_words_by_ref -n : cur words cword
+
+    COMPREPLY=(
+        $( env COMP_WORDS="${words[*]}" \
+             COMP_CWORD=$cword \
+             _FPGA_COMPLETE=complete "$1" )
+    )
+
+    __ltrim_colon_completions "$cur"
+}
+
+complete -F _fpga_completion -o default fpga;

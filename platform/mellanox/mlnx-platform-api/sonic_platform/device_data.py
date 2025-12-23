@@ -32,6 +32,7 @@ class DpuInterfaceEnum(Enum):
     MIDPLANE_INT = "midplane_interface"
     RSHIM_INT = "rshim_info"
     PCIE_INT = "bus_info"
+    RSHIM_PCIE_INT = "rshim_bus_info"
 
 
 dpu_interface_values = [item.value for item in DpuInterfaceEnum]
@@ -231,10 +232,19 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def get_fan_drawer_sysfs_count(cls):
+        return len(glob.glob('/run/hw-management/thermal/fan*_status'))
+
+    @classmethod
+    @utils.read_only_cache()
     def get_fan_drawer_count(cls):
         # Here we don't read from /run/hw-management/config/hotplug_fans because the value in it is not
         # always correct.
-        return len(glob.glob('/run/hw-management/thermal/fan*_status')) if cls.is_fan_hotswapable() else 1
+        fan_status_count = cls.get_fan_drawer_sysfs_count()
+        if fan_status_count == 0:
+            # For system with no fan, for example, liquid cooling system.
+            return 0
+        return fan_status_count if cls.is_fan_hotswapable() else 1
 
     @classmethod
     @utils.read_only_cache()

@@ -431,7 +431,7 @@ def container_wait(feature, **kwargs):
                 format(feature))
     else:
         debug_msg("END -- transitioning to docker wait")
-        ret = docker_action("wait", docker_id, **kwargs)
+        ret = os.execv("/usr/bin/docker-rs", ["docker-rs", "wait", docker_id])
 
     return ret
 

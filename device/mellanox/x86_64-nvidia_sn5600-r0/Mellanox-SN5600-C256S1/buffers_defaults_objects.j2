@@ -16,6 +16,59 @@
     limitations under the License.
 #}
 
+{% import 'traffic_config.j2' as traffic_config %}
+
+{%- set PORT_ALL = [] %}
+{%- set PORT_ACTIVE = [] %}
+{%- set PORT_UPLINK = [] %}
+{%- set PORT_DOWNLINK = [] %}
+
+{# Initialize PORT_ALL and PORT_ACTIVE #}
+{%- for port in PORT %}
+    {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
+        {%- if PORT_ALL.append(port) %}{% endif %}
+    {%- endif %}
+{%- endfor %}
+
+{%- if DEVICE_NEIGHBOR is not defined %}
+    {%- set PORT_ACTIVE = PORT_ALL %}
+{%- else %}
+    {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+{# Generate uplink and downlink port lists based on router type and neighbors #}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined %}
+    {%- if 'type' in DEVICE_METADATA['localhost'] and DEVICE_NEIGHBOR is defined %}
+        {%- set local_router_type = DEVICE_METADATA['localhost']['type'] %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if DEVICE_NEIGHBOR.get(port) and DEVICE_NEIGHBOR[port].name is defined and DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR[port].name in DEVICE_NEIGHBOR_METADATA %}
+                {%- set neighbor_info = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[port].name] %}
+                {%- if 'LeafRouter' in local_router_type %}
+                    {%- if 'ToRRouter' in neighbor_info.type %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- elif 'SpineRouter' in neighbor_info.type %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- elif 'ToRRouter' in local_router_type %}
+                    {%- if 'LeafRouter' in neighbor_info.type %}
+                        {%- if PORT_UPLINK.append(port) %}{%- endif %}
+                    {%- else %}
+                        {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+                    {%- endif %}
+                {%- endif %}
+            {%- else %}
+                {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+            {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {%- for port in PORT_ACTIVE %}
+            {%- if PORT_DOWNLINK.append(port) %}{%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endif %}
+
 {%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
     "BUFFER_POOL": {
         {% if dynamic_mode is not defined and port_names_inactive|length > 0 -%}
@@ -57,11 +110,6 @@
           "size":"0",
           "dynamic_th":"-8"
         },
-        "egress_lossless_zero_profile" : {
-          "pool":"egress_lossless_pool",
-          "size":"0",
-          "dynamic_th":"-8"
-        },
         "egress_lossy_zero_profile" : {
           "pool":"egress_lossy_pool",
           "size":"0",
@@ -71,11 +119,6 @@
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
-        },
-        "egress_lossless_profile": {
-            "pool":"egress_lossless_pool",
-            "size":"0",
             "dynamic_th":"7"
         },
         "egress_lossy_profile": {
@@ -83,20 +126,93 @@
             "size":"9216",
             "dynamic_th":"7"
         },
-        "q_lossy_profile": {
-            "pool":"egress_lossy_pool",
-            "size":"0",
-            "dynamic_th":"0"
+        "queue0_downlink_lossy_profile": {
+            "dynamic_th": "0",
+            "size": "0",
+            "pool": "egress_lossy_pool"
         },
-        "q_lossy_minus_7_profile": {
+        "queue1_downlink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th" : "-7"
+            "dynamic_th": "-7"
         },
-        "q_lossy_minus_3_profile": {
+        "queue2_downlink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
             "pool": "egress_lossy_pool",
             "size": "0",
-            "dynamic_th" : "-3"
+            "dynamic_th": "-7"
+        },
+        "queue3_downlink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-7"
+        },
+        "queue4_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "0"
+        },
+        "queue5_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-3"
+        },
+        "queue6_downlink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "0"
+        },
+        "queue0_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "0"
+        },
+        "queue1_uplink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-7"
+        },
+        "queue2_uplink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-7"
+        },
+        "queue3_uplink_lossy_profile": {
+            {% if traffic_config.traffic_classification_enable %}
+            "packet_discard_action": "drop",
+            {% endif %}
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-7"
+        },
+        "queue4_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "0"
+        },
+        "queue5_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "-3"
+        },
+        "queue6_uplink_lossy_profile": {
+            "pool": "egress_lossy_pool",
+            "size": "0",
+            "dynamic_th": "0"
         }
     },
 {%- endmacro %}
@@ -126,7 +242,7 @@
     "BUFFER_PORT_EGRESS_PROFILE_LIST": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}": {
-            "profile_list" : "egress_lossless_profile,egress_lossy_profile"
+            "profile_list" : "egress_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -135,9 +251,9 @@
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
 {% if dynamic_mode is defined %}
-            "profile_list" : "egress_lossless_profile,egress_lossy_profile"
+            "profile_list" : "egress_lossy_profile"
 {% else %}
-            "profile_list" : "egress_lossless_zero_profile,egress_lossy_zero_profile"
+            "profile_list" : "egress_lossy_zero_profile"
 {% endif %}
         }{% if not loop.last %},{% endif %}
 
@@ -149,39 +265,64 @@
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
     "BUFFER_QUEUE": {
 {% for port in port_names_active.split(',') %}
+    {%- set port_type = 'uplink' if port in PORT_UPLINK else 'downlink' %}
         "{{ port }}|0": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue0_{{ port_type }}_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
-        "{{ port }}|1-3": {
-            "profile" : "q_lossy_minus_7_profile"
+        "{{ port }}|1": {
+            "profile" : "queue1_{{ port_type }}_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
+        "{{ port }}|2": {
+            "profile" : "queue2_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|3": {
+            "profile" : "queue3_{{ port_type }}_lossy_profile"
+        },
         "{{ port }}|4": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue4_{{ port_type }}_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
         "{{ port }}|5": {
-            "profile" : "q_lossy_minus_3_profile"
+            "profile" : "queue5_{{ port_type }}_lossy_profile"
         },
-{% endfor %}
-{% for port in port_names_active.split(',') %}
         "{{ port }}|6": {
-            "profile" : "q_lossy_profile"
+            "profile" : "queue6_{{ port_type }}_lossy_profile"
         }{% if not loop.last %},{% endif %}
-
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
+{% if dynamic_mode is defined %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
 {% for port in port_names_inactive.split(',') %}
-       {%- if loop.first -%},{%- endif -%}
-        "{{ port }}|1-6": {
+    {%- set port_type = 'uplink' if port in PORT_UPLINK else 'downlink' %}
+        "{{ port }}|0": {
+            "profile" : "queue0_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|1": {
+            "profile" : "queue1_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|2": {
+            "profile" : "queue2_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|3": {
+            "profile" : "queue3_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|4": {
+            "profile" : "queue4_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|5": {
+            "profile" : "queue5_{{ port_type }}_lossy_profile"
+        },
+        "{{ port }}|6": {
+            "profile" : "queue6_{{ port_type }}_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+{% else %}
+{% if port_names_active.split(',')|length > 0 %},{% endif %}
+{% for port in port_names_inactive.split(',') %}
+        "{{ port }}|0-6": {
             "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
-
 {% endfor %}
+{% endif %}
 {% endif %}
     }
 {%- endmacro %}

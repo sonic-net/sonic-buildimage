@@ -1,0 +1,76 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-buster
+
+ARG docker_container_name
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+COPY \
+{% for deb in docker_syncd_clounix_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+COPY \
+{% for deb in docker_syncd_clounix_pydebs.split(' ') -%}
+python-debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN apt-get install -y libxml2 \
+# Install IPython, jupyter-console packages
+        jupyter-console      \
+        jupyter-client
+
+RUN dpkg -i \
+{% for deb in docker_syncd_clounix_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+##RUN dpkg -i \
+##{% for deb in docker_syncd_clounix_pydebs.split(' ') -%}
+##debs/{{ deb }}{{' '}}
+##{%- endfor %}
+
+COPY ["files/dsserve", "/usr/bin/"]
+RUN chmod +x /usr/bin/dsserve
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+# IPython kernel config
+COPY ["ipython_config.json", "/etc/ipython/"]
+
+# Install IPython Cling Kernel
+#COPY ["install_clingkernel.sh", "/usr/bin/"]
+#COPY ["cling-0.9-buster.tar", "/opt/"]
+#RUN /usr/bin/install_clingkernel.sh
+
+RUN apt-get install -y build-essential      \
+                       libc-dev             \
+                       libc6-dev-i386
+
+ENV CLING_OPTS "-I/usr/include/sai/ \
+                -I/usr/include/clounix/ \
+                -I/usr/include/clx_system/clx_sdk/include \
+                -I/usr/include/clx_system/clx_sdk/include/cdb \
+                -I/usr/include/clx_system/clx_sdk/include/osal \
+                -I/usr/include/clx_system/clx_sdk/src/inc \
+                -DCLX_EN_HOST_64_BIT_LITTLE_ENDIAN \
+                -DCLX_EN_LITTLE_ENDIAN \
+                -DCLX_EN_COMPILER_SUPPORT_LONG_LONG \
+                -DCLX_LINUX_USER_MODE \
+                -DCLX_SDK \
+                -DCLX_EN_NETIF \
+                -DCLX_EN_64BIT_ADDR "
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

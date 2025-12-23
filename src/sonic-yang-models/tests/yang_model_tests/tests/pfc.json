@@ -46,5 +46,12 @@
     "PFC_WDOG_WITH_INVALID_RESTORATION_TIME": {
         "desc": "PFC_WDOG_WITH_INVALID_RESTORATION_TIME",
         "eStr": ["restoration_time must be greater than or equal to POLL_INTERVAL"]
+    },
+    "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_VALID_PFC_STAT_HISTORY"
+    },
+    "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY": {
+        "desc": "PFC_WDOG_WITH_INVALID_PFC_STAT_HISTORY",
+        "eStr": ["pfc_stat_history must be either enable or disable"]
     }
 }

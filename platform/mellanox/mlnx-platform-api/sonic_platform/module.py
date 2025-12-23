@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -262,14 +262,11 @@ class DpuModule(ModuleBase):
         self.dpu_id = dpu_id
         self._name = f"DPU{self.dpu_id}"
         self.dpuctl_obj = DpuCtlPlat(self._name.lower())
+        self.dpuctl_obj.setup_logger(use_notice_level=True)
+        self.dpuctl_obj.verbosity = True
         self.fault_state = False
         self.dpu_vpd_parser = DpuVpdParser('/var/run/hw-management/eeprom/vpd_data', self.dpuctl_obj._name.upper())
         self.CONFIG_DB_NAME = "CONFIG_DB"
-        self.DHCP_SERVER_HASH = f"DHCP_SERVER_IPV4_PORT|bridge-midplane|{self._name.lower()}"
-        self.DHCP_IP_ADDRESS_KEY = "ips@"
-        self.config_db = ConfigDBConnector(use_unix_socket_path=False)
-        self.config_db.connect()
-        self.midplane_ip = None
         self.midplane_interface = None
         self.bus_info = None
         self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
@@ -282,7 +279,12 @@ class DpuModule(ModuleBase):
                 (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
+            f'{self.reboot_base_path}reset_pwr_off':
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset due to Power off'),
         }
+        self.MLX_DPU_REBOOT_CAUSE_WARM = 0
+        self.MLX_DPU_REBOOT_CAUSE_COLD = 1
+        self.MLX_DPU_REBOOT_CAUSE_WATCHDOG = 2
         self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
         self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
 
@@ -337,13 +339,11 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
-        # Skip pre shutdown and Post startup, handled by pci_detach and pci_reattach
-        if reboot_type == ModuleBase.MODULE_REBOOT_DPU:
-            return self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
-        elif reboot_type == ModuleBase.MODULE_REBOOT_SMARTSWITCH:
-            # Do not wait for result if we are rebooting NPU + DPUs
-            return self.dpuctl_obj.dpu_reboot(no_wait=True, skip_pre_post=True)
-        raise RuntimeError(f"Invalid Reboot Type provided for {self._name}: {reboot_type}")
+        logger.log_notice(f"Rebooting {self._name} with type {reboot_type}")
+        # no_wait=True is not supported at this point, because of race conditions with other drivers
+        return_value = self.dpuctl_obj.dpu_reboot(skip_pre_post=True)
+        logger.log_notice(f"Rebooted {self._name} with type {reboot_type} and return value {return_value}")
+        return return_value
 
     def set_admin_state(self, up):
         """
@@ -360,12 +360,16 @@ class DpuModule(ModuleBase):
         Returns:
             bool: True if the request has been issued successfully, False if not
         """
+        logger.log_notice(f"Setting the admin state for {self._name} to {up}")
         if up:
-            if self.dpuctl_obj.dpu_power_on():
+            if self.dpuctl_obj.dpu_power_on(skip_pre_post=True):
+                logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
                 return True
             logger.log_error(f"Failed to set the admin state for {self._name}")
             return False
-        return self.dpuctl_obj.dpu_power_off()
+        return_value = self.dpuctl_obj.dpu_power_off(skip_pre_post=True)
+        logger.log_notice(f"Completed the admin state change for {self._name} to {up}")
+        return return_value
 
     def get_type(self):
         """
@@ -433,8 +437,27 @@ class DpuModule(ModuleBase):
             REBOOT_CAUSE_HOST_POWERCYCLED_DPU, REBOOT_CAUSE_SW_THERMAL,
             REBOOT_CAUSE_DPU_SELF_REBOOT
         """
+        # Check for Watchdog reboot first
+        pcie_path = DeviceDataManager.get_dpu_interface(self._name.lower(), DpuInterfaceEnum.PCIE_INT.value)
+        # mlxreg -d 0000:08:00.0 --reg_name MRSI -g -indexes "device=1"
+        try:
+            op = subprocess.check_output(['mlxreg', '-d', pcie_path, '--reg_name', 'MRSI', '-g', '-indexes', 'device=1'])
+        except subprocess.CalledProcessError as e:
+            logger.log_error(f"Failed to check watchdog reason for {self._name}! {e}")
+            op = b''
+        reset_reason_value = None
+        for line in op.decode().split('\n'):
+            if 'reset_reason' in line:
+                # Extract the value after the '|'
+                reset_reason_value = line.split('|')[1].strip()
+                break
+        if reset_reason_value and int(reset_reason_value,16) == self.MLX_DPU_REBOOT_CAUSE_WATCHDOG:
+            logger.log_notice(f"Reset reason for {self._name} is {ChassisBase.REBOOT_CAUSE_WATCHDOG}")
+            return ChassisBase.REBOOT_CAUSE_WATCHDOG, 'Watchdog reboot'
+        # Check for other reboot causes
         for f, rd in self.reboot_cause_map.items():
             if utils.read_int_from_file(f) == 1:
+                logger.log_notice(f"Reset reason for {self._name} is {rd[0]}")
                 return rd
         return ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''
 
@@ -450,9 +473,7 @@ class DpuModule(ModuleBase):
         Returns:
             A string, the IP-address of the module reachable over the midplane
         """
-        if not self.midplane_ip:
-            self.midplane_ip = self.config_db.get(self.CONFIG_DB_NAME, self.DHCP_SERVER_HASH, self.DHCP_IP_ADDRESS_KEY)
-        return self.midplane_ip
+        return f"169.254.200.{int(self.dpu_id) + 1}"
 
     def is_midplane_reachable(self):
         """
@@ -488,14 +509,13 @@ class DpuModule(ModuleBase):
         Retrieves the bus information.
 
         Returns:
-            Returns the PCI bus information in BDF format like "[DDDD:]BB:SS:F"
+            Returns the PCI bus information in list of BDF format
         """
-        if not self.bus_info:
-            # Cache the data to prevent multiple platform.json parsing
-            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.PCIE_INT.value)
-            # If we are unable to parse platform.json for midplane interface raise RunTimeError
-            if not self.bus_info:
-                raise RuntimeError(f"Unable to obtain bus info from platform.json for {self.get_name()}")
+        if self.bus_info:
+            return self.bus_info
+        bus_paths = self.dpuctl_obj.get_pci_dev_path()
+        # Convert full paths to BDF format
+        self.bus_info = [path.split('/')[-1] for path in bus_paths]
         return self.bus_info
 
     def pci_detach(self):

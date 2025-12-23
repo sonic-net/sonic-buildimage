@@ -1,0 +1,9 @@
+Source: sonic
+Maintainer: Feng Pan <fenpan@microsoft.com>
+Section: net
+Priority: optional
+Standards-Version: 1.0.0
+
+Package: sonic-bmp-watchdog
+Architecture: any
+Description: bmp watchdog for KubeSONiC project

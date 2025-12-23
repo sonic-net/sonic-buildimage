@@ -6,13 +6,13 @@
                 "name": "Aboot()"
             },
             {
-                "name": "Scd(addr=0000:04:00.0)"
+                "name": "Scd(addr=0000:03:00.0)"
             },
             {
                 "name": "Scd(addr=0000:06:00.0)"
             },
             {
-                "name": "Scd(addr=0000:08:00.0)"
+                "name": "Scd(addr=0000:05:00.0)"
             },
             {
                 "name": "RedstartSysCpld(addr=13-0023)"
@@ -59,12 +59,18 @@
                 "name": "psu1",
                 "voltage_high_threshold": false,
                 "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": []
             },
             {
                 "name": "psu2",
                 "voltage_high_threshold": false,
                 "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": []
             }
         ],
@@ -100,6 +106,11 @@
             {
                 "name": "TH5 PCB Right",
                 "controllable": false
+            },
+            {
+                "name": "Port Card",
+                "controllable": false
+
             }
         ],
         "sfps": [
@@ -471,7 +482,7 @@
         },
         "Ethernet128": {
             "index": "17,17,17,17",
-            "lanes": "73,74,75,76",
+            "lanes": "101,102,103,104",
             "breakout_modes": {
                 "1x400G": [
                     "etp17a"
@@ -480,7 +491,7 @@
         },
         "Ethernet132": {
             "index": "17,17,17,17",
-            "lanes": "77,78,79,80",
+            "lanes": "97,98,99,100",
             "breakout_modes": {
                 "1x400G": [
                     "etp17b"
@@ -489,7 +500,7 @@
         },
         "Ethernet136": {
             "index": "17,17,17,17",
-            "lanes": "81,82,83,84",
+            "lanes": "125,126,127,128",
             "breakout_modes": {
                 "1x400G": [
                     "etp17c"
@@ -498,7 +509,7 @@
         },
         "Ethernet140": {
             "index": "17,17,17,17",
-            "lanes": "85,86,87,88",
+            "lanes": "121,122,123,124",
             "breakout_modes": {
                 "1x400G": [
                     "etp17d"
@@ -507,7 +518,7 @@
         },
         "Ethernet144": {
             "index": "17,17,17,17",
-            "lanes": "89,90,91,92",
+            "lanes": "77,78,79,80",
             "breakout_modes": {
                 "1x400G": [
                     "etp17e"
@@ -516,7 +527,7 @@
         },
         "Ethernet148": {
             "index": "17,17,17,17",
-            "lanes": "93,94,95,96",
+            "lanes": "73,74,75,76",
             "breakout_modes": {
                 "1x400G": [
                     "etp17f"
@@ -525,7 +536,7 @@
         },
         "Ethernet152": {
             "index": "17,17,17,17",
-            "lanes": "97,98,99,100",
+            "lanes": "109,110,111,112",
             "breakout_modes": {
                 "1x400G": [
                     "etp17g"
@@ -534,7 +545,7 @@
         },
         "Ethernet156": {
             "index": "17,17,17,17",
-            "lanes": "101,102,103,104",
+            "lanes": "105,106,107,108",
             "breakout_modes": {
                 "1x400G": [
                     "etp17h"
@@ -543,7 +554,7 @@
         },
         "Ethernet160": {
             "index": "17,17,17,17",
-            "lanes": "105,106,107,108",
+            "lanes": "85,86,87,88",
             "breakout_modes": {
                 "1x400G": [
                     "etp17i"
@@ -552,7 +563,7 @@
         },
         "Ethernet164": {
             "index": "17,17,17,17",
-            "lanes": "109,110,111,112",
+            "lanes": "81,82,83,84",
             "breakout_modes": {
                 "1x400G": [
                     "etp17j"
@@ -561,7 +572,7 @@
         },
         "Ethernet168": {
             "index": "17,17,17,17",
-            "lanes": "121,122,123,124",
+            "lanes": "93,94,95,96",
             "breakout_modes": {
                 "1x400G": [
                     "etp17k"
@@ -570,7 +581,7 @@
         },
         "Ethernet172": {
             "index": "17,17,17,17",
-            "lanes": "125,126,127,128",
+            "lanes": "89,90,91,92",
             "breakout_modes": {
                 "1x400G": [
                     "etp17l"
@@ -579,7 +590,7 @@
         },
         "Ethernet176": {
             "index": "18,18,18,18",
-            "lanes": "137,138,139,140",
+            "lanes": "189,190,191,192",
             "breakout_modes": {
                 "1x400G": [
                     "etp18a"
@@ -588,7 +599,7 @@
         },
         "Ethernet180": {
             "index": "18,18,18,18",
-            "lanes": "141,142,143,144",
+            "lanes": "185,186,187,188",
             "breakout_modes": {
                 "1x400G": [
                     "etp18b"
@@ -597,7 +608,7 @@
         },
         "Ethernet184": {
             "index": "18,18,18,18",
-            "lanes": "145,146,147,148",
+            "lanes": "149,150,151,152",
             "breakout_modes": {
                 "1x400G": [
                     "etp18c"
@@ -606,7 +617,7 @@
         },
         "Ethernet188": {
             "index": "18,18,18,18",
-            "lanes": "149,150,151,152",
+            "lanes": "157,158,159,160",
             "breakout_modes": {
                 "1x400G": [
                     "etp18d"
@@ -615,7 +626,7 @@
         },
         "Ethernet192": {
             "index": "18,18,18,18",
-            "lanes": "153,154,155,156",
+            "lanes": "165,166,167,168",
             "breakout_modes": {
                 "1x400G": [
                     "etp18e"
@@ -624,7 +635,7 @@
         },
         "Ethernet196": {
             "index": "18,18,18,18",
-            "lanes": "157,158,159,160",
+            "lanes": "173,174,175,176",
             "breakout_modes": {
                 "1x400G": [
                     "etp18f"
@@ -633,7 +644,7 @@
         },
         "Ethernet200": {
             "index": "18,18,18,18",
-            "lanes": "161,162,163,164",
+            "lanes": "153,154,155,156",
             "breakout_modes": {
                 "1x400G": [
                     "etp18g"
@@ -642,7 +653,7 @@
         },
         "Ethernet204": {
             "index": "18,18,18,18",
-            "lanes": "165,166,167,168",
+            "lanes": "145,146,147,148",
             "breakout_modes": {
                 "1x400G": [
                     "etp18h"
@@ -660,7 +671,7 @@
         },
         "Ethernet212": {
             "index": "18,18,18,18",
-            "lanes": "173,174,175,176",
+            "lanes": "161,162,163,164",
             "breakout_modes": {
                 "1x400G": [
                     "etp18j"
@@ -669,7 +680,7 @@
         },
         "Ethernet216": {
             "index": "18,18,18,18",
-            "lanes": "185,186,187,188",
+            "lanes": "141,142,143,144",
             "breakout_modes": {
                 "1x400G": [
                     "etp18k"
@@ -678,7 +689,7 @@
         },
         "Ethernet220": {
             "index": "18,18,18,18",
-            "lanes": "189,190,191,192",
+            "lanes": "137,138,139,140",
             "breakout_modes": {
                 "1x400G": [
                     "etp18l"
@@ -687,7 +698,7 @@
         },
         "Ethernet224": {
             "index": "19,19,19,19",
-            "lanes": "457,458,459,460",
+            "lanes": "37,38,39,40",
             "breakout_modes": {
                 "1x400G": [
                     "etp19a"
@@ -696,7 +707,7 @@
         },
         "Ethernet228": {
             "index": "19,19,19,19",
-            "lanes": "461,462,463,464",
+            "lanes": "33,34,35,36",
             "breakout_modes": {
                 "1x400G": [
                     "etp19b"
@@ -705,7 +716,7 @@
         },
         "Ethernet232": {
             "index": "19,19,19,19",
-            "lanes": "465,466,467,468",
+            "lanes": "5,6,7,8",
             "breakout_modes": {
                 "1x400G": [
                     "etp19c"
@@ -714,7 +725,7 @@
         },
         "Ethernet236": {
             "index": "19,19,19,19",
-            "lanes": "469,470,471,472",
+            "lanes": "1,2,3,4",
             "breakout_modes": {
                 "1x400G": [
                     "etp19d"
@@ -723,7 +734,7 @@
         },
         "Ethernet240": {
             "index": "19,19,19,19",
-            "lanes": "473,474,475,476",
+            "lanes": "45,46,47,48",
             "breakout_modes": {
                 "1x400G": [
                     "etp19e"
@@ -732,7 +743,7 @@
         },
         "Ethernet244": {
             "index": "19,19,19,19",
-            "lanes": "477,478,479,480",
+            "lanes": "41,42,43,44",
             "breakout_modes": {
                 "1x400G": [
                     "etp19f"
@@ -741,7 +752,7 @@
         },
         "Ethernet248": {
             "index": "19,19,19,19",
-            "lanes": "481,482,483,484",
+            "lanes": "21,22,23,24",
             "breakout_modes": {
                 "1x400G": [
                     "etp19g"
@@ -750,7 +761,7 @@
         },
         "Ethernet252": {
             "index": "19,19,19,19",
-            "lanes": "485,486,487,488",
+            "lanes": "17,18,19,20",
             "breakout_modes": {
                 "1x400G": [
                     "etp19h"
@@ -759,7 +770,7 @@
         },
         "Ethernet256": {
             "index": "19,19,19,19",
-            "lanes": "489,490,491,492",
+            "lanes": "61,62,63,64",
             "breakout_modes": {
                 "1x400G": [
                     "etp19i"
@@ -768,7 +779,7 @@
         },
         "Ethernet260": {
             "index": "19,19,19,19",
-            "lanes": "493,494,495,496",
+            "lanes": "57,58,59,60",
             "breakout_modes": {
                 "1x400G": [
                     "etp19j"
@@ -777,7 +788,7 @@
         },
         "Ethernet264": {
             "index": "19,19,19,19",
-            "lanes": "505,506,507,508",
+            "lanes": "29,30,31,32",
             "breakout_modes": {
                 "1x400G": [
                     "etp19k"
@@ -786,7 +797,7 @@
         },
         "Ethernet268": {
             "index": "19,19,19,19",
-            "lanes": "509,510,511,512",
+            "lanes": "25,26,27,28",
             "breakout_modes": {
                 "1x400G": [
                     "etp19l"
@@ -795,7 +806,7 @@
         },
         "Ethernet272": {
             "index": "20,20,20,20",
-            "lanes": "201,202,203,204",
+            "lanes": "253,254,255,256",
             "breakout_modes": {
                 "1x400G": [
                     "etp20a"
@@ -804,7 +815,7 @@
         },
         "Ethernet276": {
             "index": "20,20,20,20",
-            "lanes": "205,206,207,208",
+            "lanes": "249,250,251,252",
             "breakout_modes": {
                 "1x400G": [
                     "etp20b"
@@ -813,7 +824,7 @@
         },
         "Ethernet280": {
             "index": "20,20,20,20",
-            "lanes": "209,210,211,212",
+            "lanes": "213,214,215,216",
             "breakout_modes": {
                 "1x400G": [
                     "etp20c"
@@ -822,7 +833,7 @@
         },
         "Ethernet284": {
             "index": "20,20,20,20",
-            "lanes": "213,214,215,216",
+            "lanes": "221,222,223,224",
             "breakout_modes": {
                 "1x400G": [
                     "etp20d"
@@ -831,7 +842,7 @@
         },
         "Ethernet288": {
             "index": "20,20,20,20",
-            "lanes": "217,218,219,220",
+            "lanes": "229,230,231,232",
             "breakout_modes": {
                 "1x400G": [
                     "etp20e"
@@ -840,7 +851,7 @@
         },
         "Ethernet292": {
             "index": "20,20,20,20",
-            "lanes": "221,222,223,224",
+            "lanes": "237,238,239,240",
             "breakout_modes": {
                 "1x400G": [
                     "etp20f"
@@ -849,7 +860,7 @@
         },
         "Ethernet296": {
             "index": "20,20,20,20",
-            "lanes": "225,226,227,228",
+            "lanes": "217,218,219,220",
             "breakout_modes": {
                 "1x400G": [
                     "etp20g"
@@ -858,7 +869,7 @@
         },
         "Ethernet300": {
             "index": "20,20,20,20",
-            "lanes": "229,230,231,232",
+            "lanes": "209,210,211,212",
             "breakout_modes": {
                 "1x400G": [
                     "etp20h"
@@ -876,7 +887,7 @@
         },
         "Ethernet308": {
             "index": "20,20,20,20",
-            "lanes": "237,238,239,240",
+            "lanes": "225,226,227,228",
             "breakout_modes": {
                 "1x400G": [
                     "etp20j"
@@ -885,7 +896,7 @@
         },
         "Ethernet312": {
             "index": "20,20,20,20",
-            "lanes": "249,250,251,252",
+            "lanes": "205,206,207,208",
             "breakout_modes": {
                 "1x400G": [
                     "etp20k"
@@ -894,7 +905,7 @@
         },
         "Ethernet316": {
             "index": "20,20,20,20",
-            "lanes": "253,254,255,256",
+            "lanes": "201,202,203,204",
             "breakout_modes": {
                 "1x400G": [
                     "etp20l"
@@ -903,7 +914,7 @@
         },
         "Ethernet320": {
             "index": "21,21,21,21",
-            "lanes": "1,2,3,4",
+            "lanes": "485,486,487,488",
             "breakout_modes": {
                 "1x400G": [
                     "etp21a"
@@ -912,7 +923,7 @@
         },
         "Ethernet324": {
             "index": "21,21,21,21",
-            "lanes": "5,6,7,8",
+            "lanes": "481,482,483,484",
             "breakout_modes": {
                 "1x400G": [
                     "etp21b"
@@ -921,7 +932,7 @@
         },
         "Ethernet328": {
             "index": "21,21,21,21",
-            "lanes": "17,18,19,20",
+            "lanes": "461,462,463,464",
             "breakout_modes": {
                 "1x400G": [
                     "etp21c"
@@ -930,7 +941,7 @@
         },
         "Ethernet332": {
             "index": "21,21,21,21",
-            "lanes": "21,22,23,24",
+            "lanes": "457,458,459,460",
             "breakout_modes": {
                 "1x400G": [
                     "etp21d"
@@ -939,7 +950,7 @@
         },
         "Ethernet336": {
             "index": "21,21,21,21",
-            "lanes": "25,26,27,28",
+            "lanes": "493,494,495,496",
             "breakout_modes": {
                 "1x400G": [
                     "etp21e"
@@ -948,7 +959,7 @@
         },
         "Ethernet340": {
             "index": "21,21,21,21",
-            "lanes": "29,30,31,32",
+            "lanes": "489,490,491,492",
             "breakout_modes": {
                 "1x400G": [
                     "etp21f"
@@ -957,7 +968,7 @@
         },
         "Ethernet344": {
             "index": "21,21,21,21",
-            "lanes": "33,34,35,36",
+            "lanes": "469,470,471,472",
             "breakout_modes": {
                 "1x400G": [
                     "etp21g"
@@ -966,7 +977,7 @@
         },
         "Ethernet348": {
             "index": "21,21,21,21",
-            "lanes": "37,38,39,40",
+            "lanes": "465,466,467,468",
             "breakout_modes": {
                 "1x400G": [
                     "etp21h"
@@ -975,7 +986,7 @@
         },
         "Ethernet352": {
             "index": "21,21,21,21",
-            "lanes": "41,42,43,44",
+            "lanes": "509,510,511,512",
             "breakout_modes": {
                 "1x400G": [
                     "etp21i"
@@ -984,7 +995,7 @@
         },
         "Ethernet356": {
             "index": "21,21,21,21",
-            "lanes": "45,46,47,48",
+            "lanes": "505,506,507,508",
             "breakout_modes": {
                 "1x400G": [
                     "etp21j"
@@ -993,7 +1004,7 @@
         },
         "Ethernet360": {
             "index": "21,21,21,21",
-            "lanes": "57,58,59,60",
+            "lanes": "477,478,479,480",
             "breakout_modes": {
                 "1x400G": [
                     "etp21k"
@@ -1002,7 +1013,7 @@
         },
         "Ethernet364": {
             "index": "21,21,21,21",
-            "lanes": "61,62,63,64",
+            "lanes": "473,474,475,476",
             "breakout_modes": {
                 "1x400G": [
                     "etp21l"
@@ -1011,7 +1022,7 @@
         },
         "Ethernet368": {
             "index": "22,22,22,22",
-            "lanes": "257,258,259,260",
+            "lanes": "317,318,319,320",
             "breakout_modes": {
                 "1x400G": [
                     "etp22a"
@@ -1020,7 +1031,7 @@
         },
         "Ethernet372": {
             "index": "22,22,22,22",
-            "lanes": "261,262,263,264",
+            "lanes": "313,314,315,316",
             "breakout_modes": {
                 "1x400G": [
                     "etp22b"
@@ -1029,7 +1040,7 @@
         },
         "Ethernet376": {
             "index": "22,22,22,22",
-            "lanes": "273,274,275,276",
+            "lanes": "285,286,287,288",
             "breakout_modes": {
                 "1x400G": [
                     "etp22c"
@@ -1047,7 +1058,7 @@
         },
         "Ethernet384": {
             "index": "22,22,22,22",
-            "lanes": "281,282,283,284",
+            "lanes": "293,294,295,296",
             "breakout_modes": {
                 "1x400G": [
                     "etp22e"
@@ -1056,7 +1067,7 @@
         },
         "Ethernet388": {
             "index": "22,22,22,22",
-            "lanes": "285,286,287,288",
+            "lanes": "301,302,303,304",
             "breakout_modes": {
                 "1x400G": [
                     "etp22f"
@@ -1065,7 +1076,7 @@
         },
         "Ethernet392": {
             "index": "22,22,22,22",
-            "lanes": "289,290,291,292",
+            "lanes": "273,274,275,276",
             "breakout_modes": {
                 "1x400G": [
                     "etp22g"
@@ -1074,7 +1085,7 @@
         },
         "Ethernet396": {
             "index": "22,22,22,22",
-            "lanes": "293,294,295,296",
+            "lanes": "281,282,283,284",
             "breakout_modes": {
                 "1x400G": [
                     "etp22h"
@@ -1092,7 +1103,7 @@
         },
         "Ethernet404": {
             "index": "22,22,22,22",
-            "lanes": "301,302,303,304",
+            "lanes": "289,290,291,292",
             "breakout_modes": {
                 "1x400G": [
                     "etp22j"
@@ -1101,7 +1112,7 @@
         },
         "Ethernet408": {
             "index": "22,22,22,22",
-            "lanes": "313,314,315,316",
+            "lanes": "261,262,263,264",
             "breakout_modes": {
                 "1x400G": [
                     "etp22k"
@@ -1110,7 +1121,7 @@
         },
         "Ethernet412": {
             "index": "22,22,22,22",
-            "lanes": "317,318,319,320",
+            "lanes": "257,258,259,260",
             "breakout_modes": {
                 "1x400G": [
                     "etp22l"
@@ -1119,7 +1130,7 @@
         },
         "Ethernet416": {
             "index": "23,23,23,23",
-            "lanes": "393,394,395,396",
+            "lanes": "421,422,423,424",
             "breakout_modes": {
                 "1x400G": [
                     "etp23a"
@@ -1128,7 +1139,7 @@
         },
         "Ethernet420": {
             "index": "23,23,23,23",
-            "lanes": "397,398,399,400",
+            "lanes": "417,418,419,420",
             "breakout_modes": {
                 "1x400G": [
                     "etp23b"
@@ -1137,7 +1148,7 @@
         },
         "Ethernet424": {
             "index": "23,23,23,23",
-            "lanes": "401,402,403,404",
+            "lanes": "445,446,447,448",
             "breakout_modes": {
                 "1x400G": [
                     "etp23c"
@@ -1146,7 +1157,7 @@
         },
         "Ethernet428": {
             "index": "23,23,23,23",
-            "lanes": "405,406,407,408",
+            "lanes": "441,442,443,444",
             "breakout_modes": {
                 "1x400G": [
                     "etp23d"
@@ -1155,7 +1166,7 @@
         },
         "Ethernet432": {
             "index": "23,23,23,23",
-            "lanes": "409,410,411,412",
+            "lanes": "397,398,399,400",
             "breakout_modes": {
                 "1x400G": [
                     "etp23e"
@@ -1164,7 +1175,7 @@
         },
         "Ethernet436": {
             "index": "23,23,23,23",
-            "lanes": "413,414,415,416",
+            "lanes": "393,394,395,396",
             "breakout_modes": {
                 "1x400G": [
                     "etp23f"
@@ -1173,7 +1184,7 @@
         },
         "Ethernet440": {
             "index": "23,23,23,23",
-            "lanes": "417,418,419,420",
+            "lanes": "429,430,431,432",
             "breakout_modes": {
                 "1x400G": [
                     "etp23g"
@@ -1182,7 +1193,7 @@
         },
         "Ethernet444": {
             "index": "23,23,23,23",
-            "lanes": "421,422,423,424",
+            "lanes": "425,426,427,428",
             "breakout_modes": {
                 "1x400G": [
                     "etp23h"
@@ -1191,7 +1202,7 @@
         },
         "Ethernet448": {
             "index": "23,23,23,23",
-            "lanes": "425,426,427,428",
+            "lanes": "405,406,407,408",
             "breakout_modes": {
                 "1x400G": [
                     "etp23i"
@@ -1200,7 +1211,7 @@
         },
         "Ethernet452": {
             "index": "23,23,23,23",
-            "lanes": "429,430,431,432",
+            "lanes": "401,402,403,404",
             "breakout_modes": {
                 "1x400G": [
                     "etp23j"
@@ -1209,7 +1220,7 @@
         },
         "Ethernet456": {
             "index": "23,23,23,23",
-            "lanes": "441,442,443,444",
+            "lanes": "413,414,415,416",
             "breakout_modes": {
                 "1x400G": [
                     "etp23k"
@@ -1218,7 +1229,7 @@
         },
         "Ethernet460": {
             "index": "23,23,23,23",
-            "lanes": "445,446,447,448",
+            "lanes": "409,410,411,412",
             "breakout_modes": {
                 "1x400G": [
                     "etp23l"
@@ -1227,7 +1238,7 @@
         },
         "Ethernet464": {
             "index": "24,24,24,24",
-            "lanes": "329,330,331,332",
+            "lanes": "381,382,383,384",
             "breakout_modes": {
                 "1x400G": [
                     "etp24a"
@@ -1236,7 +1247,7 @@
         },
         "Ethernet468": {
             "index": "24,24,24,24",
-            "lanes": "333,334,335,336",
+            "lanes": "377,378,379,380",
             "breakout_modes": {
                 "1x400G": [
                     "etp24b"
@@ -1245,7 +1256,7 @@
         },
         "Ethernet472": {
             "index": "24,24,24,24",
-            "lanes": "337,338,339,340",
+            "lanes": "341,342,343,344",
             "breakout_modes": {
                 "1x400G": [
                     "etp24c"
@@ -1254,7 +1265,7 @@
         },
         "Ethernet476": {
             "index": "24,24,24,24",
-            "lanes": "341,342,343,344",
+            "lanes": "349,350,351,352",
             "breakout_modes": {
                 "1x400G": [
                     "etp24d"
@@ -1263,7 +1274,7 @@
         },
         "Ethernet480": {
             "index": "24,24,24,24",
-            "lanes": "345,346,347,348",
+            "lanes": "357,358,359,360",
             "breakout_modes": {
                 "1x400G": [
                     "etp24e"
@@ -1272,7 +1283,7 @@
         },
         "Ethernet484": {
             "index": "24,24,24,24",
-            "lanes": "349,350,351,352",
+            "lanes": "365,366,367,368",
             "breakout_modes": {
                 "1x400G": [
                     "etp24f"
@@ -1281,7 +1292,7 @@
         },
         "Ethernet488": {
             "index": "24,24,24,24",
-            "lanes": "353,354,355,356",
+            "lanes": "345,346,347,348",
             "breakout_modes": {
                 "1x400G": [
                     "etp24g"
@@ -1290,7 +1301,7 @@
         },
         "Ethernet492": {
             "index": "24,24,24,24",
-            "lanes": "357,358,359,360",
+            "lanes": "337,338,339,340",
             "breakout_modes": {
                 "1x400G": [
                     "etp24h"
@@ -1308,7 +1319,7 @@
         },
         "Ethernet500": {
             "index": "24,24,24,24",
-            "lanes": "365,366,367,368",
+            "lanes": "353,354,355,356",
             "breakout_modes": {
                 "1x400G": [
                     "etp24j"
@@ -1317,7 +1328,7 @@
         },
         "Ethernet504": {
             "index": "24,24,24,24",
-            "lanes": "377,378,379,380",
+            "lanes": "333,334,335,336",
             "breakout_modes": {
                 "1x400G": [
                     "etp24k"
@@ -1326,7 +1337,7 @@
         },
         "Ethernet508": {
             "index": "24,24,24,24",
-            "lanes": "381,382,383,384",
+            "lanes": "329,330,331,332",
             "breakout_modes": {
                 "1x400G": [
                     "etp24l"

@@ -42,7 +42,11 @@ ipv6 prefix-list LOCAL_VLAN_IPV6_PREFIX seq {{ loop.index * 5 }} permit {{ prefi
 {% if DEVICE_METADATA['localhost']['sub_role'] == 'FrontEnd' or DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
 {% set multi_asic = True %}
 {% endif %}
-{% if multi_asic is defined or DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if DEVICE_METADATA['localhost']['switch_type'] == 'voq' and ('chassisdb_conf_present' in DEVICE_METADATA['localhost'] or
+      '/usr/share/sonic/platform/chassisdb.conf' | file_exists) %}
+{% set voq_chassis = True %}
+{% endif %}
+{% if multi_asic is defined or voq_chassis is defined or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
 ip prefix-list V4_P2P_IP permit 0.0.0.0/0 ge 31 le 31
 !
 ipv6 prefix-list V6_P2P_IP permit ::/0 ge 126 le 126
@@ -88,8 +92,10 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bgp graceful-restart select-defer-time {{ constants.bgp.graceful_restart.select_defer_time | default(45) }}
 {% endif %}
 !
-{# set bmp info #}
-{% if (FEATURE is defined) and ('bmp' in FEATURE) and ('state' in FEATURE['bmp']) and (FEATURE['bmp']['state'] == 'enabled') %}
+{# set frr_bmp info #}
+{% if (FEATURE is defined) and
+      (('frr_bmp' in FEATURE and 'state' in FEATURE['frr_bmp'] and FEATURE['frr_bmp']['state'] == 'enabled') or
+      ('bmp' in FEATURE and 'state' in FEATURE['bmp'] and FEATURE['bmp']['state'] == 'enabled')) %}
 !
   bmp mirror buffer-limit 4294967214
 !
@@ -97,12 +103,12 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bmp stats interval 1000
   bmp monitor ipv4 unicast pre-policy
   bmp monitor ipv6 unicast pre-policy
-  bmp connect 127.0.0.1 port 5000 min-retry 1000 max-retry 2000
+  bmp connect 127.0.0.1 port 5000 min-retry 10000 max-retry 15000
 !
 !
 {% endif %}
 {# set router-id #}
-{% if DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or voq_chassis is defined or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
 {% if 'bgp_router_id' in DEVICE_METADATA['localhost'] %}
   bgp router-id {{ DEVICE_METADATA["localhost"]["bgp_router_id"] }}
 {% elif lo4096_ipv4 is not none %}
@@ -120,7 +126,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {% if lo0_ipv4 is not none %}
   network {{ lo0_ipv4 }}/32
 {% endif %}
-{% if lo4096_ipv4 is not none and ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
+{% if lo4096_ipv4 is not none and ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (voq_chassis is defined)) %}
   network {{ lo4096_ipv4 }}/32 route-map HIDE_INTERNAL
 {% endif %}
 !
@@ -131,13 +137,13 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128
 {% else %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/64
-{% if DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if voq_chassis is defined or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128 route-map HIDE_INTERNAL
 {% endif %}
 {% endif %}
   exit-address-family
 {% endif %}
-{% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
+{% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (voq_chassis is defined)) %}
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") != 'None' %}
   address-family ipv6
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip }}/128 route-map HIDE_INTERNAL
@@ -159,7 +165,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {% endblock vlan_advertisement %}
 !
 !
-{% if DEVICE_METADATA['localhost']['sub_role'] == 'FrontEnd' or DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+{% if DEVICE_METADATA['localhost']['sub_role'] == 'FrontEnd' or voq_chassis is defined or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
   address-family ipv4
     redistribute connected route-map V4_CONNECTED_ROUTES
   exit-address-family

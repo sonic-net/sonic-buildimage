@@ -191,6 +191,9 @@ def load_namespace_config():
         if not SonicDBConfig.isInit():
             SonicDBConfig.initialize()
 
+def file_exists_filter(path):
+    return os.path.isfile(path)
+
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
 We will move to DB schema and remove this class when the config templates are modified.
@@ -294,12 +297,24 @@ def _get_jinja2_env(paths):
     env.filters['pfx_filter'] = pfx_filter
     env.filters['ip_network'] = ip_network
     env.filters['get_primary_addr'] = get_primary_addr
+    env.filters['file_exists'] = file_exists_filter
     for attr in ['ip', 'network', 'prefixlen', 'netmask', 'broadcast']:
         env.filters[attr] = partial(prefix_attr, attr)
 
     # Base64 encoder/decoder
     env.filters['b64encode'] = b64encode
     env.filters['b64decode'] = b64decode
+
+    # Introduce a 'template_exists' function to check if a template exists
+    # This is used to conditionally import a template since jinja2 import
+    # statement fails if the template does not exist and does not have native support
+    def template_exists(name):
+        try:
+            loader.get_source(env, name)
+            return True
+        except jinja2.exceptions.TemplateNotFound:
+            return False
+    env.globals['template_exists'] = template_exists
 
     return env
 
@@ -471,6 +486,8 @@ def main():
     paths = ['/', '/usr/share/sonic/templates']
     if args.template_dir:
         paths.append(os.path.abspath(args.template_dir))
+
+    paths.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../files/build_templates')))
 
     if args.template:
         for template_file, _ in args.template:

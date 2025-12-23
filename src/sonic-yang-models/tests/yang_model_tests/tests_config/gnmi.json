@@ -108,13 +108,34 @@
                 "GNMI_CLIENT_CERT_LIST": [
                 {
                     "cert_cname": "testcert1",
-                    "role": "RW"
+                    "role": [
+                        "RW"
+                    ]
                 },
                 {
                     "cert_cname": "testcert2",
-                    "role": "RO"
+                    "role": [
+                        "RO"
+                    ]
                 }
                 ]
+            }
+        }
+    },
+    "GNMI_TABLE_WITH_VALID_USER_AUTH": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/credentials/server.cer",
+                    "server_key": "/etc/sonic/credentials/server.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "user_auth": "none",
+                    "log_level": "2",
+                    "port": "50052"
+                }
             }
         }
     }
