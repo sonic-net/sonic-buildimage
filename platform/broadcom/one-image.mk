@@ -45,6 +45,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(ACCTON_AS5835_54X_PLATFORM_MODULE) \
                                $(ACCTON_AS9716_32D_PLATFORM_MODULE) \
                                $(ACCTON_AS9726_32D_PLATFORM_MODULE) \
+                               $(ACCTON_AS9736_64D_PLATFORM_MODULE) \
                                $(ACCTON_AS5835_54T_PLATFORM_MODULE) \
                                $(ACCTON_AS7312_54XS_PLATFORM_MODULE) \
                                $(ACCTON_AS7315_27XB_PLATFORM_MODULE) \
