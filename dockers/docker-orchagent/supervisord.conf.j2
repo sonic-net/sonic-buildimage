@@ -340,3 +340,19 @@ dependent_startup_wait_for=swssconfig:exited
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 {%- endif %}
+
+{% if DEVICE_METADATA.localhost.type %}
+{% if DEVICE_METADATA.localhost.type == "BmcMgmtToRRouter" %}
+[program:non_persistent_acl_mgrd]
+command=/usr/bin/non_persistent_acl_mgrd
+priority=18
+autostart=false
+autorestart=unexpected
+startretries=0
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=orchagent:running
+{%- endif %}
+{%- endif %}
