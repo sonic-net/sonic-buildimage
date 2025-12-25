@@ -107,6 +107,16 @@ DEVICE_DATA = {
     'x86_64-mlnx_msn3800-r0': {
     },
     'x86_64-mlnx_msn4700-r0': {
+        'platform_json': {
+            # List of sysfs files to read for determining hardware revision.
+            # Values from all files are joined with '_' to form the revision key.
+            # For single file, the value is used directly as the key.
+            'sysfs_files': ['/var/run/hw-management/system/config1'],
+            'revision_map': {
+                '0': 'platform.json.a0',
+                '1': 'platform.json.a1'
+            }
+        }
     },
     'x86_64-mlnx_msn4410-r0': {
     },
@@ -425,3 +435,116 @@ class DeviceDataManager:
             return None
 
         return sfp_data.get('fw_control_ports')
+
+    @classmethod
+    def get_platform_json_config(cls):
+        """Get platform.json configuration for hardware revision based selection.
+
+        Returns:
+            dict: Configuration containing 'sysfs_files' (list) and 'revision_map', or None if not configured.
+        """
+        platform_data = DEVICE_DATA.get(cls.get_platform_name())
+        if not platform_data:
+            return None
+
+        return platform_data.get('platform_json')
+
+    @classmethod
+    def setup_platform_json_symlink(cls):
+        """Setup platform.json symbolic link based on hardware revision.
+
+        This method reads hardware revision indicator(s) from sysfs and creates
+        a symbolic link 'platform.json' pointing to the correct revision-specific
+        platform.json file (e.g., platform.json.a0 or platform.json.a1).
+
+        The configuration is read from DEVICE_DATA and should contain:
+        - 'sysfs_files': List of paths to sysfs files containing revision indicators.
+                         Values from all files are joined with '_' to form the revision key.
+                         For a single file, the value is used directly as the key.
+        - 'revision_map': Dictionary mapping revision keys to platform.json filenames.
+
+        Example configurations:
+            Single sysfs file:
+                'sysfs_files': ['/var/run/hw-management/system/config1'],
+                'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+
+            Multiple sysfs files:
+                'sysfs_files': ['/path/to/config1', '/path/to/config2'],
+                'revision_map': {'0_0': 'platform.json.v1', '1_0': 'platform.json.v2'}
+
+        Returns:
+            bool: True if symlink was created/updated successfully or no action needed,
+                  False if an error occurred.
+        """
+        from sonic_py_common import device_info
+
+        config = cls.get_platform_json_config()
+        if not config:
+            # No platform_json configuration for this platform, nothing to do
+            return True
+
+        sysfs_files = config.get('sysfs_files')
+        revision_map = config.get('revision_map')
+
+        if not sysfs_files or not revision_map:
+            return True
+
+        # Read values from all sysfs files
+        revision_values = []
+        for sysfs_file in sysfs_files:
+            # Check if sysfs file exists
+            if not os.path.exists(sysfs_file):
+                # Sysfs file not available yet, skip symlink creation
+                return True
+
+            # Read hardware revision from sysfs
+            value = utils.read_str_from_file(sysfs_file, log_func=None)
+            if not value:
+                return True
+            revision_values.append(value)
+
+        # Combine values to form the revision key
+        # For single file, use value directly; for multiple files, join with '_'
+        if len(revision_values) == 1:
+            hw_revision_key = revision_values[0]
+        else:
+            hw_revision_key = '_'.join(revision_values)
+
+        # Get the target platform.json filename based on revision
+        target_filename = revision_map.get(hw_revision_key)
+        if not target_filename:
+            # Unknown revision value, no mapping defined
+            return True
+
+        # Get platform directory path
+        platform_path = device_info.get_path_to_platform_dir()
+        platform_json_path = os.path.join(platform_path, 'platform.json')
+        target_path = os.path.join(platform_path, target_filename)
+
+        # Check if target file exists
+        if not os.path.exists(target_path):
+            return False
+
+        # Check if symlink already points to the correct target
+        if os.path.islink(platform_json_path):
+            current_target = os.readlink(platform_json_path)
+            # Handle both absolute and relative paths
+            if current_target == target_filename or current_target == target_path:
+                # Symlink already correct
+                return True
+            # Remove incorrect symlink
+            try:
+                os.remove(platform_json_path)
+            except OSError:
+                return False
+        elif os.path.exists(platform_json_path):
+            # platform.json exists but is not a symlink, don't overwrite
+            return True
+
+        # Create symbolic link using relative path
+        try:
+            os.symlink(target_filename, platform_json_path)
+        except OSError:
+            return False
+
+        return True
