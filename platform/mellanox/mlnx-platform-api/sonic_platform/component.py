@@ -946,6 +946,23 @@ class ComponentBMC(Component):
     def get_firmware_update_notification(self, image_path):
         return "BMC will be automatically restarted to complete BMC firmware update"
 
+    def auto_update_firmware(self, image_path, boot_action):
+        """
+        Default handling of attempted automatic update for a component of a Mellanox switch.
+        """
+        # Verify image path exists
+        if not os.path.exists(image_path):
+            # Invalid image path
+            return FW_AUTO_ERR_IMAGE
+        # Actually we perform a BMC restart, so the switch boot_action is not relevant
+        # boot_type did not match (skip)
+        if boot_action != "cold":
+            return FW_AUTO_ERR_BOOT_TYPE
+        # Install firmware and restart BMC
+        if not self.install_firmware(image_path):
+            return FW_AUTO_ERR_UNKNOWN
+        return FW_AUTO_INSTALLED
+
     def install_firmware(self, image_path):
         """
         Installs the BMC firmware

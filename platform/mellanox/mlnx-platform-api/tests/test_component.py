@@ -567,6 +567,11 @@ class TestComponent:
         c.image_ext_name = '.txt'
         assert not c._check_file_validity(os.path.abspath(__file__))
 
+    @mock.patch('sonic_py_common.device_info.get_bmc_build_config', 
+                mock.MagicMock(return_value={'bmc_nos_account_username': 'testuser'}))
+    @mock.patch('sonic_py_common.device_info.get_bmc_data', 
+                mock.MagicMock(return_value={'bmc_addr': '169.254.0.1'}))
+    @mock.patch('sonic_platform.bmc.BMC._get_tpm_password', mock.MagicMock(return_value=''))
     @mock.patch('sonic_platform.component.subprocess.check_call')
     @mock.patch('sonic_platform.component.ComponentBMC._check_file_validity', 
                 mock.MagicMock(return_value=True))
