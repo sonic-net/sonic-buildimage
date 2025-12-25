@@ -1,7 +1,7 @@
 
 #DPKG FRK
 SPATH       := $($(BRCM_XGS_SAI)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai.mk platform/broadcom/sai.dep
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai-xgs.mk platform/broadcom/sai-dnx.mk platform/broadcom/sai.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 # Get the Latest HTTP Header and calculate the SHA value as it is a softlink that always points to LATEST_INT_OCP_SAI_X.X.X
 SAI_FLAGS   := $(shell SKIP_BUILD_HOOK=y wget --spider --server-response $($(BRCM_XGS_SAI)_URL) $($(BRCM_XGS_SAI_DEV)_URL)  2>&1 \
