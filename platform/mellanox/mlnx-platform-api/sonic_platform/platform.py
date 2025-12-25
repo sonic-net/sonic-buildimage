@@ -31,6 +31,8 @@ except ImportError as e:
 class Platform(PlatformBase):
     def __init__(self):
         PlatformBase.__init__(self)
+        # Setup platform.json symlink based on hardware revision before chassis initialization
+        DeviceDataManager.setup_platform_json_symlink()
         if DeviceDataManager.get_dpu_count():
             self._chassis = SmartSwitchChassis()
         elif DeviceDataManager.get_linecard_count() == 0:
