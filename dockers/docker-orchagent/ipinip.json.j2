@@ -4,8 +4,12 @@
 
 {# Check if the ASIC is Broadcom #}
 {% set is_broadcom = false %}
+{% set is_tomahawk5 = false %}
 {% if ASIC_VENDOR is defined and "broadcom" in ASIC_VENDOR|lower %}
   {% set is_broadcom = true %}
+  {% if 'Arista-7060X6' in DEVICE_METADATA['localhost']['hwsku'] %}
+    {% set is_tomahawk5 = true %}
+  {% endif %}
 {% endif %}
 
 {% set is_broadcom_t1 = false %}
@@ -92,7 +96,7 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
+{% if azure_qos_exists and (not is_broadcom or is_tomahawk5) %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
 {% endif %}
@@ -122,7 +126,7 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
+{% if azure_qos_exists and (not is_broadcom or is_tomahawk5) %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
 {% endif %}
@@ -159,7 +163,7 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
+{% if azure_qos_exists and (not is_broadcom or is_tomahawk5) %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
 {% endif %}
@@ -189,7 +193,7 @@
 {% endif %}
 {% else %}
             "dscp_mode":"pipe",
-{% if azure_qos_exists %}
+{% if azure_qos_exists and (not is_broadcom or is_tomahawk5) %}
             "decap_dscp_to_tc_map":"AZURE",
 {% endif %}
 {% endif %}
