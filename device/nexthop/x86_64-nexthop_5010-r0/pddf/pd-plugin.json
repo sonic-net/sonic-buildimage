@@ -328,7 +328,9 @@
                 }
             }
         },
-        "PSU_FAN_MAX_SPEED": "37000"
+        "PSU_FAN_MAX_SPEED_MAP": {
+            "default": "37000"
+        }
     },
     "FAN": {
         "present": {
