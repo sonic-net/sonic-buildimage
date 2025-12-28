@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -197,11 +198,15 @@ integrate-mlnx-sdk:
 ifeq ($(SDK_FROM_SRC),y)
 	wget $(MLNX_SDK_SOURCE_BASE_URL)/sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz $(LOG_SIMPLE)
 	tar -xf sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) $(LOG_SIMPLE)
-else
-	# Download from upstream repository
+else ifeq ($(MLNX_SDK_SOURCE_BASE_URL),)
+	# Download from upstream repository (no source URL available)
 	wget $(MLNX_SDK_DRIVERS_GITHUB_URL)/archive/refs/heads/$(MLNX_SDK_VERSION).zip $(LOG_SIMPLE)
 	unzip $(MLNX_SDK_VERSION).zip -d $(SDK_TMPDIR) $(LOG_SIMPLE)
 	mv $(SDK_TMPDIR)/Spectrum-SDK-Drivers-$(MLNX_SDK_VERSION)/* $(SDK_TMPDIR) $(LOG_SIMPLE)
+else
+	# Use provided source URL
+	wget $(MLNX_SDK_SOURCE_BASE_URL)/sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz $(LOG_SIMPLE)
+	tar -xf sx_kernel-$(MLNX_SDK_VERSION)-$(MLNX_SDK_ISSU_VERSION).tar.gz --strip-components=1 -C $(SDK_TMPDIR) $(LOG_SIMPLE)
 endif
 
 	pushd $(BUILD_WORKDIR)/src/sonic-linux-kernel; git clean -f -- patch/; git stash -- patch/
