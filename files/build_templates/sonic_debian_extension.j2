@@ -122,8 +122,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Install tpm-tools
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install tpm2-tools
 
-sudo cp src/sonic-platform-common/sonic_platform_base/bmc-fw-update.py $FILESYSTEM_ROOT/usr/bin/bmc-fw-update.py
-sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bmc-fw-update.py
+sudo cp src/sonic-platform-common/sonic_platform_base/bmc_fw_update.py $FILESYSTEM_ROOT/usr/bin/bmc_fw_update.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/bmc_fw_update.py
 
 # Apply environtment configuration files
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
