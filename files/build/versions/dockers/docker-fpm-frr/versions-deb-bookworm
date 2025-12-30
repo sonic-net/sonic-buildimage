@@ -1,9 +1,9 @@
 cron==3.0pl1-162
 cron-daemon-common==3.0pl1-162
-frr==10.3-sonic-0
-frr-dbgsym==10.3-sonic-0
-frr-snmp==10.3-sonic-0
-frr-snmp-dbgsym==10.3-sonic-0
+frr==10.4.1-sonic-0
+frr-dbgsym==10.4.1-sonic-0
+frr-snmp==10.4.1-sonic-0
+frr-snmp-dbgsym==10.4.1-sonic-0
 gdb==13.1-3
 gdbserver==13.1-3
 libbabeltrace1==1.5.11-1+b2
@@ -24,7 +24,6 @@ libjson-c5==0.16-2
 libmpfr6==4.2.0-1
 libpci3==1:3.9.0-4
 libpcre2-posix3==10.42-1
-libprotobuf-c1==1.4.1-1+b1
 libsensors-config==1:3.6.0-7.1
 libsensors5==1:3.6.0-7.1
 libsnmp-base==5.9.3+dfsg-2
