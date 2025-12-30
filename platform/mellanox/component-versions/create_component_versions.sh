@@ -38,3 +38,4 @@ echo "HW_MANAGEMENT $4" >> temp_versions_file
 echo "MFT $5-$6" >> temp_versions_file
 echo "KERNEL $7" >> temp_versions_file
 echo "SIMX $8" >> temp_versions_file
+echo "RSHIM $9" >> temp_versions_file
