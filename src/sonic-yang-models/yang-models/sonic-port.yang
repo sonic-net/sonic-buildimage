@@ -241,6 +241,13 @@ module sonic-port{
 						type int32;
 				}
 
+				leaf fast_linkup {
+					type boolean;
+					default "false";
+					description "Enable or disable fast link-up on the port";
+				}
+
+
 			} /* end of list PORT_LIST */
 
 		} /* end of container PORT */
