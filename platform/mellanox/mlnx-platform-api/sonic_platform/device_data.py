@@ -113,8 +113,8 @@ DEVICE_DATA = {
             # For single file, the value is used directly as the key.
             'sysfs_files': ['/var/run/hw-management/system/config1'],
             'revision_map': {
-                '0': 'platform.json.a0',
-                '1': 'platform.json.a1'
+                '0': 'platform.a0.json',
+                '1': 'platform.a1.json'
             }
         }
     },
@@ -466,11 +466,11 @@ class DeviceDataManager:
         Example configurations:
             Single sysfs file:
                 'sysfs_files': ['/var/run/hw-management/system/config1'],
-                'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+                'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
 
             Multiple sysfs files:
                 'sysfs_files': ['/path/to/config1', '/path/to/config2'],
-                'revision_map': {'0_0': 'platform.json.v1', '1_0': 'platform.json.v2'}
+                'revision_map': {'0_0': 'platform.v1.json', '1_0': 'platform.v2.json'}
 
         Returns:
             bool: True if symlink was created/updated successfully or no action needed,

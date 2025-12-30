@@ -210,7 +210,7 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns True when sysfs file doesn't exist."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_exists.return_value = False
         result = DeviceDataManager.setup_platform_json_symlink()
@@ -227,18 +227,18 @@ class TestDeviceData:
         """Test setup_platform_json_symlink creates symlink successfully with single sysfs file."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
         # sysfs file exists, target file exists, platform.json doesn't exist
-        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.json.a1']
+        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.a1.json']
         mock_islink.return_value = False
         mock_symlink.return_value = None
 
         result = DeviceDataManager.setup_platform_json_symlink()
         assert result is True
-        mock_symlink.assert_called_once_with('platform.json.a1', '/tmp/platform/platform.json')
+        mock_symlink.assert_called_once_with('platform.a1.json', '/tmp/platform/platform.json')
 
     @mock.patch('sonic_platform.device_data.os.symlink')
     @mock.patch('sonic_platform.device_data.os.path.islink')
@@ -252,21 +252,21 @@ class TestDeviceData:
         mock_get_config.return_value = {
             'sysfs_files': ['/path/to/config1', '/path/to/config2'],
             'revision_map': {
-                '0_0': 'platform.json.v1',
-                '0_1': 'platform.json.v2',
-                '1_0': 'platform.json.v3',
-                '1_1': 'platform.json.v4'
+                '0_0': 'platform.v1.json',
+                '0_1': 'platform.v2.json',
+                '1_0': 'platform.v3.json',
+                '1_1': 'platform.v4.json'
             }
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.side_effect = ['1', '0']  # Returns '1' for config1, '0' for config2
-        mock_exists.side_effect = lambda path: path in ['/path/to/config1', '/path/to/config2', '/tmp/platform/platform.json.v3']
+        mock_exists.side_effect = lambda path: path in ['/path/to/config1', '/path/to/config2', '/tmp/platform/platform.v3.json']
         mock_islink.return_value = False
         mock_symlink.return_value = None
 
         result = DeviceDataManager.setup_platform_json_symlink()
         assert result is True
-        mock_symlink.assert_called_once_with('platform.json.v3', '/tmp/platform/platform.json')
+        mock_symlink.assert_called_once_with('platform.v3.json', '/tmp/platform/platform.json')
 
     @mock.patch('sonic_platform.device_data.os.readlink')
     @mock.patch('sonic_platform.device_data.os.path.islink')
@@ -279,13 +279,13 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns True when symlink already points to correct target."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
-        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.json.a1']
+        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.a1.json']
         mock_islink.return_value = True
-        mock_readlink.return_value = 'platform.json.a1'
+        mock_readlink.return_value = 'platform.a1.json'
 
         result = DeviceDataManager.setup_platform_json_symlink()
         assert result is True
@@ -304,20 +304,20 @@ class TestDeviceData:
         """Test setup_platform_json_symlink updates symlink when pointing to wrong target."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
-        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.json.a1']
+        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.a1.json']
         mock_islink.return_value = True
-        mock_readlink.return_value = 'platform.json.a0'  # Wrong target
+        mock_readlink.return_value = 'platform.a0.json'  # Wrong target
         mock_remove.return_value = None
         mock_symlink.return_value = None
 
         result = DeviceDataManager.setup_platform_json_symlink()
         assert result is True
         mock_remove.assert_called_once_with('/tmp/platform/platform.json')
-        mock_symlink.assert_called_once_with('platform.json.a1', '/tmp/platform/platform.json')
+        mock_symlink.assert_called_once_with('platform.a1.json', '/tmp/platform/platform.json')
 
     @mock.patch('sonic_platform.device_data.os.path.islink')
     @mock.patch('sonic_platform.device_data.os.path.exists')
@@ -329,13 +329,13 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns True without overwriting regular file."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
         # platform.json exists as regular file
         mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1',
-                                                         '/tmp/platform/platform.json.a1',
+                                                         '/tmp/platform/platform.a1.json',
                                                          '/tmp/platform/platform.json']
         mock_islink.return_value = False
 
@@ -351,7 +351,7 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns False when target file doesn't exist."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
@@ -370,7 +370,7 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns True for unknown revision value."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '2'  # Unknown revision
@@ -386,7 +386,7 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns True when sysfs file is empty."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_exists.return_value = True
         mock_read_str.return_value = ''
@@ -405,11 +405,11 @@ class TestDeviceData:
         """Test setup_platform_json_symlink returns False on OSError during symlink creation."""
         mock_get_config.return_value = {
             'sysfs_files': ['/var/run/hw-management/system/config1'],
-            'revision_map': {'0': 'platform.json.a0', '1': 'platform.json.a1'}
+            'revision_map': {'0': 'platform.a0.json', '1': 'platform.a1.json'}
         }
         mock_platform_dir.return_value = '/tmp/platform'
         mock_read_str.return_value = '1'
-        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.json.a1']
+        mock_exists.side_effect = lambda path: path in ['/var/run/hw-management/system/config1', '/tmp/platform/platform.a1.json']
         mock_islink.return_value = False
         mock_symlink.side_effect = OSError("Permission denied")
 
