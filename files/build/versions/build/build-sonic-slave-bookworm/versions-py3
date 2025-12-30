@@ -29,7 +29,7 @@ pycairo==1.26.1
 pynacl==1.6.0
 pyroute2==0.7.12
 python-arptable==0.0.2
-python-sdk-api==4.8.1086
+python-sdk-api==4.8.1122
 scp==0.14.5
 semantic-version==2.10.0
 supervisor==4.3.0
