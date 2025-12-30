@@ -35,6 +35,9 @@ $(addprefix $(DEST)/, $(MLNX_RSHIM)): $(DEST)/% :
 	# disable default systemd service
 	sed -i 's/	dh_auto_configure/	dh_auto_configure -- --with-systemdsystemunitdir=no/' debian/rules
 
+	# Fix Build-Depends for trixie (use libsystemd-dev)
+	sed -i 's/systemd-dev | systemd (<< 253)/libsystemd-dev/' debian/control
+
 	# Build the package
 	DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 

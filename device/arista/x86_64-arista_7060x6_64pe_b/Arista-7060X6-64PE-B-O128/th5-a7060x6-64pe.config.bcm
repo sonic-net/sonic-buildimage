@@ -1382,8 +1382,10 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            #enable port queue drop stats + enable egress queue drop flex counter
-            sai_stats_support_mask: 0x804
+            # bit 2: enable egress queue drop flex counter
+            # bit 7: enable SRv6 MY_SID counters
+            # bit 11: enable port queue drop stats
+            sai_stats_support_mask: 0x884
             #disable vxlan tunnel stats
             sai_stats_disable_mask: 0x200
             #For PPIU Mode, Set resources for counters in global mode counters like ACL, etc
