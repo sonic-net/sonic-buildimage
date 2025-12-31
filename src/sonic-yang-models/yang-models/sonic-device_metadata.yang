@@ -335,6 +335,15 @@ module sonic-device_metadata {
                      type stypes:boolean_type;
                      default "false";
                 }
+
+                leaf zebra_nexthop {
+                    description "Enable or disable next hop group support. This value only takes effect during boot time";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
             }
             /* end of container localhost */
         }

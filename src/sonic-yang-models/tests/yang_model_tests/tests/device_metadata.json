@@ -251,6 +251,9 @@
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
     },
+    "DEVICE_METADATA_VALID_ZEBRA_NEXTHOP": {
+        "desc": "Verifying valid zebra_nexthop configuration."
+    },
     "DEVICE_METADATA_VALID_T2_GROUP_ASNS": {
         "desc": "Verifying valid t2_group_asns."
     },

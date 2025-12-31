@@ -63,6 +63,7 @@ COMMANDS_FOR_ACTUAL = {
     "MFT": [["dpkg", "-l"], ["grep", "mft "], "mft *([0-9.-]*)"],
     "SDK": [["docker", "exec", "syncd", "bash", "-c", 'dpkg -l | grep sdn'], "sdn-appliance *([0-9.-]*mlnx1)"],
     "SAI": [["docker", "exec", "syncd", "bash", "-c", 'dpkg -l | grep mlnx-sai'], ".*1\\.mlnx\\.([A-Za-z0-9.]*)"],
+    "SAI_API_HEADERS": [["docker", "exec", "syncd", "dpkg", "-s", "mlnx-sai"], "X-Sai-Headers-Version: ([0-9.]+)"],
     "FW": [["mlxfwmanager", "--query"], "FW * [0-9]{2}\\.([0-9.]*)"],
     "KERNEL": [["uname", "-r"], "(.*)-[a-z0-9]+$"],
     "BFSOC": [["dpkg", "-l"], ["grep", "mlxbf-bootimages"], "mlxbf-bootimages *([0-9.-]*)"]
@@ -72,6 +73,7 @@ UNAVAILABLE_COMPILED_VERSIONS = {
     "SDK": "N/A",
     "FW": "N/A",
     "SAI": "N/A",
+    "SAI_API_HEADERS": "N/A",
     "MFT": "N/A",
     "KERNEL": "N/A",
     "BFSOC": "N/A",
