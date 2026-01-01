@@ -45,17 +45,46 @@ class master_key_mgr:
         try:
             with open(CIPHER_PASS_FILE, 'r') as f:
                 return json.load(f)
-        except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "_load_registry: Exception occurred: {}".format(e))
+
+        except json.JSONDecodeError as e:
+            # File exists but is corrupted
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_load_registry: Invalid JSON in {}: {}".format(CIPHER_PASS_FILE, e))
+            return {}
+        except PermissionError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_load_registry: Permission denied reading {}: {}".format(CIPHER_PASS_FILE, e))
+            return {}
+        except OSError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_load_registry: OS error reading {}: {}".format(CIPHER_PASS_FILE, e))
             return {}
 
     def _save_registry(self, data):
         """
         Write cipher_pass.json file
         """
-        with open(CIPHER_PASS_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
-        os.chmod(self._file_path, 0o640)
+        try:
+            with open(CIPHER_PASS_FILE, 'w') as f:
+                json.dump(data, f, indent=2)
+            os.chmod(self._file_path, 0o600)
+
+        except PermissionError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_save_registry: Permission denied writing {}: {}".format(self._file_path, e))
+        except OSError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_save_registry: OS error writing {}: {}".format(self._file_path, e))
+        except TypeError as e:
+            # json.dump serialization error
+            syslog.syslog(
+                syslog.LOG_ERR,
+                "_save_registry: Invalid data format, not JSON serializable: {}".format(e))
 
     def _encrypt_passkey(self, feature_type, secret: str, passwd: str) -> str:
         """
