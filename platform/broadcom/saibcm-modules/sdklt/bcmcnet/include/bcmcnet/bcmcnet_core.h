@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -70,6 +71,12 @@ struct pkt_hdr {
 #define PDMA_TX_NO_PAD      (1 << 5)
     /*! Tx to HNET */
 #define PDMA_TX_TO_HNET     (1 << 6)
+    /*! Tx XDP frame */
+#define PDMA_TX_XDP_FRM     (1 << 7)
+    /*! Tx XDP action */
+#define PDMA_TX_XDP_ACT     (1 << 8)
+    /*! Tx XSK ZC frame */
+#define PDMA_TX_XSK_ZC      (1 << 9)
     /*! Rx to VNET */
 #define PDMA_RX_TO_VNET     (1 << 10)
     /*! Rx strip vlan tag */
@@ -265,6 +272,15 @@ struct dev_ctrl {
 
     /*! Tx descriptor size */
     uint32_t tx_desc_size;
+
+    /*! Bitmap of Rx queues in busy state */
+    uint64_t bm_rxq_busy;
+
+    /*! Bitmap of Tx queues in busy state */
+    uint64_t bm_txq_busy;
+
+    /*! Device resource lock */
+    sal_spinlock_t lock;
 };
 
 /*!
@@ -347,8 +363,9 @@ typedef void (*pdma_dev_stats_get_f)(struct pdma_dev *dev);
  * Reset device statistics.
  *
  * \param [in] dev Pointer to device structure.
+ * \param [in] dir Direction of packets specified to reset statistics.
  */
-typedef void (*pdma_dev_stats_reset_f)(struct pdma_dev *dev);
+typedef void (*pdma_dev_stats_reset_f)(struct pdma_dev *dev, pdma_dir_t dir);
 
 /*!
  * Convert logic queue to physical queue.
@@ -847,6 +864,9 @@ struct pdma_dev {
     /*! Device statistics data */
     struct bcmcnet_dev_stats stats;
 
+    /*! Device statistics base data */
+    struct bcmcnet_dev_stats stats_base;
+
     /*! Private data */
     void *priv;
 
@@ -1078,12 +1098,13 @@ bcmcnet_pdma_dev_stats_get(struct pdma_dev *dev);
  * \brief Reset device statistics.
  *
  * \param [in] dev Device structure point.
+ * \param [in] dir Direction of packets specified to reset statistics.
  *
  * \retval SHR_E_NONE No errors.
  * \retval SHR_E_XXXX Operation failed.
  */
 extern int
-bcmcnet_pdma_dev_stats_reset(struct pdma_dev *dev);
+bcmcnet_pdma_dev_stats_reset(struct pdma_dev *dev, pdma_dir_t dir);
 
 /*!
  * \brief Change queue number to channel number.

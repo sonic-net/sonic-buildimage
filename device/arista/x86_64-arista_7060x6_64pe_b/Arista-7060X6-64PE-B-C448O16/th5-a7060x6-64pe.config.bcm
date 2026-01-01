@@ -39,9 +39,14 @@ bcm_device:
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
             pfc_deadlock_seq_control : 1
-            sai_tunnel_support: 2
+            sai_tunnel_support: 0x12
             bcm_tunnel_term_compatible_mode: 1
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_ecmp_member_first_lkup_mem_size: 0
+            l3_ecmp_member_secondary_mem_size: 0
+            stat_custom_receive0_management_mode: 1
+            sai_pkt_trim_queue_index: 4
+            # disable DSCP modification for TCs not present in TC_TO_DSCP_MAP:
+            sai_pkt_dscp_modification_disable: 1
 ---
 device:
     0:
@@ -3360,7 +3365,7 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
-            sai_stats_support_mask: 0
+            sai_stats_support_mask: 0x880
             global_flexctr_ing_action_num_reserved: 20
             global_flexctr_ing_pool_num_reserved: 8
             global_flexctr_ing_op_profile_num_reserved: 20
@@ -3398,4 +3403,11 @@ device:
             THRESHOLD_MODE: LOSSY
         TM_SCHEDULER_CONFIG:
             NUM_MC_Q: NUM_MC_Q_2
+...
+# Initialize SmartSAF functionality
+---
+device:
+    0:
+        TM_SMART_STORE_AND_FORWARD_CONFIG:
+            SMART_STORE_AND_FORWARD: 1
 ...

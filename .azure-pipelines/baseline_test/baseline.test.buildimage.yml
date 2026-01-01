@@ -1,0 +1,126 @@
+name: BaselineTest_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: "0 8 * * *"
+    displayName: Baseline test Scheduler
+    branches:
+      include:
+        - master
+    always: true
+
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    endpoint: sonic-net
+    ref: master
+
+parameters:
+  - name: BUILD_REASON
+    type: string
+    default: "BaselineTest"
+
+  - name: TEST_PLAN_NUM
+    type: string
+    default: $(BASELINE_MGMT_PUBLIC_MASTER_TEST_NUM)
+
+  - name: RETRY_TIMES
+    type: string
+    default: "0"
+
+  - name: TEST_PLAN_STOP_ON_FAILURE
+    type: string
+    default: "False"
+
+  - name: CHECKOUT_SONIC_MGMT
+    type: boolean
+    default: true
+
+variables:
+- template: ../azure-pipelines-repd-build-variables.yml
+- template: ../template-variables.yml
+- group: SONiC-Elastictest
+- group: GIT_SECRETS
+- name: CACHE_MODE
+  value: rcache
+- name: ENABLE_FIPS
+  value: y
+- name: BUILD_BRANCH
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: $(System.PullRequest.TargetBranch)
+  ${{ else }}:
+    value: $(Build.SourceBranchName)
+
+stages:
+  - stage: BuildVS
+    pool: sonicso1ES-amd64
+    jobs:
+    - template: ../azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vs
+
+  - stage: Test_round_1
+    dependsOn: BuildVS
+    condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+
+  - stage: Test_round_2
+    dependsOn:
+    - Test_round_1
+    condition: succeededOrFailed('Test_round_1')
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+
+  - stage: Test_round_3
+    dependsOn:
+    - Test_round_2
+    condition: succeededOrFailed('Test_round_2')
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}
+
+  - stage: Test_round_4
+    dependsOn:
+    - Test_round_3
+    condition: succeededOrFailed('Test_round_3')
+    jobs:
+    - template: .azure-pipelines/pr_test_template.yml@sonic-mgmt
+      parameters:
+        GLOBAL_PARAMS:
+          BUILD_REASON: ${{ parameters.BUILD_REASON }}
+          RETRY_TIMES: ${{ parameters.RETRY_TIMES }}
+          STOP_ON_FAILURE: ${{ parameters.TEST_PLAN_STOP_ON_FAILURE }}
+          TEST_PLAN_NUM: ${{ parameters.TEST_PLAN_NUM }}
+        CHECKOUT_SONIC_MGMT: ${{ parameters.CHECKOUT_SONIC_MGMT }}

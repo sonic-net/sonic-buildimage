@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -33,6 +34,9 @@
 #define BCMPKT_LBHDR_SIZE_BYTES         16
 /*! TX Packet MetaData size (words). */
 #define BCMPKT_LBHDR_SIZE_WORDS         4
+
+/*! LBHDR FID field supported check. */
+#define BCMPKT_LBHDR_FID_SUPPORTED(_st, _f) SHR_BITGET((_st)->fbits, _f)
 
 /*!
  * \name LBHDR Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)

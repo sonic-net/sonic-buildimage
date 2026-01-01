@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +16,9 @@
 ## limitations under the License.
 ##
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -44,7 +47,8 @@ RUN apt-get update        \
     libnanomsg-dev        \
     libthrift-0.17.0      \
     thrift-compiler       \
-    python3-thrift
+    python3-thrift        \
+    pciutils
 
 RUN pip3 install --upgrade pip
 
@@ -95,9 +99,9 @@ RUN apt-get -y purge \
     libthrift-dev    \
     build-essential
 
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+FROM $BASE
 
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

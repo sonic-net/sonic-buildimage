@@ -1,6 +1,7 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.4 Broadcom SDK $
-# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+#
+# $Copyright: 2017-2025 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -100,6 +101,7 @@ USER_BDE := $(DEST_DIR)/$(USER_BDE_LOCAL)
 
 KNET_CB_LOCAL := linux-knet-cb.$(KOBJ)
 KNET_CB := $(DEST_DIR)/$(KNET_CB_LOCAL)
+
 export BUILD_BCM_GENL=1
 export BUILD_GENL_PACKET=0
 GENL_PACKET_LOCAL := genl-packet.$(KOBJ)

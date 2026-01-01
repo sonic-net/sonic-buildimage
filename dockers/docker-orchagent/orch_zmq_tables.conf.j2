@@ -1,4 +1,4 @@
-{% if DEVICE_METADATA.localhost.orch_dash_zmq_enabled == "false"  %}
+{% if DEVICE_METADATA.localhost.orch_northbond_dash_zmq_enabled != "false"  %}
 DASH_VNET_TABLE
 DASH_QOS_TABLE
 DASH_ENI_TABLE
@@ -23,7 +23,7 @@ DASH_METER_RULE_TABLE
 DASH_ROUTING_APPLIANCE_TABLE
 DASH_ENI_FORWARD_TABLE
 {% endif %}
-{% if DEVICE_METADATA.localhost.orch_route_zmq_enabled == "true"  %}
+{% if DEVICE_METADATA.localhost.orch_northbond_route_zmq_enabled == "true"  %}
 ROUTE_TABLE
 LABEL_ROUTE_TABLE
 {% endif %}

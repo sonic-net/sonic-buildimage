@@ -63,6 +63,7 @@ class SsdUtil(StorageBase):
         """
         self.model_attr = {
              "ER2-GD"       : { "temperature" : "\n190\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" },
+             "ER3-GD"       : { "temperature" : "\n190\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" },
              "AF2MA31DTDLT" : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n202\s+(.+?)\n" },
              "SSDSCK"       : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n233\s+(.+?)\n" },
              "SM619GXC"     : { "temperature" : "\n194\s+(.+?)\n", "remainingLife" : "\n169\s+(.+?)\n" },

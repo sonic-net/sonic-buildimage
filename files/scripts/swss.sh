@@ -107,6 +107,120 @@ function clean_up_tables()
     end" 0
 }
 
+# This function attempts to delete entries using a specified delete function, retrying up to a maximum number of times if the deletion fails.
+# Arguments:
+#   $1 - delete_func: Name of the function to call for deleting the entry.
+#   $2 - host: Host identifier for the deletion operation.
+#   $3 - asic: ASIC identifier for the deletion operation.
+#   $4 - entry_name: Name of the entry being deleted (used for logging).
+#
+# Behavior:
+#   - Calls the delete function with host and asic as arguments.
+#   - If the deletion succeeds (exit code 0), prints the result and exits.
+#   - If the deletion fails, logs the attempt and retries up to max_retries times (default: 6).
+#   - Waits 10 seconds between retries.
+#   - If all attempts fail, logs an error and returns 1.
+function retry_delete_entries() {
+    local delete_func=$1
+    local host=$2
+    local asic=$3
+    local max_retries=3
+    local attempt=1
+    local result
+    while true; do
+        result=$($delete_func "$host" "$asic")
+        if [[ $? -eq 0 ]]; then
+            echo $result
+            break
+        else
+            debug "retrying $delete_func failed host=$host asic=$asic(attempt $attempt/$max_retries)"
+            if [[ $attempt -ge $max_retries ]]; then
+                debug "Error: $delete_func failed after $max_retries attempts for host=$host asic=$asic"
+                return 1
+            fi
+            attempt=$((attempt+1))
+            sleep 10
+        fi
+    done
+}
+# Function to delete SYSTEM_NEIGH entries for a given host and asic
+function delete_system_neigh_entries() {
+    local_host=$1
+    local_asic=$2
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nn = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_NEIGH*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_NEIGH*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nn = nn + 1
+        end
+    end
+    return nn" 0 $local_host $local_asic
+}
+# Function to delete SYSTEM_INTERFACE entries for a given host and asic
+function delete_system_interface_entries() {
+    local_host=$1
+    local_asic=$2
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsi = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_INTERFACE*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_INTERFACE*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nsi = nsi + 1
+        end
+    end
+    return nsi" 0 $local_host $local_asic
+  }
+# Function to delete SYSTEM_LAG_MEMBER_TABLE entries for a given host and asic
+function delete_system_lag_member_entries() {
+    local_host=$1
+    local_asic=$2
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nlm = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_LAG_MEMBER_TABLE*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_LAG_MEMBER_TABLE*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nlm = nlm + 1
+        end
+    end
+    return nlm" 0 $local_host $local_asic
+}
+
+function delete_system_lag_entries() {
+    local_host=$1
+    local_asic=$2
+    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsl = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_LAG_TABLE*|' .. '(' .. host .. '|' .. dev ..'.*' .. ')'
+    local keylist = redis.call('KEYS', 'SYSTEM_LAG_TABLE*')
+    for j,key in ipairs(keylist) do
+        local lagname = string.match(key, ps)
+        if lagname ~= nil then
+            redis.call('DEL', key)
+            local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
+            redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('rpush', 'SYSTEM_LAG_IDS_FREE_LIST', lagid)
+            nsl = nsl + 1
+        end
+    end
+    return nsl" 0 $local_host $local_asic
+}
+
 # This function cleans up the chassis db table entries created ONLY by this asic
 # This is used to do the clean up operation when the line card / asic reboots
 # When the asic/lc is RE-booting, the chassis db server is supposed to be running
@@ -126,10 +240,17 @@ function clean_up_chassis_db_tables()
 {
 
     switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
+    platform=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'platform'`
 
     # Run clean up only in swss running for voq switches
     if is_chassis_supervisor || [[ $switch_type != 'voq' ]]; then
         return
+    fi
+
+    chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
+    if [ ! -e $chassis_config ]; then
+       debug "No chassis config found"
+       return
     fi
 
     until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
@@ -150,20 +271,8 @@ function clean_up_chassis_db_tables()
     done
     debug "Chassis db clean up for ${SERVICE}$DEV. asic=$asic"
 
-    # First, delete SYSTEM_NEIGH entries
-    num_neigh=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
-    local nn = 0
-    local host = string.gsub(ARGV[1], '%-', '%%-')
-    local dev = ARGV[2]
-    local ps = 'SYSTEM_NEIGH*|' .. host .. '|' .. dev
-    local keylist = redis.call('KEYS', 'SYSTEM_NEIGH*')
-    for j,key in ipairs(keylist) do
-        if string.match(key, ps) ~= nil then
-            redis.call('DEL', key)
-            nn = nn + 1
-        end
-    end
-    return nn" 0 $lc $asic`
+    # First, delete SYSTEM_NEIGH entries using a dedicated function
+    num_neigh=$(retry_delete_entries delete_system_neigh_entries "$lc" "$asic")
 
     debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_NEIGH entries deleted: $num_neigh"
 
@@ -177,37 +286,16 @@ function clean_up_chassis_db_tables()
         sleep 30
     fi
 
-    # Next, delete SYSTEM_INTERFACE entries
-    num_sys_intf=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
-    local nsi = 0
-    local host = string.gsub(ARGV[1], '%-', '%%-')
-    local dev = ARGV[2]
-    local ps = 'SYSTEM_INTERFACE*|' .. host .. '|' .. dev
-    local keylist = redis.call('KEYS', 'SYSTEM_INTERFACE*')
-    for j,key in ipairs(keylist) do
-        if string.match(key, ps) ~= nil then
-            redis.call('DEL', key)
-            nsi = nsi + 1
-        end
-    end
-    return nsi" 0 $lc $asic`
+    # Next, delete SYSTEM_INTERFACE entries 
+    num_sys_intf=$(retry_delete_entries delete_system_interface_entries "$lc" "$asic")
 
     debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_INTERFACE entries deleted: $num_sys_intf"
+    if [[ $num_sys_intf > 0 ]]; then
+        sleep 15
+    fi
 
-    # Next, delete SYSTEM_LAG_MEMBER_TABLE entries
-    num_lag_mem=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
-    local nlm = 0
-    local host = string.gsub(ARGV[1], '%-', '%%-')
-    local dev = ARGV[2]
-    local ps = 'SYSTEM_LAG_MEMBER_TABLE*|' .. host .. '|' .. dev
-    local keylist = redis.call('KEYS', 'SYSTEM_LAG_MEMBER_TABLE*')
-    for j,key in ipairs(keylist) do
-        if string.match(key, ps) ~= nil then
-            redis.call('DEL', key)
-            nlm = nlm + 1
-        end
-    end
-    return nlm" 0 $lc $asic`
+    # Next, delete SYSTEM_LAG_MEMBER_TABLE entries using a dedicated function
+    num_lag_mem=$(retry_delete_entries delete_system_lag_member_entries "$lc" "$asic")
 
     debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_MEMBER_TABLE entries deleted: $num_lag_mem"
 
@@ -220,24 +308,7 @@ function clean_up_chassis_db_tables()
     fi
 
     # Finally, delete SYSTEM_LAG_TABLE entries and deallot LAG IDs
-    num_sys_lag=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
-    local nsl = 0
-    local host = string.gsub(ARGV[1], '%-', '%%-')
-    local dev = ARGV[2]
-    local ps = 'SYSTEM_LAG_TABLE*|' .. '(' .. host .. '|' .. dev ..'.*' .. ')'
-    local keylist = redis.call('KEYS', 'SYSTEM_LAG_TABLE*')
-    for j,key in ipairs(keylist) do
-        local lagname = string.match(key, ps)
-        if lagname ~= nil then
-            redis.call('DEL', key)
-            local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
-            redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
-            redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
-            redis.call('rpush', 'SYSTEM_LAG_IDS_FREE_LIST', lagid)
-            nsl = nsl + 1
-        end
-    end
-    return nsl" 0 $lc $asic`
+    num_sys_lag=$(retry_delete_entries delete_system_lag_entries "$lc" "$asic")
 
     debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_TABLE entries deleted: $num_sys_lag"
 
@@ -339,6 +410,17 @@ start() {
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
+        MEDIA_SETTINGS="/usr/share/sonic/device/$PLATFORM/media_settings.json"
+        if [ -f $MEDIA_SETTINGS ]; then
+            if [ "$( docker inspect -f '{{.State.Running}}' pmon )" != "true" ]; then
+                debug "pmon not running so skip restarting xcvrd"
+            else
+                # Need to restart XCVRD on media_settings.json skus due to
+                # https://github.com/sonic-net/sonic-buildimage/issues/21902
+                debug "Restarting xcvrd service..."
+                /usr/bin/docker exec pmon supervisorctl restart xcvrd
+            fi
+        fi
     fi
 
     # On supervisor card, skip starting asic related services here. In wait(),
@@ -415,9 +497,9 @@ wait() {
     done
 
     if [[ ! -z $DEV ]]; then
-        /usr/bin/docker-wait-any -s ${SERVICE}$DEV -d `printf "%s$DEV " ${PEER}` ${ALL_DEPS}
+        /usr/bin/docker-wait-any-rs -s ${SERVICE}$DEV -d `printf "%s$DEV " ${PEER}` ${ALL_DEPS}
     else
-        /usr/bin/docker-wait-any -s ${SERVICE} -d ${PEER} ${ALL_DEPS}
+        /usr/bin/docker-wait-any-rs -s ${SERVICE} -d ${PEER} ${ALL_DEPS}
     fi
 }
 

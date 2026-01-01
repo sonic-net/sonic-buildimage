@@ -8,6 +8,9 @@
     "STATIC_ROUTE_TEST_WITH_BLACKHOLE": {
         "desc": "Configure with nexthop as blackhole"
     },
+    "STATIC_ROUTE_TEST_WITH_ADVERTISE": {
+        "desc": "Configure static route with advertise flag"
+    },
     "STATIC_ROUTE_TEST_WITH_VRF": {
         "desc": "Configure with routes in non default VRF"
     },
@@ -35,6 +38,10 @@
     },
     "STATIC_ROUTE_TEST_BLACKHOLE_INVALID": {
         "desc": "Configure with invalid value for blackhole",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_WITH_ADVERTISE_INVALID": {
+        "desc": "Configure static route with invalid advertise flag value",
         "eStrKey": "Pattern"
     },
      "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {

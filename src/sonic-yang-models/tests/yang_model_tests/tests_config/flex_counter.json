@@ -13,6 +13,10 @@
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 10000
                 },
+                "DASH_METER": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 10000
+                },
                 "PFCWD": {
                     "FLEX_COUNTER_STATUS": "enable"
                 },
@@ -68,6 +72,10 @@
                     "POLL_INTERVAL": 1000
                 },
                 "SRV6": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 1000
+                },
+                "SWITCH": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 1000
                 }

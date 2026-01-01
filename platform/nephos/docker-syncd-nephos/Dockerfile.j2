@@ -35,7 +35,6 @@ COPY ["files/dsserve", "files/npx_diag", "/usr/bin/"]
 RUN chmod +x /usr/bin/npx_diag /usr/bin/dsserve
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 ## Clean up

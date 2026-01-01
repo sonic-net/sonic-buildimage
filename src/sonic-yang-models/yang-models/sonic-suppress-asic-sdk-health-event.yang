@@ -51,6 +51,7 @@ module sonic-suppress-asic-sdk-health-event {
                         enum cpu_hw;
                         enum asic_hw;
                     }
+                    ordered-by user;
                     description "Category of the ASIC/SDK health event to suppress";
                 }
             }

@@ -4,7 +4,8 @@
  *
  */
 /*
- * Copyright 2018-2024 Broadcom. All rights reserved.
+ *
+ * Copyright 2018-2025 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -36,51 +37,29 @@
 
 /*!
  * \brief Rx buffer mode definitions.
+ *
+ * Buffer modes used for pktio various work modes:
+ *   PDMA_BUF_MODE_PRIV   - Used for UNET DAM buffers mapped to user space.
+ *   PDMA_BUF_MODE_SKB    - Legacy SKB buffer for KNET mode in kernel space.
+ *   PDMA_BUF_MODE_PAGE   - Pages as DMA buffer for KNET mode in kernel space.
+ *   PDMA_BUF_MODE_MAPPED - DMA buffers mapped to user space so zero-copy can
+ *                          be supported by kernel for KNET mode.
  */
 enum buf_mode {
     /*! Private DMA buffer in user space */
     PDMA_BUF_MODE_PRIV,
 
-    /*! SKB in kernel */
+    /*! Legacy SKB buffer in Linux kernel */
     PDMA_BUF_MODE_SKB,
 
-    /*! Paged buffer in kernel */
+    /*! Raw Page buffer in Linux kernel */
     PDMA_BUF_MODE_PAGE,
 
     /*! Kernel buffer mapped to user space */
     PDMA_BUF_MODE_MAPPED,
 
-    /*! MAX mode */
+    /*! Maximum number of modes */
     PDMA_BUF_MODE_MAX
-};
-
-/*!
- * \brief Rx queue statistics.
- */
-struct rx_stats {
-    /*! Number of received packets */
-    uint64_t packets;
-
-    /*! Number of received bytes */
-    uint64_t bytes;
-
-    /*! Number of dropped packets */
-    uint64_t dropped;
-
-    /*! Number of errors */
-    uint64_t errors;
-
-    /*! Number of head errors */
-    uint64_t head_errors;
-
-    /*! Number of data errors */
-    uint64_t data_errors;
-
-    /*! Number of cell errors */
-    uint64_t cell_errors;
-
-    /*! Number of failed allocation */
-    uint64_t nomems;
 };
 
 /*!
@@ -133,7 +112,7 @@ struct pdma_rx_queue {
     int intr_coalescing;
 
     /*! Queue statistics */
-    struct rx_stats stats;
+    struct bcmcnet_rxq_stats stats;
 
     /*! Rx queue spin lock */
     sal_spinlock_t lock;
@@ -161,26 +140,9 @@ struct pdma_rx_queue {
 
     /*! Page order in PDMA_BUF_MODE_PAGE mode */
     uint32_t page_order;
-};
 
-/*!
- * \brief Tx queue statistics.
- */
-struct tx_stats {
-    /*! Number of sent packets */
-    uint64_t packets;
-
-    /*! Number of sent bytes */
-    uint64_t bytes;
-
-    /*! Number of dropped packets */
-    uint64_t dropped;
-
-    /*! Number of errors */
-    uint64_t errors;
-
-    /*! Number of suspends */
-    uint64_t xoffs;
+    /*! Page size in PDMA_BUF_MODE_PAGE mode */
+    uint32_t page_size;
 };
 
 /*!
@@ -233,7 +195,7 @@ struct pdma_tx_queue {
     int intr_coalescing;
 
     /*! Queue statistics */
-    struct tx_stats stats;
+    struct bcmcnet_txq_stats stats;
 
     /*! Tx queue spin lock */
     sal_spinlock_t lock;

@@ -50,12 +50,6 @@ void RebootBE::Start() {
   s.addSelectable(&m_Done);
   s.addSelectable(&m_RebootThreadFinished);
 
-  if (swss::WarmStart::isWarmStart()) {
-    SetCurrentStatus(RebManagerStatus::WARM_INIT_WAIT);
-  } else {
-    SWSS_LOG_NOTICE("Warm restart not enabled");
-  }
-
   SWSS_LOG_NOTICE("RebootBE entering operational loop");
   while (true) {
     swss::Selectable *sel;
@@ -121,6 +115,31 @@ void RebootBE::SendNotificationResponse(const std::string key,
   m_RebootResponse.send(key, swss::statusCodeToStr(code), ret_values);
 }
 
+NotificationResponse RebootBE::RequestRebootStatus(
+    const std::string &jsonStatusRequest) {
+  SWSS_LOG_ENTER();
+  SWSS_LOG_NOTICE("Sending reboot status request to platform");
+
+  NotificationResponse response = {.status = swss::StatusCode::SWSS_RC_SUCCESS,
+                   .json_string = "{}"};
+
+  // Send a request to the reboot host service via dbus.
+  DbusInterface::DbusResponse dbus_response =
+      m_dbus.RebootStatus(jsonStatusRequest);
+
+  if (dbus_response.status == DbusInterface::DbusStatus::DBUS_FAIL) {
+    SWSS_LOG_ERROR("Failed to send reboot status request to platform: %s",
+                    dbus_response.json_string.c_str());
+    response.status = swss::StatusCode::SWSS_RC_INTERNAL;
+    return response;
+  }
+
+  response.json_string = dbus_response.json_string;
+  SWSS_LOG_NOTICE("Received reboot status response from platform: %s",
+                  response.json_string.c_str());
+  return response;
+}
+
 NotificationResponse RebootBE::HandleRebootRequest(
     const std::string &jsonRebootRequest) {
   using namespace gpu;
@@ -148,9 +167,27 @@ NotificationResponse RebootBE::HandleRebootRequest(
 
   if (!RebootAllowed(request.method())) {
     response.status = swss::StatusCode::SWSS_RC_IN_USE;
-    response.json_string =
-        "Reboot not allowed at this time. Reboot, halt or "
-        "post-warmboot in progress";
+    RebManagerStatus current_status = GetCurrentStatus();
+
+    switch (current_status) {
+    	case RebManagerStatus::COLD_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Cold Reboot in progress";
+		break;
+    	case RebManagerStatus::HALT_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Halt Reboot in progress";
+		break;
+    	case RebManagerStatus::WARM_REBOOT_IN_PROGRESS:
+    		response.json_string =
+        	"Reboot not allowed at this time. Warm Reboot in progress";
+		break;
+	default:
+    		response.json_string =
+        	"Reboot not allowed at this time,current reboot status is unknown.";
+		break;
+    }
+		
     SWSS_LOG_WARN("%s", response.json_string.c_str());
     return response;
   }
@@ -178,9 +215,6 @@ bool RebootBE::RebootAllowed(const gnoi::system::RebootMethod rebMethod) {
     case RebManagerStatus::WARM_REBOOT_IN_PROGRESS: {
       return false;
     }
-    case RebManagerStatus::WARM_INIT_WAIT: {
-      return rebMethod == gnoi::system::RebootMethod::COLD;
-    }
     case RebManagerStatus::IDLE: {
       return true;
     }
@@ -193,6 +227,11 @@ bool RebootBE::RebootAllowed(const gnoi::system::RebootMethod rebMethod) {
 NotificationResponse RebootBE::HandleStatusRequest(
     const std::string &jsonStatusRequest) {
   SWSS_LOG_ENTER();
+
+  //For Halt reboot, we need to send the status request to the platform
+  if (m_CurrentStatus == RebManagerStatus::HALT_REBOOT_IN_PROGRESS) {
+    return RequestRebootStatus(jsonStatusRequest);
+  }
 
   gnoi::system::RebootStatusResponse reboot_response =
       m_RebootThread.GetResponse();

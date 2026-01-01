@@ -1,0 +1,144 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+export INSTALL_MOD_DIR := extra
+
+export KVERSION   ?= $(shell uname -r)
+export KERNEL_SRC ?= /lib/modules/$(KVERSION)
+KERNEL_BUILD := $(KERNEL_SRC)/build
+MOD_SRC_DIR := $(shell pwd)
+MODULE_DIRS :=
+
+# Common
+MODULE_DIRS += common
+# CPU Card
+MODULE_DIRS += komodo
+# SKU
+MODULE_DIRS += nh-4010
+MODULE_DIRS += nh-4220
+MODULE_DIRS += nh-4220-r0
+MODULE_DIRS += nh-5010
+
+SERVICE_DIR := service
+SYSTEM_DIR := etc/systemd/system
+UTILS_DIR := utils
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+PACKAGE_PRE_NAME := sonic-platform-nexthop
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	set -e
+	if [ ! -d "$(KERNEL_BUILD)" ]; then \
+		echo "ERROR: Kernel build directory $(KERNEL_BUILD) not found. Cannot build kernel modules."; \
+		exit 1; \
+	fi
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			$(MAKE) -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules modules; \
+			./sign-modules.sh $(MOD_SRC_DIR)/$${mod}/modules; \
+		fi; \
+	done)
+	python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)
+	echo "Finished making sonic_platform whl package"
+
+override_dh_auto_test:
+	python3 -m pytest
+
+override_dh_usrlocal:
+# Needed since we are installing files to /usr/local
+
+override_dh_installsystemd:
+# Disables dh_installsystemd from autogenerating postinst scripts which
+# prematurely start platform services.
+
+override_dh_auto_install:
+	set -e
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		pkg_name=$(PACKAGE_PRE_NAME)-"$${mod#nh-}"; \
+		dh_installdirs -p$${pkg_name} \
+			$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$${pkg_name} \
+			/lib/systemd/system; \
+		dh_installdirs -p$${pkg_name} \
+			/usr/local/bin; \
+		dh_installdirs -p$${pkg_name} \
+			etc/udev/rules.d; \
+		if [ -f $(MOD_SRC_DIR)/$${mod}/modules/Makefile ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko \
+				debian/$${pkg_name}$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR) ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service \
+				debian/$${pkg_name}/lib/systemd/system; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(SYSTEM_DIR) ]; then \
+			mkdir -p debian/$${pkg_name}/$(SYSTEM_DIR)/; \
+			cp -r $(MOD_SRC_DIR)/$${mod}/$(SYSTEM_DIR)/* \
+				debian/$${pkg_name}/$(SYSTEM_DIR)/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR) ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* \
+				debian/$${pkg_name}/usr/local/bin/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/udev ]; then \
+			cp $(MOD_SRC_DIR)/$${mod}/udev/* \
+				debian/$${pkg_name}/etc/udev/rules.d/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/bash_completion.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/bash_completion.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/bash_completion.d/* \
+				debian/$${pkg_name}/etc/bash_completion.d/; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d ]; then \
+			dh_installdirs -p$${pkg_name} etc/modprobe.d; \
+			cp $(MOD_SRC_DIR)/$${mod}/etc/modprobe.d/* \
+				debian/$${pkg_name}/etc/modprobe.d/; \
+		fi; \
+	done)
+	python3 setup.py install \
+		--root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-common \
+		--install-layout=deb
+
+override_dh_install:
+	set -e
+	# Get all package names from debian/control
+	(for pkg_name in $$(dh_listpackages); do \
+		set -e; \
+		case "$${pkg_name}" in \
+			*-r[0-9]*) \
+				if [ -f sonic_platform-1.0-py3-none-any.whl ]; then \
+					platform_suffix="$${pkg_name#$(PACKAGE_PRE_NAME)-}"; \
+					sku="$${platform_suffix%-r[0-9]*}"; \
+					revision="$${platform_suffix#$$sku}"; \
+					fixed_sku=$$(echo "$$sku" | sed 's/-/_/g'); \
+					device_name="x86_64-nexthop_$${fixed_sku}$${revision}"; \
+					dh_install -p$${pkg_name} sonic_platform-1.0-py3-none-any.whl \
+						usr/share/sonic/device/$${device_name}/pddf/; \
+				fi; \
+				if [ -f common/utils/nh_powercycle ]; then \
+					dh_install -p$${pkg_name} common/utils/nh_powercycle \
+						usr/lib/systemd/system-shutdown/; \
+				fi; \
+				;; \
+		esac; \
+	done)
+
+override_dh_clean:
+	set -e
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		set -e; \
+		if [ -d "$(KERNEL_BUILD)" ] && [ -f "$(MOD_SRC_DIR)/$${mod}/modules/Makefile" ]; then \
+			make -C $(KERNEL_BUILD) M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+		fi; \
+		echo $(MOD_SRC_DIR); \
+		rm -f $(MOD_SRC_DIR)/*.whl; \
+	done)

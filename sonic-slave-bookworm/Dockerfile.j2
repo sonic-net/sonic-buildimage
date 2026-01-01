@@ -281,7 +281,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         debhelper \
         autotools-dev \
         libbsd-dev \
-        pkg-config \
+        pkgconf \
         check \
 # For bmp
         librdkafka-dev \
@@ -370,6 +370,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libevent-dev \
 # For libyang
         swig \
+        pkgconf \
+        tcl-expect \
+        libxxhash-dev \
+# For libyang3-py3
+        python3-cffi \
 # For build dtb
         device-tree-compiler \
 # For sonic-mgmt-framework
@@ -399,23 +404,23 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For kdump-tools
         libbz2-dev \
 # For linkmgrd
-        libboost-dev \
-        libboost-program-options-dev \
-        libboost-system-dev \
-        libboost-serialization1.74-dev \
-        libboost-thread-dev \
-        libboost-atomic-dev \
-        libboost-chrono-dev \
-        libboost-container-dev \
-        libboost-context-dev \
-        libboost-contract-dev \
-        libboost-coroutine-dev \
-        libboost-date-time-dev \
-        libboost-fiber-dev \
-        libboost-filesystem-dev \
-        libboost-graph-parallel-dev \
-        libboost-log-dev \
-        libboost-regex-dev \
+        libboost1.83-dev \
+        libboost-program-options1.83-dev \
+        libboost-system1.83-dev \
+        libboost-serialization1.83-dev \
+        libboost-thread1.83-dev \
+        libboost-atomic1.83-dev \
+        libboost-chrono1.83-dev \
+        libboost-container1.83-dev \
+        libboost-context1.83-dev \
+        libboost-contract1.83-dev \
+        libboost-coroutine1.83-dev \
+        libboost-date-time1.83-dev \
+        libboost-fiber1.83-dev \
+        libboost-filesystem1.83-dev \
+        libboost-graph-parallel1.83-dev \
+        libboost-log1.83-dev \
+        libboost-regex1.83-dev \
         googletest \
         libgtest-dev \
         libgmock-dev \
@@ -424,7 +429,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libdbus-1-dev \
         libgirepository1.0-dev \
         libsystemd-dev \
-        pkg-config \
 # For sonic-utilities build
         python3-cryptography \
 # For audisp-tacplus
@@ -478,9 +482,9 @@ RUN eatmydata apt-get install -y \
         libopenmpi-dev \
         libthrift-0.17.0 \
         libthrift-dev \
-        libboost-all-dev \
-        libboost-graph-dev \
-        libboost-iostreams-dev \
+        libboost1.83-all-dev \
+        libboost-graph1.83-dev \
+        libboost-iostreams1.83-dev \
         libgc-dev \
         tcpdump \
         llvm \
@@ -530,8 +534,8 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+RUN wget -O golang-go.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://packages.trafficmanager.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.19 /usr/local/go \
  && rm golang-go.deb golang-src.deb
@@ -575,6 +579,9 @@ RUN pip3 install pillow==10.0.0
 RUN pip3 install \
          ctypesgen==1.0.2 \
          crc16
+
+# For nvidia-bluefield sdk
+RUN pip3 install ctypeslib2 clang==14
 
 # For sonic config engine testing
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -717,7 +724,7 @@ RUN eatmydata apt-get install -y \
         libxtables12:$arch \
         libatm1-dev:$arch \
         libbpf-dev:$arch \
-        libdb-dev:$arch pkg-config:$arch \
+        libdb-dev:$arch pkgconf:$arch \
         libnghttp2-14:$arch \
         librtmp1:$arch \
         libssh2-1:$arch \
@@ -771,3 +778,11 @@ RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-g
 {% endif -%}
 ENV RUSTUP_HOME $RUST_ROOT
 ENV PATH $PATH:$RUST_ROOT/bin
+
+# Install cargo-tarpaulin for code coverage
+RUN $RUST_ROOT/bin/cargo install --locked cargo-tarpaulin
+
+{# Include vendor-defined rules for slave container if it exists.  Contained in ../files #}
+{% with DEBIAN_VERSION='bookworm' %}
+{% include 'files/sonic-slave-Dockerfile.vendor.j2' ignore missing %}
+{% endwith %}

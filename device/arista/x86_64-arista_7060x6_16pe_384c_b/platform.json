@@ -6,16 +6,16 @@
                 "name": "Aboot()"
             },
             {
-                "name": "Scd(addr=0000:04:00.0)"
+                "name": "Scd(addr=0000:03:00.0)"
+            },
+            {
+                "name": "RedstartSysCpld(addr=13-0023)"
             },
             {
                 "name": "Scd(addr=0000:06:00.0)"
             },
             {
-                "name": "Scd(addr=0000:08:00.0)"
-            },
-            {
-                "name": "RedstartSysCpld(addr=13-0023)"
+                "name": "Scd(addr=0000:05:00.0)"
             }
         ],
         "fans": [],
@@ -59,12 +59,18 @@
                 "name": "psu1",
                 "voltage_high_threshold": false,
                 "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": []
             },
             {
                 "name": "psu2",
                 "voltage_high_threshold": false,
                 "voltage_low_threshold": false,
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": []
             }
         ],
@@ -100,6 +106,11 @@
             {
                 "name": "TH5 PCB Right",
                 "controllable": false
+            },
+            {
+                "name": "Port Card",
+                "controllable": false
+
             }
         ],
         "sfps": [

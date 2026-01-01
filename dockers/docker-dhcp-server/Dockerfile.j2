@@ -1,14 +1,13 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE AS base
 
 ARG docker_container_name
 ARG image_version
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-
-# Pass the image_version to container
-ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update &&       \
     apt-get install -f -y   \
@@ -41,18 +40,20 @@ RUN pip3 install psutil
 RUN apt-get remove -y build-essential     \
                       python3-dev
 
-RUN apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y   && \
-    rm -rf /debs
-
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["lease_update.sh", "/etc/kea/"]
 COPY ["kea-dhcp4-init.conf", "/etc/kea/kea-dhcp4.conf"]
 COPY ["cli", "/cli/"]
 
+FROM $BASE
+
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

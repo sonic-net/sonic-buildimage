@@ -34,7 +34,20 @@ $(DOCKER_GNMI)_RUN_OPT += -t
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
+# For disk space monitoring.
+$(DOCKER_GNMI)_RUN_OPT += -v /:/mnt/host:ro
+# For sonic binary image download.
+$(DOCKER_GNMI)_RUN_OPT += -v /tmp:/mnt/host/tmp:rw
+# For sonic binary image downloads to persistent file system.
+$(DOCKER_GNMI)_RUN_OPT += -v /var/tmp:/mnt/host/var/tmp:rw
+# For host command execution in gnoi.
+$(DOCKER_GNMI)_RUN_OPT += --pid=host
+# For host command execution in gnoi.
+$(DOCKER_GNMI)_RUN_OPT += --privileged
+# For GNOI running sudo command in case of container NS remapping.
+$(DOCKER_GNMI)_RUN_OPT += --userns=host
 
-$(DOCKER_GNMI)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
-$(DOCKER_GNMI)_BASE_IMAGE_FILES_J2 += monit_gnmi.j2
+
+
+
 $(DOCKER_GNMI)_BASE_IMAGE_FILES += monit_gnmi:/etc/monit/conf.d

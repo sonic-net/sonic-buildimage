@@ -173,10 +173,14 @@ function postStartAction()
 {%- if docker_container_name == "database" %}
     midplane_ip=""
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
+    if [[ -f $CHASSISDB_CONF && $DATABASE_TYPE != "dpudb" ]]; then
+        slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
+        supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
+    fi
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
-        SYSCTL_NET_CONFIG="/etc/sysctl.d/sysctl-net.conf"
+        SYSCTL_NET_CONFIG="/usr/lib/sysctl.d/90-sonic.conf"
         docker exec -i database$DEV sed -i -e "s/^net.ipv4.conf.eth0.forwarding=0/net.ipv4.conf.eth0.forwarding=1/;
                                                s/^net.ipv6.conf.eth0.forwarding=0/net.ipv6.conf.eth0.forwarding=1/" $SYSCTL_NET_CONFIG
         docker exec -i database$DEV sysctl --system -e
@@ -187,9 +191,6 @@ function postStartAction()
            # Use /16 for loopback interface
            ip netns exec "$NET_NS" ip addr add 127.0.0.1/16 dev lo
            ip netns exec "$NET_NS" ip addr del 127.0.0.1/8 dev lo
-
-           slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_my_slot())' 2>/dev/null)
-           supervisor_slot_id=$(python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); print(platform_chassis.get_supervisor_slot())' 2>/dev/null)
 
            # Create eth1 in database instance
            if [[ "${slot_id}" == "${supervisor_slot_id}" ]]; then
@@ -235,6 +236,12 @@ function postStartAction()
            fi
        fi
     fi
+
+    # midplane ip for the Linecard database container
+    if [[ -z "$DEV" && "$DATABASE_TYPE" != "dpudb"  && -f $CHASSISDB_CONF && "${slot_id}" != "${supervisor_slot_id}" ]]; then
+        midplane_ip=$(docker exec -i ${DOCKERNAME} ip addr show eth1-midplane | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+    fi
+
     # Setup ebtables configuration
 {%- if sonic_asic_platform != "vs" %}
     ebtables_config
@@ -330,8 +337,8 @@ function postStartAction()
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
-
-    if [[ $DEV && $midplane_ip ]]; then
+    # Binding the midplane ip to the redisdb
+    if [[ -n "$midplane_ip" ]]; then
         IFS=_ read ip port < <(jq -r '.INSTANCES | [.redis.hostname, .redis.port] | join("_")' /var/run/redis$DEV/sonic-db/database_config.json)
         bound_ips=$(redis-cli --raw -h $ip -p $port config get bind | sed -n '2,2 p')
         redis-cli -h $ip -p $port config set bind "$bound_ips $midplane_ip"
@@ -525,7 +532,7 @@ start() {
     {%- if docker_container_name == "swss" %}
     # Generate the asic_table.json and peripheral_table.json
     if [ ! -f /etc/sonic/asic_table.json ] && [ -f /usr/share/sonic/templates/asic_table.j2 ]; then
-        sonic-cfggen -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
+        sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"platform":"'$PLATFORM'"}}}'  -d -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json 2> errorlog.txt
         if [[ $? -ne 0 ]] ; then
             echo "sonic-cfggen failed to render asic_table.json"
             echo "$(cat errorlog.txt)"
@@ -682,9 +689,13 @@ start() {
         -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
+        $(if [ -e /sys/devices/platform/mlxplat ]; then echo "-v /sys/devices/platform/mlxplat:/sys/devices/platform/mlxplat:rw"; fi) \
+        -v /sys/module/sx_core:/sys/module/sx_core:rw \
         -v /var/run/hw-management:/var/run/hw-management:rw \
+        -v /etc/hw-management-sensors:/etc/hw-management-sensors:ro \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         $SMARTSWITCH_MNT \
@@ -697,6 +708,11 @@ start() {
 {%- endif %}
 {%- endif %}
 {%- endif %}
+{%- if sonic_asic_platform == "nvidia-bluefield" %}
+{%- if docker_container_name == "syncd" %}
+        -v /usr/bin/asic_detect:/usr/bin/asic_detect:rw \
+{%- endif %}
+{%- endif %}
 {%- if sonic_asic_platform == "broadcom" %}
 {%- if docker_container_name == "syncd" %}
         --shm-size=${SYNCD_SHM_SIZE:-512m} \
@@ -705,6 +721,14 @@ start() {
 {%- endif %}
 {%- if docker_container_name == "pmon" %}
     -v /usr/share/sonic/firmware:/usr/share/sonic/firmware:rw \
+    $(if [ -e "/dev/i2c-0" ]; then echo "--device=/dev/i2c-0:/dev/i2c-0"; fi) \
+    $(if [ -e "/dev/ipmi0" ]; then echo "--device=/dev/ipmi0:/dev/ipmi0"; fi) \
+    $(if [ -e "/dev/sda" ]; then echo "--device=/dev/sda:/dev/sda"; fi) \
+    $(if [ -e "/dev/sdb" ]; then echo "--device=/dev/sdb:/dev/sdb"; fi) \
+    $(if [ -e "/dev/watchdog" ]; then echo "--device=/dev/watchdog:/dev/watchdog"; fi) \
+    $(for watchdog in /sys/class/watchdog/*; do if [ -d "$watchdog" ]; then device_name=$(basename "$watchdog"); dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; done) \
+    $(for blockdev in /sys/block/*; do if [ -d "$blockdev" ]; then device_name=$(basename "$blockdev"); if [[ "$device_name" =~ ^(sd[a-z]+|nvme[0-9]+n[0-9]+)$ ]] && [[ ! "$device_name" =~ (boot|loop) ]]; then dev_file="/dev/$device_name"; if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; fi; fi; done) \
+    $(for dev_file in /dev/nvme*; do if [ -e "$dev_file" ]; then echo "--device=$dev_file:$dev_file"; fi; done) \
 {%- endif %}
 {%- if docker_container_name == "swss" %}
         -e ASIC_VENDOR={{ sonic_asic_platform }} \
@@ -723,7 +747,11 @@ start() {
 {%- endif %}
         $REDIS_MNT \
         -v /etc/fips/fips_enable:/etc/fips/fips_enable:ro \
+{%- if sonic_asic_platform == "mellanox" %}
+        -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:rw \
+{%- else %}
         -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:ro \
+{%- endif %}
         -v /usr/share/sonic/templates/rsyslog-container.conf.j2:/usr/share/sonic/templates/rsyslog-container.conf.j2:ro \
 {%- if sonic_asic_platform != "mellanox" %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
@@ -744,6 +772,8 @@ start() {
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
         "docker-$GBSYNCD_PLATFORM":latest \
+{%- elif docker_image_reference is defined and docker_image_reference is not none %}
+        {{docker_image_reference}} \
 {%- elif docker_image_name is defined %}
         {{docker_image_name}}:latest \
 {%- else %}
@@ -765,7 +795,7 @@ start() {
 
 wait() {
     {%- if docker_container_name == "database" %}
-    docker wait $DOCKERNAME
+    /usr/bin/docker-rs wait $DOCKERNAME
     {%- else %}
     /usr/local/bin/container wait $DOCKERNAME
     {%- endif %}
