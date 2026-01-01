@@ -47,7 +47,6 @@ class master_key_mgr:
                 return json.load(f)
 
         except json.JSONDecodeError as e:
-            # File exists but is corrupted
             syslog.syslog(
                 syslog.LOG_ERR,
                 "_load_registry: Invalid JSON in {}: {}".format(CIPHER_PASS_FILE, e))
@@ -81,7 +80,6 @@ class master_key_mgr:
                 syslog.LOG_ERR,
                 "_save_registry: OS error writing {}: {}".format(self._file_path, e))
         except TypeError as e:
-            # json.dump serialization error
             syslog.syslog(
                 syslog.LOG_ERR,
                 "_save_registry: Invalid data format, not JSON serializable: {}".format(e))
