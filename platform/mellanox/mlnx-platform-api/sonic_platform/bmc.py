@@ -73,9 +73,6 @@ def _get_bmc_values():
         logger.log_error("BMC NOS account username not found in build configuration")
         return none_values
     bmc_root_account_default_password = bmc_config.get('bmc_root_account_default_password')
-    if not bmc_root_account_default_password:
-        logger.log_error("BMC root account default password not found in build configuration")
-        return none_values
     return bmc_addr, bmc_nos_account_username, bmc_root_account_default_password
 
 
@@ -99,7 +96,7 @@ class BMC(BMCBase):
     def get_instance():
         if BMC._instance is None:
             bmc_addr, bmc_nos_account_username, bmc_root_account_default_password = _get_bmc_values()
-            if not bmc_addr or not bmc_nos_account_username or not bmc_root_account_default_password:
+            if not bmc_addr or not bmc_nos_account_username:
                 return None
             BMC._instance = BMC(bmc_addr, bmc_nos_account_username, bmc_root_account_default_password)
         return BMC._instance
