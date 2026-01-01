@@ -197,7 +197,7 @@ class master_key_mgr:
             table, entry = table_info.split("|")
             db_entry = self._config_db.get_entry(table, entry)
             encrypted_passkey = db_entry.get("passkey")
-            #Rotate only if valid passkey is present and 'key_encyrpt' flag is True
+            #Rotate only if valid passkey is present and 'key_encrypt' flag is True
             if encrypted_passkey and str(db_entry.get("key_encrypt")).lower() == 'true':
                 # Decrypt with old password
                 plain_passkey = self._decrypt_passkey(feature_type, encrypted_passkey, old_password)
