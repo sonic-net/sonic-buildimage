@@ -19,6 +19,88 @@ function debug()
     /usr/bin/logger --id=$$ -- "$1"
     /bin/echo `date` "- $1" >> ${DEBUGLOG}
 }
+function nokia_chassis_set_sfm_active_link()
+{
+    hostname=$(sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "hostname")
+    sfm=8
+    case $hostname  in
+        "ixre-egl-board25"|"ixre-egl-board26" )
+            sfm=1
+            ;;
+        "ixre-egl-board3"|"ixre-egl-board4" )
+            sfm=1
+            ;;
+        "ixre-egl-board3"|"ixre-egl-board4" )
+            sfm=2
+            ;;
+        "ixre-egl-board23"|"ixre-egl-board24" )
+            sfm=3
+            ;;
+        "ixre-egl-board7"|"ixre-egl-board15"|"ixre-egl-board28" )
+            sfm=8
+            ;;
+        "ixre-egl-board9"|"ixre-egl-board10" )
+            sfm=8
+            ;;
+        "ixre-egl-board1"|"ixre-egl-board5"|"ixre-egl-board27" )
+            sfm=2
+            ;;
+        "ixre-egl-board33"|"ixre-egl-board34"|"ixre-egl-board35"|"ixre-egl-board36"|"ixre-egl-board31"|"ixre-egl-board37"|"ixre-egl-board38" )
+            sfm=7
+            ;;
+        "ixre-egl-board29"|"ixre-egl-board30" )
+            sfm=1
+            ;;
+        "ixre-egl-board40"|"ixre-egl-board41" )
+            sfm=1
+            ;;
+        "ixre-egl-board61"|"ixre-egl-board62"|"ixre-egl-board63"|"ixre-egl-board64"|"ixre-egl-board65"|"ixre-egl-board66"|"ixre-egl-board67" )
+            sfm=7
+            ;;
+        "ixre-egl-board71"|"ixre-egl-board72"|"ixre-egl-board73"|"ixre-egl-board74" )
+            sfm=4
+            ;;
+        "ixre-egl-board191"|"ixre-egl-board192" )
+            sfm=3
+            ;;
+        "ixre-egl-board201"|"ixre-egl-board202" )
+            sfm=3
+            ;;
+        "ixre-egl-board211"|"ixre-egl-board22" )
+            sfm=3
+            ;;
+        *)
+            return
+            ;;
+    esac
+   
+    ports=$(( $sfm*16 ))
+    old_ports=112
+    hwsku_100=/usr/share/sonic/device/x86_64-nokia_ixr7250e_36x400g-r0/Nokia-IXR7250E-36x100G
+    hwsku_400=/usr/share/sonic/device/x86_64-nokia_ixr7250e_36x400g-r0/Nokia-IXR7250E-36x400G
+    
+    new_parm="appl_param_active_links_thr_high=$ports"
+    links=$(grep -w "appl_param_active_links_thr_high" ${hwsku_100}/0/jr2cp-nokia-18x100g-4x25g-config.bcm  | awk -F "=" '{print $2 }')
+    if [ $links -eq $old_ports ]; then
+        sudo sed -i '/appl_param_active_links_thr_high/c\'"$new_parm" ${hwsku_100}/0/jr2cp-nokia-18x100g-4x25g-config.bcm
+        echo "DBG: Modify ${hwsku_100}/0/jr2cp-nokia-18x100g-4x25g-config.bcm with a new value $ports"
+    fi
+    links=$(grep -w "appl_param_active_links_thr_high" ${hwsku_100}/1/jr2cp-nokia-18x100g-4x25g-config.bcm  | awk -F "=" '{print $2 }')
+    if [ $links -eq $old_ports ]; then
+        sudo sed -i '/appl_param_active_links_thr_high/c\'"$new_parm" ${hwsku_100}/1/jr2cp-nokia-18x100g-4x25g-config.bcm
+        echo "DBG: Modify ${hwsku_100}/1/jr2cp-nokia-18x100g-4x25g-config.bcm with a new value $ports"
+    fi
+    links=$(grep -w "appl_param_active_links_thr_high" ${hwsku_400}/0/jr2cp-nokia-18x400g-config.bcm  | awk -F "=" '{print $2 }')
+    if [ $links -eq $old_ports ]; then
+        sudo sed -i '/appl_param_active_links_thr_high/c\'"$new_parm" ${hwsku_400}/0/jr2cp-nokia-18x400g-config.bcm
+        echo "DBG: Modify ${hwsku_400}/0/jr2cp-nokia-18x400g-config.bcm with a new value $ports"
+    fi
+    links=$(grep -w "appl_param_active_links_thr_high" ${hwsku_400}/1/jr2cp-nokia-18x400g-config.bcm  | awk -F "=" '{print $2 }')
+    if [ $links -eq $old_ports ]; then
+        sudo sed -i '/appl_param_active_links_thr_high/c\'"$new_parm" ${hwsku_400}/1/jr2cp-nokia-18x400g-config.bcm
+        echo "DBG: Modify ${hwsku_400}/1/jr2cp-nokia-18x400g-config.bcm with a new value $ports"
+    fi
+}
 
 function read_dependent_services()
 {
@@ -397,7 +479,9 @@ start() {
     validate_restore_count
 
     debug "Warm boot flag: ${SERVICE}$DEV ${WARM_BOOT}."
-
+    
+    nokia_chassis_set_sfm_active_link
+    
     # Don't flush DB during warm boot
     if [[ x"$WARM_BOOT" != x"true" ]]; then
         debug "Flushing APP, ASIC, COUNTER, CONFIG, and partial STATE databases ..."
