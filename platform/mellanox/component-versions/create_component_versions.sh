@@ -20,7 +20,7 @@ echo "SDK $1" > temp_versions_file
 echo $2 | sed -r 's/([0-9]*)\.([0-9]*)\.([0-9]*)/FW \2\.\3/g' >> temp_versions_file
 echo "SAI $3" >> temp_versions_file
 
-SAI_API_VERSION_PATH="../../../src/sonic-sairedis/SAI/inc/saiversion.h"
+SAI_API_VERSION_PATH="/sonic/src/sonic-sairedis/SAI/inc/saiversion.h"
 if [ -f "$SAI_API_VERSION_PATH" ]; then
     SAI_MAJOR=$(grep "SAI_MAJOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
     SAI_MINOR=$(grep "SAI_MINOR" "$SAI_API_VERSION_PATH" | grep -oE "[0-9]+")
