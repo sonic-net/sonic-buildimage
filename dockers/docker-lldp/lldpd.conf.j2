@@ -5,6 +5,10 @@
 {% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
 {% if mgmt_if.update({'ipv4' : mgmt_prefix|ip}) %} {% endif %}
 {% endif %}
+{% if mgmt_prefix|ipv6 %}
+{% if mgmt_if.update({'port_name' : mgmt_name}) %} {% endif %}
+{% if mgmt_if.update({'ipv6' : mgmt_prefix|ip}) %} {% endif %}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if mgmt_if %}
@@ -16,7 +20,11 @@ configure ports eth0 lldp portidsubtype local {{ MGMT_PORT[mgmt_if.port_name].al
 configure ports eth0 lldp portidsubtype local {{ mgmt_if.port_name }}
 {% endif %}
 {% endif %}
+{% if mgmt_if.ipv4 %}
 configure system ip management pattern {{ mgmt_if.ipv4 }}
+{% elif mgmt_if.ipv6 %}
+configure system ip management pattern {{ mgmt_if.ipv6 }}
+{% endif %}
 {% endif %}
 configure system hostname {{ DEVICE_METADATA['localhost']['hostname'] }}
 {# pause lldpd operations until all interfaces are well configured, resume command will run in lldpmgrd #}
