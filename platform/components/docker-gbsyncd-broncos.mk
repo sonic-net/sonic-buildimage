@@ -30,7 +30,6 @@ $(DOCKER_GBSYNCD_BRONCOS)_CONTAINER_NAME = gbsyncd
 $(DOCKER_GBSYNCD_BRONCOS)_RUN_OPT += --privileged -t
 $(DOCKER_GBSYNCD_BRONCOS)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_GBSYNCD_BRONCOS)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_GBSYNCD_BRONCOS)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 SONIC_ONLINE_DEBS += $(LIBSAI_BRONCOS)
 

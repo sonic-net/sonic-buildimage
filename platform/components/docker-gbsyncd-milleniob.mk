@@ -30,7 +30,6 @@ $(DOCKER_GBSYNCD_MILLENIOB)_CONTAINER_NAME = gbsyncd
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += --privileged -t
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_GBSYNCD_MILLENIOB)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
 $(DOCKER_GBSYNCD_MILLENIOB)_VERSION = 1.0.0
 $(DOCKER_GBSYNCD_MILLENIOB)_PACKAGE_NAME = gbsyncd-milleniob
